@@ -9,8 +9,8 @@ export class PreloadScene extends Phaser.Scene {
   create(): void {
     generatePlaceholderTextures(this);
 
-    // Temporary until CharacterCreateScene/TownScene exist to take over
-    // routing — proves texture generation actually rendered something.
-    this.add.sprite(this.scale.width / 2, this.scale.height / 2, 'player-warrior');
+    // TODO: once CharacterCreateScene/SaveService exist, route to
+    // CharacterCreateScene when there's no save, else load and go to Town.
+    this.scene.start('Town');
   }
 }
