@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 
 const DEFAULT_SPEED = 160;
+// TODO(task 10): replace with values from data/classes.ts per chosen class.
+const DEFAULT_ATTACK_POWER = 5;
+const DEFAULT_ATTACK_RANGE = 40;
+const DEFAULT_ATTACK_COOLDOWN_MS = 1200;
 
 interface WasdKeys {
   W: Phaser.Input.Keyboard.Key;
@@ -11,6 +15,9 @@ interface WasdKeys {
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   speed = DEFAULT_SPEED;
+  attackPower = DEFAULT_ATTACK_POWER;
+  attackRange = DEFAULT_ATTACK_RANGE;
+  attackCooldownMs = DEFAULT_ATTACK_COOLDOWN_MS;
   private readonly keys: WasdKeys;
 
   constructor(scene: Phaser.Scene, x: number, y: number, textureKey: string) {

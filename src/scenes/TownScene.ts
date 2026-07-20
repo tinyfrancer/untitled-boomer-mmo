@@ -6,6 +6,7 @@ import { Rat } from '../entities/Rat';
 import type { Mob } from '../entities/Mob';
 import { TILESET_KEY } from './generateTextures';
 import { TARGET_CLEARED_EVENT, TARGET_SELECTED_EVENT } from '../ui/uiEvents';
+import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
 
 const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
   [-96, -64],
@@ -23,6 +24,7 @@ export class TownScene extends Phaser.Scene {
   private rats: Rat[] = [];
   private target: Mob | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
+  private lastAttackAt = 0;
 
   constructor() {
     super('Town');
@@ -66,10 +68,11 @@ export class TownScene extends Phaser.Scene {
     this.scene.launch('UI');
   }
 
-  update(): void {
+  update(time: number): void {
     this.player.update();
     this.rats.forEach((rat) => rat.update());
     this.updateSelectionRing();
+    this.updateCombat(time);
   }
 
   private handlePointerDown(
@@ -108,5 +111,47 @@ export class TownScene extends Phaser.Scene {
     this.selectionRing.lineStyle(2, SELECTION_RING_COLOR, 1);
     this.selectionRing.strokeCircle(this.target.x, this.target.y, SELECTION_RING_RADIUS);
     this.selectionRing.setVisible(true);
+  }
+
+  private updateCombat(time: number): void {
+    if (!this.target || !this.target.isAlive()) {
+      return;
+    }
+
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      this.target.x,
+      this.target.y,
+    );
+    if (!isInRange(distance, this.player.attackRange)) {
+      return;
+    }
+    if (!isCooldownReady(time - this.lastAttackAt, this.player.attackCooldownMs)) {
+      return;
+    }
+
+    this.lastAttackAt = time;
+    const { damage } = resolveAttack({ attackPower: this.player.attackPower });
+    this.showDamageNumber(this.target.x, this.target.y, damage);
+    this.target.takeDamage(damage);
+  }
+
+  private showDamageNumber(x: number, y: number, amount: number): void {
+    const text = this.add
+      .text(x, y - 20, `-${amount}`, {
+        fontSize: '14px',
+        color: '#ffee58',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
+    this.tweens.add({
+      targets: text,
+      y: y - 50,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => text.destroy(),
+    });
   }
 }
