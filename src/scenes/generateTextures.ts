@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
 
+export const TILESET_KEY = 'tileset';
+
 export function generatePlaceholderTextures(scene: Phaser.Scene): void {
   generatePlayerTexture(scene, 'player-warrior', 0x3d5afe);
   generatePlayerTexture(scene, 'player-wizard', 0x7c3aed);
   generateRatTexture(scene);
-  generateTileTexture(scene, 'tile-grass', 0x2e7d32);
-  generateTileTexture(scene, 'tile-path', 0x8d6e63);
+  generateTilesetTexture(scene);
 }
 
 function generatePlayerTexture(scene: Phaser.Scene, key: string, color: number): void {
@@ -42,12 +43,23 @@ function generateRatTexture(scene: Phaser.Scene): void {
   graphics.destroy();
 }
 
-function generateTileTexture(scene: Phaser.Scene, key: string, color: number): void {
+// A single tileset image with tiles laid out side by side, since
+// Phaser's Tilemap API indexes tiles into one tileset texture rather
+// than accepting separate textures per tile.
+function generateTilesetTexture(scene: Phaser.Scene): void {
   const graphics = scene.add.graphics();
-  graphics.fillStyle(color, 1);
-  graphics.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-  graphics.lineStyle(1, 0x000000, 0.15);
-  graphics.strokeRect(0, 0, TILE_SIZE, TILE_SIZE);
-  graphics.generateTexture(key, TILE_SIZE, TILE_SIZE);
+
+  drawTile(graphics, 0, 0x2e7d32); // index 0: grass
+  drawTile(graphics, 1, 0x8d6e63); // index 1: path
+
+  graphics.generateTexture(TILESET_KEY, TILE_SIZE * 2, TILE_SIZE);
   graphics.destroy();
+}
+
+function drawTile(graphics: Phaser.GameObjects.Graphics, index: number, color: number): void {
+  const x = index * TILE_SIZE;
+  graphics.fillStyle(color, 1);
+  graphics.fillRect(x, 0, TILE_SIZE, TILE_SIZE);
+  graphics.lineStyle(1, 0x000000, 0.15);
+  graphics.strokeRect(x, 0, TILE_SIZE, TILE_SIZE);
 }
