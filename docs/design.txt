@@ -1,0 +1,42 @@
+Untitled Boomer MMO
+
+Overview:
+I am a professional software engineer with Claude experience, but no game development experience.  I would like to build a game to broaden my abilities, and as a fun side-project.  This game will likely never be distributed, and will mostly be for personal use.  We will be working together on this, and I will be looking for advice on best-practices.  We will start small and build from there. 
+
+Game Details:
+***Note: not all of this need be implemented at first, this will be iterative over time, we will start really small***
+
+Old-school MMORPG, with systems similar to Everquest, RuneScape, and World of Warcraft. High-fantasy, elves dragons goblins etc. Can be played either solo, or with others.  We will build it initially as a solo-player experience.  Mobile/PC friendly to play.
+
+Character persistence, should be able to close out and open up without losing progress.
+
+The game is designed to be slow, with both AFK and active playstyles.  If I want to fight the same enemy on a loop on a second monitor all day I should be able to do that with minimal interaction. 
+
+We want the feel of an adventurer who starts as a lowly townsperson, and strives to become an amazing champion of the world they live in. Starting area could be a small town, with rats as the enemy.
+
+Character should be able to pick a class.  Warrior/Wizard/Etc.
+
+Character should be able to equip gear.  We will start small with only a few slots available.
+
+Character should be able to level up through killing enemies. Max level for now will be 10.
+
+Character should be able to level up skills.  We will start with fishing, max level of 10.
+
+Character should have combat skills.
+
+Styling: 
+Top-down 2D with WASD movement, and targetable entities.  I have no art skills, so we will be using basic models and textures.  I am unsure how that works so I will rely on you to help with sourcing, generation, etc.  We do not want to use copyrighted materials.  We can use stick-figure SVGs to begin with.
+
+Tech-stack:
+Looking for input here. 
+As this will be small in scope we can use docker for tools we may not have.
+I have heard that Godot is good for simple games, but have no experience.  This is a possible language.
+
+We will use GitHub for version control.  I have heard about Vercel for app hosting, so that is a possibility as well.
+
+Depending on language, recommend me an IDE to use.
+
+Starting point:
+- Boiler plate code for creating a character
+- Small starting area with rats to kill
+
