@@ -1,10 +1,6 @@
 import Phaser from 'phaser';
-
-const DEFAULT_SPEED = 160;
-// TODO(task 10): replace with values from data/classes.ts per chosen class.
-const DEFAULT_ATTACK_POWER = 5;
-const DEFAULT_ATTACK_RANGE = 40;
-const DEFAULT_ATTACK_COOLDOWN_MS = 1200;
+import { CLASSES } from '../data/classes';
+import type { ClassId } from '../types/ids';
 
 interface WasdKeys {
   W: Phaser.Input.Keyboard.Key;
@@ -14,17 +10,27 @@ interface WasdKeys {
 }
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
-  speed = DEFAULT_SPEED;
-  attackPower = DEFAULT_ATTACK_POWER;
-  attackRange = DEFAULT_ATTACK_RANGE;
-  attackCooldownMs = DEFAULT_ATTACK_COOLDOWN_MS;
+  readonly classId: ClassId;
+  readonly maxHp: number;
+  speed: number;
+  attackPower: number;
+  attackRange: number;
+  attackCooldownMs: number;
   private readonly keys: WasdKeys;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, textureKey: string) {
-    super(scene, x, y, textureKey);
+  constructor(scene: Phaser.Scene, x: number, y: number, classId: ClassId) {
+    const classDef = CLASSES[classId];
+    super(scene, x, y, classDef.textureKey);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setCollideWorldBounds(true);
+
+    this.classId = classId;
+    this.maxHp = classDef.baseStats.maxHp;
+    this.speed = classDef.baseStats.speed;
+    this.attackPower = classDef.baseStats.attackPower;
+    this.attackRange = classDef.baseStats.attackRange;
+    this.attackCooldownMs = classDef.baseStats.attackCooldownMs;
 
     const keyboard = scene.input.keyboard;
     if (!keyboard) {

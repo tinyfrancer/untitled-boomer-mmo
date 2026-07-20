@@ -58,7 +58,9 @@ export class TownScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
-    this.player = new Player(this, worldWidth / 2, worldHeight / 2, 'player-warrior');
+    // TODO(task 11): read the chosen class from CharacterCreateScene / save
+    // data instead of hardcoding it here.
+    this.player = new Player(this, worldWidth / 2, worldHeight / 2, 'warrior');
     this.cameras.main.startFollow(this.player, true);
 
     this.rats = RAT_SPAWN_OFFSETS.map(([dx, dy]) => {
