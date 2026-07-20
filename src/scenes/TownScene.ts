@@ -2,10 +2,20 @@ import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
 import { TOWN_MAP } from '../data/townMap';
 import { Player } from '../entities/Player';
+import { Rat } from '../entities/Rat';
 import { TILESET_KEY } from './generateTextures';
+
+const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
+  [-96, -64],
+  [96, -64],
+  [-64, 96],
+  [64, 96],
+  [0, 128],
+];
 
 export class TownScene extends Phaser.Scene {
   private player!: Player;
+  private rats: Rat[] = [];
 
   constructor() {
     super('Town');
@@ -33,9 +43,14 @@ export class TownScene extends Phaser.Scene {
 
     this.player = new Player(this, worldWidth / 2, worldHeight / 2, 'player-warrior');
     this.cameras.main.startFollow(this.player, true);
+
+    this.rats = RAT_SPAWN_OFFSETS.map(
+      ([dx, dy]) => new Rat(this, worldWidth / 2 + dx, worldHeight / 2 + dy),
+    );
   }
 
   update(): void {
     this.player.update();
+    this.rats.forEach((rat) => rat.update());
   }
 }
