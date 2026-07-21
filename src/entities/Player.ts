@@ -20,6 +20,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   attackRange: number;
   attackCooldownMs: number;
   private readonly keys: WasdKeys;
+  private touchVectorX = 0;
+  private touchVectorY = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -53,6 +55,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     };
   }
 
+  // Called by TownScene when the on-screen virtual joystick moves; x/y are
+  // normalized to [-1, 1], preserving analog magnitude for partial pushes.
+  setTouchVector(x: number, y: number): void {
+    this.touchVectorX = x;
+    this.touchVectorY = y;
+  }
+
   update(): void {
     let vx = 0;
     let vy = 0;
@@ -61,10 +70,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.keys.W.isDown) vy -= 1;
     if (this.keys.S.isDown) vy += 1;
 
-    const length = Math.hypot(vx, vy);
-    if (length > 0) {
+    if (vx !== 0 || vy !== 0) {
+      const length = Math.hypot(vx, vy);
       vx = (vx / length) * this.speed;
       vy = (vy / length) * this.speed;
+    } else {
+      vx = this.touchVectorX * this.speed;
+      vy = this.touchVectorY * this.speed;
     }
 
     this.setVelocity(vx, vy);

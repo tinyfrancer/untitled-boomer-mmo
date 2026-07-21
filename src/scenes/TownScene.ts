@@ -7,6 +7,7 @@ import type { Mob } from '../entities/Mob';
 import { TILESET_KEY } from './generateTextures';
 import {
   LEVEL_UP_EVENT,
+  MOVE_VECTOR_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   XP_GAINED_EVENT,
@@ -85,6 +86,7 @@ export class TownScene extends Phaser.Scene {
     this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.keyboard?.on('keydown-ESC', () => this.clearTarget());
     this.input.keyboard?.on('keydown-F9', () => this.resetCharacter());
+    this.game.events.on(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
 
     this.add
       .text(this.scale.width - 8, this.scale.height - 8, 'F9: Reset Character (dev)', {
@@ -104,6 +106,7 @@ export class TownScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('pagehide', this.handleWindowUnload);
       window.removeEventListener('beforeunload', this.handleWindowUnload);
+      this.game.events.off(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
     });
 
     this.scene.launch('UI');
@@ -126,6 +129,10 @@ export class TownScene extends Phaser.Scene {
     } else {
       this.clearTarget();
     }
+  }
+
+  private handleMoveVector(x: number, y: number): void {
+    this.player.setTouchVector(x, y);
   }
 
   private setTarget(mob: Mob): void {

@@ -2,8 +2,10 @@ import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
 import { ITEMS } from '../data/items';
 import { TargetFrame } from '../ui/TargetFrame';
+import { VirtualJoystick } from '../ui/VirtualJoystick';
 import {
   LEVEL_UP_EVENT,
+  MOVE_VECTOR_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   XP_GAINED_EVENT,
@@ -31,6 +33,7 @@ export class UIScene extends Phaser.Scene {
     this.createXpBar(character);
     this.createLevelUpToast();
     this.createGearPanel(character);
+    this.createJoystick();
 
     this.game.events.on(TARGET_SELECTED_EVENT, this.handleTargetSelected, this);
     this.game.events.on(TARGET_CLEARED_EVENT, this.handleTargetCleared, this);
@@ -101,6 +104,14 @@ export class UIScene extends Phaser.Scene {
         color: '#cccccc',
       })
       .setScrollFactor(0);
+  }
+
+  private createJoystick(): void {
+    const x = this.scale.width - 90;
+    const y = this.scale.height - 90;
+    new VirtualJoystick(this, x, y, (vx, vy) => {
+      this.game.events.emit(MOVE_VECTOR_EVENT, vx, vy);
+    });
   }
 
   private describeItem(itemId: string | null): string {
