@@ -89,11 +89,11 @@ export class TownScene extends Phaser.Scene {
     this.game.events.on(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
 
     this.add
-      .text(this.scale.width - 8, this.scale.height - 8, 'F9: Reset Character (dev)', {
+      .text(16, 72, 'F9: Reset Character (dev)', {
         fontSize: '10px',
-        color: '#666666',
+        color: '#999999',
       })
-      .setOrigin(1, 1)
+      .setOrigin(0, 0)
       .setScrollFactor(0);
 
     this.time.addEvent({
