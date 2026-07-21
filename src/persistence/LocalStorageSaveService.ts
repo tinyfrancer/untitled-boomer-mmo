@@ -1,7 +1,7 @@
 import type { CharacterState } from './CharacterState';
 import type { SaveService } from './SaveService';
 
-const STORAGE_KEY = 'untitled-boomer-mmo:character:v1';
+export const STORAGE_KEY = 'untitled-boomer-mmo:character:v1';
 
 export class LocalStorageSaveService implements SaveService {
   hasSave(): boolean {
