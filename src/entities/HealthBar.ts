@@ -9,9 +9,9 @@ export interface HealthBarOptions {
   label?: string;
 }
 
-const DEFAULT_WIDTH = 28;
-const DEFAULT_HEIGHT = 4;
-const DEFAULT_OFFSET_Y = 22;
+const DEFAULT_WIDTH = 56;
+const DEFAULT_HEIGHT = 8;
+const DEFAULT_OFFSET_Y = 44;
 const DEFAULT_BACKGROUND_COLOR = 0x000000;
 const DEFAULT_FILL_COLOR = 0x66bb6a;
 

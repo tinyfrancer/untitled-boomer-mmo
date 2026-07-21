@@ -1,4 +1,4 @@
-export const TILE_SIZE = 32;
+export const TILE_SIZE = 64;
 
 export const WORLD_WIDTH_TILES = 25;
 export const WORLD_HEIGHT_TILES = 19;

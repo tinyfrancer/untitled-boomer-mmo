@@ -59,7 +59,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.attackRange = stats.attackRange;
     this.attackCooldownMs = stats.attackCooldownMs;
 
-    this.healthBar = new HealthBar(scene, { width: 32, height: 5, offsetY: 26, label: name });
+    this.healthBar = new HealthBar(scene, { width: 64, height: 10, offsetY: 52, label: name });
 
     const keyboard = scene.input.keyboard;
     if (!keyboard) {

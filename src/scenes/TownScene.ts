@@ -24,14 +24,14 @@ import { createNewCharacter, saveService, type CharacterState } from '../persist
 import type { GearSlotId } from '../types/ids';
 
 const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
-  [-96, -64],
-  [96, -64],
-  [-64, 96],
-  [64, 96],
-  [0, 128],
+  [-192, -128],
+  [192, -128],
+  [-128, 192],
+  [128, 192],
+  [0, 256],
 ];
 
-const SELECTION_RING_RADIUS = 18;
+const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
 const AUTOSAVE_INTERVAL_MS = 30000;
 

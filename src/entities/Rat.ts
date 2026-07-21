@@ -8,10 +8,10 @@ const RAT_CONFIG: Omit<MobConfig, 'textureKey'> = {
   respawnDelayMs: 6000,
   lootTableId: 'rat',
   wander: {
-    radius: 48,
+    radius: 96,
     minPauseMs: 1500,
     maxPauseMs: 3500,
-    speed: 40,
+    speed: 80,
   },
 };
 
