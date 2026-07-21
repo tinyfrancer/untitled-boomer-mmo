@@ -14,6 +14,7 @@ export interface ClassDefinition {
   description: string;
   textureKey: string;
   baseStats: ClassStats;
+  startingWeaponId: string;
 }
 
 export const CLASSES: Record<ClassId, ClassDefinition> = {
@@ -30,6 +31,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       attackRange: 40,
       attackCooldownMs: 1200,
     },
+    startingWeaponId: 'rusty-sword',
   },
   wizard: {
     id: 'wizard',
@@ -43,5 +45,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       attackRange: 140,
       attackCooldownMs: 1400,
     },
+    startingWeaponId: 'apprentice-wand',
   },
 };

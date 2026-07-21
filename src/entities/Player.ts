@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { CLASSES } from '../data/classes';
-import type { ClassId } from '../types/ids';
+import { getWeaponAttackBonus } from '../data/items';
+import type { ClassId, GearSlotId } from '../types/ids';
+
+const NO_GEAR: Record<GearSlotId, string | null> = { weapon: null, armor: null };
 
 interface WasdKeys {
   W: Phaser.Input.Keyboard.Key;
@@ -18,7 +21,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   attackCooldownMs: number;
   private readonly keys: WasdKeys;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, classId: ClassId) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    classId: ClassId,
+    gear: Record<GearSlotId, string | null> = NO_GEAR,
+  ) {
     const classDef = CLASSES[classId];
     super(scene, x, y, classDef.textureKey);
     scene.add.existing(this);
@@ -28,7 +37,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.classId = classId;
     this.maxHp = classDef.baseStats.maxHp;
     this.speed = classDef.baseStats.speed;
-    this.attackPower = classDef.baseStats.attackPower;
+    this.attackPower = classDef.baseStats.attackPower + getWeaponAttackBonus(gear.weapon);
     this.attackRange = classDef.baseStats.attackRange;
     this.attackCooldownMs = classDef.baseStats.attackCooldownMs;
 

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
+import { ITEMS } from '../data/items';
 import { TargetFrame } from '../ui/TargetFrame';
 import {
   LEVEL_UP_EVENT,
@@ -7,6 +8,7 @@ import {
   TARGET_SELECTED_EVENT,
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
+import type { CharacterState } from '../persistence/CharacterState';
 
 const XP_BAR_WIDTH = 200;
 const XP_BAR_HEIGHT = 14;
@@ -25,6 +27,7 @@ export class UIScene extends Phaser.Scene {
     this.targetFrame = new TargetFrame(this, 16, 16);
     this.createXpBar();
     this.createLevelUpToast();
+    this.createGearPanel();
 
     this.game.events.on(TARGET_SELECTED_EVENT, this.handleTargetSelected, this);
     this.game.events.on(TARGET_CLEARED_EVENT, this.handleTargetCleared, this);
@@ -66,6 +69,39 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setAlpha(0);
+  }
+
+  private createGearPanel(): void {
+    const character = this.registry.get('character') as CharacterState | undefined;
+    const gear = character?.gear ?? { weapon: null, armor: null };
+
+    const width = 164;
+    const x = this.scale.width - width - 16;
+    const y = 16;
+
+    this.add.rectangle(x, y, width, 60, 0x000000, 0.55).setOrigin(0, 0).setScrollFactor(0);
+    this.add
+      .text(x + 8, y + 6, 'Gear', { fontSize: '13px', color: '#ffffff', fontStyle: 'bold' })
+      .setScrollFactor(0);
+    this.add
+      .text(x + 8, y + 24, `Weapon: ${this.describeItem(gear.weapon)}`, {
+        fontSize: '11px',
+        color: '#cccccc',
+      })
+      .setScrollFactor(0);
+    this.add
+      .text(x + 8, y + 40, `Armor: ${this.describeItem(gear.armor)}`, {
+        fontSize: '11px',
+        color: '#cccccc',
+      })
+      .setScrollFactor(0);
+  }
+
+  private describeItem(itemId: string | null): string {
+    if (!itemId) {
+      return '(empty)';
+    }
+    return ITEMS[itemId]?.name ?? itemId;
   }
 
   private handleTargetSelected = (name: string, hp: number, maxHp: number): void => {

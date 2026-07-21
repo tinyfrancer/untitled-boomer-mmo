@@ -61,7 +61,8 @@ export class TownScene extends Phaser.Scene {
 
     const character = this.registry.get('character') as CharacterState | undefined;
     const classId = character?.classId ?? 'warrior';
-    this.player = new Player(this, worldWidth / 2, worldHeight / 2, classId);
+    const gear = character?.gear ?? { weapon: null, armor: null };
+    this.player = new Player(this, worldWidth / 2, worldHeight / 2, classId, gear);
     this.cameras.main.startFollow(this.player, true);
 
     this.rats = RAT_SPAWN_OFFSETS.map(([dx, dy]) => {
