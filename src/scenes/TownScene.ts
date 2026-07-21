@@ -14,6 +14,7 @@ import {
 } from '../ui/uiEvents';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
 import { addXp, type LevelState } from '../systems/LevelingSystem';
+import type { CharacterState } from '../persistence/CharacterState';
 
 const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
   [-96, -64],
@@ -58,9 +59,9 @@ export class TownScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
-    // TODO(task 11): read the chosen class from CharacterCreateScene / save
-    // data instead of hardcoding it here.
-    this.player = new Player(this, worldWidth / 2, worldHeight / 2, 'warrior');
+    const character = this.registry.get('character') as CharacterState | undefined;
+    const classId = character?.classId ?? 'warrior';
+    this.player = new Player(this, worldWidth / 2, worldHeight / 2, classId);
     this.cameras.main.startFollow(this.player, true);
 
     this.rats = RAT_SPAWN_OFFSETS.map(([dx, dy]) => {

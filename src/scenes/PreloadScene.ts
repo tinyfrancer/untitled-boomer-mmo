@@ -9,8 +9,8 @@ export class PreloadScene extends Phaser.Scene {
   create(): void {
     generatePlaceholderTextures(this);
 
-    // TODO: once CharacterCreateScene/SaveService exist, route to
-    // CharacterCreateScene when there's no save, else load and go to Town.
-    this.scene.start('Town');
+    // TODO(task 13): once SaveService exists, skip straight to Town (with
+    // the saved character loaded) when a save is present.
+    this.scene.start('CharacterCreate');
   }
 }
