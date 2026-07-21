@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { CLASSES } from '../data/classes';
+import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
+import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
 
@@ -41,8 +42,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     gear: Record<GearSlotId, string | null> = NO_GEAR,
     name = 'Adventurer',
   ) {
-    const classDef = CLASSES[classId];
-    super(scene, x, y, classDef.textureKey);
+    super(scene, x, y, ensurePlayerTexture(scene, computeAppearance(gear)));
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setCollideWorldBounds(true);
@@ -88,6 +88,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.strength = stats.strength;
     this.intellect = stats.intellect;
     this.attackPower = stats.attackPower;
+    this.setTexture(ensurePlayerTexture(this.scene, computeAppearance(gear)));
   }
 
   takeDamage(amount: number): void {

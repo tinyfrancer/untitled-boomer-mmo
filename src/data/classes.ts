@@ -16,7 +16,6 @@ export interface ClassDefinition {
   id: ClassId;
   name: string;
   description: string;
-  textureKey: string;
   color: number;
   baseStats: ClassStats;
   startingWeaponId: string;
@@ -28,7 +27,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     name: 'Warrior',
     description:
       'A stalwart melee fighter with high HP and a mighty swing, but must close to melee range.',
-    textureKey: 'player-warrior',
     color: 0x3d5afe,
     baseStats: {
       maxHp: 40,
@@ -45,7 +43,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     id: 'wizard',
     name: 'Wizard',
     description: 'A fragile spellcaster who strikes from a distance, trading HP for reach.',
-    textureKey: 'player-wizard',
     color: 0x7c3aed,
     baseStats: {
       maxHp: 24,

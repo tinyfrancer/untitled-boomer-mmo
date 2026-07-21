@@ -43,6 +43,16 @@ export function equipItem(gear: Gear, inventory: Inventory, itemId: string): Equ
   return { gear: { ...gear, [item.slot]: itemId }, inventory: nextInventory };
 }
 
+// Backs the character sheet's per-slot picker: what in the bag could go here?
+export function itemsForSlot(inventory: Inventory, slot: GearSlotId): string[] {
+  return Object.entries(inventory)
+    .filter(([itemId, quantity]) => {
+      const item = ITEMS[itemId];
+      return quantity > 0 && item?.kind === 'equipment' && item.slot === slot;
+    })
+    .map(([itemId]) => itemId);
+}
+
 export function unequipItem(gear: Gear, inventory: Inventory, slot: GearSlotId): EquipChange {
   const itemId = gear[slot];
   if (!itemId) {

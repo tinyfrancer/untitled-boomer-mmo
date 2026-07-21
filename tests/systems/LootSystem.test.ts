@@ -3,7 +3,10 @@ import { rollLootTable } from '../../src/systems/LootSystem';
 
 describe('rollLootTable', () => {
   it('rolls every entry independently and includes only the ones whose roll beats their chance', () => {
-    const rolls = [0.1, 0.9, 0.01]; // bones (0.6): hit, meat (0.5): miss, armor (0.05): hit
+    // one roll per rat table entry, in order:
+    // bones (0.6) hit, meat (0.5) miss, chestplate (0.05) hit,
+    // helmet (0.04) miss, legs (0.04) hit, axe (0.03) miss
+    const rolls = [0.1, 0.9, 0.01, 0.9, 0.02, 0.9];
     let call = 0;
     const rng = () => rolls[call++];
 
@@ -11,7 +14,8 @@ describe('rollLootTable', () => {
 
     expect(drops).toEqual([
       { itemId: 'rat-bones', quantity: 1 },
-      { itemId: 'brown-armor', quantity: 1 },
+      { itemId: 'brown-chestplate', quantity: 1 },
+      { itemId: 'brown-legs', quantity: 1 },
     ]);
   });
 

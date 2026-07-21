@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 import { CLASSES } from '../data/classes';
+import { computeAppearance } from '../systems/AppearanceSystem';
+import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
+import { ensurePlayerTexture } from './generateTextures';
 import type { ClassId } from '../types/ids';
 import { createNewCharacter, saveService } from '../persistence';
 
@@ -7,6 +10,8 @@ const CLASS_IDS: ClassId[] = ['warrior', 'wizard'];
 const DEFAULT_NAME = 'Adventurer';
 const SELECTED_STROKE_COLOR = 0xffee58;
 const UNSELECTED_STROKE_COLOR = 0x555577;
+
+const NO_GEAR = { helmet: null, chest: null, pants: null, weapon: null };
 
 interface ClassCard {
   background: Phaser.GameObjects.Rectangle;
@@ -17,6 +22,7 @@ export class CharacterCreateScene extends Phaser.Scene {
   private selectedClassId: ClassId | null = null;
   private readonly classCards = new Map<ClassId, ClassCard>();
   private beginButtonText!: Phaser.GameObjects.Text;
+  private uiScale = 1;
 
   constructor() {
     super('CharacterCreate');
@@ -24,11 +30,12 @@ export class CharacterCreateScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#1a1a2e');
+    this.uiScale = scenePxScale(this);
 
     this.add
-      .text(this.scale.width / 2, 48, 'Create Your Character', {
-        fontSize: '24px',
-        color: '#ffffff',
+      .text(this.scale.width / 2, px(48, this.uiScale), 'Create Your Character', {
+        fontSize: fontPx(THEME.font.xl, this.uiScale),
+        color: THEME.color.text,
       })
       .setOrigin(0.5);
 
@@ -42,18 +49,21 @@ export class CharacterCreateScene extends Phaser.Scene {
     input.type = 'text';
     input.placeholder = DEFAULT_NAME;
     input.maxLength = 20;
-    input.style.cssText = 'width:220px;padding:6px 8px;font-size:14px;text-align:center;';
+    // Styled in CSS px directly: DOM elements sit above the canvas and are not
+    // subject to the Scale Manager's transform.
+    input.style.cssText = 'width:220px;padding:8px 10px;font-size:16px;text-align:center;';
     this.nameInput = input;
-    this.add.dom(this.scale.width / 2, 120, input);
+    this.add.dom(this.scale.width / 2, px(110, this.uiScale), input);
   }
 
   private createClassCards(): void {
-    const cardWidth = 180;
-    const cardHeight = 140;
-    const gap = 24;
+    const scale = this.uiScale;
+    const cardWidth = px(200, scale);
+    const cardHeight = px(200, scale);
+    const gap = px(24, scale);
     const totalWidth = CLASS_IDS.length * cardWidth + (CLASS_IDS.length - 1) * gap;
     const startX = this.scale.width / 2 - totalWidth / 2 + cardWidth / 2;
-    const y = 260;
+    const y = px(280, scale);
 
     CLASS_IDS.forEach((classId, index) => {
       const classDef = CLASSES[classId];
@@ -61,23 +71,35 @@ export class CharacterCreateScene extends Phaser.Scene {
 
       const background = this.add
         .rectangle(x, y, cardWidth, cardHeight, 0x2a2a4a, 1)
-        .setStrokeStyle(2, UNSELECTED_STROKE_COLOR)
+        .setStrokeStyle(px(2, scale), UNSELECTED_STROKE_COLOR)
         .setInteractive({ useHandCursor: true });
       background.on('pointerdown', () => this.selectClass(classId));
 
       this.add
-        .text(x, y - cardHeight / 2 + 22, classDef.name, {
-          fontSize: '18px',
-          color: '#ffffff',
+        .text(x, y - cardHeight / 2 + px(20, scale), classDef.name, {
+          fontSize: fontPx(THEME.font.lg, scale),
+          color: THEME.color.text,
           fontStyle: 'bold',
         })
         .setOrigin(0.5);
 
+      // Classes now look alike apart from the weapon they start holding, so the
+      // preview is the naked figure plus that starting weapon.
+      const previewSize = px(THEME.paperdollSize, scale);
+      const preview = ensurePlayerTexture(
+        this,
+        computeAppearance({ ...NO_GEAR, weapon: classDef.startingWeaponId }),
+      );
       this.add
-        .text(x, y + 10, classDef.description, {
-          fontSize: '11px',
-          color: '#cccccc',
-          wordWrap: { width: cardWidth - 24 },
+        .image(x, y - px(10, scale), preview)
+        .setDisplaySize(previewSize, previewSize)
+        .setOrigin(0.5);
+
+      this.add
+        .text(x, y + cardHeight / 2 - px(34, scale), classDef.description, {
+          fontSize: fontPx(THEME.font.xs, scale),
+          color: THEME.color.muted,
+          wordWrap: { width: cardWidth - px(20, scale) },
           align: 'center',
         })
         .setOrigin(0.5);
@@ -90,7 +112,7 @@ export class CharacterCreateScene extends Phaser.Scene {
     this.selectedClassId = classId;
     this.classCards.forEach((card, id) => {
       card.background.setStrokeStyle(
-        2,
+        px(2, this.uiScale),
         id === classId ? SELECTED_STROKE_COLOR : UNSELECTED_STROKE_COLOR,
       );
     });
@@ -98,24 +120,25 @@ export class CharacterCreateScene extends Phaser.Scene {
   }
 
   private createBeginButton(): void {
-    const y = 380;
+    const scale = this.uiScale;
+    const y = px(430, scale);
     const background = this.add
-      .rectangle(this.scale.width / 2, y, 200, 44, 0x333333, 1)
-      .setStrokeStyle(2, UNSELECTED_STROKE_COLOR)
+      .rectangle(this.scale.width / 2, y, px(220, scale), px(THEME.touchMin, scale), 0x333333, 1)
+      .setStrokeStyle(px(2, scale), UNSELECTED_STROKE_COLOR)
       .setInteractive({ useHandCursor: true });
     background.on('pointerdown', () => this.tryBeginAdventure());
 
     this.beginButtonText = this.add
       .text(this.scale.width / 2, y, 'Begin Adventure', {
-        fontSize: '16px',
-        color: '#888888',
+        fontSize: fontPx(THEME.font.lg, scale),
+        color: THEME.color.dim,
       })
       .setOrigin(0.5);
   }
 
   private updateBeginButtonState(): void {
     const ready = this.selectedClassId !== null;
-    this.beginButtonText.setColor(ready ? '#ffffff' : '#888888');
+    this.beginButtonText.setColor(ready ? THEME.color.text : THEME.color.dim);
   }
 
   private tryBeginAdventure(): void {

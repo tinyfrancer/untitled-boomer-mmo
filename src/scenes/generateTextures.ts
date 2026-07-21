@@ -1,14 +1,17 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
-import { CLASSES } from '../data/classes';
-import type { ClassId } from '../types/ids';
+import { appearanceTextureKey, computeAppearance } from '../systems/AppearanceSystem';
+import type { Appearance } from '../systems/AppearanceSystem';
+import type { WeaponShapeId } from '../types/ids';
 
 export const TILESET_KEY = 'tileset';
 
+const NO_GEAR = { helmet: null, chest: null, pants: null, weapon: null };
+const OUTLINE_COLOR = 0x14140f;
+
 export function generatePlaceholderTextures(scene: Phaser.Scene): void {
-  Object.values(CLASSES).forEach((classDef) => {
-    generatePlayerTexture(scene, classDef.id, classDef.textureKey, classDef.color);
-  });
+  // the bare figure, so a Player always has a texture to construct against
+  ensurePlayerTexture(scene, computeAppearance(NO_GEAR));
   generateRatTexture(scene);
   generateTilesetTexture(scene);
 }
@@ -44,92 +47,118 @@ function buildStickFigure(size: number): StickFigure {
   };
 }
 
-// Body skeleton is shared across classes; each class id adds its own accessory
-// shapes on top so silhouettes read as distinct at a glance, not just by color.
-function generatePlayerTexture(
-  scene: Phaser.Scene,
-  classId: ClassId,
-  key: string,
-  color: number,
-): void {
+// One baked texture per distinct look. The key covers everything drawn, so a
+// cache hit is always safe and the handful of gear combinations stay cheap.
+export function ensurePlayerTexture(scene: Phaser.Scene, appearance: Appearance): string {
+  const key = appearanceTextureKey(appearance);
+  if (scene.textures.exists(key)) {
+    return key;
+  }
+
   const size = TILE_SIZE;
   const figure = buildStickFigure(size);
   const graphics = scene.add.graphics();
 
-  graphics.lineStyle(figure.limbWidth, color, 1);
-  graphics.lineBetween(figure.cx, figure.shoulderY, figure.cx, figure.hipY); // torso
-  graphics.lineBetween(figure.leftHandX, figure.shoulderY, figure.rightHandX, figure.shoulderY); // arms
-  graphics.lineBetween(
-    figure.cx,
-    figure.hipY,
-    figure.cx - size * 0.13,
-    figure.footY,
-  ); // left leg
-  graphics.lineBetween(
-    figure.cx,
-    figure.hipY,
-    figure.cx + size * 0.13,
-    figure.footY,
-  ); // right leg
+  const torso = (): void => {
+    graphics.lineBetween(figure.cx, figure.shoulderY, figure.cx, figure.hipY);
+    graphics.lineBetween(figure.leftHandX, figure.shoulderY, figure.rightHandX, figure.shoulderY);
+  };
+  const legs = (): void => {
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx - size * 0.13, figure.footY);
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * 0.13, figure.footY);
+  };
 
-  graphics.fillStyle(color, 1);
+  // Dark backing pass: without it a limb painted in gear color disappears into
+  // terrain of the same color — brown armor standing on the brown path.
+  graphics.lineStyle(figure.limbWidth + size * 0.03, OUTLINE_COLOR, 1);
+  torso();
+  legs();
+
+  graphics.lineStyle(figure.limbWidth, appearance.torsoColor, 1);
+  torso();
+  graphics.lineStyle(figure.limbWidth, appearance.legColor, 1);
+  legs();
+
+  graphics.fillStyle(appearance.headColor, 1);
   graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  // white outline keeps the default black head readable against dark tiles
   graphics.lineStyle(size * 0.03, 0xffffff, 1);
   graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
 
-  drawClassAccessory(graphics, classId, figure, size);
+  if (appearance.weapon) {
+    drawWeapon(graphics, appearance.weapon.shape, appearance.weapon.color, figure, size);
+  }
 
   graphics.generateTexture(key, size, size);
   graphics.destroy();
+  return key;
 }
 
-function drawClassAccessory(
+// Weapons hang from the right hand and stay inside the size x size texture box,
+// so swapping one never changes the sprite's physics body.
+function drawWeapon(
   graphics: Phaser.GameObjects.Graphics,
-  classId: ClassId,
+  shape: WeaponShapeId,
+  color: number,
   figure: StickFigure,
   size: number,
 ): void {
-  switch (classId) {
-    case 'warrior': {
-      // helmet band across the top of the head
-      graphics.fillStyle(0xb0bec5, 1);
-      graphics.fillRect(
-        figure.cx - figure.headRadius,
-        figure.headCenterY - figure.headRadius * 0.6,
-        figure.headRadius * 2,
-        figure.headRadius * 0.5,
-      );
-      // sword held in the right hand, blade down, with a small crossguard
-      const swordTipY = figure.hipY + size * 0.15;
-      graphics.lineStyle(size * 0.035, 0xcfd8dc, 1);
-      graphics.lineBetween(figure.rightHandX, figure.shoulderY, figure.rightHandX, swordTipY);
-      graphics.lineBetween(
-        figure.rightHandX - size * 0.05,
-        figure.shoulderY + size * 0.04,
-        figure.rightHandX + size * 0.05,
-        figure.shoulderY + size * 0.04,
-      );
+  const width = size * 0.035;
+  // Same two-pass trick as the limbs: dark backing, then the item's own color.
+  const passes: Array<[number, number]> = [
+    [width + size * 0.03, OUTLINE_COLOR],
+    [width, color],
+  ];
+
+  switch (shape) {
+    case 'sword': {
+      const tipY = figure.hipY + size * 0.15;
+      const guardY = figure.shoulderY + size * 0.04;
+      passes.forEach(([lineWidth, lineColor]) => {
+        graphics.lineStyle(lineWidth, lineColor, 1);
+        graphics.lineBetween(figure.rightHandX, figure.shoulderY, figure.rightHandX, tipY);
+        graphics.lineBetween(
+          figure.rightHandX - size * 0.05,
+          guardY,
+          figure.rightHandX + size * 0.05,
+          guardY,
+        );
+      });
       break;
     }
-    case 'wizard': {
-      // pointed hat above the head
-      const hatBaseY = figure.headCenterY - figure.headRadius * 0.3;
-      graphics.fillStyle(0x4a148c, 1);
-      graphics.fillTriangle(
-        figure.cx,
-        figure.headCenterY - figure.headRadius - size * 0.14,
-        figure.cx - figure.headRadius * 1.3,
-        hatBaseY,
-        figure.cx + figure.headRadius * 1.3,
-        hatBaseY,
-      );
-      // staff held in the left hand, angled up, with a glowing tip
-      const staffTipX = figure.leftHandX - size * 0.06;
-      const staffTipY = figure.shoulderY - size * 0.25;
-      graphics.lineStyle(size * 0.035, 0x8d6e63, 1);
-      graphics.lineBetween(figure.leftHandX, figure.shoulderY, staffTipX, staffTipY);
+    case 'wand': {
+      const tipX = figure.rightHandX + size * 0.06;
+      const tipY = figure.shoulderY - size * 0.22;
+      passes.forEach(([lineWidth, lineColor]) => {
+        graphics.lineStyle(lineWidth, lineColor, 1);
+        graphics.lineBetween(figure.rightHandX, figure.shoulderY, tipX, tipY);
+      });
       graphics.fillStyle(0xffd54f, 1);
-      graphics.fillCircle(staffTipX, staffTipY, size * 0.045);
+      graphics.fillCircle(tipX, tipY, size * 0.045);
+      break;
+    }
+    case 'axe': {
+      const haftTopY = figure.shoulderY - size * 0.1;
+      const haftBottomY = figure.hipY + size * 0.12;
+      // wedge head, biting outward from the top of the haft
+      const head: Array<[number, number]> = [
+        [figure.rightHandX, haftTopY],
+        [figure.rightHandX + size * 0.11, haftTopY + size * 0.05],
+        [figure.rightHandX, haftTopY + size * 0.14],
+      ];
+      passes.forEach(([lineWidth, lineColor]) => {
+        graphics.lineStyle(lineWidth, lineColor, 1);
+        graphics.lineBetween(figure.rightHandX, haftTopY, figure.rightHandX, haftBottomY);
+        graphics.fillStyle(lineColor, 1);
+        graphics.fillTriangle(
+          head[0][0],
+          head[0][1],
+          head[1][0],
+          head[1][1],
+          head[2][0],
+          head[2][1],
+        );
+      });
       break;
     }
   }

@@ -1,10 +1,16 @@
-import type { GearSlotId } from '../types/ids';
+import type { GearSlotId, TierId, WeaponShapeId } from '../types/ids';
+import { TIER_COLORS } from './tiers';
 
 interface EquipmentItemDefinition {
   id: string;
   name: string;
   kind: 'equipment';
   slot: GearSlotId;
+  // Color the stick figure paints this piece with: the matching body part for
+  // armor, the weapon itself for weapons.
+  color: number;
+  tier?: TierId;
+  weaponShape?: WeaponShapeId;
   attackPowerBonus?: number;
   healthBonus?: number;
   strengthBonus?: number;
@@ -25,6 +31,8 @@ export const ITEMS: Record<string, ItemDefinition> = {
     name: 'Rusty Sword',
     kind: 'equipment',
     slot: 'weapon',
+    color: 0xcfd8dc,
+    weaponShape: 'sword',
     attackPowerBonus: 2,
   },
   'apprentice-wand': {
@@ -32,6 +40,8 @@ export const ITEMS: Record<string, ItemDefinition> = {
     name: 'Apprentice Wand',
     kind: 'equipment',
     slot: 'weapon',
+    color: 0x8d6e63,
+    weaponShape: 'wand',
     attackPowerBonus: 2,
   },
   'rat-bones': {
@@ -44,14 +54,45 @@ export const ITEMS: Record<string, ItemDefinition> = {
     name: 'Rat Meat',
     kind: 'material',
   },
-  'brown-armor': {
-    id: 'brown-armor',
-    name: 'Brown Armor',
+  'brown-chestplate': {
+    id: 'brown-chestplate',
+    name: 'Brown Chestplate',
     kind: 'equipment',
     slot: 'chest',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
     healthBonus: 1,
     strengthBonus: 1,
     intellectBonus: 1,
+  },
+  'brown-helmet': {
+    id: 'brown-helmet',
+    name: 'Brown Helmet',
+    kind: 'equipment',
+    slot: 'helmet',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    healthBonus: 1,
+  },
+  'brown-legs': {
+    id: 'brown-legs',
+    name: 'Brown Legs',
+    kind: 'equipment',
+    slot: 'pants',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    healthBonus: 1,
+    strengthBonus: 1,
+  },
+  'brown-axe': {
+    id: 'brown-axe',
+    name: 'Brown Axe',
+    kind: 'equipment',
+    slot: 'weapon',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    weaponShape: 'axe',
+    attackPowerBonus: 3,
   },
 };
 

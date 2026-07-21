@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addItemToInventory,
   equipItem,
+  itemsForSlot,
   removeItemFromInventory,
   unequipItem,
 } from '../../src/systems/InventorySystem';
@@ -41,8 +42,8 @@ describe('removeItemFromInventory', () => {
 
 describe('equipItem', () => {
   it('moves an equippable item from inventory into its gear slot', () => {
-    const result = equipItem(EMPTY_GEAR, { 'brown-armor': 1 }, 'brown-armor');
-    expect(result.gear.chest).toBe('brown-armor');
+    const result = equipItem(EMPTY_GEAR, { 'brown-chestplate': 1 }, 'brown-chestplate');
+    expect(result.gear.chest).toBe('brown-chestplate');
     expect(result.inventory).toEqual({});
   });
 
@@ -61,7 +62,7 @@ describe('equipItem', () => {
   });
 
   it('is a no-op when the item is not in inventory', () => {
-    const result = equipItem(EMPTY_GEAR, {}, 'brown-armor');
+    const result = equipItem(EMPTY_GEAR, {}, 'brown-chestplate');
     expect(result.gear).toEqual(EMPTY_GEAR);
     expect(result.inventory).toEqual({});
   });
@@ -69,15 +70,45 @@ describe('equipItem', () => {
 
 describe('unequipItem', () => {
   it('moves the equipped item back into inventory and clears the slot', () => {
-    const gear = { ...EMPTY_GEAR, chest: 'brown-armor' };
+    const gear = { ...EMPTY_GEAR, chest: 'brown-chestplate' };
     const result = unequipItem(gear, {}, 'chest');
     expect(result.gear.chest).toBeNull();
-    expect(result.inventory).toEqual({ 'brown-armor': 1 });
+    expect(result.inventory).toEqual({ 'brown-chestplate': 1 });
   });
 
   it('is a no-op when the slot is already empty', () => {
     const result = unequipItem(EMPTY_GEAR, {}, 'chest');
     expect(result.gear).toEqual(EMPTY_GEAR);
     expect(result.inventory).toEqual({});
+  });
+});
+
+describe('itemsForSlot', () => {
+  const inventory = {
+    'brown-helmet': 1,
+    'brown-chestplate': 2,
+    'brown-axe': 1,
+    'rusty-sword': 1,
+    'rat-bones': 5,
+  };
+
+  it('returns only equipment matching the slot', () => {
+    expect(itemsForSlot(inventory, 'weapon').sort()).toEqual(['brown-axe', 'rusty-sword']);
+    expect(itemsForSlot(inventory, 'helmet')).toEqual(['brown-helmet']);
+  });
+
+  it('excludes materials and empty stacks', () => {
+    expect(itemsForSlot(inventory, 'chest')).toEqual(['brown-chestplate']);
+    expect(itemsForSlot({ 'brown-helmet': 0 }, 'helmet')).toEqual([]);
+    expect(itemsForSlot({ 'rat-meat': 3 }, 'chest')).toEqual([]);
+  });
+
+  it('returns an empty list for a slot with nothing to put in it', () => {
+    expect(itemsForSlot(inventory, 'pants')).toEqual([]);
+    expect(itemsForSlot({}, 'weapon')).toEqual([]);
+  });
+
+  it('ignores unknown item ids', () => {
+    expect(itemsForSlot({ 'not-an-item': 1 }, 'weapon')).toEqual([]);
   });
 });

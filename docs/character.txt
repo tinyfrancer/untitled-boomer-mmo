@@ -1,0 +1,16 @@
+The character stick figure should represent what they are wearing.
+
+The base character should be a black stick figure with no weapons or gear visible. If a character has a weapon equipped, it should be displayed. 
+For armor, the section of the stick figure should be colored to match the gear. IE: for brown gear (lowest tier gear) a helmet should change the head to brown.
+
+We will use this time to add a couple more items to the rat loot table.
+    - Brown legs
+    - Brown helmet
+    - Brown axe
+
+The character UI should display a visual representation of the character, and the item slots / equipped items.  We should be able to equip/uneqip from this menu.
+We can merge the character stats with gear menu. 
+
+The UI elements are a little hard to read on mobile/when the window size is small.  What are your recommendations for UI size?  Should we enhance the entire UI?
+
+Ask questions along the way about what else makes sense to include in this feature update.

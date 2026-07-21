@@ -1,7 +1,7 @@
 import { CLASSES } from '../data/classes';
 import type { ClassId, GearSlotId } from '../types/ids';
 
-export const CHARACTER_STATE_VERSION = 2;
+export const CHARACTER_STATE_VERSION = 3;
 
 export interface CharacterState {
   version: number;

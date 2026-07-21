@@ -11,11 +11,13 @@ import {
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   MOVE_VECTOR_EVENT,
+  PLAYER_HP_CHANGED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
+import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
 import { addXp, xpToNextLevel } from '../systems/LevelingSystem';
 import { rollLootTable } from '../systems/LootSystem';
@@ -98,10 +100,12 @@ export class TownScene extends Phaser.Scene {
     this.game.events.on(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
     this.game.events.on(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
 
+    // bottom edge, clear of the joystick corner and the HUD's top-left column
+    const uiScale = scenePxScale(this);
     this.add
-      .text(16, 72, 'F9: Reset Character (dev)', {
-        fontSize: '10px',
-        color: '#999999',
+      .text(px(200, uiScale), this.scale.height - px(24, uiScale), 'F9: Reset Character (dev)', {
+        fontSize: fontPx(THEME.font.xs, uiScale),
+        color: THEME.color.dim,
       })
       .setOrigin(0, 0)
       .setScrollFactor(0);
@@ -197,7 +201,12 @@ export class TownScene extends Phaser.Scene {
     const xpReward = this.target.xpReward;
     const lootTableId = this.target.lootTableId;
     this.target.takeDamage(damage);
-    this.game.events.emit(TARGET_SELECTED_EVENT, this.target.name, this.target.hp, this.target.maxHp);
+    this.game.events.emit(
+      TARGET_SELECTED_EVENT,
+      this.target.name,
+      this.target.hp,
+      this.target.maxHp,
+    );
     if (!this.target.isAlive()) {
       this.awardXp(xpReward);
       this.grantLoot(lootTableId);
@@ -241,18 +250,22 @@ export class TownScene extends Phaser.Scene {
     const result = equipItem(this.characterState.gear, this.characterState.inventory, itemId);
     this.characterState.gear = result.gear;
     this.characterState.inventory = result.inventory;
-    this.player.setGear(this.characterState.gear);
-    this.game.events.emit(GEAR_CHANGED_EVENT, this.characterState.gear);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    this.applyGearChange();
   }
 
   private handleUnequipRequested(slot: GearSlotId): void {
     const result = unequipItem(this.characterState.gear, this.characterState.inventory, slot);
     this.characterState.gear = result.gear;
     this.characterState.inventory = result.inventory;
+    this.applyGearChange();
+  }
+
+  // Gear moves max HP, so the HUD needs the new current HP alongside the gear.
+  private applyGearChange(): void {
     this.player.setGear(this.characterState.gear);
     this.game.events.emit(GEAR_CHANGED_EVENT, this.characterState.gear);
     this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   private persistCharacter(): void {
@@ -270,9 +283,10 @@ export class TownScene extends Phaser.Scene {
 
   private showDamageNumber(x: number, y: number, amount: number): void {
     const text = this.add
+      // world-space, so this scales with the camera rather than the ui scale
       .text(x, y - 20, `-${amount}`, {
-        fontSize: '14px',
-        color: '#ffee58',
+        fontSize: '20px',
+        color: THEME.color.equippable,
         fontStyle: 'bold',
       })
       .setOrigin(0.5);

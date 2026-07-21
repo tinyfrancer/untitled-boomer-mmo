@@ -29,14 +29,14 @@ describe('computeEffectiveStats', () => {
   });
 
   it('adds +1 health, strength, and intellect from brown armor', () => {
-    const stats = computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'brown-armor' });
+    const stats = computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'brown-chestplate' });
     expect(stats.maxHp).toBe(41);
     expect(stats.strength).toBe(7);
     expect(stats.intellect).toBe(2);
   });
 
   it("only the primary stat's bonus feeds attackPower", () => {
-    const stats = computeEffectiveStats('wizard', { ...NO_GEAR, chest: 'brown-armor' });
+    const stats = computeEffectiveStats('wizard', { ...NO_GEAR, chest: 'brown-chestplate' });
     // wizard's primary stat is intellect: base 6 + 1 (brown armor) = 7, strength bonus ignored
     expect(stats.attackPower).toBe(7);
   });
@@ -45,7 +45,7 @@ describe('computeEffectiveStats', () => {
     const stats = computeEffectiveStats('warrior', {
       ...NO_GEAR,
       weapon: 'rusty-sword',
-      chest: 'brown-armor',
+      chest: 'brown-chestplate',
     });
     expect(stats.attackPower).toBe(6 + 1 + 2); // strength base+bonus, then weapon bonus
     expect(stats.maxHp).toBe(41);

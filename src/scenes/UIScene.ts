@@ -1,28 +1,29 @@
 import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
-import { GearPanel, GEAR_PANEL_HEIGHT, GEAR_PANEL_WIDTH } from '../ui/GearPanel';
-import { InventoryPanel, INVENTORY_PANEL_WIDTH } from '../ui/InventoryPanel';
-import { StatsPanel } from '../ui/StatsPanel';
+import { CharacterPanel, characterPanelHeight, characterPanelWidth } from '../ui/CharacterPanel';
+import { InventoryPanel, inventoryPanelWidth } from '../ui/InventoryPanel';
+import { SlotPicker } from '../ui/SlotPicker';
 import { TargetFrame } from '../ui/TargetFrame';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
+import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import {
   EQUIP_ITEM_REQUESTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   MOVE_VECTOR_EVENT,
+  PLAYER_HP_CHANGED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
 import { xpToNextLevel } from '../systems/LevelingSystem';
+import { itemsForSlot } from '../systems/InventorySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { CharacterState } from '../persistence/CharacterState';
 import type { ClassId, GearSlotId } from '../types/ids';
 
-const XP_BAR_WIDTH = 200;
-const XP_BAR_HEIGHT = 14;
 const DEFAULT_GEAR: Record<GearSlotId, string | null> = {
   helmet: null,
   chest: null,
@@ -30,16 +31,41 @@ const DEFAULT_GEAR: Record<GearSlotId, string | null> = {
   weapon: null,
 };
 
+// Everything the HUD renders. Kept here so a resize can tear the panels down and
+// rebuild them at the new scale without asking TownScene to re-send anything.
+interface HudModel {
+  name: string;
+  level: number;
+  xp: number;
+  gear: Record<GearSlotId, string | null>;
+  inventory: Record<string, number>;
+  hp: number;
+  characterPanelVisible: boolean;
+  inventoryPanelVisible: boolean;
+}
+
 export class UIScene extends Phaser.Scene {
   private targetFrame!: TargetFrame;
-  private nameText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
   private xpBarFill!: Phaser.GameObjects.Rectangle;
+  private xpBarWidth = 0;
   private levelUpToast!: Phaser.GameObjects.Text;
-  private gearPanel!: GearPanel;
+  private characterPanel!: CharacterPanel;
   private inventoryPanel!: InventoryPanel;
-  private statsPanel!: StatsPanel;
+  private joystick!: VirtualJoystick;
+  private slotPicker: SlotPicker | null = null;
   private classId: ClassId = 'warrior';
+  private uiScale = 1;
+  private model: HudModel = {
+    name: 'Adventurer',
+    level: 1,
+    xp: 0,
+    gear: DEFAULT_GEAR,
+    inventory: {},
+    hp: 0,
+    characterPanelVisible: true,
+    inventoryPanelVisible: false,
+  };
 
   constructor() {
     super('UI');
@@ -48,15 +74,17 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     const character = this.registry.get('character') as CharacterState | undefined;
     this.classId = character?.classId ?? 'warrior';
+    this.model = {
+      ...this.model,
+      name: character?.name ?? 'Adventurer',
+      level: character?.level ?? 1,
+      xp: character?.xp ?? 0,
+      gear: character?.gear ?? DEFAULT_GEAR,
+      inventory: character?.inventory ?? {},
+      hp: computeEffectiveStats(this.classId, character?.gear ?? DEFAULT_GEAR).maxHp,
+    };
 
-    this.targetFrame = new TargetFrame(this, 16, 16);
-    this.createXpBar(character);
-    this.createLevelUpToast();
-    this.createStatsPanel(character);
-    this.createGearPanel(character);
-    this.createInventoryPanel(character);
-    this.createPanelToggleButtons();
-    this.createJoystick();
+    this.buildHud();
 
     this.game.events.on(TARGET_SELECTED_EVENT, this.handleTargetSelected, this);
     this.game.events.on(TARGET_CLEARED_EVENT, this.handleTargetCleared, this);
@@ -64,8 +92,14 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(LEVEL_UP_EVENT, this.handleLevelUp, this);
     this.game.events.on(GEAR_CHANGED_EVENT, this.handleGearChanged, this);
     this.game.events.on(INVENTORY_CHANGED_EVENT, this.handleInventoryChanged, this);
+    this.game.events.on(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
 
-    this.input.keyboard?.on('keydown-I', () => this.inventoryPanel.toggle());
+    this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
+    this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
+
+    // Panel sizes are derived from how large the canvas is on screen, so they
+    // have to be rebuilt whenever that changes.
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off(TARGET_SELECTED_EVENT, this.handleTargetSelected, this);
@@ -74,42 +108,87 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(LEVEL_UP_EVENT, this.handleLevelUp, this);
       this.game.events.off(GEAR_CHANGED_EVENT, this.handleGearChanged, this);
       this.game.events.off(INVENTORY_CHANGED_EVENT, this.handleInventoryChanged, this);
+      this.game.events.off(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
 
-  private createXpBar(character?: CharacterState): void {
-    const x = 16;
-    const y = this.scale.height - 32;
+  private handleResize = (): void => {
+    const next = scenePxScale(this);
+    if (next === this.uiScale) {
+      return;
+    }
+    this.slotPicker?.close();
+    this.slotPicker = null;
+    // Joystick first: it owns scene-level input listeners that removeAll misses.
+    this.joystick.destroy();
+    this.children.removeAll(true);
+    this.buildHud();
+  };
 
-    this.nameText = this.add
-      .text(x, y - 34, character?.name ?? 'Adventurer', {
-        fontSize: '13px',
-        color: '#ffffff',
+  private buildHud(): void {
+    this.uiScale = scenePxScale(this);
+    const margin = px(THEME.margin, this.uiScale);
+
+    this.targetFrame = new TargetFrame(this, margin, margin, this.uiScale);
+    this.createXpBar();
+    this.createLevelUpToast();
+    this.createCharacterPanel();
+    this.createInventoryPanel();
+    this.createPanelToggleButtons();
+    this.createJoystick();
+
+    this.refreshCharacterPanel();
+    this.inventoryPanel.update(this.model.inventory);
+    this.characterPanel.setVisible(this.model.characterPanelVisible);
+    this.inventoryPanel.setVisible(this.model.inventoryPanelVisible);
+    this.handleXpGained(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
+  }
+
+  // Player info sits top-left under the target frame, leaving the whole bottom
+  // -left corner to the joystick — otherwise a full-height character sheet on a
+  // phone covers whichever corner the joystick is in.
+  private playerBlockTop(): number {
+    return px(THEME.margin, this.uiScale) * 2 + px(52, this.uiScale);
+  }
+
+  private createXpBar(): void {
+    const scale = this.uiScale;
+    const margin = px(THEME.margin, scale);
+    const barHeight = px(THEME.xpBar.height, scale);
+    this.xpBarWidth = px(THEME.xpBar.width, scale);
+    const top = this.playerBlockTop();
+
+    this.add
+      .text(margin, top, this.model.name, {
+        fontSize: fontPx(THEME.font.md, scale),
+        color: THEME.color.text,
         fontStyle: 'bold',
       })
       .setScrollFactor(0);
     this.levelText = this.add
-      .text(x, y - 18, 'Level 1', { fontSize: '13px', color: '#ffffff' })
+      .text(margin, top + px(20, scale), 'Level 1', {
+        fontSize: fontPx(THEME.font.md, scale),
+        color: THEME.color.text,
+      })
       .setScrollFactor(0);
+
+    const barY = top + px(40, scale);
     this.add
-      .rectangle(x, y, XP_BAR_WIDTH, XP_BAR_HEIGHT, 0x000000, 0.5)
+      .rectangle(margin, barY, this.xpBarWidth, barHeight, 0x000000, 0.5)
       .setOrigin(0, 0)
       .setScrollFactor(0);
     this.xpBarFill = this.add
-      .rectangle(x, y, 0, XP_BAR_HEIGHT, 0x42a5f5, 1)
+      .rectangle(margin, barY, 0, barHeight, THEME.xpFill, 1)
       .setOrigin(0, 0)
       .setScrollFactor(0);
-
-    const level = character?.level ?? 1;
-    const xp = character?.xp ?? 0;
-    this.handleXpGained(level, xp, xpToNextLevel(level));
   }
 
   private createLevelUpToast(): void {
     this.levelUpToast = this.add
-      .text(this.scale.width / 2, this.scale.height / 2 - 80, '', {
-        fontSize: '28px',
-        color: '#ffd54f',
+      .text(this.scale.width / 2, this.scale.height / 2 - px(80, this.uiScale), '', {
+        fontSize: fontPx(THEME.font.xl, this.uiScale),
+        color: THEME.color.levelUp,
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
@@ -117,68 +196,111 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0);
   }
 
-  private createStatsPanel(character?: CharacterState): void {
-    this.statsPanel = new StatsPanel(this, 16, 96);
-    const stats = computeEffectiveStats(this.classId, character?.gear ?? DEFAULT_GEAR);
-    this.statsPanel.update({
-      hp: stats.maxHp,
-      maxHp: stats.maxHp,
-      strength: stats.strength,
-      intellect: stats.intellect,
-      attackPower: stats.attackPower,
+  private createCharacterPanel(): void {
+    const margin = px(THEME.margin, this.uiScale);
+    const x = this.scale.width - characterPanelWidth(this.uiScale) - margin;
+    this.characterPanel = new CharacterPanel(this, x, margin, this.uiScale, (slot, isEmpty) => {
+      if (isEmpty) {
+        this.openSlotPicker(slot);
+      } else {
+        this.game.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot);
+      }
     });
   }
 
-  private createGearPanel(character?: CharacterState): void {
-    const x = this.scale.width - GEAR_PANEL_WIDTH - 16;
-    this.gearPanel = new GearPanel(this, x, 16, (slot) =>
-      this.game.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot),
-    );
-    this.gearPanel.update(character?.gear ?? DEFAULT_GEAR);
-  }
-
-  private createInventoryPanel(character?: CharacterState): void {
-    const x = this.scale.width - INVENTORY_PANEL_WIDTH - 16;
-    const y = 16 + GEAR_PANEL_HEIGHT + 8;
-    this.inventoryPanel = new InventoryPanel(this, x, y, (itemId) =>
+  private createInventoryPanel(): void {
+    const margin = px(THEME.margin, this.uiScale);
+    const x = this.scale.width - inventoryPanelWidth(this.uiScale) - margin;
+    const y = margin + characterPanelHeight(this.uiScale) + px(THEME.padding, this.uiScale);
+    this.inventoryPanel = new InventoryPanel(this, x, y, this.uiScale, (itemId) =>
       this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
     );
-    this.inventoryPanel.update(character?.inventory ?? {});
+  }
+
+  private openSlotPicker(slot: GearSlotId): void {
+    this.slotPicker?.close();
+    const bounds = this.characterPanel.slotRowBounds(slot);
+    this.slotPicker = new SlotPicker(
+      this,
+      bounds.x - characterPanelWidth(this.uiScale) - px(THEME.padding, this.uiScale),
+      bounds.y,
+      this.uiScale,
+      slot,
+      itemsForSlot(this.model.inventory, slot),
+      (itemId) => this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
+    );
   }
 
   private createPanelToggleButtons(): void {
-    const buttonSize = 22;
-    const gap = 4;
-    const x = 16;
-    const y = this.nameText.y - buttonSize - 6;
+    const scale = this.uiScale;
+    const size = px(THEME.touchMin, scale);
+    const gap = px(THEME.padding, scale);
+    const x = px(THEME.margin, scale);
+    const y = this.playerBlockTop() + px(40 + THEME.xpBar.height, scale) + gap;
 
-    this.createToggleButton(x, y, 'C', () => this.statsPanel.toggle());
-    this.createToggleButton(x + (buttonSize + gap), y, 'G', () => this.gearPanel.toggle());
-    this.createToggleButton(x + (buttonSize + gap) * 2, y, 'I', () =>
-      this.inventoryPanel.toggle(),
-    );
+    this.createToggleButton(x, y, size, 'C', () => this.toggleCharacterPanel());
+    this.createToggleButton(x + size + gap, y, size, 'I', () => this.toggleInventoryPanel());
   }
 
-  private createToggleButton(x: number, y: number, label: string, onClick: () => void): void {
-    const size = 22;
+  private createToggleButton(
+    x: number,
+    y: number,
+    size: number,
+    label: string,
+    onClick: () => void,
+  ): void {
     this.add
-      .rectangle(x, y, size, size, 0x333333, 0.85)
+      .rectangle(x, y, size, size, THEME.buttonBg, THEME.buttonAlpha)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x888888)
+      .setStrokeStyle(px(1, this.uiScale), 0x888888)
       .setScrollFactor(0)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', onClick);
     this.add
-      .text(x + size / 2, y + size / 2, label, { fontSize: '12px', color: '#ffffff' })
+      .text(x + size / 2, y + size / 2, label, {
+        fontSize: fontPx(THEME.font.md, this.uiScale),
+        color: THEME.color.text,
+      })
       .setOrigin(0.5)
       .setScrollFactor(0);
   }
 
   private createJoystick(): void {
-    const x = this.scale.width - 90;
-    const y = this.scale.height - 90;
-    new VirtualJoystick(this, x, y, (vx, vy) => {
-      this.game.events.emit(MOVE_VECTOR_EVENT, vx, vy);
+    const offset = px(90, this.uiScale);
+    this.joystick = new VirtualJoystick(
+      this,
+      offset,
+      this.scale.height - offset,
+      this.uiScale,
+      (vx, vy) => this.game.events.emit(MOVE_VECTOR_EVENT, vx, vy),
+    );
+  }
+
+  private toggleCharacterPanel(): void {
+    this.characterPanel.toggle();
+    this.model.characterPanelVisible = this.characterPanel.isVisible();
+    if (!this.model.characterPanelVisible) {
+      this.slotPicker?.close();
+      this.slotPicker = null;
+    }
+  }
+
+  private toggleInventoryPanel(): void {
+    this.inventoryPanel.toggle();
+    this.model.inventoryPanelVisible = this.inventoryPanel.isVisible();
+  }
+
+  private refreshCharacterPanel(): void {
+    const stats = computeEffectiveStats(this.classId, this.model.gear);
+    this.characterPanel.update({
+      gear: this.model.gear,
+      stats: {
+        hp: Math.min(this.model.hp, stats.maxHp),
+        maxHp: stats.maxHp,
+        strength: stats.strength,
+        intellect: stats.intellect,
+        attackPower: stats.attackPower,
+      },
     });
   }
 
@@ -191,11 +313,13 @@ export class UIScene extends Phaser.Scene {
   };
 
   private handleXpGained = (level: number, xp: number, xpToNext: number): void => {
+    this.model.level = level;
+    this.model.xp = xp;
     this.levelText.setText(
       level >= MAX_CHARACTER_LEVEL ? `Level ${level} (Max)` : `Level ${level}`,
     );
     const ratio = xpToNext > 0 ? Phaser.Math.Clamp(xp / xpToNext, 0, 1) : 1;
-    this.xpBarFill.width = XP_BAR_WIDTH * ratio;
+    this.xpBarFill.width = this.xpBarWidth * ratio;
   };
 
   private handleLevelUp = (level: number): void => {
@@ -210,18 +334,19 @@ export class UIScene extends Phaser.Scene {
   };
 
   private handleGearChanged = (gear: Record<GearSlotId, string | null>): void => {
-    this.gearPanel.update(gear);
-    const stats = computeEffectiveStats(this.classId, gear);
-    this.statsPanel.update({
-      hp: stats.maxHp,
-      maxHp: stats.maxHp,
-      strength: stats.strength,
-      intellect: stats.intellect,
-      attackPower: stats.attackPower,
-    });
+    this.model.gear = gear;
+    this.slotPicker?.close();
+    this.slotPicker = null;
+    this.refreshCharacterPanel();
   };
 
   private handleInventoryChanged = (inventory: Record<string, number>): void => {
+    this.model.inventory = inventory;
     this.inventoryPanel.update(inventory);
+  };
+
+  private handlePlayerHpChanged = (hp: number): void => {
+    this.model.hp = hp;
+    this.refreshCharacterPanel();
   };
 }
