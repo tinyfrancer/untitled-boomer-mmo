@@ -45,6 +45,15 @@ describe('LocalStorageSaveService', () => {
     expect(service.hasSave()).toBe(false);
   });
 
+  it('discards and clears a save whose version does not match CHARACTER_STATE_VERSION', () => {
+    const service = new LocalStorageSaveService();
+    const stale = { ...createNewCharacter('Aria', 'wizard'), version: 0 };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stale));
+
+    expect(service.load()).toBeNull();
+    expect(service.hasSave()).toBe(false);
+  });
+
   it('does not throw when localStorage.setItem fails (e.g. quota exceeded)', () => {
     const service = new LocalStorageSaveService();
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {

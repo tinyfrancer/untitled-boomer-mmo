@@ -1,0 +1,11 @@
+For our first feature, we want to add items.  Enemies should have loot tables with configurable drops/drop chances.
+  Character should have an inventory where they can view the items they have collected.
+  Character should be able to equip/unequip items
+
+We don't need a large list of items, but we should be able to modify over time. 
+
+Rats should drop rat bones and rat meat, and rarely some Brown armor.
+
+Character should have item slots for helmet, chest, pants, weapon for now.
+
+Ask me questions to get more details on the requirements.

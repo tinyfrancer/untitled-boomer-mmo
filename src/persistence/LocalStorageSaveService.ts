@@ -1,4 +1,4 @@
-import type { CharacterState } from './CharacterState';
+import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 import type { SaveService } from './SaveService';
 
 export const STORAGE_KEY = 'untitled-boomer-mmo:character:v1';
@@ -14,7 +14,14 @@ export class LocalStorageSaveService implements SaveService {
       if (!raw) {
         return null;
       }
-      return JSON.parse(raw) as CharacterState;
+      const parsed = JSON.parse(raw) as CharacterState;
+      if (parsed.version !== CHARACTER_STATE_VERSION) {
+        // Old save shapes aren't migrated in v0 — wipe rather than risk
+        // loading a character with a stale gear/inventory shape.
+        this.clear();
+        return null;
+      }
+      return parsed;
     } catch {
       // Corrupted or unparsable save — degrade to "no save" instead of
       // crashing boot.

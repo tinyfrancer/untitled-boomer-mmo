@@ -13,12 +13,14 @@ export interface MobConfig {
   xpReward: number;
   respawnDelayMs: number;
   wander: WanderConfig;
+  lootTableId?: string;
 }
 
 export class Mob extends Phaser.Physics.Arcade.Sprite {
   hp: number;
   readonly maxHp: number;
   readonly xpReward: number;
+  readonly lootTableId?: string;
 
   private readonly spawnX: number;
   private readonly spawnY: number;
@@ -38,6 +40,7 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     this.maxHp = config.maxHp;
     this.hp = config.maxHp;
     this.xpReward = config.xpReward;
+    this.lootTableId = config.lootTableId;
     this.respawnDelayMs = config.respawnDelayMs;
     this.wanderConfig = config.wander;
 

@@ -3,7 +3,12 @@ import { CLASSES } from '../data/classes';
 import { getWeaponAttackBonus } from '../data/items';
 import type { ClassId, GearSlotId } from '../types/ids';
 
-const NO_GEAR: Record<GearSlotId, string | null> = { weapon: null, armor: null };
+const NO_GEAR: Record<GearSlotId, string | null> = {
+  helmet: null,
+  chest: null,
+  pants: null,
+  weapon: null,
+};
 
 interface WasdKeys {
   W: Phaser.Input.Keyboard.Key;
@@ -19,6 +24,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   attackPower: number;
   attackRange: number;
   attackCooldownMs: number;
+  private readonly baseAttackPower: number;
   private readonly keys: WasdKeys;
   private touchVectorX = 0;
   private touchVectorY = 0;
@@ -39,7 +45,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.classId = classId;
     this.maxHp = classDef.baseStats.maxHp;
     this.speed = classDef.baseStats.speed;
-    this.attackPower = classDef.baseStats.attackPower + getWeaponAttackBonus(gear.weapon);
+    this.baseAttackPower = classDef.baseStats.attackPower;
+    this.attackPower = this.baseAttackPower + getWeaponAttackBonus(gear.weapon);
     this.attackRange = classDef.baseStats.attackRange;
     this.attackCooldownMs = classDef.baseStats.attackCooldownMs;
 
@@ -60,6 +67,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   setTouchVector(x: number, y: number): void {
     this.touchVectorX = x;
     this.touchVectorY = y;
+  }
+
+  setGear(gear: Record<GearSlotId, string | null>): void {
+    this.attackPower = this.baseAttackPower + getWeaponAttackBonus(gear.weapon);
   }
 
   update(): void {

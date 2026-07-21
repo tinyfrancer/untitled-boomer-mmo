@@ -6,15 +6,22 @@ import { Rat } from '../entities/Rat';
 import type { Mob } from '../entities/Mob';
 import { TILESET_KEY } from './generateTextures';
 import {
+  EQUIP_ITEM_REQUESTED_EVENT,
+  GEAR_CHANGED_EVENT,
+  INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   MOVE_VECTOR_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
+  UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
 import { addXp, xpToNextLevel } from '../systems/LevelingSystem';
+import { rollLootTable } from '../systems/LootSystem';
+import { addItemToInventory, equipItem, unequipItem } from '../systems/InventorySystem';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
+import type { GearSlotId } from '../types/ids';
 
 const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
   [-96, -64],
@@ -87,6 +94,8 @@ export class TownScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => this.clearTarget());
     this.input.keyboard?.on('keydown-F9', () => this.resetCharacter());
     this.game.events.on(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
+    this.game.events.on(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
+    this.game.events.on(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
 
     this.add
       .text(16, 72, 'F9: Reset Character (dev)', {
@@ -107,6 +116,8 @@ export class TownScene extends Phaser.Scene {
       window.removeEventListener('pagehide', this.handleWindowUnload);
       window.removeEventListener('beforeunload', this.handleWindowUnload);
       this.game.events.off(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
+      this.game.events.off(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
+      this.game.events.off(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
     });
 
     this.scene.launch('UI');
@@ -183,9 +194,11 @@ export class TownScene extends Phaser.Scene {
     const { damage } = resolveAttack({ attackPower: this.player.attackPower });
     this.showDamageNumber(this.target.x, this.target.y, damage);
     const xpReward = this.target.xpReward;
+    const lootTableId = this.target.lootTableId;
     this.target.takeDamage(damage);
     if (!this.target.isAlive()) {
       this.awardXp(xpReward);
+      this.grantLoot(lootTableId);
     }
   }
 
@@ -205,6 +218,39 @@ export class TownScene extends Phaser.Scene {
       this.game.events.emit(LEVEL_UP_EVENT, this.characterState.level);
       this.persistCharacter();
     }
+  }
+
+  private grantLoot(lootTableId?: string): void {
+    if (!lootTableId) return;
+    const drops = rollLootTable(lootTableId);
+    if (drops.length === 0) return;
+
+    drops.forEach((drop) => {
+      this.characterState.inventory = addItemToInventory(
+        this.characterState.inventory,
+        drop.itemId,
+        drop.quantity,
+      );
+    });
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+  }
+
+  private handleEquipRequested(itemId: string): void {
+    const result = equipItem(this.characterState.gear, this.characterState.inventory, itemId);
+    this.characterState.gear = result.gear;
+    this.characterState.inventory = result.inventory;
+    this.player.setGear(this.characterState.gear);
+    this.game.events.emit(GEAR_CHANGED_EVENT, this.characterState.gear);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+  }
+
+  private handleUnequipRequested(slot: GearSlotId): void {
+    const result = unequipItem(this.characterState.gear, this.characterState.inventory, slot);
+    this.characterState.gear = result.gear;
+    this.characterState.inventory = result.inventory;
+    this.player.setGear(this.characterState.gear);
+    this.game.events.emit(GEAR_CHANGED_EVENT, this.characterState.gear);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
   }
 
   private persistCharacter(): void {
