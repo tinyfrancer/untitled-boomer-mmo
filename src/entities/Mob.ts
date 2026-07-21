@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { HealthBar } from './HealthBar';
 
 interface WanderConfig {
   radius: number;
@@ -8,6 +9,7 @@ interface WanderConfig {
 }
 
 export interface MobConfig {
+  name: string;
   textureKey: string;
   maxHp: number;
   xpReward: number;
@@ -26,6 +28,7 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
   private readonly spawnY: number;
   private readonly wanderConfig: WanderConfig;
   private readonly respawnDelayMs: number;
+  private readonly healthBar: HealthBar;
   private wanderTarget: Phaser.Math.Vector2 | null = null;
   private wanderTimer?: Phaser.Time.TimerEvent;
   private alive = true;
@@ -35,6 +38,7 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    this.name = config.name;
     this.spawnX = x;
     this.spawnY = y;
     this.maxHp = config.maxHp;
@@ -43,12 +47,17 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     this.lootTableId = config.lootTableId;
     this.respawnDelayMs = config.respawnDelayMs;
     this.wanderConfig = config.wander;
+    this.healthBar = new HealthBar(scene, { label: config.name });
+    this.healthBar.update(x, y, this.hp, this.maxHp);
 
     this.scheduleNextWander();
   }
 
   update(): void {
-    if (!this.alive || !this.wanderTarget) return;
+    if (!this.alive) return;
+    this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
+
+    if (!this.wanderTarget) return;
 
     const distance = Phaser.Math.Distance.Between(
       this.x,
@@ -97,6 +106,7 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
 
   private die(): void {
     this.alive = false;
+    this.healthBar.setVisible(false);
     this.wanderTimer?.remove();
     this.setVelocity(0, 0);
     (this.body as Phaser.Physics.Arcade.Body).enable = false;
@@ -119,6 +129,8 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     this.setAlpha(1);
     this.setVisible(true);
     (this.body as Phaser.Physics.Arcade.Body).enable = true;
+    this.healthBar.setVisible(true);
+    this.healthBar.update(this.spawnX, this.spawnY, this.hp, this.maxHp);
     this.scheduleNextWander();
   }
 }

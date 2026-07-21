@@ -1,0 +1,14 @@
+Enemies can now drop items, and we can equip items.  Now would be a good time to add character stats.  For now, we should keep it simple.
+
+Health - The amount of health the player/enemy has
+Strength - Damage modifier for physical attacks
+Intellect - Damage modifier for magical attacks 
+
+Characters should have base stats when created. The brown items we have should have simple +1 health +1 strength +1 intellect 
+
+Bug identified, enemy target window does not show health decreasing.
+
+We should include health bars over enemies and character.
+
+Ask questions for further details or design decisions.
+

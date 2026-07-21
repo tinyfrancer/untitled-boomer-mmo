@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
 import { GearPanel, GEAR_PANEL_HEIGHT, GEAR_PANEL_WIDTH } from '../ui/GearPanel';
 import { InventoryPanel, INVENTORY_PANEL_WIDTH } from '../ui/InventoryPanel';
+import { StatsPanel } from '../ui/StatsPanel';
 import { TargetFrame } from '../ui/TargetFrame';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
 import {
@@ -16,8 +17,9 @@ import {
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
 import { xpToNextLevel } from '../systems/LevelingSystem';
+import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { CharacterState } from '../persistence/CharacterState';
-import type { GearSlotId } from '../types/ids';
+import type { ClassId, GearSlotId } from '../types/ids';
 
 const XP_BAR_WIDTH = 200;
 const XP_BAR_HEIGHT = 14;
@@ -30,11 +32,14 @@ const DEFAULT_GEAR: Record<GearSlotId, string | null> = {
 
 export class UIScene extends Phaser.Scene {
   private targetFrame!: TargetFrame;
+  private nameText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
   private xpBarFill!: Phaser.GameObjects.Rectangle;
   private levelUpToast!: Phaser.GameObjects.Text;
   private gearPanel!: GearPanel;
   private inventoryPanel!: InventoryPanel;
+  private statsPanel!: StatsPanel;
+  private classId: ClassId = 'warrior';
 
   constructor() {
     super('UI');
@@ -42,12 +47,15 @@ export class UIScene extends Phaser.Scene {
 
   create(): void {
     const character = this.registry.get('character') as CharacterState | undefined;
+    this.classId = character?.classId ?? 'warrior';
 
     this.targetFrame = new TargetFrame(this, 16, 16);
     this.createXpBar(character);
     this.createLevelUpToast();
+    this.createStatsPanel(character);
     this.createGearPanel(character);
     this.createInventoryPanel(character);
+    this.createPanelToggleButtons();
     this.createJoystick();
 
     this.game.events.on(TARGET_SELECTED_EVENT, this.handleTargetSelected, this);
@@ -73,6 +81,13 @@ export class UIScene extends Phaser.Scene {
     const x = 16;
     const y = this.scale.height - 32;
 
+    this.nameText = this.add
+      .text(x, y - 34, character?.name ?? 'Adventurer', {
+        fontSize: '13px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setScrollFactor(0);
     this.levelText = this.add
       .text(x, y - 18, 'Level 1', { fontSize: '13px', color: '#ffffff' })
       .setScrollFactor(0);
@@ -102,6 +117,18 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0);
   }
 
+  private createStatsPanel(character?: CharacterState): void {
+    this.statsPanel = new StatsPanel(this, 16, 96);
+    const stats = computeEffectiveStats(this.classId, character?.gear ?? DEFAULT_GEAR);
+    this.statsPanel.update({
+      hp: stats.maxHp,
+      maxHp: stats.maxHp,
+      strength: stats.strength,
+      intellect: stats.intellect,
+      attackPower: stats.attackPower,
+    });
+  }
+
   private createGearPanel(character?: CharacterState): void {
     const x = this.scale.width - GEAR_PANEL_WIDTH - 16;
     this.gearPanel = new GearPanel(this, x, 16, (slot) =>
@@ -117,6 +144,34 @@ export class UIScene extends Phaser.Scene {
       this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
     );
     this.inventoryPanel.update(character?.inventory ?? {});
+  }
+
+  private createPanelToggleButtons(): void {
+    const buttonSize = 22;
+    const gap = 4;
+    const x = 16;
+    const y = this.nameText.y - buttonSize - 6;
+
+    this.createToggleButton(x, y, 'C', () => this.statsPanel.toggle());
+    this.createToggleButton(x + (buttonSize + gap), y, 'G', () => this.gearPanel.toggle());
+    this.createToggleButton(x + (buttonSize + gap) * 2, y, 'I', () =>
+      this.inventoryPanel.toggle(),
+    );
+  }
+
+  private createToggleButton(x: number, y: number, label: string, onClick: () => void): void {
+    const size = 22;
+    this.add
+      .rectangle(x, y, size, size, 0x333333, 0.85)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x888888)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', onClick);
+    this.add
+      .text(x + size / 2, y + size / 2, label, { fontSize: '12px', color: '#ffffff' })
+      .setOrigin(0.5)
+      .setScrollFactor(0);
   }
 
   private createJoystick(): void {
@@ -156,6 +211,14 @@ export class UIScene extends Phaser.Scene {
 
   private handleGearChanged = (gear: Record<GearSlotId, string | null>): void => {
     this.gearPanel.update(gear);
+    const stats = computeEffectiveStats(this.classId, gear);
+    this.statsPanel.update({
+      hp: stats.maxHp,
+      maxHp: stats.maxHp,
+      strength: stats.strength,
+      intellect: stats.intellect,
+      attackPower: stats.attackPower,
+    });
   };
 
   private handleInventoryChanged = (inventory: Record<string, number>): void => {

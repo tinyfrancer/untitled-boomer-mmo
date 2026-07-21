@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import { describeItemName, isEquippable } from '../data/items';
+import { describeItemBonuses, describeItemName, isEquippable } from '../data/items';
 
 const ROW_HEIGHT = 16;
 const PANEL_TOP_PADDING = 24;
 
-export const INVENTORY_PANEL_WIDTH = 200;
+export const INVENTORY_PANEL_WIDTH = 240;
 
 export class InventoryPanel {
   private readonly scene: Phaser.Scene;
@@ -37,10 +37,12 @@ export class InventoryPanel {
 
     const entries = Object.entries(inventory).filter(([, quantity]) => quantity > 0);
     entries.forEach(([itemId, quantity], index) => {
+      const bonuses = describeItemBonuses(itemId);
+      const suffix = bonuses ? ` (${bonuses})` : '';
       const text = this.scene.add.text(
         8,
         PANEL_TOP_PADDING + index * ROW_HEIGHT,
-        `${describeItemName(itemId)} x${quantity}`,
+        `${describeItemName(itemId)} x${quantity}${suffix}`,
         { fontSize: '11px', color: isEquippable(itemId) ? '#ffee58' : '#cccccc' },
       );
       if (isEquippable(itemId)) {

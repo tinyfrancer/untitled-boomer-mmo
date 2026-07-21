@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Mob, type MobConfig } from './Mob';
 
 const RAT_CONFIG: Omit<MobConfig, 'textureKey'> = {
+  name: 'Rat',
   maxHp: 20,
   xpReward: 5,
   respawnDelayMs: 6000,

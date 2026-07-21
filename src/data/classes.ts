@@ -1,9 +1,13 @@
 import type { ClassId } from '../types/ids';
 
+export type PrimaryStat = 'strength' | 'intellect';
+
 export interface ClassStats {
   maxHp: number;
   speed: number;
-  attackPower: number;
+  strength: number;
+  intellect: number;
+  primaryStat: PrimaryStat;
   attackRange: number;
   attackCooldownMs: number;
 }
@@ -27,7 +31,9 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     baseStats: {
       maxHp: 40,
       speed: 160,
-      attackPower: 6,
+      strength: 6,
+      intellect: 1,
+      primaryStat: 'strength',
       attackRange: 40,
       attackCooldownMs: 1200,
     },
@@ -41,7 +47,9 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     baseStats: {
       maxHp: 24,
       speed: 160,
-      attackPower: 4,
+      strength: 1,
+      intellect: 6,
+      primaryStat: 'intellect',
       attackRange: 140,
       attackCooldownMs: 1400,
     },

@@ -78,6 +78,7 @@ export class TownScene extends Phaser.Scene {
       worldHeight / 2,
       this.characterState.classId,
       this.characterState.gear,
+      this.characterState.name,
     );
     this.cameras.main.startFollow(this.player, true);
 
@@ -148,7 +149,7 @@ export class TownScene extends Phaser.Scene {
 
   private setTarget(mob: Mob): void {
     this.target = mob;
-    this.game.events.emit(TARGET_SELECTED_EVENT, 'Rat', mob.hp, mob.maxHp);
+    this.game.events.emit(TARGET_SELECTED_EVENT, mob.name, mob.hp, mob.maxHp);
   }
 
   private clearTarget(): void {
@@ -196,6 +197,7 @@ export class TownScene extends Phaser.Scene {
     const xpReward = this.target.xpReward;
     const lootTableId = this.target.lootTableId;
     this.target.takeDamage(damage);
+    this.game.events.emit(TARGET_SELECTED_EVENT, this.target.name, this.target.hp, this.target.maxHp);
     if (!this.target.isAlive()) {
       this.awardXp(xpReward);
       this.grantLoot(lootTableId);

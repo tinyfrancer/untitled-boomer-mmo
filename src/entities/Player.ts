@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CLASSES } from '../data/classes';
-import { getWeaponAttackBonus } from '../data/items';
+import { computeEffectiveStats } from '../systems/StatsSystem';
+import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
 
 const NO_GEAR: Record<GearSlotId, string | null> = {
@@ -19,12 +20,15 @@ interface WasdKeys {
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly classId: ClassId;
-  readonly maxHp: number;
+  maxHp: number;
+  hp: number;
+  strength: number;
+  intellect: number;
   speed: number;
   attackPower: number;
   attackRange: number;
   attackCooldownMs: number;
-  private readonly baseAttackPower: number;
+  private readonly healthBar: HealthBar;
   private readonly keys: WasdKeys;
   private touchVectorX = 0;
   private touchVectorY = 0;
@@ -35,6 +39,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     y: number,
     classId: ClassId,
     gear: Record<GearSlotId, string | null> = NO_GEAR,
+    name = 'Adventurer',
   ) {
     const classDef = CLASSES[classId];
     super(scene, x, y, classDef.textureKey);
@@ -42,13 +47,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     this.setCollideWorldBounds(true);
 
+    this.name = name;
     this.classId = classId;
-    this.maxHp = classDef.baseStats.maxHp;
-    this.speed = classDef.baseStats.speed;
-    this.baseAttackPower = classDef.baseStats.attackPower;
-    this.attackPower = this.baseAttackPower + getWeaponAttackBonus(gear.weapon);
-    this.attackRange = classDef.baseStats.attackRange;
-    this.attackCooldownMs = classDef.baseStats.attackCooldownMs;
+    const stats = computeEffectiveStats(classId, gear);
+    this.maxHp = stats.maxHp;
+    this.hp = stats.maxHp;
+    this.strength = stats.strength;
+    this.intellect = stats.intellect;
+    this.speed = stats.speed;
+    this.attackPower = stats.attackPower;
+    this.attackRange = stats.attackRange;
+    this.attackCooldownMs = stats.attackCooldownMs;
+
+    this.healthBar = new HealthBar(scene, { width: 32, height: 5, offsetY: 26, label: name });
 
     const keyboard = scene.input.keyboard;
     if (!keyboard) {
@@ -70,7 +81,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   setGear(gear: Record<GearSlotId, string | null>): void {
-    this.attackPower = this.baseAttackPower + getWeaponAttackBonus(gear.weapon);
+    const stats = computeEffectiveStats(this.classId, gear);
+    const maxHpDelta = stats.maxHp - this.maxHp;
+    this.maxHp = stats.maxHp;
+    this.hp = Phaser.Math.Clamp(this.hp + maxHpDelta, 0, this.maxHp);
+    this.strength = stats.strength;
+    this.intellect = stats.intellect;
+    this.attackPower = stats.attackPower;
+  }
+
+  takeDamage(amount: number): void {
+    this.hp = Math.max(0, this.hp - amount);
+  }
+
+  isAlive(): boolean {
+    return this.hp > 0;
   }
 
   update(): void {
@@ -91,5 +116,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.setVelocity(vx, vy);
+    this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
   }
 }
