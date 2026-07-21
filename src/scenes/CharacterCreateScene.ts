@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CLASSES } from '../data/classes';
 import type { ClassId } from '../types/ids';
-import { createNewCharacter } from '../persistence/CharacterState';
+import { createNewCharacter, saveService } from '../persistence';
 
 const CLASS_IDS: ClassId[] = ['warrior', 'wizard'];
 const DEFAULT_NAME = 'Adventurer';
@@ -127,6 +127,7 @@ export class CharacterCreateScene extends Phaser.Scene {
     const name = rawName.length > 0 ? rawName : DEFAULT_NAME;
     const character = createNewCharacter(name, this.selectedClassId);
 
+    saveService.save(character);
     this.registry.set('character', character);
     this.scene.start('Town');
   }

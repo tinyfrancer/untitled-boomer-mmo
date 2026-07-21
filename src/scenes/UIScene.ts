@@ -8,6 +8,7 @@ import {
   TARGET_SELECTED_EVENT,
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
+import { xpToNextLevel } from '../systems/LevelingSystem';
 import type { CharacterState } from '../persistence/CharacterState';
 
 const XP_BAR_WIDTH = 200;
@@ -24,10 +25,12 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
+    const character = this.registry.get('character') as CharacterState | undefined;
+
     this.targetFrame = new TargetFrame(this, 16, 16);
-    this.createXpBar();
+    this.createXpBar(character);
     this.createLevelUpToast();
-    this.createGearPanel();
+    this.createGearPanel(character);
 
     this.game.events.on(TARGET_SELECTED_EVENT, this.handleTargetSelected, this);
     this.game.events.on(TARGET_CLEARED_EVENT, this.handleTargetCleared, this);
@@ -42,7 +45,7 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  private createXpBar(): void {
+  private createXpBar(character?: CharacterState): void {
     const x = 16;
     const y = this.scale.height - 32;
 
@@ -57,6 +60,10 @@ export class UIScene extends Phaser.Scene {
       .rectangle(x, y, 0, XP_BAR_HEIGHT, 0x42a5f5, 1)
       .setOrigin(0, 0)
       .setScrollFactor(0);
+
+    const level = character?.level ?? 1;
+    const xp = character?.xp ?? 0;
+    this.handleXpGained(level, xp, xpToNextLevel(level));
   }
 
   private createLevelUpToast(): void {
@@ -71,8 +78,7 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0);
   }
 
-  private createGearPanel(): void {
-    const character = this.registry.get('character') as CharacterState | undefined;
+  private createGearPanel(character?: CharacterState): void {
     const gear = character?.gear ?? { weapon: null, armor: null };
 
     const width = 164;

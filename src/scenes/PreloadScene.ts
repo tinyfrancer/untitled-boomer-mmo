@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { generatePlaceholderTextures } from './generateTextures';
+import { saveService } from '../persistence';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -9,8 +10,12 @@ export class PreloadScene extends Phaser.Scene {
   create(): void {
     generatePlaceholderTextures(this);
 
-    // TODO(task 13): once SaveService exists, skip straight to Town (with
-    // the saved character loaded) when a save is present.
-    this.scene.start('CharacterCreate');
+    const savedCharacter = saveService.load();
+    if (savedCharacter) {
+      this.registry.set('character', savedCharacter);
+      this.scene.start('Town');
+    } else {
+      this.scene.start('CharacterCreate');
+    }
   }
 }

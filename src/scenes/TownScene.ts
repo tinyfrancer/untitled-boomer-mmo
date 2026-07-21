@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
-import { MAX_CHARACTER_LEVEL, TILE_SIZE } from '../config/constants';
+import { TILE_SIZE } from '../config/constants';
 import { TOWN_MAP } from '../data/townMap';
-import { xpToReachLevel } from '../data/xpTable';
 import { Player } from '../entities/Player';
 import { Rat } from '../entities/Rat';
 import type { Mob } from '../entities/Mob';
@@ -13,8 +12,8 @@ import {
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
-import { addXp, type LevelState } from '../systems/LevelingSystem';
-import type { CharacterState } from '../persistence/CharacterState';
+import { addXp, xpToNextLevel } from '../systems/LevelingSystem';
+import { createNewCharacter, saveService, type CharacterState } from '../persistence';
 
 const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
   [-96, -64],
@@ -26,6 +25,7 @@ const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
 
 const SELECTION_RING_RADIUS = 18;
 const SELECTION_RING_COLOR = 0xffee58;
+const AUTOSAVE_INTERVAL_MS = 30000;
 
 export class TownScene extends Phaser.Scene {
   private player!: Player;
@@ -33,7 +33,8 @@ export class TownScene extends Phaser.Scene {
   private target: Mob | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
   private lastAttackAt = 0;
-  private playerLevelState: LevelState = { level: 1, xp: 0 };
+  private characterState!: CharacterState;
+  private handleWindowUnload = (): void => this.persistCharacter();
 
   constructor() {
     super('Town');
@@ -59,10 +60,17 @@ export class TownScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
-    const character = this.registry.get('character') as CharacterState | undefined;
-    const classId = character?.classId ?? 'warrior';
-    const gear = character?.gear ?? { weapon: null, armor: null };
-    this.player = new Player(this, worldWidth / 2, worldHeight / 2, classId, gear);
+    this.characterState =
+      (this.registry.get('character') as CharacterState | undefined) ??
+      createNewCharacter('Adventurer', 'warrior');
+
+    this.player = new Player(
+      this,
+      worldWidth / 2,
+      worldHeight / 2,
+      this.characterState.classId,
+      this.characterState.gear,
+    );
     this.cameras.main.startFollow(this.player, true);
 
     this.rats = RAT_SPAWN_OFFSETS.map(([dx, dy]) => {
@@ -76,6 +84,27 @@ export class TownScene extends Phaser.Scene {
 
     this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.keyboard?.on('keydown-ESC', () => this.clearTarget());
+    this.input.keyboard?.on('keydown-F9', () => this.resetCharacter());
+
+    this.add
+      .text(this.scale.width - 8, this.scale.height - 8, 'F9: Reset Character (dev)', {
+        fontSize: '10px',
+        color: '#666666',
+      })
+      .setOrigin(1, 1)
+      .setScrollFactor(0);
+
+    this.time.addEvent({
+      delay: AUTOSAVE_INTERVAL_MS,
+      loop: true,
+      callback: () => this.persistCharacter(),
+    });
+    window.addEventListener('pagehide', this.handleWindowUnload);
+    window.addEventListener('beforeunload', this.handleWindowUnload);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('pagehide', this.handleWindowUnload);
+      window.removeEventListener('beforeunload', this.handleWindowUnload);
+    });
 
     this.scene.launch('UI');
   }
@@ -154,22 +183,34 @@ export class TownScene extends Phaser.Scene {
   }
 
   private awardXp(amount: number): void {
-    const result = addXp(this.playerLevelState, amount);
-    this.playerLevelState = result.state;
+    const result = addXp({ level: this.characterState.level, xp: this.characterState.xp }, amount);
+    this.characterState.level = result.state.level;
+    this.characterState.xp = result.state.xp;
 
-    const nextLevel = Math.min(this.playerLevelState.level + 1, MAX_CHARACTER_LEVEL);
-    const xpToNext =
-      this.playerLevelState.level >= MAX_CHARACTER_LEVEL ? 0 : xpToReachLevel(nextLevel);
     this.game.events.emit(
       XP_GAINED_EVENT,
-      this.playerLevelState.level,
-      this.playerLevelState.xp,
-      xpToNext,
+      this.characterState.level,
+      this.characterState.xp,
+      xpToNextLevel(this.characterState.level),
     );
 
     if (result.leveledUp) {
-      this.game.events.emit(LEVEL_UP_EVENT, this.playerLevelState.level);
+      this.game.events.emit(LEVEL_UP_EVENT, this.characterState.level);
+      this.persistCharacter();
     }
+  }
+
+  private persistCharacter(): void {
+    this.characterState.position = { x: Math.round(this.player.x), y: Math.round(this.player.y) };
+    this.characterState.updatedAt = new Date().toISOString();
+    saveService.save(this.characterState);
+  }
+
+  private resetCharacter(): void {
+    saveService.clear();
+    this.registry.remove('character');
+    this.scene.stop('UI');
+    this.scene.start('CharacterCreate');
   }
 
   private showDamageNumber(x: number, y: number, amount: number): void {

@@ -33,3 +33,13 @@ export function addXp(state: LevelState, amount: number): AddXpResult {
 
   return { state: { level, xp }, leveledUp };
 }
+
+// XP needed to reach the next level, or 0 if already at the cap — the
+// single source of truth for this so HUD init (on load) and HUD updates
+// (on kill) can't drift apart.
+export function xpToNextLevel(level: number): number {
+  if (level >= MAX_CHARACTER_LEVEL) {
+    return 0;
+  }
+  return xpToReachLevel(level + 1);
+}
