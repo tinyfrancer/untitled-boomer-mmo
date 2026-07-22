@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { describeItemBonuses, describeItemName } from '../data/items';
-import { SKILLS, SKILL_ORDER } from '../data/skills';
+import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
 import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { computeAppearance } from '../systems/AppearanceSystem';
 import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
@@ -48,6 +48,9 @@ export interface CharacterPanelState {
   gear: Record<GearSlotId, string | null>;
   stats: DisplayedStats;
   skills: Skills;
+  // Combat skill caps ride the character's level, so the sheet needs it to know
+  // when one of those bars is full.
+  level: number;
 }
 
 interface SlotRow {
@@ -76,7 +79,10 @@ export function characterPanelHeight(scale: number): number {
     SLOT_ORDER.length * THEME.touchMin +
     GAP +
     SKILL_HEADER +
-    SKILL_ORDER.length * SKILL_ROW;
+    SKILL_ORDER.length * SKILL_ROW +
+    GAP +
+    SKILL_HEADER +
+    COMBAT_SKILL_ORDER.length * SKILL_ROW;
   return px(cssHeight, scale);
 }
 
@@ -176,41 +182,53 @@ export class CharacterPanel {
 
     this.skillRows = {} as Record<SkillId, SkillRow>;
     const skillObjects: Phaser.GameObjects.GameObject[] = [];
-    const skillsTop = slotsTop + SLOT_ORDER.length * rowHeight + px(GAP, scale);
     const barWidth = width - pad * 2;
 
-    skillObjects.push(
-      scene.add.text(pad, skillsTop, 'Skills', {
-        fontSize: fontPx(THEME.font.sm, scale),
-        color: THEME.color.text,
-        fontStyle: 'bold',
-      }),
-    );
+    // Returns the y the next block starts at, so the two blocks stack without
+    // either one knowing how tall the other is.
+    const buildSkillBlock = (title: string, skillIds: SkillId[], top: number): number => {
+      skillObjects.push(
+        scene.add.text(pad, top, title, {
+          fontSize: fontPx(THEME.font.sm, scale),
+          color: THEME.color.text,
+          fontStyle: 'bold',
+        }),
+      );
 
-    SKILL_ORDER.forEach((skillId, index) => {
-      const rowY = skillsTop + px(SKILL_HEADER + index * SKILL_ROW, scale);
-      const name = scene.add.text(pad, rowY, SKILLS[skillId].name, {
-        fontSize: fontPx(THEME.font.xs, scale),
-        color: THEME.color.muted,
-      });
-      const level = scene.add
-        .text(width - pad, rowY, '', {
+      skillIds.forEach((skillId, index) => {
+        const rowY = top + px(SKILL_HEADER + index * SKILL_ROW, scale);
+        const name = scene.add.text(pad, rowY, SKILLS[skillId].name, {
           fontSize: fontPx(THEME.font.xs, scale),
           color: THEME.color.muted,
-        })
-        .setOrigin(1, 0);
+        });
+        const level = scene.add
+          .text(width - pad, rowY, '', {
+            fontSize: fontPx(THEME.font.xs, scale),
+            color: THEME.color.muted,
+          })
+          .setOrigin(1, 0);
 
-      const barY = rowY + px(SKILL_ROW - SKILL_BAR_HEIGHT - 3, scale);
-      const barBg = scene.add
-        .rectangle(pad, barY, barWidth, px(SKILL_BAR_HEIGHT, scale), 0x000000, 0.5)
-        .setOrigin(0, 0);
-      const barFill = scene.add
-        .rectangle(pad, barY, 0, px(SKILL_BAR_HEIGHT, scale), THEME.xpFill, 1)
-        .setOrigin(0, 0);
+        const barY = rowY + px(SKILL_ROW - SKILL_BAR_HEIGHT - 3, scale);
+        const barBg = scene.add
+          .rectangle(pad, barY, barWidth, px(SKILL_BAR_HEIGHT, scale), 0x000000, 0.5)
+          .setOrigin(0, 0);
+        const barFill = scene.add
+          .rectangle(pad, barY, 0, px(SKILL_BAR_HEIGHT, scale), THEME.xpFill, 1)
+          .setOrigin(0, 0);
 
-      this.skillRows[skillId] = { level, barFill, barWidth };
-      skillObjects.push(name, level, barBg, barFill);
-    });
+        this.skillRows[skillId] = { level, barFill, barWidth };
+        skillObjects.push(name, level, barBg, barFill);
+      });
+
+      return top + px(SKILL_HEADER + skillIds.length * SKILL_ROW + GAP, scale);
+    };
+
+    const combatSkillsTop = buildSkillBlock(
+      'Skills',
+      SKILL_ORDER,
+      slotsTop + SLOT_ORDER.length * rowHeight + px(GAP, scale),
+    );
+    buildSkillBlock('Combat Skills', COMBAT_SKILL_ORDER, combatSkillsTop);
 
     this.container = scene.add
       .container(x, y, [
@@ -257,10 +275,10 @@ export class CharacterPanel {
       row.bonuses.setText(describeItemBonuses(itemId));
     });
 
-    SKILL_ORDER.forEach((skillId) => {
+    [...SKILL_ORDER, ...COMBAT_SKILL_ORDER].forEach((skillId) => {
       const skill = state.skills[skillId] ?? { level: 1, xp: 0 };
       const row = this.skillRows[skillId];
-      const xpToNext = skillXpToNextLevel(skill.level);
+      const xpToNext = skillXpToNextLevel(skillId, skill.level, state.level);
       row.level.setText(
         xpToNext > 0 ? `${skill.xp}/${xpToNext} · Lv ${skill.level}` : `Lv ${skill.level} (Max)`,
       );

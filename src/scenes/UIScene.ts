@@ -460,6 +460,7 @@ export class UIScene extends Phaser.Scene {
         attackStat: CLASSES[this.classId].baseStats.primaryStat,
       },
       skills: this.model.skills,
+      level: this.model.level,
     });
   }
 

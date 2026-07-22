@@ -500,6 +500,40 @@ try {
   check('enemy damages the player', true, `player ${hurt.player.hp}/${hurt.player.maxHp}`);
   await page.screenshot({ path: `${OUT}/3-combat.png` });
 
+  // --- Combat skills: swinging trains the weapon skill, and a level 1
+  // character's cap is 10 no matter how long they swing for. ---
+  const swung = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const s = z.character.state.skills;
+    return { weapon: z.character.activeWeaponSkill(), oneHanded: { ...s['one-handed'] } };
+  });
+  check(
+    'landing hits trains the weapon skill the equipped weapon uses',
+    swung.weapon === 'one-handed' && swung.oneHanded.xp + swung.oneHanded.level > 1,
+    `${swung.weapon} lv${swung.oneHanded.level} xp${swung.oneHanded.xp}`,
+  );
+
+  const capped = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.awardSkillXp('one-handed', 999999);
+    z.character.awardSkillXp('woodcutting', 999999);
+    return {
+      level: z.character.state.level,
+      oneHanded: z.character.skillLevelOf('one-handed'),
+      woodcutting: z.character.skillLevelOf('woodcutting'),
+    };
+  });
+  check(
+    'a combat skill caps at ten times the character level',
+    capped.oneHanded === capped.level * 10,
+    `char lv${capped.level}, 1 handed ${capped.oneHanded}`,
+  );
+  check(
+    'a gathering skill keeps its own flat cap',
+    capped.woodcutting === 10,
+    `woodcutting ${capped.woodcutting}`,
+  );
+
   // --- Leash: a chasing rat that loses the player resets and heals. ---
   // Set this up from scratch rather than reusing the rat from the fight above,
   // which the player may well have finished off by now. Aim the player at the

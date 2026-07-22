@@ -35,7 +35,7 @@ import {
   CURRENCY_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import { THEME, fontPx, px, scenePxScale, worldZoom } from '../ui/theme';
-import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
+import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
 import { rollLootTable } from '../systems/LootSystem';
 import { canCook, findCookableItem, recipeForInput, rollCook } from '../systems/CookingSystem';
@@ -76,6 +76,10 @@ const EXIT_MARGIN = TILE_SIZE * 0.6;
 // Far enough inside the new zone that the player doesn't stand on the return
 // exit and bounce straight back.
 const ARRIVAL_INSET = TILE_SIZE * 1.5;
+// Combat skills are earned a rep at a time — one landed swing, one hit turned
+// aside — rather than in the lumps a gather or a kill pays out.
+const WEAPON_SKILL_XP_PER_HIT = 1;
+const DEFENSE_SKILL_XP_PER_SAVE = 1;
 
 // Passed through scene.restart on a zone change; absent on the first boot.
 interface ZoneSceneData {
@@ -759,14 +763,19 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
   }
 
-  private awardSkillXp(skill: SkillId, amount: number): void {
+  // Combat skills tick up a point at a time on every swing, which would bury
+  // the screen in floating text — those pass `silent` and are seen only on the
+  // sheet and at the level-up toast.
+  private awardSkillXp(skill: SkillId, amount: number, options?: { silent: boolean }): void {
     const gain = this.character.awardSkillXp(skill, amount);
-    this.showFloatingText(
-      this.player.x,
-      this.player.y - 20,
-      `+${amount} ${SKILLS[skill].name} XP`,
-      THEME.color.skillUp,
-    );
+    if (!options?.silent) {
+      this.showFloatingText(
+        this.player.x,
+        this.player.y - 20,
+        `+${amount} ${SKILLS[skill].name} XP`,
+        THEME.color.skillUp,
+      );
+    }
     this.game.events.emit(SKILL_XP_GAINED_EVENT, gain);
     if (gain.leveledUp) {
       this.persistCharacter();
@@ -829,7 +838,11 @@ export class ZoneScene extends Phaser.Scene {
     }
 
     this.lastAttackAt = time;
-    const { damage } = resolveAttack({ attackPower: this.player.attackPower });
+    const weaponSkill = this.character.activeWeaponSkill();
+    const { damage } = resolveAttack({
+      attackPower: this.player.attackPower,
+      weaponSkillLevel: this.character.skillLevelOf(weaponSkill),
+    });
     this.showFloatingText(this.target.x, this.target.y, `-${damage}`, THEME.color.equippable);
     const xpReward = this.target.xpReward;
     const lootTableId = this.target.lootTableId;
@@ -838,6 +851,8 @@ export class ZoneScene extends Phaser.Scene {
     // Anything the player hits fights back, whether or not it opens combat itself.
     this.target.engage();
     this.publishTarget();
+    // Skill comes from swinging, not from killing: a landed hit is the rep.
+    this.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
     if (!this.target.isAlive()) {
       this.awardXp(xpReward);
       this.grantLoot(lootTableId);
@@ -855,6 +870,25 @@ export class ZoneScene extends Phaser.Scene {
       if (!isCooldownReady(time - mob.lastAttackAt, mob.attackCooldownMs)) continue;
 
       mob.lastAttackAt = time;
+
+      // A turned-aside hit trains the skill that turned it aside and stops
+      // there — no damage, and nothing to interrupt a gather.
+      const defense = rollDefense({
+        blockLevel: this.character.skillLevelOf('block'),
+        parryLevel: this.character.skillLevelOf('parry'),
+        hasWeapon: this.character.state.gear.weapon !== null,
+      });
+      if (defense.avoided && defense.skillId) {
+        this.showFloatingText(
+          this.player.x,
+          this.player.y,
+          SKILLS[defense.skillId].name,
+          THEME.color.heal,
+        );
+        this.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
+        continue;
+      }
+
       const { damage } = resolveAttack({ attackPower: mob.attackPower });
       this.player.takeDamage(damage);
       this.showFloatingText(this.player.x, this.player.y, `-${damage}`, THEME.color.playerDamage);

@@ -8,7 +8,8 @@ import {
   unequipItem,
 } from './InventorySystem';
 import type { CharacterState } from '../persistence/CharacterState';
-import type { GearSlotId, SkillId, ZoneId } from '../types/ids';
+import { weaponSkillFor } from './CombatSystem';
+import type { CombatSkillId, GearSlotId, SkillId, ZoneId } from '../types/ids';
 
 export interface CombatXpGain {
   level: number;
@@ -94,16 +95,21 @@ export class CharacterController {
   }
 
   awardSkillXp(skillId: SkillId, amount: number): SkillXpGain {
-    const result = addSkillXp(this.state.skills, skillId, amount);
+    const result = addSkillXp(this.state.skills, skillId, amount, this.state.level);
     this.state.skills = result.skills;
     const state = result.skills[skillId];
     return {
       skillId,
       level: state.level,
       xp: state.xp,
-      xpToNext: skillXpToNextLevel(state.level),
+      xpToNext: skillXpToNextLevel(skillId, state.level, this.state.level),
       leveledUp: result.leveledUp,
     };
+  }
+
+  /** The weapon skill the currently equipped weapon (or empty hand) trains. */
+  activeWeaponSkill(): CombatSkillId {
+    return weaponSkillFor(this.state.gear.weapon);
   }
 
   skillLevelOf(skillId: SkillId): number {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createInitialSkills } from '../../src/systems/SkillSystem';
 import {
   CHARACTER_STATE_VERSION,
   STARTING_COPPER,
@@ -28,11 +29,9 @@ describe('createNewCharacter', () => {
 
   it('starts every skill at level 1 with no xp', () => {
     const character = createNewCharacter('Aria', 'wizard');
-    expect(character.skills).toEqual({
-      woodcutting: { level: 1, xp: 0 },
-      fishing: { level: 1, xp: 0 },
-      cooking: { level: 1, xp: 0 },
-    });
+    expect(character.skills).toEqual(createInitialSkills());
+    expect(Object.values(character.skills)).not.toHaveLength(0);
+    Object.values(character.skills).forEach((skill) => expect(skill).toEqual({ level: 1, xp: 0 }));
   });
 
   it('stamps the current CHARACTER_STATE_VERSION', () => {
