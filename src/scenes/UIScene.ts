@@ -12,11 +12,13 @@ import {
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   MOVE_VECTOR_EVENT,
+  PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
+  type TargetInfo,
 } from '../ui/uiEvents';
 import { xpToNextLevel } from '../systems/LevelingSystem';
 import { itemsForSlot } from '../systems/InventorySystem';
@@ -81,7 +83,11 @@ export class UIScene extends Phaser.Scene {
       xp: character?.xp ?? 0,
       gear: character?.gear ?? DEFAULT_GEAR,
       inventory: character?.inventory ?? {},
-      hp: computeEffectiveStats(this.classId, character?.gear ?? DEFAULT_GEAR).maxHp,
+      hp: computeEffectiveStats(
+        this.classId,
+        character?.gear ?? DEFAULT_GEAR,
+        character?.level ?? 1,
+      ).maxHp,
     };
 
     this.buildHud();
@@ -93,6 +99,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(GEAR_CHANGED_EVENT, this.handleGearChanged, this);
     this.game.events.on(INVENTORY_CHANGED_EVENT, this.handleInventoryChanged, this);
     this.game.events.on(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
+    this.game.events.on(PLAYER_DIED_EVENT, this.handlePlayerDied, this);
 
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
@@ -109,6 +116,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(GEAR_CHANGED_EVENT, this.handleGearChanged, this);
       this.game.events.off(INVENTORY_CHANGED_EVENT, this.handleInventoryChanged, this);
       this.game.events.off(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
+      this.game.events.off(PLAYER_DIED_EVENT, this.handlePlayerDied, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
@@ -291,7 +299,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private refreshCharacterPanel(): void {
-    const stats = computeEffectiveStats(this.classId, this.model.gear);
+    const stats = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
     this.characterPanel.update({
       gear: this.model.gear,
       stats: {
@@ -304,8 +312,8 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  private handleTargetSelected = (name: string, hp: number, maxHp: number): void => {
-    this.targetFrame.show(name, hp, maxHp);
+  private handleTargetSelected = (target: TargetInfo): void => {
+    this.targetFrame.show(target);
   };
 
   private handleTargetCleared = (): void => {
@@ -323,7 +331,18 @@ export class UIScene extends Phaser.Scene {
   };
 
   private handleLevelUp = (level: number): void => {
-    this.levelUpToast.setText(`Level Up! Level ${level}`);
+    this.model.level = level;
+    this.refreshCharacterPanel();
+    this.showToast(`Level Up! Level ${level}`, THEME.color.levelUp);
+  };
+
+  private handlePlayerDied = (): void => {
+    this.showToast('You have died.', THEME.color.playerDamage);
+  };
+
+  private showToast(message: string, color: string): void {
+    this.levelUpToast.setText(message);
+    this.levelUpToast.setColor(color);
     this.levelUpToast.setAlpha(1);
     this.tweens.add({
       targets: this.levelUpToast,
@@ -331,7 +350,7 @@ export class UIScene extends Phaser.Scene {
       duration: 1500,
       delay: 500,
     });
-  };
+  }
 
   private handleGearChanged = (gear: Record<GearSlotId, string | null>): void => {
     this.model.gear = gear;

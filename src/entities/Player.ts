@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
+import { regenTick } from '../systems/RegenSystem';
 import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
@@ -21,6 +22,7 @@ interface WasdKeys {
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly classId: ClassId;
+  level: number;
   maxHp: number;
   hp: number;
   strength: number;
@@ -33,6 +35,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly keys: WasdKeys;
   private touchVectorX = 0;
   private touchVectorY = 0;
+  private gear: Record<GearSlotId, string | null>;
+  // Regen accrues in fractions of a point per frame, so current HP is tracked
+  // as a float here and only rounded when something reads it.
+  private hpFloat: number;
+  private msSinceCombat = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -41,6 +48,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     classId: ClassId,
     gear: Record<GearSlotId, string | null> = NO_GEAR,
     name = 'Adventurer',
+    level = 1,
   ) {
     super(scene, x, y, ensurePlayerTexture(scene, computeAppearance(gear)));
     scene.add.existing(this);
@@ -49,9 +57,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.name = name;
     this.classId = classId;
-    const stats = computeEffectiveStats(classId, gear);
+    this.level = level;
+    this.gear = gear;
+    const stats = computeEffectiveStats(classId, gear, level);
     this.maxHp = stats.maxHp;
     this.hp = stats.maxHp;
+    this.hpFloat = stats.maxHp;
     this.strength = stats.strength;
     this.intellect = stats.intellect;
     this.speed = stats.speed;
@@ -81,25 +92,56 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   setGear(gear: Record<GearSlotId, string | null>): void {
-    const stats = computeEffectiveStats(this.classId, gear);
-    const maxHpDelta = stats.maxHp - this.maxHp;
-    this.maxHp = stats.maxHp;
-    this.hp = Phaser.Math.Clamp(this.hp + maxHpDelta, 0, this.maxHp);
-    this.strength = stats.strength;
-    this.intellect = stats.intellect;
-    this.attackPower = stats.attackPower;
+    this.gear = gear;
+    this.applyStats();
     this.setTexture(ensurePlayerTexture(this.scene, computeAppearance(gear)));
   }
 
+  setLevel(level: number): void {
+    this.level = level;
+    this.applyStats();
+  }
+
+  // Max HP moves with both gear and level, so current HP rides the delta rather
+  // than resetting — gaining a level should never feel like a partial heal loss.
+  private applyStats(): void {
+    const stats = computeEffectiveStats(this.classId, this.gear, this.level);
+    const maxHpDelta = stats.maxHp - this.maxHp;
+    this.maxHp = stats.maxHp;
+    this.hpFloat = Phaser.Math.Clamp(this.hpFloat + maxHpDelta, 0, this.maxHp);
+    this.hp = Math.round(this.hpFloat);
+    this.strength = stats.strength;
+    this.intellect = stats.intellect;
+    this.attackPower = stats.attackPower;
+  }
+
   takeDamage(amount: number): void {
-    this.hp = Math.max(0, this.hp - amount);
+    this.hpFloat = Math.max(0, this.hpFloat - amount);
+    this.hp = Math.round(this.hpFloat);
+    this.markInCombat();
+  }
+
+  // Also called when the player lands a hit: swinging keeps regen suppressed
+  // just as much as being hit does.
+  markInCombat(): void {
+    this.msSinceCombat = 0;
+  }
+
+  restoreToFull(): void {
+    this.hpFloat = this.maxHp;
+    this.hp = this.maxHp;
+    this.msSinceCombat = 0;
   }
 
   isAlive(): boolean {
     return this.hp > 0;
   }
 
-  update(): void {
+  update(deltaMs: number): void {
+    this.msSinceCombat += deltaMs;
+    this.hpFloat += regenTick(this.hpFloat, this.maxHp, this.msSinceCombat, deltaMs);
+    this.hp = Math.round(this.hpFloat);
+
     let vx = 0;
     let vy = 0;
     if (this.keys.A.isDown) vx -= 1;

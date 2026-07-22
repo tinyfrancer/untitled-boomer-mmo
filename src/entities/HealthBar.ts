@@ -56,6 +56,12 @@ export class HealthBar {
     this.labelText?.setPosition(x, top - 2);
   }
 
+  // The floating name is not fixed: an enemy's level color is relative to the
+  // player's level, so it has to be re-rendered whenever the player levels.
+  setLabel(text: string, color: string): void {
+    this.labelText?.setText(text).setColor(color);
+  }
+
   setVisible(visible: boolean): void {
     this.graphics.setVisible(visible);
     this.labelText?.setVisible(visible);

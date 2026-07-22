@@ -37,6 +37,15 @@ export const THEME = {
     equippable: '#ffee58',
     targetHp: '#ff8a80',
     levelUp: '#ffd54f',
+    playerDamage: '#ff5252',
+    // Difficulty ("con") shades for an enemy's name, relative to the player.
+    con: {
+      trivial: '#9e9e9e',
+      low: '#66bb6a',
+      even: '#ffffff',
+      high: '#ffee58',
+      deadly: '#ff5252',
+    },
   },
   xpFill: 0x42a5f5,
 } as const;
