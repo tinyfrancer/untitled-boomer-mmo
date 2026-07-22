@@ -2,6 +2,12 @@ import type { ClassId } from '../types/ids';
 
 export type PrimaryStat = 'strength' | 'intellect';
 
+export interface LevelGrowth {
+  maxHp: number;
+  strength: number;
+  intellect: number;
+}
+
 export interface ClassStats {
   maxHp: number;
   speed: number;
@@ -10,6 +16,8 @@ export interface ClassStats {
   primaryStat: PrimaryStat;
   attackRange: number;
   attackCooldownMs: number;
+  // Added once per level gained past 1, so a class grows along its own axis.
+  perLevel: LevelGrowth;
 }
 
 export interface ClassDefinition {
@@ -36,6 +44,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       primaryStat: 'strength',
       attackRange: 80,
       attackCooldownMs: 1200,
+      perLevel: { maxHp: 6, strength: 2, intellect: 0 },
     },
     startingWeaponId: 'rusty-sword',
   },
@@ -52,6 +61,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       primaryStat: 'intellect',
       attackRange: 280,
       attackCooldownMs: 1400,
+      perLevel: { maxHp: 3, strength: 0, intellect: 2 },
     },
     startingWeaponId: 'apprentice-wand',
   },

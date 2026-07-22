@@ -2,8 +2,8 @@
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a
 learning side project. This is v0: a single-player starting town with rats to kill,
-character creation, leveling, gear, and local save/load. See [`docs/design.txt`](docs/design.txt)
-for the full long-term vision.
+character creation, leveling, gear, and local save/load. See
+[`docs/initial_design.txt`](docs/initial_design.txt) for the full long-term vision.
 
 ## Stack
 

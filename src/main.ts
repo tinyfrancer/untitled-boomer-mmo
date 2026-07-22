@@ -29,4 +29,11 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, PreloadScene, CharacterCreateScene, TownScene, UIScene],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// Dev-only handle on the running game, so the devtools console and the
+// scripted smoke check can inspect live scene state. Stripped from production
+// builds by the import.meta.env.DEV guard.
+if (import.meta.env.DEV) {
+  (window as unknown as { game: Phaser.Game }).game = game;
+}

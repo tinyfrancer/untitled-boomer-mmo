@@ -51,6 +51,37 @@ describe('computeEffectiveStats', () => {
     expect(stats.maxHp).toBe(41);
   });
 
+  it('grants no growth at level 1, the implicit default', () => {
+    expect(computeEffectiveStats('warrior', NO_GEAR, 1)).toEqual(
+      computeEffectiveStats('warrior', NO_GEAR),
+    );
+  });
+
+  it('adds one growth step per level past the first', () => {
+    const stats = computeEffectiveStats('warrior', NO_GEAR, 3);
+    expect(stats.maxHp).toBe(40 + 6 * 2);
+    expect(stats.strength).toBe(6 + 2 * 2);
+    expect(stats.intellect).toBe(1);
+  });
+
+  it("grows a class along its own axis: the wizard's is intellect", () => {
+    const stats = computeEffectiveStats('wizard', NO_GEAR, 3);
+    expect(stats.maxHp).toBe(24 + 3 * 2);
+    expect(stats.intellect).toBe(6 + 2 * 2);
+    expect(stats.strength).toBe(1);
+  });
+
+  it('feeds level growth into attackPower through the primary stat', () => {
+    expect(computeEffectiveStats('warrior', NO_GEAR, 3).attackPower).toBe(6 + 2 * 2);
+    expect(computeEffectiveStats('wizard', NO_GEAR, 3).attackPower).toBe(6 + 2 * 2);
+  });
+
+  it('stacks level growth with gear bonuses', () => {
+    const stats = computeEffectiveStats('warrior', { ...NO_GEAR, weapon: 'rusty-sword' }, 2);
+    expect(stats.attackPower).toBe(6 + 2 + 2); // base str, one growth step, weapon bonus
+    expect(stats.maxHp).toBe(40 + 6);
+  });
+
   it('treats an unknown item id in a gear slot as contributing no bonus', () => {
     const stats = computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'nonexistent-item' });
     expect(stats.maxHp).toBe(40);

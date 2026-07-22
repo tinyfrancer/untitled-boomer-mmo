@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { THEME, fontPx, px } from './theme';
+import type { TargetInfo } from './uiEvents';
 
 export class TargetFrame {
   private readonly container: Phaser.GameObjects.Container;
@@ -35,9 +36,10 @@ export class TargetFrame {
       .setVisible(false);
   }
 
-  show(name: string, hp: number, maxHp: number): void {
-    this.nameText.setText(name);
-    this.hpText.setText(`HP: ${hp} / ${maxHp}`);
+  show(target: TargetInfo): void {
+    this.nameText.setText(`${target.name} (Lv ${target.level})`);
+    this.nameText.setColor(target.conColor);
+    this.hpText.setText(`HP: ${target.hp} / ${target.maxHp}`);
     this.container.setVisible(true);
   }
 

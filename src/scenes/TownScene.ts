@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
 import { TOWN_MAP } from '../data/townMap';
+import { TOWN_RAT_SPAWNS } from '../data/spawns';
 import { Player } from '../entities/Player';
 import { Rat } from '../entities/Rat';
 import type { Mob } from '../entities/Mob';
@@ -11,6 +12,7 @@ import {
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   MOVE_VECTOR_EVENT,
+  PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
@@ -19,19 +21,12 @@ import {
 } from '../ui/uiEvents';
 import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
+import { conColor } from '../systems/EnemySystem';
 import { addXp, xpToNextLevel } from '../systems/LevelingSystem';
 import { rollLootTable } from '../systems/LootSystem';
 import { addItemToInventory, equipItem, unequipItem } from '../systems/InventorySystem';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
 import type { GearSlotId } from '../types/ids';
-
-const RAT_SPAWN_OFFSETS: Array<[number, number]> = [
-  [-192, -128],
-  [192, -128],
-  [-128, 192],
-  [128, 192],
-  [0, 256],
-];
 
 const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
@@ -43,6 +38,8 @@ export class TownScene extends Phaser.Scene {
   private target: Mob | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
   private lastAttackAt = 0;
+  private spawnPoint = new Phaser.Math.Vector2();
+  private lastReportedHp = 0;
   private characterState!: CharacterState;
   private handleWindowUnload = (): void => this.persistCharacter();
 
@@ -74,18 +71,27 @@ export class TownScene extends Phaser.Scene {
       (this.registry.get('character') as CharacterState | undefined) ??
       createNewCharacter('Adventurer', 'warrior');
 
+    this.spawnPoint.set(worldWidth / 2, worldHeight / 2);
     this.player = new Player(
       this,
-      worldWidth / 2,
-      worldHeight / 2,
+      this.spawnPoint.x,
+      this.spawnPoint.y,
       this.characterState.classId,
       this.characterState.gear,
       this.characterState.name,
+      this.characterState.level,
     );
+    this.lastReportedHp = this.player.hp;
     this.cameras.main.startFollow(this.player, true);
 
-    this.rats = RAT_SPAWN_OFFSETS.map(([dx, dy]) => {
-      const rat = new Rat(this, worldWidth / 2 + dx, worldHeight / 2 + dy);
+    this.rats = TOWN_RAT_SPAWNS.map(({ dx, dy, level }) => {
+      const rat = new Rat(
+        this,
+        this.spawnPoint.x + dx,
+        this.spawnPoint.y + dy,
+        level,
+        this.characterState.level,
+      );
       rat.setInteractive();
       return rat;
     });
@@ -128,11 +134,13 @@ export class TownScene extends Phaser.Scene {
     this.scene.launch('UI');
   }
 
-  update(time: number): void {
-    this.player.update();
-    this.rats.forEach((rat) => rat.update());
+  update(time: number, delta: number): void {
+    this.player.update(delta);
+    this.rats.forEach((rat) => rat.update(this.player.x, this.player.y));
     this.updateSelectionRing();
     this.updateCombat(time);
+    this.updateEnemyAttacks(time);
+    this.publishPlayerHp();
   }
 
   private handlePointerDown(
@@ -153,7 +161,18 @@ export class TownScene extends Phaser.Scene {
 
   private setTarget(mob: Mob): void {
     this.target = mob;
-    this.game.events.emit(TARGET_SELECTED_EVENT, mob.name, mob.hp, mob.maxHp);
+    this.publishTarget();
+  }
+
+  private publishTarget(): void {
+    if (!this.target) return;
+    this.game.events.emit(TARGET_SELECTED_EVENT, {
+      name: this.target.name,
+      level: this.target.level,
+      hp: this.target.hp,
+      maxHp: this.target.maxHp,
+      conColor: conColor(this.characterState.level, this.target.level),
+    });
   }
 
   private clearTarget(): void {
@@ -197,20 +216,58 @@ export class TownScene extends Phaser.Scene {
 
     this.lastAttackAt = time;
     const { damage } = resolveAttack({ attackPower: this.player.attackPower });
-    this.showDamageNumber(this.target.x, this.target.y, damage);
+    this.showDamageNumber(this.target.x, this.target.y, damage, THEME.color.equippable);
     const xpReward = this.target.xpReward;
     const lootTableId = this.target.lootTableId;
+    this.player.markInCombat();
     this.target.takeDamage(damage);
-    this.game.events.emit(
-      TARGET_SELECTED_EVENT,
-      this.target.name,
-      this.target.hp,
-      this.target.maxHp,
-    );
+    // Anything the player hits fights back, whether or not it opens combat itself.
+    this.target.engage();
+    this.publishTarget();
     if (!this.target.isAlive()) {
       this.awardXp(xpReward);
       this.grantLoot(lootTableId);
     }
+  }
+
+  private updateEnemyAttacks(time: number): void {
+    if (!this.player.isAlive()) return;
+
+    for (const rat of this.rats) {
+      if (!rat.isEngaged()) continue;
+
+      const distance = Phaser.Math.Distance.Between(rat.x, rat.y, this.player.x, this.player.y);
+      if (!isInRange(distance, rat.attackRange)) continue;
+      if (!isCooldownReady(time - rat.lastAttackAt, rat.attackCooldownMs)) continue;
+
+      rat.lastAttackAt = time;
+      const { damage } = resolveAttack({ attackPower: rat.attackPower });
+      this.player.takeDamage(damage);
+      this.showDamageNumber(this.player.x, this.player.y, damage, THEME.color.playerDamage);
+
+      if (!this.player.isAlive()) {
+        this.handlePlayerDeath();
+        return;
+      }
+    }
+  }
+
+  private handlePlayerDeath(): void {
+    this.rats.forEach((rat) => rat.disengage());
+    this.clearTarget();
+    this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
+    this.player.setVelocity(0, 0);
+    this.player.restoreToFull();
+    this.game.events.emit(PLAYER_DIED_EVENT);
+    this.persistCharacter();
+  }
+
+  // Regen and enemy hits both move HP outside of any single event, so the HUD is
+  // driven off the rounded value changing rather than off each damage source.
+  private publishPlayerHp(): void {
+    if (this.player.hp === this.lastReportedHp) return;
+    this.lastReportedHp = this.player.hp;
+    this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   private awardXp(amount: number): void {
@@ -226,6 +283,10 @@ export class TownScene extends Phaser.Scene {
     );
 
     if (result.leveledUp) {
+      this.player.setLevel(this.characterState.level);
+      // Con colors are relative to the player, so every name has to be redrawn.
+      this.rats.forEach((rat) => rat.refreshLabel(this.characterState.level));
+      this.publishTarget();
       this.game.events.emit(LEVEL_UP_EVENT, this.characterState.level);
       this.persistCharacter();
     }
@@ -281,12 +342,12 @@ export class TownScene extends Phaser.Scene {
     this.scene.start('CharacterCreate');
   }
 
-  private showDamageNumber(x: number, y: number, amount: number): void {
+  private showDamageNumber(x: number, y: number, amount: number, color: string): void {
     const text = this.add
       // world-space, so this scales with the camera rather than the ui scale
       .text(x, y - 20, `-${amount}`, {
         fontSize: '20px',
-        color: THEME.color.equippable,
+        color,
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
