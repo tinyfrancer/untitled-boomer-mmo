@@ -6,9 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v0: single-player only, a starting town with leveled rats to kill, character creation, leveling,
-gear, two-way combat with death and respawn, and local save/load. Per-feature briefs live in
-`docs/feature_N_*.txt`. Full long-term vision is in `docs/initial_design.txt` (multiplayer, more zones,
+v1: single-player only; three zones (town with leveled rats and a shop, a beach with crabs and
+ocean fishing, a bandit camp with aggressive humanoids); character creation, leveling, gear,
+two-way combat with death and respawn; gathering/cooking skills; currency and vendoring;
+click/tap-to-move with a mobile-first HUD; and local save/load with versioned migrations.
+Per-feature briefs live in `docs/feature_N_*.txt`. Full long-term vision is in `docs/initial_design.txt` (multiplayer, more zones,
 skills like fishing, etc.) — most of it is intentionally not built yet, so don't assume features
 from that doc exist in code.
 
