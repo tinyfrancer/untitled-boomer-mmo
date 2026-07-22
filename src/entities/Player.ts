@@ -159,6 +159,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.foodBuff !== null;
   }
 
+  // Used when the player crosses zones: the scene rebuilds the sprite, and
+  // without this the rebuild would silently heal them to full.
+  setHp(hp: number): void {
+    this.hpFloat = Phaser.Math.Clamp(hp, 0, this.maxHp);
+    this.hp = Math.round(this.hpFloat);
+  }
+
   restoreToFull(): void {
     this.hpFloat = this.maxHp;
     this.hp = this.maxHp;
