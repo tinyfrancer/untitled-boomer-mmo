@@ -51,6 +51,8 @@ export const THEME = {
     },
   },
   xpFill: 0x42a5f5,
+  // Deeper than the XP bar's blue, so the two stacked bars stay tellable apart.
+  manaFill: 0x3949ab,
 } as const;
 
 // How many tiles the world camera aims to show across the viewport's smaller

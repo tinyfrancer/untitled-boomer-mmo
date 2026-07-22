@@ -23,3 +23,5 @@ export type ResourceNodeId = 'tree' | 'fishing-spot' | 'ocean-fishing-spot';
 export type ZoneId = 'town' | 'beach' | 'bandit-camp';
 
 export type NpcId = 'shopkeeper';
+
+export type AbilityId = 'fireball' | 'mana-shield' | 'power-slash' | 'battle-fury';
