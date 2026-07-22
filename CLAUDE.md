@@ -118,9 +118,10 @@ resetting mob state by hand. `Mob.update()` takes the player's position, since c
 **Persistence** (`src/persistence/`): `SaveService` is an interface; `LocalStorageSaveService` is
 the only implementation today. Always import the `saveService` singleton from
 `src/persistence/index.ts` rather than constructing `LocalStorageSaveService` directly — that
-indirection is the intended swap point for a future networked backend. `CharacterState` has a
-`version` field (`CHARACTER_STATE_VERSION`) for future migrations; bump it if you change the
-shape in a way that breaks old saves.
+indirection is the intended swap point for a future networked backend. `CharacterState` carries a
+`version` field: when you change the shape, bump `CHARACTER_STATE_VERSION` and add a step to
+`persistence/migrations.ts` so existing saves upgrade on load instead of being wiped — a save
+with no chain of steps to the current version is dropped.
 
 **Data-driven definitions** (`src/data/`): class stats (`classes.ts`), items/gear (`items.ts`),
 enemy definitions (`enemies.ts`), where and at what level they spawn (`spawns.ts`), loot

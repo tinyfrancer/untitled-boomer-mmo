@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CHARACTER_STATE_VERSION, createNewCharacter } from '../../src/persistence/CharacterState';
+import {
+  CHARACTER_STATE_VERSION,
+  STARTING_COPPER,
+  createNewCharacter,
+} from '../../src/persistence/CharacterState';
 
 describe('createNewCharacter', () => {
   it('sets the starting weapon and leaves helmet/chest/pants empty', () => {
@@ -12,9 +16,14 @@ describe('createNewCharacter', () => {
     });
   });
 
-  it('starts carrying both gathering tools and nothing else', () => {
+  it('starts with an empty bag and coin for one shop tool', () => {
     const character = createNewCharacter('Aria', 'wizard');
-    expect(character.inventory).toEqual({ 'felling-axe': 1, 'fishing-pole': 1 });
+    expect(character.inventory).toEqual({});
+    expect(character.currency).toBe(STARTING_COPPER);
+  });
+
+  it('starts in the town zone', () => {
+    expect(createNewCharacter('Aria', 'wizard').zoneId).toBe('town');
   });
 
   it('starts every skill at level 1 with no xp', () => {

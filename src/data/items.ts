@@ -6,6 +6,8 @@ interface EquipmentItemDefinition {
   id: string;
   name: string;
   kind: 'equipment';
+  // Vendor sell price in copper; absent means the item can't be sold.
+  value?: number;
   slot: GearSlotId;
   // Color the stick figure paints this piece with: the matching body part for
   // armor, the weapon itself for weapons.
@@ -25,12 +27,14 @@ interface MaterialItemDefinition {
   id: string;
   name: string;
   kind: 'material';
+  value?: number;
 }
 
 interface ConsumableItemDefinition {
   id: string;
   name: string;
   kind: 'consumable';
+  value?: number;
   healAmount: number;
   healDurationMs: number;
 }
@@ -42,6 +46,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'rusty-sword': {
     id: 'rusty-sword',
     name: 'Rusty Sword',
+    value: 10,
     kind: 'equipment',
     slot: 'weapon',
     color: 0xcfd8dc,
@@ -51,6 +56,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'apprentice-wand': {
     id: 'apprentice-wand',
     name: 'Apprentice Wand',
+    value: 10,
     kind: 'equipment',
     slot: 'weapon',
     color: 0x8d6e63,
@@ -60,16 +66,19 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'rat-bones': {
     id: 'rat-bones',
     name: 'Rat Bones',
+    value: 2,
     kind: 'material',
   },
   'rat-meat': {
     id: 'rat-meat',
     name: 'Rat Meat',
+    value: 3,
     kind: 'material',
   },
   'brown-chestplate': {
     id: 'brown-chestplate',
     name: 'Brown Chestplate',
+    value: 35,
     kind: 'equipment',
     slot: 'chest',
     color: TIER_COLORS.brown,
@@ -81,6 +90,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'brown-helmet': {
     id: 'brown-helmet',
     name: 'Brown Helmet',
+    value: 25,
     kind: 'equipment',
     slot: 'helmet',
     color: TIER_COLORS.brown,
@@ -90,6 +100,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'brown-legs': {
     id: 'brown-legs',
     name: 'Brown Legs',
+    value: 30,
     kind: 'equipment',
     slot: 'pants',
     color: TIER_COLORS.brown,
@@ -100,6 +111,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'brown-axe': {
     id: 'brown-axe',
     name: 'Brown Axe',
+    value: 40,
     kind: 'equipment',
     slot: 'weapon',
     color: TIER_COLORS.brown,
@@ -112,6 +124,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'felling-axe': {
     id: 'felling-axe',
     name: 'Felling Axe',
+    value: 30,
     kind: 'equipment',
     slot: 'weapon',
     color: 0x9e9e9e,
@@ -122,6 +135,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'fishing-pole': {
     id: 'fishing-pole',
     name: 'Fishing Pole',
+    value: 30,
     kind: 'equipment',
     slot: 'weapon',
     color: 0xa1887f,
@@ -132,16 +146,19 @@ export const ITEMS: Record<string, ItemDefinition> = {
   logs: {
     id: 'logs',
     name: 'Logs',
+    value: 3,
     kind: 'material',
   },
   'raw-fish': {
     id: 'raw-fish',
     name: 'Raw Fish',
+    value: 4,
     kind: 'material',
   },
   'cooked-fish': {
     id: 'cooked-fish',
     name: 'Cooked Fish',
+    value: 8,
     kind: 'consumable',
     healAmount: 15,
     healDurationMs: 10000,
@@ -149,6 +166,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
   'burnt-fish': {
     id: 'burnt-fish',
     name: 'Burnt Fish',
+    value: 1,
     kind: 'material',
   },
 };
@@ -220,6 +238,12 @@ export function consumableFor(
     return null;
   }
   return { healAmount: item.healAmount, healDurationMs: item.healDurationMs };
+}
+
+// Vendor sell price in copper, or null if the item can't be sold.
+export function itemValue(itemId: string | null): number | null {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.value ?? null;
 }
 
 export function describeItemName(itemId: string | null): string {

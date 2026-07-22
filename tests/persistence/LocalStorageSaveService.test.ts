@@ -45,13 +45,34 @@ describe('LocalStorageSaveService', () => {
     expect(service.hasSave()).toBe(false);
   });
 
-  it('discards and clears a save whose version does not match CHARACTER_STATE_VERSION', () => {
+  it('discards and clears a save too old for the migration chain', () => {
     const service = new LocalStorageSaveService();
     const stale = { ...createNewCharacter('Aria', 'wizard'), version: 0 };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stale));
 
     expect(service.load()).toBeNull();
     expect(service.hasSave()).toBe(false);
+  });
+
+  it('migrates a v4 save on load and persists the upgraded shape', () => {
+    const service = new LocalStorageSaveService();
+    const v4 = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: 4,
+      inventory: { 'felling-axe': 1, 'fishing-pole': 1 },
+    } as Record<string, unknown>;
+    delete v4.currency;
+    delete v4.zoneId;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(v4));
+
+    const loaded = service.load();
+    expect(loaded?.currency).toBe(0);
+    expect(loaded?.zoneId).toBe('town');
+    expect(loaded?.inventory).toEqual({ 'felling-axe': 1, 'fishing-pole': 1 });
+
+    // The upgrade is written back, so the next load doesn't migrate again.
+    const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
+    expect(persisted?.version).toBe(loaded?.version);
   });
 
   it('does not throw when localStorage.setItem fails (e.g. quota exceeded)', () => {

@@ -19,6 +19,13 @@ export const EAT_ITEM_REQUESTED_EVENT = 'eat-item-requested';
 export const COOK_REQUESTED_EVENT = 'cook-requested';
 export const LIGHT_FIRE_REQUESTED_EVENT = 'light-fire-requested';
 export const ACTIONS_CHANGED_EVENT = 'actions-changed';
+// Shop flow: ZoneScene owns whether the shop is open (it knows about range);
+// UIScene renders the panel and forwards buy/sell taps back as requests.
+export const SHOP_OPENED_EVENT = 'shop-opened';
+export const SHOP_CLOSED_EVENT = 'shop-closed';
+export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
+export const SELL_ITEM_REQUESTED_EVENT = 'sell-item-requested';
+export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.

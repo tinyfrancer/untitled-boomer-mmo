@@ -3,9 +3,17 @@ export interface LootTableEntry {
   chance: number;
 }
 
+export interface CurrencyDrop {
+  min: number;
+  max: number;
+  chance: number;
+}
+
 export interface LootTable {
   id: string;
   entries: LootTableEntry[];
+  // Copper carried by the creature — humanoids only; animals drop parts.
+  currency?: CurrencyDrop;
 }
 
 export const LOOT_TABLES: Record<string, LootTable> = {
