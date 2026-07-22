@@ -95,6 +95,7 @@ export class ZoneScene extends Phaser.Scene {
   private pendingGatherNode: ResourceNode | null = null;
   private pendingShopNpc: Shopkeeper | null = null;
   private pursuingTarget = false;
+  private npcs: Shopkeeper[] = [];
   // The shopkeeper the open shop belongs to; null when the shop is closed.
   private shopNpc: Shopkeeper | null = null;
   private campfire: Campfire | null = null;
@@ -201,9 +202,8 @@ export class ZoneScene extends Phaser.Scene {
       return node;
     });
 
-    // All NPCs are shopkeepers today; a second npcId would branch here. The
-    // scene owns them; clicks find them through the pointer's currentlyOver.
-    this.zone.npcSpawns.forEach(
+    // All NPCs are shopkeepers today; a second npcId would branch here.
+    this.npcs = this.zone.npcSpawns.map(
       ({ dx, dy }) => new Shopkeeper(this, this.spawnPoint.x + dx, this.spawnPoint.y + dy),
     );
     this.shopNpc = null;
@@ -375,15 +375,27 @@ export class ZoneScene extends Phaser.Scene {
     );
   }
 
-  private handlePointerDown(
-    pointer: Phaser.Input.Pointer,
-    currentlyOver: Phaser.GameObjects.GameObject[],
-  ): void {
+  // What world objects are under this pointer, tested explicitly. The
+  // currentlyOver list the pointerdown event carries is NOT used: with two
+  // active scenes (UI above this one), Phaser 3.90 computes every scene's
+  // list into one shared internal array, and on pointerdown this scene's
+  // copy is intermittently stale/empty depending on event/frame timing —
+  // clicks on mobs and NPCs silently fell through to the ground path. An
+  // explicit hit test against our own clickables, with a private output
+  // array, is deterministic.
+  private hitTestWorld(pointer: Phaser.Input.Pointer): Phaser.GameObjects.GameObject[] {
+    const candidates: Phaser.GameObjects.GameObject[] = [...this.nodes, ...this.npcs, ...this.mobs];
+    return this.input.manager.hitTest(pointer, candidates, this.cameras.main, []);
+  }
+
+  private handlePointerDown(pointer: Phaser.Input.Pointer): void {
     // Clicks that land on the HUD belong to it, not the world.
     const ui = this.scene.get('UI');
     if (ui?.input && ui.input.hitTestPointer(pointer).length > 0) {
       return;
     }
+
+    const currentlyOver = this.hitTestWorld(pointer);
 
     const clickedNode = currentlyOver.find(
       (obj): obj is ResourceNode => obj instanceof ResourceNode,
