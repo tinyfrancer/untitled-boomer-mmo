@@ -15,6 +15,7 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
   generateRatTexture(scene);
   generateTreeTextures(scene);
   generateFishingSpotTexture(scene);
+  generateCampfireTexture(scene);
   generateTilesetTexture(scene);
 }
 
@@ -248,6 +249,39 @@ function generateFishingSpotTexture(scene: Phaser.Scene): void {
   graphics.fillCircle(size / 2, size / 2, size * 0.08);
 
   graphics.generateTexture('fishing-spot', size, size);
+  graphics.destroy();
+}
+
+// Crossed logs with a flame above them. Drawn around a centre origin so the
+// Campfire's flicker tween scales it in place.
+function generateCampfireTexture(scene: Phaser.Scene): void {
+  const size = TILE_SIZE * 0.8;
+  const graphics = scene.add.graphics();
+  const cx = size / 2;
+  const baseY = size * 0.72;
+
+  graphics.lineStyle(size * 0.11, 0x5d4037, 1);
+  graphics.lineBetween(
+    cx - size * 0.28,
+    baseY + size * 0.08,
+    cx + size * 0.28,
+    baseY - size * 0.08,
+  );
+  graphics.lineBetween(
+    cx - size * 0.28,
+    baseY - size * 0.08,
+    cx + size * 0.28,
+    baseY + size * 0.08,
+  );
+
+  graphics.fillStyle(0xe65100, 1);
+  graphics.fillTriangle(cx, size * 0.14, cx - size * 0.26, baseY, cx + size * 0.26, baseY);
+  graphics.fillStyle(0xffb300, 1);
+  graphics.fillTriangle(cx, size * 0.34, cx - size * 0.15, baseY, cx + size * 0.15, baseY);
+  graphics.fillStyle(0xfff59d, 0.9);
+  graphics.fillTriangle(cx, size * 0.5, cx - size * 0.07, baseY, cx + size * 0.07, baseY);
+
+  graphics.generateTexture('campfire', size, size);
   graphics.destroy();
 }
 
