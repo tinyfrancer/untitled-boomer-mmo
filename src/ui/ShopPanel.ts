@@ -138,7 +138,9 @@ export class ShopPanel {
       );
     }
 
-    this.background.height = cursorY + pad;
+    // setSize, not a bare .height write: only setSize refreshes the shape's
+    // drawn geometry, so the fill and outline actually grow with the rows.
+    this.background.setSize(width, cursorY + pad);
     (this.background.input?.hitArea as Phaser.Geom.Rectangle | undefined)?.setSize(
       width,
       this.background.height,

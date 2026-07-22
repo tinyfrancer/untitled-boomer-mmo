@@ -144,7 +144,9 @@ export class InventoryPanel {
       }
     });
 
-    this.background.height = cursorY + pad;
+    // setSize, not a bare .height write: only setSize refreshes the shape's
+    // drawn geometry, so the fill and outline actually grow with the rows.
+    this.background.setSize(this.background.width, cursorY + pad);
     // The hit area was sized at setInteractive() time; keep it in step with the
     // background as rows come and go.
     (this.background.input?.hitArea as Phaser.Geom.Rectangle | undefined)?.setSize(
