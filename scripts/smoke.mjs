@@ -23,7 +23,18 @@ function check(name, passed, detail = '') {
   console.log(`${passed ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
-const browser = await chromium.launch({ headless: !headed });
+// Phaser drives its update loop off requestAnimationFrame, and headless Chromium
+// will background an idle renderer and stop firing it — mid-run the game freezes
+// with velocities set but positions never integrating. These flags keep the
+// renderer awake for the whole session.
+const browser = await chromium.launch({
+  headless: !headed,
+  args: [
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+  ],
+});
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
 const consoleErrors = [];
@@ -33,6 +44,12 @@ page.on('pageerror', (e) => consoleErrors.push(String(e)));
 // Scene helpers. `game` is the dev-only handle installed in src/main.ts.
 const townState = () =>
   page.evaluate(() => {
+    // Phaser sleeps its TimeStep when the page blurs, and a CI runner has no
+    // window manager to ever focus it — the game silently stops stepping with
+    // velocities still set. Nudge it awake on every poll.
+    const loop = window.game.loop;
+    if (loop.sleeping) loop.wake();
+
     const town = window.game.scene.getScene('Town');
     if (!town?.scene.isActive()) return null;
     const p = town.player;
@@ -45,19 +62,29 @@ const townState = () =>
       x: Math.round(r.x),
       y: Math.round(r.y),
       dist: Math.round(Phaser.Math.Distance.Between(r.x, r.y, p.x, p.y)),
+      state: r.aiState,
+      fromSpawn: Math.round(Phaser.Math.Distance.Between(r.x, r.y, r.spawnX, r.spawnY)),
+      vel: [Math.round(r.body.velocity.x), Math.round(r.body.velocity.y)],
+      bodyOn: r.body.enable,
     }));
     return {
       player: { hp: p.hp, maxHp: p.maxHp, level: p.level, x: Math.round(p.x), y: Math.round(p.y) },
       rats,
+      loop: { sleeping: loop.sleeping, running: loop.running, fps: Math.round(loop.actualFps) },
     };
   });
 
 const waitFor = async (fn, label, timeoutMs = 20000) => {
   const start = Date.now();
+  let last = null;
   for (;;) {
-    const s = await townState();
-    if (s && fn(s)) return s;
-    if (Date.now() - start > timeoutMs) throw new Error(`timed out waiting for: ${label}`);
+    last = (await townState()) ?? last;
+    if (last && fn(last)) return last;
+    if (Date.now() - start > timeoutMs) {
+      // Dump the last state seen: these timeouts are usually only reproducible
+      // on CI, so the failure message has to carry enough to diagnose it.
+      throw new Error(`timed out waiting for: ${label}\nlast state: ${JSON.stringify(last)}`);
+    }
     await page.waitForTimeout(150);
   }
 };
@@ -132,18 +159,49 @@ try {
   check('enemy damages the player', true, `player ${hurt.player.hp}/${hurt.player.maxHp}`);
   await page.screenshot({ path: `${OUT}/3-combat.png` });
 
-  // --- Leash: teleport far away; the rat must reset to full HP and drop aggro. ---
-  await page.evaluate(() => {
+  // --- Leash: a chasing rat that loses the player resets and heals. ---
+  // Set this up from scratch rather than reusing the rat from the fight above,
+  // which the player may well have finished off by now. Aim the player at the
+  // in-bounds corner furthest from that rat's own spawn: a fixed offset can be
+  // clipped by the world bounds to somewhere inside the leash radius.
+  const leashTarget = await page.evaluate(() => {
     const town = window.game.scene.getScene('Town');
-    town.player.setPosition(town.player.x + 900, town.player.y);
+    town.clearTarget(); // stop swinging, so the rat survives to leash
+    const index = town.rats.findIndex((r) => r.isAlive() && r.hp === r.maxHp);
+    const rat = town.rats[index];
+    rat.takeDamage(Math.floor(rat.maxHp / 2)); // a wound, so healing is visible
+    rat.engage();
+    const bounds = town.physics.world.bounds;
+    const margin = 48;
+    town.player.setPosition(
+      rat.spawnX < bounds.width / 2 ? bounds.width - margin : margin,
+      rat.spawnY < bounds.height / 2 ? bounds.height - margin : margin,
+    );
+    return { index, hp: rat.hp, maxHp: rat.maxHp };
   });
-  const leashed = await waitFor((s) => !s.rats.some((r) => r.engaged), 'rats to leash off');
-  const allFull = leashed.rats.filter((r) => r.alive).every((r) => r.hp === r.maxHp);
-  check('rat leashes and heals to full on the way home', allFull);
+  const leashed = await waitFor(
+    (s) => !s.rats[leashTarget.index].engaged,
+    'the chasing rat to leash off',
+    30000,
+  );
+  check(
+    'rat leashes and heals to full on the way home',
+    leashed.rats[leashTarget.index].hp === leashTarget.maxHp,
+    `${leashTarget.hp} -> ${leashed.rats[leashTarget.index].hp}/${leashTarget.maxHp}`,
+  );
 
   // --- Out-of-combat regen: player HP must climb back on its own. ---
-  const beforeRegen = (await townState()).player.hp;
-  const regened = await waitFor((s) => s.player.hp > beforeRegen, 'player HP to regenerate', 20000);
+  // Set the starting point explicitly rather than inheriting whatever the
+  // fight left behind: dropping the target stops the player swinging (which
+  // counts as combat), and the damage both guarantees a deficit to heal and
+  // restarts the out-of-combat timer from a known instant.
+  const beforeRegen = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.clearTarget();
+    town.player.takeDamage(Math.floor(town.player.maxHp / 2));
+    return town.player.hp;
+  });
+  const regened = await waitFor((s) => s.player.hp > beforeRegen, 'player HP to regenerate', 30000);
   check('player regenerates out of combat', true, `${beforeRegen} -> ${regened.player.hp}`);
 
   // --- Death: stand on the level 3 rat with 1 HP and let it finish the job. ---
