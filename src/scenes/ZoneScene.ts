@@ -28,6 +28,11 @@ import {
   TARGET_SELECTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
+  BUY_ITEM_REQUESTED_EVENT,
+  SELL_ITEM_REQUESTED_EVENT,
+  SHOP_OPENED_EVENT,
+  SHOP_CLOSED_EVENT,
+  CURRENCY_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import { THEME, fontPx, px, scenePxScale, worldZoom } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
@@ -36,8 +41,11 @@ import { rollLootTable } from '../systems/LootSystem';
 import { canCook, findCookableItem, rollCook } from '../systems/CookingSystem';
 import { Campfire } from '../entities/Campfire';
 import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
-import { consumableFor } from '../data/items';
+import { consumableFor, itemValue } from '../data/items';
 import { SKILLS } from '../data/skills';
+import { SHOP_CLOSE_RADIUS, SHOP_INTERACT_RADIUS, shopPriceFor } from '../data/shop';
+import { formatCurrency } from '../systems/CurrencySystem';
+import { Shopkeeper } from '../entities/Shopkeeper';
 import {
   advanceGather,
   beginGather,
@@ -79,9 +87,13 @@ export class ZoneScene extends Phaser.Scene {
   private gatherState: GatherState | null = null;
   private gatherNode: ResourceNode | null = null;
   // Click-to-move approach state: a node the player is walking toward to
-  // gather, or whether they are closing on the current combat target.
+  // gather, a shopkeeper they are walking toward to trade, or whether they
+  // are closing on the current combat target.
   private pendingGatherNode: ResourceNode | null = null;
+  private pendingShopNpc: Shopkeeper | null = null;
   private pursuingTarget = false;
+  // The shopkeeper the open shop belongs to; null when the shop is closed.
+  private shopNpc: Shopkeeper | null = null;
   private campfire: Campfire | null = null;
   private lastActions = { canLightFire: false, canCook: false };
   private target: Mob | null = null;
@@ -180,6 +192,13 @@ export class ZoneScene extends Phaser.Scene {
       return node;
     });
 
+    // All NPCs are shopkeepers today; a second npcId would branch here. The
+    // scene owns them; clicks find them through the pointer's currentlyOver.
+    this.zone.npcSpawns.forEach(
+      ({ dx, dy }) => new Shopkeeper(this, this.spawnPoint.x + dx, this.spawnPoint.y + dy),
+    );
+    this.shopNpc = null;
+
     // Nothing walks into the pond.
     groundLayer.setCollision(BLOCKING_TILES);
     this.physics.add.collider(this.player, groundLayer);
@@ -201,6 +220,9 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.on(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
     this.game.events.on(COOK_REQUESTED_EVENT, this.handleCookRequested, this);
     this.game.events.on(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
+    this.game.events.on(BUY_ITEM_REQUESTED_EVENT, this.handleBuyRequested, this);
+    this.game.events.on(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
+    this.game.events.on(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
 
     // bottom-left corner, under the HUD's top-left column
     const uiScale = scenePxScale();
@@ -233,6 +255,9 @@ export class ZoneScene extends Phaser.Scene {
       this.game.events.off(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
       this.game.events.off(COOK_REQUESTED_EVENT, this.handleCookRequested, this);
       this.game.events.off(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
+      this.game.events.off(BUY_ITEM_REQUESTED_EVENT, this.handleBuyRequested, this);
+      this.game.events.off(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
+      this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
     });
 
     // The HUD survives zone changes: launched once on first boot, and left
@@ -257,7 +282,45 @@ export class ZoneScene extends Phaser.Scene {
     this.updateEnemyAttacks(time);
     this.publishPlayerHp();
     this.publishActions();
+    this.updateShopRange();
     this.checkZoneExit();
+  }
+
+  // Walking off mid-trade closes the window, like any vendor would.
+  private updateShopRange(): void {
+    if (!this.shopNpc) return;
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      this.shopNpc.x,
+      this.shopNpc.y,
+    );
+    if (distance > SHOP_CLOSE_RADIUS) {
+      this.closeShop();
+    }
+  }
+
+  private handleBuyRequested(itemId: string): void {
+    if (!this.shopNpc) return;
+    const price = shopPriceFor(itemId);
+    if (price === null) return;
+    if (!this.character.spendCurrency(price)) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, "You can't afford that.");
+      return;
+    }
+    this.character.addItem(itemId, 1);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+  }
+
+  private handleSellRequested(itemId: string): void {
+    if (!this.shopNpc) return;
+    const value = itemValue(itemId);
+    if (value === null || this.character.itemCount(itemId) <= 0) return;
+    this.character.removeItem(itemId, 1);
+    this.character.addCurrency(value);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
   }
 
   private checkZoneExit(): void {
@@ -285,6 +348,7 @@ export class ZoneScene extends Phaser.Scene {
     );
     this.stopGathering();
     this.clearTarget();
+    this.closeShop();
     this.character.recordLocation(exit.to, this.player.x, this.player.y);
     saveService.save(this.character.state);
     const data: ZoneSceneData = {
@@ -325,6 +389,15 @@ export class ZoneScene extends Phaser.Scene {
     // to stop chopping.
     this.stopGathering();
     this.pendingGatherNode = null;
+    this.pendingShopNpc = null;
+
+    const clickedNpc = currentlyOver.find((obj): obj is Shopkeeper => obj instanceof Shopkeeper);
+    if (clickedNpc) {
+      this.clearTarget();
+      this.pursuingTarget = false;
+      this.approachShop(clickedNpc);
+      return;
+    }
 
     const clickedMob = currentlyOver.find((obj): obj is Mob => obj instanceof Mob);
     if (clickedMob) {
@@ -352,12 +425,53 @@ export class ZoneScene extends Phaser.Scene {
     this.player.moveTo(node.x, node.y);
   }
 
-  // Drives the two click-to-move approaches: closing on a combat target, and
-  // walking up to a node before gathering. WASD input cancels both.
+  private approachShop(npc: Shopkeeper): void {
+    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+    if (distance <= SHOP_INTERACT_RADIUS) {
+      this.openShop(npc);
+      return;
+    }
+    this.pendingShopNpc = npc;
+    this.player.moveTo(npc.x, npc.y);
+  }
+
+  private openShop(npc: Shopkeeper): void {
+    this.player.stopMoving();
+    this.shopNpc = npc;
+    this.game.events.emit(SHOP_OPENED_EVENT);
+  }
+
+  private closeShop(): void {
+    if (!this.shopNpc) return;
+    this.shopNpc = null;
+    this.game.events.emit(SHOP_CLOSED_EVENT);
+  }
+
+  // The UI's close button already tore the panel down; just drop the state.
+  private handleShopClosedByUi(): void {
+    this.shopNpc = null;
+  }
+
+  // Drives the click-to-move approaches: closing on a combat target, walking
+  // up to a node before gathering, or up to a shopkeeper before trading. WASD
+  // input cancels all of them.
   private updateApproach(): void {
     if (this.player.isKeyboardMoving()) {
       this.pursuingTarget = false;
       this.pendingGatherNode = null;
+      this.pendingShopNpc = null;
+      return;
+    }
+
+    if (this.pendingShopNpc) {
+      const npc = this.pendingShopNpc;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+      if (distance <= SHOP_INTERACT_RADIUS) {
+        this.pendingShopNpc = null;
+        this.openShop(npc);
+      } else if (!this.player.hasMoveTarget()) {
+        this.pendingShopNpc = null;
+      }
       return;
     }
 
@@ -675,7 +789,9 @@ export class ZoneScene extends Phaser.Scene {
     this.mobs.forEach((mob) => mob.disengage());
     this.stopGathering();
     this.clearTarget();
+    this.closeShop();
     this.pendingGatherNode = null;
+    this.pendingShopNpc = null;
     this.pursuingTarget = false;
     this.player.stopMoving();
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
@@ -710,11 +826,22 @@ export class ZoneScene extends Phaser.Scene {
 
   private grantLoot(lootTableId?: string): void {
     if (!lootTableId) return;
-    const drops = rollLootTable(lootTableId);
-    if (drops.length === 0) return;
+    const { drops, copper } = rollLootTable(lootTableId);
 
-    drops.forEach((drop) => this.character.addItem(drop.itemId, drop.quantity));
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    if (drops.length > 0) {
+      drops.forEach((drop) => this.character.addItem(drop.itemId, drop.quantity));
+      this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    }
+    if (copper > 0) {
+      this.character.addCurrency(copper);
+      this.showFloatingText(
+        this.player.x,
+        this.player.y - 40,
+        `+${formatCurrency(copper)}`,
+        THEME.color.levelUp,
+      );
+      this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+    }
   }
 
   private handleEquipRequested(itemId: string): void {

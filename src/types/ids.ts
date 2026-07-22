@@ -13,3 +13,5 @@ export type SkillId = 'fishing' | 'woodcutting' | 'cooking';
 export type ResourceNodeId = 'tree' | 'fishing-spot';
 
 export type ZoneId = 'town';
+
+export type NpcId = 'shopkeeper';

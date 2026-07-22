@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { consumableFor, describeItemBonuses, describeItemName, isEquippable } from '../data/items';
+import { formatCurrency } from '../systems/CurrencySystem';
 import { THEME, fontPx, px } from './theme';
 
 const TITLE_ROW = 22;
@@ -13,6 +14,7 @@ export class InventoryPanel {
   private readonly scale: number;
   private readonly container: Phaser.GameObjects.Container;
   private readonly background: Phaser.GameObjects.Rectangle;
+  private currencyText!: Phaser.GameObjects.Text;
   private rowObjects: Phaser.GameObjects.GameObject[] = [];
   private readonly onItemClicked: (itemId: string) => void;
   private readonly onFoodClicked: (itemId: string) => void;
@@ -46,10 +48,22 @@ export class InventoryPanel {
       fontStyle: 'bold',
     });
 
+    // Coin lives here rather than as an inventory row: currency is not an item.
+    this.currencyText = scene.add
+      .text(width - pad, pad + px(2, scale), formatCurrency(0), {
+        fontSize: fontPx(THEME.font.sm, scale),
+        color: THEME.color.levelUp,
+      })
+      .setOrigin(1, 0);
+
     this.container = scene.add
-      .container(x, y, [this.background, title])
+      .container(x, y, [this.background, title, this.currencyText])
       .setScrollFactor(0)
       .setVisible(false);
+  }
+
+  setCurrency(totalCopper: number): void {
+    this.currencyText.setText(formatCurrency(totalCopper));
   }
 
   update(inventory: Record<string, number>): void {

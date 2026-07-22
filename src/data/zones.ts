@@ -1,4 +1,4 @@
-import type { ZoneId } from '../types/ids';
+import type { NpcId, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import {
   TOWN_MOB_SPAWNS,
@@ -6,6 +6,12 @@ import {
   type MobSpawnPoint,
   type NodeSpawnPoint,
 } from './spawns';
+
+export interface NpcSpawnPoint {
+  dx: number;
+  dy: number;
+  npcId: NpcId;
+}
 
 export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 
@@ -22,6 +28,7 @@ export interface ZoneDefinition {
   map: number[][];
   mobSpawns: MobSpawnPoint[];
   nodeSpawns: NodeSpawnPoint[];
+  npcSpawns: NpcSpawnPoint[];
   exits: ZoneExit[];
 }
 
@@ -32,6 +39,8 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     map: TOWN_MAP,
     mobSpawns: TOWN_MOB_SPAWNS,
     nodeSpawns: TOWN_NODE_SPAWNS,
+    // Just off the crossroads, clear of every mob spawn point.
+    npcSpawns: [{ dx: 96, dy: -96, npcId: 'shopkeeper' }],
     exits: [],
   },
 };

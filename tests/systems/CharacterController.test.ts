@@ -24,10 +24,37 @@ describe('CharacterController inventory', () => {
   });
 });
 
+describe('CharacterController currency', () => {
+  it('adds and spends copper against the state', () => {
+    const character = makeController();
+    const start = character.state.currency;
+    character.addCurrency(50);
+    expect(character.state.currency).toBe(start + 50);
+    expect(character.spendCurrency(30)).toBe(true);
+    expect(character.state.currency).toBe(start + 20);
+  });
+
+  it('refuses to overspend and deducts nothing', () => {
+    const character = makeController();
+    const start = character.state.currency;
+    expect(character.spendCurrency(start + 1)).toBe(false);
+    expect(character.state.currency).toBe(start);
+  });
+
+  it('ignores negative amounts on both sides', () => {
+    const character = makeController();
+    const start = character.state.currency;
+    character.addCurrency(-100);
+    expect(character.state.currency).toBe(start);
+    expect(character.spendCurrency(-5)).toBe(false);
+  });
+});
+
 describe('CharacterController gear', () => {
   it('equips from the inventory and swaps the old piece back in', () => {
     const character = makeController();
-    // warrior starts with the rusty sword equipped and the tools in the bag
+    character.addItem('felling-axe', 1);
+    // the warrior starts with the rusty sword equipped
     expect(character.state.gear.weapon).toBe('rusty-sword');
     character.equip('felling-axe');
     expect(character.state.gear.weapon).toBe('felling-axe');

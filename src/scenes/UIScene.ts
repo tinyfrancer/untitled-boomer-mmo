@@ -4,6 +4,7 @@ import { CharacterPanel, characterPanelHeight, characterPanelWidth } from '../ui
 import { ActionBar } from '../ui/ActionBar';
 import { GatherProgressBar } from '../ui/GatherProgressBar';
 import { InventoryPanel, inventoryPanelWidth } from '../ui/InventoryPanel';
+import { ShopPanel } from '../ui/ShopPanel';
 import { SlotPicker } from '../ui/SlotPicker';
 import { TargetFrame } from '../ui/TargetFrame';
 import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
@@ -28,6 +29,11 @@ import {
   SKILL_XP_GAINED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
+  BUY_ITEM_REQUESTED_EVENT,
+  SELL_ITEM_REQUESTED_EVENT,
+  SHOP_OPENED_EVENT,
+  SHOP_CLOSED_EVENT,
+  CURRENCY_CHANGED_EVENT,
   type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
@@ -54,10 +60,12 @@ interface HudModel {
   xp: number;
   gear: Record<GearSlotId, string | null>;
   inventory: Record<string, number>;
+  currency: number;
   skills: Skills;
   hp: number;
   characterPanelVisible: boolean;
   inventoryPanelVisible: boolean;
+  shopOpen: boolean;
   actions: AvailableActions;
 }
 
@@ -73,6 +81,7 @@ export class UIScene extends Phaser.Scene {
   private gatherBar!: GatherProgressBar;
   private actionBar!: ActionBar;
   private slotPicker: SlotPicker | null = null;
+  private shopPanel: ShopPanel | null = null;
   private classId: ClassId = 'warrior';
   private uiScale = 1;
   private model: HudModel = {
@@ -81,10 +90,12 @@ export class UIScene extends Phaser.Scene {
     xp: 0,
     gear: DEFAULT_GEAR,
     inventory: {},
+    currency: 0,
     skills: createInitialSkills(),
     hp: 0,
     characterPanelVisible: true,
     inventoryPanelVisible: false,
+    shopOpen: false,
     actions: { canLightFire: false, canCook: false },
   };
 
@@ -102,6 +113,7 @@ export class UIScene extends Phaser.Scene {
       xp: character?.xp ?? 0,
       gear: character?.gear ?? DEFAULT_GEAR,
       inventory: character?.inventory ?? {},
+      currency: character?.currency ?? 0,
       skills: character?.skills ?? createInitialSkills(),
       hp: computeEffectiveStats(
         this.classId,
@@ -126,6 +138,9 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(GATHER_ENDED_EVENT, this.handleGatherEnded, this);
     this.game.events.on(GATHER_REFUSED_EVENT, this.handleGatherRefused, this);
     this.game.events.on(ACTIONS_CHANGED_EVENT, this.handleActionsChanged, this);
+    this.game.events.on(SHOP_OPENED_EVENT, this.handleShopOpened, this);
+    this.game.events.on(SHOP_CLOSED_EVENT, this.handleShopClosed, this);
+    this.game.events.on(CURRENCY_CHANGED_EVENT, this.handleCurrencyChanged, this);
 
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
@@ -149,6 +164,9 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(GATHER_ENDED_EVENT, this.handleGatherEnded, this);
       this.game.events.off(GATHER_REFUSED_EVENT, this.handleGatherRefused, this);
       this.game.events.off(ACTIONS_CHANGED_EVENT, this.handleActionsChanged, this);
+      this.game.events.off(SHOP_OPENED_EVENT, this.handleShopOpened, this);
+      this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosed, this);
+      this.game.events.off(CURRENCY_CHANGED_EVENT, this.handleCurrencyChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
@@ -158,6 +176,9 @@ export class UIScene extends Phaser.Scene {
   private handleResize = (): void => {
     this.slotPicker?.close();
     this.slotPicker = null;
+    // Destroyed with the rest of the children; buildHud reopens it if the shop
+    // is still open.
+    this.shopPanel = null;
     this.children.removeAll(true);
     this.buildHud();
   };
@@ -177,10 +198,43 @@ export class UIScene extends Phaser.Scene {
 
     this.refreshCharacterPanel();
     this.inventoryPanel.update(this.model.inventory);
+    this.inventoryPanel.setCurrency(this.model.currency);
     this.characterPanel.setVisible(this.model.characterPanelVisible);
     this.inventoryPanel.setVisible(this.model.inventoryPanelVisible);
     this.handleXpGained(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
+    if (this.model.shopOpen) {
+      this.openShopPanel();
+    }
   }
+
+  private openShopPanel(): void {
+    this.shopPanel?.destroy();
+    this.shopPanel = new ShopPanel(
+      this,
+      this.uiScale,
+      { inventory: this.model.inventory, currency: this.model.currency },
+      (itemId) => this.game.events.emit(BUY_ITEM_REQUESTED_EVENT, itemId),
+      (itemId) => this.game.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId),
+      () => this.game.events.emit(SHOP_CLOSED_EVENT),
+    );
+  }
+
+  private handleShopOpened = (): void => {
+    this.model.shopOpen = true;
+    this.openShopPanel();
+  };
+
+  private handleShopClosed = (): void => {
+    this.model.shopOpen = false;
+    this.shopPanel?.destroy();
+    this.shopPanel = null;
+  };
+
+  private handleCurrencyChanged = (totalCopper: number): void => {
+    this.model.currency = totalCopper;
+    this.inventoryPanel.setCurrency(totalCopper);
+    this.shopPanel?.update({ inventory: this.model.inventory, currency: totalCopper });
+  };
 
   // Player info sits top-left under the target frame.
   private playerBlockTop(): number {
@@ -430,6 +484,7 @@ export class UIScene extends Phaser.Scene {
   private handleInventoryChanged = (inventory: Record<string, number>): void => {
     this.model.inventory = inventory;
     this.inventoryPanel.update(inventory);
+    this.shopPanel?.update({ inventory, currency: this.model.currency });
   };
 
   private handleSkillXpGained = (progress: SkillProgressInfo): void => {

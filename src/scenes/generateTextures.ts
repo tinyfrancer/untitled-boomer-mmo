@@ -13,10 +13,52 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
   // the bare figure, so a Player always has a texture to construct against
   ensurePlayerTexture(scene, computeAppearance(NO_GEAR));
   generateRatTexture(scene);
+  generateShopkeeperTexture(scene);
   generateTreeTextures(scene);
   generateFishingSpotTexture(scene);
   generateCampfireTexture(scene);
   generateTilesetTexture(scene);
+}
+
+export const SHOPKEEPER_TEXTURE_KEY = 'npc-shopkeeper';
+
+// The player's stick figure in merchant colors — amber apron, coin in hand —
+// so an NPC reads as a person but never as another player.
+function generateShopkeeperTexture(scene: Phaser.Scene): void {
+  const size = TILE_SIZE;
+  const figure = buildStickFigure(size);
+  const graphics = scene.add.graphics();
+
+  const torso = (): void => {
+    graphics.lineBetween(figure.cx, figure.shoulderY, figure.cx, figure.hipY);
+    graphics.lineBetween(figure.leftHandX, figure.shoulderY, figure.rightHandX, figure.shoulderY);
+  };
+  const legs = (): void => {
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx - size * 0.13, figure.footY);
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * 0.13, figure.footY);
+  };
+
+  graphics.lineStyle(figure.limbWidth + size * 0.03, OUTLINE_COLOR, 1);
+  torso();
+  legs();
+  graphics.lineStyle(figure.limbWidth, 0xffb300, 1);
+  torso();
+  graphics.lineStyle(figure.limbWidth, 0x8d6e63, 1);
+  legs();
+
+  graphics.fillStyle(0x14140f, 1);
+  graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  graphics.lineStyle(size * 0.03, 0xffffff, 1);
+  graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
+
+  // the coin
+  graphics.fillStyle(0xffd54f, 1);
+  graphics.fillCircle(figure.rightHandX, figure.shoulderY, size * 0.06);
+  graphics.lineStyle(size * 0.015, OUTLINE_COLOR, 1);
+  graphics.strokeCircle(figure.rightHandX, figure.shoulderY, size * 0.06);
+
+  graphics.generateTexture(SHOPKEEPER_TEXTURE_KEY, size, size);
+  graphics.destroy();
 }
 
 // Landmark points of the stick figure, expressed as fractions of TILE_SIZE so the

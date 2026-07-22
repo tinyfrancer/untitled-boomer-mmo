@@ -169,6 +169,62 @@ try {
   });
   check('gathering is refused without the right tool equipped', refused === false);
 
+  // --- Shop: tools no longer start on the character; they are bought. ---
+  const freshWallet = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    return { copper: town.character.state.currency, inv: { ...town.character.state.inventory } };
+  });
+  check(
+    'a new character starts with copper and an empty bag',
+    freshWallet.copper > 0 && Object.keys(freshWallet.inv).length === 0,
+    `copper=${freshWallet.copper}`,
+  );
+
+  const cantAfford = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    const npc = town.children.list.find((obj) => obj.texture?.key === 'npc-shopkeeper');
+    town.player.setPosition(npc.x, npc.y + 50);
+    town.approachShop(npc);
+    const open = town.shopNpc !== null;
+    // 75 starting copper buys one 60c tool, not two
+    town.handleBuyRequested('felling-axe');
+    town.handleBuyRequested('fishing-pole');
+    return {
+      open,
+      copper: town.character.state.currency,
+      inv: { ...town.character.state.inventory },
+    };
+  });
+  check('clicking the shopkeeper in range opens the shop', cantAfford.open === true);
+  check(
+    'the shop refuses a purchase the player cannot afford',
+    cantAfford.inv['felling-axe'] === 1 && cantAfford.inv['fishing-pole'] === undefined,
+    `copper=${cantAfford.copper}`,
+  );
+
+  const traded = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    // earn the second tool by selling vendor trash
+    town.character.state.inventory['rat-bones'] = 30;
+    for (let i = 0; i < 30; i++) town.handleSellRequested('rat-bones');
+    town.handleBuyRequested('fishing-pole');
+    return { copper: town.character.state.currency, inv: { ...town.character.state.inventory } };
+  });
+  check(
+    'selling loot funds the second tool',
+    traded.inv['fishing-pole'] === 1 && traded.inv['rat-bones'] === undefined,
+    `copper left=${traded.copper}`,
+  );
+
+  const shopClosed = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    const npc = town.shopNpc;
+    town.player.setPosition(npc.x + 400, npc.y);
+    town.updateShopRange();
+    return town.shopNpc === null;
+  });
+  check('walking away closes the shop', shopClosed === true);
+
   const beforeChop = await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
     town.handleEquipRequested('felling-axe');

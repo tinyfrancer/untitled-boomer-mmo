@@ -49,6 +49,19 @@ export class CharacterController {
     this.state.inventory = removeItemFromInventory(this.state.inventory, itemId, quantity);
   }
 
+  addCurrency(copper: number): void {
+    this.state.currency += Math.max(0, copper);
+  }
+
+  /** Returns false (and deducts nothing) if the character can't afford it. */
+  spendCurrency(copper: number): boolean {
+    if (copper < 0 || this.state.currency < copper) {
+      return false;
+    }
+    this.state.currency -= copper;
+    return true;
+  }
+
   equip(itemId: string): void {
     const result = equipItem(this.state.gear, this.state.inventory, itemId);
     this.state.gear = result.gear;
