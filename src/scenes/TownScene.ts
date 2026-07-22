@@ -9,8 +9,12 @@ import { ResourceNode } from '../entities/ResourceNode';
 import type { Mob } from '../entities/Mob';
 import { TILESET_KEY } from './generateTextures';
 import {
+  ACTIONS_CHANGED_EVENT,
+  COOK_REQUESTED_EVENT,
+  EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   GATHER_ENDED_EVENT,
+  LIGHT_FIRE_REQUESTED_EVENT,
   GATHER_PROGRESS_EVENT,
   GATHER_REFUSED_EVENT,
   GATHER_STARTED_EVENT,
@@ -31,7 +35,16 @@ import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSyst
 import { conColor } from '../systems/EnemySystem';
 import { addXp, xpToNextLevel } from '../systems/LevelingSystem';
 import { rollLootTable } from '../systems/LootSystem';
-import { addItemToInventory, equipItem, unequipItem } from '../systems/InventorySystem';
+import {
+  addItemToInventory,
+  equipItem,
+  removeItemFromInventory,
+  unequipItem,
+} from '../systems/InventorySystem';
+import { canCook, findCookableItem, rollCook } from '../systems/CookingSystem';
+import { Campfire } from '../entities/Campfire';
+import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
+import { consumableFor } from '../data/items';
 import {
   advanceGather,
   beginGather,
@@ -54,6 +67,8 @@ export class TownScene extends Phaser.Scene {
   private nodes: ResourceNode[] = [];
   private gatherState: GatherState | null = null;
   private gatherNode: ResourceNode | null = null;
+  private campfire: Campfire | null = null;
+  private lastActions = { canLightFire: false, canCook: false };
   private target: Mob | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
   private lastAttackAt = 0;
@@ -148,6 +163,9 @@ export class TownScene extends Phaser.Scene {
     this.game.events.on(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
     this.game.events.on(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
     this.game.events.on(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
+    this.game.events.on(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
+    this.game.events.on(COOK_REQUESTED_EVENT, this.handleCookRequested, this);
+    this.game.events.on(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
 
     // bottom edge, clear of the joystick corner and the HUD's top-left column
     const uiScale = scenePxScale(this);
@@ -172,6 +190,9 @@ export class TownScene extends Phaser.Scene {
       this.game.events.off(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
       this.game.events.off(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
       this.game.events.off(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
+      this.game.events.off(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
+      this.game.events.off(COOK_REQUESTED_EVENT, this.handleCookRequested, this);
+      this.game.events.off(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
     });
 
     this.scene.launch('UI');
@@ -185,6 +206,7 @@ export class TownScene extends Phaser.Scene {
     this.updateCombat(time);
     this.updateEnemyAttacks(time);
     this.publishPlayerHp();
+    this.publishActions();
   }
 
   private handlePointerDown(
@@ -286,6 +308,106 @@ export class TownScene extends Phaser.Scene {
       skillLevel(this.characterState.skills, definition.skill),
     );
     this.game.events.emit(GATHER_PROGRESS_EVENT, 0);
+  }
+
+  private isNearFire(): boolean {
+    if (!this.campfire?.isLit()) return false;
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      this.campfire.x,
+      this.campfire.y,
+    );
+    return distance <= FIRE_COOK_RADIUS;
+  }
+
+  // The action bar is driven off what is actually possible right now, so it can
+  // show only the buttons that would succeed. Emitted on change rather than
+  // every frame, the same way player HP is.
+  private publishActions(): void {
+    const next = {
+      canLightFire:
+        !this.isNearFire() && (this.characterState.inventory[FIRE_INPUT_ITEM_ID] ?? 0) > 0,
+      canCook: this.isNearFire() && findCookableItem(this.characterState.inventory) !== null,
+    };
+    if (
+      next.canLightFire === this.lastActions.canLightFire &&
+      next.canCook === this.lastActions.canCook
+    ) {
+      return;
+    }
+    this.lastActions = next;
+    this.game.events.emit(ACTIONS_CHANGED_EVENT, next);
+  }
+
+  private handleLightFireRequested(): void {
+    if ((this.characterState.inventory[FIRE_INPUT_ITEM_ID] ?? 0) <= 0) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, 'You have no logs to burn.');
+      return;
+    }
+
+    // One fire at a time: lighting a new one replaces the old, rather than
+    // letting the player carpet the town in campfires.
+    this.campfire?.extinguish();
+    this.characterState.inventory = removeItemFromInventory(
+      this.characterState.inventory,
+      FIRE_INPUT_ITEM_ID,
+      1,
+    );
+    this.campfire = new Campfire(this, this.player.x, this.player.y + 32);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+  }
+
+  private handleCookRequested(): void {
+    const recipe = findCookableItem(this.characterState.inventory);
+    if (!recipe) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, 'You have nothing to cook.');
+      return;
+    }
+
+    const check = canCook(
+      recipe,
+      this.characterState.skills,
+      this.characterState.inventory,
+      this.isNearFire(),
+    );
+    if (!check.ok) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      return;
+    }
+
+    const result = rollCook(recipe, skillLevel(this.characterState.skills, 'cooking'));
+    this.characterState.inventory = addItemToInventory(
+      removeItemFromInventory(this.characterState.inventory, recipe.inputItemId, 1),
+      result.itemId,
+      1,
+    );
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    if (result.burnt) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, 'You burn it.');
+    } else {
+      this.awardSkillXp('cooking', result.xp);
+    }
+  }
+
+  private handleEatRequested(itemId: string): void {
+    if ((this.characterState.inventory[itemId] ?? 0) <= 0 || !consumableFor(itemId)) {
+      return;
+    }
+    if (this.player.hp >= this.player.maxHp) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, 'You are already at full health.');
+      return;
+    }
+    if (!this.player.eat(itemId)) {
+      return;
+    }
+
+    this.characterState.inventory = removeItemFromInventory(
+      this.characterState.inventory,
+      itemId,
+      1,
+    );
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
   }
 
   private awardSkillXp(skill: SkillId, amount: number): void {

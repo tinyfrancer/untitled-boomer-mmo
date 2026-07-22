@@ -83,6 +83,8 @@ const townState = () =>
       inventory: { ...town.characterState.inventory },
       skills: JSON.parse(JSON.stringify(town.characterState.skills)),
       gear: { ...town.characterState.gear },
+      fireLit: town.campfire?.isLit() === true,
+      eating: p.isEating(),
       loop: { sleeping: loop.sleeping, running: loop.running, fps: Math.round(loop.actualFps) },
     };
   });
@@ -216,6 +218,101 @@ try {
     `fish=${caught.inventory['raw-fish']} fishing xp=${caught.skills.fishing.xp}`,
   );
   await page.screenshot({ path: `${OUT}/5-gathering.png` });
+
+  // --- Cooking chain: logs -> fire -> cooked fish -> eaten for health. ---
+  // Stock the bag directly. Gathering enough by hand is already covered above,
+  // and doing it again would just be a slow way to reach the same state.
+  const lit = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.stopGathering();
+    town.characterState.inventory.logs = 3;
+    town.characterState.inventory['raw-fish'] = 6;
+    town.handleLightFireRequested();
+    return {
+      fire: town.campfire?.isLit() === true,
+      logs: town.characterState.inventory.logs ?? 0,
+    };
+  });
+  check(
+    'lighting a fire consumes a log and places it',
+    lit.fire === true && lit.logs === 2,
+    `fire=${lit.fire} logs=${lit.logs}`,
+  );
+
+  // Cooking near the fire must produce one of the two outcomes and consume the
+  // raw fish either way; which one is a dice roll, so don't assert on it.
+  const cooked = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    const before = town.characterState.inventory['raw-fish'];
+    // Cook the lot, so at least one succeeds despite the level 1 burn chance.
+    for (let i = 0; i < before; i++) town.handleCookRequested();
+    const inv = town.characterState.inventory;
+    return {
+      raw: inv['raw-fish'] ?? 0,
+      cooked: inv['cooked-fish'] ?? 0,
+      burnt: inv['burnt-fish'] ?? 0,
+      xp: town.characterState.skills.cooking.xp,
+    };
+  });
+  check(
+    'cooking consumes the raw fish',
+    cooked.raw === 0,
+    `cooked=${cooked.cooked} burnt=${cooked.burnt}`,
+  );
+  check('cooking produces food or a burnt mess', cooked.cooked + cooked.burnt === 6);
+  check(
+    'a successful cook grants cooking xp',
+    cooked.cooked === 0 || cooked.xp > 0,
+    `cooking xp=${cooked.xp}`,
+  );
+
+  // Cooking away from a fire has to be refused.
+  const awayFromFire = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.characterState.inventory['raw-fish'] = 1;
+    town.player.setPosition(town.campfire.x + 600, town.campfire.y);
+    town.handleCookRequested();
+    return town.characterState.inventory['raw-fish'];
+  });
+  check('cooking away from a fire is refused', awayFromFire === 1);
+
+  // --- Eating: a heal over time that outpaces baseline regen. ---
+  const beforeEat = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.characterState.inventory['cooked-fish'] = 1;
+    town.player.takeDamage(Math.floor(town.player.maxHp / 2));
+    // Past the regen lockout, so any healing seen is food doing its job on top
+    // of a baseline that is also running — see the regen check above.
+    town.player.msSinceCombat = 5000;
+    town.handleEatRequested('cooked-fish');
+    return {
+      hp: town.player.hp,
+      eating: town.player.isEating(),
+      fish: town.characterState.inventory['cooked-fish'] ?? 0,
+    };
+  });
+  check(
+    'eating consumes the food and starts a heal',
+    beforeEat.eating === true && beforeEat.fish === 0,
+  );
+
+  const ate = await waitFor((s) => s.player.hp > beforeEat.hp, 'food to heal the player');
+  check('eating heals the player over time', true, `${beforeEat.hp} -> ${ate.player.hp}`);
+
+  // Getting hit has to cancel it, since food is out-of-combat only.
+  const interrupted = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.characterState.inventory['cooked-fish'] = 1;
+    town.handleEatRequested('cooked-fish');
+    const started = town.player.isEating();
+    town.player.takeDamage(1);
+    return { started, stillEating: town.player.isEating() };
+  });
+  check(
+    'taking a hit cancels the food buff',
+    interrupted.started === true && interrupted.stillEating === false,
+  );
+  await page.screenshot({ path: `${OUT}/6-cooking.png` });
 
   // Back to the starting loadout so the combat checks below run on the gear
   // they were written against.
