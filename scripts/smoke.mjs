@@ -23,7 +23,18 @@ function check(name, passed, detail = '') {
   console.log(`${passed ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
-const browser = await chromium.launch({ headless: !headed });
+// Phaser drives its update loop off requestAnimationFrame, and headless Chromium
+// will background an idle renderer and stop firing it — mid-run the game freezes
+// with velocities set but positions never integrating. These flags keep the
+// renderer awake for the whole session.
+const browser = await chromium.launch({
+  headless: !headed,
+  args: [
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+  ],
+});
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
 const consoleErrors = [];
