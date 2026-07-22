@@ -663,6 +663,109 @@ try {
     `at ${moved.player.x},${moved.player.y}`,
   );
 
+  // --- Inventory scrolling: a full bag must stay on screen and scroll,
+  // and a scroll drag must never be mistaken for a row tap. ---
+  const invPanel = () =>
+    page.evaluate(() => {
+      const p = window.game.scene.getScene('UI').inventoryPanel;
+      return {
+        visible: p.isVisible(),
+        scrollY: Math.round(p.scrollY),
+        maxScroll: Math.round(Math.max(0, p.contentHeight - p.viewportHeight)),
+        bottom: Math.round(p.panelY + p.background.height),
+        thumb: p.scrollThumb.visible,
+        selected: p.selectedItemId,
+        // Rows scrolled out of the viewport must not still catch taps.
+        enabledRows: p.rowObjects.filter((o) => o.input?.enabled).length,
+        inputRows: p.rowObjects.filter((o) => o.input).length,
+      };
+    });
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.state.inventory = {
+      'rat-bones': 12,
+      'rat-meat': 7,
+      logs: 5,
+      'raw-fish': 3,
+      'brown-helmet': 1,
+      'crab-meat': 4,
+      'cooked-fish': 2,
+      'burnt-fish': 1,
+      'brown-chestplate': 1,
+      'brown-legs': 1,
+      'brown-axe': 1,
+      'felling-axe': 1,
+      'fishing-pole': 1,
+      'cooked-crab': 2,
+    };
+    z.game.events.emit('inventory-changed', z.character.state.inventory);
+  });
+  await page.waitForTimeout(200);
+  if (!(await invPanel()).visible) {
+    await page.keyboard.press('i');
+    await page.waitForTimeout(300);
+  }
+  const invFull = await invPanel();
+  check(
+    'a full inventory panel stays within the screen',
+    invFull.bottom <= 900,
+    `bottom=${invFull.bottom} of 900`,
+  );
+  check(
+    'an overflowing inventory becomes scrollable',
+    invFull.maxScroll > 0 && invFull.thumb === true,
+    `maxScroll=${invFull.maxScroll}`,
+  );
+
+  const invCenter = await page.evaluate(() => {
+    const p = window.game.scene.getScene('UI').inventoryPanel;
+    return { x: p.panelX + 100, y: p.panelY + p.rowsTop() + p.viewportHeight / 2 };
+  });
+  await page.mouse.move(invCenter.x, invCenter.y);
+  await page.mouse.wheel(0, 5000);
+  await page.waitForTimeout(250);
+  const invScrolled = await invPanel();
+  check(
+    'the wheel scrolls the bag and clamps at the end',
+    invScrolled.scrollY === invScrolled.maxScroll && invScrolled.scrollY > 0,
+    `scrollY=${invScrolled.scrollY}/${invScrolled.maxScroll}`,
+  );
+  check(
+    'rows scrolled out of the viewport stop taking input',
+    invScrolled.enabledRows < invScrolled.inputRows,
+    `${invScrolled.enabledRows}/${invScrolled.inputRows} rows live`,
+  );
+
+  // A tap selects; a drag of the same press must not.
+  await page.mouse.move(invCenter.x, invCenter.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const invTapped = await invPanel();
+  check('tapping a row selects the item', invTapped.selected !== null, `${invTapped.selected}`);
+
+  await page.mouse.move(invCenter.x, invCenter.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) {
+    await page.mouse.move(invCenter.x, invCenter.y + i * 12);
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const invDragged = await invPanel();
+  check(
+    'a scroll drag scrolls without changing the selection',
+    invDragged.scrollY < invScrolled.scrollY && invDragged.selected === invTapped.selected,
+    `scrollY ${invScrolled.scrollY} -> ${invDragged.scrollY}, selection kept`,
+  );
+  await page.screenshot({ path: `${OUT}/10-inventory-scroll.png` });
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.state.inventory = { logs: 1 };
+    z.game.events.emit('inventory-changed', z.character.state.inventory);
+    window.game.scene.getScene('UI').inventoryPanel.setVisible(false);
+  });
+
   // --- Portrait phone: the canvas tracks the viewport 1:1 and the camera
   // zooms in rather than shrinking the world. ---
   await page.setViewportSize({ width: 390, height: 844 });

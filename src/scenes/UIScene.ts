@@ -170,6 +170,8 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosed, this);
       this.game.events.off(CURRENCY_CHANGED_EVENT, this.handleCurrencyChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      // Owns an off-display-list mask that a scene teardown won't reach.
+      this.inventoryPanel?.destroy();
     });
   }
 
@@ -181,6 +183,9 @@ export class UIScene extends Phaser.Scene {
     // Destroyed with the rest of the children; buildHud reopens it if the shop
     // is still open.
     this.shopPanel = null;
+    // Explicit: the inventory panel owns scene-level input listeners and an
+    // off-list mask that children.removeAll can't reach.
+    this.inventoryPanel?.destroy();
     this.children.removeAll(true);
     this.buildHud();
   };
@@ -326,6 +331,8 @@ export class UIScene extends Phaser.Scene {
       x,
       y,
       this.uiScale,
+      // Cap the panel at the screen's bottom margin; past that, rows scroll.
+      this.scale.height - y - margin,
       (itemId) =>
         actionsForItem(itemId, {
           nearFire: this.model.actions.nearFire,
