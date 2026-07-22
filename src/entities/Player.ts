@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
-import { regenTick } from '../systems/RegenSystem';
+import { manaRegenTick, regenTick } from '../systems/RegenSystem';
+import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/AbilitySystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { stepToward, type Point } from '../systems/MovementSystem';
@@ -28,6 +29,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   level: number;
   maxHp: number;
   hp: number;
+  maxMana: number;
+  mana: number;
   strength: number;
   intellect: number;
   speed: number;
@@ -41,7 +44,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // Regen accrues in fractions of a point per frame, so current HP is tracked
   // as a float here and only rounded when something reads it.
   private hpFloat: number;
+  // Mana accrues the same fractional way HP does, and for the same reason.
+  private manaFloat: number;
   private msSinceCombat = 0;
+  private manaShield: ManaShield | null = null;
+  private haste: Haste | null = null;
   private foodBuff: FoodBuff | null = null;
   private healPulse: HealPulseState = createHealPulse();
   private pendingHealPulse = 0;
@@ -73,6 +80,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.maxHp = stats.maxHp;
     this.hp = stats.maxHp;
     this.hpFloat = stats.maxHp;
+    this.maxMana = stats.maxMana;
+    this.mana = stats.maxMana;
+    this.manaFloat = stats.maxMana;
     this.strength = stats.strength;
     this.intellect = stats.intellect;
     this.speed = stats.speed;
@@ -142,15 +152,58 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.maxHp = stats.maxHp;
     this.hpFloat = Phaser.Math.Clamp(this.hpFloat + maxHpDelta, 0, this.maxHp);
     this.hp = Math.round(this.hpFloat);
+    // Mana rides its own ceiling the same way, so a level never costs a caster
+    // the mana they were holding.
+    const maxManaDelta = stats.maxMana - this.maxMana;
+    this.maxMana = stats.maxMana;
+    this.manaFloat = Phaser.Math.Clamp(this.manaFloat + maxManaDelta, 0, this.maxMana);
+    this.mana = Math.round(this.manaFloat);
     this.strength = stats.strength;
     this.intellect = stats.intellect;
     this.attackPower = stats.attackPower;
   }
 
-  takeDamage(amount: number): void {
-    this.hpFloat = Math.max(0, this.hpFloat - amount);
+  /** Returns how much a mana shield soaked, for the scene to show. */
+  takeDamage(amount: number): number {
+    const absorb = absorbDamage(this.manaShield, amount);
+    this.manaShield = absorb.shield;
+    this.hpFloat = Math.max(0, this.hpFloat - absorb.damage);
     this.hp = Math.round(this.hpFloat);
     this.markInCombat();
+    return absorb.absorbed;
+  }
+
+  /** Returns false, spending nothing, if the pool is short. */
+  spendMana(amount: number): boolean {
+    if (this.manaFloat < amount) {
+      return false;
+    }
+    this.manaFloat -= amount;
+    this.mana = Math.round(this.manaFloat);
+    return true;
+  }
+
+  /** Passing null drops any shield currently up. */
+  applyManaShield(shield: ManaShield | null): void {
+    this.manaShield = shield;
+  }
+
+  applyHaste(haste: Haste): void {
+    this.haste = haste;
+  }
+
+  hasManaShield(): boolean {
+    return this.manaShield !== null;
+  }
+
+  isHasted(): boolean {
+    return this.haste !== null;
+  }
+
+  // What the scene's cooldown check should actually use — Battle Fury shortens
+  // it while it lasts.
+  effectiveAttackCooldownMs(): number {
+    return this.attackCooldownMs * (this.haste?.cooldownMultiplier ?? 1);
   }
 
   // Also called when the player lands a hit: swinging keeps regen suppressed
@@ -185,8 +238,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   restoreToFull(): void {
     this.hpFloat = this.maxHp;
     this.hp = this.maxHp;
+    this.manaFloat = this.maxMana;
+    this.mana = this.maxMana;
     this.msSinceCombat = 0;
     this.foodBuff = null;
+    this.manaShield = null;
+    this.haste = null;
     this.healPulse = createHealPulse();
     this.pendingHealPulse = 0;
   }
@@ -228,6 +285,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.pendingHealPulse += healTick.pulse;
 
     this.hp = Math.round(this.hpFloat);
+
+    // Mana comes back on the same curve HP does, but without the out-of-combat
+    // lockout: a caster who can't regain mana mid-fight has no fight to be in.
+    this.manaFloat += manaRegenTick(this.manaFloat, this.maxMana, deltaMs);
+    this.mana = Math.round(this.manaFloat);
+
+    this.manaShield = tickBuff(this.manaShield, deltaMs);
+    this.haste = tickBuff(this.haste, deltaMs);
 
     let vx = 0;
     let vy = 0;

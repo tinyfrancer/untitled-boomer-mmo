@@ -33,9 +33,15 @@ import {
   SHOP_OPENED_EVENT,
   SHOP_CLOSED_EVENT,
   CURRENCY_CHANGED_EVENT,
+  ABILITY_REQUESTED_EVENT,
+  ABILITY_STATE_CHANGED_EVENT,
+  PLAYER_MANA_CHANGED_EVENT,
+  type AbilityState,
   type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
+import { ActionBar } from '../ui/ActionBar';
+import { abilitiesFor } from '../systems/AbilitySystem';
 import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
 import { itemsForSlot } from '../systems/InventorySystem';
 import { equippableFrom } from '../systems/EquipSystem';
@@ -65,6 +71,9 @@ interface HudModel {
   currency: number;
   skills: Skills;
   hp: number;
+  mana: number;
+  maxMana: number;
+  abilities: AbilityState[];
   characterPanelVisible: boolean;
   inventoryPanelVisible: boolean;
   shopOpen: boolean;
@@ -81,6 +90,11 @@ export class UIScene extends Phaser.Scene {
   private characterPanel!: CharacterPanel;
   private inventoryPanel!: InventoryPanel;
   private gatherBar!: GatherProgressBar;
+  private actionBar!: ActionBar;
+  // Null for a class with no mana pool, which is what the bar's absence means.
+  private manaBarFill: Phaser.GameObjects.Rectangle | null = null;
+  private manaText: Phaser.GameObjects.Text | null = null;
+  private manaBarWidth = 0;
   private slotPicker: SlotPicker | null = null;
   private shopPanel: ShopPanel | null = null;
   private classId: ClassId = 'warrior';
@@ -94,6 +108,9 @@ export class UIScene extends Phaser.Scene {
     currency: 0,
     skills: createInitialSkills(),
     hp: 0,
+    mana: 0,
+    maxMana: 0,
+    abilities: [],
     characterPanelVisible: true,
     inventoryPanelVisible: false,
     shopOpen: false,
@@ -107,6 +124,11 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     const character = this.registry.get('character') as CharacterState | undefined;
     this.classId = character?.classId ?? 'warrior';
+    const startingStats = computeEffectiveStats(
+      this.classId,
+      character?.gear ?? DEFAULT_GEAR,
+      character?.level ?? 1,
+    );
     this.model = {
       ...this.model,
       name: character?.name ?? 'Adventurer',
@@ -116,11 +138,9 @@ export class UIScene extends Phaser.Scene {
       inventory: character?.inventory ?? {},
       currency: character?.currency ?? 0,
       skills: character?.skills ?? createInitialSkills(),
-      hp: computeEffectiveStats(
-        this.classId,
-        character?.gear ?? DEFAULT_GEAR,
-        character?.level ?? 1,
-      ).maxHp,
+      hp: startingStats.maxHp,
+      mana: startingStats.maxMana,
+      maxMana: startingStats.maxMana,
     };
     // A phone screen starts with the playfield clear; desktop keeps the sheet
     // open as before.
@@ -146,8 +166,17 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(SHOP_CLOSED_EVENT, this.handleShopClosed, this);
     this.game.events.on(CURRENCY_CHANGED_EVENT, this.handleCurrencyChanged, this);
 
+    this.game.events.on(PLAYER_MANA_CHANGED_EVENT, this.handleManaChanged, this);
+    this.game.events.on(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
+
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
+    // The action bar's two slots, in the order it draws them.
+    abilitiesFor(this.classId).forEach((ability, index) => {
+      this.input.keyboard?.on(`keydown-${['ONE', 'TWO'][index]}`, () =>
+        this.game.events.emit(ABILITY_REQUESTED_EVENT, ability.id),
+      );
+    });
 
     // Panel sizes are derived from how large the canvas is on screen, so they
     // have to be rebuilt whenever that changes.
@@ -171,6 +200,8 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(SHOP_OPENED_EVENT, this.handleShopOpened, this);
       this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosed, this);
       this.game.events.off(CURRENCY_CHANGED_EVENT, this.handleCurrencyChanged, this);
+      this.game.events.off(PLAYER_MANA_CHANGED_EVENT, this.handleManaChanged, this);
+      this.game.events.off(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       // Owns an off-display-list mask that a scene teardown won't reach.
       this.inventoryPanel?.destroy();
@@ -194,6 +225,9 @@ export class UIScene extends Phaser.Scene {
 
   private buildHud(): void {
     this.uiScale = scenePxScale();
+    // Rebuilt below; the old objects are already gone with the rest of the HUD.
+    this.manaBarFill = null;
+    this.manaText = null;
     const margin = px(THEME.margin, this.uiScale);
 
     this.targetFrame = new TargetFrame(this, margin, margin, this.uiScale);
@@ -203,6 +237,11 @@ export class UIScene extends Phaser.Scene {
     this.createInventoryPanel();
     this.createPanelToggleButtons();
     this.createGatherBar();
+    this.createManaBar();
+    this.actionBar = new ActionBar(this, this.uiScale, this.classId, (abilityId) =>
+      this.game.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
+    );
+    this.actionBar.update(this.model.abilities);
 
     this.refreshCharacterPanel();
     this.inventoryPanel.update(this.model.inventory);
@@ -288,6 +327,56 @@ export class UIScene extends Phaser.Scene {
         color: THEME.color.muted,
       })
       .setScrollFactor(0);
+  }
+
+  // Where the XP bar's detail line ends — the top of the mana bar's slot.
+  private manaBarTop(): number {
+    return this.playerBlockTop() + px(40 + THEME.xpBar.height + 18, this.uiScale);
+  }
+
+  // The bottom of the whole top-left column, mana bar included when the class
+  // has one. Everything stacked below it hangs off this.
+  private playerColumnBottom(): number {
+    return (
+      this.manaBarTop() + (this.model.maxMana > 0 ? px(THEME.xpBar.height + 4, this.uiScale) : 0)
+    );
+  }
+
+  // Sits under the XP bar, and only for a class that has a pool to show.
+  private createManaBar(): void {
+    if (this.model.maxMana <= 0) {
+      return;
+    }
+    const scale = this.uiScale;
+    const margin = px(THEME.margin, scale);
+    const barHeight = px(THEME.xpBar.height, scale);
+    const width = px(THEME.xpBar.width, scale);
+    const y = this.manaBarTop();
+
+    this.add
+      .rectangle(margin, y, width, barHeight, 0x000000, 0.5)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+    this.manaBarFill = this.add
+      .rectangle(margin, y, width, barHeight, THEME.manaFill, 1)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+    this.manaText = this.add
+      .text(margin + px(4, scale), y, '', {
+        fontSize: fontPx(THEME.font.xs, scale),
+        color: THEME.color.text,
+      })
+      .setScrollFactor(0);
+    this.manaBarWidth = width;
+    this.refreshManaBar();
+  }
+
+  private refreshManaBar(): void {
+    if (!this.manaBarFill) return;
+    const ratio =
+      this.model.maxMana > 0 ? Phaser.Math.Clamp(this.model.mana / this.model.maxMana, 0, 1) : 0;
+    this.manaBarFill.width = this.manaBarWidth * ratio;
+    this.manaText?.setText(`${this.model.mana} / ${this.model.maxMana} mana`);
   }
 
   private createLevelUpToast(): void {
@@ -384,8 +473,8 @@ export class UIScene extends Phaser.Scene {
     const size = px(THEME.touchMin, scale);
     const gap = px(THEME.padding, scale);
     const x = px(THEME.margin, scale);
-    // Below the XP bar's detail line.
-    const y = this.playerBlockTop() + px(40 + THEME.xpBar.height + 18, scale) + gap;
+    // Below the XP bar's detail line, and below the mana bar when there is one.
+    const y = this.playerColumnBottom() + gap;
 
     this.createToggleButton(x, y, size, 'C', () => this.toggleCharacterPanel());
     this.createToggleButton(x + size + gap, y, size, 'I', () => this.toggleInventoryPanel());
@@ -552,6 +641,17 @@ export class UIScene extends Phaser.Scene {
 
   private handleGatherRefused = (reason: string): void => {
     this.showToast(reason, THEME.color.muted);
+  };
+
+  private handleManaChanged = (mana: number, maxMana: number): void => {
+    this.model.mana = mana;
+    this.model.maxMana = maxMana;
+    this.refreshManaBar();
+  };
+
+  private handleAbilityStateChanged = (states: AbilityState[]): void => {
+    this.model.abilities = states;
+    this.actionBar.update(states);
   };
 
   private handlePlayerHpChanged = (hp: number): void => {

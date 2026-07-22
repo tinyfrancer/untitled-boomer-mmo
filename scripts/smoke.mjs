@@ -927,6 +927,94 @@ try {
   );
   check('a wizard can wear the cloth robe', armor.clothOk === true);
 
+  // --- Abilities: the wizard is already loaded, so cast with them. ---
+  const bar = await page.evaluate(() => ({
+    hasBar: window.game.scene.getScene('UI').actionBar !== undefined,
+    mana: window.game.scene.getScene('Zone').player.mana,
+    maxMana: window.game.scene.getScene('Zone').player.maxMana,
+  }));
+  check(
+    'a caster starts with a full mana pool and an action bar',
+    bar.hasBar && bar.mana > 0 && bar.mana === bar.maxMana,
+    `${bar.mana}/${bar.maxMana} mana`,
+  );
+
+  // Mana Shield is self-cast, so it needs no target and always resolves.
+  const shielded = await page.evaluate(async () => {
+    const z = window.game.scene.getScene('Zone');
+    const before = z.player.mana;
+    // Cast until one gets through: the spell can genuinely fizzle.
+    for (let i = 0; i < 40 && !z.player.hasManaShield(); i += 1) {
+      z.lastAbilityAt.clear();
+      z.handleAbilityRequested('mana-shield');
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    return { before, after: z.player.mana, up: z.player.hasManaShield() };
+  });
+  check(
+    'casting Mana Shield spends mana and raises a shield',
+    shielded.up && shielded.after < shielded.before,
+    `mana ${shielded.before} -> ${shielded.after}`,
+  );
+
+  const absorbed = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const hpBefore = z.player.hp;
+    const soaked = z.player.takeDamage(5);
+    return { soaked, hpBefore, hpAfter: z.player.hp };
+  });
+  check(
+    'the shield soaks damage instead of the player taking it',
+    absorbed.soaked === 5 && absorbed.hpAfter === absorbed.hpBefore,
+    `soaked ${absorbed.soaked}, hp ${absorbed.hpBefore} -> ${absorbed.hpAfter}`,
+  );
+
+  const fizzles = await page.evaluate(async () => {
+    const z = window.game.scene.getScene('Zone');
+    // A fresh Destruction skill fizzles ~1 cast in 5, so over many casts some
+    // must fail and some must land.
+    let attempts = 0;
+    let shields = 0;
+    for (let i = 0; i < 60; i += 1) {
+      z.player.applyManaShield(null);
+      z.player.mana = z.player.maxMana;
+      z.player.manaFloat = z.player.maxMana;
+      z.lastAbilityAt.clear();
+      z.handleAbilityRequested('mana-shield');
+      attempts += 1;
+      if (z.player.hasManaShield()) shields += 1;
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    return { attempts, shields, destruction: z.character.skillLevelOf('destruction') };
+  });
+  check(
+    'spells sometimes fail to cast',
+    fizzles.shields > 0 && fizzles.shields < fizzles.attempts,
+    `${fizzles.attempts - fizzles.shields}/${fizzles.attempts} fizzled`,
+  );
+  check(
+    'casting trains Destruction',
+    fizzles.destruction >= 1,
+    `destruction lv${fizzles.destruction}`,
+  );
+
+  const gated = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.lastAbilityAt.clear();
+    z.player.mana = 0;
+    z.player.manaFloat = 0;
+    z.handleAbilityRequested('fireball');
+    const noMana = z.lastAbilityAt.has('fireball') === false;
+    // A warrior ability must not be castable by a wizard at all.
+    z.player.mana = z.player.maxMana;
+    z.player.manaFloat = z.player.maxMana;
+    z.handleAbilityRequested('power-slash');
+    return { noMana, wrongClass: z.lastAbilityAt.has('power-slash') === false };
+  });
+  check('an ability with no mana behind it is refused', gated.noMana === true);
+  check("another class's ability can't be cast", gated.wrongClass === true);
+  await page.screenshot({ path: `${OUT}/11-abilities.png` });
+
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 } catch (err) {
   check('smoke run completed', false, String(err.message ?? err));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OUT_OF_COMBAT_DELAY_MS, regenTick } from '../../src/systems/RegenSystem';
+import { OUT_OF_COMBAT_DELAY_MS, manaRegenTick, regenTick } from '../../src/systems/RegenSystem';
 
 const OUT_OF_COMBAT = OUT_OF_COMBAT_DELAY_MS;
 
@@ -32,5 +32,22 @@ describe('regenTick', () => {
 
   it('does not heal the dead', () => {
     expect(regenTick(0, 40, OUT_OF_COMBAT, 1000)).toBe(0);
+  });
+});
+
+describe('manaRegenTick', () => {
+  it('restores mana without waiting for the out-of-combat lockout', () => {
+    // The same call that would return 0 for HP mid-fight returns mana.
+    expect(manaRegenTick(10, 30, 1000)).toBeGreaterThan(0);
+  });
+
+  it('scales with elapsed time and never overfills the pool', () => {
+    expect(manaRegenTick(0, 30, 2000)).toBeCloseTo(manaRegenTick(0, 30, 1000) * 2);
+    expect(manaRegenTick(29, 30, 100000)).toBe(1);
+    expect(manaRegenTick(30, 30, 1000)).toBe(0);
+  });
+
+  it('is 0 for a class with no pool, so a warrior never accrues mana', () => {
+    expect(manaRegenTick(0, 0, 1000)).toBe(0);
   });
 });

@@ -33,7 +33,20 @@ import {
   SHOP_OPENED_EVENT,
   SHOP_CLOSED_EVENT,
   CURRENCY_CHANGED_EVENT,
+  ABILITY_REQUESTED_EVENT,
+  ABILITY_STATE_CHANGED_EVENT,
+  PLAYER_MANA_CHANGED_EVENT,
 } from '../ui/uiEvents';
+import {
+  abilitiesFor,
+  abilityById,
+  canUseAbility,
+  resolveAbilityDamage,
+  rollSpellFailure,
+  startHaste,
+  startManaShield,
+} from '../systems/AbilitySystem';
+import type { AbilityDefinition } from '../data/abilities';
 import { THEME, fontPx, px, scenePxScale, worldZoom } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
@@ -64,7 +77,7 @@ import {
 } from '../systems/ZoneSystem';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
-import type { GearSlotId, SkillId, ZoneId } from '../types/ids';
+import type { AbilityId, GearSlotId, SkillId, ZoneId } from '../types/ids';
 
 const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
@@ -80,6 +93,9 @@ const ARRIVAL_INSET = TILE_SIZE * 1.5;
 // aside — rather than in the lumps a gather or a kill pays out.
 const WEAPON_SKILL_XP_PER_HIT = 1;
 const DEFENSE_SKILL_XP_PER_SAVE = 1;
+// A cast is worth more than a swing: abilities sit behind long cooldowns, so
+// paying a swing's rate would make Destruction unlevellable.
+const ABILITY_SKILL_XP_PER_CAST = 3;
 
 // Passed through scene.restart on a zone change; absent on the first boot.
 interface ZoneSceneData {
@@ -117,8 +133,12 @@ export class ZoneScene extends Phaser.Scene {
   private target: Mob | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
   private lastAttackAt = 0;
+  // When each ability was last cast, for the cooldown check and the bar's sweep.
+  private lastAbilityAt = new Map<AbilityId, number>();
+  private lastAbilitySignature = '';
   private spawnPoint = new Phaser.Math.Vector2();
   private lastReportedHp = 0;
+  private lastReportedMana = -1;
   private character!: CharacterController;
   private changingZone = false;
   private handleWindowUnload = (): void => this.persistCharacter();
@@ -252,6 +272,7 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.on(BUY_ITEM_REQUESTED_EVENT, this.handleBuyRequested, this);
     this.game.events.on(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
     this.game.events.on(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
+    this.game.events.on(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
 
     // bottom-left corner, under the HUD's top-left column
     const uiScale = scenePxScale();
@@ -287,6 +308,7 @@ export class ZoneScene extends Phaser.Scene {
       this.game.events.off(BUY_ITEM_REQUESTED_EVENT, this.handleBuyRequested, this);
       this.game.events.off(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
       this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
+      this.game.events.off(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
     });
 
     // The HUD survives zone changes: launched once on first boot, and left
@@ -310,6 +332,8 @@ export class ZoneScene extends Phaser.Scene {
     this.updateCombat(time);
     this.updateEnemyAttacks(time);
     this.publishPlayerHp();
+    this.publishPlayerMana();
+    this.publishAbilityState();
     this.publishActions();
     this.updateShopRange();
     this.checkZoneExit();
@@ -833,7 +857,7 @@ export class ZoneScene extends Phaser.Scene {
     if (!isInRange(distance, this.player.attackRange)) {
       return;
     }
-    if (!isCooldownReady(time - this.lastAttackAt, this.player.attackCooldownMs)) {
+    if (!isCooldownReady(time - this.lastAttackAt, this.player.effectiveAttackCooldownMs())) {
       return;
     }
 
@@ -890,8 +914,23 @@ export class ZoneScene extends Phaser.Scene {
       }
 
       const { damage } = resolveAttack({ attackPower: mob.attackPower });
-      this.player.takeDamage(damage);
-      this.showFloatingText(this.player.x, this.player.y, `-${damage}`, THEME.color.playerDamage);
+      const absorbed = this.player.takeDamage(damage);
+      if (absorbed > 0) {
+        this.showFloatingText(
+          this.player.x,
+          this.player.y - 16,
+          `(${absorbed} absorbed)`,
+          THEME.color.skillUp,
+        );
+      }
+      if (damage > absorbed) {
+        this.showFloatingText(
+          this.player.x,
+          this.player.y,
+          `-${damage - absorbed}`,
+          THEME.color.playerDamage,
+        );
+      }
       // Taking a hit breaks the channel, so gathering is never a way to ignore a
       // mob already chewing on you.
       if (this.gatherState) {
@@ -975,6 +1014,127 @@ export class ZoneScene extends Phaser.Scene {
       );
       this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
     }
+  }
+
+  // Abilities. The scene owns the decision because it is the only thing that
+  // knows about targets and range; the HUD just asks.
+  private handleAbilityRequested(abilityId: AbilityId): void {
+    if (!this.player.isAlive()) return;
+    const ability = abilityById(abilityId);
+    if (ability.classId !== this.character.state.classId) return;
+
+    const distance = this.target
+      ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.target.x, this.target.y)
+      : Infinity;
+    const check = canUseAbility(ability, {
+      mana: this.player.mana,
+      elapsedMs: this.time.now - (this.lastAbilityAt.get(abilityId) ?? -Infinity),
+      hasTarget: this.target !== null && this.target.isAlive(),
+      targetDistance: distance,
+    });
+    if (!check.ok) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      return;
+    }
+
+    if (!this.player.spendMana(ability.manaCost)) return;
+    this.lastAbilityAt.set(abilityId, this.time.now);
+    this.stopGathering();
+    this.player.markInCombat();
+    this.publishAbilityState();
+
+    // A spell that fizzles still costs the mana and the cooldown; that is what
+    // makes Destruction worth levelling.
+    const skillLevel = ability.skill ? this.character.skillLevelOf(ability.skill) : 0;
+    if (ability.skill && rollSpellFailure(ability, skillLevel)) {
+      this.showFloatingText(this.player.x, this.player.y, 'Fizzle!', THEME.color.dim);
+      this.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
+      return;
+    }
+
+    this.applyAbilityEffect(ability, skillLevel);
+    if (ability.skill) {
+      this.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
+    }
+  }
+
+  private applyAbilityEffect(ability: AbilityDefinition, skillLevel: number): void {
+    switch (ability.effect.kind) {
+      case 'damage': {
+        if (!this.target?.isAlive()) return;
+        const damage = resolveAbilityDamage(ability, this.player.attackPower, skillLevel);
+        const target = this.target;
+        this.castBolt(target, ability);
+        this.showFloatingText(target.x, target.y, `-${damage}`, THEME.color.levelUp);
+        const xpReward = target.xpReward;
+        const lootTableId = target.lootTableId;
+        target.takeDamage(damage);
+        target.engage();
+        this.publishTarget();
+        if (!target.isAlive()) {
+          this.awardXp(xpReward);
+          this.grantLoot(lootTableId);
+        }
+        return;
+      }
+      case 'absorb': {
+        const shield = startManaShield(ability);
+        if (shield) this.player.applyManaShield(shield);
+        this.showFloatingText(this.player.x, this.player.y, ability.name, THEME.color.skillUp);
+        return;
+      }
+      case 'haste': {
+        const haste = startHaste(ability);
+        if (haste) this.player.applyHaste(haste);
+        this.showFloatingText(this.player.x, this.player.y, ability.name, THEME.color.levelUp);
+        return;
+      }
+    }
+  }
+
+  // A bolt thrown from the caster to the target. Purely cosmetic, but a ranged
+  // nuke that produced only a number over the mob read as nothing happening.
+  private castBolt(target: Mob, ability: AbilityDefinition): void {
+    if (ability.range <= 0) return;
+    const bolt = this.add.circle(this.player.x, this.player.y, 8, 0xff7043, 1);
+    bolt.setStrokeStyle(2, 0xffd54f, 1);
+    this.tweens.add({
+      targets: bolt,
+      x: target.x,
+      y: target.y,
+      duration: 180,
+      onComplete: () => bolt.destroy(),
+    });
+  }
+
+  // The bar redraws off this; emitted only when a button's rendered state moves.
+  private publishAbilityState(): void {
+    const states = abilitiesFor(this.character.state.classId).map((ability) => {
+      const elapsedMs = this.time.now - (this.lastAbilityAt.get(ability.id) ?? -Infinity);
+      const cooldownRemaining = Phaser.Math.Clamp(
+        (ability.cooldownMs - elapsedMs) / ability.cooldownMs,
+        0,
+        1,
+      );
+      return {
+        abilityId: ability.id,
+        cooldownRemaining,
+        usable: cooldownRemaining === 0 && this.player.mana >= ability.manaCost,
+      };
+    });
+
+    const signature = states
+      .map((s) => `${s.abilityId}:${s.cooldownRemaining.toFixed(2)}:${s.usable}`)
+      .join('|');
+    if (signature === this.lastAbilitySignature) return;
+    this.lastAbilitySignature = signature;
+    this.game.events.emit(ABILITY_STATE_CHANGED_EVENT, states);
+  }
+
+  private publishPlayerMana(): void {
+    if (this.player.mana === this.lastReportedMana) return;
+    this.lastReportedMana = this.player.mana;
+    this.game.events.emit(PLAYER_MANA_CHANGED_EVENT, this.player.mana, this.player.maxMana);
   }
 
   private handleEquipRequested(itemId: string): void {

@@ -1,4 +1,4 @@
-import type { SkillId } from '../types/ids';
+import type { AbilityId, SkillId } from '../types/ids';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -26,6 +26,11 @@ export const SHOP_CLOSED_EVENT = 'shop-closed';
 export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
 export const SELL_ITEM_REQUESTED_EVENT = 'sell-item-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
+// Abilities: the HUD asks, ZoneScene decides (it owns range, mana and targets)
+// and answers with the state the bar draws itself from.
+export const ABILITY_REQUESTED_EVENT = 'ability-requested';
+export const ABILITY_STATE_CHANGED_EVENT = 'ability-state-changed';
+export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -42,6 +47,16 @@ export interface TargetInfo {
 // the HUD combines it with the selected item via ItemActionsSystem.
 export interface AvailableActions {
   nearFire: boolean;
+}
+
+// Payload for ABILITY_STATE_CHANGED_EVENT: everything the action bar needs to
+// draw one button. Emitted only when a value the bar renders actually changes.
+export interface AbilityState {
+  abilityId: AbilityId;
+  // 0 when ready, otherwise how far through the cooldown it is (0..1).
+  cooldownRemaining: number;
+  // Whether it could be pressed right now, mana and cooldown considered.
+  usable: boolean;
 }
 
 // Payload for SKILL_XP_GAINED_EVENT.

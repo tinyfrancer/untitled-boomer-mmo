@@ -20,3 +20,18 @@ export function regenTick(
   const healed = (maxHp * REGEN_FRACTION_PER_SECOND * deltaMs) / 1000;
   return Math.min(healed, maxHp - hp);
 }
+
+const MANA_REGEN_FRACTION_PER_SECOND = 0.03;
+
+/**
+ * Mana restored over `deltaMs`. Fractional for the same reason regenTick is,
+ * but with no out-of-combat lockout: mana that only returned between fights
+ * would make a spell a once-per-fight button.
+ */
+export function manaRegenTick(mana: number, maxMana: number, deltaMs: number): number {
+  if (maxMana <= 0 || mana >= maxMana) {
+    return 0;
+  }
+  const restored = (maxMana * MANA_REGEN_FRACTION_PER_SECOND * deltaMs) / 1000;
+  return Math.min(restored, maxMana - mana);
+}
