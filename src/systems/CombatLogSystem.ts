@@ -1,0 +1,85 @@
+import { THEME } from '../ui/theme';
+import { formatCurrency } from './CurrencySystem';
+
+export interface CombatLogEntry {
+  text: string;
+  color: string;
+}
+
+// How many lines the log keeps. Old lines are dropped rather than kept and
+// scrolled to: this is a running commentary on the current fight, not a record.
+export const COMBAT_LOG_LIMIT = 50;
+
+/**
+ * Appends a line, dropping the oldest once the log is full. Returns a new array
+ * — the log is rendered off it, so mutating in place would hide changes.
+ */
+export function appendLogEntry(
+  log: CombatLogEntry[],
+  entry: CombatLogEntry,
+  limit = COMBAT_LOG_LIMIT,
+): CombatLogEntry[] {
+  const next = [...log, entry];
+  return next.length > limit ? next.slice(next.length - limit) : next;
+}
+
+/** The most recent `count` lines, oldest first — what a fixed-height log shows. */
+export function recentEntries(log: CombatLogEntry[], count: number): CombatLogEntry[] {
+  return count >= log.length ? log : log.slice(log.length - count);
+}
+
+export function logDamageDealt(targetName: string, damage: number): CombatLogEntry {
+  return { text: `You hit ${targetName} for ${damage}.`, color: THEME.color.text };
+}
+
+export function logDamageTaken(sourceName: string, damage: number): CombatLogEntry {
+  return { text: `${sourceName} hits you for ${damage}.`, color: THEME.color.playerDamage };
+}
+
+export function logAbsorbed(amount: number): CombatLogEntry {
+  return { text: `Your shield absorbs ${amount}.`, color: THEME.color.skillUp };
+}
+
+export function logDefense(skillName: string, sourceName: string): CombatLogEntry {
+  return {
+    text: `You ${skillName.toLowerCase()} ${sourceName}'s attack.`,
+    color: THEME.color.heal,
+  };
+}
+
+export function logKill(targetName: string): CombatLogEntry {
+  return { text: `You have slain ${targetName}!`, color: THEME.color.levelUp };
+}
+
+export function logAbilityUsed(abilityName: string): CombatLogEntry {
+  return { text: `You cast ${abilityName}.`, color: THEME.color.muted };
+}
+
+export function logSpellFailed(abilityName: string): CombatLogEntry {
+  return { text: `Your ${abilityName} fizzles.`, color: THEME.color.dim };
+}
+
+export function logXpGain(amount: number): CombatLogEntry {
+  return { text: `You gain ${amount} experience.`, color: THEME.color.levelUp };
+}
+
+export function logLevelUp(level: number): CombatLogEntry {
+  return { text: `You are now level ${level}!`, color: THEME.color.levelUp };
+}
+
+export function logSkillLevelUp(skillName: string, level: number): CombatLogEntry {
+  return { text: `${skillName} is now level ${level}.`, color: THEME.color.skillUp };
+}
+
+export function logLoot(itemName: string, quantity: number): CombatLogEntry {
+  const suffix = quantity > 1 ? ` (${quantity})` : '';
+  return { text: `You receive ${itemName}${suffix}.`, color: THEME.color.equippable };
+}
+
+export function logCoin(copper: number): CombatLogEntry {
+  return { text: `You receive ${formatCurrency(copper)}.`, color: THEME.color.equippable };
+}
+
+export function logNotice(message: string): CombatLogEntry {
+  return { text: message, color: THEME.color.muted };
+}

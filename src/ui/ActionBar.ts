@@ -25,6 +25,8 @@ interface AbilityButton {
 export class ActionBar {
   private readonly container: Phaser.GameObjects.Container;
   private readonly buttons: Map<AbilityId, AbilityButton> = new Map();
+  // What anything stacked above the bar hangs off.
+  readonly top: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -82,6 +84,7 @@ export class ActionBar {
       children.push(background, sweep, name, slot, cost);
     });
 
+    this.top = top;
     this.container = scene.add.container(0, 0, children).setScrollFactor(0).setDepth(500);
   }
 

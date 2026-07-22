@@ -36,6 +36,7 @@ import {
   ABILITY_REQUESTED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
+  COMBAT_LOG_EVENT,
 } from '../ui/uiEvents';
 import {
   abilitiesFor,
@@ -47,6 +48,22 @@ import {
   startManaShield,
 } from '../systems/AbilitySystem';
 import type { AbilityDefinition } from '../data/abilities';
+import {
+  logAbilityUsed,
+  logAbsorbed,
+  logCoin,
+  logDamageDealt,
+  logDamageTaken,
+  logDefense,
+  logKill,
+  logLevelUp,
+  logLoot,
+  logNotice,
+  logSkillLevelUp,
+  logSpellFailed,
+  logXpGain,
+  type CombatLogEntry,
+} from '../systems/CombatLogSystem';
 import { THEME, fontPx, px, scenePxScale, worldZoom } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
@@ -54,7 +71,7 @@ import { rollLootTable } from '../systems/LootSystem';
 import { canCook, findCookableItem, recipeForInput, rollCook } from '../systems/CookingSystem';
 import { Campfire } from '../entities/Campfire';
 import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
-import { consumableFor, itemValue } from '../data/items';
+import { consumableFor, describeItemName, itemValue } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { SHOP_CLOSE_RADIUS, SHOP_INTERACT_RADIUS, shopPriceFor } from '../data/shop';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -802,6 +819,7 @@ export class ZoneScene extends Phaser.Scene {
     }
     this.game.events.emit(SKILL_XP_GAINED_EVENT, gain);
     if (gain.leveledUp) {
+      this.log(logSkillLevelUp(SKILLS[skill].name, gain.level));
       this.persistCharacter();
     }
   }
@@ -868,6 +886,7 @@ export class ZoneScene extends Phaser.Scene {
       weaponSkillLevel: this.character.skillLevelOf(weaponSkill),
     });
     this.showFloatingText(this.target.x, this.target.y, `-${damage}`, THEME.color.equippable);
+    this.log(logDamageDealt(this.target.name, damage));
     const xpReward = this.target.xpReward;
     const lootTableId = this.target.lootTableId;
     this.player.markInCombat();
@@ -878,6 +897,7 @@ export class ZoneScene extends Phaser.Scene {
     // Skill comes from swinging, not from killing: a landed hit is the rep.
     this.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
     if (!this.target.isAlive()) {
+      this.log(logKill(this.target.name));
       this.awardXp(xpReward);
       this.grantLoot(lootTableId);
     }
@@ -909,6 +929,7 @@ export class ZoneScene extends Phaser.Scene {
           SKILLS[defense.skillId].name,
           THEME.color.heal,
         );
+        this.log(logDefense(SKILLS[defense.skillId].name, mob.name));
         this.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
         continue;
       }
@@ -922,6 +943,7 @@ export class ZoneScene extends Phaser.Scene {
           `(${absorbed} absorbed)`,
           THEME.color.skillUp,
         );
+        this.log(logAbsorbed(absorbed));
       }
       if (damage > absorbed) {
         this.showFloatingText(
@@ -930,6 +952,7 @@ export class ZoneScene extends Phaser.Scene {
           `-${damage - absorbed}`,
           THEME.color.playerDamage,
         );
+        this.log(logDamageTaken(mob.name, damage - absorbed));
       }
       // Taking a hit breaks the channel, so gathering is never a way to ignore a
       // mob already chewing on you.
@@ -955,6 +978,7 @@ export class ZoneScene extends Phaser.Scene {
     this.pendingSignpost = null;
     this.pursuingTarget = false;
     this.player.stopMoving();
+    this.log(logNotice('You have died.'));
     this.game.events.emit(PLAYER_DIED_EVENT);
 
     // Dying away from home sends you back to town — respawning in the middle
@@ -984,9 +1008,11 @@ export class ZoneScene extends Phaser.Scene {
   private awardXp(amount: number): void {
     const gain = this.character.awardXp(amount);
     this.showFloatingText(this.player.x, this.player.y - 20, `+${amount} XP`, THEME.color.levelUp);
+    this.log(logXpGain(amount));
     this.game.events.emit(XP_GAINED_EVENT, gain.level, gain.xp, gain.xpToNext);
 
     if (gain.leveledUp) {
+      this.log(logLevelUp(gain.level));
       this.player.setLevel(gain.level);
       // Con colors are relative to the player, so every name has to be redrawn.
       this.mobs.forEach((mob) => mob.refreshLabel(gain.level));
@@ -1001,11 +1027,15 @@ export class ZoneScene extends Phaser.Scene {
     const { drops, copper } = rollLootTable(lootTableId);
 
     if (drops.length > 0) {
-      drops.forEach((drop) => this.character.addItem(drop.itemId, drop.quantity));
+      drops.forEach((drop) => {
+        this.character.addItem(drop.itemId, drop.quantity);
+        this.log(logLoot(describeItemName(drop.itemId), drop.quantity));
+      });
       this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     }
     if (copper > 0) {
       this.character.addCurrency(copper);
+      this.log(logCoin(copper));
       this.showFloatingText(
         this.player.x,
         this.player.y - 40,
@@ -1046,8 +1076,10 @@ export class ZoneScene extends Phaser.Scene {
     // A spell that fizzles still costs the mana and the cooldown; that is what
     // makes Destruction worth levelling.
     const skillLevel = ability.skill ? this.character.skillLevelOf(ability.skill) : 0;
+    this.log(logAbilityUsed(ability.name));
     if (ability.skill && rollSpellFailure(ability, skillLevel)) {
       this.showFloatingText(this.player.x, this.player.y, 'Fizzle!', THEME.color.dim);
+      this.log(logSpellFailed(ability.name));
       this.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
       return;
     }
@@ -1066,12 +1098,14 @@ export class ZoneScene extends Phaser.Scene {
         const target = this.target;
         this.castBolt(target, ability);
         this.showFloatingText(target.x, target.y, `-${damage}`, THEME.color.levelUp);
+        this.log(logDamageDealt(target.name, damage));
         const xpReward = target.xpReward;
         const lootTableId = target.lootTableId;
         target.takeDamage(damage);
         target.engage();
         this.publishTarget();
         if (!target.isAlive()) {
+          this.log(logKill(target.name));
           this.awardXp(xpReward);
           this.grantLoot(lootTableId);
         }
@@ -1169,6 +1203,10 @@ export class ZoneScene extends Phaser.Scene {
     this.registry.remove('character');
     this.scene.stop('UI');
     this.scene.start('CharacterCreate');
+  }
+
+  private log(entry: CombatLogEntry): void {
+    this.game.events.emit(COMBAT_LOG_EVENT, entry);
   }
 
   private showFloatingText(x: number, y: number, message: string, color: string): void {

@@ -31,6 +31,9 @@ export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 export const ABILITY_REQUESTED_EVENT = 'ability-requested';
 export const ABILITY_STATE_CHANGED_EVENT = 'ability-state-changed';
 export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
+// One line of combat commentary. Emitted alongside the floating text it mirrors,
+// so the two can never drift out of step.
+export const COMBAT_LOG_EVENT = 'combat-log';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
