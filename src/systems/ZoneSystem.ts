@@ -1,8 +1,36 @@
+import { TILE_SIZE } from '../config/constants';
 import type { ZoneEdge, ZoneExit } from '../data/zones';
 
 export interface ArrivalPoint {
   x: number;
   y: number;
+}
+
+// Signpost placement: near its edge's midpoint but nudged sideways, so a
+// player arriving through the exit (who appears at that midpoint) doesn't
+// spawn standing on the post.
+export const SIGNPOST_INSET = TILE_SIZE * 1.25;
+export const SIGNPOST_SIDE_OFFSET = TILE_SIZE;
+// Standing this close to a signpost and tapping it (or walking up after a
+// tap) triggers the transition.
+export const SIGNPOST_INTERACT_RADIUS = 90;
+
+/** Where an exit's signpost stands in its zone. */
+export function signpostPoint(
+  edge: ZoneEdge,
+  worldWidth: number,
+  worldHeight: number,
+): ArrivalPoint {
+  switch (edge) {
+    case 'north':
+      return { x: worldWidth / 2 + SIGNPOST_SIDE_OFFSET, y: SIGNPOST_INSET };
+    case 'south':
+      return { x: worldWidth / 2 + SIGNPOST_SIDE_OFFSET, y: worldHeight - SIGNPOST_INSET };
+    case 'west':
+      return { x: SIGNPOST_INSET, y: worldHeight / 2 + SIGNPOST_SIDE_OFFSET };
+    default:
+      return { x: worldWidth - SIGNPOST_INSET, y: worldHeight / 2 + SIGNPOST_SIDE_OFFSET };
+  }
 }
 
 export function oppositeEdge(edge: ZoneEdge): ZoneEdge {

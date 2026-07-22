@@ -16,6 +16,7 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
   generateCrabTexture(scene);
   generateBanditTexture(scene);
   generateShopkeeperTexture(scene);
+  generateSignpostTexture(scene);
   generateTreeTextures(scene);
   generateFishingSpotTexture(scene);
   generateCampfireTexture(scene);
@@ -60,6 +61,39 @@ function generateShopkeeperTexture(scene: Phaser.Scene): void {
   graphics.strokeCircle(figure.rightHandX, figure.shoulderY, size * 0.06);
 
   graphics.generateTexture(SHOPKEEPER_TEXTURE_KEY, size, size);
+  graphics.destroy();
+}
+
+export const SIGNPOST_TEXTURE_KEY = 'zone-signpost';
+
+// A wooden post with an arrow board. Deliberately chunky: on a phone this is
+// the tap target for leaving a zone, so it has to be easy to hit.
+function generateSignpostTexture(scene: Phaser.Scene): void {
+  const width = TILE_SIZE * 0.95;
+  const height = TILE_SIZE;
+  const graphics = scene.add.graphics();
+  const cx = width / 2;
+
+  // post
+  graphics.fillStyle(0x5d4037, 1);
+  graphics.fillRect(cx - width * 0.06, height * 0.2, width * 0.12, height * 0.78);
+
+  // arrow board: rectangle with a pointed right end
+  const boardTop = height * 0.14;
+  const boardBottom = height * 0.42;
+  const boardLeft = width * 0.06;
+  const boardRight = width * 0.78;
+  const tipX = width * 0.97;
+  const boardMid = (boardTop + boardBottom) / 2;
+  graphics.fillStyle(0x8d6e63, 1);
+  graphics.fillRect(boardLeft, boardTop, boardRight - boardLeft, boardBottom - boardTop);
+  graphics.fillTriangle(boardRight, boardTop, tipX, boardMid, boardRight, boardBottom);
+  graphics.lineStyle(2, OUTLINE_COLOR, 1);
+  graphics.strokeRect(boardLeft, boardTop, boardRight - boardLeft, boardBottom - boardTop);
+  graphics.lineBetween(boardRight, boardTop, tipX, boardMid);
+  graphics.lineBetween(tipX, boardMid, boardRight, boardBottom);
+
+  graphics.generateTexture(SIGNPOST_TEXTURE_KEY, width, height);
   graphics.destroy();
 }
 

@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalPoint, edgeFraction, findExit, oppositeEdge } from '../../src/systems/ZoneSystem';
+import {
+  SIGNPOST_INSET,
+  SIGNPOST_INTERACT_RADIUS,
+  SIGNPOST_SIDE_OFFSET,
+  arrivalPoint,
+  edgeFraction,
+  findExit,
+  oppositeEdge,
+  signpostPoint,
+} from '../../src/systems/ZoneSystem';
+import { TILE_SIZE } from '../../src/config/constants';
+import { BLOCKING_TILES } from '../../src/data/tiles';
 import { ZONES } from '../../src/data/zones';
 import { ENEMIES } from '../../src/data/enemies';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
@@ -109,6 +120,47 @@ describe('ZONES data integrity', () => {
       const width = zone.map[0].length;
       expect(width).toBeGreaterThan(0);
       zone.map.forEach((row) => expect(row.length).toBe(width));
+    });
+  });
+});
+
+describe('signpostPoint', () => {
+  it('stands near its edge midpoint, nudged sideways off the arrival spot', () => {
+    expect(signpostPoint('south', WORLD_W, WORLD_H)).toEqual({
+      x: WORLD_W / 2 + SIGNPOST_SIDE_OFFSET,
+      y: WORLD_H - SIGNPOST_INSET,
+    });
+    expect(signpostPoint('north', WORLD_W, WORLD_H)).toEqual({
+      x: WORLD_W / 2 + SIGNPOST_SIDE_OFFSET,
+      y: SIGNPOST_INSET,
+    });
+    expect(signpostPoint('west', WORLD_W, WORLD_H)).toEqual({
+      x: SIGNPOST_INSET,
+      y: WORLD_H / 2 + SIGNPOST_SIDE_OFFSET,
+    });
+    expect(signpostPoint('east', WORLD_W, WORLD_H)).toEqual({
+      x: WORLD_W - SIGNPOST_INSET,
+      y: WORLD_H / 2 + SIGNPOST_SIDE_OFFSET,
+    });
+  });
+
+  it('sits clear of the arrival point but within tapping-then-walking reach', () => {
+    const arrive = arrivalPoint('south', 0.5, WORLD_W, WORLD_H, 96);
+    const post = signpostPoint('south', WORLD_W, WORLD_H);
+    const gap = Math.hypot(arrive.x - post.x, arrive.y - post.y);
+    expect(gap).toBeGreaterThan(30);
+    expect(gap).toBeLessThan(SIGNPOST_INTERACT_RADIUS);
+  });
+
+  it('places every zone exit signpost on walkable ground', () => {
+    Object.values(ZONES).forEach((zone) => {
+      zone.exits.forEach((exit) => {
+        const worldW = zone.map[0].length * TILE_SIZE;
+        const worldH = zone.map.length * TILE_SIZE;
+        const point = signpostPoint(exit.edge, worldW, worldH);
+        const tile = zone.map[Math.floor(point.y / TILE_SIZE)][Math.floor(point.x / TILE_SIZE)];
+        expect(BLOCKING_TILES).not.toContain(tile);
+      });
     });
   });
 });
