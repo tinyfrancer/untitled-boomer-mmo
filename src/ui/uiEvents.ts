@@ -12,6 +12,10 @@ export const INVENTORY_CHANGED_EVENT = 'inventory-changed';
 export const EQUIP_ITEM_REQUESTED_EVENT = 'equip-item-requested';
 export const UNEQUIP_SLOT_REQUESTED_EVENT = 'unequip-slot-requested';
 export const SKILL_XP_GAINED_EVENT = 'skill-xp-gained';
+export const GATHER_STARTED_EVENT = 'gather-started';
+export const GATHER_PROGRESS_EVENT = 'gather-progress';
+export const GATHER_ENDED_EVENT = 'gather-ended';
+export const GATHER_REFUSED_EVENT = 'gather-refused';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.

@@ -67,9 +67,22 @@ const townState = () =>
       vel: [Math.round(r.body.velocity.x), Math.round(r.body.velocity.y)],
       bodyOn: r.body.enable,
     }));
+    const nodes = town.nodes.map((n) => ({
+      id: n.definition.id,
+      skill: n.definition.skill,
+      available: n.isAvailable(),
+      x: Math.round(n.x),
+      y: Math.round(n.y),
+      dist: Math.round(Phaser.Math.Distance.Between(n.x, n.y, p.x, p.y)),
+    }));
     return {
       player: { hp: p.hp, maxHp: p.maxHp, level: p.level, x: Math.round(p.x), y: Math.round(p.y) },
       rats,
+      nodes,
+      gathering: town.gatherState !== null,
+      inventory: { ...town.characterState.inventory },
+      skills: JSON.parse(JSON.stringify(town.characterState.skills)),
+      gear: { ...town.characterState.gear },
       loop: { sleeping: loop.sleeping, running: loop.running, fps: Math.round(loop.actualFps) },
     };
   });
@@ -131,6 +144,83 @@ try {
     boot.rats.map((r) => `L${r.level}:${r.maxHp}`).join(' '),
   );
   await page.screenshot({ path: `${OUT}/2-town.png` });
+
+  // --- Gathering: tools gate it, the channel yields, and range cancels it. ---
+  check(
+    'town spawns resource nodes',
+    boot.nodes.length === 6,
+    boot.nodes.map((n) => n.id).join(' '),
+  );
+
+  // The starting sword is not a woodcutting tool, so this must be refused
+  // outright rather than silently starting a channel.
+  const refused = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    const tree = town.nodes.find((n) => n.definition.id === 'tree');
+    town.player.setPosition(tree.x, tree.y + 40);
+    town.startGathering(tree);
+    return town.gatherState !== null;
+  });
+  check('gathering is refused without the right tool equipped', refused === false);
+
+  const beforeChop = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.handleEquipRequested('felling-axe');
+    const tree = town.nodes.find((n) => n.definition.id === 'tree');
+    town.player.setPosition(tree.x, tree.y + 40);
+    town.startGathering(tree);
+    return {
+      gathering: town.gatherState !== null,
+      xp: town.characterState.skills.woodcutting.xp,
+    };
+  });
+  check('equipping the axe starts a woodcutting channel', beforeChop.gathering === true);
+
+  const chopped = await waitFor((s) => (s.inventory.logs ?? 0) > 0, 'the tree to yield logs');
+  check(
+    'chopping yields logs and woodcutting xp',
+    chopped.skills.woodcutting.xp > beforeChop.xp,
+    `logs=${chopped.inventory.logs} wc xp ${beforeChop.xp} -> ${chopped.skills.woodcutting.xp}`,
+  );
+  check('the channel auto-repeats after a yield', chopped.gathering === true);
+
+  // Walking off must drop the channel — this is the AFK-safety valve.
+  await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    const tree = town.nodes.find((n) => n.definition.id === 'tree');
+    town.player.setPosition(tree.x + 400, tree.y + 400);
+  });
+  const walkedOff = await waitFor((s) => !s.gathering, 'the channel to cancel out of range');
+  check('walking out of range cancels the channel', walkedOff.gathering === false);
+
+  // Fishing runs the same path through a different tool and an endless node.
+  const fished = await page.evaluate(async () => {
+    const town = window.game.scene.getScene('Town');
+    town.handleEquipRequested('fishing-pole');
+    const spot = town.nodes.find((n) => n.definition.id === 'fishing-spot');
+    // On the shore north of the spot: the spot itself is on water, which the
+    // player cannot stand on.
+    town.player.setPosition(spot.x, spot.y - 64);
+    town.startGathering(spot);
+    return town.gatherState !== null;
+  });
+  check('fishing starts with the pole equipped', fished === true);
+  const caught = await waitFor((s) => (s.inventory['raw-fish'] ?? 0) > 0, 'a fish to be caught');
+  check(
+    'fishing yields raw fish and fishing xp',
+    caught.skills.fishing.xp > 0,
+    `fish=${caught.inventory['raw-fish']} fishing xp=${caught.skills.fishing.xp}`,
+  );
+  await page.screenshot({ path: `${OUT}/5-gathering.png` });
+
+  // Back to the starting loadout so the combat checks below run on the gear
+  // they were written against.
+  await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.stopGathering();
+    town.handleEquipRequested('rusty-sword');
+    town.player.restoreToFull();
+  });
 
   // --- Retaliation: target the nearest level 1 rat and let combat run. ---
   await page.evaluate(() => {
