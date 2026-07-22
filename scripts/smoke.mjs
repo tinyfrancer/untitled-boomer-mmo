@@ -927,8 +927,34 @@ try {
   // has to reach the player rather than silently doing nothing. Done last,
   // because it throws the warrior away and rerolls as a wizard. ---
   await page.setViewportSize({ width: 1280, height: 900 });
+  // --- Options menu: the mobile route to a character reset, which used to be
+  // bound to F9 and so unreachable on a phone. Two taps, on purpose. ---
+  const options = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    ui.openOptions();
+    const opened = ui.optionsPanel !== null;
+    window.__optionsOpen = opened;
+    // First press only arms the confirm; the save must still be there after it.
+    ui.optionsPanel.handleResetPressed(() => {});
+    const armed = ui.optionsPanel.confirmingReset;
+    const saveIntact = localStorage.length > 0;
+    return { opened, armed, saveIntact };
+  });
+  await page.screenshot({ path: `${OUT}/12-options.png` });
   await page.evaluate(() => {
-    window.game.scene.getScene('Zone').resetCharacter();
+    const ui = window.game.scene.getScene('UI');
+    ui.optionsPanel.close();
+    ui.optionsPanel = null;
+  });
+  check('the options menu opens from the HUD', options.opened === true);
+  check(
+    'the first reset press only arms a confirm, leaving the save alone',
+    options.armed === true && options.saveIntact === true,
+  );
+
+  await page.evaluate(() => {
+    // The real path a phone takes: the panel asks, the scene does the work.
+    window.game.events.emit('reset-character-requested');
   });
   await page.waitForFunction(
     () => window.game.scene.getScene('CharacterCreate')?.scene.isActive(),
