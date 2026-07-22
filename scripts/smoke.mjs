@@ -54,10 +54,15 @@ const townState = () =>
 
 const waitFor = async (fn, label, timeoutMs = 20000) => {
   const start = Date.now();
+  let last = null;
   for (;;) {
-    const s = await townState();
-    if (s && fn(s)) return s;
-    if (Date.now() - start > timeoutMs) throw new Error(`timed out waiting for: ${label}`);
+    last = (await townState()) ?? last;
+    if (last && fn(last)) return last;
+    if (Date.now() - start > timeoutMs) {
+      // Dump the last state seen: these timeouts are usually only reproducible
+      // on CI, so the failure message has to carry enough to diagnose it.
+      throw new Error(`timed out waiting for: ${label}\nlast state: ${JSON.stringify(last)}`);
+    }
     await page.waitForTimeout(150);
   }
 };
@@ -132,12 +137,22 @@ try {
   check('enemy damages the player', true, `player ${hurt.player.hp}/${hurt.player.maxHp}`);
   await page.screenshot({ path: `${OUT}/3-combat.png` });
 
-  // --- Leash: teleport far away; the rat must reset to full HP and drop aggro. ---
+  // --- Leash: run far enough that the rat gives up, resets and heals. ---
+  // Aim for the in-bounds corner furthest from that rat's own spawn rather than
+  // offsetting the player by a fixed amount — an offset can be clipped by the
+  // world bounds into a spot the rat never has to travel leashRadius to reach.
   await page.evaluate(() => {
     const town = window.game.scene.getScene('Town');
-    town.player.setPosition(town.player.x + 900, town.player.y);
+    const rat = town.rats.find((r) => r.isEngaged());
+    const bounds = town.physics.world.bounds;
+    const margin = 48;
+    town.clearTarget(); // stop swinging, so nothing re-engages behind our back
+    town.player.setPosition(
+      rat.spawnX < bounds.width / 2 ? bounds.width - margin : margin,
+      rat.spawnY < bounds.height / 2 ? bounds.height - margin : margin,
+    );
   });
-  const leashed = await waitFor((s) => !s.rats.some((r) => r.engaged), 'rats to leash off');
+  const leashed = await waitFor((s) => !s.rats.some((r) => r.engaged), 'rats to leash off', 30000);
   const allFull = leashed.rats.filter((r) => r.alive).every((r) => r.hp === r.maxHp);
   check('rat leashes and heals to full on the way home', allFull);
 
