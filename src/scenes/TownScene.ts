@@ -1,19 +1,26 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
-import { TOWN_MAP } from '../data/townMap';
-import { TOWN_RAT_SPAWNS } from '../data/spawns';
+import { BLOCKING_TILES, TOWN_MAP } from '../data/townMap';
+import { RESOURCE_NODES } from '../data/resourceNodes';
+import { TOWN_NODE_SPAWNS, TOWN_RAT_SPAWNS } from '../data/spawns';
 import { Player } from '../entities/Player';
 import { Rat } from '../entities/Rat';
+import { ResourceNode } from '../entities/ResourceNode';
 import type { Mob } from '../entities/Mob';
 import { TILESET_KEY } from './generateTextures';
 import {
   EQUIP_ITEM_REQUESTED_EVENT,
+  GATHER_ENDED_EVENT,
+  GATHER_PROGRESS_EVENT,
+  GATHER_REFUSED_EVENT,
+  GATHER_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   MOVE_VECTOR_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
+  SKILL_XP_GAINED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
@@ -25,9 +32,18 @@ import { conColor } from '../systems/EnemySystem';
 import { addXp, xpToNextLevel } from '../systems/LevelingSystem';
 import { rollLootTable } from '../systems/LootSystem';
 import { addItemToInventory, equipItem, unequipItem } from '../systems/InventorySystem';
+import {
+  advanceGather,
+  beginGather,
+  canGather,
+  rollGatherQuantity,
+  type GatherState,
+} from '../systems/GatherSystem';
+import { addSkillXp, skillLevel, skillXpToNextLevel } from '../systems/SkillSystem';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
-import type { GearSlotId } from '../types/ids';
+import type { GearSlotId, SkillId } from '../types/ids';
 
+const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
 const AUTOSAVE_INTERVAL_MS = 30000;
@@ -35,6 +51,9 @@ const AUTOSAVE_INTERVAL_MS = 30000;
 export class TownScene extends Phaser.Scene {
   private player!: Player;
   private rats: Rat[] = [];
+  private nodes: ResourceNode[] = [];
+  private gatherState: GatherState | null = null;
+  private gatherNode: ResourceNode | null = null;
   private target: Mob | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
   private lastAttackAt = 0;
@@ -61,6 +80,9 @@ export class TownScene extends Phaser.Scene {
     if (!groundLayer) {
       throw new Error('Failed to create ground layer');
     }
+    // Below everything, so flat decals drawn onto the terrain (fishing spots)
+    // can sit at a negative depth and still be visible above it.
+    groundLayer.setDepth(GROUND_DEPTH);
 
     const worldWidth = tilemap.widthInPixels;
     const worldHeight = tilemap.heightInPixels;
@@ -94,6 +116,27 @@ export class TownScene extends Phaser.Scene {
       );
       rat.setInteractive();
       return rat;
+    });
+
+    this.nodes = TOWN_NODE_SPAWNS.map(({ dx, dy, nodeId }) => {
+      const node = new ResourceNode(
+        this,
+        this.spawnPoint.x + dx,
+        this.spawnPoint.y + dy,
+        RESOURCE_NODES[nodeId],
+      );
+      node.setInteractive();
+      return node;
+    });
+
+    // Nothing walks into the pond.
+    groundLayer.setCollision(BLOCKING_TILES);
+    this.physics.add.collider(this.player, groundLayer);
+    this.rats.forEach((rat) => this.physics.add.collider(rat, groundLayer));
+    const solidNodes = this.nodes.filter((node) => node.definition.solid);
+    solidNodes.forEach((node) => {
+      this.physics.add.collider(this.player, node);
+      this.rats.forEach((rat) => this.physics.add.collider(rat, node));
     });
 
     this.selectionRing = this.add.graphics();
@@ -138,6 +181,7 @@ export class TownScene extends Phaser.Scene {
     this.player.update(delta);
     this.rats.forEach((rat) => rat.update(this.player.x, this.player.y));
     this.updateSelectionRing();
+    this.updateGathering(delta);
     this.updateCombat(time);
     this.updateEnemyAttacks(time);
     this.publishPlayerHp();
@@ -147,11 +191,118 @@ export class TownScene extends Phaser.Scene {
     _pointer: Phaser.Input.Pointer,
     currentlyOver: Phaser.GameObjects.GameObject[],
   ): void {
+    const clickedNode = currentlyOver.find(
+      (obj): obj is ResourceNode => obj instanceof ResourceNode,
+    );
+    if (clickedNode) {
+      this.clearTarget();
+      this.startGathering(clickedNode);
+      return;
+    }
+
+    // Any other click ends a gather: picking a fight or walking off is a choice
+    // to stop chopping.
+    this.stopGathering();
+
     const clickedRat = currentlyOver.find((obj): obj is Rat => obj instanceof Rat);
     if (clickedRat) {
       this.setTarget(clickedRat);
     } else {
       this.clearTarget();
+    }
+  }
+
+  private startGathering(node: ResourceNode): void {
+    if (!node.isAvailable()) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, `The ${node.definition.name} is spent.`);
+      return;
+    }
+
+    const check = canGather(node.definition, this.characterState.skills, this.characterState.gear);
+    if (!check.ok) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      return;
+    }
+
+    this.gatherNode = node;
+    this.gatherState = beginGather(
+      node.definition,
+      skillLevel(this.characterState.skills, node.definition.skill),
+    );
+    this.game.events.emit(GATHER_STARTED_EVENT, node.definition.name);
+  }
+
+  private stopGathering(): void {
+    if (!this.gatherState) return;
+    this.gatherState = null;
+    this.gatherNode = null;
+    this.game.events.emit(GATHER_ENDED_EVENT);
+  }
+
+  private updateGathering(delta: number): void {
+    if (!this.gatherState || !this.gatherNode) return;
+
+    const node = this.gatherNode;
+    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, node.x, node.y);
+    const outcome = advanceGather(this.gatherState, delta, distance);
+
+    if (outcome.status === 'gathering') {
+      this.gatherState = outcome.state;
+      this.game.events.emit(GATHER_PROGRESS_EVENT, outcome.progress);
+      return;
+    }
+
+    if (outcome.status === 'cancelled') {
+      this.stopGathering();
+      return;
+    }
+
+    this.completeGather(node);
+  }
+
+  private completeGather(node: ResourceNode): void {
+    const { definition } = node;
+    const level = skillLevel(this.characterState.skills, definition.skill);
+
+    const quantity = rollGatherQuantity(level);
+    this.characterState.inventory = addItemToInventory(
+      this.characterState.inventory,
+      definition.yieldItemId,
+      quantity,
+    );
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    this.awardSkillXp(definition.skill, definition.xpReward);
+
+    const emptied = node.consumeCharge();
+    if (emptied) {
+      this.stopGathering();
+      return;
+    }
+
+    // Auto-repeat: re-arm the channel so gathering runs unattended until
+    // something interrupts it.
+    this.gatherState = beginGather(
+      definition,
+      skillLevel(this.characterState.skills, definition.skill),
+    );
+    this.game.events.emit(GATHER_PROGRESS_EVENT, 0);
+  }
+
+  private awardSkillXp(skill: SkillId, amount: number): void {
+    const result = addSkillXp(this.characterState.skills, skill, amount);
+    this.characterState.skills = result.skills;
+
+    const state = result.skills[skill];
+    this.game.events.emit(SKILL_XP_GAINED_EVENT, {
+      skillId: skill,
+      level: state.level,
+      xp: state.xp,
+      xpToNext: skillXpToNextLevel(state.level),
+      leveledUp: result.leveledUp,
+    });
+
+    if (result.leveledUp) {
+      this.persistCharacter();
     }
   }
 
@@ -244,6 +395,12 @@ export class TownScene extends Phaser.Scene {
       const { damage } = resolveAttack({ attackPower: rat.attackPower });
       this.player.takeDamage(damage);
       this.showDamageNumber(this.player.x, this.player.y, damage, THEME.color.playerDamage);
+      // Taking a hit breaks the channel, so gathering is never a way to ignore a
+      // mob already chewing on you.
+      if (this.gatherState) {
+        this.game.events.emit(GATHER_REFUSED_EVENT, 'You are interrupted!');
+        this.stopGathering();
+      }
 
       if (!this.player.isAlive()) {
         this.handlePlayerDeath();
@@ -254,6 +411,7 @@ export class TownScene extends Phaser.Scene {
 
   private handlePlayerDeath(): void {
     this.rats.forEach((rat) => rat.disengage());
+    this.stopGathering();
     this.clearTarget();
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
     this.player.setVelocity(0, 0);

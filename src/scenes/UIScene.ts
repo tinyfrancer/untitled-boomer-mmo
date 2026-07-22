@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
 import { CharacterPanel, characterPanelHeight, characterPanelWidth } from '../ui/CharacterPanel';
+import { GatherProgressBar } from '../ui/GatherProgressBar';
 import { InventoryPanel, inventoryPanelWidth } from '../ui/InventoryPanel';
 import { SlotPicker } from '../ui/SlotPicker';
 import { TargetFrame } from '../ui/TargetFrame';
@@ -8,6 +9,10 @@ import { VirtualJoystick } from '../ui/VirtualJoystick';
 import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import {
   EQUIP_ITEM_REQUESTED_EVENT,
+  GATHER_ENDED_EVENT,
+  GATHER_PROGRESS_EVENT,
+  GATHER_REFUSED_EVENT,
+  GATHER_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
@@ -59,6 +64,7 @@ export class UIScene extends Phaser.Scene {
   private levelUpToast!: Phaser.GameObjects.Text;
   private characterPanel!: CharacterPanel;
   private inventoryPanel!: InventoryPanel;
+  private gatherBar!: GatherProgressBar;
   private joystick!: VirtualJoystick;
   private slotPicker: SlotPicker | null = null;
   private classId: ClassId = 'warrior';
@@ -108,6 +114,10 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
     this.game.events.on(PLAYER_DIED_EVENT, this.handlePlayerDied, this);
     this.game.events.on(SKILL_XP_GAINED_EVENT, this.handleSkillXpGained, this);
+    this.game.events.on(GATHER_STARTED_EVENT, this.handleGatherStarted, this);
+    this.game.events.on(GATHER_PROGRESS_EVENT, this.handleGatherProgress, this);
+    this.game.events.on(GATHER_ENDED_EVENT, this.handleGatherEnded, this);
+    this.game.events.on(GATHER_REFUSED_EVENT, this.handleGatherRefused, this);
 
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
@@ -126,6 +136,10 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
       this.game.events.off(PLAYER_DIED_EVENT, this.handlePlayerDied, this);
       this.game.events.off(SKILL_XP_GAINED_EVENT, this.handleSkillXpGained, this);
+      this.game.events.off(GATHER_STARTED_EVENT, this.handleGatherStarted, this);
+      this.game.events.off(GATHER_PROGRESS_EVENT, this.handleGatherProgress, this);
+      this.game.events.off(GATHER_ENDED_EVENT, this.handleGatherEnded, this);
+      this.game.events.off(GATHER_REFUSED_EVENT, this.handleGatherRefused, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
@@ -153,6 +167,7 @@ export class UIScene extends Phaser.Scene {
     this.createCharacterPanel();
     this.createInventoryPanel();
     this.createPanelToggleButtons();
+    this.createGatherBar();
     this.createJoystick();
 
     this.refreshCharacterPanel();
@@ -282,6 +297,16 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0);
   }
 
+  // Centred just below the player, who the camera keeps centred anyway.
+  private createGatherBar(): void {
+    this.gatherBar = new GatherProgressBar(
+      this,
+      this.scale.width / 2 - px(60, this.uiScale),
+      this.scale.height / 2 + px(60, this.uiScale),
+      this.uiScale,
+    );
+  }
+
   private createJoystick(): void {
     const offset = px(90, this.uiScale);
     this.joystick = new VirtualJoystick(
@@ -386,6 +411,22 @@ export class UIScene extends Phaser.Scene {
         THEME.color.skillUp,
       );
     }
+  };
+
+  private handleGatherStarted = (label: string): void => {
+    this.gatherBar.show(label);
+  };
+
+  private handleGatherProgress = (progress: number): void => {
+    this.gatherBar.setProgress(progress);
+  };
+
+  private handleGatherEnded = (): void => {
+    this.gatherBar.hide();
+  };
+
+  private handleGatherRefused = (reason: string): void => {
+    this.showToast(reason, THEME.color.muted);
   };
 
   private handlePlayerHpChanged = (hp: number): void => {

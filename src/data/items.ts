@@ -205,6 +205,13 @@ export function toolSkill(itemId: string | null): SkillId | null {
   return item.toolFor ?? null;
 }
 
+// The tool item for a skill, used to tell the player what they are missing.
+export function toolItemFor(skill: SkillId): ItemDefinition | null {
+  return (
+    Object.values(ITEMS).find((item) => item.kind === 'equipment' && item.toolFor === skill) ?? null
+  );
+}
+
 export function consumableFor(
   itemId: string | null,
 ): { healAmount: number; healDurationMs: number } | null {

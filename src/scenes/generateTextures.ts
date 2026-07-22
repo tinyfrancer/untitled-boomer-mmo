@@ -13,6 +13,8 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
   // the bare figure, so a Player always has a texture to construct against
   ensurePlayerTexture(scene, computeAppearance(NO_GEAR));
   generateRatTexture(scene);
+  generateTreeTextures(scene);
+  generateFishingSpotTexture(scene);
   generateTilesetTexture(scene);
 }
 
@@ -201,6 +203,54 @@ function generateRatTexture(scene: Phaser.Scene): void {
   graphics.destroy();
 }
 
+// Trees stand a tile and a half tall so the canopy reads above the player, but
+// the trunk is what the physics body covers — see ResourceNode.
+function generateTreeTextures(scene: Phaser.Scene): void {
+  const width = TILE_SIZE;
+  const height = TILE_SIZE * 1.5;
+  const trunkWidth = width * 0.18;
+  const trunkTop = height * 0.55;
+
+  const graphics = scene.add.graphics();
+  const trunk = (): void => {
+    graphics.fillStyle(0x5d4037, 1);
+    graphics.fillRect(width / 2 - trunkWidth / 2, trunkTop, trunkWidth, height - trunkTop);
+  };
+
+  trunk();
+  graphics.fillStyle(0x1b5e20, 1);
+  graphics.fillCircle(width / 2, height * 0.34, width * 0.42);
+  graphics.fillStyle(0x2e7d32, 1);
+  graphics.fillCircle(width * 0.38, height * 0.28, width * 0.26);
+  graphics.fillCircle(width * 0.64, height * 0.36, width * 0.22);
+  graphics.generateTexture('tree', width, height);
+  graphics.clear();
+
+  // Same footprint as the tree so a depleted node swaps texture without the
+  // sprite jumping; only the canopy is gone.
+  trunk();
+  graphics.fillStyle(0x6d4c41, 1);
+  graphics.fillEllipse(width / 2, trunkTop, trunkWidth * 1.6, trunkWidth * 0.7);
+  graphics.generateTexture('tree-stump', width, height);
+  graphics.destroy();
+}
+
+// Ripple rings, drawn to sit on top of a water tile.
+function generateFishingSpotTexture(scene: Phaser.Scene): void {
+  const size = TILE_SIZE * 0.75;
+  const graphics = scene.add.graphics();
+
+  graphics.lineStyle(3, 0xe0f7fa, 0.85);
+  graphics.strokeCircle(size / 2, size / 2, size * 0.42);
+  graphics.lineStyle(2, 0xe0f7fa, 0.55);
+  graphics.strokeCircle(size / 2, size / 2, size * 0.26);
+  graphics.fillStyle(0xe0f7fa, 0.7);
+  graphics.fillCircle(size / 2, size / 2, size * 0.08);
+
+  graphics.generateTexture('fishing-spot', size, size);
+  graphics.destroy();
+}
+
 // A single tileset image with tiles laid out side by side, since
 // Phaser's Tilemap API indexes tiles into one tileset texture rather
 // than accepting separate textures per tile.
@@ -209,9 +259,34 @@ function generateTilesetTexture(scene: Phaser.Scene): void {
 
   drawGrassTile(graphics, 0);
   drawPathTile(graphics, 1);
+  drawWaterTile(graphics, 2);
 
-  graphics.generateTexture(TILESET_KEY, TILE_SIZE * 2, TILE_SIZE);
+  graphics.generateTexture(TILESET_KEY, TILE_SIZE * 3, TILE_SIZE);
   graphics.destroy();
+}
+
+function drawWaterTile(graphics: Phaser.GameObjects.Graphics, index: number): void {
+  const x = index * TILE_SIZE;
+  graphics.fillStyle(0x1565c0, 1);
+  graphics.fillRect(x, 0, TILE_SIZE, TILE_SIZE);
+
+  // a couple of lighter wave strokes so the surface isn't a flat block of blue
+  graphics.lineStyle(2, 0x64b5f6, 0.5);
+  const waveFractions: Array<[number, number]> = [
+    [0.15, 0.3],
+    [0.5, 0.62],
+  ];
+  waveFractions.forEach(([wx, wy]) => {
+    graphics.lineBetween(
+      x + wx * TILE_SIZE,
+      wy * TILE_SIZE,
+      x + (wx + 0.34) * TILE_SIZE,
+      wy * TILE_SIZE,
+    );
+  });
+
+  graphics.lineStyle(1, 0x000000, 0.15);
+  graphics.strokeRect(x, 0, TILE_SIZE, TILE_SIZE);
 }
 
 function drawGrassTile(graphics: Phaser.GameObjects.Graphics, index: number): void {
