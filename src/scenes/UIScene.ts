@@ -6,7 +6,6 @@ import { GatherProgressBar } from '../ui/GatherProgressBar';
 import { InventoryPanel, inventoryPanelWidth } from '../ui/InventoryPanel';
 import { SlotPicker } from '../ui/SlotPicker';
 import { TargetFrame } from '../ui/TargetFrame';
-import { VirtualJoystick } from '../ui/VirtualJoystick';
 import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import {
   ACTIONS_CHANGED_EVENT,
@@ -22,7 +21,6 @@ import {
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
-  MOVE_VECTOR_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   TARGET_CLEARED_EVENT,
@@ -73,7 +71,6 @@ export class UIScene extends Phaser.Scene {
   private inventoryPanel!: InventoryPanel;
   private gatherBar!: GatherProgressBar;
   private actionBar!: ActionBar;
-  private joystick!: VirtualJoystick;
   private slotPicker: SlotPicker | null = null;
   private classId: ClassId = 'warrior';
   private uiScale = 1;
@@ -155,21 +152,17 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  // Panel positions are derived from the canvas size, which under Scale.RESIZE
+  // changes with the window — rebuild the whole HUD at the new size.
   private handleResize = (): void => {
-    const next = scenePxScale(this);
-    if (next === this.uiScale) {
-      return;
-    }
     this.slotPicker?.close();
     this.slotPicker = null;
-    // Joystick first: it owns scene-level input listeners that removeAll misses.
-    this.joystick.destroy();
     this.children.removeAll(true);
     this.buildHud();
   };
 
   private buildHud(): void {
-    this.uiScale = scenePxScale(this);
+    this.uiScale = scenePxScale();
     const margin = px(THEME.margin, this.uiScale);
 
     this.targetFrame = new TargetFrame(this, margin, margin, this.uiScale);
@@ -180,7 +173,6 @@ export class UIScene extends Phaser.Scene {
     this.createPanelToggleButtons();
     this.createGatherBar();
     this.createActionBar();
-    this.createJoystick();
 
     this.refreshCharacterPanel();
     this.inventoryPanel.update(this.model.inventory);
@@ -189,9 +181,7 @@ export class UIScene extends Phaser.Scene {
     this.handleXpGained(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
   }
 
-  // Player info sits top-left under the target frame, leaving the whole bottom
-  // -left corner to the joystick — otherwise a full-height character sheet on a
-  // phone covers whichever corner the joystick is in.
+  // Player info sits top-left under the target frame.
   private playerBlockTop(): number {
     return px(THEME.margin, this.uiScale) * 2 + px(52, this.uiScale);
   }
@@ -266,7 +256,7 @@ export class UIScene extends Phaser.Scene {
     );
   }
 
-  // Bottom centre, clear of the joystick corner and the gather bar above it.
+  // Bottom centre, clear of the gather bar above it.
   private createActionBar(): void {
     this.actionBar = new ActionBar(
       this,
@@ -349,17 +339,6 @@ export class UIScene extends Phaser.Scene {
       this.scale.width / 2 - px(60, this.uiScale),
       this.scale.height / 2 + px(60, this.uiScale),
       this.uiScale,
-    );
-  }
-
-  private createJoystick(): void {
-    const offset = px(90, this.uiScale);
-    this.joystick = new VirtualJoystick(
-      this,
-      offset,
-      this.scale.height - offset,
-      this.uiScale,
-      (vx, vy) => this.game.events.emit(MOVE_VECTOR_EVENT, vx, vy),
     );
   }
 

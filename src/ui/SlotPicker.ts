@@ -38,7 +38,9 @@ export class SlotPicker {
     const background = scene.add
       .rectangle(0, 0, width, height, THEME.panelBg, 0.92)
       .setOrigin(0, 0)
-      .setStrokeStyle(px(1, scale), 0xffee58);
+      .setStrokeStyle(px(1, scale), 0xffee58)
+      // Interactive so a click on the picker never falls through to the world.
+      .setInteractive();
 
     const title = scene.add.text(pad, pad, `Equip ${SLOT_LABELS[slot]}`, {
       fontSize: fontPx(THEME.font.md, scale),

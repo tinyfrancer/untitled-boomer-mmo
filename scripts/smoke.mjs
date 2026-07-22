@@ -440,6 +440,46 @@ try {
   );
   await page.screenshot({ path: `${OUT}/4-after-death.png` });
 
+  // --- Click-to-move: a tap destination pulls the player across the map. ---
+  const moveTarget = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    const target = { x: town.player.x + 200, y: town.player.y + 100 };
+    town.player.moveTo(target.x, target.y);
+    return { x: Math.round(target.x), y: Math.round(target.y) };
+  });
+  const moved = await waitFor(
+    (s) => Math.abs(s.player.x - moveTarget.x) <= 12 && Math.abs(s.player.y - moveTarget.y) <= 12,
+    'player to walk to the click destination',
+  );
+  check(
+    'click-to-move walks the player to the destination',
+    true,
+    `at ${moved.player.x},${moved.player.y}`,
+  );
+
+  // --- Portrait phone: the canvas tracks the viewport 1:1 and the camera
+  // zooms in rather than shrinking the world. ---
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(600);
+  const portrait = await page.evaluate(() => ({
+    w: window.game.scale.width,
+    h: window.game.scale.height,
+    zoom: window.game.scene.getScene('Zone').cameras.main.zoom,
+    uiActive: window.game.scene.getScene('UI').scene.isActive(),
+  }));
+  check(
+    'portrait viewport resizes the canvas 1:1',
+    portrait.w === 390 && portrait.h === 844,
+    `${portrait.w}x${portrait.h}`,
+  );
+  check(
+    'portrait camera zooms in and stays inside the world',
+    portrait.zoom < 1 && 844 / portrait.zoom <= 1216,
+    `zoom=${portrait.zoom.toFixed(2)}`,
+  );
+  check('UI scene survives the resize', portrait.uiActive === true);
+  await page.screenshot({ path: `${OUT}/7-portrait.png` });
+
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 } catch (err) {
   check('smoke run completed', false, String(err.message ?? err));

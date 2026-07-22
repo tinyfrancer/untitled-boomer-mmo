@@ -1,10 +1,10 @@
-import { GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { TILE_SIZE } from '../config/constants';
 
-// Every size below is authored in CSS pixels — what the player actually sees —
-// rather than canvas units. Scale.FIT shrinks the fixed GAME_WIDTH canvas to fit
-// the viewport, so a HUD sized in canvas units gets physically smaller the
-// smaller the window; on a phone it becomes unreadable. Multiply by uiScale()
-// at build time to keep apparent size roughly constant instead.
+// Every size below is authored in CSS pixels. Scale.RESIZE keeps the canvas at
+// the viewport's size, so canvas units and CSS pixels are 1:1 and the HUD can
+// be laid out directly in these values. The px()/fontPx() helpers still take a
+// scale factor — it is 1 today (see scenePxScale), kept as the hook for a
+// future accessibility/text-size setting rather than re-threading one later.
 export const THEME = {
   font: {
     xs: 11,
@@ -52,32 +52,39 @@ export const THEME = {
   xpFill: 0x42a5f5,
 } as const;
 
-export const MIN_UI_SCALE = 1;
-
-// Tallest thing the HUD draws, in CSS px (the character sheet). The upper clamp
-// is whatever scale still keeps that on screen rather than a round number —
-// past it the panel would run off the bottom of the canvas on a phone. Grew when
-// the sheet gained its skills section; keep it in step with
-// characterPanelHeight() rather than tuning it for a nicer clamp.
-const TALLEST_PANEL = 414;
-export const MAX_UI_SCALE = GAME_HEIGHT / TALLEST_PANEL;
+// How many tiles the world camera aims to show across the viewport's smaller
+// axis. Bigger number = further zoomed out.
+const TARGET_TILES_ACROSS = 10;
 
 /**
- * Canvas units per CSS pixel, given the canvas's on-screen width.
+ * Zoom for the world camera, from the viewport and world pixel sizes.
  *
- * The lower clamp stops the HUD rendering below its authored pixel density on
- * very wide displays; the upper clamp keeps the tallest panel on screen.
+ * Aims to show roughly the same slice of world on every device (a phone gets
+ * a closer camera in absolute pixels, not a miniature map), clamped to at most
+ * 1:1 pixels and never further out than the world edge — a camera wider than
+ * the world would letterbox it against the page background.
  */
-export function uiScale(displayWidth: number): number {
-  if (!Number.isFinite(displayWidth) || displayWidth <= 0) {
-    return MIN_UI_SCALE;
+export function worldZoom(
+  viewportWidth: number,
+  viewportHeight: number,
+  worldWidth: number,
+  worldHeight: number,
+): number {
+  if (
+    !Number.isFinite(viewportWidth) ||
+    !Number.isFinite(viewportHeight) ||
+    viewportWidth <= 0 ||
+    viewportHeight <= 0
+  ) {
+    return 1;
   }
-  const raw = GAME_WIDTH / displayWidth;
-  return Math.min(Math.max(raw, MIN_UI_SCALE), MAX_UI_SCALE);
+  const target = Math.min(viewportWidth, viewportHeight) / (TILE_SIZE * TARGET_TILES_ACROSS);
+  const fillsWorld = Math.max(viewportWidth / worldWidth, viewportHeight / worldHeight);
+  return Math.max(Math.min(target, 1), fillsWorld);
 }
 
-export function scenePxScale(scene: Phaser.Scene): number {
-  return uiScale(scene.scale.displaySize.width);
+export function scenePxScale(): number {
+  return 1;
 }
 
 export function px(value: number, scale: number): number {

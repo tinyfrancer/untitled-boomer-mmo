@@ -13,7 +13,11 @@ const config: Phaser.Types.Core.GameConfig = {
   height: GAME_HEIGHT,
   backgroundColor: '#1a1a2e',
   scale: {
-    mode: Phaser.Scale.FIT,
+    // The canvas is always the viewport's size, so UI code works in real CSS
+    // pixels; the world camera compensates with zoom (see worldZoom in
+    // ui/theme.ts). FIT letterboxed a fixed canvas, which shrank the HUD into
+    // illegibility on phones.
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   physics: {

@@ -94,7 +94,7 @@ ways), not a new scene class.
 
 **Scene-to-scene communication** goes through `this.game.events` (a global Phaser event emitter),
 not direct references between scenes — see `src/ui/uiEvents.ts` for the event name constants
-(`target-selected`, `xp-gained`, `level-up`, `move-vector`, etc.). `ZoneScene` owns gameplay
+(`target-selected`, `xp-gained`, `level-up`, `equip-item-requested`, etc.). `ZoneScene` owns gameplay
 state and emits events; `UIScene` only listens and renders. Mutations of `CharacterState`
 itself (inventory, gear, xp, skills, location) go through the Phaser-free
 `systems/CharacterController.ts` rather than being inlined in the scene. Add new HUD-facing state changes by
