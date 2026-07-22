@@ -152,6 +152,72 @@ try {
   );
   await page.screenshot({ path: `${OUT}/2-town.png` });
 
+  // --- Real input: genuine mouse clicks must select world objects. The
+  // pointerdown event's own currentlyOver list proved timing-flaky with two
+  // active scenes (see ZoneScene.hitTestWorld), and every other combat check
+  // here calls setTarget directly — so this is the only coverage of the real
+  // click path. Three attempts, because the original bug was intermittent.
+  const resetForClick = () =>
+    page.evaluate(() => {
+      const z = window.game.scene.getScene('Zone');
+      z.clearTarget();
+      z.player.stopMoving();
+      z.player.setPosition(z.spawnPoint.x, z.spawnPoint.y);
+      z.player.setVelocity(0, 0);
+    });
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await resetForClick();
+    await page.waitForTimeout(200);
+    const ratScreen = await page.evaluate(() => {
+      const z = window.game.scene.getScene('Zone');
+      const cam = z.cameras.main;
+      const m = z.mobs.find((mob) => mob.isAlive());
+      return {
+        x: Math.round((m.x - cam.worldView.x) * cam.zoom),
+        y: Math.round((m.y - cam.worldView.y) * cam.zoom),
+      };
+    });
+    await page.mouse.move(ratScreen.x, ratScreen.y);
+    await page.mouse.down();
+    await page.mouse.up();
+    await page.waitForTimeout(150);
+    const targeted = await page.evaluate(
+      () => window.game.scene.getScene('Zone').target?.name ?? null,
+    );
+    check(`real mouse click selects a rat (attempt ${attempt})`, targeted === 'Rat');
+  }
+
+  await resetForClick();
+  await page.waitForTimeout(200);
+  const npcScreen = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const cam = z.cameras.main;
+    const npc = z.children.list.find((o) => o.texture?.key === 'npc-shopkeeper');
+    return {
+      x: Math.round((npc.x - cam.worldView.x) * cam.zoom),
+      y: Math.round((npc.y - cam.worldView.y) * cam.zoom),
+    };
+  });
+  await page.mouse.move(npcScreen.x, npcScreen.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  // Out of interact range from spawn, so the click walks the player over first.
+  await page.waitForFunction(
+    () => {
+      const loop = window.game.loop;
+      if (loop.sleeping) loop.wake();
+      return window.game.scene.getScene('Zone').shopNpc !== null;
+    },
+    null,
+    { timeout: 60000 },
+  );
+  check('real mouse click walks to the shopkeeper and opens the shop', true);
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.closeShop();
+  });
+  await resetForClick();
+
   // --- Gathering: tools gate it, the channel yields, and range cancels it. ---
   check(
     'town spawns resource nodes',
