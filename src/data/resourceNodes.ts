@@ -52,4 +52,20 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
     interactRadius: 96,
     solid: false,
   },
+  // The ocean's deeper waters: same fish, better xp, gated behind a fishing
+  // level earned at the town pond.
+  'ocean-fishing-spot': {
+    id: 'ocean-fishing-spot',
+    name: 'Ocean Fishing Spot',
+    textureKey: 'fishing-spot',
+    skill: 'fishing',
+    requiredLevel: 5,
+    yieldItemId: 'raw-fish',
+    xpReward: 16,
+    baseGatherMs: 2200,
+    charges: null,
+    respawnDelayMs: 0,
+    interactRadius: 96,
+    solid: false,
+  },
 };

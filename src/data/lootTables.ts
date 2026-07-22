@@ -28,4 +28,20 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { itemId: 'brown-axe', chance: 0.03 },
     ],
   },
+  crab: {
+    id: 'crab',
+    entries: [{ itemId: 'crab-meat', chance: 0.8 }],
+  },
+  bandit: {
+    id: 'bandit',
+    entries: [
+      { itemId: 'cooked-fish', chance: 0.15 },
+      { itemId: 'brown-chestplate', chance: 0.05 },
+      { itemId: 'brown-helmet', chance: 0.05 },
+      { itemId: 'brown-legs', chance: 0.05 },
+      { itemId: 'brown-axe', chance: 0.05 },
+    ],
+    // Humanoids carry coin; the animals above never do.
+    currency: { min: 8, max: 25, chance: 0.9 },
+  },
 };

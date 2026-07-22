@@ -42,3 +42,32 @@ export const TOWN_NODE_SPAWNS: NodeSpawnPoint[] = [
   { dx: 384, dy: 192, nodeId: 'fishing-spot' },
   { dx: 544, dy: 192, nodeId: 'fishing-spot' },
 ];
+
+// Crabs live on the sand band (see beachMap.ts), away from the grass strip
+// where the road from town arrives. Same weighting-by-level idea as the rats.
+export const BEACH_MOB_SPAWNS: MobSpawnPoint[] = [
+  { dx: -384, dy: 32, enemyId: 'crab', level: 4 },
+  { dx: 64, dy: 128, enemyId: 'crab', level: 4 },
+  { dx: 384, dy: 0, enemyId: 'crab', level: 4 },
+  { dx: -192, dy: 256, enemyId: 'crab', level: 5 },
+  { dx: 256, dy: 288, enemyId: 'crab', level: 5 },
+  { dx: 576, dy: 224, enemyId: 'crab', level: 6 },
+];
+
+// On the ocean's northern row, fished from the shore like the town pond.
+export const BEACH_NODE_SPAWNS: NodeSpawnPoint[] = [
+  { dx: -256, dy: 384, nodeId: 'ocean-fishing-spot' },
+  { dx: 64, dy: 384, nodeId: 'ocean-fishing-spot' },
+  { dx: 384, dy: 384, nodeId: 'ocean-fishing-spot' },
+];
+
+// All inside the dirt clearing (see banditCampMap.ts), far enough east that
+// arriving from town never lands inside an aggro radius.
+export const BANDIT_CAMP_MOB_SPAWNS: MobSpawnPoint[] = [
+  { dx: 160, dy: -160, enemyId: 'bandit', level: 7 },
+  { dx: 192, dy: 160, enemyId: 'bandit', level: 7 },
+  { dx: 384, dy: 0, enemyId: 'bandit', level: 7 },
+  { dx: 480, dy: -224, enemyId: 'bandit', level: 8 },
+  { dx: 512, dy: 224, enemyId: 'bandit', level: 8 },
+  { dx: 576, dy: 0, enemyId: 'bandit', level: 9 },
+];

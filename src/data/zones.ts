@@ -1,6 +1,11 @@
 import type { NpcId, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
+import { BEACH_MAP } from './beachMap';
+import { BANDIT_CAMP_MAP } from './banditCampMap';
 import {
+  BANDIT_CAMP_MOB_SPAWNS,
+  BEACH_MOB_SPAWNS,
+  BEACH_NODE_SPAWNS,
   TOWN_MOB_SPAWNS,
   TOWN_NODE_SPAWNS,
   type MobSpawnPoint,
@@ -41,6 +46,27 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     nodeSpawns: TOWN_NODE_SPAWNS,
     // Just off the crossroads, clear of every mob spawn point.
     npcSpawns: [{ dx: 96, dy: -96, npcId: 'shopkeeper' }],
-    exits: [],
+    exits: [
+      { edge: 'south', to: 'beach' },
+      { edge: 'east', to: 'bandit-camp' },
+    ],
+  },
+  beach: {
+    id: 'beach',
+    name: 'Beach',
+    map: BEACH_MAP,
+    mobSpawns: BEACH_MOB_SPAWNS,
+    nodeSpawns: BEACH_NODE_SPAWNS,
+    npcSpawns: [],
+    exits: [{ edge: 'north', to: 'town' }],
+  },
+  'bandit-camp': {
+    id: 'bandit-camp',
+    name: 'Bandit Camp',
+    map: BANDIT_CAMP_MAP,
+    mobSpawns: BANDIT_CAMP_MOB_SPAWNS,
+    nodeSpawns: [],
+    npcSpawns: [],
+    exits: [{ edge: 'west', to: 'town' }],
   },
 };

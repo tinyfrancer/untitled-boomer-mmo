@@ -19,6 +19,14 @@ export const COOKING_RECIPES: Record<string, CookingRecipe> = {
     xpReward: 12,
     cookMs: 2000,
   },
+  'crab-meat': {
+    inputItemId: 'crab-meat',
+    outputItemId: 'cooked-crab',
+    burntItemId: 'burnt-crab',
+    requiredLevel: 3,
+    xpReward: 20,
+    cookMs: 2500,
+  },
 };
 
 export const FIRE_INPUT_ITEM_ID = 'logs';

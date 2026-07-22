@@ -13,6 +13,8 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
   // the bare figure, so a Player always has a texture to construct against
   ensurePlayerTexture(scene, computeAppearance(NO_GEAR));
   generateRatTexture(scene);
+  generateCrabTexture(scene);
+  generateBanditTexture(scene);
   generateShopkeeperTexture(scene);
   generateTreeTextures(scene);
   generateFishingSpotTexture(scene);
@@ -281,6 +283,92 @@ function generateRatTexture(scene: Phaser.Scene): void {
   graphics.destroy();
 }
 
+function generateCrabTexture(scene: Phaser.Scene): void {
+  const width = TILE_SIZE * 0.85;
+  const height = TILE_SIZE * 0.55;
+  const graphics = scene.add.graphics();
+  const bodyY = height * 0.55;
+
+  // legs: three splayed strokes per side
+  graphics.lineStyle(2, 0xbf360c, 1);
+  const legOffsets: Array<[number, number]> = [
+    [0.16, 0.15],
+    [0.2, 0.0],
+    [0.16, -0.15],
+  ];
+  legOffsets.forEach(([dx, dy]) => {
+    graphics.lineBetween(width * 0.25, bodyY, width * (0.25 - dx), bodyY + height * (0.3 + dy));
+    graphics.lineBetween(width * 0.75, bodyY, width * (0.75 + dx), bodyY + height * (0.3 + dy));
+  });
+
+  // shell
+  graphics.fillStyle(0xd84315, 1);
+  graphics.fillEllipse(width / 2, bodyY, width * 0.6, height * 0.62);
+
+  // claws raised in front
+  graphics.fillStyle(0xbf360c, 1);
+  graphics.fillCircle(width * 0.16, height * 0.28, width * 0.11);
+  graphics.fillCircle(width * 0.84, height * 0.28, width * 0.11);
+
+  // eye stalks
+  graphics.fillStyle(0x000000, 1);
+  graphics.fillCircle(width * 0.42, height * 0.28, TILE_SIZE * 0.035);
+  graphics.fillCircle(width * 0.58, height * 0.28, TILE_SIZE * 0.035);
+
+  graphics.generateTexture('crab', width, height);
+  graphics.destroy();
+}
+
+// The player's stick figure in outlaw colors — gray shirt, red bandana over
+// the face, a dagger in hand — humanoid at a glance, hostile on second look.
+function generateBanditTexture(scene: Phaser.Scene): void {
+  const size = TILE_SIZE;
+  const figure = buildStickFigure(size);
+  const graphics = scene.add.graphics();
+
+  const torso = (): void => {
+    graphics.lineBetween(figure.cx, figure.shoulderY, figure.cx, figure.hipY);
+    graphics.lineBetween(figure.leftHandX, figure.shoulderY, figure.rightHandX, figure.shoulderY);
+  };
+  const legs = (): void => {
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx - size * 0.13, figure.footY);
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * 0.13, figure.footY);
+  };
+
+  graphics.lineStyle(figure.limbWidth + size * 0.03, OUTLINE_COLOR, 1);
+  torso();
+  legs();
+  graphics.lineStyle(figure.limbWidth, 0x757575, 1);
+  torso();
+  graphics.lineStyle(figure.limbWidth, 0x424242, 1);
+  legs();
+
+  graphics.fillStyle(0x14140f, 1);
+  graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  graphics.lineStyle(size * 0.03, 0xffffff, 1);
+  graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  // the bandana: a red band across the lower half of the face
+  graphics.fillStyle(0xc62828, 1);
+  graphics.fillRect(
+    figure.cx - figure.headRadius,
+    figure.headCenterY,
+    figure.headRadius * 2,
+    figure.headRadius * 0.75,
+  );
+
+  // a short dagger, blade up from the hand
+  graphics.lineStyle(size * 0.035, 0xb0bec5, 1);
+  graphics.lineBetween(
+    figure.rightHandX,
+    figure.shoulderY + size * 0.04,
+    figure.rightHandX,
+    figure.shoulderY - size * 0.16,
+  );
+
+  graphics.generateTexture('bandit', size, size);
+  graphics.destroy();
+}
+
 // Trees stand a tile and a half tall so the canopy reads above the player, but
 // the trunk is what the physics body covers — see ResourceNode.
 function generateTreeTextures(scene: Phaser.Scene): void {
@@ -371,9 +459,34 @@ function generateTilesetTexture(scene: Phaser.Scene): void {
   drawGrassTile(graphics, 0);
   drawPathTile(graphics, 1);
   drawWaterTile(graphics, 2);
+  drawSandTile(graphics, 3);
 
-  graphics.generateTexture(TILESET_KEY, TILE_SIZE * 3, TILE_SIZE);
+  graphics.generateTexture(TILESET_KEY, TILE_SIZE * 4, TILE_SIZE);
   graphics.destroy();
+}
+
+function drawSandTile(graphics: Phaser.GameObjects.Graphics, index: number): void {
+  const x = index * TILE_SIZE;
+  graphics.fillStyle(0xe0c184, 1);
+  graphics.fillRect(x, 0, TILE_SIZE, TILE_SIZE);
+
+  // darker speckles so the beach doesn't read as a flat color
+  graphics.fillStyle(0xc7a35f, 0.6);
+  const speckleFractions: Array<[number, number]> = [
+    [0.2, 0.25],
+    [0.6, 0.15],
+    [0.4, 0.5],
+    [0.8, 0.6],
+    [0.15, 0.75],
+    [0.55, 0.85],
+  ];
+  const speckleSize = TILE_SIZE * 0.05;
+  speckleFractions.forEach(([sx, sy]) =>
+    graphics.fillRect(x + sx * TILE_SIZE, sy * TILE_SIZE, speckleSize, speckleSize),
+  );
+
+  graphics.lineStyle(1, 0x000000, 0.15);
+  graphics.strokeRect(x, 0, TILE_SIZE, TILE_SIZE);
 }
 
 function drawWaterTile(graphics: Phaser.GameObjects.Graphics, index: number): void {

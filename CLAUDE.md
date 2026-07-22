@@ -111,7 +111,9 @@ directions: `updateCombat()` for the player's swings and `updateEnemyAttacks()` 
 hitting back.
 
 **Aggro contract**: `Mob.engage()` starts a chase, `disengage()` drops aggro _and heals the mob
-to full_ on its way back to spawn. Both leashing (running past `leashRadius`) and player death
+to full_ on its way back to spawn. Enemies with `aggressive: true` and an `aggroRadius` engage
+on their own when a wandering mob sees the player inside that radius (bandits); passive enemies
+only ever retaliate. Both leashing (running past `leashRadius`) and player death
 route through `disengage()`, so a fight always restarts from a clean slate — reuse it rather than
 resetting mob state by hand. `Mob.update()` takes the player's position, since chasing needs it.
 

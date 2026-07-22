@@ -794,10 +794,21 @@ export class ZoneScene extends Phaser.Scene {
     this.pendingShopNpc = null;
     this.pursuingTarget = false;
     this.player.stopMoving();
+    this.game.events.emit(PLAYER_DIED_EVENT);
+
+    // Dying away from home sends you back to town — respawning in the middle
+    // of a hostile zone would just feed the same bandit again.
+    if (this.zone.id !== 'town') {
+      this.changingZone = true;
+      this.character.recordLocation('town', this.spawnPoint.x, this.spawnPoint.y);
+      saveService.save(this.character.state);
+      this.scene.restart({ zoneId: 'town' } satisfies ZoneSceneData);
+      return;
+    }
+
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
     this.player.setVelocity(0, 0);
     this.player.restoreToFull();
-    this.game.events.emit(PLAYER_DIED_EVENT);
     this.persistCharacter();
   }
 

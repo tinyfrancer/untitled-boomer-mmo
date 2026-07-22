@@ -90,3 +90,114 @@ describe('TOWN_MOB_SPAWNS', () => {
     });
   });
 });
+
+// --- Difficulty curve: simulated duels, per the tuning contract in CLAUDE.md.
+// Both sides swing on cooldown at average damage (variance is symmetric), so
+// whoever lands their killing blow first wins; the player wins exact ties by
+// swinging simultaneously.
+import { computeEffectiveStats } from '../../src/systems/StatsSystem';
+import { BANDIT_CAMP_MOB_SPAWNS, BEACH_MOB_SPAWNS } from '../../src/data/spawns';
+import type { EnemyId } from '../../src/types/ids';
+
+interface Combatant {
+  hp: number;
+  attackPower: number;
+  cooldownMs: number;
+}
+
+function duel(player: Combatant, enemy: Combatant): 'player' | 'enemy' {
+  const playerKillTime = (Math.ceil(enemy.hp / player.attackPower) - 1) * player.cooldownMs;
+  const enemyKillTime = (Math.ceil(player.hp / enemy.attackPower) - 1) * enemy.cooldownMs;
+  return playerKillTime <= enemyKillTime ? 'player' : 'enemy';
+}
+
+// A warrior in the brown set with the brown axe — the gear the previous zone
+// drops, which is what "expected level" means for the next one.
+function gearedWarrior(level: number): Combatant {
+  const stats = computeEffectiveStats(
+    'warrior',
+    { helmet: 'brown-helmet', chest: 'brown-chestplate', pants: 'brown-legs', weapon: 'brown-axe' },
+    level,
+  );
+  return { hp: stats.maxHp, attackPower: stats.attackPower, cooldownMs: stats.attackCooldownMs };
+}
+
+function freshWarrior(): Combatant {
+  const stats = computeEffectiveStats(
+    'warrior',
+    { helmet: null, chest: null, pants: null, weapon: 'rusty-sword' },
+    1,
+  );
+  return { hp: stats.maxHp, attackPower: stats.attackPower, cooldownMs: stats.attackCooldownMs };
+}
+
+function enemyAt(id: EnemyId, level: number): Combatant {
+  const stats = scaleEnemyStats(ENEMIES[id], level);
+  return {
+    hp: stats.maxHp,
+    attackPower: stats.attackPower,
+    cooldownMs: ENEMIES[id].attackCooldownMs,
+  };
+}
+
+describe('difficulty curve', () => {
+  it('keeps the documented rat contract: a fresh warrior beats L1, beats L2, loses to L3', () => {
+    expect(duel(freshWarrior(), enemyAt('rat', 1))).toBe('player');
+    expect(duel(freshWarrior(), enemyAt('rat', 2))).toBe('player');
+    expect(duel(freshWarrior(), enemyAt('rat', 3))).toBe('enemy');
+  });
+
+  it('crabs follow the same shape at beach levels: beat even and +1, lose to +2', () => {
+    expect(duel(gearedWarrior(4), enemyAt('crab', 4))).toBe('player');
+    expect(duel(gearedWarrior(4), enemyAt('crab', 5))).toBe('player');
+    expect(duel(gearedWarrior(4), enemyAt('crab', 6))).toBe('enemy');
+    expect(duel(gearedWarrior(5), enemyAt('crab', 6))).toBe('player');
+  });
+
+  it('bandits follow it at camp levels: beat even, lose to +2', () => {
+    expect(duel(gearedWarrior(7), enemyAt('bandit', 7))).toBe('player');
+    expect(duel(gearedWarrior(8), enemyAt('bandit', 8))).toBe('player');
+    expect(duel(gearedWarrior(7), enemyAt('bandit', 9))).toBe('enemy');
+    expect(duel(gearedWarrior(9), enemyAt('bandit', 9))).toBe('player');
+  });
+
+  it('every aggressive or hostile chaser is slower than the player, so fleeing works', () => {
+    const playerSpeed = computeEffectiveStats('warrior', {
+      helmet: null,
+      chest: null,
+      pants: null,
+      weapon: null,
+    }).speed;
+    Object.values(ENEMIES).forEach((enemy) => {
+      expect(enemy.chaseSpeed).toBeLessThan(playerSpeed);
+    });
+  });
+});
+
+describe('new zone spawn tables', () => {
+  it('beach crabs cover levels 4-6, weighted toward the low end', () => {
+    const levels = BEACH_MOB_SPAWNS.map((s) => s.level);
+    expect(Math.min(...levels)).toBe(4);
+    expect(Math.max(...levels)).toBe(6);
+    expect(levels.filter((l) => l === 4).length).toBeGreaterThan(
+      levels.filter((l) => l === 6).length,
+    );
+    BEACH_MOB_SPAWNS.forEach((s) => expect(s.enemyId).toBe('crab'));
+  });
+
+  it('bandit camp covers levels 7-9, weighted toward the low end', () => {
+    const levels = BANDIT_CAMP_MOB_SPAWNS.map((s) => s.level);
+    expect(Math.min(...levels)).toBe(7);
+    expect(Math.max(...levels)).toBe(9);
+    expect(levels.filter((l) => l === 7).length).toBeGreaterThan(
+      levels.filter((l) => l === 9).length,
+    );
+    BANDIT_CAMP_MOB_SPAWNS.forEach((s) => expect(s.enemyId).toBe('bandit'));
+  });
+
+  it('only humanoids drop currency', () => {
+    expect(ENEMIES.bandit.aggressive).toBe(true);
+    expect(ENEMIES.crab.aggressive).toBe(false);
+    expect(ENEMIES.rat.aggressive).toBe(false);
+  });
+});
