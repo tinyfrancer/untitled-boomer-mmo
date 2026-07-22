@@ -45,6 +45,10 @@ const townState = () =>
       x: Math.round(r.x),
       y: Math.round(r.y),
       dist: Math.round(Phaser.Math.Distance.Between(r.x, r.y, p.x, p.y)),
+      state: r.aiState,
+      fromSpawn: Math.round(Phaser.Math.Distance.Between(r.x, r.y, r.spawnX, r.spawnY)),
+      vel: [Math.round(r.body.velocity.x), Math.round(r.body.velocity.y)],
+      bodyOn: r.body.enable,
     }));
     return {
       player: { hp: p.hp, maxHp: p.maxHp, level: p.level, x: Math.round(p.x), y: Math.round(p.y) },
