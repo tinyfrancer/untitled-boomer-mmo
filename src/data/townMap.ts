@@ -1,12 +1,5 @@
 import { WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../config/constants';
-
-export const GRASS_TILE = 0;
-export const PATH_TILE = 1;
-export const WATER_TILE = 2;
-
-// Tiles nothing can walk over. TownScene turns collision on for exactly these,
-// so adding a walkable tile needs no change there — only a blocking one does.
-export const BLOCKING_TILES = [WATER_TILE];
+import { GRASS_TILE, PATH_TILE, WATER_TILE } from './tiles';
 
 // South-east, clear of both the crossroads and every rat spawn in spawns.ts, so
 // fishing is a trip out of town rather than on top of it. Kept south of its

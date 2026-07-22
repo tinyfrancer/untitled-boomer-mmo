@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
-import { TOWN_RAT_SPAWNS } from '../../src/data/spawns';
+import { TOWN_MOB_SPAWNS } from '../../src/data/spawns';
 import { conColor, enemyDisplayName, scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { THEME } from '../../src/ui/theme';
 
@@ -73,10 +73,10 @@ describe('enemyDisplayName', () => {
   });
 });
 
-describe('TOWN_RAT_SPAWNS', () => {
+describe('TOWN_MOB_SPAWNS', () => {
   it('spawns fewer enemies at each higher level', () => {
     const countAt = (level: number): number =>
-      TOWN_RAT_SPAWNS.filter((spawn) => spawn.level === level).length;
+      TOWN_MOB_SPAWNS.filter((spawn) => spawn.level === level).length;
 
     expect(countAt(1)).toBeGreaterThan(countAt(2));
     expect(countAt(2)).toBeGreaterThan(countAt(3));
@@ -84,7 +84,7 @@ describe('TOWN_RAT_SPAWNS', () => {
   });
 
   it('only uses levels the starting area is tuned for', () => {
-    TOWN_RAT_SPAWNS.forEach((spawn) => {
+    TOWN_MOB_SPAWNS.forEach((spawn) => {
       expect(spawn.level).toBeGreaterThanOrEqual(1);
       expect(spawn.level).toBeLessThanOrEqual(3);
     });

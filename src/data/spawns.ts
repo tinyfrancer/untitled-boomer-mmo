@@ -1,8 +1,9 @@
-import type { ResourceNodeId } from '../types/ids';
+import type { EnemyId, ResourceNodeId } from '../types/ids';
 
-export interface SpawnPoint {
+export interface MobSpawnPoint {
   dx: number;
   dy: number;
+  enemyId: EnemyId;
   level: number;
 }
 
@@ -16,19 +17,19 @@ export interface NodeSpawnPoint {
 // so a camp keeps the same difficulty across respawns, and the distribution
 // (more level 1 than 2, more 2 than 3) is a property of the table itself.
 // Levels climb with distance from town center, so wandering out is the risk.
-export const TOWN_RAT_SPAWNS: SpawnPoint[] = [
-  { dx: -192, dy: -128, level: 1 },
-  { dx: 192, dy: -128, level: 1 },
-  { dx: -128, dy: 192, level: 1 },
-  { dx: 128, dy: 192, level: 1 },
-  { dx: 0, dy: 256, level: 1 },
-  { dx: -416, dy: 64, level: 2 },
-  { dx: 416, dy: 64, level: 2 },
-  { dx: 32, dy: -352, level: 2 },
-  { dx: -480, dy: -352, level: 3 },
+export const TOWN_MOB_SPAWNS: MobSpawnPoint[] = [
+  { dx: -192, dy: -128, enemyId: 'rat', level: 1 },
+  { dx: 192, dy: -128, enemyId: 'rat', level: 1 },
+  { dx: -128, dy: 192, enemyId: 'rat', level: 1 },
+  { dx: 128, dy: 192, enemyId: 'rat', level: 1 },
+  { dx: 0, dy: 256, enemyId: 'rat', level: 1 },
+  { dx: -416, dy: 64, enemyId: 'rat', level: 2 },
+  { dx: 416, dy: 64, enemyId: 'rat', level: 2 },
+  { dx: 32, dy: -352, enemyId: 'rat', level: 2 },
+  { dx: -480, dy: -352, enemyId: 'rat', level: 3 },
 ];
 
-// Same offsets-from-center convention as the rat spawns. Trees cluster into a
+// Same offsets-from-center convention as the mob spawns. Trees cluster into a
 // grove in the south-west; the fishing spots sit on the water itself, in the
 // pond's northern row (see POND in townMap.ts). The player can't walk onto
 // water, so they are fished from the shore — which is what the node's

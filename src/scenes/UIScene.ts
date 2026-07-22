@@ -49,7 +49,7 @@ const DEFAULT_GEAR: Record<GearSlotId, string | null> = {
 };
 
 // Everything the HUD renders. Kept here so a resize can tear the panels down and
-// rebuild them at the new scale without asking TownScene to re-send anything.
+// rebuild them at the new scale without asking ZoneScene to re-send anything.
 interface HudModel {
   name: string;
   level: number;

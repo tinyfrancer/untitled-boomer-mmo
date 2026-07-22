@@ -1,6 +1,6 @@
 import { CLASSES } from '../data/classes';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
-import type { ClassId, GearSlotId } from '../types/ids';
+import type { ClassId, GearSlotId, ZoneId } from '../types/ids';
 
 export const CHARACTER_STATE_VERSION = 4;
 
@@ -13,6 +13,9 @@ export interface CharacterState {
   gear: Record<GearSlotId, string | null>;
   inventory: Record<string, number>;
   skills: Skills;
+  // Optional so v4 saves written before zones existed still parse; readers
+  // default it to 'town'. Becomes required at the next version bump.
+  zoneId?: ZoneId;
   position: { x: number; y: number };
   createdAt: string;
   updatedAt: string;
@@ -36,6 +39,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     // every character starts carrying both.
     inventory: { 'felling-axe': 1, 'fishing-pole': 1 },
     skills: createInitialSkills(),
+    zoneId: 'town',
     position: { x: 0, y: 0 },
     createdAt: now,
     updatedAt: now,

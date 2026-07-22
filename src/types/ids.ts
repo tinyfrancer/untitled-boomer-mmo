@@ -11,3 +11,5 @@ export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
 export type SkillId = 'fishing' | 'woodcutting' | 'cooking';
 
 export type ResourceNodeId = 'tree' | 'fishing-spot';
+
+export type ZoneId = 'town';

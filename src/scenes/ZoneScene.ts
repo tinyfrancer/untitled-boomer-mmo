@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
-import { BLOCKING_TILES, TOWN_MAP } from '../data/townMap';
+import { BLOCKING_TILES } from '../data/tiles';
+import { ZONES, type ZoneDefinition, type ZoneEdge, type ZoneExit } from '../data/zones';
+import { ENEMIES } from '../data/enemies';
 import { RESOURCE_NODES } from '../data/resourceNodes';
-import { TOWN_NODE_SPAWNS, TOWN_RAT_SPAWNS } from '../data/spawns';
 import { Player } from '../entities/Player';
-import { Rat } from '../entities/Rat';
+import { Mob } from '../entities/Mob';
 import { ResourceNode } from '../entities/ResourceNode';
-import type { Mob } from '../entities/Mob';
 import { TILESET_KEY } from './generateTextures';
 import {
   ACTIONS_CHANGED_EVENT,
@@ -33,14 +33,7 @@ import {
 import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
-import { addXp, xpToNextLevel } from '../systems/LevelingSystem';
 import { rollLootTable } from '../systems/LootSystem';
-import {
-  addItemToInventory,
-  equipItem,
-  removeItemFromInventory,
-  unequipItem,
-} from '../systems/InventorySystem';
 import { canCook, findCookableItem, rollCook } from '../systems/CookingSystem';
 import { Campfire } from '../entities/Campfire';
 import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
@@ -52,18 +45,36 @@ import {
   rollGatherQuantity,
   type GatherState,
 } from '../systems/GatherSystem';
-import { addSkillXp, skillLevel, skillXpToNextLevel } from '../systems/SkillSystem';
+import { CharacterController } from '../systems/CharacterController';
+import { arrivalPoint, edgeFraction, findExit, oppositeEdge } from '../systems/ZoneSystem';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
-import type { GearSlotId, SkillId } from '../types/ids';
+import type { GearSlotId, SkillId, ZoneId } from '../types/ids';
 
 const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
 const AUTOSAVE_INTERVAL_MS = 30000;
+// Wider than half the player's body, since world-bounds collision stops the
+// sprite's center that far from the edge.
+const EXIT_MARGIN = TILE_SIZE * 0.6;
+// Far enough inside the new zone that the player doesn't stand on the return
+// exit and bounce straight back.
+const ARRIVAL_INSET = TILE_SIZE * 1.5;
 
-export class TownScene extends Phaser.Scene {
+// Passed through scene.restart on a zone change; absent on the first boot.
+interface ZoneSceneData {
+  zoneId?: ZoneId;
+  entryEdge?: ZoneEdge;
+  entryFraction?: number;
+}
+
+export class ZoneScene extends Phaser.Scene {
+  private zone!: ZoneDefinition;
+  private worldWidth = 0;
+  private worldHeight = 0;
+  private initData: ZoneSceneData = {};
   private player!: Player;
-  private rats: Rat[] = [];
+  private mobs: Mob[] = [];
   private nodes: ResourceNode[] = [];
   private gatherState: GatherState | null = null;
   private gatherNode: ResourceNode | null = null;
@@ -74,16 +85,28 @@ export class TownScene extends Phaser.Scene {
   private lastAttackAt = 0;
   private spawnPoint = new Phaser.Math.Vector2();
   private lastReportedHp = 0;
-  private characterState!: CharacterState;
+  private character!: CharacterController;
+  private changingZone = false;
   private handleWindowUnload = (): void => this.persistCharacter();
 
   constructor() {
-    super('Town');
+    super('Zone');
+  }
+
+  init(data: ZoneSceneData): void {
+    this.initData = data ?? {};
   }
 
   create(): void {
+    const state =
+      (this.registry.get('character') as CharacterState | undefined) ??
+      createNewCharacter('Adventurer', 'warrior');
+    this.character = new CharacterController(state);
+    this.zone = ZONES[this.initData.zoneId ?? state.zoneId ?? 'town'];
+    this.changingZone = false;
+
     const tilemap = this.make.tilemap({
-      data: TOWN_MAP,
+      data: this.zone.map,
       tileWidth: TILE_SIZE,
       tileHeight: TILE_SIZE,
     });
@@ -99,41 +122,48 @@ export class TownScene extends Phaser.Scene {
     // can sit at a negative depth and still be visible above it.
     groundLayer.setDepth(GROUND_DEPTH);
 
-    const worldWidth = tilemap.widthInPixels;
-    const worldHeight = tilemap.heightInPixels;
-    this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
-    this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+    this.worldWidth = tilemap.widthInPixels;
+    this.worldHeight = tilemap.heightInPixels;
+    this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
+    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
-    this.characterState =
-      (this.registry.get('character') as CharacterState | undefined) ??
-      createNewCharacter('Adventurer', 'warrior');
-
-    this.spawnPoint.set(worldWidth / 2, worldHeight / 2);
+    this.spawnPoint.set(this.worldWidth / 2, this.worldHeight / 2);
+    const start =
+      this.initData.entryEdge !== undefined
+        ? arrivalPoint(
+            this.initData.entryEdge,
+            this.initData.entryFraction ?? 0.5,
+            this.worldWidth,
+            this.worldHeight,
+            ARRIVAL_INSET,
+          )
+        : this.spawnPoint;
     this.player = new Player(
       this,
-      this.spawnPoint.x,
-      this.spawnPoint.y,
-      this.characterState.classId,
-      this.characterState.gear,
-      this.characterState.name,
-      this.characterState.level,
+      start.x,
+      start.y,
+      state.classId,
+      state.gear,
+      state.name,
+      state.level,
     );
     this.lastReportedHp = this.player.hp;
     this.cameras.main.startFollow(this.player, true);
 
-    this.rats = TOWN_RAT_SPAWNS.map(({ dx, dy, level }) => {
-      const rat = new Rat(
+    this.mobs = this.zone.mobSpawns.map(({ dx, dy, enemyId, level }) => {
+      const mob = new Mob(
         this,
         this.spawnPoint.x + dx,
         this.spawnPoint.y + dy,
+        ENEMIES[enemyId],
         level,
-        this.characterState.level,
+        state.level,
       );
-      rat.setInteractive();
-      return rat;
+      mob.setInteractive();
+      return mob;
     });
 
-    this.nodes = TOWN_NODE_SPAWNS.map(({ dx, dy, nodeId }) => {
+    this.nodes = this.zone.nodeSpawns.map(({ dx, dy, nodeId }) => {
       const node = new ResourceNode(
         this,
         this.spawnPoint.x + dx,
@@ -147,11 +177,11 @@ export class TownScene extends Phaser.Scene {
     // Nothing walks into the pond.
     groundLayer.setCollision(BLOCKING_TILES);
     this.physics.add.collider(this.player, groundLayer);
-    this.rats.forEach((rat) => this.physics.add.collider(rat, groundLayer));
+    this.mobs.forEach((mob) => this.physics.add.collider(mob, groundLayer));
     const solidNodes = this.nodes.filter((node) => node.definition.solid);
     solidNodes.forEach((node) => {
       this.physics.add.collider(this.player, node);
-      this.rats.forEach((rat) => this.physics.add.collider(rat, node));
+      this.mobs.forEach((mob) => this.physics.add.collider(mob, node));
     });
 
     this.selectionRing = this.add.graphics();
@@ -195,18 +225,59 @@ export class TownScene extends Phaser.Scene {
       this.game.events.off(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
     });
 
-    this.scene.launch('UI');
+    // The HUD survives zone changes: launched once on first boot, and left
+    // running when this scene restarts into another zone.
+    if (!this.scene.isActive('UI')) {
+      this.scene.launch('UI');
+    }
   }
 
   update(time: number, delta: number): void {
+    if (this.changingZone) return;
     this.player.update(delta);
-    this.rats.forEach((rat) => rat.update(this.player.x, this.player.y));
+    this.mobs.forEach((mob) => mob.update(this.player.x, this.player.y));
     this.updateSelectionRing();
     this.updateGathering(delta);
     this.updateCombat(time);
     this.updateEnemyAttacks(time);
     this.publishPlayerHp();
     this.publishActions();
+    this.checkZoneExit();
+  }
+
+  private checkZoneExit(): void {
+    const exit = findExit(
+      this.zone.exits,
+      this.player.x,
+      this.player.y,
+      this.worldWidth,
+      this.worldHeight,
+      EXIT_MARGIN,
+    );
+    if (exit) {
+      this.changeZone(exit);
+    }
+  }
+
+  private changeZone(exit: ZoneExit): void {
+    this.changingZone = true;
+    const fraction = edgeFraction(
+      exit.edge,
+      this.player.x,
+      this.player.y,
+      this.worldWidth,
+      this.worldHeight,
+    );
+    this.stopGathering();
+    this.clearTarget();
+    this.character.recordLocation(exit.to, this.player.x, this.player.y);
+    saveService.save(this.character.state);
+    const data: ZoneSceneData = {
+      zoneId: exit.to,
+      entryEdge: oppositeEdge(exit.edge),
+      entryFraction: fraction,
+    };
+    this.scene.restart(data);
   }
 
   private handlePointerDown(
@@ -226,9 +297,9 @@ export class TownScene extends Phaser.Scene {
     // to stop chopping.
     this.stopGathering();
 
-    const clickedRat = currentlyOver.find((obj): obj is Rat => obj instanceof Rat);
-    if (clickedRat) {
-      this.setTarget(clickedRat);
+    const clickedMob = currentlyOver.find((obj): obj is Mob => obj instanceof Mob);
+    if (clickedMob) {
+      this.setTarget(clickedMob);
     } else {
       this.clearTarget();
     }
@@ -240,7 +311,11 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const check = canGather(node.definition, this.characterState.skills, this.characterState.gear);
+    const check = canGather(
+      node.definition,
+      this.character.state.skills,
+      this.character.state.gear,
+    );
     if (!check.ok) {
       this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
       return;
@@ -249,7 +324,7 @@ export class TownScene extends Phaser.Scene {
     this.gatherNode = node;
     this.gatherState = beginGather(
       node.definition,
-      skillLevel(this.characterState.skills, node.definition.skill),
+      this.character.skillLevelOf(node.definition.skill),
     );
     this.game.events.emit(GATHER_STARTED_EVENT, node.definition.name);
   }
@@ -284,15 +359,10 @@ export class TownScene extends Phaser.Scene {
 
   private completeGather(node: ResourceNode): void {
     const { definition } = node;
-    const level = skillLevel(this.characterState.skills, definition.skill);
 
-    const quantity = rollGatherQuantity(level);
-    this.characterState.inventory = addItemToInventory(
-      this.characterState.inventory,
-      definition.yieldItemId,
-      quantity,
-    );
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    const quantity = rollGatherQuantity(this.character.skillLevelOf(definition.skill));
+    this.character.addItem(definition.yieldItemId, quantity);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     this.awardSkillXp(definition.skill, definition.xpReward);
 
     const emptied = node.consumeCharge();
@@ -303,10 +373,7 @@ export class TownScene extends Phaser.Scene {
 
     // Auto-repeat: re-arm the channel so gathering runs unattended until
     // something interrupts it.
-    this.gatherState = beginGather(
-      definition,
-      skillLevel(this.characterState.skills, definition.skill),
-    );
+    this.gatherState = beginGather(definition, this.character.skillLevelOf(definition.skill));
     this.game.events.emit(GATHER_PROGRESS_EVENT, 0);
   }
 
@@ -326,9 +393,8 @@ export class TownScene extends Phaser.Scene {
   // every frame, the same way player HP is.
   private publishActions(): void {
     const next = {
-      canLightFire:
-        !this.isNearFire() && (this.characterState.inventory[FIRE_INPUT_ITEM_ID] ?? 0) > 0,
-      canCook: this.isNearFire() && findCookableItem(this.characterState.inventory) !== null,
+      canLightFire: !this.isNearFire() && this.character.itemCount(FIRE_INPUT_ITEM_ID) > 0,
+      canCook: this.isNearFire() && findCookableItem(this.character.state.inventory) !== null,
     };
     if (
       next.canLightFire === this.lastActions.canLightFire &&
@@ -341,7 +407,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   private handleLightFireRequested(): void {
-    if ((this.characterState.inventory[FIRE_INPUT_ITEM_ID] ?? 0) <= 0) {
+    if (this.character.itemCount(FIRE_INPUT_ITEM_ID) <= 0) {
       this.game.events.emit(GATHER_REFUSED_EVENT, 'You have no logs to burn.');
       return;
     }
@@ -349,17 +415,13 @@ export class TownScene extends Phaser.Scene {
     // One fire at a time: lighting a new one replaces the old, rather than
     // letting the player carpet the town in campfires.
     this.campfire?.extinguish();
-    this.characterState.inventory = removeItemFromInventory(
-      this.characterState.inventory,
-      FIRE_INPUT_ITEM_ID,
-      1,
-    );
+    this.character.removeItem(FIRE_INPUT_ITEM_ID, 1);
     this.campfire = new Campfire(this, this.player.x, this.player.y + 32);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
   }
 
   private handleCookRequested(): void {
-    const recipe = findCookableItem(this.characterState.inventory);
+    const recipe = findCookableItem(this.character.state.inventory);
     if (!recipe) {
       this.game.events.emit(GATHER_REFUSED_EVENT, 'You have nothing to cook.');
       return;
@@ -367,8 +429,8 @@ export class TownScene extends Phaser.Scene {
 
     const check = canCook(
       recipe,
-      this.characterState.skills,
-      this.characterState.inventory,
+      this.character.state.skills,
+      this.character.state.inventory,
       this.isNearFire(),
     );
     if (!check.ok) {
@@ -376,13 +438,10 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const result = rollCook(recipe, skillLevel(this.characterState.skills, 'cooking'));
-    this.characterState.inventory = addItemToInventory(
-      removeItemFromInventory(this.characterState.inventory, recipe.inputItemId, 1),
-      result.itemId,
-      1,
-    );
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    const result = rollCook(recipe, this.character.skillLevelOf('cooking'));
+    this.character.removeItem(recipe.inputItemId, 1);
+    this.character.addItem(result.itemId, 1);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     if (result.burnt) {
       this.game.events.emit(GATHER_REFUSED_EVENT, 'You burn it.');
     } else {
@@ -391,7 +450,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   private handleEatRequested(itemId: string): void {
-    if ((this.characterState.inventory[itemId] ?? 0) <= 0 || !consumableFor(itemId)) {
+    if (this.character.itemCount(itemId) <= 0 || !consumableFor(itemId)) {
       return;
     }
     if (this.player.hp >= this.player.maxHp) {
@@ -402,28 +461,14 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    this.characterState.inventory = removeItemFromInventory(
-      this.characterState.inventory,
-      itemId,
-      1,
-    );
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    this.character.removeItem(itemId, 1);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
   }
 
   private awardSkillXp(skill: SkillId, amount: number): void {
-    const result = addSkillXp(this.characterState.skills, skill, amount);
-    this.characterState.skills = result.skills;
-
-    const state = result.skills[skill];
-    this.game.events.emit(SKILL_XP_GAINED_EVENT, {
-      skillId: skill,
-      level: state.level,
-      xp: state.xp,
-      xpToNext: skillXpToNextLevel(state.level),
-      leveledUp: result.leveledUp,
-    });
-
-    if (result.leveledUp) {
+    const gain = this.character.awardSkillXp(skill, amount);
+    this.game.events.emit(SKILL_XP_GAINED_EVENT, gain);
+    if (gain.leveledUp) {
       this.persistCharacter();
     }
   }
@@ -444,7 +489,7 @@ export class TownScene extends Phaser.Scene {
       level: this.target.level,
       hp: this.target.hp,
       maxHp: this.target.maxHp,
-      conColor: conColor(this.characterState.level, this.target.level),
+      conColor: conColor(this.character.state.level, this.target.level),
     });
   }
 
@@ -506,15 +551,15 @@ export class TownScene extends Phaser.Scene {
   private updateEnemyAttacks(time: number): void {
     if (!this.player.isAlive()) return;
 
-    for (const rat of this.rats) {
-      if (!rat.isEngaged()) continue;
+    for (const mob of this.mobs) {
+      if (!mob.isEngaged()) continue;
 
-      const distance = Phaser.Math.Distance.Between(rat.x, rat.y, this.player.x, this.player.y);
-      if (!isInRange(distance, rat.attackRange)) continue;
-      if (!isCooldownReady(time - rat.lastAttackAt, rat.attackCooldownMs)) continue;
+      const distance = Phaser.Math.Distance.Between(mob.x, mob.y, this.player.x, this.player.y);
+      if (!isInRange(distance, mob.attackRange)) continue;
+      if (!isCooldownReady(time - mob.lastAttackAt, mob.attackCooldownMs)) continue;
 
-      rat.lastAttackAt = time;
-      const { damage } = resolveAttack({ attackPower: rat.attackPower });
+      mob.lastAttackAt = time;
+      const { damage } = resolveAttack({ attackPower: mob.attackPower });
       this.player.takeDamage(damage);
       this.showDamageNumber(this.player.x, this.player.y, damage, THEME.color.playerDamage);
       // Taking a hit breaks the channel, so gathering is never a way to ignore a
@@ -532,7 +577,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   private handlePlayerDeath(): void {
-    this.rats.forEach((rat) => rat.disengage());
+    this.mobs.forEach((mob) => mob.disengage());
     this.stopGathering();
     this.clearTarget();
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
@@ -551,23 +596,15 @@ export class TownScene extends Phaser.Scene {
   }
 
   private awardXp(amount: number): void {
-    const result = addXp({ level: this.characterState.level, xp: this.characterState.xp }, amount);
-    this.characterState.level = result.state.level;
-    this.characterState.xp = result.state.xp;
+    const gain = this.character.awardXp(amount);
+    this.game.events.emit(XP_GAINED_EVENT, gain.level, gain.xp, gain.xpToNext);
 
-    this.game.events.emit(
-      XP_GAINED_EVENT,
-      this.characterState.level,
-      this.characterState.xp,
-      xpToNextLevel(this.characterState.level),
-    );
-
-    if (result.leveledUp) {
-      this.player.setLevel(this.characterState.level);
+    if (gain.leveledUp) {
+      this.player.setLevel(gain.level);
       // Con colors are relative to the player, so every name has to be redrawn.
-      this.rats.forEach((rat) => rat.refreshLabel(this.characterState.level));
+      this.mobs.forEach((mob) => mob.refreshLabel(gain.level));
       this.publishTarget();
-      this.game.events.emit(LEVEL_UP_EVENT, this.characterState.level);
+      this.game.events.emit(LEVEL_UP_EVENT, gain.level);
       this.persistCharacter();
     }
   }
@@ -577,42 +614,31 @@ export class TownScene extends Phaser.Scene {
     const drops = rollLootTable(lootTableId);
     if (drops.length === 0) return;
 
-    drops.forEach((drop) => {
-      this.characterState.inventory = addItemToInventory(
-        this.characterState.inventory,
-        drop.itemId,
-        drop.quantity,
-      );
-    });
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    drops.forEach((drop) => this.character.addItem(drop.itemId, drop.quantity));
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
   }
 
   private handleEquipRequested(itemId: string): void {
-    const result = equipItem(this.characterState.gear, this.characterState.inventory, itemId);
-    this.characterState.gear = result.gear;
-    this.characterState.inventory = result.inventory;
+    this.character.equip(itemId);
     this.applyGearChange();
   }
 
   private handleUnequipRequested(slot: GearSlotId): void {
-    const result = unequipItem(this.characterState.gear, this.characterState.inventory, slot);
-    this.characterState.gear = result.gear;
-    this.characterState.inventory = result.inventory;
+    this.character.unequip(slot);
     this.applyGearChange();
   }
 
   // Gear moves max HP, so the HUD needs the new current HP alongside the gear.
   private applyGearChange(): void {
-    this.player.setGear(this.characterState.gear);
-    this.game.events.emit(GEAR_CHANGED_EVENT, this.characterState.gear);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.characterState.inventory);
+    this.player.setGear(this.character.state.gear);
+    this.game.events.emit(GEAR_CHANGED_EVENT, this.character.state.gear);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   private persistCharacter(): void {
-    this.characterState.position = { x: Math.round(this.player.x), y: Math.round(this.player.y) };
-    this.characterState.updatedAt = new Date().toISOString();
-    saveService.save(this.characterState);
+    this.character.recordLocation(this.zone.id, this.player.x, this.player.y);
+    saveService.save(this.character.state);
   }
 
   private resetCharacter(): void {

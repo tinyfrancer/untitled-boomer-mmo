@@ -86,7 +86,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     };
   }
 
-  // Called by TownScene when the on-screen virtual joystick moves; x/y are
+  // Called by ZoneScene when the on-screen virtual joystick moves; x/y are
   // normalized to [-1, 1], preserving analog magnitude for partial pushes.
   setTouchVector(x: number, y: number): void {
     this.touchVectorX = x;

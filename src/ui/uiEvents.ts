@@ -32,7 +32,7 @@ export interface TargetInfo {
 }
 
 // Payload for ACTIONS_CHANGED_EVENT: which contextual actions are available
-// right now. TownScene owns the answer, since it knows about fires and range.
+// right now. ZoneScene owns the answer, since it knows about fires and range.
 export interface AvailableActions {
   canLightFire: boolean;
   canCook: boolean;
