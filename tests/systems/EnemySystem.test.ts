@@ -40,14 +40,20 @@ describe('conColor', () => {
     expect(conColor(5, 5)).toBe(THEME.color.con.even);
   });
 
-  it('is yellow from one to two levels above the player', () => {
+  it('is yellow exactly one level above the player', () => {
     expect(conColor(5, 6)).toBe(THEME.color.con.high);
-    expect(conColor(5, 7)).toBe(THEME.color.con.high);
   });
 
-  it('is red from three levels above the player', () => {
+  it('is red from two levels above the player', () => {
+    expect(conColor(5, 7)).toBe(THEME.color.con.deadly);
     expect(conColor(5, 8)).toBe(THEME.color.con.deadly);
     expect(conColor(1, 10)).toBe(THEME.color.con.deadly);
+  });
+
+  // The starting zone caps at level 3, so a level 1 character has to be able to
+  // see a red name there or the warning never fires where it matters most.
+  it('cons a level 3 rat red to a fresh level 1 character', () => {
+    expect(conColor(1, 3)).toBe(THEME.color.con.deadly);
   });
 
   it('is green one to two levels below the player', () => {

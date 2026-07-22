@@ -21,7 +21,9 @@ export function conColor(playerLevel: number, enemyLevel: number): string {
   if (delta <= -3) return THEME.color.con.trivial;
   if (delta < 0) return THEME.color.con.low;
   if (delta === 0) return THEME.color.con.even;
-  if (delta <= 2) return THEME.color.con.high;
+  // Red starts at +2 rather than +3: two levels up already wins most fights,
+  // and at +3 the starting zone could never show a red name at all.
+  if (delta === 1) return THEME.color.con.high;
   return THEME.color.con.deadly;
 }
 
