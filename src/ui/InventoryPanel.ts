@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { describeItemBonuses, describeItemName, isEquippable } from '../data/items';
+import { consumableFor, describeItemBonuses, describeItemName, isEquippable } from '../data/items';
 import { THEME, fontPx, px } from './theme';
 
 const TITLE_ROW = 22;
@@ -15,6 +15,7 @@ export class InventoryPanel {
   private readonly background: Phaser.GameObjects.Rectangle;
   private rowObjects: Phaser.GameObjects.GameObject[] = [];
   private readonly onItemClicked: (itemId: string) => void;
+  private readonly onFoodClicked: (itemId: string) => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -22,10 +23,12 @@ export class InventoryPanel {
     y: number,
     scale: number,
     onItemClicked: (itemId: string) => void,
+    onFoodClicked: (itemId: string) => void,
   ) {
     this.scene = scene;
     this.scale = scale;
     this.onItemClicked = onItemClicked;
+    this.onFoodClicked = onFoodClicked;
 
     const width = inventoryPanelWidth(scale);
     const pad = px(THEME.padding, scale);
@@ -60,13 +63,17 @@ export class InventoryPanel {
     entries.forEach(([itemId, quantity], index) => {
       const rowY = rowsTop + index * rowHeight;
       const equippable = isEquippable(itemId);
+      const edible = consumableFor(itemId) !== null;
 
-      if (equippable) {
+      // Equipment equips, food gets eaten; everything else is inert.
+      if (equippable || edible) {
         const hit = this.scene.add
           .rectangle(pad, rowY, width - pad * 2, rowHeight, 0xffffff, 0.05)
           .setOrigin(0, 0)
           .setInteractive({ useHandCursor: true });
-        hit.on('pointerdown', () => this.onItemClicked(itemId));
+        hit.on('pointerdown', () =>
+          equippable ? this.onItemClicked(itemId) : this.onFoodClicked(itemId),
+        );
         this.container.add(hit);
         this.rowObjects.push(hit);
       }
@@ -77,7 +84,11 @@ export class InventoryPanel {
         `${describeItemName(itemId)} x${quantity}`,
         {
           fontSize: fontPx(THEME.font.sm, scale),
-          color: equippable ? THEME.color.equippable : THEME.color.muted,
+          color: equippable
+            ? THEME.color.equippable
+            : edible
+              ? THEME.color.skillUp
+              : THEME.color.muted,
         },
       );
       const bonuses = this.scene.add.text(

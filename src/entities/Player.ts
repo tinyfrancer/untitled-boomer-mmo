@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import { regenTick } from '../systems/RegenSystem';
+import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
@@ -40,6 +41,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // as a float here and only rounded when something reads it.
   private hpFloat: number;
   private msSinceCombat = 0;
+  private foodBuff: FoodBuff | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -122,15 +124,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   // Also called when the player lands a hit: swinging keeps regen suppressed
-  // just as much as being hit does.
+  // just as much as being hit does. Food is out-of-combat only, so this is
+  // where eating gets cancelled too — one choke point for both.
   markInCombat(): void {
     this.msSinceCombat = 0;
+    this.foodBuff = null;
+  }
+
+  /** Returns false if the item isn't food. */
+  eat(itemId: string): boolean {
+    const buff = startFoodBuff(itemId);
+    if (!buff) {
+      return false;
+    }
+    this.foodBuff = buff;
+    return true;
+  }
+
+  isEating(): boolean {
+    return this.foodBuff !== null;
   }
 
   restoreToFull(): void {
     this.hpFloat = this.maxHp;
     this.hp = this.maxHp;
     this.msSinceCombat = 0;
+    this.foodBuff = null;
   }
 
   isAlive(): boolean {
@@ -140,6 +159,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   update(deltaMs: number): void {
     this.msSinceCombat += deltaMs;
     this.hpFloat += regenTick(this.hpFloat, this.maxHp, this.msSinceCombat, deltaMs);
+
+    const food = foodTick(this.foodBuff, deltaMs);
+    this.foodBuff = food.buff;
+    this.hpFloat = Math.min(this.hpFloat + food.healed, this.maxHp);
+
     this.hp = Math.round(this.hpFloat);
 
     let vx = 0;

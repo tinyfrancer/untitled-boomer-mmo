@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
 import { CharacterPanel, characterPanelHeight, characterPanelWidth } from '../ui/CharacterPanel';
+import { ActionBar } from '../ui/ActionBar';
 import { GatherProgressBar } from '../ui/GatherProgressBar';
 import { InventoryPanel, inventoryPanelWidth } from '../ui/InventoryPanel';
 import { SlotPicker } from '../ui/SlotPicker';
@@ -8,8 +9,13 @@ import { TargetFrame } from '../ui/TargetFrame';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
 import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import {
+  ACTIONS_CHANGED_EVENT,
+  COOK_REQUESTED_EVENT,
+  EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   GATHER_ENDED_EVENT,
+  LIGHT_FIRE_REQUESTED_EVENT,
+  type AvailableActions,
   GATHER_PROGRESS_EVENT,
   GATHER_REFUSED_EVENT,
   GATHER_STARTED_EVENT,
@@ -54,6 +60,7 @@ interface HudModel {
   hp: number;
   characterPanelVisible: boolean;
   inventoryPanelVisible: boolean;
+  actions: AvailableActions;
 }
 
 export class UIScene extends Phaser.Scene {
@@ -65,6 +72,7 @@ export class UIScene extends Phaser.Scene {
   private characterPanel!: CharacterPanel;
   private inventoryPanel!: InventoryPanel;
   private gatherBar!: GatherProgressBar;
+  private actionBar!: ActionBar;
   private joystick!: VirtualJoystick;
   private slotPicker: SlotPicker | null = null;
   private classId: ClassId = 'warrior';
@@ -79,6 +87,7 @@ export class UIScene extends Phaser.Scene {
     hp: 0,
     characterPanelVisible: true,
     inventoryPanelVisible: false,
+    actions: { canLightFire: false, canCook: false },
   };
 
   constructor() {
@@ -118,6 +127,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(GATHER_PROGRESS_EVENT, this.handleGatherProgress, this);
     this.game.events.on(GATHER_ENDED_EVENT, this.handleGatherEnded, this);
     this.game.events.on(GATHER_REFUSED_EVENT, this.handleGatherRefused, this);
+    this.game.events.on(ACTIONS_CHANGED_EVENT, this.handleActionsChanged, this);
 
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
@@ -140,6 +150,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(GATHER_PROGRESS_EVENT, this.handleGatherProgress, this);
       this.game.events.off(GATHER_ENDED_EVENT, this.handleGatherEnded, this);
       this.game.events.off(GATHER_REFUSED_EVENT, this.handleGatherRefused, this);
+      this.game.events.off(ACTIONS_CHANGED_EVENT, this.handleActionsChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
@@ -168,6 +179,7 @@ export class UIScene extends Phaser.Scene {
     this.createInventoryPanel();
     this.createPanelToggleButtons();
     this.createGatherBar();
+    this.createActionBar();
     this.createJoystick();
 
     this.refreshCharacterPanel();
@@ -244,9 +256,42 @@ export class UIScene extends Phaser.Scene {
     const margin = px(THEME.margin, this.uiScale);
     const x = this.scale.width - inventoryPanelWidth(this.uiScale) - margin;
     const y = margin + characterPanelHeight(this.uiScale) + px(THEME.padding, this.uiScale);
-    this.inventoryPanel = new InventoryPanel(this, x, y, this.uiScale, (itemId) =>
-      this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
+    this.inventoryPanel = new InventoryPanel(
+      this,
+      x,
+      y,
+      this.uiScale,
+      (itemId) => this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
+      (itemId) => this.game.events.emit(EAT_ITEM_REQUESTED_EVENT, itemId),
     );
+  }
+
+  // Bottom centre, clear of the joystick corner and the gather bar above it.
+  private createActionBar(): void {
+    this.actionBar = new ActionBar(
+      this,
+      this.scale.width / 2 - px(108, this.uiScale),
+      this.scale.height - px(THEME.touchMin + THEME.margin, this.uiScale),
+      this.uiScale,
+      [
+        {
+          id: 'light-fire',
+          label: 'Light Fire',
+          onClick: () => this.game.events.emit(LIGHT_FIRE_REQUESTED_EVENT),
+        },
+        {
+          id: 'cook',
+          label: 'Cook',
+          onClick: () => this.game.events.emit(COOK_REQUESTED_EVENT),
+        },
+      ],
+    );
+    this.applyActions();
+  }
+
+  private applyActions(): void {
+    this.actionBar.setAvailable('light-fire', this.model.actions.canLightFire);
+    this.actionBar.setAvailable('cook', this.model.actions.canCook);
   }
 
   private openSlotPicker(slot: GearSlotId): void {
@@ -423,6 +468,11 @@ export class UIScene extends Phaser.Scene {
 
   private handleGatherEnded = (): void => {
     this.gatherBar.hide();
+  };
+
+  private handleActionsChanged = (actions: AvailableActions): void => {
+    this.model.actions = actions;
+    this.applyActions();
   };
 
   private handleGatherRefused = (reason: string): void => {
