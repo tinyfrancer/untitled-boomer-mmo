@@ -76,6 +76,7 @@ const townState = () =>
       dist: Math.round(Phaser.Math.Distance.Between(n.x, n.y, p.x, p.y)),
     }));
     return {
+      zoneId: town.zone.id,
       player: { hp: p.hp, maxHp: p.maxHp, level: p.level, x: Math.round(p.x), y: Math.round(p.y) },
       mobs,
       nodes,
@@ -247,10 +248,11 @@ try {
   check('the channel auto-repeats after a yield', chopped.gathering === true);
 
   // Walking off must drop the channel — this is the AFK-safety valve.
+  // North-east rather than south, which since zones would walk out the exit.
   await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
     const tree = town.nodes.find((n) => n.definition.id === 'tree');
-    town.player.setPosition(tree.x + 400, tree.y + 400);
+    town.player.setPosition(tree.x + 400, tree.y - 400);
   });
   const walkedOff = await waitFor((s) => !s.gathering, 'the channel to cancel out of range');
   check('walking out of range cancels the channel', walkedOff.gathering === false);
@@ -326,7 +328,8 @@ try {
   const awayFromFire = await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
     town.character.state.inventory['raw-fish'] = 1;
-    town.player.setPosition(town.campfire.x + 600, town.campfire.y);
+    // West, toward town center: east would carry the player out the zone exit.
+    town.player.setPosition(town.campfire.x - 600, town.campfire.y);
     town.handleCookRequested();
     return town.character.state.inventory['raw-fish'];
   });
@@ -495,6 +498,78 @@ try {
     died.mobs.filter((r) => r.alive).every((r) => r.hp === r.maxHp && !r.engaged),
   );
   await page.screenshot({ path: `${OUT}/4-after-death.png` });
+
+  // --- Zones: edge walks load the neighbours, and each side spawns its own
+  // table. EXIT_MARGIN is 38.4px, so 33px from the edge is inside it. ---
+  await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    const bounds = town.physics.world.bounds;
+    town.player.setPosition(bounds.width / 2, bounds.height - 33);
+  });
+  await waitFor((s) => s.zoneId === 'beach', 'the south exit to load the beach');
+  const beachInfo = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    return {
+      enemies: [...new Set(z.mobs.map((m) => m.definition.id))],
+      levels: z.mobs.map((m) => m.level).sort(),
+      nodes: [...new Set(z.nodes.map((n) => n.definition.id))],
+      arrivalY: Math.round(z.player.y),
+    };
+  });
+  check(
+    'the beach spawns crabs 4-6 and ocean fishing spots',
+    beachInfo.enemies.join(',') === 'crab' &&
+      beachInfo.levels[0] === 4 &&
+      beachInfo.levels[beachInfo.levels.length - 1] === 6 &&
+      beachInfo.nodes.join(',') === 'ocean-fishing-spot',
+    `levels=${beachInfo.levels} arrivalY=${beachInfo.arrivalY}`,
+  );
+  await page.screenshot({ path: `${OUT}/8-beach.png` });
+
+  // Ocean fishing is gated on fishing level 5, which this character lacks.
+  const oceanRefused = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const spot = z.nodes[0];
+    z.player.setPosition(spot.x, spot.y - 64);
+    z.startGathering(spot);
+    return z.gatherState === null;
+  });
+  check('ocean fishing spots refuse a low-level fisher', oceanRefused === true);
+
+  // Walk back north to town, then east into the bandit camp.
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.player.setPosition(z.physics.world.bounds.width / 2, 33);
+  });
+  await waitFor((s) => s.zoneId === 'town', 'the north exit to return to town');
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const bounds = z.physics.world.bounds;
+    z.player.setPosition(bounds.width - 33, bounds.height / 2);
+  });
+  await waitFor((s) => s.zoneId === 'bandit-camp', 'the east exit to load the bandit camp');
+  check('zone travel round-trips town -> beach -> town -> bandit camp', true);
+
+  // --- Aggro: bandits open combat unprovoked, and the beating that follows
+  // sends the level 1 player home to town. ---
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const bandit = z.mobs[0];
+    // inside the 180px aggro radius, outside the 72px attack range
+    z.player.setPosition(bandit.x + 150, bandit.y);
+  });
+  const ambushed = await waitFor(
+    (s) => s.mobs.some((m) => m.engaged),
+    'a bandit to aggro unprovoked',
+  );
+  check('bandits aggro unprovoked', true, `bandit hp ${ambushed.mobs.find((m) => m.engaged).hp}`);
+  await page.screenshot({ path: `${OUT}/9-bandit-aggro.png` });
+
+  const sentHome = await waitFor(
+    (s) => s.zoneId === 'town' && s.player.hp === s.player.maxHp,
+    'death in the camp to send the player home',
+  );
+  check('dying away from town respawns the player in town', true, `hp ${sentHome.player.hp}`);
 
   // --- Click-to-move: a tap destination pulls the player across the map. ---
   const moveTarget = await page.evaluate(() => {

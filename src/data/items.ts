@@ -169,6 +169,27 @@ export const ITEMS: Record<string, ItemDefinition> = {
     value: 1,
     kind: 'material',
   },
+  'crab-meat': {
+    id: 'crab-meat',
+    name: 'Crab Meat',
+    value: 5,
+    kind: 'material',
+  },
+  // Heals more than cooked fish: beach-tier food for beach-tier fights.
+  'cooked-crab': {
+    id: 'cooked-crab',
+    name: 'Cooked Crab',
+    value: 12,
+    kind: 'consumable',
+    healAmount: 25,
+    healDurationMs: 10000,
+  },
+  'burnt-crab': {
+    id: 'burnt-crab',
+    name: 'Burnt Crab',
+    value: 1,
+    kind: 'material',
+  },
 };
 
 export interface EquipmentBonuses {

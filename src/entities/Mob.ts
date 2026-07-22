@@ -61,6 +61,7 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
   update(playerX: number, playerY: number): void {
     if (!this.alive) return;
     this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
+    this.maybeAggro(playerX, playerY);
 
     switch (this.aiState) {
       case 'chase':
@@ -71,6 +72,17 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
         break;
       default:
         this.updateWander();
+    }
+  }
+
+  // Aggressive enemies open combat themselves when the player wanders too
+  // close. Only from wander — a returning (leashed) mob has given up and
+  // walks home untouchable, exactly like a retaliating one.
+  private maybeAggro(playerX: number, playerY: number): void {
+    const { aggressive, aggroRadius } = this.definition;
+    if (!aggressive || !aggroRadius || this.aiState !== 'wander') return;
+    if (Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY) <= aggroRadius) {
+      this.engage();
     }
   }
 
