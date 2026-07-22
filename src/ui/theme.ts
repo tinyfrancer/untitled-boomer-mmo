@@ -22,6 +22,7 @@ export const THEME = {
     character: 240,
     inventory: 210,
     target: 160,
+    combatLog: 300,
   },
   paperdollSize: 102,
   xpBar: { width: 190, height: 12 },

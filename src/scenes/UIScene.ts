@@ -36,11 +36,14 @@ import {
   ABILITY_REQUESTED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
+  COMBAT_LOG_EVENT,
   type AbilityState,
   type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
 import { ActionBar } from '../ui/ActionBar';
+import { CombatLogPanel, combatLogPanelHeight } from '../ui/CombatLogPanel';
+import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { abilitiesFor } from '../systems/AbilitySystem';
 import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
 import { itemsForSlot } from '../systems/InventorySystem';
@@ -74,8 +77,10 @@ interface HudModel {
   mana: number;
   maxMana: number;
   abilities: AbilityState[];
+  combatLog: CombatLogEntry[];
   characterPanelVisible: boolean;
   inventoryPanelVisible: boolean;
+  combatLogVisible: boolean;
   shopOpen: boolean;
   actions: AvailableActions;
 }
@@ -91,6 +96,7 @@ export class UIScene extends Phaser.Scene {
   private inventoryPanel!: InventoryPanel;
   private gatherBar!: GatherProgressBar;
   private actionBar!: ActionBar;
+  private combatLogPanel!: CombatLogPanel;
   // Null for a class with no mana pool, which is what the bar's absence means.
   private manaBarFill: Phaser.GameObjects.Rectangle | null = null;
   private manaText: Phaser.GameObjects.Text | null = null;
@@ -111,8 +117,10 @@ export class UIScene extends Phaser.Scene {
     mana: 0,
     maxMana: 0,
     abilities: [],
+    combatLog: [],
     characterPanelVisible: true,
     inventoryPanelVisible: false,
+    combatLogVisible: false,
     shopOpen: false,
     actions: { nearFire: false },
   };
@@ -143,8 +151,9 @@ export class UIScene extends Phaser.Scene {
       maxMana: startingStats.maxMana,
     };
     // A phone screen starts with the playfield clear; desktop keeps the sheet
-    // open as before.
+    // and the log open as before.
     this.model.characterPanelVisible = !this.isNarrow();
+    this.model.combatLogVisible = !this.isNarrow();
 
     this.buildHud();
 
@@ -168,9 +177,11 @@ export class UIScene extends Phaser.Scene {
 
     this.game.events.on(PLAYER_MANA_CHANGED_EVENT, this.handleManaChanged, this);
     this.game.events.on(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
+    this.game.events.on(COMBAT_LOG_EVENT, this.handleCombatLog, this);
 
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
+    this.input.keyboard?.on('keydown-L', this.toggleCombatLog, this);
     // The action bar's two slots, in the order it draws them.
     abilitiesFor(this.classId).forEach((ability, index) => {
       this.input.keyboard?.on(`keydown-${['ONE', 'TWO'][index]}`, () =>
@@ -202,6 +213,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(CURRENCY_CHANGED_EVENT, this.handleCurrencyChanged, this);
       this.game.events.off(PLAYER_MANA_CHANGED_EVENT, this.handleManaChanged, this);
       this.game.events.off(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
+      this.game.events.off(COMBAT_LOG_EVENT, this.handleCombatLog, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       // Owns an off-display-list mask that a scene teardown won't reach.
       this.inventoryPanel?.destroy();
@@ -242,6 +254,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
     );
     this.actionBar.update(this.model.abilities);
+    this.createCombatLogPanel();
 
     this.refreshCharacterPanel();
     this.inventoryPanel.update(this.model.inventory);
@@ -379,6 +392,16 @@ export class UIScene extends Phaser.Scene {
     this.manaText?.setText(`${this.model.mana} / ${this.model.maxMana} mana`);
   }
 
+  // Directly above the action bar, so the left column reads player, log,
+  // abilities from top to bottom.
+  private createCombatLogPanel(): void {
+    const margin = px(THEME.margin, this.uiScale);
+    const y = this.actionBar.top - combatLogPanelHeight(this.uiScale) - margin;
+    this.combatLogPanel = new CombatLogPanel(this, margin, y, this.uiScale);
+    this.combatLogPanel.update(this.model.combatLog);
+    this.combatLogPanel.setVisible(this.model.combatLogVisible);
+  }
+
   private createLevelUpToast(): void {
     this.levelUpToast = this.add
       .text(this.scale.width / 2, this.scale.height / 2 - px(80, this.uiScale), '', {
@@ -478,6 +501,7 @@ export class UIScene extends Phaser.Scene {
 
     this.createToggleButton(x, y, size, 'C', () => this.toggleCharacterPanel());
     this.createToggleButton(x + size + gap, y, size, 'I', () => this.toggleInventoryPanel());
+    this.createToggleButton(x + (size + gap) * 2, y, size, 'L', () => this.toggleCombatLog());
   }
 
   private createToggleButton(
@@ -534,6 +558,11 @@ export class UIScene extends Phaser.Scene {
       this.slotPicker?.close();
       this.slotPicker = null;
     }
+  }
+
+  private toggleCombatLog(): void {
+    this.combatLogPanel.toggle();
+    this.model.combatLogVisible = this.combatLogPanel.isVisible();
   }
 
   private refreshCharacterPanel(): void {
@@ -652,6 +681,11 @@ export class UIScene extends Phaser.Scene {
   private handleAbilityStateChanged = (states: AbilityState[]): void => {
     this.model.abilities = states;
     this.actionBar.update(states);
+  };
+
+  private handleCombatLog = (entry: CombatLogEntry): void => {
+    this.model.combatLog = appendLogEntry(this.model.combatLog, entry);
+    this.combatLogPanel.update(this.model.combatLog);
   };
 
   private handlePlayerHpChanged = (hp: number): void => {

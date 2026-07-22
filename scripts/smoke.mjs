@@ -539,6 +539,47 @@ try {
   // which the player may well have finished off by now. Aim the player at the
   // in-bounds corner furthest from that rat's own spawn: a fixed offset can be
   // clipped by the world bounds to somewhere inside the leash radius.
+  // --- Combat log: the fight above must have left a trail in it. ---
+  const logged = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    return {
+      lines: ui.model.combatLog.map((e) => e.text),
+      visible: ui.combatLogPanel.isVisible(),
+    };
+  });
+  check(
+    'the combat log records the fight',
+    logged.lines.some((l) => l.includes('You hit')) &&
+      logged.lines.some((l) => l.includes('hits you for')),
+    `${logged.lines.length} lines, last: ${logged.lines[logged.lines.length - 1]}`,
+  );
+  check('the log is open by default on a desktop viewport', logged.visible === true);
+
+  const toggled = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    ui.toggleCombatLog();
+    const hidden = ui.combatLogPanel.isVisible();
+    ui.toggleCombatLog();
+    return { hidden, shown: ui.combatLogPanel.isVisible() };
+  });
+  check(
+    'the log can be hidden and shown again',
+    toggled.hidden === false && toggled.shown === true,
+  );
+
+  const cappedLog = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    for (let i = 0; i < 200; i += 1) {
+      window.game.events.emit('combat-log', { text: `filler ${i}`, color: '#fff' });
+    }
+    return { length: ui.model.combatLog.length, last: ui.model.combatLog.at(-1).text };
+  });
+  check(
+    'the log caps its length and keeps the newest line',
+    cappedLog.length === 50 && cappedLog.last === 'filler 199',
+    `${cappedLog.length} lines`,
+  );
+
   const leashTarget = await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
     town.clearTarget(); // stop swinging, so the rat survives to leash
