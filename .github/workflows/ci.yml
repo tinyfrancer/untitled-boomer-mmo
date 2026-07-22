@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to a PR makes the in-flight run obsolete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: gates (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Both versions' results are useful; don't cancel one because the other failed.
+      fail-fast: false
+      matrix:
+        # 22 is the LTS floor, 25 is what the project is developed on. Keeping
+        # both is deliberate: a Node-version-specific break in the test
+        # environment is exactly what went unnoticed before there was any CI.
+        node: ['22', '25']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run test
+
+      - run: npm run build
+
+  smoke:
+    name: browser smoke
+    # Downloads a browser and boots the dev server, so it is much slower than the
+    # unit gates. It guards merges into main rather than every push to a branch.
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        # Always --with-deps: the cache restores the browser binary, but the
+        # system libraries it links against are runner state and are not cached.
+        # The download itself is skipped when the cache hit already supplied it.
+        run: npx playwright install --with-deps chromium
+
+      - name: Start dev server
+        # Started and awaited in one step: the first request cold-compiles all of
+        # Phaser, so being served is not the same as being ready.
+        run: |
+          npm run dev &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:5173 >/dev/null && exit 0
+            sleep 1
+          done
+          echo "dev server never came up on :5173" >&2
+          exit 1
+
+      - run: npm run smoke
+
+      - name: Upload smoke screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshots
+          path: .smoke/
+          if-no-files-found: ignore
+          retention-days: 7
