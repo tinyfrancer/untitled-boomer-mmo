@@ -29,8 +29,22 @@ npm run smoke       # browser smoke check (needs `npm run dev` running in anothe
 Run a single test file: `npx vitest run tests/systems/CombatSystem.test.ts`
 Run tests matching a name: `npx vitest run -t "isCooldownReady"`
 
-There is no CI config in this repo — `lint`, `typecheck`, and `test` are the gates to run
-manually before considering a change done. Don't commit on a red suite.
+There is no CI config in this repo yet — `lint`, `typecheck`, and `test` are the gates to run
+manually before considering a change done. Don't commit on a red suite, including failures that
+pre-date your change; fixing a broken test _environment_ is in scope, not a distraction.
+
+## Workflow
+
+Work happens on a feature branch and merges through a pull request — never commit directly to
+`main`, even for a one-line doc fix. Branch before the first commit, and open the PR with
+`gh pr create`. This is deliberate practice on a repo that could get away without it, so "too
+small for a PR" isn't a reason to skip it.
+
+Keep commits separable when a change has genuinely independent parts (a test-environment fix, the
+feature itself, docs) — PRs here are merged with a merge commit rather than squashed, so that
+structure survives in history and stays reviewable later.
+
+Merging to `main` triggers a Vercel production deploy, so a merge publishes.
 
 ## Verifying gameplay changes
 
