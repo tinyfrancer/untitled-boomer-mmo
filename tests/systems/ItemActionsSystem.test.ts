@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { actionsForItem } from '../../src/systems/ItemActionsSystem';
 
-const away = { nearFire: false, shopOpen: false };
-const byFire = { nearFire: true, shopOpen: false };
-const atShop = { nearFire: false, shopOpen: true };
+const away = { nearFire: false, shopOpen: false, classId: 'warrior' } as const;
+const byFire = { nearFire: true, shopOpen: false, classId: 'warrior' } as const;
+const atShop = { nearFire: false, shopOpen: true, classId: 'warrior' } as const;
 
 function ids(itemId: string, context: Parameters<typeof actionsForItem>[1]): string[] {
   return actionsForItem(itemId, context).map((action) => action.id);
@@ -37,5 +37,12 @@ describe('actionsForItem', () => {
 
   it('unknown items offer nothing', () => {
     expect(ids('no-such-item', atShop)).toEqual([]);
+  });
+
+  it('offers no Equip button for armor the class cannot wear', () => {
+    expect(ids('brown-chestplate', away)).toEqual(['equip']);
+    expect(ids('brown-chestplate', { ...away, classId: 'wizard' })).toEqual([]);
+    // The robe is the wizard's half of the same slot.
+    expect(ids('brown-robe', { ...away, classId: 'wizard' })).toEqual(['equip']);
   });
 });

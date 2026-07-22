@@ -1,4 +1,5 @@
 import { addXp, xpToNextLevel } from './LevelingSystem';
+import { canEquip, type EquipCheck } from './EquipSystem';
 import { addSkillXp, skillLevel, skillXpToNextLevel } from './SkillSystem';
 import {
   addItemToInventory,
@@ -62,10 +63,16 @@ export class CharacterController {
     return true;
   }
 
-  equip(itemId: string): void {
+  /** Refuses, changing nothing, if this class can't wear the item. */
+  equip(itemId: string): EquipCheck {
+    const check = canEquip(itemId, this.state.classId);
+    if (!check.ok) {
+      return check;
+    }
     const result = equipItem(this.state.gear, this.state.inventory, itemId);
     this.state.gear = result.gear;
     this.state.inventory = result.inventory;
+    return check;
   }
 
   unequip(slot: GearSlotId): void {

@@ -28,17 +28,34 @@ describe('computeEffectiveStats', () => {
     expect(stats.attackPower).toBe(6 + 2);
   });
 
-  it('adds +1 health, strength, and intellect from brown armor', () => {
-    const stats = computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'brown-chestplate' });
-    expect(stats.maxHp).toBe(41);
-    expect(stats.strength).toBe(7);
-    expect(stats.intellect).toBe(2);
+  it('adds health and strength from leather, health and intellect from cloth', () => {
+    const leather = computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'brown-chestplate' });
+    expect(leather.maxHp).toBe(41);
+    expect(leather.strength).toBe(7);
+    // Armor feeds one stat or the other, never both.
+    expect(leather.intellect).toBe(1);
+
+    const cloth = computeEffectiveStats('wizard', { ...NO_GEAR, chest: 'brown-robe' });
+    expect(cloth.maxHp).toBe(25);
+    expect(cloth.intellect).toBe(7);
+    expect(cloth.strength).toBe(1);
   });
 
   it("only the primary stat's bonus feeds attackPower", () => {
-    const stats = computeEffectiveStats('wizard', { ...NO_GEAR, chest: 'brown-chestplate' });
-    // wizard's primary stat is intellect: base 6 + 1 (brown armor) = 7, strength bonus ignored
+    const stats = computeEffectiveStats('wizard', { ...NO_GEAR, chest: 'brown-robe' });
+    // wizard's primary stat is intellect: base 6 + 1 (robe) = 7
     expect(stats.attackPower).toBe(7);
+    // The same robe does nothing for a warrior's swing.
+    expect(computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'brown-robe' }).attackPower).toBe(
+      6,
+    );
+  });
+
+  it('gives a mana pool only to the class that casts', () => {
+    expect(computeEffectiveStats('wizard', NO_GEAR).maxMana).toBe(30);
+    expect(computeEffectiveStats('warrior', NO_GEAR).maxMana).toBe(0);
+    // Intellect from cloth buys more of it.
+    expect(computeEffectiveStats('wizard', { ...NO_GEAR, chest: 'brown-robe' }).maxMana).toBe(35);
   });
 
   it('stacks bonuses across multiple equipped items', () => {

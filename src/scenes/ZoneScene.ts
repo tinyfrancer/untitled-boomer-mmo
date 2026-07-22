@@ -944,7 +944,11 @@ export class ZoneScene extends Phaser.Scene {
   }
 
   private handleEquipRequested(itemId: string): void {
-    this.character.equip(itemId);
+    const check = this.character.equip(itemId);
+    if (!check.ok) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      return;
+    }
     this.applyGearChange();
   }
 

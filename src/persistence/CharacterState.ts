@@ -2,7 +2,7 @@ import { CLASSES } from '../data/classes';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { ClassId, GearSlotId, ZoneId } from '../types/ids';
 
-export const CHARACTER_STATE_VERSION = 5;
+export const CHARACTER_STATE_VERSION = 6;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.

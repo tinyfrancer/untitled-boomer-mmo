@@ -2,8 +2,13 @@ import { CLASSES } from '../data/classes';
 import { getEquipmentBonuses } from '../data/items';
 import type { ClassId, GearSlotId } from '../types/ids';
 
+// Intellect buys this much mana a point. Only classes that cast get a pool at
+// all, so a warrior's intellect stays worth nothing to them.
+const MANA_PER_INTELLECT = 5;
+
 export interface EffectiveStats {
   maxHp: number;
+  maxMana: number;
   strength: number;
   intellect: number;
   attackPower: number;
@@ -43,6 +48,7 @@ export function computeEffectiveStats(
 
   return {
     maxHp: classDef.baseStats.maxHp + growth.maxHp * growthSteps + bonuses.health,
+    maxMana: classDef.baseStats.primaryStat === 'intellect' ? intellect * MANA_PER_INTELLECT : 0,
     strength,
     intellect,
     attackPower: primaryStatValue + bonuses.attackPower,
