@@ -1,0 +1,31 @@
+General feature updates
+
+Can our stick figure character look slightly less static when moving? Simple leg transition should suffice.
+
+Spells/Skills:
+We want our characters to have spells and skills. 
+Mage should have Fireball and Mana Shield
+Warrior should have a power slash and maybe something to boost attack speed for a few seconds.
+Very basic but we want to set the groundwork for expansion.  
+
+Alongside this we should have attribute/skills related to the spells.
+Fireball could be from the destruction family of spells. Destruction should be a levelable stat. Higher levels should slightly increase spell damage, and reduce chance of spell failure
+Spells can fail to cast.
+
+There should be stats for things like 1 handed weapons, fist damage, block, parry, etc.  I will let you decide on the base implementation and we can iterate on it.
+
+Let's go with the 10x approach of things like 1 handed max level being 10x current level.
+
+Combat log:
+There should be the ability to show/hide a combat log, which will detail combat details and experience gains and levels. 
+
+Itemization/stats:
+Currently character stats are confusing. Do both int and strength apply to attack?  Let's flesh out items a bit more, adding armor type and class requirements.
+For starters, we will need a brown robe/brown pants/brown cloth hat.
+
+Character reset on mobile:
+F9 can not be used, need an options menu perhaps.
+
+Why does the character have a white line around it's face?
+
+Ask questions for more requirements.  Use best practices.
