@@ -142,8 +142,17 @@ try {
   check('rat leashes and heals to full on the way home', allFull);
 
   // --- Out-of-combat regen: player HP must climb back on its own. ---
-  const beforeRegen = (await townState()).player.hp;
-  const regened = await waitFor((s) => s.player.hp > beforeRegen, 'player HP to regenerate', 20000);
+  // Set the starting point explicitly rather than inheriting whatever the
+  // fight left behind: dropping the target stops the player swinging (which
+  // counts as combat), and the damage both guarantees a deficit to heal and
+  // restarts the out-of-combat timer from a known instant.
+  const beforeRegen = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Town');
+    town.clearTarget();
+    town.player.takeDamage(Math.floor(town.player.maxHp / 2));
+    return town.player.hp;
+  });
+  const regened = await waitFor((s) => s.player.hp > beforeRegen, 'player HP to regenerate', 30000);
   check('player regenerates out of combat', true, `${beforeRegen} -> ${regened.player.hp}`);
 
   // --- Death: stand on the level 3 rat with 1 HP and let it finish the job. ---
