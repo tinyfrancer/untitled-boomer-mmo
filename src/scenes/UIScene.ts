@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
 import { CharacterPanel, characterPanelHeight, characterPanelWidth } from '../ui/CharacterPanel';
-import { ActionBar } from '../ui/ActionBar';
 import { GatherProgressBar } from '../ui/GatherProgressBar';
 import { InventoryPanel, inventoryPanelWidth } from '../ui/InventoryPanel';
 import { ShopPanel } from '../ui/ShopPanel';
@@ -39,6 +38,7 @@ import {
 } from '../ui/uiEvents';
 import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
 import { itemsForSlot } from '../systems/InventorySystem';
+import { actionsForItem, type ItemActionId } from '../systems/ItemActionsSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import { SKILLS } from '../data/skills';
@@ -79,7 +79,6 @@ export class UIScene extends Phaser.Scene {
   private characterPanel!: CharacterPanel;
   private inventoryPanel!: InventoryPanel;
   private gatherBar!: GatherProgressBar;
-  private actionBar!: ActionBar;
   private slotPicker: SlotPicker | null = null;
   private shopPanel: ShopPanel | null = null;
   private classId: ClassId = 'warrior';
@@ -96,7 +95,7 @@ export class UIScene extends Phaser.Scene {
     characterPanelVisible: true,
     inventoryPanelVisible: false,
     shopOpen: false,
-    actions: { canLightFire: false, canCook: false },
+    actions: { nearFire: false },
   };
 
   constructor() {
@@ -121,6 +120,9 @@ export class UIScene extends Phaser.Scene {
         character?.level ?? 1,
       ).maxHp,
     };
+    // A phone screen starts with the playfield clear; desktop keeps the sheet
+    // open as before.
+    this.model.characterPanelVisible = !this.isNarrow();
 
     this.buildHud();
 
@@ -194,7 +196,6 @@ export class UIScene extends Phaser.Scene {
     this.createInventoryPanel();
     this.createPanelToggleButtons();
     this.createGatherBar();
-    this.createActionBar();
 
     this.refreshCharacterPanel();
     this.inventoryPanel.update(this.model.inventory);
@@ -222,12 +223,15 @@ export class UIScene extends Phaser.Scene {
   private handleShopOpened = (): void => {
     this.model.shopOpen = true;
     this.openShopPanel();
+    // Selling becomes possible, so a selected item may gain a Sell button.
+    this.inventoryPanel.refreshActions();
   };
 
   private handleShopClosed = (): void => {
     this.model.shopOpen = false;
     this.shopPanel?.destroy();
     this.shopPanel = null;
+    this.inventoryPanel.refreshActions();
   };
 
   private handleCurrencyChanged = (totalCopper: number): void => {
@@ -303,46 +307,52 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  // On narrow (phone) screens the two right-side panels overlap the whole
+  // playfield, so only one stays open at a time there.
+  private isNarrow(): boolean {
+    return this.scale.width < px(720, this.uiScale);
+  }
+
   private createInventoryPanel(): void {
     const margin = px(THEME.margin, this.uiScale);
     const x = this.scale.width - inventoryPanelWidth(this.uiScale) - margin;
-    const y = margin + characterPanelHeight(this.uiScale) + px(THEME.padding, this.uiScale);
+    // On a narrow screen the panels are mutually exclusive anyway, so the bag
+    // can use the character sheet's spot instead of stacking below it.
+    const y = this.isNarrow()
+      ? margin
+      : margin + characterPanelHeight(this.uiScale) + px(THEME.padding, this.uiScale);
     this.inventoryPanel = new InventoryPanel(
       this,
       x,
       y,
       this.uiScale,
-      (itemId) => this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
-      (itemId) => this.game.events.emit(EAT_ITEM_REQUESTED_EVENT, itemId),
+      (itemId) =>
+        actionsForItem(itemId, {
+          nearFire: this.model.actions.nearFire,
+          shopOpen: this.model.shopOpen,
+        }),
+      (actionId, itemId) => this.dispatchItemAction(actionId, itemId),
     );
   }
 
-  // Bottom centre, clear of the gather bar above it.
-  private createActionBar(): void {
-    this.actionBar = new ActionBar(
-      this,
-      this.scale.width / 2 - px(108, this.uiScale),
-      this.scale.height - px(THEME.touchMin + THEME.margin, this.uiScale),
-      this.uiScale,
-      [
-        {
-          id: 'light-fire',
-          label: 'Light Fire',
-          onClick: () => this.game.events.emit(LIGHT_FIRE_REQUESTED_EVENT),
-        },
-        {
-          id: 'cook',
-          label: 'Cook',
-          onClick: () => this.game.events.emit(COOK_REQUESTED_EVENT),
-        },
-      ],
-    );
-    this.applyActions();
-  }
-
-  private applyActions(): void {
-    this.actionBar.setAvailable('light-fire', this.model.actions.canLightFire);
-    this.actionBar.setAvailable('cook', this.model.actions.canCook);
+  private dispatchItemAction(actionId: ItemActionId, itemId: string): void {
+    switch (actionId) {
+      case 'equip':
+        this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId);
+        break;
+      case 'eat':
+        this.game.events.emit(EAT_ITEM_REQUESTED_EVENT, itemId);
+        break;
+      case 'light-fire':
+        this.game.events.emit(LIGHT_FIRE_REQUESTED_EVENT);
+        break;
+      case 'cook':
+        this.game.events.emit(COOK_REQUESTED_EVENT, itemId);
+        break;
+      case 'sell':
+        this.game.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId);
+        break;
+    }
   }
 
   private openSlotPicker(slot: GearSlotId): void {
@@ -410,12 +420,21 @@ export class UIScene extends Phaser.Scene {
     if (!this.model.characterPanelVisible) {
       this.slotPicker?.close();
       this.slotPicker = null;
+    } else if (this.isNarrow() && this.model.inventoryPanelVisible) {
+      this.inventoryPanel.setVisible(false);
+      this.model.inventoryPanelVisible = false;
     }
   }
 
   private toggleInventoryPanel(): void {
     this.inventoryPanel.toggle();
     this.model.inventoryPanelVisible = this.inventoryPanel.isVisible();
+    if (this.model.inventoryPanelVisible && this.isNarrow() && this.model.characterPanelVisible) {
+      this.characterPanel.setVisible(false);
+      this.model.characterPanelVisible = false;
+      this.slotPicker?.close();
+      this.slotPicker = null;
+    }
   }
 
   private refreshCharacterPanel(): void {
@@ -515,7 +534,8 @@ export class UIScene extends Phaser.Scene {
 
   private handleActionsChanged = (actions: AvailableActions): void => {
     this.model.actions = actions;
-    this.applyActions();
+    // Fire proximity changes which buttons a selected item shows.
+    this.inventoryPanel.refreshActions();
   };
 
   private handleGatherRefused = (reason: string): void => {

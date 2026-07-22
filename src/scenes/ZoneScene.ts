@@ -38,7 +38,7 @@ import { THEME, fontPx, px, scenePxScale, worldZoom } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
 import { rollLootTable } from '../systems/LootSystem';
-import { canCook, findCookableItem, rollCook } from '../systems/CookingSystem';
+import { canCook, findCookableItem, recipeForInput, rollCook } from '../systems/CookingSystem';
 import { Campfire } from '../entities/Campfire';
 import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
 import { consumableFor, itemValue } from '../data/items';
@@ -74,6 +74,9 @@ interface ZoneSceneData {
   zoneId?: ZoneId;
   entryEdge?: ZoneEdge;
   entryFraction?: number;
+  // Carried across the restart so walking through an exit is never a heal;
+  // omitted on death, where respawning at full is the point.
+  hp?: number;
 }
 
 export class ZoneScene extends Phaser.Scene {
@@ -95,7 +98,7 @@ export class ZoneScene extends Phaser.Scene {
   // The shopkeeper the open shop belongs to; null when the shop is closed.
   private shopNpc: Shopkeeper | null = null;
   private campfire: Campfire | null = null;
-  private lastActions = { canLightFire: false, canCook: false };
+  private lastActions = { nearFire: false };
   private target: Mob | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
   private lastAttackAt = 0;
@@ -163,7 +166,13 @@ export class ZoneScene extends Phaser.Scene {
       state.name,
       state.level,
     );
+    if (this.initData.hp !== undefined) {
+      this.player.setHp(this.initData.hp);
+    }
     this.lastReportedHp = this.player.hp;
+    // The HUD may be carrying HP from before a restart (a zone walk, or the
+    // death that sent us here) — resync it unconditionally.
+    this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
     this.cameras.main.startFollow(this.player, true);
     this.applyCameraZoom();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
@@ -355,6 +364,7 @@ export class ZoneScene extends Phaser.Scene {
       zoneId: exit.to,
       entryEdge: oppositeEdge(exit.edge),
       entryFraction: fraction,
+      hp: this.player.hp,
     };
     this.scene.restart(data);
   }
@@ -595,18 +605,12 @@ export class ZoneScene extends Phaser.Scene {
     return distance <= FIRE_COOK_RADIUS;
   }
 
-  // The action bar is driven off what is actually possible right now, so it can
-  // show only the buttons that would succeed. Emitted on change rather than
-  // every frame, the same way player HP is.
+  // The HUD's item actions are driven off what is actually possible right now,
+  // so they show only buttons that would succeed. Emitted on change rather
+  // than every frame, the same way player HP is.
   private publishActions(): void {
-    const next = {
-      canLightFire: !this.isNearFire() && this.character.itemCount(FIRE_INPUT_ITEM_ID) > 0,
-      canCook: this.isNearFire() && findCookableItem(this.character.state.inventory) !== null,
-    };
-    if (
-      next.canLightFire === this.lastActions.canLightFire &&
-      next.canCook === this.lastActions.canCook
-    ) {
+    const next = { nearFire: this.isNearFire() };
+    if (next.nearFire === this.lastActions.nearFire) {
       return;
     }
     this.lastActions = next;
@@ -627,8 +631,11 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
   }
 
-  private handleCookRequested(): void {
-    const recipe = findCookableItem(this.character.state.inventory);
+  // With an item selected in the bag the HUD names what to cook; without one
+  // (dev console, older callers) fall back to the first cookable thing.
+  private handleCookRequested(itemId?: string): void {
+    const recipe =
+      (itemId ? recipeForInput(itemId) : null) ?? findCookableItem(this.character.state.inventory);
     if (!recipe) {
       this.game.events.emit(GATHER_REFUSED_EVENT, 'You have nothing to cook.');
       return;

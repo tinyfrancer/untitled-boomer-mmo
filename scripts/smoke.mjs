@@ -504,6 +504,8 @@ try {
   await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
     const bounds = town.physics.world.bounds;
+    // wounded on purpose: crossing a zone line must not be a free heal
+    town.player.takeDamage(15);
     town.player.setPosition(bounds.width / 2, bounds.height - 33);
   });
   await waitFor((s) => s.zoneId === 'beach', 'the south exit to load the beach');
@@ -514,8 +516,15 @@ try {
       levels: z.mobs.map((m) => m.level).sort(),
       nodes: [...new Set(z.nodes.map((n) => n.definition.id))],
       arrivalY: Math.round(z.player.y),
+      hp: z.player.hp,
+      maxHp: z.player.maxHp,
     };
   });
+  check(
+    'hp carries across the zone walk instead of resetting to full',
+    beachInfo.hp <= beachInfo.maxHp - 12,
+    `hp=${beachInfo.hp}/${beachInfo.maxHp}`,
+  );
   check(
     'the beach spawns crabs 4-6 and ocean fishing spots',
     beachInfo.enemies.join(',') === 'crab' &&

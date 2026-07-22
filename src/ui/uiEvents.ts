@@ -37,11 +37,11 @@ export interface TargetInfo {
   conColor: string;
 }
 
-// Payload for ACTIONS_CHANGED_EVENT: which contextual actions are available
-// right now. ZoneScene owns the answer, since it knows about fires and range.
+// Payload for ACTIONS_CHANGED_EVENT: what the world around the player allows
+// right now. ZoneScene owns the answer, since it knows about fires and range;
+// the HUD combines it with the selected item via ItemActionsSystem.
 export interface AvailableActions {
-  canLightFire: boolean;
-  canCook: boolean;
+  nearFire: boolean;
 }
 
 // Payload for SKILL_XP_GAINED_EVENT.
