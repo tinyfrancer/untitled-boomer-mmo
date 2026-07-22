@@ -177,6 +177,19 @@ try {
       rat.spawnX < bounds.width / 2 ? bounds.width - margin : margin,
       rat.spawnY < bounds.height / 2 ? bounds.height - margin : margin,
     );
+    // Start the rat just inside its leash boundary rather than making it run the
+    // full radius. What is under test is that crossing leashRadius disengages
+    // and heals it, not how fast the runner can step the game — CI has been seen
+    // stepping this at 5fps, where the old setup timed out with the rat still
+    // 12px short of the line.
+    const toPlayerX = town.player.x - rat.spawnX;
+    const toPlayerY = town.player.y - rat.spawnY;
+    const length = Math.hypot(toPlayerX, toPlayerY);
+    const edge = rat.definition.leashRadius - 16;
+    rat.setPosition(
+      rat.spawnX + (toPlayerX / length) * edge,
+      rat.spawnY + (toPlayerY / length) * edge,
+    );
     return { index, hp: rat.hp, maxHp: rat.maxHp };
   });
   const leashed = await waitFor(
