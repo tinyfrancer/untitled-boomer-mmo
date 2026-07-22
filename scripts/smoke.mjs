@@ -686,6 +686,40 @@ try {
   check('UI scene survives the resize', portrait.uiActive === true);
   await page.screenshot({ path: `${OUT}/7-portrait.png` });
 
+  // --- Mobile zone travel: tapping the exit signpost must work. Edge-walk
+  // transitions need pixel-precision taps a phone can't make (the landing
+  // strip is ~4 screen px in portrait), which is why signposts exist. ---
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.clearTarget();
+    z.player.stopMoving();
+    z.player.setPosition(z.spawnPoint.x, z.spawnPoint.y);
+    z.player.setVelocity(0, 0);
+  });
+  await page.waitForTimeout(400);
+  const signScreen = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const cam = z.cameras.main;
+    const post = z.signposts.find((s) => s.exit.edge === 'south');
+    return {
+      x: Math.round((post.x - cam.worldView.x) * cam.zoom),
+      y: Math.round((post.y - cam.worldView.y) * cam.zoom),
+      fromBottom: window.game.scale.height - Math.round((post.y - cam.worldView.y) * cam.zoom),
+    };
+  });
+  await page.mouse.move(signScreen.x, signScreen.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  const viaSignpost = await waitFor(
+    (s) => s.zoneId === 'beach',
+    'the tapped signpost to walk the player over and load the beach',
+  );
+  check(
+    'tapping the south signpost travels to the beach on a phone viewport',
+    viaSignpost.zoneId === 'beach',
+    `tap was ${signScreen.fromBottom}px above the screen bottom`,
+  );
+
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 } catch (err) {
   check('smoke run completed', false, String(err.message ?? err));

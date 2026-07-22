@@ -90,9 +90,11 @@ alongside it as a parallel HUD scene.
 
 **Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
 node spawns, exits), all played through the single `ZoneScene` — a zone change is
-`scene.restart({ zoneId })`, and the `UI` scene stays running across it. Edge-walk transitions
-are pure math in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both
-ways), not a new scene class.
+`scene.restart({ zoneId })`, and the `UI` scene stays running across it. Each exit spawns a
+tappable `ZoneSignpost` (the mobile path — the invisible edge-walk band is untappably thin on
+a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
+in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not a
+new scene class.
 
 **Scene-to-scene communication** goes through `this.game.events` (a global Phaser event emitter),
 not direct references between scenes — see `src/ui/uiEvents.ts` for the event name constants

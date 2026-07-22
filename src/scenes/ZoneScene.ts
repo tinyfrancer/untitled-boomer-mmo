@@ -54,7 +54,15 @@ import {
   type GatherState,
 } from '../systems/GatherSystem';
 import { CharacterController } from '../systems/CharacterController';
-import { arrivalPoint, edgeFraction, findExit, oppositeEdge } from '../systems/ZoneSystem';
+import {
+  SIGNPOST_INTERACT_RADIUS,
+  arrivalPoint,
+  edgeFraction,
+  findExit,
+  oppositeEdge,
+  signpostPoint,
+} from '../systems/ZoneSystem';
+import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
 import type { GearSlotId, SkillId, ZoneId } from '../types/ids';
 
@@ -94,8 +102,10 @@ export class ZoneScene extends Phaser.Scene {
   // are closing on the current combat target.
   private pendingGatherNode: ResourceNode | null = null;
   private pendingShopNpc: Shopkeeper | null = null;
+  private pendingSignpost: ZoneSignpost | null = null;
   private pursuingTarget = false;
   private npcs: Shopkeeper[] = [];
+  private signposts: ZoneSignpost[] = [];
   // The shopkeeper the open shop belongs to; null when the shop is closed.
   private shopNpc: Shopkeeper | null = null;
   private campfire: Campfire | null = null;
@@ -207,6 +217,12 @@ export class ZoneScene extends Phaser.Scene {
       ({ dx, dy }) => new Shopkeeper(this, this.spawnPoint.x + dx, this.spawnPoint.y + dy),
     );
     this.shopNpc = null;
+
+    // One tappable signpost per exit — the mobile way out of a zone.
+    this.signposts = this.zone.exits.map((exit) => {
+      const point = signpostPoint(exit.edge, this.worldWidth, this.worldHeight);
+      return new ZoneSignpost(this, point.x, point.y, exit, ZONES[exit.to].name);
+    });
 
     // Nothing walks into the pond.
     groundLayer.setCollision(BLOCKING_TILES);
@@ -384,7 +400,12 @@ export class ZoneScene extends Phaser.Scene {
   // explicit hit test against our own clickables, with a private output
   // array, is deterministic.
   private hitTestWorld(pointer: Phaser.Input.Pointer): Phaser.GameObjects.GameObject[] {
-    const candidates: Phaser.GameObjects.GameObject[] = [...this.nodes, ...this.npcs, ...this.mobs];
+    const candidates: Phaser.GameObjects.GameObject[] = [
+      ...this.nodes,
+      ...this.npcs,
+      ...this.signposts,
+      ...this.mobs,
+    ];
     return this.input.manager.hitTest(pointer, candidates, this.cameras.main, []);
   }
 
@@ -412,6 +433,17 @@ export class ZoneScene extends Phaser.Scene {
     this.stopGathering();
     this.pendingGatherNode = null;
     this.pendingShopNpc = null;
+    this.pendingSignpost = null;
+
+    const clickedSignpost = currentlyOver.find(
+      (obj): obj is ZoneSignpost => obj instanceof ZoneSignpost,
+    );
+    if (clickedSignpost) {
+      this.clearTarget();
+      this.pursuingTarget = false;
+      this.approachSignpost(clickedSignpost);
+      return;
+    }
 
     const clickedNpc = currentlyOver.find((obj): obj is Shopkeeper => obj instanceof Shopkeeper);
     if (clickedNpc) {
@@ -445,6 +477,23 @@ export class ZoneScene extends Phaser.Scene {
     }
     this.pendingGatherNode = node;
     this.player.moveTo(node.x, node.y);
+  }
+
+  // Walk toward a tapped signpost and take its exit on arrival — the mobile
+  // route out of a zone; walking into the map edge still works for WASD.
+  private approachSignpost(signpost: ZoneSignpost): void {
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      signpost.x,
+      signpost.y,
+    );
+    if (distance <= SIGNPOST_INTERACT_RADIUS) {
+      this.changeZone(signpost.exit);
+      return;
+    }
+    this.pendingSignpost = signpost;
+    this.player.moveTo(signpost.x, signpost.y);
   }
 
   private approachShop(npc: Shopkeeper): void {
@@ -482,6 +531,25 @@ export class ZoneScene extends Phaser.Scene {
       this.pursuingTarget = false;
       this.pendingGatherNode = null;
       this.pendingShopNpc = null;
+      this.pendingSignpost = null;
+      return;
+    }
+
+    if (this.pendingSignpost) {
+      const signpost = this.pendingSignpost;
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        signpost.x,
+        signpost.y,
+      );
+      if (distance <= SIGNPOST_INTERACT_RADIUS) {
+        this.pendingSignpost = null;
+        this.player.stopMoving();
+        this.changeZone(signpost.exit);
+      } else if (!this.player.hasMoveTarget()) {
+        this.pendingSignpost = null;
+      }
       return;
     }
 
@@ -811,6 +879,7 @@ export class ZoneScene extends Phaser.Scene {
     this.closeShop();
     this.pendingGatherNode = null;
     this.pendingShopNpc = null;
+    this.pendingSignpost = null;
     this.pursuingTarget = false;
     this.player.stopMoving();
     this.game.events.emit(PLAYER_DIED_EVENT);
