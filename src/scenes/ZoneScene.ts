@@ -37,6 +37,7 @@ import {
   ABILITY_STATE_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
   COMBAT_LOG_EVENT,
+  RESET_CHARACTER_REQUESTED_EVENT,
 } from '../ui/uiEvents';
 import {
   abilitiesFor,
@@ -64,7 +65,7 @@ import {
   logXpGain,
   type CombatLogEntry,
 } from '../systems/CombatLogSystem';
-import { THEME, fontPx, px, scenePxScale, worldZoom } from '../ui/theme';
+import { THEME, worldZoom } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
 import { rollLootTable } from '../systems/LootSystem';
@@ -280,6 +281,7 @@ export class ZoneScene extends Phaser.Scene {
 
     this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.keyboard?.on('keydown-ESC', () => this.clearTarget());
+    // Kept as a desktop shortcut; the options menu is the way a phone gets here.
     this.input.keyboard?.on('keydown-F9', () => this.resetCharacter());
     this.game.events.on(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
     this.game.events.on(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
@@ -290,21 +292,7 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.on(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
     this.game.events.on(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
     this.game.events.on(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
-
-    // bottom-left corner, under the HUD's top-left column
-    const uiScale = scenePxScale();
-    this.add
-      .text(
-        px(THEME.margin, uiScale),
-        this.scale.height - px(24, uiScale),
-        'F9: Reset Character (dev)',
-        {
-          fontSize: fontPx(THEME.font.xs, uiScale),
-          color: THEME.color.dim,
-        },
-      )
-      .setOrigin(0, 0)
-      .setScrollFactor(0);
+    this.game.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
 
     this.time.addEvent({
       delay: AUTOSAVE_INTERVAL_MS,
@@ -326,6 +314,7 @@ export class ZoneScene extends Phaser.Scene {
       this.game.events.off(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
       this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
       this.game.events.off(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
+      this.game.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
     });
 
     // The HUD survives zone changes: launched once on first boot, and left

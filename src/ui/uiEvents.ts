@@ -34,6 +34,8 @@ export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
 // One line of combat commentary. Emitted alongside the floating text it mirrors,
 // so the two can never drift out of step.
 export const COMBAT_LOG_EVENT = 'combat-log';
+// Asked for by the options menu; ZoneScene owns the save, so it does the work.
+export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.

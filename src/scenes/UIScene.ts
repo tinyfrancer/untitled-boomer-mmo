@@ -37,12 +37,14 @@ import {
   ABILITY_STATE_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
   COMBAT_LOG_EVENT,
+  RESET_CHARACTER_REQUESTED_EVENT,
   type AbilityState,
   type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
 import { ActionBar } from '../ui/ActionBar';
 import { CombatLogPanel, combatLogPanelHeight } from '../ui/CombatLogPanel';
+import { OptionsPanel } from '../ui/OptionsPanel';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { abilitiesFor } from '../systems/AbilitySystem';
 import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
@@ -97,6 +99,7 @@ export class UIScene extends Phaser.Scene {
   private gatherBar!: GatherProgressBar;
   private actionBar!: ActionBar;
   private combatLogPanel!: CombatLogPanel;
+  private optionsPanel: OptionsPanel | null = null;
   // Null for a class with no mana pool, which is what the bar's absence means.
   private manaBarFill: Phaser.GameObjects.Rectangle | null = null;
   private manaText: Phaser.GameObjects.Text | null = null;
@@ -225,6 +228,8 @@ export class UIScene extends Phaser.Scene {
   private handleResize = (): void => {
     this.slotPicker?.close();
     this.slotPicker = null;
+    this.optionsPanel?.close();
+    this.optionsPanel = null;
     // Destroyed with the rest of the children; buildHud reopens it if the shop
     // is still open.
     this.shopPanel = null;
@@ -502,6 +507,7 @@ export class UIScene extends Phaser.Scene {
     this.createToggleButton(x, y, size, 'C', () => this.toggleCharacterPanel());
     this.createToggleButton(x + size + gap, y, size, 'I', () => this.toggleInventoryPanel());
     this.createToggleButton(x + (size + gap) * 2, y, size, 'L', () => this.toggleCombatLog());
+    this.createToggleButton(x + (size + gap) * 3, y, size, '⚙', () => this.openOptions());
   }
 
   private createToggleButton(
@@ -558,6 +564,20 @@ export class UIScene extends Phaser.Scene {
       this.slotPicker?.close();
       this.slotPicker = null;
     }
+  }
+
+  private openOptions(): void {
+    this.optionsPanel?.close();
+    this.optionsPanel = new OptionsPanel(this, this.uiScale, {
+      onResetCharacter: () => {
+        this.optionsPanel?.close();
+        this.optionsPanel = null;
+        this.game.events.emit(RESET_CHARACTER_REQUESTED_EVENT);
+      },
+      onClose: () => {
+        this.optionsPanel = null;
+      },
+    });
   }
 
   private toggleCombatLog(): void {
