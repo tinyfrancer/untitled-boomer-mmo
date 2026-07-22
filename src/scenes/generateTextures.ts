@@ -137,6 +137,19 @@ function drawWeapon(
       graphics.fillCircle(tipX, tipY, size * 0.045);
       break;
     }
+    case 'pole': {
+      // Angled back over the shoulder with a slack line, so it reads as a rod
+      // rather than a spear at this size.
+      const tipX = figure.rightHandX + size * 0.2;
+      const tipY = figure.shoulderY - size * 0.28;
+      passes.forEach(([lineWidth, lineColor]) => {
+        graphics.lineStyle(lineWidth, lineColor, 1);
+        graphics.lineBetween(figure.rightHandX - size * 0.06, figure.hipY, tipX, tipY);
+      });
+      graphics.lineStyle(size * 0.012, 0xeceff1, 0.9);
+      graphics.lineBetween(tipX, tipY, tipX + size * 0.02, tipY + size * 0.16);
+      break;
+    }
     case 'axe': {
       const haftTopY = figure.shoulderY - size * 0.1;
       const haftBottomY = figure.hipY + size * 0.12;

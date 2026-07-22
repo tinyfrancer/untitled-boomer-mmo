@@ -74,7 +74,11 @@ const townState = () =>
     };
   });
 
-const waitFor = async (fn, label, timeoutMs = 20000) => {
+// Generous by default: a loaded CI runner steps the game far slower than wall
+// clock — runs have been seen at 5fps, where a second of game time costs the
+// better part of a minute. Every wait here is on a condition that either
+// happens or hangs, so a high ceiling only costs time on a genuine failure.
+const waitFor = async (fn, label, timeoutMs = 60000) => {
   const start = Date.now();
   let last = null;
   for (;;) {
@@ -177,12 +181,24 @@ try {
       rat.spawnX < bounds.width / 2 ? bounds.width - margin : margin,
       rat.spawnY < bounds.height / 2 ? bounds.height - margin : margin,
     );
+    // Start the rat just inside its leash boundary rather than making it run the
+    // full radius. What is under test is that crossing leashRadius disengages
+    // and heals it, not how fast the runner can step the game — CI has been seen
+    // stepping this at 5fps, where the old setup timed out with the rat still
+    // 12px short of the line.
+    const toPlayerX = town.player.x - rat.spawnX;
+    const toPlayerY = town.player.y - rat.spawnY;
+    const length = Math.hypot(toPlayerX, toPlayerY);
+    const edge = rat.definition.leashRadius - 16;
+    rat.setPosition(
+      rat.spawnX + (toPlayerX / length) * edge,
+      rat.spawnY + (toPlayerY / length) * edge,
+    );
     return { index, hp: rat.hp, maxHp: rat.maxHp };
   });
   const leashed = await waitFor(
     (s) => !s.rats[leashTarget.index].engaged,
     'the chasing rat to leash off',
-    30000,
   );
   check(
     'rat leashes and heals to full on the way home',
@@ -199,9 +215,14 @@ try {
     const town = window.game.scene.getScene('Town');
     town.clearTarget();
     town.player.takeDamage(Math.floor(town.player.maxHp / 2));
+    // Skip ahead to the end of the out-of-combat lockout rather than waiting it
+    // out. It is 5s of *game* time, which on a slow runner costs minutes of wall
+    // clock, and RegenSystem's unit tests already cover the lockout itself.
+    // What only a real run can show is that regen reaches the player at all.
+    town.player.msSinceCombat = 5000;
     return town.player.hp;
   });
-  const regened = await waitFor((s) => s.player.hp > beforeRegen, 'player HP to regenerate', 30000);
+  const regened = await waitFor((s) => s.player.hp > beforeRegen, 'player HP to regenerate');
   check('player regenerates out of combat', true, `${beforeRegen} -> ${regened.player.hp}`);
 
   // --- Death: stand on the level 3 rat with 1 HP and let it finish the job. ---
@@ -220,7 +241,6 @@ try {
       s.player.y === spawnBefore.y &&
       s.player.hp === s.player.maxHp,
     'player death and respawn at town center',
-    25000,
   );
   check(
     'player death respawns at town center at full HP',

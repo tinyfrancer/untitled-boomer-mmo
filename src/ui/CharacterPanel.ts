@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { describeItemBonuses, describeItemName } from '../data/items';
+import { SKILLS, SKILL_ORDER } from '../data/skills';
 import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { computeAppearance } from '../systems/AppearanceSystem';
+import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
 import { THEME, fontPx, px } from './theme';
-import type { GearSlotId } from '../types/ids';
+import type { GearSlotId, SkillId } from '../types/ids';
 
 export const SLOT_ORDER: GearSlotId[] = ['weapon', 'helmet', 'chest', 'pants'];
 export const SLOT_LABELS: Record<GearSlotId, string> = {
@@ -17,6 +19,11 @@ export const SLOT_LABELS: Record<GearSlotId, string> = {
 const TITLE_ROW = 22;
 const STAT_ROW = 20;
 const GAP = 6;
+const SKILL_HEADER = 20;
+// One line per skill — name, level, and a hairline XP bar sharing the row.
+// Deliberately far tighter than a gear row: skills are read, never tapped.
+const SKILL_ROW = 20;
+const SKILL_BAR_HEIGHT = 3;
 
 const EMPTY_GEAR: Record<GearSlotId, string | null> = {
   helmet: null,
@@ -36,12 +43,19 @@ export interface DisplayedStats {
 export interface CharacterPanelState {
   gear: Record<GearSlotId, string | null>;
   stats: DisplayedStats;
+  skills: Skills;
 }
 
 interface SlotRow {
   hit: Phaser.GameObjects.Rectangle;
   value: Phaser.GameObjects.Text;
   bonuses: Phaser.GameObjects.Text;
+}
+
+interface SkillRow {
+  level: Phaser.GameObjects.Text;
+  barFill: Phaser.GameObjects.Rectangle;
+  barWidth: number;
 }
 
 export function characterPanelWidth(scale: number): number {
@@ -55,7 +69,10 @@ export function characterPanelHeight(scale: number): number {
     GAP +
     THEME.paperdollSize +
     GAP +
-    SLOT_ORDER.length * THEME.touchMin;
+    SLOT_ORDER.length * THEME.touchMin +
+    GAP +
+    SKILL_HEADER +
+    SKILL_ORDER.length * SKILL_ROW;
   return px(cssHeight, scale);
 }
 
@@ -70,6 +87,7 @@ export class CharacterPanel {
   private readonly container: Phaser.GameObjects.Container;
   private readonly paperdoll: Phaser.GameObjects.Image;
   private readonly slotRows: Record<GearSlotId, SlotRow>;
+  private readonly skillRows: Record<SkillId, SkillRow>;
   private readonly statTexts: Phaser.GameObjects.Text[];
   private gear: Record<GearSlotId, string | null> = EMPTY_GEAR;
 
@@ -149,8 +167,53 @@ export class CharacterPanel {
       slotObjects.push(hit, label, bonuses, value);
     });
 
+    this.skillRows = {} as Record<SkillId, SkillRow>;
+    const skillObjects: Phaser.GameObjects.GameObject[] = [];
+    const skillsTop = slotsTop + SLOT_ORDER.length * rowHeight + px(GAP, scale);
+    const barWidth = width - pad * 2;
+
+    skillObjects.push(
+      scene.add.text(pad, skillsTop, 'Skills', {
+        fontSize: fontPx(THEME.font.sm, scale),
+        color: THEME.color.text,
+        fontStyle: 'bold',
+      }),
+    );
+
+    SKILL_ORDER.forEach((skillId, index) => {
+      const rowY = skillsTop + px(SKILL_HEADER + index * SKILL_ROW, scale);
+      const name = scene.add.text(pad, rowY, SKILLS[skillId].name, {
+        fontSize: fontPx(THEME.font.xs, scale),
+        color: THEME.color.muted,
+      });
+      const level = scene.add
+        .text(width - pad, rowY, '', {
+          fontSize: fontPx(THEME.font.xs, scale),
+          color: THEME.color.muted,
+        })
+        .setOrigin(1, 0);
+
+      const barY = rowY + px(SKILL_ROW - SKILL_BAR_HEIGHT - 3, scale);
+      const barBg = scene.add
+        .rectangle(pad, barY, barWidth, px(SKILL_BAR_HEIGHT, scale), 0x000000, 0.5)
+        .setOrigin(0, 0);
+      const barFill = scene.add
+        .rectangle(pad, barY, 0, px(SKILL_BAR_HEIGHT, scale), THEME.xpFill, 1)
+        .setOrigin(0, 0);
+
+      this.skillRows[skillId] = { level, barFill, barWidth };
+      skillObjects.push(name, level, barBg, barFill);
+    });
+
     this.container = scene.add
-      .container(x, y, [background, title, this.paperdoll, ...this.statTexts, ...slotObjects])
+      .container(x, y, [
+        background,
+        title,
+        this.paperdoll,
+        ...this.statTexts,
+        ...slotObjects,
+        ...skillObjects,
+      ])
       .setScrollFactor(0);
 
     SLOT_ORDER.forEach((slot) => {
@@ -185,6 +248,15 @@ export class CharacterPanel {
       row.value.setText(describeItemName(itemId));
       row.value.setColor(itemId ? THEME.color.equippable : THEME.color.dim);
       row.bonuses.setText(describeItemBonuses(itemId));
+    });
+
+    SKILL_ORDER.forEach((skillId) => {
+      const skill = state.skills[skillId] ?? { level: 1, xp: 0 };
+      const row = this.skillRows[skillId];
+      const xpToNext = skillXpToNextLevel(skill.level);
+      row.level.setText(`Lv ${skill.level}`);
+      const ratio = xpToNext > 0 ? Phaser.Math.Clamp(skill.xp / xpToNext, 0, 1) : 1;
+      row.barFill.width = row.barWidth * ratio;
     });
   }
 

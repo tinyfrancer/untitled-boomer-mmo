@@ -1,4 +1,5 @@
-import type { GearSlotId, TierId, WeaponShapeId } from '../types/ids';
+import type { GearSlotId, SkillId, TierId, WeaponShapeId } from '../types/ids';
+import { SKILLS } from './skills';
 import { TIER_COLORS } from './tiers';
 
 interface EquipmentItemDefinition {
@@ -15,6 +16,9 @@ interface EquipmentItemDefinition {
   healthBonus?: number;
   strengthBonus?: number;
   intellectBonus?: number;
+  // Gathering tools occupy the weapon slot, so holding one means putting your
+  // sword away. This is what a resource node checks before letting you gather.
+  toolFor?: SkillId;
 }
 
 interface MaterialItemDefinition {
@@ -23,7 +27,16 @@ interface MaterialItemDefinition {
   kind: 'material';
 }
 
-export type ItemDefinition = EquipmentItemDefinition | MaterialItemDefinition;
+interface ConsumableItemDefinition {
+  id: string;
+  name: string;
+  kind: 'consumable';
+  healAmount: number;
+  healDurationMs: number;
+}
+
+export type ItemDefinition =
+  EquipmentItemDefinition | MaterialItemDefinition | ConsumableItemDefinition;
 
 export const ITEMS: Record<string, ItemDefinition> = {
   'rusty-sword': {
@@ -94,6 +107,50 @@ export const ITEMS: Record<string, ItemDefinition> = {
     weaponShape: 'axe',
     attackPowerBonus: 3,
   },
+  // Both tools sit below the starting weapons on attack power, so gathering gear
+  // can never double as a stealth combat upgrade.
+  'felling-axe': {
+    id: 'felling-axe',
+    name: 'Felling Axe',
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0x9e9e9e,
+    weaponShape: 'axe',
+    attackPowerBonus: 1,
+    toolFor: 'woodcutting',
+  },
+  'fishing-pole': {
+    id: 'fishing-pole',
+    name: 'Fishing Pole',
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0xa1887f,
+    weaponShape: 'pole',
+    attackPowerBonus: 0,
+    toolFor: 'fishing',
+  },
+  logs: {
+    id: 'logs',
+    name: 'Logs',
+    kind: 'material',
+  },
+  'raw-fish': {
+    id: 'raw-fish',
+    name: 'Raw Fish',
+    kind: 'material',
+  },
+  'cooked-fish': {
+    id: 'cooked-fish',
+    name: 'Cooked Fish',
+    kind: 'consumable',
+    healAmount: 15,
+    healDurationMs: 10000,
+  },
+  'burnt-fish': {
+    id: 'burnt-fish',
+    name: 'Burnt Fish',
+    kind: 'material',
+  },
 };
 
 export interface EquipmentBonuses {
@@ -117,17 +174,45 @@ export function getEquipmentBonuses(itemId: string | null): EquipmentBonuses {
 }
 
 export function describeItemBonuses(itemId: string | null): string {
+  const food = consumableFor(itemId);
+  if (food) {
+    return `Restores ${food.healAmount} HP over ${Math.round(food.healDurationMs / 1000)}s`;
+  }
+
   const bonuses = getEquipmentBonuses(itemId);
   const parts: string[] = [];
   if (bonuses.attackPower) parts.push(`+${bonuses.attackPower} ATK`);
   if (bonuses.health) parts.push(`+${bonuses.health} HP`);
   if (bonuses.strength) parts.push(`+${bonuses.strength} STR`);
   if (bonuses.intellect) parts.push(`+${bonuses.intellect} INT`);
+
+  const tool = toolSkill(itemId);
+  if (tool) parts.push(SKILLS[tool].name);
+
   return parts.join(', ');
 }
 
 export function isEquippable(itemId: string): boolean {
   return ITEMS[itemId]?.kind === 'equipment';
+}
+
+// The skill this item is a gathering tool for, if any.
+export function toolSkill(itemId: string | null): SkillId | null {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  if (!item || item.kind !== 'equipment') {
+    return null;
+  }
+  return item.toolFor ?? null;
+}
+
+export function consumableFor(
+  itemId: string | null,
+): { healAmount: number; healDurationMs: number } | null {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  if (!item || item.kind !== 'consumable') {
+    return null;
+  }
+  return { healAmount: item.healAmount, healDurationMs: item.healDurationMs };
 }
 
 export function describeItemName(itemId: string | null): string {

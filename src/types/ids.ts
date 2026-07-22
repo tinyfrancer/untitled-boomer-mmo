@@ -6,4 +6,8 @@ export type TierId = 'brown';
 
 export type EnemyId = 'rat';
 
-export type WeaponShapeId = 'sword' | 'wand' | 'axe';
+export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
+
+export type SkillId = 'fishing' | 'woodcutting' | 'cooking';
+
+export type ResourceNodeId = 'tree' | 'fishing-spot';

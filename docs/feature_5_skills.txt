@@ -1,0 +1,13 @@
+The next feature we would like to implement would be skills. 
+
+We will start with fishing,cooking,woodcutting as a means of getting food for our player to eat to heal health, possibly hunger guage later.
+
+We will need a few trees in the starting area, and a pond.  
+
+Fishing should require a fishing pole, woodcutting an ax, cooking a fire.  Woodcutting can make a fire.
+
+Secondary skill levels will match player level, so 10 will be the max for now. 
+
+Skills should be listed in the character pane.
+
+Ask any questions that might be required for further details/requirements.  Use best practices when it comes to design and architecture.  

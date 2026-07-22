@@ -12,9 +12,18 @@ describe('createNewCharacter', () => {
     });
   });
 
-  it('starts with an empty inventory', () => {
+  it('starts carrying both gathering tools and nothing else', () => {
     const character = createNewCharacter('Aria', 'wizard');
-    expect(character.inventory).toEqual({});
+    expect(character.inventory).toEqual({ 'felling-axe': 1, 'fishing-pole': 1 });
+  });
+
+  it('starts every skill at level 1 with no xp', () => {
+    const character = createNewCharacter('Aria', 'wizard');
+    expect(character.skills).toEqual({
+      woodcutting: { level: 1, xp: 0 },
+      fishing: { level: 1, xp: 0 },
+      cooking: { level: 1, xp: 0 },
+    });
   });
 
   it('stamps the current CHARACTER_STATE_VERSION', () => {
