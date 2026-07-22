@@ -159,24 +159,36 @@ try {
   check('enemy damages the player', true, `player ${hurt.player.hp}/${hurt.player.maxHp}`);
   await page.screenshot({ path: `${OUT}/3-combat.png` });
 
-  // --- Leash: run far enough that the rat gives up, resets and heals. ---
-  // Aim for the in-bounds corner furthest from that rat's own spawn rather than
-  // offsetting the player by a fixed amount — an offset can be clipped by the
-  // world bounds into a spot the rat never has to travel leashRadius to reach.
-  await page.evaluate(() => {
+  // --- Leash: a chasing rat that loses the player resets and heals. ---
+  // Set this up from scratch rather than reusing the rat from the fight above,
+  // which the player may well have finished off by now. Aim the player at the
+  // in-bounds corner furthest from that rat's own spawn: a fixed offset can be
+  // clipped by the world bounds to somewhere inside the leash radius.
+  const leashTarget = await page.evaluate(() => {
     const town = window.game.scene.getScene('Town');
-    const rat = town.rats.find((r) => r.isEngaged());
+    town.clearTarget(); // stop swinging, so the rat survives to leash
+    const index = town.rats.findIndex((r) => r.isAlive() && r.hp === r.maxHp);
+    const rat = town.rats[index];
+    rat.takeDamage(Math.floor(rat.maxHp / 2)); // a wound, so healing is visible
+    rat.engage();
     const bounds = town.physics.world.bounds;
     const margin = 48;
-    town.clearTarget(); // stop swinging, so nothing re-engages behind our back
     town.player.setPosition(
       rat.spawnX < bounds.width / 2 ? bounds.width - margin : margin,
       rat.spawnY < bounds.height / 2 ? bounds.height - margin : margin,
     );
+    return { index, hp: rat.hp, maxHp: rat.maxHp };
   });
-  const leashed = await waitFor((s) => !s.rats.some((r) => r.engaged), 'rats to leash off', 30000);
-  const allFull = leashed.rats.filter((r) => r.alive).every((r) => r.hp === r.maxHp);
-  check('rat leashes and heals to full on the way home', allFull);
+  const leashed = await waitFor(
+    (s) => !s.rats[leashTarget.index].engaged,
+    'the chasing rat to leash off',
+    30000,
+  );
+  check(
+    'rat leashes and heals to full on the way home',
+    leashed.rats[leashTarget.index].hp === leashTarget.maxHp,
+    `${leashTarget.hp} -> ${leashed.rats[leashTarget.index].hp}/${leashTarget.maxHp}`,
+  );
 
   // --- Out-of-combat regen: player HP must climb back on its own. ---
   // Set the starting point explicitly rather than inheriting whatever the
