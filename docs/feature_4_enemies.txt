@@ -1,0 +1,26 @@
+For this feature we want to focus on enemies.
+
+Enemies should have levels, and these levels should dictate their base stats.
+Example (Not necessarily real stats): 
+    - Lvl 1 rat - 10 health , 1 strength
+    - Lvl 2 rat - 12 health , 2 strength 
+
+In our starting area, the rats can be between level 1 and 3.  There should be more level 1 spawns than level 2, and less level 3 spawns
+
+Higher level enemies should hit harder, be harder to kill, and provide better exp.  Drop rates can remain the same for now.
+
+Enemy names should change color based on relative level to the character. Their level should also be displayed by the name.
+Example:
+    - Green same level 
+    - Yellow 1-2 levels above 
+    - Red 3 + 
+
+
+Combat:
+
+Enemies should retaliate and attack player when attacked.  Rats will not attack first, but some enemies might.
+When the player dies, for now they will just respawn back at the main spawn. 
+Enemies should regenerate health when player is killed.
+
+Ask any questions about additional features that should be added, or suggestions or requirements.
+ß

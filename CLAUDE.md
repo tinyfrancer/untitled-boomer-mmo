@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
 v0: single-player only, a starting town with rats to kill, character creation, leveling, gear,
-and local save/load. Full long-term vision is in `docs/design.txt` (multiplayer, more zones,
+and local save/load. Full long-term vision is in `docs/initial_design.txt` (multiplayer, more zones,
 skills like fishing, etc.) — most of it is intentionally not built yet, so don't assume features
 from that doc exist in code.
 
@@ -74,7 +74,7 @@ into them. Prefer adding a row to one of these tables over hardcoding values in 
 
 **Textures are generated procedurally at runtime** (`src/scenes/generateTextures.ts`) using
 Phaser's `Graphics.generateTexture`, not loaded from image files — there are no art assets yet
-(placeholder circles/shapes only, per the "no art skills" constraint in `docs/design.txt`).
+(placeholder circles/shapes only, per the "no art skills" constraint in `docs/initial_design.txt`).
 
 ## Conventions
 
