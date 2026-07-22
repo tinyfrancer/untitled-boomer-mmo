@@ -1,5 +1,6 @@
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 import { stripIllegalGear } from '../systems/EquipSystem';
+import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
 import type { ClassId } from '../types/ids';
 
@@ -26,6 +27,12 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     );
     return { ...state, ...stripped };
   },
+  // v6 → v7: combat skills join the sheet. Existing gathering progress is kept
+  // as it stands; the new skills simply start where a new character's would.
+  6: (state) => ({
+    ...state,
+    skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
+  }),
 };
 
 /**

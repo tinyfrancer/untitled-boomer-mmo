@@ -1,20 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_SKILL_LEVEL } from '../../src/config/constants';
-import { skillXpToReachLevel } from '../../src/data/xpTable';
+import { MAX_GATHER_SKILL_LEVEL, combatSkillCap } from '../../src/config/constants';
+import { combatSkillXpToReachLevel, skillXpToReachLevel } from '../../src/data/xpTable';
+import { COMBAT_SKILL_ORDER, SKILL_ORDER } from '../../src/data/skills';
 import {
   addSkillXp,
   createInitialSkills,
+  skillCap,
   skillLevel,
   skillXpToNextLevel,
 } from '../../src/systems/SkillSystem';
 
 describe('createInitialSkills', () => {
-  it('starts every skill at level 1 with no xp', () => {
-    expect(createInitialSkills()).toEqual({
-      woodcutting: { level: 1, xp: 0 },
-      fishing: { level: 1, xp: 0 },
-      cooking: { level: 1, xp: 0 },
-    });
+  it('starts every skill, gathering and combat, at level 1 with no xp', () => {
+    const skills = createInitialSkills();
+    const ids = [...SKILL_ORDER, ...COMBAT_SKILL_ORDER];
+    expect(Object.keys(skills).sort()).toEqual([...ids].sort());
+    ids.forEach((id) => expect(skills[id]).toEqual({ level: 1, xp: 0 }));
   });
 });
 
@@ -39,9 +40,9 @@ describe('addSkillXp', () => {
     expect(skills.cooking.xp).toBe(0);
   });
 
-  it('caps at MAX_SKILL_LEVEL and zeroes xp there', () => {
+  it('caps a gathering skill at its flat maximum and zeroes xp there', () => {
     const { skills } = addSkillXp(createInitialSkills(), 'woodcutting', 999999);
-    expect(skills.woodcutting).toEqual({ level: MAX_SKILL_LEVEL, xp: 0 });
+    expect(skills.woodcutting).toEqual({ level: MAX_GATHER_SKILL_LEVEL, xp: 0 });
   });
 
   it('is a no-op once capped, so a maxed skill never reports another level up', () => {
@@ -66,13 +67,46 @@ describe('addSkillXp', () => {
   });
 });
 
+describe('combat skill caps', () => {
+  it('caps a combat skill at ten times the character level', () => {
+    expect(skillCap('one-handed', 1)).toBe(10);
+    expect(skillCap('one-handed', 10)).toBe(100);
+    // Gathering skills ignore the character's level entirely.
+    expect(skillCap('woodcutting', 10)).toBe(MAX_GATHER_SKILL_LEVEL);
+  });
+
+  it('stops a level 1 character at 10 no matter how much they swing', () => {
+    const { skills } = addSkillXp(createInitialSkills(), 'one-handed', 999999, 1);
+    expect(skills['one-handed']).toEqual({ level: combatSkillCap(1), xp: 0 });
+  });
+
+  it('lets the same skill climb further once the character levels', () => {
+    const atLevel1 = addSkillXp(createInitialSkills(), 'one-handed', 999999, 1).skills;
+    const atLevel5 = addSkillXp(atLevel1, 'one-handed', 999999, 5).skills;
+    expect(atLevel5['one-handed'].level).toBe(combatSkillCap(5));
+  });
+
+  it('levels a combat skill on its own shallow curve', () => {
+    const { skills, leveledUp } = addSkillXp(
+      createInitialSkills(),
+      'parry',
+      combatSkillXpToReachLevel(2),
+      5,
+    );
+    expect(skills.parry).toEqual({ level: 2, xp: 0 });
+    expect(leveledUp).toBe(true);
+  });
+});
+
 describe('skillXpToNextLevel', () => {
-  it('reports the cost of the next level', () => {
-    expect(skillXpToNextLevel(1)).toBe(skillXpToReachLevel(2));
+  it('reports the cost of the next level on the skill’s own curve', () => {
+    expect(skillXpToNextLevel('fishing', 1)).toBe(skillXpToReachLevel(2));
+    expect(skillXpToNextLevel('block', 1, 5)).toBe(combatSkillXpToReachLevel(2));
   });
 
   it('is 0 at the cap, so a full bar never divides by it', () => {
-    expect(skillXpToNextLevel(MAX_SKILL_LEVEL)).toBe(0);
+    expect(skillXpToNextLevel('fishing', MAX_GATHER_SKILL_LEVEL)).toBe(0);
+    expect(skillXpToNextLevel('block', combatSkillCap(3), 3)).toBe(0);
   });
 });
 

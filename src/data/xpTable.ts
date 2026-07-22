@@ -13,3 +13,12 @@ export function xpToReachLevel(level: number): number {
 export function skillXpToReachLevel(level: number): number {
   return SKILL_XP_COEFFICIENT * level * level;
 }
+
+// Combat skills tick up off single swings and single blocked hits, so their
+// curve is shallow and linear: the brake on them is the character-level cap,
+// not the grind. One point per swing puts an early level a few fights apart.
+const COMBAT_SKILL_XP_PER_LEVEL = 4;
+
+export function combatSkillXpToReachLevel(level: number): number {
+  return COMBAT_SKILL_XP_PER_LEVEL * level;
+}
