@@ -152,6 +152,6 @@ export class CharacterCreateScene extends Phaser.Scene {
 
     saveService.save(character);
     this.registry.set('character', character);
-    this.scene.start('Town');
+    this.scene.start('Zone');
   }
 }

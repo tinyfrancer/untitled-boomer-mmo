@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from './config/constants';
 import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { CharacterCreateScene } from './scenes/CharacterCreateScene';
-import { TownScene } from './scenes/TownScene';
+import { ZoneScene } from './scenes/ZoneScene';
 import { UIScene } from './scenes/UIScene';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -26,7 +26,7 @@ const config: Phaser.Types.Core.GameConfig = {
   dom: {
     createContainer: true,
   },
-  scene: [BootScene, PreloadScene, CharacterCreateScene, TownScene, UIScene],
+  scene: [BootScene, PreloadScene, CharacterCreateScene, ZoneScene, UIScene],
 };
 
 const game = new Phaser.Game(config);

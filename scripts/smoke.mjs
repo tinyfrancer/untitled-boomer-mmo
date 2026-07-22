@@ -50,10 +50,10 @@ const townState = () =>
     const loop = window.game.loop;
     if (loop.sleeping) loop.wake();
 
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     if (!town?.scene.isActive()) return null;
     const p = town.player;
-    const rats = town.rats.map((r) => ({
+    const mobs = town.mobs.map((r) => ({
       level: r.level,
       hp: r.hp,
       maxHp: r.maxHp,
@@ -77,12 +77,12 @@ const townState = () =>
     }));
     return {
       player: { hp: p.hp, maxHp: p.maxHp, level: p.level, x: Math.round(p.x), y: Math.round(p.y) },
-      rats,
+      mobs,
       nodes,
       gathering: town.gatherState !== null,
-      inventory: { ...town.characterState.inventory },
-      skills: JSON.parse(JSON.stringify(town.characterState.skills)),
-      gear: { ...town.characterState.gear },
+      inventory: { ...town.character.state.inventory },
+      skills: JSON.parse(JSON.stringify(town.character.state.skills)),
+      gear: { ...town.character.state.gear },
       fireLit: town.campfire?.isLit() === true,
       eating: p.isEating(),
       loop: { sleeping: loop.sleeping, running: loop.running, fps: Math.round(loop.actualFps) },
@@ -131,10 +131,10 @@ try {
     s.selectClass('warrior');
     s.tryBeginAdventure();
   });
-  const boot = await waitFor((s) => s.rats.length > 0, 'Town scene with rats');
-  check('town scene spawns rats', boot.rats.length === 9, `${boot.rats.length} rats`);
+  const boot = await waitFor((s) => s.mobs.length > 0, 'Town scene with rats');
+  check('town scene spawns rats', boot.mobs.length === 9, `${boot.mobs.length} rats`);
 
-  const levels = boot.rats.map((r) => r.level).sort();
+  const levels = boot.mobs.map((r) => r.level).sort();
   const dist = { 1: 0, 2: 0, 3: 0 };
   levels.forEach((l) => (dist[l] += 1));
   check(
@@ -143,11 +143,11 @@ try {
     `lvl1=${dist[1]} lvl2=${dist[2]} lvl3=${dist[3]}`,
   );
 
-  const scaled = boot.rats.every((r) => r.maxHp === 20 + 20 * (r.level - 1));
+  const scaled = boot.mobs.every((r) => r.maxHp === 20 + 20 * (r.level - 1));
   check(
     'rat max HP scales with level',
     scaled,
-    boot.rats.map((r) => `L${r.level}:${r.maxHp}`).join(' '),
+    boot.mobs.map((r) => `L${r.level}:${r.maxHp}`).join(' '),
   );
   await page.screenshot({ path: `${OUT}/2-town.png` });
 
@@ -161,7 +161,7 @@ try {
   // The starting sword is not a woodcutting tool, so this must be refused
   // outright rather than silently starting a channel.
   const refused = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     const tree = town.nodes.find((n) => n.definition.id === 'tree');
     town.player.setPosition(tree.x, tree.y + 40);
     town.startGathering(tree);
@@ -170,14 +170,14 @@ try {
   check('gathering is refused without the right tool equipped', refused === false);
 
   const beforeChop = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     town.handleEquipRequested('felling-axe');
     const tree = town.nodes.find((n) => n.definition.id === 'tree');
     town.player.setPosition(tree.x, tree.y + 40);
     town.startGathering(tree);
     return {
       gathering: town.gatherState !== null,
-      xp: town.characterState.skills.woodcutting.xp,
+      xp: town.character.state.skills.woodcutting.xp,
     };
   });
   check('equipping the axe starts a woodcutting channel', beforeChop.gathering === true);
@@ -192,7 +192,7 @@ try {
 
   // Walking off must drop the channel — this is the AFK-safety valve.
   await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     const tree = town.nodes.find((n) => n.definition.id === 'tree');
     town.player.setPosition(tree.x + 400, tree.y + 400);
   });
@@ -201,7 +201,7 @@ try {
 
   // Fishing runs the same path through a different tool and an endless node.
   const fished = await page.evaluate(async () => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     town.handleEquipRequested('fishing-pole');
     const spot = town.nodes.find((n) => n.definition.id === 'fishing-spot');
     // On the shore north of the spot: the spot itself is on water, which the
@@ -223,14 +223,14 @@ try {
   // Stock the bag directly. Gathering enough by hand is already covered above,
   // and doing it again would just be a slow way to reach the same state.
   const lit = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     town.stopGathering();
-    town.characterState.inventory.logs = 3;
-    town.characterState.inventory['raw-fish'] = 6;
+    town.character.state.inventory.logs = 3;
+    town.character.state.inventory['raw-fish'] = 6;
     town.handleLightFireRequested();
     return {
       fire: town.campfire?.isLit() === true,
-      logs: town.characterState.inventory.logs ?? 0,
+      logs: town.character.state.inventory.logs ?? 0,
     };
   });
   check(
@@ -242,16 +242,16 @@ try {
   // Cooking near the fire must produce one of the two outcomes and consume the
   // raw fish either way; which one is a dice roll, so don't assert on it.
   const cooked = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
-    const before = town.characterState.inventory['raw-fish'];
+    const town = window.game.scene.getScene('Zone');
+    const before = town.character.state.inventory['raw-fish'];
     // Cook the lot, so at least one succeeds despite the level 1 burn chance.
     for (let i = 0; i < before; i++) town.handleCookRequested();
-    const inv = town.characterState.inventory;
+    const inv = town.character.state.inventory;
     return {
       raw: inv['raw-fish'] ?? 0,
       cooked: inv['cooked-fish'] ?? 0,
       burnt: inv['burnt-fish'] ?? 0,
-      xp: town.characterState.skills.cooking.xp,
+      xp: town.character.state.skills.cooking.xp,
     };
   });
   check(
@@ -268,18 +268,18 @@ try {
 
   // Cooking away from a fire has to be refused.
   const awayFromFire = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
-    town.characterState.inventory['raw-fish'] = 1;
+    const town = window.game.scene.getScene('Zone');
+    town.character.state.inventory['raw-fish'] = 1;
     town.player.setPosition(town.campfire.x + 600, town.campfire.y);
     town.handleCookRequested();
-    return town.characterState.inventory['raw-fish'];
+    return town.character.state.inventory['raw-fish'];
   });
   check('cooking away from a fire is refused', awayFromFire === 1);
 
   // --- Eating: a heal over time that outpaces baseline regen. ---
   const beforeEat = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
-    town.characterState.inventory['cooked-fish'] = 1;
+    const town = window.game.scene.getScene('Zone');
+    town.character.state.inventory['cooked-fish'] = 1;
     town.player.takeDamage(Math.floor(town.player.maxHp / 2));
     // Past the regen lockout, so any healing seen is food doing its job on top
     // of a baseline that is also running — see the regen check above.
@@ -288,7 +288,7 @@ try {
     return {
       hp: town.player.hp,
       eating: town.player.isEating(),
-      fish: town.characterState.inventory['cooked-fish'] ?? 0,
+      fish: town.character.state.inventory['cooked-fish'] ?? 0,
     };
   });
   check(
@@ -301,8 +301,8 @@ try {
 
   // Getting hit has to cancel it, since food is out-of-combat only.
   const interrupted = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
-    town.characterState.inventory['cooked-fish'] = 1;
+    const town = window.game.scene.getScene('Zone');
+    town.character.state.inventory['cooked-fish'] = 1;
     town.handleEatRequested('cooked-fish');
     const started = town.player.isEating();
     town.player.takeDamage(1);
@@ -317,7 +317,7 @@ try {
   // Back to the starting loadout so the combat checks below run on the gear
   // they were written against.
   await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     town.stopGathering();
     town.handleEquipRequested('rusty-sword');
     town.player.restoreToFull();
@@ -325,9 +325,9 @@ try {
 
   // --- Retaliation: target the nearest level 1 rat and let combat run. ---
   await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     const p = town.player;
-    const rat = town.rats
+    const rat = town.mobs
       .filter((r) => r.level === 1)
       .sort(
         (a, b) =>
@@ -339,11 +339,11 @@ try {
     town.setTarget(rat);
   });
 
-  const engaged = await waitFor((s) => s.rats.some((r) => r.engaged), 'a rat to engage');
+  const engaged = await waitFor((s) => s.mobs.some((r) => r.engaged), 'a rat to engage');
   check(
     'attacked rat retaliates (enters chase)',
     true,
-    `rat hp ${engaged.rats.find((r) => r.engaged).hp}`,
+    `rat hp ${engaged.mobs.find((r) => r.engaged).hp}`,
   );
 
   const hurt = await waitFor((s) => s.player.hp < s.player.maxHp, 'player to take damage');
@@ -356,10 +356,10 @@ try {
   // in-bounds corner furthest from that rat's own spawn: a fixed offset can be
   // clipped by the world bounds to somewhere inside the leash radius.
   const leashTarget = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     town.clearTarget(); // stop swinging, so the rat survives to leash
-    const index = town.rats.findIndex((r) => r.isAlive() && r.hp === r.maxHp);
-    const rat = town.rats[index];
+    const index = town.mobs.findIndex((r) => r.isAlive() && r.hp === r.maxHp);
+    const rat = town.mobs[index];
     rat.takeDamage(Math.floor(rat.maxHp / 2)); // a wound, so healing is visible
     rat.engage();
     const bounds = town.physics.world.bounds;
@@ -384,13 +384,13 @@ try {
     return { index, hp: rat.hp, maxHp: rat.maxHp };
   });
   const leashed = await waitFor(
-    (s) => !s.rats[leashTarget.index].engaged,
+    (s) => !s.mobs[leashTarget.index].engaged,
     'the chasing rat to leash off',
   );
   check(
     'rat leashes and heals to full on the way home',
-    leashed.rats[leashTarget.index].hp === leashTarget.maxHp,
-    `${leashTarget.hp} -> ${leashed.rats[leashTarget.index].hp}/${leashTarget.maxHp}`,
+    leashed.mobs[leashTarget.index].hp === leashTarget.maxHp,
+    `${leashTarget.hp} -> ${leashed.mobs[leashTarget.index].hp}/${leashTarget.maxHp}`,
   );
 
   // --- Out-of-combat regen: player HP must climb back on its own. ---
@@ -399,7 +399,7 @@ try {
   // counts as combat), and the damage both guarantees a deficit to heal and
   // restarts the out-of-combat timer from a known instant.
   const beforeRegen = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
+    const town = window.game.scene.getScene('Zone');
     town.clearTarget();
     town.player.takeDamage(Math.floor(town.player.maxHp / 2));
     // Skip ahead to the end of the out-of-combat lockout rather than waiting it
@@ -414,8 +414,8 @@ try {
 
   // --- Death: stand on the level 3 rat with 1 HP and let it finish the job. ---
   const spawnBefore = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Town');
-    const rat = town.rats.find((r) => r.level === 3);
+    const town = window.game.scene.getScene('Zone');
+    const rat = town.mobs.find((r) => r.level === 3);
     town.player.setPosition(rat.x, rat.y - 30);
     town.player.takeDamage(town.player.hp - 1);
     town.setTarget(rat);
@@ -436,7 +436,7 @@ try {
   );
   check(
     'all mobs reset after player death',
-    died.rats.filter((r) => r.alive).every((r) => r.hp === r.maxHp && !r.engaged),
+    died.mobs.filter((r) => r.alive).every((r) => r.hp === r.maxHp && !r.engaged),
   );
   await page.screenshot({ path: `${OUT}/4-after-death.png` });
 

@@ -1,0 +1,41 @@
+For this feature, we will also make it our first version upgrade.  Multiple items will be tackled as part of this.
+
+Mobile Redesign:
+I think for now we want to move away from WASD/Arrow movement, and move to click.  This will make it more mobile friendly.
+On mobile, half the screen/ui elements don't appear.  This needs to be addressed.
+
+Experience:
+Experience should not be hidden. The Exp bar should show detailed exp data, as well as when we receive exp there should be a notification of sorts.
+This should apply to both combat and secondary skills. 
+
+Character:
+Health regen should also be visible, like damage is shown.
+Sword is held upside down
+Axe is held too close to the blade
+
+
+Currency:
+The game should have currency.  We will start with a simple copper/silver/gold setup. 100 copper = 1 silver. 100 silver = 1 gold
+Separate inventory item, not related to other items
+Items should be able to be sold for currency, and humanoid mobs should drop currency.
+
+Starting town updates:
+We should add a shop, with an NPC that will allow you to sell items.  Also, this shop should sell the fishing pole and woodcutting axe, and it should not start on the character.
+
+New areas:
+To the south, a new area should load.  A beach, with crabs lvl 4-6.  Crabs drop crab meat.  Ocean should have fishing spots, requiring level 5 fishing.
+To the east, an area with humanoid bandit mobs.
+
+General Repo redesign:
+We want this project to not get muddied up over time.  Review the repo and identify any room for improvements to ensure changes can be made easily. Less spaghetti where possible.
+
+Mob redesign:
+Rats tails need to be longer
+
+UI: 
+The UI needs revision.  When we have a log in our inventory it just shows a light fire button, and the same for cooking.
+Explore selecting items and adding functions to them. 
+UI getting clunky the more we add, determine clean apprach for displaying data.
+
+
+Ask questions for further details.

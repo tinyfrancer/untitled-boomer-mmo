@@ -13,7 +13,7 @@ export class PreloadScene extends Phaser.Scene {
     const savedCharacter = saveService.load();
     if (savedCharacter) {
       this.registry.set('character', savedCharacter);
-      this.scene.start('Town');
+      this.scene.start('Zone');
     } else {
       this.scene.start('CharacterCreate');
     }

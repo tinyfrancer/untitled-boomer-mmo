@@ -56,7 +56,7 @@ there rather than trying to unit-test Phaser. Screenshots land in gitignored `.s
 
 It works because `src/main.ts` puts the `Phaser.Game` instance on `window.game` behind an
 `import.meta.env.DEV` guard (Vite strips it from production builds). That handle is also the way
-to inspect live state from the devtools console: `game.scene.getScene('Town').rats`.
+to inspect live state from the devtools console: `game.scene.getScene('Zone').mobs`.
 
 Two environment notes that will otherwise waste your time:
 
@@ -82,24 +82,33 @@ or entity, rather than inlining logic into a Scene or a Phaser.GameObjects subcl
 
 **Scene flow** (registered in `src/main.ts`, one `Phaser.Game` instance):
 `Boot` → `Preload` (generates placeholder textures at runtime, no image assets; loads any
-existing save and routes straight to `Town`, else to `CharacterCreate`) → `CharacterCreate`
-(builds a `CharacterState` and saves it) → `Town` (the gameplay scene) with `UI` launched
+existing save and routes straight to `Zone`, else to `CharacterCreate`) → `CharacterCreate`
+(builds a `CharacterState` and saves it) → `Zone` (the gameplay scene) with `UI` launched
 alongside it as a parallel HUD scene.
+
+**Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
+node spawns, exits), all played through the single `ZoneScene` — a zone change is
+`scene.restart({ zoneId })`, and the `UI` scene stays running across it. Edge-walk transitions
+are pure math in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both
+ways), not a new scene class.
 
 **Scene-to-scene communication** goes through `this.game.events` (a global Phaser event emitter),
 not direct references between scenes — see `src/ui/uiEvents.ts` for the event name constants
-(`target-selected`, `xp-gained`, `level-up`, `move-vector`, etc.). `TownScene` owns gameplay
-state and emits events; `UIScene` only listens and renders. Add new HUD-facing state changes by
+(`target-selected`, `xp-gained`, `level-up`, `move-vector`, etc.). `ZoneScene` owns gameplay
+state and emits events; `UIScene` only listens and renders. Mutations of `CharacterState`
+itself (inventory, gear, xp, skills, location) go through the Phaser-free
+`systems/CharacterController.ts` rather than being inlined in the scene. Add new HUD-facing state changes by
 adding an event constant and emitting/listening to it, not by reaching into the other scene. An
 event carrying more than two or three values should pass one object (see `TargetInfo` in
 `uiEvents.ts`) rather than growing a positional argument list.
 
-**Entities** (`src/entities/`): `Player` and `Rat` (extends the shared `Mob` base) are
-`Phaser.Physics.Arcade.Sprite` subclasses. `Mob` owns HP, death/respawn timers, and a
-`wander | chase | returning` AI state machine. Combat math itself (damage rolls, range/cooldown
-checks) is _not_ on these classes — it lives in `systems/CombatSystem.ts` and is called from
-`TownScene`, which resolves both directions: `updateCombat()` for the player's swings and
-`updateEnemyAttacks()` for everything hitting back.
+**Entities** (`src/entities/`): `Player` and `Mob` are `Phaser.Physics.Arcade.Sprite`
+subclasses. `Mob` is instantiated directly from an `ENEMIES` definition (no per-enemy
+subclasses) and owns HP, death/respawn timers, and a `wander | chase | returning` AI state
+machine. Combat math itself (damage rolls, range/cooldown checks) is _not_ on these classes —
+it lives in `systems/CombatSystem.ts` and is called from `ZoneScene`, which resolves both
+directions: `updateCombat()` for the player's swings and `updateEnemyAttacks()` for everything
+hitting back.
 
 **Aggro contract**: `Mob.engage()` starts a chase, `disengage()` drops aggro _and heals the mob
 to full_ on its way back to spawn. Both leashing (running past `leashRadius`) and player death
@@ -115,9 +124,9 @@ shape in a way that breaks old saves.
 
 **Data-driven definitions** (`src/data/`): class stats (`classes.ts`), items/gear (`items.ts`),
 enemy definitions (`enemies.ts`), where and at what level they spawn (`spawns.ts`), loot
-(`lootTables.ts`), the XP curve (`xpTable.ts`), and the town tilemap layout (`townMap.ts`) are
-plain data tables keyed by id. `types/ids.ts` holds the id unions (`ClassId`, `GearSlotId`,
-`EnemyId`) that key into them. Prefer adding a row to one of these tables over hardcoding values
+(`lootTables.ts`), the XP curve (`xpTable.ts`), zones (`zones.ts`), and the tilemap layouts
+(`tiles.ts`, `townMap.ts`) are plain data tables keyed by id. `types/ids.ts` holds the id
+unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`) that key into them. Prefer adding a row to one of these tables over hardcoding values
 in a scene/entity — a new enemy type should be an `ENEMIES` row plus a loot table, not a new
 `Mob` subclass with numbers baked in.
 
