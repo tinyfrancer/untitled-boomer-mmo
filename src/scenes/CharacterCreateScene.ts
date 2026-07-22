@@ -30,7 +30,7 @@ export class CharacterCreateScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#1a1a2e');
-    this.uiScale = scenePxScale(this);
+    this.uiScale = scenePxScale();
 
     this.add
       .text(this.scale.width / 2, px(48, this.uiScale), 'Create Your Character', {

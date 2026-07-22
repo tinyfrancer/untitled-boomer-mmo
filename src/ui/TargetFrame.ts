@@ -19,7 +19,9 @@ export class TargetFrame {
         THEME.panelAlpha,
       )
       .setOrigin(0, 0)
-      .setStrokeStyle(px(1, scale), THEME.panelStroke);
+      .setStrokeStyle(px(1, scale), THEME.panelStroke)
+      // Interactive so a click on the frame never falls through to the world.
+      .setInteractive();
     this.nameText = scene.add.text(pad, pad, '', {
       fontSize: fontPx(THEME.font.md, scale),
       color: THEME.color.text,

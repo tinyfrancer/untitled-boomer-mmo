@@ -21,7 +21,6 @@ import {
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
-  MOVE_VECTOR_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
@@ -30,7 +29,7 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
 } from '../ui/uiEvents';
-import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
+import { THEME, fontPx, px, scenePxScale, worldZoom } from '../ui/theme';
 import { isCooldownReady, isInRange, resolveAttack } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
 import { rollLootTable } from '../systems/LootSystem';
@@ -78,6 +77,10 @@ export class ZoneScene extends Phaser.Scene {
   private nodes: ResourceNode[] = [];
   private gatherState: GatherState | null = null;
   private gatherNode: ResourceNode | null = null;
+  // Click-to-move approach state: a node the player is walking toward to
+  // gather, or whether they are closing on the current combat target.
+  private pendingGatherNode: ResourceNode | null = null;
+  private pursuingTarget = false;
   private campfire: Campfire | null = null;
   private lastActions = { canLightFire: false, canCook: false };
   private target: Mob | null = null;
@@ -149,6 +152,8 @@ export class ZoneScene extends Phaser.Scene {
     );
     this.lastReportedHp = this.player.hp;
     this.cameras.main.startFollow(this.player, true);
+    this.applyCameraZoom();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
 
     this.mobs = this.zone.mobSpawns.map(({ dx, dy, enemyId, level }) => {
       const mob = new Mob(
@@ -190,20 +195,24 @@ export class ZoneScene extends Phaser.Scene {
     this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.keyboard?.on('keydown-ESC', () => this.clearTarget());
     this.input.keyboard?.on('keydown-F9', () => this.resetCharacter());
-    this.game.events.on(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
     this.game.events.on(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
     this.game.events.on(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
     this.game.events.on(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
     this.game.events.on(COOK_REQUESTED_EVENT, this.handleCookRequested, this);
     this.game.events.on(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
 
-    // bottom edge, clear of the joystick corner and the HUD's top-left column
-    const uiScale = scenePxScale(this);
+    // bottom-left corner, under the HUD's top-left column
+    const uiScale = scenePxScale();
     this.add
-      .text(px(200, uiScale), this.scale.height - px(24, uiScale), 'F9: Reset Character (dev)', {
-        fontSize: fontPx(THEME.font.xs, uiScale),
-        color: THEME.color.dim,
-      })
+      .text(
+        px(THEME.margin, uiScale),
+        this.scale.height - px(24, uiScale),
+        'F9: Reset Character (dev)',
+        {
+          fontSize: fontPx(THEME.font.xs, uiScale),
+          color: THEME.color.dim,
+        },
+      )
       .setOrigin(0, 0)
       .setScrollFactor(0);
 
@@ -217,7 +226,7 @@ export class ZoneScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('pagehide', this.handleWindowUnload);
       window.removeEventListener('beforeunload', this.handleWindowUnload);
-      this.game.events.off(MOVE_VECTOR_EVENT, this.handleMoveVector, this);
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
       this.game.events.off(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
       this.game.events.off(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
       this.game.events.off(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
@@ -234,6 +243,7 @@ export class ZoneScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     if (this.changingZone) return;
+    this.updateApproach();
     this.player.update(delta);
     this.mobs.forEach((mob) => mob.update(this.player.x, this.player.y));
     this.updateSelectionRing();
@@ -280,28 +290,106 @@ export class ZoneScene extends Phaser.Scene {
     this.scene.restart(data);
   }
 
+  private applyCameraZoom(): void {
+    this.cameras.main.setZoom(
+      worldZoom(this.scale.width, this.scale.height, this.worldWidth, this.worldHeight),
+    );
+  }
+
   private handlePointerDown(
-    _pointer: Phaser.Input.Pointer,
+    pointer: Phaser.Input.Pointer,
     currentlyOver: Phaser.GameObjects.GameObject[],
   ): void {
+    // Clicks that land on the HUD belong to it, not the world.
+    const ui = this.scene.get('UI');
+    if (ui?.input && ui.input.hitTestPointer(pointer).length > 0) {
+      return;
+    }
+
     const clickedNode = currentlyOver.find(
       (obj): obj is ResourceNode => obj instanceof ResourceNode,
     );
     if (clickedNode) {
       this.clearTarget();
-      this.startGathering(clickedNode);
+      this.pursuingTarget = false;
+      this.approachAndGather(clickedNode);
       return;
     }
 
     // Any other click ends a gather: picking a fight or walking off is a choice
     // to stop chopping.
     this.stopGathering();
+    this.pendingGatherNode = null;
 
     const clickedMob = currentlyOver.find((obj): obj is Mob => obj instanceof Mob);
     if (clickedMob) {
       this.setTarget(clickedMob);
-    } else {
-      this.clearTarget();
+      // Auto-approach: walking into range is implied by choosing a target.
+      this.pursuingTarget = true;
+      return;
+    }
+
+    this.clearTarget();
+    this.pursuingTarget = false;
+    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    this.player.moveTo(worldPoint.x, worldPoint.y);
+  }
+
+  // Walk toward a clicked node and start the gather once inside its
+  // interact radius; startGathering fires immediately when already there.
+  private approachAndGather(node: ResourceNode): void {
+    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, node.x, node.y);
+    if (distance <= node.definition.interactRadius) {
+      this.startGathering(node);
+      return;
+    }
+    this.pendingGatherNode = node;
+    this.player.moveTo(node.x, node.y);
+  }
+
+  // Drives the two click-to-move approaches: closing on a combat target, and
+  // walking up to a node before gathering. WASD input cancels both.
+  private updateApproach(): void {
+    if (this.player.isKeyboardMoving()) {
+      this.pursuingTarget = false;
+      this.pendingGatherNode = null;
+      return;
+    }
+
+    if (this.pendingGatherNode) {
+      const node = this.pendingGatherNode;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, node.x, node.y);
+      if (distance <= node.definition.interactRadius * 0.9) {
+        this.pendingGatherNode = null;
+        this.player.stopMoving();
+        this.startGathering(node);
+      } else if (!this.player.hasMoveTarget()) {
+        // The walk ended short (blocked or arrived at a stale point) — give up
+        // rather than pushing into a wall forever.
+        this.pendingGatherNode = null;
+      }
+      return;
+    }
+
+    if (this.pursuingTarget) {
+      if (!this.target || !this.target.isAlive()) {
+        this.pursuingTarget = false;
+        return;
+      }
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.target.x,
+        this.target.y,
+      );
+      // Stop a little inside attack range, mirroring how mobs close in, so the
+      // player doesn't hover exactly on the boundary of their own reach.
+      if (isInRange(distance, this.player.attackRange * 0.8)) {
+        this.pursuingTarget = false;
+        this.player.stopMoving();
+      } else {
+        this.player.moveTo(this.target.x, this.target.y);
+      }
     }
   }
 
@@ -473,10 +561,6 @@ export class ZoneScene extends Phaser.Scene {
     }
   }
 
-  private handleMoveVector(x: number, y: number): void {
-    this.player.setTouchVector(x, y);
-  }
-
   private setTarget(mob: Mob): void {
     this.target = mob;
     this.publishTarget();
@@ -580,6 +664,9 @@ export class ZoneScene extends Phaser.Scene {
     this.mobs.forEach((mob) => mob.disengage());
     this.stopGathering();
     this.clearTarget();
+    this.pendingGatherNode = null;
+    this.pursuingTarget = false;
+    this.player.stopMoving();
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
     this.player.setVelocity(0, 0);
     this.player.restoreToFull();

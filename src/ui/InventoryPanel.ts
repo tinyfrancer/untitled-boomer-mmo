@@ -36,7 +36,10 @@ export class InventoryPanel {
     this.background = scene.add
       .rectangle(0, 0, width, pad * 2 + px(TITLE_ROW, scale), THEME.panelBg, THEME.panelAlpha)
       .setOrigin(0, 0)
-      .setStrokeStyle(px(1, scale), THEME.panelStroke);
+      .setStrokeStyle(px(1, scale), THEME.panelStroke)
+      // Interactive so a click on the panel is seen as a HUD hit and never
+      // falls through to the world as a move order.
+      .setInteractive();
     const title = scene.add.text(pad, pad, 'Inventory (I)', {
       fontSize: fontPx(THEME.font.md, scale),
       color: THEME.color.text,
@@ -102,6 +105,12 @@ export class InventoryPanel {
     });
 
     this.background.height = rowsTop + entries.length * rowHeight + pad;
+    // The hit area was sized at setInteractive() time; keep it in step with the
+    // background as rows come and go.
+    (this.background.input?.hitArea as Phaser.Geom.Rectangle | undefined)?.setSize(
+      this.background.width,
+      this.background.height,
+    );
   }
 
   isVisible(): boolean {

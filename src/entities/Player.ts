@@ -3,6 +3,7 @@ import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import { regenTick } from '../systems/RegenSystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
+import { stepToward, type Point } from '../systems/MovementSystem';
 import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
@@ -34,8 +35,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   attackCooldownMs: number;
   private readonly healthBar: HealthBar;
   private readonly keys: WasdKeys;
-  private touchVectorX = 0;
-  private touchVectorY = 0;
+  private moveTarget: Point | null = null;
   private gear: Record<GearSlotId, string | null>;
   // Regen accrues in fractions of a point per frame, so current HP is tracked
   // as a float here and only rounded when something reads it.
@@ -86,11 +86,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     };
   }
 
-  // Called by ZoneScene when the on-screen virtual joystick moves; x/y are
-  // normalized to [-1, 1], preserving analog magnitude for partial pushes.
-  setTouchVector(x: number, y: number): void {
-    this.touchVectorX = x;
-    this.touchVectorY = y;
+  // Click/tap-to-move: walk toward this world point until arrival, a new
+  // destination, or a WASD press takes over.
+  moveTo(x: number, y: number): void {
+    this.moveTarget = { x, y };
+  }
+
+  stopMoving(): void {
+    this.moveTarget = null;
+  }
+
+  hasMoveTarget(): boolean {
+    return this.moveTarget !== null;
+  }
+
+  isKeyboardMoving(): boolean {
+    return this.keys.A.isDown || this.keys.D.isDown || this.keys.W.isDown || this.keys.S.isDown;
   }
 
   setGear(gear: Record<GearSlotId, string | null>): void {
@@ -174,12 +185,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.keys.S.isDown) vy += 1;
 
     if (vx !== 0 || vy !== 0) {
+      // Keyboard overrides and cancels any click destination.
+      this.moveTarget = null;
       const length = Math.hypot(vx, vy);
       vx = (vx / length) * this.speed;
       vy = (vy / length) * this.speed;
-    } else {
-      vx = this.touchVectorX * this.speed;
-      vy = this.touchVectorY * this.speed;
+    } else if (this.moveTarget) {
+      const step = stepToward(this.x, this.y, this.moveTarget, this.speed);
+      if (step.arrived) {
+        this.moveTarget = null;
+      }
+      vx = step.vx;
+      vy = step.vy;
     }
 
     this.setVelocity(vx, vy);
