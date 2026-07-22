@@ -4,6 +4,8 @@ export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon';
 
 export type TierId = 'brown';
 
+export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
+
 export type EnemyId = 'rat' | 'crab' | 'bandit';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';

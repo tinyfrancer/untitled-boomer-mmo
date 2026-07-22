@@ -848,6 +848,51 @@ try {
     `tap was ${signScreen.fromBottom}px above the screen bottom`,
   );
 
+  // --- Armor types: a wizard may wear cloth and not leather, and the refusal
+  // has to reach the player rather than silently doing nothing. Done last,
+  // because it throws the warrior away and rerolls as a wizard. ---
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => {
+    window.game.scene.getScene('Zone').resetCharacter();
+  });
+  await page.waitForFunction(
+    () => window.game.scene.getScene('CharacterCreate')?.scene.isActive(),
+    null,
+    { timeout: 20000 },
+  );
+  await page.evaluate(() => {
+    const s = window.game.scene.getScene('CharacterCreate');
+    s.selectClass('wizard');
+    s.tryBeginAdventure();
+  });
+  await waitFor((s) => s.mobs.length > 0, 'town as a wizard');
+
+  const armor = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.addItem('brown-chestplate', 1);
+    z.character.addItem('brown-robe', 1);
+    const leather = z.character.equip('brown-chestplate');
+    const cloth = z.character.equip('brown-robe');
+    return {
+      leatherRefused: leather.ok === false,
+      reason: leather.ok === false ? leather.reason : '',
+      chest: z.character.state.gear.chest,
+      clothOk: cloth.ok,
+      stillBagged: z.character.itemCount('brown-chestplate'),
+    };
+  });
+  check(
+    'a wizard is refused leather, with a reason',
+    armor.leatherRefused && armor.reason.length > 0,
+    armor.reason,
+  );
+  check(
+    'the refused piece stays in the bag and the slot stays empty of it',
+    armor.stillBagged === 1 && armor.chest === 'brown-robe',
+    `chest=${armor.chest}`,
+  );
+  check('a wizard can wear the cloth robe', armor.clothOk === true);
+
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 } catch (err) {
   check('smoke run completed', false, String(err.message ?? err));

@@ -1,6 +1,27 @@
-import type { GearSlotId, SkillId, TierId, WeaponShapeId } from '../types/ids';
+import type {
+  ArmorTypeId,
+  ClassId,
+  GearSlotId,
+  SkillId,
+  TierId,
+  WeaponShapeId,
+} from '../types/ids';
 import { SKILLS } from './skills';
 import { TIER_COLORS } from './tiers';
+
+// Who can wear what. Class restrictions hang off the armor type rather than off
+// each item, so a new armor row inherits its rules from the type it names.
+export const ARMOR_TYPE_CLASSES: Record<ArmorTypeId, ClassId[]> = {
+  cloth: ['warrior', 'wizard'],
+  leather: ['warrior'],
+  plate: ['warrior'],
+};
+
+export const ARMOR_TYPE_LABELS: Record<ArmorTypeId, string> = {
+  cloth: 'Cloth',
+  leather: 'Leather',
+  plate: 'Plate',
+};
 
 interface EquipmentItemDefinition {
   id: string;
@@ -13,6 +34,9 @@ interface EquipmentItemDefinition {
   // armor, the weapon itself for weapons.
   color: number;
   tier?: TierId;
+  // Armor pieces name a type, which is what decides who can wear them; weapons
+  // and tools leave it unset and stay open to every class.
+  armorType?: ArmorTypeId;
   weaponShape?: WeaponShapeId;
   attackPowerBonus?: number;
   healthBonus?: number;
@@ -75,6 +99,8 @@ export const ITEMS: Record<string, ItemDefinition> = {
     value: 3,
     kind: 'material',
   },
+  // The leather set carries strength and the cloth set intellect, never both:
+  // armor that fed every stat was why nobody could tell which one mattered.
   'brown-chestplate': {
     id: 'brown-chestplate',
     name: 'Brown Chestplate',
@@ -83,9 +109,9 @@ export const ITEMS: Record<string, ItemDefinition> = {
     slot: 'chest',
     color: TIER_COLORS.brown,
     tier: 'brown',
+    armorType: 'leather',
     healthBonus: 1,
     strengthBonus: 1,
-    intellectBonus: 1,
   },
   'brown-helmet': {
     id: 'brown-helmet',
@@ -95,6 +121,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     slot: 'helmet',
     color: TIER_COLORS.brown,
     tier: 'brown',
+    armorType: 'leather',
     healthBonus: 1,
   },
   'brown-legs': {
@@ -105,8 +132,44 @@ export const ITEMS: Record<string, ItemDefinition> = {
     slot: 'pants',
     color: TIER_COLORS.brown,
     tier: 'brown',
+    armorType: 'leather',
     healthBonus: 1,
     strengthBonus: 1,
+  },
+  'brown-robe': {
+    id: 'brown-robe',
+    name: 'Brown Robe',
+    value: 35,
+    kind: 'equipment',
+    slot: 'chest',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    armorType: 'cloth',
+    healthBonus: 1,
+    intellectBonus: 1,
+  },
+  'brown-cloth-hat': {
+    id: 'brown-cloth-hat',
+    name: 'Brown Cloth Hat',
+    value: 25,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    armorType: 'cloth',
+    healthBonus: 1,
+  },
+  'brown-cloth-pants': {
+    id: 'brown-cloth-pants',
+    name: 'Brown Cloth Pants',
+    value: 30,
+    kind: 'equipment',
+    slot: 'pants',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    armorType: 'cloth',
+    healthBonus: 1,
+    intellectBonus: 1,
   },
   'brown-axe': {
     id: 'brown-axe',
@@ -228,7 +291,19 @@ export function describeItemBonuses(itemId: string | null): string {
   const tool = toolSkill(itemId);
   if (tool) parts.push(SKILLS[tool].name);
 
+  const armor = armorTypeOf(itemId);
+  if (armor) parts.push(ARMOR_TYPE_LABELS[armor]);
+
   return parts.join(', ');
+}
+
+// The armor type this item is, if it is armor at all.
+export function armorTypeOf(itemId: string | null): ArmorTypeId | null {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  if (!item || item.kind !== 'equipment') {
+    return null;
+  }
+  return item.armorType ?? null;
 }
 
 export function isEquippable(itemId: string): boolean {

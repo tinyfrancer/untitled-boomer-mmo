@@ -5,6 +5,7 @@ import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { computeAppearance } from '../systems/AppearanceSystem';
 import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
 import { THEME, fontPx, px } from './theme';
+import type { PrimaryStat } from '../data/classes';
 import type { GearSlotId, SkillId } from '../types/ids';
 
 export const SLOT_ORDER: GearSlotId[] = ['weapon', 'helmet', 'chest', 'pants'];
@@ -38,6 +39,9 @@ export interface DisplayedStats {
   strength: number;
   intellect: number;
   attackPower: number;
+  // Which stat the class turns into attack power. Shown beside ATK, because
+  // "do both STR and INT apply?" is otherwise unanswerable from the sheet.
+  attackStat: PrimaryStat;
 }
 
 export interface CharacterPanelState {
@@ -236,12 +240,12 @@ export class CharacterPanel {
     const size = px(THEME.paperdollSize, this.scale);
     this.paperdoll.setDisplaySize(size, size);
 
-    const { hp, maxHp, strength, intellect, attackPower } = state.stats;
+    const { hp, maxHp, strength, intellect, attackPower, attackStat } = state.stats;
     const lines = [
       `HP ${hp} / ${maxHp}`,
       `STR ${strength}`,
       `INT ${intellect}`,
-      `ATK ${attackPower}`,
+      `ATK ${attackPower} (${attackStat === 'strength' ? 'STR' : 'INT'})`,
     ];
     this.statTexts.forEach((text, index) => text.setText(lines[index]));
 

@@ -1,4 +1,7 @@
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
+import { stripIllegalGear } from '../systems/EquipSystem';
+import type { Gear, Inventory } from '../systems/InventorySystem';
+import type { ClassId } from '../types/ids';
 
 // Each step upgrades a save from exactly `fromVersion` to `fromVersion + 1`.
 // Saves older than the earliest step here can't be migrated and are dropped —
@@ -13,6 +16,16 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     currency: 0,
     zoneId: state.zoneId ?? 'town',
   }),
+  // v5 → v6: armor gains a type and classes gain restrictions. A wizard who was
+  // already wearing what is now leather keeps the item, just not the slot.
+  5: (state) => {
+    const stripped = stripIllegalGear(
+      state.gear as Gear,
+      state.inventory as Inventory,
+      state.classId as ClassId,
+    );
+    return { ...state, ...stripped };
+  },
 };
 
 /**

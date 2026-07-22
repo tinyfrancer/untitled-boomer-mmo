@@ -41,6 +41,40 @@ describe('migrateCharacterState', () => {
     expect(migrated?.level).toBe(3);
   });
 
+  it('unequips armor the class may no longer wear, keeping the item', () => {
+    const wizardInLeather = {
+      ...v4Save(),
+      version: 5,
+      currency: 0,
+      zoneId: 'town',
+      gear: {
+        helmet: 'brown-helmet',
+        chest: 'brown-chestplate',
+        pants: null,
+        weapon: 'apprentice-wand',
+      },
+    };
+    const migrated = migrateCharacterState(wizardInLeather);
+    expect(migrated?.gear).toEqual({
+      helmet: null,
+      chest: null,
+      pants: null,
+      weapon: 'apprentice-wand',
+    });
+    expect(migrated?.inventory['brown-helmet']).toBe(1);
+    expect(migrated?.inventory['brown-chestplate']).toBe(1);
+  });
+
+  it('leaves a warrior in leather wearing it', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      classId: 'warrior',
+      gear: { helmet: 'brown-helmet', chest: null, pants: null, weapon: 'rusty-sword' },
+    });
+    expect(migrated?.gear.helmet).toBe('brown-helmet');
+    expect(migrated?.inventory['brown-helmet']).toBeUndefined();
+  });
+
   it('respects a zoneId a late v4 save already had', () => {
     const migrated = migrateCharacterState({ ...v4Save(), zoneId: 'town' });
     expect(migrated?.zoneId).toBe('town');

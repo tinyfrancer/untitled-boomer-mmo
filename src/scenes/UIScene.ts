@@ -38,10 +38,12 @@ import {
 } from '../ui/uiEvents';
 import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
 import { itemsForSlot } from '../systems/InventorySystem';
+import { equippableFrom } from '../systems/EquipSystem';
 import { actionsForItem, type ItemActionId } from '../systems/ItemActionsSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import { SKILLS } from '../data/skills';
+import { CLASSES } from '../data/classes';
 import type { CharacterState } from '../persistence/CharacterState';
 import type { ClassId, GearSlotId } from '../types/ids';
 
@@ -337,6 +339,7 @@ export class UIScene extends Phaser.Scene {
         actionsForItem(itemId, {
           nearFire: this.model.actions.nearFire,
           shopOpen: this.model.shopOpen,
+          classId: this.classId,
         }),
       (actionId, itemId) => this.dispatchItemAction(actionId, itemId),
     );
@@ -371,7 +374,7 @@ export class UIScene extends Phaser.Scene {
       bounds.y,
       this.uiScale,
       slot,
-      itemsForSlot(this.model.inventory, slot),
+      equippableFrom(itemsForSlot(this.model.inventory, slot), this.classId),
       (itemId) => this.game.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
     );
   }
@@ -454,6 +457,7 @@ export class UIScene extends Phaser.Scene {
         strength: stats.strength,
         intellect: stats.intellect,
         attackPower: stats.attackPower,
+        attackStat: CLASSES[this.classId].baseStats.primaryStat,
       },
       skills: this.model.skills,
     });
