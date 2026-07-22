@@ -44,6 +44,12 @@ page.on('pageerror', (e) => consoleErrors.push(String(e)));
 // Scene helpers. `game` is the dev-only handle installed in src/main.ts.
 const townState = () =>
   page.evaluate(() => {
+    // Phaser sleeps its TimeStep when the page blurs, and a CI runner has no
+    // window manager to ever focus it — the game silently stops stepping with
+    // velocities still set. Nudge it awake on every poll.
+    const loop = window.game.loop;
+    if (loop.sleeping) loop.wake();
+
     const town = window.game.scene.getScene('Town');
     if (!town?.scene.isActive()) return null;
     const p = town.player;
@@ -64,6 +70,7 @@ const townState = () =>
     return {
       player: { hp: p.hp, maxHp: p.maxHp, level: p.level, x: Math.round(p.x), y: Math.round(p.y) },
       rats,
+      loop: { sleeping: loop.sleeping, running: loop.running, fps: Math.round(loop.actualFps) },
     };
   });
 
