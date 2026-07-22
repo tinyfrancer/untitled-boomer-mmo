@@ -257,7 +257,9 @@ export class CharacterPanel {
       const skill = state.skills[skillId] ?? { level: 1, xp: 0 };
       const row = this.skillRows[skillId];
       const xpToNext = skillXpToNextLevel(skill.level);
-      row.level.setText(`Lv ${skill.level}`);
+      row.level.setText(
+        xpToNext > 0 ? `${skill.xp}/${xpToNext} · Lv ${skill.level}` : `Lv ${skill.level} (Max)`,
+      );
       const ratio = xpToNext > 0 ? Phaser.Math.Clamp(skill.xp / xpToNext, 0, 1) : 1;
       row.barFill.width = row.barWidth * ratio;
     });

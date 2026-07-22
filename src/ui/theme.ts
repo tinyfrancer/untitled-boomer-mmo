@@ -40,6 +40,7 @@ export const THEME = {
     // Distinct from levelUp so a skill gain never reads as a combat level.
     skillUp: '#4fc3f7',
     playerDamage: '#ff5252',
+    heal: '#66bb6a',
     // Difficulty ("con") shades for an enemy's name, relative to the player.
     con: {
       trivial: '#9e9e9e',

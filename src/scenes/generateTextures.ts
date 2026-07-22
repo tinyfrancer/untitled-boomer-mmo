@@ -115,11 +115,14 @@ function drawWeapon(
 
   switch (shape) {
     case 'sword': {
-      const tipY = figure.hipY + size * 0.15;
-      const guardY = figure.shoulderY + size * 0.04;
+      // Blade up: the hand grips the hilt with the guard just above it and the
+      // blade rising past the shoulder — point-down read as held upside down.
+      const tipY = size * 0.05;
+      const gripBottomY = figure.shoulderY + size * 0.08;
+      const guardY = figure.shoulderY - size * 0.04;
       passes.forEach(([lineWidth, lineColor]) => {
         graphics.lineStyle(lineWidth, lineColor, 1);
-        graphics.lineBetween(figure.rightHandX, figure.shoulderY, figure.rightHandX, tipY);
+        graphics.lineBetween(figure.rightHandX, gripBottomY, figure.rightHandX, tipY);
         graphics.lineBetween(
           figure.rightHandX - size * 0.05,
           guardY,
@@ -154,8 +157,10 @@ function drawWeapon(
       break;
     }
     case 'axe': {
-      const haftTopY = figure.shoulderY - size * 0.1;
-      const haftBottomY = figure.hipY + size * 0.12;
+      // The head sits well above the hand, so the grip reads as mid-haft
+      // rather than choked up against the blade.
+      const haftTopY = size * 0.06;
+      const haftBottomY = figure.hipY + size * 0.05;
       // wedge head, biting outward from the top of the haft
       const head: Array<[number, number]> = [
         [figure.rightHandX, haftTopY],
@@ -181,24 +186,54 @@ function drawWeapon(
 }
 
 function generateRatTexture(scene: Phaser.Scene): void {
-  const width = TILE_SIZE * 0.8;
+  const bodyWidth = TILE_SIZE * 0.8;
   const height = TILE_SIZE * 0.6;
+  // The texture box is wider than the body so the tail has room to trail
+  // behind it — the old box clipped most of the tail off.
+  const tailLength = TILE_SIZE * 0.45;
+  const width = bodyWidth + tailLength;
+  const bodyLeft = tailLength;
   const graphics = scene.add.graphics();
 
-  // tail
+  // tail: a long two-segment sweep off the rump with an upward kink
   graphics.lineStyle(2, 0x6d4c41, 1);
-  graphics.lineBetween(width * 0.15, height * 0.6, -width * 0.25, height * 0.75);
+  graphics.lineBetween(
+    bodyLeft + bodyWidth * 0.15,
+    height * 0.6,
+    bodyLeft - tailLength * 0.55,
+    height * 0.85,
+  );
+  graphics.lineBetween(
+    bodyLeft - tailLength * 0.55,
+    height * 0.85,
+    bodyLeft - tailLength * 0.95,
+    height * 0.55,
+  );
 
   graphics.fillStyle(0x6d4c41, 1);
-  graphics.fillEllipse(width / 2, height / 2, width, height);
-  graphics.fillTriangle(width * 0.25, height * 0.2, width * 0.15, 0, width * 0.35, height * 0.05);
-  graphics.fillTriangle(width * 0.65, height * 0.05, width * 0.75, 0, width * 0.85, height * 0.2);
+  graphics.fillEllipse(bodyLeft + bodyWidth / 2, height / 2, bodyWidth, height);
+  graphics.fillTriangle(
+    bodyLeft + bodyWidth * 0.25,
+    height * 0.2,
+    bodyLeft + bodyWidth * 0.15,
+    0,
+    bodyLeft + bodyWidth * 0.35,
+    height * 0.05,
+  );
+  graphics.fillTriangle(
+    bodyLeft + bodyWidth * 0.65,
+    height * 0.05,
+    bodyLeft + bodyWidth * 0.75,
+    0,
+    bodyLeft + bodyWidth * 0.85,
+    height * 0.2,
+  );
 
   // eyes
   const eyeRadius = TILE_SIZE * 0.05;
   graphics.fillStyle(0x000000, 1);
-  graphics.fillCircle(width * 0.68, height * 0.4, eyeRadius);
-  graphics.fillCircle(width * 0.8, height * 0.42, eyeRadius);
+  graphics.fillCircle(bodyLeft + bodyWidth * 0.68, height * 0.4, eyeRadius);
+  graphics.fillCircle(bodyLeft + bodyWidth * 0.8, height * 0.42, eyeRadius);
 
   graphics.generateTexture('rat', width, height);
   graphics.destroy();

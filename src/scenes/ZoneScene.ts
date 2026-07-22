@@ -37,6 +37,7 @@ import { canCook, findCookableItem, rollCook } from '../systems/CookingSystem';
 import { Campfire } from '../entities/Campfire';
 import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
 import { consumableFor } from '../data/items';
+import { SKILLS } from '../data/skills';
 import {
   advanceGather,
   beginGather,
@@ -245,6 +246,10 @@ export class ZoneScene extends Phaser.Scene {
     if (this.changingZone) return;
     this.updateApproach();
     this.player.update(delta);
+    const healed = this.player.takeHealPulse();
+    if (healed > 0) {
+      this.showFloatingText(this.player.x, this.player.y, `+${healed}`, THEME.color.heal);
+    }
     this.mobs.forEach((mob) => mob.update(this.player.x, this.player.y));
     this.updateSelectionRing();
     this.updateGathering(delta);
@@ -555,6 +560,12 @@ export class ZoneScene extends Phaser.Scene {
 
   private awardSkillXp(skill: SkillId, amount: number): void {
     const gain = this.character.awardSkillXp(skill, amount);
+    this.showFloatingText(
+      this.player.x,
+      this.player.y - 20,
+      `+${amount} ${SKILLS[skill].name} XP`,
+      THEME.color.skillUp,
+    );
     this.game.events.emit(SKILL_XP_GAINED_EVENT, gain);
     if (gain.leveledUp) {
       this.persistCharacter();
@@ -618,7 +629,7 @@ export class ZoneScene extends Phaser.Scene {
 
     this.lastAttackAt = time;
     const { damage } = resolveAttack({ attackPower: this.player.attackPower });
-    this.showDamageNumber(this.target.x, this.target.y, damage, THEME.color.equippable);
+    this.showFloatingText(this.target.x, this.target.y, `-${damage}`, THEME.color.equippable);
     const xpReward = this.target.xpReward;
     const lootTableId = this.target.lootTableId;
     this.player.markInCombat();
@@ -645,7 +656,7 @@ export class ZoneScene extends Phaser.Scene {
       mob.lastAttackAt = time;
       const { damage } = resolveAttack({ attackPower: mob.attackPower });
       this.player.takeDamage(damage);
-      this.showDamageNumber(this.player.x, this.player.y, damage, THEME.color.playerDamage);
+      this.showFloatingText(this.player.x, this.player.y, `-${damage}`, THEME.color.playerDamage);
       // Taking a hit breaks the channel, so gathering is never a way to ignore a
       // mob already chewing on you.
       if (this.gatherState) {
@@ -684,6 +695,7 @@ export class ZoneScene extends Phaser.Scene {
 
   private awardXp(amount: number): void {
     const gain = this.character.awardXp(amount);
+    this.showFloatingText(this.player.x, this.player.y - 20, `+${amount} XP`, THEME.color.levelUp);
     this.game.events.emit(XP_GAINED_EVENT, gain.level, gain.xp, gain.xpToNext);
 
     if (gain.leveledUp) {
@@ -735,10 +747,10 @@ export class ZoneScene extends Phaser.Scene {
     this.scene.start('CharacterCreate');
   }
 
-  private showDamageNumber(x: number, y: number, amount: number, color: string): void {
+  private showFloatingText(x: number, y: number, message: string, color: string): void {
     const text = this.add
       // world-space, so this scales with the camera rather than the ui scale
-      .text(x, y - 20, `-${amount}`, {
+      .text(x, y - 20, message, {
         fontSize: '20px',
         color,
         fontStyle: 'bold',

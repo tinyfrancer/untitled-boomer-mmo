@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addXp, xpToNextLevel } from '../../src/systems/LevelingSystem';
+import { addXp, formatXpProgress, xpToNextLevel } from '../../src/systems/LevelingSystem';
 import { xpToReachLevel } from '../../src/data/xpTable';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 
@@ -50,5 +50,24 @@ describe('xpToNextLevel', () => {
 
   it('returns 0 at the level cap', () => {
     expect(xpToNextLevel(MAX_CHARACTER_LEVEL)).toBe(0);
+  });
+});
+
+describe('formatXpProgress', () => {
+  it('shows current, needed, and percent', () => {
+    expect(formatXpProgress(120, 250)).toBe('120 / 250 XP (48%)');
+  });
+
+  it('floors the percent rather than rounding past progress', () => {
+    expect(formatXpProgress(1, 300)).toBe('1 / 300 XP (0%)');
+    expect(formatXpProgress(299, 300)).toBe('299 / 300 XP (99%)');
+  });
+
+  it('reads max level at the cap', () => {
+    expect(formatXpProgress(0, 0)).toBe('Max level');
+  });
+
+  it('groups thousands for readability', () => {
+    expect(formatXpProgress(1240, 2000)).toBe('1,240 / 2,000 XP (62%)');
   });
 });
