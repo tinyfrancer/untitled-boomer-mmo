@@ -1,7 +1,14 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
-import { appearanceTextureKey, computeAppearance } from '../systems/AppearanceSystem';
-import type { Appearance } from '../systems/AppearanceSystem';
+import {
+  LEG_PHASES,
+  SKIN_COLOR,
+  appearanceTextureKey,
+  computeAppearance,
+  legOffsets,
+  walkAnimationKey,
+} from '../systems/AppearanceSystem';
+import type { Appearance, LegPhase } from '../systems/AppearanceSystem';
 import type { WeaponShapeId } from '../types/ids';
 
 export const TILESET_KEY = 'tileset';
@@ -49,10 +56,7 @@ function generateShopkeeperTexture(scene: Phaser.Scene): void {
   graphics.lineStyle(figure.limbWidth, 0x8d6e63, 1);
   legs();
 
-  graphics.fillStyle(0x14140f, 1);
-  graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
-  graphics.lineStyle(size * 0.03, 0xffffff, 1);
-  graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  drawHead(graphics, SKIN_COLOR, figure, size);
 
   // the coin
   graphics.fillStyle(0xffd54f, 1);
@@ -111,6 +115,21 @@ interface StickFigure {
   limbWidth: number;
 }
 
+// Every figure's head: a filled circle rimmed in the same dark outline the limbs
+// use. The rim is what keeps it readable on dark tiles — it used to be white,
+// which read as a halo around the face.
+function drawHead(
+  graphics: Phaser.GameObjects.Graphics,
+  color: number,
+  figure: StickFigure,
+  size: number,
+): void {
+  graphics.fillStyle(color, 1);
+  graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  graphics.lineStyle(size * 0.03, OUTLINE_COLOR, 1);
+  graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
+}
+
 function buildStickFigure(size: number): StickFigure {
   const cx = size / 2;
   const headRadius = size * 0.11;
@@ -128,16 +147,22 @@ function buildStickFigure(size: number): StickFigure {
   };
 }
 
-// One baked texture per distinct look. The key covers everything drawn, so a
-// cache hit is always safe and the handful of gear combinations stay cheap.
-export function ensurePlayerTexture(scene: Phaser.Scene, appearance: Appearance): string {
-  const key = appearanceTextureKey(appearance);
+// One baked texture per distinct look and leg phase. The key covers everything
+// drawn, so a cache hit is always safe and the handful of gear combinations
+// stay cheap.
+export function ensurePlayerTexture(
+  scene: Phaser.Scene,
+  appearance: Appearance,
+  phase: LegPhase = 0,
+): string {
+  const key = appearanceTextureKey(appearance, phase);
   if (scene.textures.exists(key)) {
     return key;
   }
 
   const size = TILE_SIZE;
   const figure = buildStickFigure(size);
+  const stride = legOffsets(phase);
   const graphics = scene.add.graphics();
 
   const torso = (): void => {
@@ -145,8 +170,8 @@ export function ensurePlayerTexture(scene: Phaser.Scene, appearance: Appearance)
     graphics.lineBetween(figure.leftHandX, figure.shoulderY, figure.rightHandX, figure.shoulderY);
   };
   const legs = (): void => {
-    graphics.lineBetween(figure.cx, figure.hipY, figure.cx - size * 0.13, figure.footY);
-    graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * 0.13, figure.footY);
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * stride.leftX, figure.footY);
+    graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * stride.rightX, figure.footY);
   };
 
   // Dark backing pass: without it a limb painted in gear color disappears into
@@ -160,11 +185,7 @@ export function ensurePlayerTexture(scene: Phaser.Scene, appearance: Appearance)
   graphics.lineStyle(figure.limbWidth, appearance.legColor, 1);
   legs();
 
-  graphics.fillStyle(appearance.headColor, 1);
-  graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
-  // white outline keeps the default black head readable against dark tiles
-  graphics.lineStyle(size * 0.03, 0xffffff, 1);
-  graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  drawHead(graphics, appearance.headColor, figure, size);
 
   if (appearance.weapon) {
     drawWeapon(graphics, appearance.weapon.shape, appearance.weapon.color, figure, size);
@@ -172,6 +193,29 @@ export function ensurePlayerTexture(scene: Phaser.Scene, appearance: Appearance)
 
   graphics.generateTexture(key, size, size);
   graphics.destroy();
+  return key;
+}
+
+// The looping walk for one look, built from its three baked leg phases. Phaser's
+// AnimationManager is game-wide, so this survives the scene restart a zone change
+// does — hence the exists() guard rather than rebuilding per scene.
+export function ensureWalkAnimation(scene: Phaser.Scene, appearance: Appearance): string {
+  const key = walkAnimationKey(appearance);
+  if (scene.anims.exists(key)) {
+    return key;
+  }
+
+  const frames = LEG_PHASES.map((phase) => ({
+    key: ensurePlayerTexture(scene, appearance, phase),
+  }));
+  // Stride, stance, opposite stride, stance: passing back through the neutral
+  // frame is what stops the legs from snapping between the two extremes.
+  scene.anims.create({
+    key,
+    frames: [frames[1], frames[0], frames[2], frames[0]],
+    frameRate: 8,
+    repeat: -1,
+  });
   return key;
 }
 
@@ -377,10 +421,7 @@ function generateBanditTexture(scene: Phaser.Scene): void {
   graphics.lineStyle(figure.limbWidth, 0x424242, 1);
   legs();
 
-  graphics.fillStyle(0x14140f, 1);
-  graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
-  graphics.lineStyle(size * 0.03, 0xffffff, 1);
-  graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
+  drawHead(graphics, SKIN_COLOR, figure, size);
   // the bandana: a red band across the lower half of the face
   graphics.fillStyle(0xc62828, 1);
   graphics.fillRect(

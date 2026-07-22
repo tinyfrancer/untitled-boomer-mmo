@@ -152,6 +152,31 @@ try {
   );
   await page.screenshot({ path: `${OUT}/2-town.png` });
 
+  // The stick figure's legs: walking plays the baked leg-phase animation and
+  // standing still puts it back on the neutral frame.
+  const walking = await page.evaluate(async () => {
+    const s = window.game.scene.getScene('Zone');
+    s.player.moveTo(s.player.x + 300, s.player.y);
+    await new Promise((r) => setTimeout(r, 300));
+    const moving = {
+      playing: s.player.anims.isPlaying,
+      frame: s.player.anims.currentFrame?.textureKey,
+    };
+    s.player.stopMoving();
+    await new Promise((r) => setTimeout(r, 300));
+    return { moving, idleTexture: s.player.texture.key, playing: s.player.anims.isPlaying };
+  });
+  check(
+    'the figure animates its legs while walking',
+    walking.moving.playing === true,
+    `frame ${walking.moving.frame}`,
+  );
+  check(
+    'the figure returns to its standing frame when it stops',
+    walking.playing === false && walking.idleTexture.endsWith(':0'),
+    walking.idleTexture,
+  );
+
   // --- Real input: genuine mouse clicks must select world objects. The
   // pointerdown event's own currentlyOver list proved timing-flaky with two
   // active scenes (see ZoneScene.hitTestWorld), and every other combat check

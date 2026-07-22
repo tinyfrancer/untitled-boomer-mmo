@@ -5,7 +5,7 @@ import { regenTick } from '../systems/RegenSystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { stepToward, type Point } from '../systems/MovementSystem';
-import { ensurePlayerTexture } from '../scenes/generateTextures';
+import { ensurePlayerTexture, ensureWalkAnimation } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
 
@@ -45,6 +45,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private foodBuff: FoodBuff | null = null;
   private healPulse: HealPulseState = createHealPulse();
   private pendingHealPulse = 0;
+  // The looping walk and the standing frame for the current gear, rebuilt
+  // whenever the figure's look changes.
+  private walkAnimKey = '';
+  private idleTextureKey = '';
 
   constructor(
     scene: Phaser.Scene,
@@ -64,6 +68,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.classId = classId;
     this.level = level;
     this.gear = gear;
+    this.applyAppearance();
     const stats = computeEffectiveStats(classId, gear, level);
     this.maxHp = stats.maxHp;
     this.hp = stats.maxHp;
@@ -110,7 +115,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   setGear(gear: Record<GearSlotId, string | null>): void {
     this.gear = gear;
     this.applyStats();
-    this.setTexture(ensurePlayerTexture(this.scene, computeAppearance(gear)));
+    this.applyAppearance();
+  }
+
+  // Bakes the standing frame and the walk for the current gear, and puts the
+  // sprite back on the standing frame — the update loop starts the walk again on
+  // the next frame the player is actually moving.
+  private applyAppearance(): void {
+    const appearance = computeAppearance(this.gear);
+    this.idleTextureKey = ensurePlayerTexture(this.scene, appearance);
+    this.walkAnimKey = ensureWalkAnimation(this.scene, appearance);
+    this.anims.stop();
+    this.setTexture(this.idleTextureKey);
   }
 
   setLevel(level: number): void {
@@ -186,6 +202,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.hp > 0;
   }
 
+  private updateWalkAnimation(moving: boolean): void {
+    if (moving) {
+      this.anims.play(this.walkAnimKey, true);
+      return;
+    }
+    if (this.anims.isPlaying) {
+      this.anims.stop();
+      this.setTexture(this.idleTextureKey);
+    }
+  }
+
   update(deltaMs: number): void {
     this.msSinceCombat += deltaMs;
     const beforeHealing = this.hpFloat;
@@ -225,6 +252,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.setVelocity(vx, vy);
+    this.updateWalkAnimation(vx !== 0 || vy !== 0);
     this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
   }
 }

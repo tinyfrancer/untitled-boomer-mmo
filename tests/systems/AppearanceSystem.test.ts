@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   BASE_FIGURE_COLOR,
+  LEG_PHASES,
+  SKIN_COLOR,
   appearanceTextureKey,
   computeAppearance,
+  legOffsets,
+  walkAnimationKey,
 } from '../../src/systems/AppearanceSystem';
 import { TIER_COLORS } from '../../src/data/tiers';
 
 const EMPTY_GEAR = { helmet: null, chest: null, pants: null, weapon: null };
 
 describe('computeAppearance', () => {
-  it('paints every body part black and holds no weapon when nothing is equipped', () => {
+  it('paints the bare limbs black, the bare head in skin, and holds no weapon', () => {
     expect(computeAppearance(EMPTY_GEAR)).toEqual({
-      headColor: BASE_FIGURE_COLOR,
+      headColor: SKIN_COLOR,
       torsoColor: BASE_FIGURE_COLOR,
       legColor: BASE_FIGURE_COLOR,
       weapon: null,
@@ -28,7 +32,7 @@ describe('computeAppearance', () => {
   it('colors only the torso when a chestplate is equipped', () => {
     const appearance = computeAppearance({ ...EMPTY_GEAR, chest: 'brown-chestplate' });
     expect(appearance.torsoColor).toBe(TIER_COLORS.brown);
-    expect(appearance.headColor).toBe(BASE_FIGURE_COLOR);
+    expect(appearance.headColor).toBe(SKIN_COLOR);
   });
 
   it('colors only the legs when pants are equipped', () => {
@@ -56,11 +60,35 @@ describe('computeAppearance', () => {
       weapon: 'rat-bones',
     });
     expect(appearance).toEqual({
-      headColor: BASE_FIGURE_COLOR,
+      headColor: SKIN_COLOR,
       torsoColor: BASE_FIGURE_COLOR,
       legColor: BASE_FIGURE_COLOR,
       weapon: null,
     });
+  });
+});
+
+describe('legOffsets', () => {
+  it('stands with the feet evenly either side of centre', () => {
+    const stance = legOffsets(0);
+    expect(stance.leftX).toBe(-stance.rightX);
+    expect(stance.rightX).toBeGreaterThan(0);
+  });
+
+  it('swings one foot out and trails the other on each half of the stride', () => {
+    const left = legOffsets(1);
+    const right = legOffsets(2);
+    // Mirror images of each other, so the two halves read as the same stride.
+    expect(left.leftX).toBe(-right.rightX);
+    expect(left.rightX).toBe(-right.leftX);
+  });
+
+  it('keeps every phase the same total stride width', () => {
+    const widths = LEG_PHASES.map((phase) => {
+      const { leftX, rightX } = legOffsets(phase);
+      return Math.round((rightX - leftX) * 100);
+    });
+    expect(new Set(widths).size).toBe(1);
   });
 });
 
@@ -83,7 +111,20 @@ describe('appearanceTextureKey', () => {
 
   it('pads color components so keys stay uniform', () => {
     expect(appearanceTextureKey(computeAppearance(EMPTY_GEAR))).toBe(
-      'player:111111:111111:111111:none',
+      'player:e0b088:111111:111111:none:0',
     );
+  });
+
+  it('gives every leg phase of one look its own key', () => {
+    const appearance = computeAppearance(EMPTY_GEAR);
+    const keys = LEG_PHASES.map((phase) => appearanceTextureKey(appearance, phase));
+    expect(new Set(keys).size).toBe(LEG_PHASES.length);
+  });
+
+  it('names the walk after the look, not a phase of it', () => {
+    const naked = computeAppearance(EMPTY_GEAR);
+    const armed = computeAppearance({ ...EMPTY_GEAR, weapon: 'brown-axe' });
+    expect(walkAnimationKey(naked)).not.toBe(walkAnimationKey(armed));
+    expect(walkAnimationKey(naked)).toBe(`${appearanceTextureKey(naked, 0)}:walk`);
   });
 });
