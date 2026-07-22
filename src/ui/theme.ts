@@ -37,6 +37,8 @@ export const THEME = {
     equippable: '#ffee58',
     targetHp: '#ff8a80',
     levelUp: '#ffd54f',
+    // Distinct from levelUp so a skill gain never reads as a combat level.
+    skillUp: '#4fc3f7',
     playerDamage: '#ff5252',
     // Difficulty ("con") shades for an enemy's name, relative to the player.
     con: {
@@ -54,8 +56,10 @@ export const MIN_UI_SCALE = 1;
 
 // Tallest thing the HUD draws, in CSS px (the character sheet). The upper clamp
 // is whatever scale still keeps that on screen rather than a round number —
-// past it the panel would run off the bottom of the canvas on a phone.
-const TALLEST_PANEL = 320;
+// past it the panel would run off the bottom of the canvas on a phone. Grew when
+// the sheet gained its skills section; keep it in step with
+// characterPanelHeight() rather than tuning it for a nicer clamp.
+const TALLEST_PANEL = 414;
 export const MAX_UI_SCALE = GAME_HEIGHT / TALLEST_PANEL;
 
 /**

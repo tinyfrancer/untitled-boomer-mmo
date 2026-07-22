@@ -7,9 +7,12 @@ describe('uiScale', () => {
     expect(uiScale(GAME_WIDTH)).toBe(1);
   });
 
+  // Both sample points stay under MAX_UI_SCALE on purpose. The clamp fell below
+  // 3 when the character sheet gained its skills section, so a 3x sample would
+  // now be testing the clamp rather than the growth it is named for.
   it('grows as the canvas is displayed smaller, keeping apparent size constant', () => {
     expect(uiScale(GAME_WIDTH / 2)).toBe(2);
-    expect(uiScale(GAME_WIDTH / 3)).toBe(3);
+    expect(uiScale(GAME_WIDTH / 2.5)).toBe(2.5);
   });
 
   it('clamps so the tallest panel still fits the canvas on a phone', () => {

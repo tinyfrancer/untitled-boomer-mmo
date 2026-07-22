@@ -16,13 +16,17 @@ import {
   PLAYER_HP_CHANGED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
+  SKILL_XP_GAINED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
+  type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
 import { xpToNextLevel } from '../systems/LevelingSystem';
 import { itemsForSlot } from '../systems/InventorySystem';
+import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
+import { SKILLS } from '../data/skills';
 import type { CharacterState } from '../persistence/CharacterState';
 import type { ClassId, GearSlotId } from '../types/ids';
 
@@ -41,6 +45,7 @@ interface HudModel {
   xp: number;
   gear: Record<GearSlotId, string | null>;
   inventory: Record<string, number>;
+  skills: Skills;
   hp: number;
   characterPanelVisible: boolean;
   inventoryPanelVisible: boolean;
@@ -64,6 +69,7 @@ export class UIScene extends Phaser.Scene {
     xp: 0,
     gear: DEFAULT_GEAR,
     inventory: {},
+    skills: createInitialSkills(),
     hp: 0,
     characterPanelVisible: true,
     inventoryPanelVisible: false,
@@ -83,6 +89,7 @@ export class UIScene extends Phaser.Scene {
       xp: character?.xp ?? 0,
       gear: character?.gear ?? DEFAULT_GEAR,
       inventory: character?.inventory ?? {},
+      skills: character?.skills ?? createInitialSkills(),
       hp: computeEffectiveStats(
         this.classId,
         character?.gear ?? DEFAULT_GEAR,
@@ -100,6 +107,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(INVENTORY_CHANGED_EVENT, this.handleInventoryChanged, this);
     this.game.events.on(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
     this.game.events.on(PLAYER_DIED_EVENT, this.handlePlayerDied, this);
+    this.game.events.on(SKILL_XP_GAINED_EVENT, this.handleSkillXpGained, this);
 
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
@@ -117,6 +125,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(INVENTORY_CHANGED_EVENT, this.handleInventoryChanged, this);
       this.game.events.off(PLAYER_HP_CHANGED_EVENT, this.handlePlayerHpChanged, this);
       this.game.events.off(PLAYER_DIED_EVENT, this.handlePlayerDied, this);
+      this.game.events.off(SKILL_XP_GAINED_EVENT, this.handleSkillXpGained, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
@@ -309,6 +318,7 @@ export class UIScene extends Phaser.Scene {
         intellect: stats.intellect,
         attackPower: stats.attackPower,
       },
+      skills: this.model.skills,
     });
   }
 
@@ -362,6 +372,20 @@ export class UIScene extends Phaser.Scene {
   private handleInventoryChanged = (inventory: Record<string, number>): void => {
     this.model.inventory = inventory;
     this.inventoryPanel.update(inventory);
+  };
+
+  private handleSkillXpGained = (progress: SkillProgressInfo): void => {
+    this.model.skills = {
+      ...this.model.skills,
+      [progress.skillId]: { level: progress.level, xp: progress.xp },
+    };
+    this.refreshCharacterPanel();
+    if (progress.leveledUp) {
+      this.showToast(
+        `${SKILLS[progress.skillId].name} Level ${progress.level}!`,
+        THEME.color.skillUp,
+      );
+    }
   };
 
   private handlePlayerHpChanged = (hp: number): void => {
