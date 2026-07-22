@@ -3,6 +3,7 @@ import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import { regenTick } from '../systems/RegenSystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
+import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { stepToward, type Point } from '../systems/MovementSystem';
 import { ensurePlayerTexture } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
@@ -42,6 +43,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private hpFloat: number;
   private msSinceCombat = 0;
   private foodBuff: FoodBuff | null = null;
+  private healPulse: HealPulseState = createHealPulse();
+  private pendingHealPulse = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -161,6 +164,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.hp = this.maxHp;
     this.msSinceCombat = 0;
     this.foodBuff = null;
+    this.healPulse = createHealPulse();
+    this.pendingHealPulse = 0;
+  }
+
+  /** Whole points healed since the last pulse, batched for display; 0 if none due. */
+  takeHealPulse(): number {
+    const pulse = this.pendingHealPulse;
+    this.pendingHealPulse = 0;
+    return pulse;
   }
 
   isAlive(): boolean {
@@ -169,11 +181,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   update(deltaMs: number): void {
     this.msSinceCombat += deltaMs;
+    const beforeHealing = this.hpFloat;
     this.hpFloat += regenTick(this.hpFloat, this.maxHp, this.msSinceCombat, deltaMs);
 
     const food = foodTick(this.foodBuff, deltaMs);
     this.foodBuff = food.buff;
     this.hpFloat = Math.min(this.hpFloat + food.healed, this.maxHp);
+
+    // Batch regen/food healing into a visible pulse for the scene to draw.
+    const healTick = healPulseTick(this.healPulse, this.hpFloat - beforeHealing, deltaMs);
+    this.healPulse = healTick.state;
+    this.pendingHealPulse += healTick.pulse;
 
     this.hp = Math.round(this.hpFloat);
 

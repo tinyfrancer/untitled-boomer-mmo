@@ -43,3 +43,12 @@ export function xpToNextLevel(level: number): number {
   }
   return xpToReachLevel(level + 1);
 }
+
+// The XP bar's detail line. xpToNext of 0 means the cap is reached.
+export function formatXpProgress(xp: number, xpToNext: number): string {
+  if (xpToNext <= 0) {
+    return 'Max level';
+  }
+  const pct = Math.floor((xp / xpToNext) * 100);
+  return `${xp.toLocaleString()} / ${xpToNext.toLocaleString()} XP (${pct}%)`;
+}

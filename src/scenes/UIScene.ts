@@ -31,7 +31,7 @@ import {
   type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
-import { xpToNextLevel } from '../systems/LevelingSystem';
+import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
 import { itemsForSlot } from '../systems/InventorySystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
@@ -65,6 +65,7 @@ export class UIScene extends Phaser.Scene {
   private targetFrame!: TargetFrame;
   private levelText!: Phaser.GameObjects.Text;
   private xpBarFill!: Phaser.GameObjects.Rectangle;
+  private xpText!: Phaser.GameObjects.Text;
   private xpBarWidth = 0;
   private levelUpToast!: Phaser.GameObjects.Text;
   private characterPanel!: CharacterPanel;
@@ -216,6 +217,12 @@ export class UIScene extends Phaser.Scene {
       .rectangle(margin, barY, 0, barHeight, THEME.xpFill, 1)
       .setOrigin(0, 0)
       .setScrollFactor(0);
+    this.xpText = this.add
+      .text(margin, barY + barHeight + px(3, scale), '', {
+        fontSize: fontPx(THEME.font.xs, scale),
+        color: THEME.color.muted,
+      })
+      .setScrollFactor(0);
   }
 
   private createLevelUpToast(): void {
@@ -303,7 +310,8 @@ export class UIScene extends Phaser.Scene {
     const size = px(THEME.touchMin, scale);
     const gap = px(THEME.padding, scale);
     const x = px(THEME.margin, scale);
-    const y = this.playerBlockTop() + px(40 + THEME.xpBar.height, scale) + gap;
+    // Below the XP bar's detail line.
+    const y = this.playerBlockTop() + px(40 + THEME.xpBar.height + 18, scale) + gap;
 
     this.createToggleButton(x, y, size, 'C', () => this.toggleCharacterPanel());
     this.createToggleButton(x + size + gap, y, size, 'I', () => this.toggleInventoryPanel());
@@ -387,6 +395,7 @@ export class UIScene extends Phaser.Scene {
     );
     const ratio = xpToNext > 0 ? Phaser.Math.Clamp(xp / xpToNext, 0, 1) : 1;
     this.xpBarFill.width = this.xpBarWidth * ratio;
+    this.xpText.setText(formatXpProgress(xp, xpToNext));
   };
 
   private handleLevelUp = (level: number): void => {
