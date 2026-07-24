@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import { consumableFor, describeItemBonuses, describeItemName, isEquippable } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
+import { encumbranceLevel } from '../systems/EncumbranceSystem';
 import type { ItemAction, ItemActionId } from '../systems/ItemActionsSystem';
 import { THEME, fontPx, px } from './theme';
 
-const TITLE_ROW = 22;
+// Tall enough for the title and the carried-weight line under it.
+const TITLE_ROW = 40;
 const ACTION_ROW = 36;
 const ACTION_BUTTON_HEIGHT = 30;
 // A press that travels further than this is a scroll drag, not a tap — row
@@ -39,6 +41,7 @@ export class InventoryPanel {
   private readonly scrollTrack: Phaser.GameObjects.Rectangle;
   private readonly scrollThumb: Phaser.GameObjects.Rectangle;
   private currencyText!: Phaser.GameObjects.Text;
+  private weightText!: Phaser.GameObjects.Text;
   private rowObjects: Phaser.GameObjects.GameObject[] = [];
   private readonly actionsFor: (itemId: string) => ItemAction[];
   private readonly onAction: (actionId: ItemActionId, itemId: string) => void;
@@ -93,6 +96,14 @@ export class InventoryPanel {
       })
       .setOrigin(1, 0);
 
+    // The pack's fill level, under the title. Colored rather than merely
+    // printed: "full" is the difference between a gather run continuing and
+    // stopping, so it has to be readable at a glance.
+    this.weightText = scene.add.text(pad, pad + px(20, scale), '', {
+      fontSize: fontPx(THEME.font.xs, scale),
+      color: THEME.color.muted,
+    });
+
     this.rowsViewport = scene.add.container(0, this.rowsTop());
 
     this.scrollTrack = scene.add
@@ -123,6 +134,7 @@ export class InventoryPanel {
         this.background,
         title,
         this.currencyText,
+        this.weightText,
         this.rowsViewport,
         this.scrollTrack,
         this.scrollThumb,
@@ -148,6 +160,18 @@ export class InventoryPanel {
 
   setCurrency(totalCopper: number): void {
     this.currencyText.setText(formatCurrency(totalCopper));
+  }
+
+  setEncumbrance(weight: number, capacity: number): void {
+    const level = encumbranceLevel(weight, capacity);
+    this.weightText.setText(`${Math.round(weight)} / ${capacity} carried`);
+    this.weightText.setColor(
+      level === 'full'
+        ? THEME.color.playerDamage
+        : level === 'heavy'
+          ? THEME.color.equippable
+          : THEME.color.muted,
+    );
   }
 
   update(inventory: Record<string, number>): void {

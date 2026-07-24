@@ -9,6 +9,12 @@ import {
 } from './InventorySystem';
 import type { CharacterState } from '../persistence/CharacterState';
 import { weaponSkillFor } from './CombatSystem';
+import {
+  canCarry,
+  carryCapacity as capacityForStrength,
+  inventoryWeight,
+} from './EncumbranceSystem';
+import { computeEffectiveStats } from './StatsSystem';
 import type { CombatSkillId, GearSlotId, SkillId, ZoneId } from '../types/ids';
 
 export interface CombatXpGain {
@@ -49,6 +55,33 @@ export class CharacterController {
 
   removeItem(itemId: string, quantity = 1): void {
     this.state.inventory = removeItemFromInventory(this.state.inventory, itemId, quantity);
+  }
+
+  /** What the pack can hold, which grows with the strength gear and levels buy. */
+  carryCapacity(): number {
+    const stats = computeEffectiveStats(this.state.classId, this.state.gear, this.state.level);
+    return capacityForStrength(stats.strength);
+  }
+
+  carriedWeight(): number {
+    return inventoryWeight(this.state.inventory);
+  }
+
+  canCarryItem(itemId: string, quantity = 1): boolean {
+    return canCarry(this.state.inventory, itemId, quantity, this.carryCapacity());
+  }
+
+  /**
+   * Adds the item, or nothing at all if the pack is too full for it. The
+   * acquisition paths — gathering, loot, buying — go through this so a full
+   * pack is one rule rather than three.
+   */
+  tryAddItem(itemId: string, quantity = 1): boolean {
+    if (!this.canCarryItem(itemId, quantity)) {
+      return false;
+    }
+    this.addItem(itemId, quantity);
+    return true;
   }
 
   addCurrency(copper: number): void {

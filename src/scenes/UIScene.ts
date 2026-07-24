@@ -53,6 +53,7 @@ import { equippableFrom } from '../systems/EquipSystem';
 import { actionsForItem, type ItemActionId } from '../systems/ItemActionsSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
+import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { SKILLS } from '../data/skills';
 import { CLASSES } from '../data/classes';
 import type { CharacterState } from '../persistence/CharacterState';
@@ -264,6 +265,7 @@ export class UIScene extends Phaser.Scene {
     this.refreshCharacterPanel();
     this.inventoryPanel.update(this.model.inventory);
     this.inventoryPanel.setCurrency(this.model.currency);
+    this.refreshEncumbrance();
     this.characterPanel.setVisible(this.model.characterPanelVisible);
     this.inventoryPanel.setVisible(this.model.inventoryPanelVisible);
     this.handleXpGained(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
@@ -585,6 +587,17 @@ export class UIScene extends Phaser.Scene {
     this.model.combatLogVisible = this.combatLogPanel.isVisible();
   }
 
+  // Capacity moves with the strength gear and levels buy, so this is refreshed
+  // on inventory, gear and level changes — not on every HP tick, which is what
+  // refreshCharacterPanel already rides.
+  private refreshEncumbrance(): void {
+    const stats = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
+    this.inventoryPanel.setEncumbrance(
+      inventoryWeight(this.model.inventory),
+      carryCapacity(stats.strength),
+    );
+  }
+
   private refreshCharacterPanel(): void {
     const stats = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
     this.characterPanel.update({
@@ -624,6 +637,8 @@ export class UIScene extends Phaser.Scene {
   private handleLevelUp = (level: number): void => {
     this.model.level = level;
     this.refreshCharacterPanel();
+    // A level buys strength, which buys capacity.
+    this.refreshEncumbrance();
     this.showToast(`Level Up! Level ${level}`, THEME.color.levelUp);
   };
 
@@ -648,11 +663,13 @@ export class UIScene extends Phaser.Scene {
     this.slotPicker?.close();
     this.slotPicker = null;
     this.refreshCharacterPanel();
+    this.refreshEncumbrance();
   };
 
   private handleInventoryChanged = (inventory: Record<string, number>): void => {
     this.model.inventory = inventory;
     this.inventoryPanel.update(inventory);
+    this.refreshEncumbrance();
     this.shopPanel?.update({ inventory, currency: this.model.currency });
   };
 

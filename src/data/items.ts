@@ -23,12 +23,19 @@ export const ARMOR_TYPE_LABELS: Record<ArmorTypeId, string> = {
   plate: 'Plate',
 };
 
-interface EquipmentItemDefinition {
+// What every item carries, whatever kind it is.
+interface BaseItemDefinition {
   id: string;
   name: string;
-  kind: 'equipment';
   // Vendor sell price in copper; absent means the item can't be sold.
   value?: number;
+  // What it costs to haul around, against the carrying capacity strength buys.
+  // Absent means DEFAULT_ITEM_WEIGHT — nothing is weightless.
+  weight?: number;
+}
+
+interface EquipmentItemDefinition extends BaseItemDefinition {
+  kind: 'equipment';
   slot: GearSlotId;
   // Color the stick figure paints this piece with: the matching body part for
   // armor, the weapon itself for weapons.
@@ -50,18 +57,12 @@ interface EquipmentItemDefinition {
   toolFor?: SkillId;
 }
 
-interface MaterialItemDefinition {
-  id: string;
-  name: string;
+interface MaterialItemDefinition extends BaseItemDefinition {
   kind: 'material';
-  value?: number;
 }
 
-interface ConsumableItemDefinition {
-  id: string;
-  name: string;
+interface ConsumableItemDefinition extends BaseItemDefinition {
   kind: 'consumable';
-  value?: number;
   healAmount: number;
   healDurationMs: number;
 }
@@ -74,6 +75,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'rusty-sword',
     name: 'Rusty Sword',
     value: 10,
+    weight: 3,
     kind: 'equipment',
     slot: 'weapon',
     color: 0xcfd8dc,
@@ -84,6 +86,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'apprentice-wand',
     name: 'Apprentice Wand',
     value: 10,
+    weight: 2,
     kind: 'equipment',
     slot: 'weapon',
     color: 0x8d6e63,
@@ -111,6 +114,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'brown-chestplate',
     name: 'Brown Chestplate',
     value: 35,
+    weight: 6,
     kind: 'equipment',
     slot: 'chest',
     color: TIER_COLORS.brown,
@@ -123,6 +127,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'brown-helmet',
     name: 'Brown Helmet',
     value: 25,
+    weight: 4,
     kind: 'equipment',
     slot: 'helmet',
     color: TIER_COLORS.brown,
@@ -134,6 +139,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'brown-legs',
     name: 'Brown Legs',
     value: 30,
+    weight: 5,
     kind: 'equipment',
     slot: 'pants',
     color: TIER_COLORS.brown,
@@ -146,6 +152,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'brown-robe',
     name: 'Brown Robe',
     value: 35,
+    weight: 3,
     kind: 'equipment',
     slot: 'chest',
     color: TIER_COLORS.brown,
@@ -158,6 +165,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'brown-cloth-hat',
     name: 'Brown Cloth Hat',
     value: 25,
+    weight: 2,
     kind: 'equipment',
     slot: 'helmet',
     color: TIER_COLORS.brown,
@@ -169,6 +177,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'brown-cloth-pants',
     name: 'Brown Cloth Pants',
     value: 30,
+    weight: 3,
     kind: 'equipment',
     slot: 'pants',
     color: TIER_COLORS.brown,
@@ -181,6 +190,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'brown-axe',
     name: 'Brown Axe',
     value: 40,
+    weight: 5,
     kind: 'equipment',
     slot: 'weapon',
     color: TIER_COLORS.brown,
@@ -194,6 +204,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'felling-axe',
     name: 'Felling Axe',
     value: 30,
+    weight: 4,
     kind: 'equipment',
     slot: 'weapon',
     color: 0x9e9e9e,
@@ -205,6 +216,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'fishing-pole',
     name: 'Fishing Pole',
     value: 30,
+    weight: 3,
     kind: 'equipment',
     slot: 'weapon',
     color: 0xa1887f,
@@ -216,6 +228,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     id: 'logs',
     name: 'Logs',
     value: 3,
+    weight: 2,
     kind: 'material',
   },
   'raw-fish': {
@@ -260,6 +273,15 @@ export const ITEMS: Record<string, ItemDefinition> = {
     kind: 'material',
   },
 };
+
+// What an item weighs when no row says otherwise. Nothing is free to carry, so
+// a new material row costs a point of capacity without having to remember to.
+export const DEFAULT_ITEM_WEIGHT = 1;
+
+export function itemWeight(itemId: string | null): number {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.weight ?? DEFAULT_ITEM_WEIGHT;
+}
 
 // Auto-attack reach is a property of what you are swinging, not of your class:
 // a wizard holding nothing punches from as close as anyone else.
