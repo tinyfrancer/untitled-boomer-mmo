@@ -38,7 +38,16 @@ import {
   PLAYER_MANA_CHANGED_EVENT,
   COMBAT_LOG_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
+  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_STATE_CHANGED_EVENT,
 } from '../ui/uiEvents';
+import {
+  AFK_ANCHOR_RADIUS,
+  afkXpReward,
+  chooseAfkFood,
+  decideAfkAction,
+  shouldAfkEat,
+} from '../systems/AfkSystem';
 import {
   abilitiesFor,
   abilityById,
@@ -158,6 +167,11 @@ export class ZoneScene extends Phaser.Scene {
   private lastReportedHp = 0;
   private lastReportedMana = -1;
   private character!: CharacterController;
+  // AFK camping: whether it is on, the spot the character settled at (fights
+  // are leashed to it), and whether they are currently standing down to heal.
+  private afkActive = false;
+  private afkAnchor = new Phaser.Math.Vector2();
+  private afkRecovering = false;
   private changingZone = false;
   private handleWindowUnload = (): void => this.persistCharacter();
 
@@ -293,6 +307,7 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.on(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
     this.game.events.on(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
     this.game.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
+    this.game.events.on(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
 
     this.time.addEvent({
       delay: AUTOSAVE_INTERVAL_MS,
@@ -315,6 +330,7 @@ export class ZoneScene extends Phaser.Scene {
       this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
       this.game.events.off(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
       this.game.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
+      this.game.events.off(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
     });
 
     // The HUD survives zone changes: launched once on first boot, and left
@@ -326,6 +342,7 @@ export class ZoneScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     if (this.changingZone) return;
+    this.updateAfk();
     this.updateApproach();
     this.player.update(delta);
     const healed = this.player.takeHealPulse();
@@ -411,6 +428,8 @@ export class ZoneScene extends Phaser.Scene {
       this.worldWidth,
       this.worldHeight,
     );
+    // The camp is a spot in the zone being left, so it can't survive the walk.
+    this.setAfk(false);
     this.stopGathering();
     this.clearTarget();
     this.closeShop();
@@ -455,6 +474,9 @@ export class ZoneScene extends Phaser.Scene {
     if (ui?.input && ui.input.hitTestPointer(pointer).length > 0) {
       return;
     }
+
+    // Touching the world is taking the controls back.
+    this.setAfk(false);
 
     const currentlyOver = this.hitTestWorld(pointer);
 
@@ -568,6 +590,7 @@ export class ZoneScene extends Phaser.Scene {
   // input cancels all of them.
   private updateApproach(): void {
     if (this.player.isKeyboardMoving()) {
+      this.setAfk(false);
       this.pursuingTarget = false;
       this.pendingGatherNode = null;
       this.pendingShopNpc = null;
@@ -639,6 +662,91 @@ export class ZoneScene extends Phaser.Scene {
       } else {
         this.player.moveTo(this.target.x, this.target.y);
       }
+    }
+  }
+
+  // AFK camping. Deliberately a worse player than the person it stands in for:
+  // it picks targets and eats, but never casts, and everything it earns is
+  // halved on the way in (see awardXp).
+  private toggleAfk(): void {
+    this.setAfk(!this.afkActive);
+  }
+
+  private setAfk(active: boolean): void {
+    if (this.afkActive === active) return;
+    this.afkActive = active;
+    this.afkRecovering = false;
+    if (active) {
+      this.stopGathering();
+      this.closeShop();
+      this.afkAnchor.set(this.player.x, this.player.y);
+      this.log(logNotice('You settle in to camp.'));
+    } else {
+      this.log(logNotice('You snap out of it.'));
+    }
+    this.game.events.emit(AFK_STATE_CHANGED_EVENT, this.afkActive);
+  }
+
+  private updateAfk(): void {
+    if (!this.afkActive || !this.player.isAlive()) return;
+
+    // A fight that wandered off the camp is dropped rather than followed: the
+    // anchor is what keeps an unattended character where they were left.
+    if (
+      this.target &&
+      Phaser.Math.Distance.Between(
+        this.afkAnchor.x,
+        this.afkAnchor.y,
+        this.target.x,
+        this.target.y,
+      ) > AFK_ANCHOR_RADIUS
+    ) {
+      this.clearTarget();
+      this.pursuingTarget = false;
+    }
+
+    const action = decideAfkAction(
+      this.mobs.map((mob, index) => ({
+        index,
+        distance: Phaser.Math.Distance.Between(this.afkAnchor.x, this.afkAnchor.y, mob.x, mob.y),
+        alive: mob.isAlive(),
+        engaged: mob.isEngaged(),
+      })),
+      { hp: this.player.hp, maxHp: this.player.maxHp, recovering: this.afkRecovering },
+    );
+    this.afkRecovering = action.kind === 'recover';
+
+    if (action.kind === 'recover') {
+      this.clearTarget();
+      this.pursuingTarget = false;
+      this.player.stopMoving();
+      this.afkEat();
+      return;
+    }
+    if (action.kind === 'idle') {
+      this.pursuingTarget = false;
+      return;
+    }
+
+    const mob = this.mobs[action.index];
+    if (this.target !== mob) {
+      this.setTarget(mob);
+    }
+    // The existing approach code walks into range and updateCombat swings, so
+    // AFK combat is the same combat, just without a hand on the mouse.
+    this.pursuingTarget = true;
+  }
+
+  private afkEat(): void {
+    if (
+      this.player.isEating() ||
+      !shouldAfkEat(this.player.hp, this.player.maxHp, this.player.isInCombat())
+    ) {
+      return;
+    }
+    const food = chooseAfkFood(this.character.state.inventory);
+    if (food) {
+      this.handleEatRequested(food);
     }
   }
 
@@ -971,6 +1079,9 @@ export class ZoneScene extends Phaser.Scene {
   }
 
   private handlePlayerDeath(): void {
+    // Dying is where an unattended session ends: it took the camp with it, and
+    // resuming would just feed the same mob until the player came back.
+    this.setAfk(false);
     this.mobs.forEach((mob) => mob.disengage());
     this.stopGathering();
     this.clearTarget();
@@ -1007,7 +1118,10 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
-  private awardXp(amount: number): void {
+  private awardXp(reward: number): void {
+    // The one choke point both the swing and the ability paths run through, so
+    // it is the one place the AFK penalty has to be applied.
+    const amount = afkXpReward(reward, this.afkActive);
     const gain = this.character.awardXp(amount);
     this.showFloatingText(this.player.x, this.player.y - 20, `+${amount} XP`, THEME.color.levelUp);
     this.log(logXpGain(amount));

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
-import { manaRegenTick, regenTick } from '../systems/RegenSystem';
+import { OUT_OF_COMBAT_DELAY_MS, manaRegenTick, regenTick } from '../systems/RegenSystem';
 import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/AbilitySystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
@@ -229,6 +229,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isEating(): boolean {
     return this.foodBuff !== null;
+  }
+
+  // The same lockout regen waits out, exposed so the AFK loop can tell resting
+  // from fighting without duplicating the threshold.
+  isInCombat(): boolean {
+    return this.msSinceCombat < OUT_OF_COMBAT_DELAY_MS;
   }
 
   // Used when the player crosses zones: the scene rebuilds the sprite, and

@@ -85,6 +85,7 @@ const townState = () =>
       skills: JSON.parse(JSON.stringify(town.character.state.skills)),
       gear: { ...town.character.state.gear },
       fireLit: town.campfire?.isLit() === true,
+      afk: { active: town.afkActive, target: town.target?.name ?? null },
       eating: p.isEating(),
       loop: { sleeping: loop.sleeping, running: loop.running, fps: Math.round(loop.actualFps) },
     };
@@ -602,6 +603,40 @@ try {
     reach.sword === 80 && reach.wand === 200 && reach.bare === 64,
     `sword ${reach.sword}, wand ${reach.wand}, bare-handed ${reach.bare}`,
   );
+
+  // --- AFK camping: the mode has to fight without a hand on the mouse, and
+  // give the controls straight back to one. ---
+  const camped = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const rat = z.mobs.find((m) => m.level === 1 && m.isAlive());
+    // Park beside the rat with nothing selected and nothing wrong with us, so
+    // anything that happens next is the camp's doing.
+    z.player.setPosition(rat.x - 60, rat.y);
+    z.player.restoreToFull();
+    z.clearTarget();
+    window.game.events.emit('afk-toggle-requested');
+    return { active: z.afkActive, target: z.target?.name ?? null };
+  });
+  check(
+    'the AFK toggle starts a camp with nothing selected',
+    camped.active === true && camped.target === null,
+  );
+
+  const fought = await waitFor(
+    (s) => s.afk.target !== null && s.mobs.some((m) => m.engaged),
+    'the camp to pick a fight on its own',
+  );
+  check(
+    'camping picks a target and opens combat with no input',
+    fought.afk.target !== null,
+    `engaged ${fought.afk.target} unprompted`,
+  );
+
+  // Real keyboard input through Phaser's own plugin, not a method call.
+  await page.keyboard.down('w');
+  const released = await waitFor((s) => !s.afk.active, 'walking to end the camp');
+  await page.keyboard.up('w');
+  check('moving by hand takes the controls back from the camp', released.afk.active === false);
 
   // --- Leash: a chasing rat that loses the player resets and heals. ---
   // Set this up from scratch rather than reusing the rat from the fight above,
