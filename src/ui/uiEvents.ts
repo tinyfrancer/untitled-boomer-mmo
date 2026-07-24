@@ -36,6 +36,10 @@ export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
 export const COMBAT_LOG_EVENT = 'combat-log';
 // Asked for by the options menu; ZoneScene owns the save, so it does the work.
 export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
+// AFK camping. The HUD asks for the toggle; ZoneScene owns whether it is on,
+// since anything in the world can turn it back off, and reports the answer.
+export const AFK_TOGGLE_REQUESTED_EVENT = 'afk-toggle-requested';
+export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.

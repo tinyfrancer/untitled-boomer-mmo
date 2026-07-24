@@ -38,6 +38,8 @@ import {
   PLAYER_MANA_CHANGED_EVENT,
   COMBAT_LOG_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
+  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_STATE_CHANGED_EVENT,
   type AbilityState,
   type SkillProgressInfo,
   type TargetInfo,
@@ -86,6 +88,7 @@ interface HudModel {
   combatLogVisible: boolean;
   shopOpen: boolean;
   actions: AvailableActions;
+  afkActive: boolean;
 }
 
 export class UIScene extends Phaser.Scene {
@@ -101,6 +104,7 @@ export class UIScene extends Phaser.Scene {
   private actionBar!: ActionBar;
   private combatLogPanel!: CombatLogPanel;
   private optionsPanel: OptionsPanel | null = null;
+  private afkButton: Phaser.GameObjects.Rectangle | null = null;
   // Null for a class with no mana pool, which is what the bar's absence means.
   private manaBarFill: Phaser.GameObjects.Rectangle | null = null;
   private manaText: Phaser.GameObjects.Text | null = null;
@@ -127,6 +131,7 @@ export class UIScene extends Phaser.Scene {
     combatLogVisible: false,
     shopOpen: false,
     actions: { nearFire: false },
+    afkActive: false,
   };
 
   constructor() {
@@ -182,10 +187,12 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(PLAYER_MANA_CHANGED_EVENT, this.handleManaChanged, this);
     this.game.events.on(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
     this.game.events.on(COMBAT_LOG_EVENT, this.handleCombatLog, this);
+    this.game.events.on(AFK_STATE_CHANGED_EVENT, this.handleAfkStateChanged, this);
 
     this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
     this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
     this.input.keyboard?.on('keydown-L', this.toggleCombatLog, this);
+    this.input.keyboard?.on('keydown-Z', () => this.game.events.emit(AFK_TOGGLE_REQUESTED_EVENT));
     // The action bar's two slots, in the order it draws them.
     abilitiesFor(this.classId).forEach((ability, index) => {
       this.input.keyboard?.on(`keydown-${['ONE', 'TWO'][index]}`, () =>
@@ -218,6 +225,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(PLAYER_MANA_CHANGED_EVENT, this.handleManaChanged, this);
       this.game.events.off(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
       this.game.events.off(COMBAT_LOG_EVENT, this.handleCombatLog, this);
+      this.game.events.off(AFK_STATE_CHANGED_EVENT, this.handleAfkStateChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       // Owns an off-display-list mask that a scene teardown won't reach.
       this.inventoryPanel?.destroy();
@@ -246,6 +254,7 @@ export class UIScene extends Phaser.Scene {
     // Rebuilt below; the old objects are already gone with the rest of the HUD.
     this.manaBarFill = null;
     this.manaText = null;
+    this.afkButton = null;
     const margin = px(THEME.margin, this.uiScale);
 
     this.targetFrame = new TargetFrame(this, margin, margin, this.uiScale);
@@ -509,7 +518,11 @@ export class UIScene extends Phaser.Scene {
     this.createToggleButton(x, y, size, 'C', () => this.toggleCharacterPanel());
     this.createToggleButton(x + size + gap, y, size, 'I', () => this.toggleInventoryPanel());
     this.createToggleButton(x + (size + gap) * 2, y, size, 'L', () => this.toggleCombatLog());
-    this.createToggleButton(x + (size + gap) * 3, y, size, '⚙', () => this.openOptions());
+    this.afkButton = this.createToggleButton(x + (size + gap) * 3, y, size, 'Z', () =>
+      this.game.events.emit(AFK_TOGGLE_REQUESTED_EVENT),
+    );
+    this.createToggleButton(x + (size + gap) * 4, y, size, '⚙', () => this.openOptions());
+    this.refreshAfkButton();
   }
 
   private createToggleButton(
@@ -518,8 +531,8 @@ export class UIScene extends Phaser.Scene {
     size: number,
     label: string,
     onClick: () => void,
-  ): void {
-    this.add
+  ): Phaser.GameObjects.Rectangle {
+    const button = this.add
       .rectangle(x, y, size, size, THEME.buttonBg, THEME.buttonAlpha)
       .setOrigin(0, 0)
       .setStrokeStyle(px(1, this.uiScale), 0x888888)
@@ -533,6 +546,16 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0);
+    return button;
+  }
+
+  // Lit while camping, since the mode is otherwise invisible — the character
+  // fighting on their own looks the same as the player fighting.
+  private refreshAfkButton(): void {
+    this.afkButton?.setStrokeStyle(
+      px(this.model.afkActive ? 2 : 1, this.uiScale),
+      this.model.afkActive ? THEME.xpFill : 0x888888,
+    );
   }
 
   // Centred just below the player, who the camera keeps centred anyway.
@@ -718,6 +741,12 @@ export class UIScene extends Phaser.Scene {
   private handleAbilityStateChanged = (states: AbilityState[]): void => {
     this.model.abilities = states;
     this.actionBar.update(states);
+  };
+
+  private handleAfkStateChanged = (active: boolean): void => {
+    this.model.afkActive = active;
+    this.refreshAfkButton();
+    this.showToast(active ? 'Camping (Z)' : 'Camp ended', THEME.color.skillUp);
   };
 
   private handleCombatLog = (entry: CombatLogEntry): void => {
