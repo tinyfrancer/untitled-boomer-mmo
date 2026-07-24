@@ -161,6 +161,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.strength = stats.strength;
     this.intellect = stats.intellect;
     this.attackPower = stats.attackPower;
+    // Reach rides the weapon now, so putting the wand away has to shorten it
+    // here rather than waiting for the scene to rebuild the sprite.
+    this.attackRange = stats.attackRange;
   }
 
   /** Returns how much a mana shield soaked, for the scene to show. */

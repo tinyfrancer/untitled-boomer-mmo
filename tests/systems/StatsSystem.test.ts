@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MELEE_ATTACK_RANGE, UNARMED_ATTACK_RANGE } from '../../src/data/items';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import type { GearSlotId } from '../../src/types/ids';
 
@@ -103,5 +104,37 @@ describe('computeEffectiveStats', () => {
     const stats = computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'nonexistent-item' });
     expect(stats.maxHp).toBe(40);
     expect(stats.strength).toBe(6);
+  });
+});
+
+describe('attack range', () => {
+  it('takes its reach from the weapon, not the class', () => {
+    for (const classId of ['warrior', 'wizard'] as const) {
+      expect(
+        computeEffectiveStats(classId, { ...NO_GEAR, weapon: 'apprentice-wand' }).attackRange,
+      ).toBe(200);
+      expect(
+        computeEffectiveStats(classId, { ...NO_GEAR, weapon: 'rusty-sword' }).attackRange,
+      ).toBe(MELEE_ATTACK_RANGE);
+    }
+  });
+
+  // The bug this replaced: a wizard with an empty weapon slot kept the class's
+  // 280 reach and sniped from across the zone bare-handed.
+  it('puts an unarmed character in punching range whatever their class', () => {
+    expect(computeEffectiveStats('wizard', NO_GEAR).attackRange).toBe(UNARMED_ATTACK_RANGE);
+    expect(computeEffectiveStats('warrior', NO_GEAR).attackRange).toBe(UNARMED_ATTACK_RANGE);
+  });
+
+  it('treats a weapon that names no range as melee', () => {
+    expect(
+      computeEffectiveStats('warrior', { ...NO_GEAR, weapon: 'felling-axe' }).attackRange,
+    ).toBe(MELEE_ATTACK_RANGE);
+  });
+
+  it('falls back to unarmed for an unknown weapon id', () => {
+    expect(
+      computeEffectiveStats('wizard', { ...NO_GEAR, weapon: 'nonexistent-item' }).attackRange,
+    ).toBe(UNARMED_ATTACK_RANGE);
   });
 });

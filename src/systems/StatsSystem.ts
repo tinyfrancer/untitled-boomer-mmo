@@ -1,5 +1,5 @@
 import { CLASSES } from '../data/classes';
-import { getEquipmentBonuses } from '../data/items';
+import { getEquipmentBonuses, weaponAttackRange } from '../data/items';
 import type { ClassId, GearSlotId } from '../types/ids';
 
 // Intellect buys this much mana a point. Only classes that cast get a pool at
@@ -52,7 +52,7 @@ export function computeEffectiveStats(
     strength,
     intellect,
     attackPower: primaryStatValue + bonuses.attackPower,
-    attackRange: classDef.baseStats.attackRange,
+    attackRange: weaponAttackRange(gear.weapon),
     attackCooldownMs: classDef.baseStats.attackCooldownMs,
     speed: classDef.baseStats.speed,
   };

@@ -38,6 +38,9 @@ interface EquipmentItemDefinition {
   // and tools leave it unset and stay open to every class.
   armorType?: ArmorTypeId;
   weaponShape?: WeaponShapeId;
+  // How far this weapon can reach. Unset means melee — only something built to
+  // strike at distance says so, and empty hands are shorter still.
+  attackRange?: number;
   attackPowerBonus?: number;
   healthBonus?: number;
   strengthBonus?: number;
@@ -85,6 +88,9 @@ export const ITEMS: Record<string, ItemDefinition> = {
     slot: 'weapon',
     color: 0x8d6e63,
     weaponShape: 'wand',
+    // The only weapon that reaches: shorter than Fireball, so a wizard who wants
+    // real distance casts for it.
+    attackRange: 200,
     attackPowerBonus: 2,
   },
   'rat-bones': {
@@ -254,6 +260,19 @@ export const ITEMS: Record<string, ItemDefinition> = {
     kind: 'material',
   },
 };
+
+// Auto-attack reach is a property of what you are swinging, not of your class:
+// a wizard holding nothing punches from as close as anyone else.
+export const MELEE_ATTACK_RANGE = 80;
+export const UNARMED_ATTACK_RANGE = 64;
+
+export function weaponAttackRange(itemId: string | null): number {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  if (!item || item.kind !== 'equipment') {
+    return UNARMED_ATTACK_RANGE;
+  }
+  return item.attackRange ?? MELEE_ATTACK_RANGE;
+}
 
 export interface EquipmentBonuses {
   health: number;
