@@ -63,12 +63,17 @@ export class InventoryPanel {
     maxHeight: number,
     actionsFor: (itemId: string) => ItemAction[],
     onAction: (actionId: ItemActionId, itemId: string) => void,
+    // Carried across a HUD rebuild (a resize) so the open item and its action
+    // row survive — the panel is destroyed and recreated, but the selection
+    // lives on the instance, so without this a resize silently deselects.
+    initialSelectedItemId: string | null = null,
   ) {
     this.scene = scene;
     this.scale = scale;
     this.panelX = x;
     this.panelY = y;
     this.maxHeight = maxHeight;
+    this.selectedItemId = initialSelectedItemId;
     this.actionsFor = actionsFor;
     this.onAction = onAction;
 
@@ -156,6 +161,12 @@ export class InventoryPanel {
 
   private rowsTop(): number {
     return px(THEME.padding + TITLE_ROW, this.scale);
+  }
+
+  // The item whose action row is open, for a rebuild to carry across. Null once
+  // nothing is selected.
+  get selectedItem(): string | null {
+    return this.selectedItemId;
   }
 
   setCurrency(totalCopper: number): void {
