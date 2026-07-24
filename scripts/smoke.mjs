@@ -348,6 +348,52 @@ try {
   const walkedOff = await waitFor((s) => !s.gathering, 'the channel to cancel out of range');
   check('walking out of range cancels the channel', walkedOff.gathering === false);
 
+  // --- Encumbrance: a full pack is the other thing that ends an unattended
+  // gathering session, and only a live channel can show it. ---
+  const packed = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    // Weight-1 bones, exactly to the brim.
+    town.character.addItem('rat-bones', town.character.carryCapacity());
+    const tree = town.nodes.find((n) => n.definition.id === 'tree' && n.isAvailable());
+    town.player.setPosition(tree.x, tree.y + 40);
+    town.startGathering(tree);
+    return { started: town.gatherState !== null, logs: town.character.itemCount('logs') };
+  });
+  const stopped = await waitFor((s) => !s.gathering, 'the full pack to stop the channel');
+  check(
+    'a full pack stops the gathering channel instead of looping forever',
+    packed.started === true && stopped.gathering === false,
+  );
+  const spared = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    const logs = town.character.itemCount('logs');
+    // Put the pack back the way it was for the tests downstream.
+    town.character.removeItem('rat-bones', town.character.itemCount('rat-bones'));
+    return { logs };
+  });
+  check(
+    'the refused haul is not silently added to the pack',
+    spared.logs === packed.logs,
+    `logs stayed at ${spared.logs}`,
+  );
+
+  const buying = await page.evaluate(() => {
+    const town = window.game.scene.getScene('Zone');
+    town.character.addItem('rat-bones', town.character.carryCapacity());
+    const before = town.character.state.currency;
+    town.shopNpc = town.npcs[0];
+    town.handleBuyRequested('felling-axe');
+    const after = town.character.state.currency;
+    town.shopNpc = null;
+    town.character.removeItem('rat-bones', town.character.itemCount('rat-bones'));
+    return { before, after };
+  });
+  check(
+    'a full pack refuses a purchase before the coin is spent',
+    buying.before === buying.after,
+    `currency stayed at ${buying.after}`,
+  );
+
   // Fishing runs the same path through a different tool and an endless node.
   const fished = await page.evaluate(async () => {
     const town = window.game.scene.getScene('Zone');

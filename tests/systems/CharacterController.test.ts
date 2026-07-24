@@ -24,6 +24,54 @@ describe('CharacterController inventory', () => {
   });
 });
 
+describe('CharacterController encumbrance', () => {
+  it('starts a fresh character with an empty pack and room in it', () => {
+    const character = makeController();
+    expect(character.carriedWeight()).toBe(0);
+    expect(character.carryCapacity()).toBeGreaterThan(0);
+  });
+
+  it('takes an item that fits', () => {
+    const character = makeController();
+    expect(character.tryAddItem('logs', 2)).toBe(true);
+    expect(character.itemCount('logs')).toBe(2);
+  });
+
+  it('refuses an item that does not fit, and adds nothing at all', () => {
+    const character = makeController();
+    const capacity = character.carryCapacity();
+    // Fill the pack to the brim with weight-1 bones, then ask for one more.
+    character.addItem('rat-bones', capacity);
+    expect(character.tryAddItem('rat-bones', 1)).toBe(false);
+    expect(character.itemCount('rat-bones')).toBe(capacity);
+    expect(character.carriedWeight()).toBe(capacity);
+  });
+
+  it('reports what it would refuse before being asked to do it', () => {
+    const character = makeController();
+    character.addItem('rat-bones', character.carryCapacity());
+    expect(character.canCarryItem('logs', 1)).toBe(false);
+  });
+
+  // Capacity comes from effective strength, so the leather that raises it
+  // raises what the character can haul too.
+  it('grows capacity with the strength gear buys', () => {
+    const character = makeController();
+    const bare = character.carryCapacity();
+    character.addItem('brown-chestplate', 1);
+    character.equip('brown-chestplate');
+    expect(character.carryCapacity()).toBeGreaterThan(bare);
+  });
+
+  it('stops charging for gear once it is worn rather than carried', () => {
+    const character = makeController();
+    character.addItem('brown-helmet', 1);
+    const carried = character.carriedWeight();
+    character.equip('brown-helmet');
+    expect(character.carriedWeight()).toBeLessThan(carried);
+  });
+});
+
 describe('CharacterController currency', () => {
   it('adds and spends copper against the state', () => {
     const character = makeController();

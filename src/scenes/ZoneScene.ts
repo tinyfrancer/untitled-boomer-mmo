@@ -363,6 +363,12 @@ export class ZoneScene extends Phaser.Scene {
     if (!this.shopNpc) return;
     const price = shopPriceFor(itemId);
     if (price === null) return;
+    // Checked before the coin leaves the purse, so a full pack never sells the
+    // player something they can't take home.
+    if (!this.character.canCarryItem(itemId, 1)) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, 'Your pack is too full to carry that.');
+      return;
+    }
     if (!this.character.spendCurrency(price)) {
       this.game.events.emit(GATHER_REFUSED_EVENT, "You can't afford that.");
       return;
@@ -692,7 +698,14 @@ export class ZoneScene extends Phaser.Scene {
     const { definition } = node;
 
     const quantity = rollGatherQuantity(this.character.skillLevelOf(definition.skill));
-    this.character.addItem(definition.yieldItemId, quantity);
+    // A haul with nowhere to go is not a gather: the node keeps its charge, the
+    // skill earns nothing, and the channel stops rather than spinning forever.
+    // This is what ends an unattended gathering session.
+    if (!this.character.tryAddItem(definition.yieldItemId, quantity)) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, 'Your pack is full.');
+      this.stopGathering();
+      return;
+    }
     this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     this.awardSkillXp(definition.skill, definition.xpReward);
 
@@ -1015,11 +1028,19 @@ export class ZoneScene extends Phaser.Scene {
     if (!lootTableId) return;
     const { drops, copper } = rollLootTable(lootTableId);
 
-    if (drops.length > 0) {
-      drops.forEach((drop) => {
-        this.character.addItem(drop.itemId, drop.quantity);
-        this.log(logLoot(describeItemName(drop.itemId), drop.quantity));
-      });
+    let took = false;
+    drops.forEach((drop) => {
+      const name = describeItemName(drop.itemId);
+      // A full pack leaves the drop on the corpse rather than silently eating
+      // it: the log line is the only way the player would ever know.
+      if (!this.character.tryAddItem(drop.itemId, drop.quantity)) {
+        this.log(logNotice(`Your pack is too full to carry ${name}.`));
+        return;
+      }
+      this.log(logLoot(name, drop.quantity));
+      took = true;
+    });
+    if (took) {
       this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     }
     if (copper > 0) {
