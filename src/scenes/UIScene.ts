@@ -92,6 +92,9 @@ interface HudModel {
   shopOpen: boolean;
   actions: AvailableActions;
   afkActive: boolean;
+  // The bag row whose actions are open, held here only so a HUD rebuild can
+  // hand it back to the fresh panel.
+  inventorySelectedItemId: string | null;
 }
 
 export class UIScene extends Phaser.Scene {
@@ -136,6 +139,7 @@ export class UIScene extends Phaser.Scene {
     shopOpen: false,
     actions: { nearFire: false },
     afkActive: false,
+    inventorySelectedItemId: null,
   };
 
   constructor() {
@@ -249,6 +253,11 @@ export class UIScene extends Phaser.Scene {
     // Destroyed with the rest of the children; buildHud reopens it if the shop
     // is still open.
     this.shopPanel = null;
+    // Carry the open item across the rebuild — the selection lives on the
+    // panel instance, which is about to be destroyed. On a phone a tap can
+    // trigger a resize (the URL bar hiding), and without this the item the tap
+    // just selected would deselect a frame later.
+    this.model.inventorySelectedItemId = this.inventoryPanel?.selectedItem ?? null;
     // Explicit: the inventory panel owns scene-level input listeners and an
     // off-list mask that children.removeAll can't reach.
     this.inventoryPanel?.destroy();
@@ -477,6 +486,7 @@ export class UIScene extends Phaser.Scene {
           classId: this.classId,
         }),
       (actionId, itemId) => this.dispatchItemAction(actionId, itemId),
+      this.model.inventorySelectedItemId,
     );
   }
 

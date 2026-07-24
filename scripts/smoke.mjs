@@ -969,6 +969,49 @@ try {
     `scrollY ${invScrolled.scrollY} -> ${invDragged.scrollY}, selection kept`,
   );
   await page.screenshot({ path: `${OUT}/10-inventory-scroll.png` });
+
+  // A resize rebuilds the whole HUD, and the selection lives on the panel
+  // instance — so without carrying it across, a resize deselects. On a phone a
+  // tap hides the URL bar, which resizes, so the item you just tapped would
+  // lose its action row a frame later. The selection and its Equip button must
+  // survive the rebuild. brown-legs is in the injected bag and a warrior can
+  // wear it, so its row is guaranteed an Equip action.
+  const equipShown = () =>
+    page.evaluate(() =>
+      window.game.scene
+        .getScene('UI')
+        .inventoryPanel.rowObjects.some((o) => o.type === 'Text' && o.text === 'Equip'),
+    );
+  await page.evaluate(() => {
+    const p = window.game.scene.getScene('UI').inventoryPanel;
+    p.selectedItemId = 'brown-legs';
+    p.render();
+  });
+  const beforeResize = { selected: (await invPanel()).selected, equip: await equipShown() };
+  await page.setViewportSize({ width: 1280, height: 864 });
+  await page.waitForTimeout(300);
+  const afterResize = { selected: (await invPanel()).selected, equip: await equipShown() };
+  check(
+    'the selected item and its Equip button survive a resize',
+    beforeResize.selected === 'brown-legs' &&
+      beforeResize.equip &&
+      afterResize.selected === 'brown-legs' &&
+      afterResize.equip,
+    `equip before/after resize: ${beforeResize.equip}/${afterResize.equip}`,
+  );
+  // And a selection whose item is gone must still clear across a resize.
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.removeItem('brown-legs', z.character.itemCount('brown-legs'));
+    z.game.events.emit('inventory-changed', z.character.state.inventory);
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForTimeout(300);
+  check(
+    'a selection whose item is gone clears rather than lingering',
+    (await invPanel()).selected === null,
+  );
+
   await page.evaluate(() => {
     const z = window.game.scene.getScene('Zone');
     z.character.state.inventory = { logs: 1 };
