@@ -317,7 +317,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       vx = (vx / length) * this.speed;
       vy = (vy / length) * this.speed;
     } else if (this.moveTarget) {
-      const step = stepToward(this.x, this.y, this.moveTarget, this.speed);
+      const step = stepToward(this.x, this.y, this.moveTarget, this.speed, deltaMs);
       if (step.arrived) {
         this.moveTarget = null;
       }

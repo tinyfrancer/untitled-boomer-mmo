@@ -857,8 +857,14 @@ try {
     town.player.moveTo(target.x, target.y);
     return { x: Math.round(target.x), y: Math.round(target.y) };
   });
+  // Generous, and deliberately so: how close "arrived" is scales with how far
+  // one frame carries the player (see arriveRadius), so a runner stepping the
+  // game at 7fps legitimately stops ~27px out where a 60fps one stops within 8.
+  const ARRIVED_WITHIN = 48;
   const moved = await waitFor(
-    (s) => Math.abs(s.player.x - moveTarget.x) <= 12 && Math.abs(s.player.y - moveTarget.y) <= 12,
+    (s) =>
+      Math.abs(s.player.x - moveTarget.x) <= ARRIVED_WITHIN &&
+      Math.abs(s.player.y - moveTarget.y) <= ARRIVED_WITHIN,
     'player to walk to the click destination',
   );
   check(
