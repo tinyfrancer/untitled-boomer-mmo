@@ -9,10 +9,11 @@ side project by a professional software engineer with no prior game-dev experien
 v1: single-player only; three zones (town with leveled rats and a shop, a beach with crabs and
 ocean fishing, a bandit camp with aggressive humanoids); character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency and vendoring;
+a weight-limited pack; an AFK camping mode that also pays out offline;
 click/tap-to-move with a mobile-first HUD; and local save/load with versioned migrations.
-Per-feature briefs live in `docs/feature_N_*.txt`. Full long-term vision is in `docs/initial_design.txt` (multiplayer, more zones,
-skills like fishing, etc.) — most of it is intentionally not built yet, so don't assume features
-from that doc exist in code.
+Per-feature briefs live in `docs/feature_N_*.txt`. Full long-term vision is in
+`docs/initial_design.txt` (multiplayer, more zones, more skills) — most of it is intentionally
+not built yet, so don't assume features from that doc exist in code.
 
 ## Commands
 
@@ -31,9 +32,11 @@ npm run smoke       # browser smoke check (needs `npm run dev` running in anothe
 Run a single test file: `npx vitest run tests/systems/CombatSystem.test.ts`
 Run tests matching a name: `npx vitest run -t "isCooldownReady"`
 
-There is no CI config in this repo yet — `lint`, `typecheck`, and `test` are the gates to run
-manually before considering a change done. Don't commit on a red suite, including failures that
-pre-date your change; fixing a broken test _environment_ is in scope, not a distraction.
+CI runs on every PR (`.github/workflows/ci.yml`): `gates (node 22)` and `gates (node 25)` run
+lint/typecheck/test on both Node versions, and `browser smoke` runs the real Playwright check.
+**The smoke job blocks merges**, so run `npm run smoke` locally before opening a PR rather than
+finding out from CI. Don't commit on a red suite, including failures that pre-date your change;
+fixing a broken test _environment_ is in scope, not a distraction.
 
 ## Workflow
 
@@ -68,6 +71,20 @@ Two environment notes that will otherwise waste your time:
   don't "fix" `LocalStorageSaveService` to work around it — the source was never the problem.
 - **The first `npm run dev` request cold-compiles all of Phaser** (~1.2 MB) and can take far
   longer than a normal page load, so browser waits need generous timeouts on a cold cache.
+
+**Reproducing a smoke failure that only happens on CI.** The runner steps the game far slower
+than a dev machine — 7fps has been seen — and frame-rate-dependent bugs hide there. Don't guess
+across CI cycles: copy `scripts/smoke.mjs` into `scripts/` under another name (it has to stay in
+that directory so `playwright` resolves), add CPU throttling after the page is created, and run
+it with `node`.
+
+```js
+const client = await page.context().newCDPSession(page);
+await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
+```
+
+A rate of 8 lands around 20fps and reproduced the last such bug every run. Iterating that way
+takes seconds instead of three minutes a guess. Delete the copy when you're done.
 
 ## Architecture
 
@@ -137,6 +154,28 @@ unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`) that key into them. Prefer
 in a scene/entity — a new enemy type should be an `ENEMIES` row plus a loot table, not a new
 `Mob` subclass with numbers baked in.
 
+**Acquiring an item can fail.** The pack has a weight limit (`systems/EncumbranceSystem.ts`,
+capacity from strength), so gathering, loot and buying all go through
+`CharacterController.tryAddItem`, which adds nothing and returns false when the pack is full.
+Use it rather than `addItem` for anything the world hands the player, and handle the refusal —
+a full pack is what ends an unattended gathering session. Currency is weightless and never fails.
+
+**Frame rate is not an assumption you may make.** A loaded CI runner or a cheap phone steps the
+game at single-digit fps, where one frame carries the player ~46px. Anything comparing a distance
+against a fixed threshold has to scale that threshold with the frame's travel — see
+`arriveRadius` in `systems/MovementSystem.ts`, which exists because a fixed 8px arrival band left
+the player orbiting a tap destination forever below 30fps. Note also that returning a velocity
+above normal speed to "land exactly" does not work: Phaser integrates velocity over the physics
+world's own timestep, not over the `delta` handed to the scene, and the mismatch shows up as an
+overshoot.
+
+**AFK play must stay behind active play** (`systems/AfkSystem.ts`, `systems/OfflineAfkSystem.ts`).
+Two mechanisms hold that, and both matter: the AFK loop never uses an ability, so the action bar
+is an advantage only a real player gets, and `awardXp` halves what it earns. Offline progress
+accrues only from a session parked with the toggle, and is capped at **one level per session** —
+a per-kill rate alone is not safe, since eight hours in the richest zone out-earned the entire
+level 1-10 curve several times over. Keep that cap if you add a zone or change the XP curve.
+
 **Levels scale both sides.** Enemies carry a `level` and derive HP/damage/XP from
 `base + perLevel` via `scaleEnemyStats()`; characters grow through `perLevel` on their class and
 `computeEffectiveStats(classId, gear, level)`. Keep those in step — making enemies tougher
@@ -148,6 +187,12 @@ Combat tuning is deliberate, not arbitrary: a fresh level 1 character should bea
 comfortably, sweat against a level 2, and lose to a level 3. If you change class stats, weapon
 bonuses, or enemy growth, re-check that curve — simulating duels across the level range is much
 faster than playing it.
+
+Auto-attack **range comes from the equipped weapon, not the class** (`weaponAttackRange` in
+`data/items.ts`): a weapon may name an `attackRange`, anything that doesn't is melee, and empty
+hands are shorter still. Abilities carry their own ranges, so a caster's reach is the spell
+rather than the class. `Player.applyStats()` has to reassign `attackRange` alongside the other
+stats or a weapon swap won't change reach until the scene rebuilds.
 
 **Textures are generated procedurally at runtime** (`src/scenes/generateTextures.ts`) using
 Phaser's `Graphics.generateTexture`, not loaded from image files — there are no art assets yet
