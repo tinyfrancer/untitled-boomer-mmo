@@ -2,7 +2,7 @@ import { CLASSES } from '../data/classes';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { ClassId, GearSlotId, ZoneId } from '../types/ids';
 
-export const CHARACTER_STATE_VERSION = 7;
+export const CHARACTER_STATE_VERSION = 8;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -21,8 +21,17 @@ export interface CharacterState {
   skills: Skills;
   zoneId: ZoneId;
   position: { x: number; y: number };
+  // The camp the character was left at, if they were left at one. Present only
+  // between an AFK toggle-on and the next load, which is what makes offline
+  // progress something the player opted into rather than a background trickle.
+  afk: AfkSession | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AfkSession {
+  startedAt: string;
+  zoneId: ZoneId;
 }
 
 export function createNewCharacter(name: string, classId: ClassId): CharacterState {
@@ -45,6 +54,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     skills: createInitialSkills(),
     zoneId: 'town',
     position: { x: 0, y: 0 },
+    afk: null,
     createdAt: now,
     updatedAt: now,
   };

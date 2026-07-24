@@ -40,6 +40,7 @@ import {
   RESET_CHARACTER_REQUESTED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   AFK_STATE_CHANGED_EVENT,
+  OFFLINE_AFK_RESOLVED_EVENT,
   type AbilityState,
   type SkillProgressInfo,
   type TargetInfo,
@@ -47,6 +48,8 @@ import {
 import { ActionBar } from '../ui/ActionBar';
 import { CombatLogPanel, combatLogPanelHeight } from '../ui/CombatLogPanel';
 import { OptionsPanel } from '../ui/OptionsPanel';
+import { AwayReportPanel } from '../ui/AwayReportPanel';
+import type { OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { abilitiesFor } from '../systems/AbilitySystem';
 import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
@@ -105,6 +108,7 @@ export class UIScene extends Phaser.Scene {
   private combatLogPanel!: CombatLogPanel;
   private optionsPanel: OptionsPanel | null = null;
   private afkButton: Phaser.GameObjects.Rectangle | null = null;
+  private awayReportPanel: AwayReportPanel | null = null;
   // Null for a class with no mana pool, which is what the bar's absence means.
   private manaBarFill: Phaser.GameObjects.Rectangle | null = null;
   private manaText: Phaser.GameObjects.Text | null = null;
@@ -165,6 +169,7 @@ export class UIScene extends Phaser.Scene {
     this.model.combatLogVisible = !this.isNarrow();
 
     this.buildHud();
+    this.showAwayReport();
 
     this.game.events.on(TARGET_SELECTED_EVENT, this.handleTargetSelected, this);
     this.game.events.on(TARGET_CLEARED_EVENT, this.handleTargetCleared, this);
@@ -239,6 +244,8 @@ export class UIScene extends Phaser.Scene {
     this.slotPicker = null;
     this.optionsPanel?.close();
     this.optionsPanel = null;
+    this.awayReportPanel?.close();
+    this.awayReportPanel = null;
     // Destroyed with the rest of the children; buildHud reopens it if the shop
     // is still open.
     this.shopPanel = null;
@@ -589,6 +596,20 @@ export class UIScene extends Phaser.Scene {
       this.slotPicker?.close();
       this.slotPicker = null;
     }
+  }
+
+  // ZoneScene leaves this in the registry on the boot that resolved a parked
+  // camp; it had already paid the character out by then, so a missed panel
+  // costs the player nothing but the news.
+  private showAwayReport(): void {
+    const report = this.registry.get(OFFLINE_AFK_RESOLVED_EVENT) as OfflineAfkReport | undefined;
+    if (!report) {
+      return;
+    }
+    this.registry.remove(OFFLINE_AFK_RESOLVED_EVENT);
+    this.awayReportPanel = new AwayReportPanel(this, this.uiScale, report, () => {
+      this.awayReportPanel = null;
+    });
   }
 
   private openOptions(): void {

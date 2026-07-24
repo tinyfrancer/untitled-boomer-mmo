@@ -1192,6 +1192,45 @@ try {
   check("another class's ability can't be cast", gated.wrongClass === true);
   await page.screenshot({ path: `${OUT}/11-abilities.png` });
 
+  // --- Offline camping: a session parked in the save pays out on the next
+  // load. Done last, because it reloads the page. Travelling an hour back in
+  // the save is the only way to reach this path at all — hence the unit tests
+  // around resolveOfflineAfk, with `now` injected, doing the harder cases. ---
+  // Written through the live game rather than into localStorage directly: the
+  // page's own beforeunload handler persists on reload and would overwrite a
+  // hand-written save. Only the clock is faked; the session itself is the one
+  // the real toggle wrote.
+  await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.state.level = 1;
+    z.character.state.xp = 0;
+    window.game.events.emit('afk-toggle-requested');
+    z.character.state.afk.startedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.game?.scene?.getScene('Zone')?.scene.isActive(), null, {
+    timeout: 60000,
+  });
+  const resumed = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const ui = window.game.scene.getScene('UI');
+    return {
+      xp: z.character.state.xp,
+      level: z.character.state.level,
+      afk: z.character.state.afk,
+      panel: ui?.awayReportPanel != null,
+    };
+  });
+  check(
+    'an hour parked in the save pays xp out on the next load',
+    resumed.xp > 0 || resumed.level > 1,
+    `level ${resumed.level}, xp ${resumed.xp}`,
+  );
+  check('the away report is shown for it', resumed.panel === true);
+  // Cleared on the load that paid it, so a second load can't pay it twice.
+  check('the parked session is cleared once resolved', resumed.afk === null);
+  await page.screenshot({ path: `${OUT}/13-away-report.png` });
+
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 } catch (err) {
   check('smoke run completed', false, String(err.message ?? err));

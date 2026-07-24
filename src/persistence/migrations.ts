@@ -33,6 +33,9 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     ...state,
     skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
   }),
+  // v7 → v8: AFK camping arrives. Nobody was camping before it existed, so an
+  // upgraded save starts with no session and earns nothing for the gap.
+  7: (state) => ({ ...state, afk: null }),
 };
 
 /**

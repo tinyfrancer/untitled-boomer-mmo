@@ -40,6 +40,9 @@ export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
 // since anything in the world can turn it back off, and reports the answer.
 export const AFK_TOGGLE_REQUESTED_EVENT = 'afk-toggle-requested';
 export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
+// What a camp earned while the tab was closed. Emitted once, on the load that
+// resolved the session; carries an OfflineAfkReport.
+export const OFFLINE_AFK_RESOLVED_EVENT = 'offline-afk-resolved';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.

@@ -40,7 +40,9 @@ import {
   RESET_CHARACTER_REQUESTED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   AFK_STATE_CHANGED_EVENT,
+  OFFLINE_AFK_RESOLVED_EVENT,
 } from '../ui/uiEvents';
+import { resolveOfflineAfk } from '../systems/OfflineAfkSystem';
 import {
   AFK_ANCHOR_RADIUS,
   afkXpReward,
@@ -190,6 +192,10 @@ export class ZoneScene extends Phaser.Scene {
     this.character = new CharacterController(state);
     this.zone = ZONES[this.initData.zoneId ?? state.zoneId ?? 'town'];
     this.changingZone = false;
+    // A restart reuses this instance, and the camp was a spot in the zone being
+    // left; nothing carries over.
+    this.afkActive = false;
+    this.afkRecovering = false;
 
     const tilemap = this.make.tilemap({
       data: this.zone.map,
@@ -332,6 +338,9 @@ export class ZoneScene extends Phaser.Scene {
       this.game.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
       this.game.events.off(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
     });
+
+    // Last, so the player, the mobs and the log are all there to pay it into.
+    this.resolveParkedAfk();
 
     // The HUD survives zone changes: launched once on first boot, and left
     // running when this scene restarts into another zone.
@@ -684,7 +693,49 @@ export class ZoneScene extends Phaser.Scene {
     } else {
       this.log(logNotice('You snap out of it.'));
     }
+    // Written to the save, not just held here: it is the only record that
+    // survives the tab closing, and the only thing offline progress is paid on.
+    this.character.state.afk = active
+      ? { startedAt: new Date().toISOString(), zoneId: this.zone.id }
+      : null;
+    this.persistCharacter();
     this.game.events.emit(AFK_STATE_CHANGED_EVENT, this.afkActive);
+  }
+
+  /**
+   * Pays out a camp that was left running when the tab closed. Runs once, on
+   * the load that finds the session, and clears it either way — a session that
+   * paid nothing must not be able to pay again on the next load.
+   */
+  private resolveParkedAfk(): void {
+    const session = this.character.state.afk;
+    if (!session) return;
+    this.character.state.afk = null;
+
+    const report = resolveOfflineAfk(session, {
+      now: Date.now(),
+      characterLevel: this.character.state.level,
+      inventory: this.character.state.inventory,
+      capacity: this.character.carryCapacity(),
+    });
+    if (report.kills <= 0) {
+      this.persistCharacter();
+      return;
+    }
+
+    for (const [itemId, quantity] of Object.entries(report.drops)) {
+      this.character.addItem(itemId, quantity);
+    }
+    this.character.addCurrency(report.copper);
+    this.awardXp(report.xp);
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+    // Handed over through the registry rather than as an event, because the
+    // only load that can find a parked session is the first boot into this
+    // scene — a zone change clears the camp on its way out — and the HUD is
+    // not listening yet at that point.
+    this.registry.set(OFFLINE_AFK_RESOLVED_EVENT, report);
+    this.persistCharacter();
   }
 
   private updateAfk(): void {
