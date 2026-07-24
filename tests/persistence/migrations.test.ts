@@ -80,6 +80,24 @@ describe('migrateCharacterState', () => {
     expect(migrated?.zoneId).toBe('town');
   });
 
+  it('gives a v7 save no camp, so the gap before AFK existed earns nothing', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 7,
+      currency: 0,
+      zoneId: 'town',
+    });
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.afk).toBeNull();
+  });
+
+  it('carries the combat skills a v6 save never had all the way to current', () => {
+    const migrated = migrateCharacterState({ ...v4Save(), version: 6, currency: 0 });
+    expect(migrated?.skills['one-handed']).toEqual({ level: 1, xp: 0 });
+    // ...without flattening the gathering progress it did have.
+    expect(migrated?.skills.woodcutting).toEqual({ level: 2, xp: 10 });
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();
