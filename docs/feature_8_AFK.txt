@@ -1,0 +1,12 @@
+We want the game to have an AFK element for second screen situations.  AFK experience should always be slower than active experience.
+Trying to come up with ways to implement, perhaps we have one mob who is always aggro in an area, so it always attacks us when it respawns?
+
+How could we handle offline AFK exp if we wanted to?  Would we implement some time mechanism to save the time the game went idle and then when it woke?
+
+Fishing and woodcutting are already semi-afk due to there being no limits on bag weight/inventory size.  This won't always be the case though. 
+Perhaps inventory size should be taken into consideration for this pass as well.
+
+Bugs: 
+Seems like wizard still attacks ranged with no weapon equipped.  Thinking maybe auto attacks will all be based on melee weapons attached. Ranged would come from spells.
+
+Looking for feedback and questions around this feature and what all should possible be included as well.

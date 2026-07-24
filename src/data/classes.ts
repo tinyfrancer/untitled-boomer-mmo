@@ -14,7 +14,6 @@ export interface ClassStats {
   strength: number;
   intellect: number;
   primaryStat: PrimaryStat;
-  attackRange: number;
   attackCooldownMs: number;
   // Added once per level gained past 1, so a class grows along its own axis.
   perLevel: LevelGrowth;
@@ -42,7 +41,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       strength: 6,
       intellect: 1,
       primaryStat: 'strength',
-      attackRange: 80,
       attackCooldownMs: 1200,
       perLevel: { maxHp: 6, strength: 2, intellect: 0 },
     },
@@ -59,7 +57,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       strength: 1,
       intellect: 6,
       primaryStat: 'intellect',
-      attackRange: 280,
       attackCooldownMs: 1400,
       perLevel: { maxHp: 3, strength: 0, intellect: 2 },
     },

@@ -534,6 +534,29 @@ try {
     `woodcutting ${capped.woodcutting}`,
   );
 
+  // --- Reach: a live weapon swap has to move attackRange, which is the half of
+  // the fix the unit suite can't see (it tests the stats, not the sprite). ---
+  const reach = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const original = { ...z.character.state.gear };
+    const rangeWith = (weapon) => {
+      z.player.setGear({ ...original, weapon });
+      return z.player.attackRange;
+    };
+    const measured = {
+      sword: rangeWith('rusty-sword'),
+      wand: rangeWith('apprentice-wand'),
+      bare: rangeWith(null),
+    };
+    z.player.setGear(original);
+    return measured;
+  });
+  check(
+    'swapping weapons changes auto-attack reach on the live player',
+    reach.sword === 80 && reach.wand === 200 && reach.bare === 64,
+    `sword ${reach.sword}, wand ${reach.wand}, bare-handed ${reach.bare}`,
+  );
+
   // --- Leash: a chasing rat that loses the player resets and heals. ---
   // Set this up from scratch rather than reusing the rat from the fight above,
   // which the player may well have finished off by now. Aim the player at the
