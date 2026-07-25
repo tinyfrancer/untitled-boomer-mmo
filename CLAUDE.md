@@ -9,8 +9,10 @@ side project by a professional software engineer with no prior game-dev experien
 v1: single-player only; three zones (town with leveled rats and a shop, a beach with crabs and
 ocean fishing, a bandit camp with aggressive humanoids); character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency and vendoring;
-a weight-limited pack; an AFK camping mode that also pays out offline;
-click/tap-to-move with a mobile-first HUD; and local save/load with versioned migrations.
+a weight-limited pack; two collection quests from the shopkeeper; an AFK camping mode that
+also pays out offline; click/tap-to-move with a mobile-first HUD; and local save/load with
+versioned migrations. All three zones are level 1-3 starter content — what separates them is
+what they drop, not how hard they are.
 Per-feature briefs live in `docs/feature_N_*.txt`. Full long-term vision is in
 `docs/initial_design.txt` (multiplayer, more zones, more skills) — most of it is intentionally
 not built yet, so don't assume features from that doc exist in code.
@@ -113,6 +115,21 @@ a phone); walking into the map edge still transitions too, for keyboards. Both a
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not a
 new scene class.
 
+**The HUD is a bottom tab bar plus sheets** (`scenes/UIScene.ts`, `ui/TabBar.ts`). Char / Bag /
+Quests / Log open one sheet at a time — the model holds a single `openSheet`, not a visible flag per
+panel — while Camp and the gear icon are actions that open nothing. Layout arithmetic lives in the
+Phaser-free `ui/layout.ts` and is unit-tested at real viewport sizes; put new HUD geometry there
+rather than inline in the scene. The breakpoint keys on **height as well as width**, because a
+landscape phone (844x390) is wide by any measure and has less vertical room than a portrait one.
+`ui/Button.ts` and `ui/Panel.ts` are the shared chrome — use them rather than hand-rolling a
+rectangle, a label and a hit area again.
+
+**Nothing in the world may be drawn under the tab bar.** The bar is opaque and swallows every tap
+that lands on it, so `ZoneScene.applyCameraZoom` shrinks the world camera's viewport to stop at
+`worldViewportHeight()`. This is not decoration: the south signpost in town rendered four pixels
+inside the bar on a portrait phone and could not be tapped at all. If you add bottom furniture,
+reserve its height there rather than hoping nothing important lands in the last sixty pixels.
+
 **Scene-to-scene communication** goes through `this.game.events` (a global Phaser event emitter),
 not direct references between scenes — see `src/ui/uiEvents.ts` for the event name constants
 (`target-selected`, `xp-gained`, `level-up`, `equip-item-requested`, etc.). `ZoneScene` owns gameplay
@@ -148,11 +165,25 @@ with no chain of steps to the current version is dropped.
 
 **Data-driven definitions** (`src/data/`): class stats (`classes.ts`), items/gear (`items.ts`),
 enemy definitions (`enemies.ts`), where and at what level they spawn (`spawns.ts`), loot
-(`lootTables.ts`), the XP curve (`xpTable.ts`), zones (`zones.ts`), and the tilemap layouts
-(`tiles.ts`, `townMap.ts`) are plain data tables keyed by id. `types/ids.ts` holds the id
-unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`) that key into them. Prefer adding a row to one of these tables over hardcoding values
-in a scene/entity — a new enemy type should be an `ENEMIES` row plus a loot table, not a new
-`Mob` subclass with numbers baked in.
+(`lootTables.ts`), quests (`quests.ts`), the XP curve (`xpTable.ts`), zones (`zones.ts`), and the
+tilemap layouts (`tiles.ts`, `townMap.ts`) are plain data tables keyed by id. `types/ids.ts` holds
+the id unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`, `QuestId`) that key into them. Prefer
+adding a row to one of these tables over hardcoding values in a scene/entity — a new enemy type
+should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numbers baked in.
+
+**Only humanoids drop gear and coin.** `EnemyDefinition.family` is `beast | humanoid`, and it is
+what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by
+a test rather than by construction, since the tables are hand-written. It is also the thing that
+makes three same-level zones worth visiting: rats give quest parts, crabs give food, bandits give
+gear and coin. The bandit table carries **both** armor types on purpose; cloth is otherwise
+shop-only, which left a wizard unable to wear anything the world dropped.
+
+**Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
+only `active | done` per quest; how far along a "bring me N of X" objective is gets counted off the
+inventory on read. Items reach the bag from loot, gathering, cooking, buying and offline camping,
+and counting on read means none of those paths can forget to bump a counter. `turnInQuest` on
+`CharacterController` refuses as a whole rather than half-applying — taking the objective and
+finding no room for the reward is the one outcome that can't be undone.
 
 **Acquiring an item can fail.** The pack has a weight limit (`systems/EncumbranceSystem.ts`,
 capacity from strength), so gathering, loot and buying all go through
@@ -175,18 +206,28 @@ is an advantage only a real player gets, and `awardXp` halves what it earns. Off
 accrues only from a session parked with the toggle, and is capped at **one level per session** —
 a per-kill rate alone is not safe, since eight hours in the richest zone out-earned the entire
 level 1-10 curve several times over. Keep that cap if you add a zone or change the XP curve.
+The camp penalty is for XP a character earns unattended, so a quest reward goes through
+`ZoneScene.publishXpGain` rather than `awardXp` — handing a quest in is something the player did.
 
 **Levels scale both sides.** Enemies carry a `level` and derive HP/damage/XP from
 `base + perLevel` via `scaleEnemyStats()`; characters grow through `perLevel` on their class and
 `computeEffectiveStats(classId, gear, level)`. Keep those in step — making enemies tougher
 without giving characters growth (or vice versa) silently breaks the difficulty curve. Enemy
 name colors come from `conColor()` in `systems/EnemySystem.ts`: gray/green below the player,
-white even, yellow +1, red +2 and up.
+white even, yellow +1, red +2 and up. With every zone in the 1-3 band that spans only three
+shades today — expected, not a bug, and it comes back the moment a higher zone is added.
 
 Combat tuning is deliberate, not arbitrary: a fresh level 1 character should beat a level 1 rat
 comfortably, sweat against a level 2, and lose to a level 3. If you change class stats, weapon
 bonuses, or enemy growth, re-check that curve — simulating duels across the level range is much
-faster than playing it.
+faster than playing it. Crabs are long fights rather than dangerous ones; the bandit camp is
+gated on gear rather than on level, which is the point given it is where gear comes from.
+
+**Pacing is held by a simulation, not by judgement** (`tests/systems/progression.test.ts`). It
+walks the arc the two quests push a player down — rat kills for the bones, fish cooked to open the
+crab recipe, crab kills and cooks for the feast, bandit kills for an armour set — and asserts it
+ends on level 3. Change `xpTable.ts`, a drop chance, a quest objective or the burn rate and this
+is the test that moves; retune until it passes rather than eyeballing the curve.
 
 Auto-attack **range comes from the equipped weapon, not the class** (`weaponAttackRange` in
 `data/items.ts`): a weapon may name an `attackRange`, anything that doesn't is melee, and empty
