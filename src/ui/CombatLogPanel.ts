@@ -39,6 +39,7 @@ export class CombatLogPanel {
       scale,
       title: 'Combat Log',
       titleSize: THEME.font.sm,
+      alpha: THEME.sheetAlpha,
     });
 
     const linesTop = pad + px(TITLE_ROW, scale);

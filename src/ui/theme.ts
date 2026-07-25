@@ -28,6 +28,10 @@ export const THEME = {
   xpBar: { width: 190, height: 12 },
   panelBg: 0x000000,
   panelAlpha: 0.65,
+  // Sheets are near-opaque where small overlays are not: a full-width sheet
+  // covers the player column, and at 0.65 the name and XP bar behind it showed
+  // straight through the text.
+  sheetAlpha: 0.94,
   panelStroke: 0x555577,
   buttonBg: 0x333333,
   buttonAlpha: 0.85,

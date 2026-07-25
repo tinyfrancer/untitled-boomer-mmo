@@ -81,7 +81,7 @@ export class InventoryPanel {
     const pad = px(THEME.padding, scale);
 
     this.background = scene.add
-      .rectangle(0, 0, width, pad * 2 + px(TITLE_ROW, scale), THEME.panelBg, THEME.panelAlpha)
+      .rectangle(0, 0, width, pad * 2 + px(TITLE_ROW, scale), THEME.panelBg, THEME.sheetAlpha)
       .setOrigin(0, 0)
       .setStrokeStyle(px(1, scale), THEME.panelStroke)
       // Interactive so a click on the panel is seen as a HUD hit and never

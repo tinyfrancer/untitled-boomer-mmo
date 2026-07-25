@@ -36,6 +36,7 @@ export class QuestPanel {
       height: rect.height,
       scale,
       title: 'Quests',
+      alpha: THEME.sheetAlpha,
     });
   }
 
