@@ -36,6 +36,10 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // v7 → v8: AFK camping arrives. Nobody was camping before it existed, so an
   // upgraded save starts with no session and earns nothing for the gap.
   7: (state) => ({ ...state, afk: null }),
+  // v8 → v9: quests arrive. An existing character starts with an empty log and
+  // can pick both up from the shopkeeper; anything already in their bag counts
+  // toward the objective, since progress is read off the inventory.
+  8: (state) => ({ ...state, quests: {} }),
 };
 
 /**

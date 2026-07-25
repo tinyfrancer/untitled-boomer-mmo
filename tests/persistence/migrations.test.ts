@@ -91,6 +91,33 @@ describe('migrateCharacterState', () => {
     expect(migrated?.afk).toBeNull();
   });
 
+  it('gives a v8 save an empty quest log', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 8,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+    });
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.quests).toEqual({});
+  });
+
+  // Progress is counted off the bag, so an upgraded character who has been
+  // hoarding rat bones can accept the quest and hand them straight back.
+  it('lets an upgraded save count what it already carries toward a quest', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 8,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      inventory: { 'rat-bones': 10 },
+    });
+    expect(migrated?.inventory['rat-bones']).toBe(10);
+    expect(migrated?.quests).toEqual({});
+  });
+
   it('carries the combat skills a v6 save never had all the way to current', () => {
     const migrated = migrateCharacterState({ ...v4Save(), version: 6, currency: 0 });
     expect(migrated?.skills['one-handed']).toEqual({ level: 1, xp: 0 });

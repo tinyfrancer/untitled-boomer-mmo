@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CharacterController } from '../../src/systems/CharacterController';
-import { createNewCharacter } from '../../src/persistence/CharacterState';
+import { STARTING_COPPER, createNewCharacter } from '../../src/persistence/CharacterState';
+import { QUESTS } from '../../src/data/quests';
+import { itemWeight } from '../../src/data/items';
+import type { QuestId } from '../../src/types/ids';
 import { xpToNextLevel } from '../../src/systems/LevelingSystem';
 import { xpToReachLevel } from '../../src/data/xpTable';
 
@@ -145,6 +148,114 @@ describe('CharacterController xp', () => {
     expect(gain.leveledUp).toBe(false);
     expect(character.state.skills.woodcutting.xp).toBe(10);
     expect(character.skillLevelOf('woodcutting')).toBe(1);
+  });
+});
+
+describe('CharacterController quests', () => {
+  it('accepts a quest once and ignores a second attempt', () => {
+    const character = makeController();
+    expect(character.acceptQuest('rat-bones')).toBe(true);
+    expect(character.acceptQuest('rat-bones')).toBe(false);
+    expect(character.state.quests['rat-bones']).toBe('active');
+  });
+
+  it('reads progress off the bag', () => {
+    const character = makeController();
+    character.acceptQuest('rat-bones');
+    expect(character.questProgress('rat-bones')).toEqual({ have: 0, need: 10, met: false });
+    character.addItem('rat-bones', 10);
+    expect(character.questProgress('rat-bones').met).toBe(true);
+  });
+
+  it('pays out coin, xp and the class-appropriate gear, and eats the objective', () => {
+    const character = makeController();
+    character.acceptQuest('rat-bones');
+    character.addItem('rat-bones', 12);
+    const before = character.state.currency;
+
+    const result = character.turnInQuest('rat-bones');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.copper).toBe(QUESTS['rat-bones'].reward.copper);
+    expect(result.rewardItemId).toBe('brown-helmet');
+    expect(result.xp.level).toBeGreaterThanOrEqual(1);
+    expect(character.state.currency).toBe(before + QUESTS['rat-bones'].reward.copper);
+    // Exactly the objective is consumed; the surplus stays in the bag.
+    expect(character.itemCount('rat-bones')).toBe(2);
+    expect(character.itemCount('brown-helmet')).toBe(1);
+    expect(character.state.quests['rat-bones']).toBe('done');
+  });
+
+  it('hands a wizard cloth where a warrior gets leather', () => {
+    const wizard = new CharacterController(createNewCharacter('Aria', 'wizard'));
+    wizard.acceptQuest('rat-bones');
+    wizard.addItem('rat-bones', 10);
+    const result = wizard.turnInQuest('rat-bones');
+    expect(result.ok && result.rewardItemId).toBe('brown-cloth-hat');
+  });
+
+  it('refuses a turn-in without the goods, changing nothing', () => {
+    const character = makeController();
+    character.acceptQuest('rat-bones');
+    character.addItem('rat-bones', 9);
+    const result = character.turnInQuest('rat-bones');
+    expect(result.ok).toBe(false);
+    expect(character.itemCount('rat-bones')).toBe(9);
+    expect(character.state.quests['rat-bones']).toBe('active');
+  });
+
+  it('refuses a quest that was never accepted', () => {
+    const character = makeController();
+    character.addItem('rat-bones', 10);
+    expect(character.turnInQuest('rat-bones').ok).toBe(false);
+  });
+
+  // Neither shipped quest can strand a player, because both hand over more
+  // weight than they give back. Worth asserting rather than assuming: it is the
+  // reason a full pack never blocks the starter arc.
+  it('keeps every quest reward lighter than the objective it consumes', () => {
+    Object.values(QUESTS).forEach((quest) => {
+      const handedOver = itemWeight(quest.objective.itemId) * quest.objective.quantity;
+      Object.values(quest.reward.gear).forEach((rewardItemId) => {
+        expect(itemWeight(rewardItemId)).toBeLessThanOrEqual(handedOver);
+      });
+    });
+  });
+
+  // ...and the guard for a future quest that doesn't hold that property. Taking
+  // the objective and then finding no room for the reward is the one outcome
+  // that can't be undone, so the whole turn-in has to fail together.
+  it('refuses rather than half-applies when the pack cannot hold the reward', () => {
+    const heavyReward = 'test-heavy-reward' as QuestId;
+    QUESTS[heavyReward] = {
+      id: heavyReward,
+      name: 'Test',
+      giverNpcId: 'shopkeeper',
+      description: '',
+      objective: { itemId: 'raw-fish', quantity: 1 },
+      reward: { copper: 50, xp: 10, gear: { warrior: 'brown-chestplate', wizard: 'brown-robe' } },
+    };
+    try {
+      const character = makeController();
+      character.acceptQuest(heavyReward);
+      character.addItem('raw-fish', 1);
+      // Fill to the brim: handing over one 1-weight fish cannot make room for a
+      // 6-weight chestplate.
+      const room = character.carryCapacity() - character.carriedWeight();
+      character.addItem('logs', Math.floor(room / itemWeight('logs')));
+
+      const result = character.turnInQuest(heavyReward);
+
+      expect(result.ok).toBe(false);
+      expect(result.ok ? '' : result.reason).toContain('pack');
+      expect(character.itemCount('raw-fish')).toBe(1);
+      expect(character.itemCount('brown-chestplate')).toBe(0);
+      expect(character.state.quests[heavyReward]).toBe('active');
+      expect(character.state.currency).toBe(STARTING_COPPER);
+    } finally {
+      delete QUESTS[heavyReward];
+    }
   });
 });
 
