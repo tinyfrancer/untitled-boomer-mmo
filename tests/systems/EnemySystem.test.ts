@@ -203,15 +203,18 @@ describe('zone spawn tables', () => {
 
   // Every zone is starter content: the three of them teach three drop tables,
   // which only works if a new character can reach all three.
-  it.each(zones)('keeps %s inside levels 1-3, weighted toward the low end', (_, spawns, enemyId) => {
-    const levels = spawns.map((s) => s.level);
-    expect(Math.min(...levels)).toBe(1);
-    expect(Math.max(...levels)).toBe(3);
-    expect(levels.filter((l) => l === 1).length).toBeGreaterThan(
-      levels.filter((l) => l === 3).length,
-    );
-    spawns.forEach((s) => expect(s.enemyId).toBe(enemyId));
-  });
+  it.each(zones)(
+    'keeps %s inside levels 1-3, weighted toward the low end',
+    (_, spawns, enemyId) => {
+      const levels = spawns.map((s) => s.level);
+      expect(Math.min(...levels)).toBe(1);
+      expect(Math.max(...levels)).toBe(3);
+      expect(levels.filter((l) => l === 1).length).toBeGreaterThan(
+        levels.filter((l) => l === 3).length,
+      );
+      spawns.forEach((s) => expect(s.enemyId).toBe(enemyId));
+    },
+  );
 });
 
 // The rule the whole starter arc is built on: each zone teaches a different
@@ -245,9 +248,9 @@ describe('only humanoids carry gear and coin', () => {
     humanoids.forEach((enemy) => {
       const table = tableFor(enemy);
       expect(table?.currency).toBeDefined();
-      expect(
-        (table?.entries ?? []).some((entry) => ITEMS[entry.itemId].kind === 'equipment'),
-      ).toBe(true);
+      expect((table?.entries ?? []).some((entry) => ITEMS[entry.itemId].kind === 'equipment')).toBe(
+        true,
+      );
     });
   });
 
