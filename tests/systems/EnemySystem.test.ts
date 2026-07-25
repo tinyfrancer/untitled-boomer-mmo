@@ -99,6 +99,7 @@ describe('TOWN_MOB_SPAWNS', () => {
 // swinging simultaneously.
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import { BANDIT_CAMP_MOB_SPAWNS, BEACH_MOB_SPAWNS } from '../../src/data/spawns';
+import type { MobSpawnPoint } from '../../src/data/spawns';
 import type { EnemyId } from '../../src/types/ids';
 
 interface Combatant {
@@ -149,18 +150,35 @@ describe('difficulty curve', () => {
     expect(duel(freshWarrior(), enemyAt('rat', 3))).toBe('enemy');
   });
 
-  it('crabs follow the same shape at beach levels: beat even and +1, lose to +2', () => {
-    expect(duel(gearedWarrior(4), enemyAt('crab', 4))).toBe('player');
-    expect(duel(gearedWarrior(4), enemyAt('crab', 5))).toBe('player');
-    expect(duel(gearedWarrior(4), enemyAt('crab', 6))).toBe('enemy');
-    expect(duel(gearedWarrior(5), enemyAt('crab', 6))).toBe('player');
+  // All three zones share the 1-3 band now, so what separates them is the shape
+  // of the fight rather than the level on the nameplate.
+  it('makes crabs long fights rather than dangerous ones: a fresh warrior beats L1 and L2', () => {
+    expect(duel(freshWarrior(), enemyAt('crab', 1))).toBe('player');
+    expect(duel(freshWarrior(), enemyAt('crab', 2))).toBe('player');
+    expect(duel(freshWarrior(), enemyAt('crab', 3))).toBe('enemy');
+    expect(duel(gearedWarrior(3), enemyAt('crab', 3))).toBe('player');
   });
 
-  it('bandits follow it at camp levels: beat even, lose to +2', () => {
-    expect(duel(gearedWarrior(7), enemyAt('bandit', 7))).toBe('player');
-    expect(duel(gearedWarrior(8), enemyAt('bandit', 8))).toBe('player');
-    expect(duel(gearedWarrior(7), enemyAt('bandit', 9))).toBe('enemy');
-    expect(duel(gearedWarrior(9), enemyAt('bandit', 9))).toBe('player');
+  // The camp has to be gated on gear rather than on level, since it is where
+  // the gear comes from: an ungeared character can clear the outer level 1
+  // bandits and buy their way up from there.
+  it('gates the bandit camp behind gear: a fresh warrior beats L1 but loses to L2', () => {
+    expect(duel(freshWarrior(), enemyAt('bandit', 1))).toBe('player');
+    expect(duel(freshWarrior(), enemyAt('bandit', 2))).toBe('enemy');
+    expect(duel(gearedWarrior(2), enemyAt('bandit', 2))).toBe('player');
+    expect(duel(gearedWarrior(3), enemyAt('bandit', 3))).toBe('player');
+  });
+
+  it('keeps the bandit the hardest thing at any given level', () => {
+    [1, 2, 3].forEach((level) => {
+      const bandit = scaleEnemyStats(ENEMIES.bandit, level);
+      const crab = scaleEnemyStats(ENEMIES.crab, level);
+      const rat = scaleEnemyStats(ENEMIES.rat, level);
+      expect(bandit.attackPower).toBeGreaterThan(crab.attackPower);
+      expect(bandit.attackPower).toBeGreaterThan(rat.attackPower);
+      expect(bandit.xpReward).toBeGreaterThan(crab.xpReward);
+      expect(crab.xpReward).toBeGreaterThan(rat.xpReward);
+    });
   });
 
   it('every aggressive or hostile chaser is slower than the player, so fleeing works', () => {
@@ -176,27 +194,24 @@ describe('difficulty curve', () => {
   });
 });
 
-describe('new zone spawn tables', () => {
-  it('beach crabs cover levels 4-6, weighted toward the low end', () => {
-    const levels = BEACH_MOB_SPAWNS.map((s) => s.level);
-    expect(Math.min(...levels)).toBe(4);
-    expect(Math.max(...levels)).toBe(6);
-    expect(levels.filter((l) => l === 4).length).toBeGreaterThan(
-      levels.filter((l) => l === 6).length,
-    );
-    BEACH_MOB_SPAWNS.forEach((s) => expect(s.enemyId).toBe('crab'));
-  });
+describe('zone spawn tables', () => {
+  const zones: [string, MobSpawnPoint[], EnemyId][] = [
+    ['town', TOWN_MOB_SPAWNS, 'rat'],
+    ['beach', BEACH_MOB_SPAWNS, 'crab'],
+    ['bandit camp', BANDIT_CAMP_MOB_SPAWNS, 'bandit'],
+  ];
 
-  it('bandit camp covers levels 7-9, weighted toward the low end', () => {
-    const levels = BANDIT_CAMP_MOB_SPAWNS.map((s) => s.level);
-    expect(Math.min(...levels)).toBe(7);
-    expect(Math.max(...levels)).toBe(9);
-    expect(levels.filter((l) => l === 7).length).toBeGreaterThan(
-      levels.filter((l) => l === 9).length,
+  // Every zone is starter content: the three of them teach three drop tables,
+  // which only works if a new character can reach all three.
+  it.each(zones)('keeps %s inside levels 1-3, weighted toward the low end', (_, spawns, enemyId) => {
+    const levels = spawns.map((s) => s.level);
+    expect(Math.min(...levels)).toBe(1);
+    expect(Math.max(...levels)).toBe(3);
+    expect(levels.filter((l) => l === 1).length).toBeGreaterThan(
+      levels.filter((l) => l === 3).length,
     );
-    BANDIT_CAMP_MOB_SPAWNS.forEach((s) => expect(s.enemyId).toBe('bandit'));
+    spawns.forEach((s) => expect(s.enemyId).toBe(enemyId));
   });
-
 });
 
 // The rule the whole starter arc is built on: each zone teaches a different
