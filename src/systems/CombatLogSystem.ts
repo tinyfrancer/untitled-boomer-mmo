@@ -80,6 +80,14 @@ export function logCoin(copper: number): CombatLogEntry {
   return { text: `You receive ${formatCurrency(copper)}.`, color: THEME.color.equippable };
 }
 
+export function logQuestAccepted(questName: string): CombatLogEntry {
+  return { text: `Quest accepted: ${questName}.`, color: THEME.color.skillUp };
+}
+
+export function logQuestCompleted(questName: string): CombatLogEntry {
+  return { text: `Quest complete: ${questName}!`, color: THEME.color.levelUp };
+}
+
 export function logNotice(message: string): CombatLogEntry {
   return { text: message, color: THEME.color.muted };
 }

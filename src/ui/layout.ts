@@ -109,6 +109,18 @@ export function hudLayout(
   };
 }
 
+/**
+ * How tall the world camera may be: the screen, less the tab bar.
+ *
+ * The bar is opaque and swallows every tap that lands on it, so world drawn
+ * under it cannot be reached. Reserving the height here rather than hoping
+ * nothing important lands in the last sixty pixels is what keeps every world
+ * object tappable.
+ */
+export function worldViewportHeight(width: number, height: number, scale = 1): number {
+  return hudLayout(width, height, { scale }).tabBar.y;
+}
+
 /** The first y an open sheet must stay clear of on a roomy screen. */
 export function playerColumnBottom(layout: HudLayout): number {
   return layout.playerColumn.y + layout.playerColumn.height;
