@@ -1,9 +1,12 @@
-const XP_PER_LEVEL = 50;
-const SKILL_XP_COEFFICIENT = 20;
+const XP_PER_LEVEL = 80;
+const SKILL_XP_COEFFICIENT = 24;
 
-// XP required to go from (level - 1) to level.
+// XP required to go from (level - 1) to level. Quadratic, so each level costs
+// visibly more than the last: the starter arc is tuned so that finishing both
+// quests and gearing up lands a character on level 3 and no further — see
+// tests/systems/progression.test.ts, which is what actually holds the pacing.
 export function xpToReachLevel(level: number): number {
-  return XP_PER_LEVEL * level;
+  return XP_PER_LEVEL * level * level;
 }
 
 // Skills grow on a quadratic curve while combat stays linear, on purpose: a kill
@@ -16,8 +19,9 @@ export function skillXpToReachLevel(level: number): number {
 
 // Combat skills tick up off single swings and single blocked hits, so their
 // curve is shallow and linear: the brake on them is the character-level cap,
-// not the grind. One point per swing puts an early level a few fights apart.
-const COMBAT_SKILL_XP_PER_LEVEL = 4;
+// not the grind. At 4 a level they moved every eight swings, which read as
+// noise rather than progress.
+const COMBAT_SKILL_XP_PER_LEVEL = 10;
 
 export function combatSkillXpToReachLevel(level: number): number {
   return COMBAT_SKILL_XP_PER_LEVEL * level;

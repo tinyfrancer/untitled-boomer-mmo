@@ -309,14 +309,108 @@ try {
     `copper left=${traded.copper}`,
   );
 
+  // --- Quests: taken and handed in at the same NPC, with progress counted off
+  // the bag rather than tracked, so the objective can be in hand beforehand. ---
+  const questTaken = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const ui = window.game.scene.getScene('UI');
+    window.game.events.emit('accept-quest-requested', 'rat-bones');
+    return {
+      log: { ...z.character.state.quests },
+      uiLog: { ...ui.model.quests },
+      progress: z.character.questProgress('rat-bones'),
+    };
+  });
+  check(
+    'the shopkeeper hands out a quest, and the HUD hears about it',
+    questTaken.log['rat-bones'] === 'active' && questTaken.uiLog['rat-bones'] === 'active',
+  );
+  check(
+    'a freshly taken quest starts at zero',
+    questTaken.progress.have === 0 && questTaken.progress.need === 10,
+    `${questTaken.progress.have}/${questTaken.progress.need}`,
+  );
+
+  const notYet = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.addItem('rat-bones', 9);
+    const before = { ...z.character.state.inventory };
+    window.game.events.emit('turn-in-quest-requested', 'rat-bones');
+    return {
+      status: z.character.state.quests['rat-bones'],
+      kept: z.character.itemCount('rat-bones'),
+      unchanged: JSON.stringify(before) === JSON.stringify(z.character.state.inventory),
+      tracker: z.character.questProgress('rat-bones'),
+    };
+  });
+  check(
+    'handing in short of the objective is refused and takes nothing',
+    notYet.status === 'active' && notYet.kept === 9 && notYet.unchanged === true,
+    `${notYet.tracker.have}/${notYet.tracker.need}`,
+  );
+
+  const handedIn = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.addItem('rat-bones', 3); // twelve: two more than asked for
+    const copperBefore = z.character.state.currency;
+    const xpBefore = z.character.state.xp;
+    window.game.events.emit('turn-in-quest-requested', 'rat-bones');
+    return {
+      status: z.character.state.quests['rat-bones'],
+      leftover: z.character.itemCount('rat-bones'),
+      reward: z.character.itemCount('brown-helmet'),
+      copperGained: z.character.state.currency - copperBefore,
+      xpMoved: z.character.state.xp !== xpBefore,
+    };
+  });
+  check(
+    'handing in pays coin, xp and the class-appropriate gear',
+    handedIn.status === 'done' &&
+      handedIn.reward === 1 &&
+      handedIn.copperGained === 120 &&
+      handedIn.xpMoved === true,
+    `+${handedIn.copperGained}c, helmet x${handedIn.reward}`,
+  );
+  check(
+    'handing in eats exactly the objective and leaves the surplus',
+    handedIn.leftover === 2,
+    `${handedIn.leftover} bones left`,
+  );
+
+  const secondTurnIn = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.addItem('rat-bones', 10);
+    const copperBefore = z.character.state.currency;
+    window.game.events.emit('turn-in-quest-requested', 'rat-bones');
+    return {
+      copperGained: z.character.state.currency - copperBefore,
+      helmets: z.character.itemCount('brown-helmet'),
+    };
+  });
+  check(
+    'a finished quest cannot be handed in twice',
+    secondTurnIn.copperGained === 0 && secondTurnIn.helmets === 1,
+  );
+
   const shopClosed = await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
+    // Clean up the quest props so later bag assertions see what they expect.
+    town.character.removeItem('rat-bones', town.character.itemCount('rat-bones'));
+    town.character.removeItem('brown-helmet', 1);
     const npc = town.shopNpc;
     town.player.setPosition(npc.x + 400, npc.y);
     town.updateShopRange();
     return town.shopNpc === null;
   });
   check('walking away closes the shop', shopClosed === true);
+
+  // Quests are conversations with an NPC, so they can't be taken from anywhere.
+  const awayFromNpc = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    window.game.events.emit('accept-quest-requested', 'crab-feast');
+    return z.character.state.quests['crab-feast'] ?? null;
+  });
+  check('a quest cannot be accepted away from the shopkeeper', awayFromNpc === null);
 
   const beforeChop = await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
@@ -648,7 +742,7 @@ try {
     const ui = window.game.scene.getScene('UI');
     return {
       lines: ui.model.combatLog.map((e) => e.text),
-      visible: ui.combatLogPanel.isVisible(),
+      openSheet: ui.model.openSheet,
     };
   });
   check(
@@ -657,18 +751,52 @@ try {
       logged.lines.some((l) => l.includes('hits you for')),
     `${logged.lines.length} lines, last: ${logged.lines[logged.lines.length - 1]}`,
   );
-  check('the log is open by default on a desktop viewport', logged.visible === true);
+  // The tab bar opens one sheet at a time, so the log starts closed even on a
+  // desktop: the character sheet is what a roomy screen opens by default.
+  check(
+    'the character sheet is the default sheet on a desktop viewport',
+    logged.openSheet === 'character',
+  );
 
-  const toggled = await page.evaluate(() => {
+  const tabbed = await page.evaluate(() => {
     const ui = window.game.scene.getScene('UI');
-    ui.toggleCombatLog();
-    const hidden = ui.combatLogPanel.isVisible();
-    ui.toggleCombatLog();
-    return { hidden, shown: ui.combatLogPanel.isVisible() };
+    ui.selectTab('log');
+    const opened = {
+      log: ui.combatLogPanel.isVisible(),
+      character: ui.characterPanel.isVisible(),
+    };
+    ui.selectTab('log');
+    return { opened, closedAgain: ui.combatLogPanel.isVisible() };
   });
   check(
-    'the log can be hidden and shown again',
-    toggled.hidden === false && toggled.shown === true,
+    'a tab opens its sheet and closes the one already open',
+    tabbed.opened.log === true && tabbed.opened.character === false,
+  );
+  check('tapping the open tab again closes it', tabbed.closedAgain === false);
+
+  // Every sheet is exclusive now, not just the character sheet and the bag —
+  // the log used to be able to sit on top of an open bag.
+  const exclusive = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    const seen = [];
+    for (const tab of ['character', 'inventory', 'quests', 'log']) {
+      ui.selectTab(tab);
+      seen.push(
+        [
+          ui.characterPanel.isVisible(),
+          ui.inventoryPanel.isVisible(),
+          ui.questPanel.isVisible(),
+          ui.combatLogPanel.isVisible(),
+        ].filter(Boolean).length,
+      );
+    }
+    ui.selectTab(ui.model.openSheet);
+    return seen;
+  });
+  check(
+    'only one sheet is ever open at a time',
+    exclusive.every((count) => count === 1),
+    `open counts ${exclusive.join(',')}`,
   );
 
   const cappedLog = await page.evaluate(() => {
@@ -796,10 +924,10 @@ try {
     `hp=${beachInfo.hp}/${beachInfo.maxHp}`,
   );
   check(
-    'the beach spawns crabs 4-6 and ocean fishing spots',
+    'the beach spawns crabs 1-3 and ocean fishing spots',
     beachInfo.enemies.join(',') === 'crab' &&
-      beachInfo.levels[0] === 4 &&
-      beachInfo.levels[beachInfo.levels.length - 1] === 6 &&
+      beachInfo.levels[0] === 1 &&
+      beachInfo.levels[beachInfo.levels.length - 1] === 3 &&
       beachInfo.nodes.join(',') === 'ocean-fishing-spot',
     `levels=${beachInfo.levels} arrivalY=${beachInfo.arrivalY}`,
   );
@@ -1027,6 +1155,8 @@ try {
     w: window.game.scale.width,
     h: window.game.scale.height,
     zoom: window.game.scene.getScene('Zone').cameras.main.zoom,
+    cameraH: window.game.scene.getScene('Zone').cameras.main.height,
+    tabBarY: window.game.scene.getScene('UI').layout.tabBar.y,
     uiActive: window.game.scene.getScene('UI').scene.isActive(),
   }));
   check(
@@ -1036,8 +1166,15 @@ try {
   );
   check(
     'portrait camera zooms in and stays inside the world',
-    portrait.zoom < 1 && 844 / portrait.zoom <= 1216,
-    `zoom=${portrait.zoom.toFixed(2)}`,
+    portrait.zoom < 1 && portrait.cameraH / portrait.zoom <= 1216,
+    `zoom=${portrait.zoom.toFixed(2)}, camera ${portrait.cameraH}px of ${portrait.h}`,
+  );
+  // The camera stops above the tab bar, so nothing in the world can be drawn
+  // under opaque HUD furniture that would swallow the tap.
+  check(
+    'the world camera stops above the tab bar',
+    portrait.cameraH === portrait.tabBarY,
+    `camera ${portrait.cameraH}, tab bar at ${portrait.tabBarY}`,
   );
   check('UI scene survives the resize', portrait.uiActive === true);
   await page.screenshot({ path: `${OUT}/7-portrait.png` });
@@ -1080,6 +1217,9 @@ try {
   // has to reach the player rather than silently doing nothing. Done last,
   // because it throws the warrior away and rerolls as a wizard. ---
   await page.setViewportSize({ width: 1280, height: 900 });
+  // The RESIZE this fires rebuilds the HUD and closes any open panel, so let it
+  // land before opening one.
+  await page.waitForTimeout(500);
   // --- Options menu: the mobile route to a character reset, which used to be
   // bound to F9 and so unreachable on a phone. Two taps, on purpose. ---
   const options = await page.evaluate(() => {

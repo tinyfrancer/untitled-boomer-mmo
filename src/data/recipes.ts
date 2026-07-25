@@ -23,7 +23,9 @@ export const COOKING_RECIPES: Record<string, CookingRecipe> = {
     inputItemId: 'crab-meat',
     outputItemId: 'cooked-crab',
     burntItemId: 'burnt-crab',
-    requiredLevel: 3,
+    // A gate the crab quest has to be walked through, but a short one: fish are
+    // the only way to it, and 20 cooked crab is already a long enough ask.
+    requiredLevel: 2,
     xpReward: 20,
     cookMs: 2500,
   },

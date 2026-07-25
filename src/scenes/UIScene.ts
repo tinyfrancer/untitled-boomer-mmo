@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
-import { CharacterPanel, characterPanelHeight, characterPanelWidth } from '../ui/CharacterPanel';
+import { CharacterPanel, characterPanelWidth } from '../ui/CharacterPanel';
 import { GatherProgressBar } from '../ui/GatherProgressBar';
 import { InventoryPanel, inventoryPanelWidth } from '../ui/InventoryPanel';
 import { ShopPanel } from '../ui/ShopPanel';
@@ -41,14 +41,22 @@ import {
   AFK_TOGGLE_REQUESTED_EVENT,
   AFK_STATE_CHANGED_EVENT,
   OFFLINE_AFK_RESOLVED_EVENT,
+  ACCEPT_QUEST_REQUESTED_EVENT,
+  TURN_IN_QUEST_REQUESTED_EVENT,
+  QUEST_LOG_CHANGED_EVENT,
   type AbilityState,
   type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
 import { ActionBar } from '../ui/ActionBar';
-import { CombatLogPanel, combatLogPanelHeight } from '../ui/CombatLogPanel';
+import { CombatLogPanel } from '../ui/CombatLogPanel';
 import { OptionsPanel } from '../ui/OptionsPanel';
 import { AwayReportPanel } from '../ui/AwayReportPanel';
+import { QuestPanel } from '../ui/QuestPanel';
+import { QuestTrackerStrip } from '../ui/QuestTrackerStrip';
+import { TabBar, type TabId } from '../ui/TabBar';
+import { hudLayout, sheetRect, type HudLayout } from '../ui/layout';
+import { activeQuests, type QuestLog } from '../systems/QuestSystem';
 import type { OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { abilitiesFor } from '../systems/AbilitySystem';
@@ -86,9 +94,10 @@ interface HudModel {
   maxMana: number;
   abilities: AbilityState[];
   combatLog: CombatLogEntry[];
-  characterPanelVisible: boolean;
-  inventoryPanelVisible: boolean;
-  combatLogVisible: boolean;
+  // Which sheet the tab bar has open, or null for a clear playfield. One value
+  // rather than a flag per panel, because only one is ever open.
+  openSheet: TabId | null;
+  quests: QuestLog;
   shopOpen: boolean;
   actions: AvailableActions;
   afkActive: boolean;
@@ -110,7 +119,6 @@ export class UIScene extends Phaser.Scene {
   private actionBar!: ActionBar;
   private combatLogPanel!: CombatLogPanel;
   private optionsPanel: OptionsPanel | null = null;
-  private afkButton: Phaser.GameObjects.Rectangle | null = null;
   private awayReportPanel: AwayReportPanel | null = null;
   // Null for a class with no mana pool, which is what the bar's absence means.
   private manaBarFill: Phaser.GameObjects.Rectangle | null = null;
@@ -118,6 +126,10 @@ export class UIScene extends Phaser.Scene {
   private manaBarWidth = 0;
   private slotPicker: SlotPicker | null = null;
   private shopPanel: ShopPanel | null = null;
+  private questPanel!: QuestPanel;
+  private questTracker!: QuestTrackerStrip;
+  private tabBar!: TabBar;
+  private layout!: HudLayout;
   private classId: ClassId = 'warrior';
   private uiScale = 1;
   private model: HudModel = {
@@ -133,9 +145,8 @@ export class UIScene extends Phaser.Scene {
     maxMana: 0,
     abilities: [],
     combatLog: [],
-    characterPanelVisible: true,
-    inventoryPanelVisible: false,
-    combatLogVisible: false,
+    openSheet: null,
+    quests: {},
     shopOpen: false,
     actions: { nearFire: false },
     afkActive: false,
@@ -163,14 +174,12 @@ export class UIScene extends Phaser.Scene {
       inventory: character?.inventory ?? {},
       currency: character?.currency ?? 0,
       skills: character?.skills ?? createInitialSkills(),
+      quests: character?.quests ?? {},
       hp: startingStats.maxHp,
       mana: startingStats.maxMana,
       maxMana: startingStats.maxMana,
     };
-    // A phone screen starts with the playfield clear; desktop keeps the sheet
-    // and the log open as before.
-    this.model.characterPanelVisible = !this.isNarrow();
-    this.model.combatLogVisible = !this.isNarrow();
+    this.model.openSheet = this.defaultSheet();
 
     this.buildHud();
     this.showAwayReport();
@@ -197,10 +206,12 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
     this.game.events.on(COMBAT_LOG_EVENT, this.handleCombatLog, this);
     this.game.events.on(AFK_STATE_CHANGED_EVENT, this.handleAfkStateChanged, this);
+    this.game.events.on(QUEST_LOG_CHANGED_EVENT, this.handleQuestLogChanged, this);
 
-    this.input.keyboard?.on('keydown-I', this.toggleInventoryPanel, this);
-    this.input.keyboard?.on('keydown-C', this.toggleCharacterPanel, this);
-    this.input.keyboard?.on('keydown-L', this.toggleCombatLog, this);
+    this.input.keyboard?.on('keydown-I', () => this.selectTab('inventory'));
+    this.input.keyboard?.on('keydown-C', () => this.selectTab('character'));
+    this.input.keyboard?.on('keydown-L', () => this.selectTab('log'));
+    this.input.keyboard?.on('keydown-Q', () => this.selectTab('quests'));
     this.input.keyboard?.on('keydown-Z', () => this.game.events.emit(AFK_TOGGLE_REQUESTED_EVENT));
     // The action bar's two slots, in the order it draws them.
     abilitiesFor(this.classId).forEach((ability, index) => {
@@ -235,6 +246,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(ABILITY_STATE_CHANGED_EVENT, this.handleAbilityStateChanged, this);
       this.game.events.off(COMBAT_LOG_EVENT, this.handleCombatLog, this);
       this.game.events.off(AFK_STATE_CHANGED_EVENT, this.handleAfkStateChanged, this);
+      this.game.events.off(QUEST_LOG_CHANGED_EVENT, this.handleQuestLogChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       // Owns an off-display-list mask that a scene teardown won't reach.
       this.inventoryPanel?.destroy();
@@ -258,6 +270,12 @@ export class UIScene extends Phaser.Scene {
     // trigger a resize (the URL bar hiding), and without this the item the tap
     // just selected would deselect a frame later.
     this.model.inventorySelectedItemId = this.inventoryPanel?.selectedItem ?? null;
+    // A phone rotated into landscape crosses the breakpoint, and the open sheet
+    // has to obey the side of it the screen is now on. Only the default moves —
+    // a sheet the player opened themselves stays open.
+    if (this.model.openSheet !== null && this.defaultSheet() === null) {
+      this.model.openSheet = null;
+    }
     // Explicit: the inventory panel owns scene-level input listeners and an
     // off-list mask that children.removeAll can't reach.
     this.inventoryPanel?.destroy();
@@ -265,50 +283,119 @@ export class UIScene extends Phaser.Scene {
     this.buildHud();
   };
 
+  // A phone starts with the playfield clear; a roomy screen can afford the
+  // character sheet. Re-derived on every rebuild, so rotating a phone into
+  // landscape picks up the narrow defaults instead of keeping the wide ones.
+  private defaultSheet(): TabId | null {
+    return hudLayout(this.scale.width, this.scale.height).narrow ? null : 'character';
+  }
+
   private buildHud(): void {
     this.uiScale = scenePxScale();
     // Rebuilt below; the old objects are already gone with the rest of the HUD.
     this.manaBarFill = null;
     this.manaText = null;
-    this.afkButton = null;
-    const margin = px(THEME.margin, this.uiScale);
+    this.layout = hudLayout(this.scale.width, this.scale.height, {
+      scale: this.uiScale,
+      hasMana: this.model.maxMana > 0,
+      trackedQuests: activeQuests(this.model.quests).length,
+    });
 
-    this.targetFrame = new TargetFrame(this, margin, margin, this.uiScale);
+    this.targetFrame = new TargetFrame(
+      this,
+      this.layout.targetFrame.x,
+      this.layout.targetFrame.y,
+      this.uiScale,
+    );
     this.createXpBar();
     this.createLevelUpToast();
     this.createCharacterPanel();
     this.createInventoryPanel();
-    this.createPanelToggleButtons();
+    this.createQuestPanel();
     this.createGatherBar();
     this.createManaBar();
-    this.actionBar = new ActionBar(this, this.uiScale, this.classId, (abilityId) =>
-      this.game.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
+    this.actionBar = new ActionBar(
+      this,
+      this.uiScale,
+      this.classId,
+      this.layout.actionBar,
+      (abilityId) => this.game.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
     );
     this.actionBar.update(this.model.abilities);
     this.createCombatLogPanel();
+    this.createTabBar();
+
+    this.questTracker = new QuestTrackerStrip(this, this.layout.tracker, this.uiScale);
+    this.questTracker.update(this.model.quests, this.model.inventory);
 
     this.refreshCharacterPanel();
     this.inventoryPanel.update(this.model.inventory);
     this.inventoryPanel.setCurrency(this.model.currency);
     this.refreshEncumbrance();
-    this.characterPanel.setVisible(this.model.characterPanelVisible);
-    this.inventoryPanel.setVisible(this.model.inventoryPanelVisible);
+    this.applyOpenSheet();
     this.handleXpGained(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
     if (this.model.shopOpen) {
       this.openShopPanel();
     }
   }
 
+  private createTabBar(): void {
+    this.tabBar = new TabBar(this, this.layout.tabBar, this.uiScale, (tab) => this.selectTab(tab));
+    this.tabBar.setCamping(this.model.afkActive);
+  }
+
+  /**
+   * The tab bar's whole behaviour: sheets toggle and are mutually exclusive,
+   * actions just fire. Exclusivity used to apply only between the character
+   * sheet and the bag, and only on a narrow screen, which is how the combat log
+   * ended up able to sit on top of an open bag.
+   */
+  private selectTab(tab: TabId): void {
+    if (tab === 'camp') {
+      this.game.events.emit(AFK_TOGGLE_REQUESTED_EVENT);
+      return;
+    }
+    if (tab === 'options') {
+      this.openOptions();
+      return;
+    }
+    this.model.openSheet = this.model.openSheet === tab ? null : tab;
+    this.applyOpenSheet();
+  }
+
+  private applyOpenSheet(): void {
+    const open = this.model.openSheet;
+    this.characterPanel.setVisible(open === 'character');
+    this.inventoryPanel.setVisible(open === 'inventory');
+    this.questPanel.setVisible(open === 'quests');
+    this.combatLogPanel.setVisible(open === 'log');
+    this.tabBar?.setSelected(open);
+    if (open !== 'character') {
+      this.slotPicker?.close();
+      this.slotPicker = null;
+    }
+    if (open === 'quests') {
+      this.questPanel.update(this.model.quests, this.model.inventory);
+    }
+  }
+
+  private shopState() {
+    return {
+      inventory: this.model.inventory,
+      currency: this.model.currency,
+      quests: this.model.quests,
+    };
+  }
+
   private openShopPanel(): void {
     this.shopPanel?.destroy();
-    this.shopPanel = new ShopPanel(
-      this,
-      this.uiScale,
-      { inventory: this.model.inventory, currency: this.model.currency },
-      (itemId) => this.game.events.emit(BUY_ITEM_REQUESTED_EVENT, itemId),
-      (itemId) => this.game.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId),
-      () => this.game.events.emit(SHOP_CLOSED_EVENT),
-    );
+    this.shopPanel = new ShopPanel(this, this.uiScale, this.shopState(), {
+      onBuy: (itemId) => this.game.events.emit(BUY_ITEM_REQUESTED_EVENT, itemId),
+      onSell: (itemId) => this.game.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId),
+      onAcceptQuest: (questId) => this.game.events.emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
+      onTurnInQuest: (questId) => this.game.events.emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
+      onClose: () => this.game.events.emit(SHOP_CLOSED_EVENT),
+    });
   }
 
   private handleShopOpened = (): void => {
@@ -328,12 +415,19 @@ export class UIScene extends Phaser.Scene {
   private handleCurrencyChanged = (totalCopper: number): void => {
     this.model.currency = totalCopper;
     this.inventoryPanel.setCurrency(totalCopper);
-    this.shopPanel?.update({ inventory: this.model.inventory, currency: totalCopper });
+    this.shopPanel?.update(this.shopState());
+  };
+
+  private handleQuestLogChanged = (quests: QuestLog): void => {
+    this.model.quests = quests;
+    // A quest taken or handed in changes how many tracker lines there are,
+    // which is a layout input — so this is a rebuild, not a redraw.
+    this.handleResize();
   };
 
   // Player info sits top-left under the target frame.
   private playerBlockTop(): number {
-    return px(THEME.margin, this.uiScale) * 2 + px(52, this.uiScale);
+    return this.layout.playerColumn.y;
   }
 
   private createXpBar(): void {
@@ -379,14 +473,6 @@ export class UIScene extends Phaser.Scene {
     return this.playerBlockTop() + px(40 + THEME.xpBar.height + 18, this.uiScale);
   }
 
-  // The bottom of the whole top-left column, mana bar included when the class
-  // has one. Everything stacked below it hangs off this.
-  private playerColumnBottom(): number {
-    return (
-      this.manaBarTop() + (this.model.maxMana > 0 ? px(THEME.xpBar.height + 4, this.uiScale) : 0)
-    );
-  }
-
   // Sits under the XP bar, and only for a class that has a pool to show.
   private createManaBar(): void {
     if (this.model.maxMana <= 0) {
@@ -424,14 +510,13 @@ export class UIScene extends Phaser.Scene {
     this.manaText?.setText(`${this.model.mana} / ${this.model.maxMana} mana`);
   }
 
-  // Directly above the action bar, so the left column reads player, log,
-  // abilities from top to bottom.
+  // A sheet like the others now, rather than its own slab above the action bar
+  // — which is where it used to paint over whatever else was open, purely
+  // because it was created last at depth 0.
   private createCombatLogPanel(): void {
-    const margin = px(THEME.margin, this.uiScale);
-    const y = this.actionBar.top - combatLogPanelHeight(this.uiScale) - margin;
-    this.combatLogPanel = new CombatLogPanel(this, margin, y, this.uiScale);
+    const sheet = this.sheetFor(px(THEME.panelWidth.combatLog, this.uiScale));
+    this.combatLogPanel = new CombatLogPanel(this, sheet.x, sheet.y, this.uiScale, sheet.width);
     this.combatLogPanel.update(this.model.combatLog);
-    this.combatLogPanel.setVisible(this.model.combatLogVisible);
   }
 
   private createLevelUpToast(): void {
@@ -446,39 +531,46 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0);
   }
 
-  private createCharacterPanel(): void {
-    const margin = px(THEME.margin, this.uiScale);
-    const x = this.scale.width - characterPanelWidth(this.uiScale) - margin;
-    this.characterPanel = new CharacterPanel(this, x, margin, this.uiScale, (slot, isEmpty) => {
-      if (isEmpty) {
-        this.openSlotPicker(slot);
-      } else {
-        this.game.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot);
-      }
-    });
+  private sheetFor(preferredWidth: number) {
+    return sheetRect(this.layout, this.scale.width, preferredWidth);
   }
 
-  // On narrow (phone) screens the two right-side panels overlap the whole
-  // playfield, so only one stays open at a time there.
-  private isNarrow(): boolean {
-    return this.scale.width < px(720, this.uiScale);
+  private createCharacterPanel(): void {
+    const sheet = this.sheetFor(characterPanelWidth(this.uiScale));
+    this.characterPanel = new CharacterPanel(
+      this,
+      sheet.x,
+      sheet.y,
+      this.uiScale,
+      (slot, isEmpty) => {
+        if (isEmpty) {
+          this.openSlotPicker(slot);
+        } else {
+          this.game.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot);
+        }
+      },
+    );
+  }
+
+  private createQuestPanel(): void {
+    this.questPanel = new QuestPanel(
+      this,
+      this.sheetFor(px(THEME.panelWidth.character, this.uiScale)),
+      this.uiScale,
+      this.classId,
+    );
+    this.questPanel.update(this.model.quests, this.model.inventory);
   }
 
   private createInventoryPanel(): void {
-    const margin = px(THEME.margin, this.uiScale);
-    const x = this.scale.width - inventoryPanelWidth(this.uiScale) - margin;
-    // On a narrow screen the panels are mutually exclusive anyway, so the bag
-    // can use the character sheet's spot instead of stacking below it.
-    const y = this.isNarrow()
-      ? margin
-      : margin + characterPanelHeight(this.uiScale) + px(THEME.padding, this.uiScale);
+    const sheet = this.sheetFor(inventoryPanelWidth(this.uiScale));
     this.inventoryPanel = new InventoryPanel(
       this,
-      x,
-      y,
+      sheet.x,
+      sheet.y,
       this.uiScale,
-      // Cap the panel at the screen's bottom margin; past that, rows scroll.
-      this.scale.height - y - margin,
+      // Cap the panel at the sheet's height; past that, rows scroll.
+      sheet.height,
       (itemId) =>
         actionsForItem(itemId, {
           nearFire: this.model.actions.nearFire,
@@ -524,57 +616,6 @@ export class UIScene extends Phaser.Scene {
     );
   }
 
-  private createPanelToggleButtons(): void {
-    const scale = this.uiScale;
-    const size = px(THEME.touchMin, scale);
-    const gap = px(THEME.padding, scale);
-    const x = px(THEME.margin, scale);
-    // Below the XP bar's detail line, and below the mana bar when there is one.
-    const y = this.playerColumnBottom() + gap;
-
-    this.createToggleButton(x, y, size, 'C', () => this.toggleCharacterPanel());
-    this.createToggleButton(x + size + gap, y, size, 'I', () => this.toggleInventoryPanel());
-    this.createToggleButton(x + (size + gap) * 2, y, size, 'L', () => this.toggleCombatLog());
-    this.afkButton = this.createToggleButton(x + (size + gap) * 3, y, size, 'Z', () =>
-      this.game.events.emit(AFK_TOGGLE_REQUESTED_EVENT),
-    );
-    this.createToggleButton(x + (size + gap) * 4, y, size, '⚙', () => this.openOptions());
-    this.refreshAfkButton();
-  }
-
-  private createToggleButton(
-    x: number,
-    y: number,
-    size: number,
-    label: string,
-    onClick: () => void,
-  ): Phaser.GameObjects.Rectangle {
-    const button = this.add
-      .rectangle(x, y, size, size, THEME.buttonBg, THEME.buttonAlpha)
-      .setOrigin(0, 0)
-      .setStrokeStyle(px(1, this.uiScale), 0x888888)
-      .setScrollFactor(0)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', onClick);
-    this.add
-      .text(x + size / 2, y + size / 2, label, {
-        fontSize: fontPx(THEME.font.md, this.uiScale),
-        color: THEME.color.text,
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
-    return button;
-  }
-
-  // Lit while camping, since the mode is otherwise invisible — the character
-  // fighting on their own looks the same as the player fighting.
-  private refreshAfkButton(): void {
-    this.afkButton?.setStrokeStyle(
-      px(this.model.afkActive ? 2 : 1, this.uiScale),
-      this.model.afkActive ? THEME.xpFill : 0x888888,
-    );
-  }
-
   // Centred just below the player, who the camera keeps centred anyway.
   private createGatherBar(): void {
     this.gatherBar = new GatherProgressBar(
@@ -583,29 +624,6 @@ export class UIScene extends Phaser.Scene {
       this.scale.height / 2 + px(60, this.uiScale),
       this.uiScale,
     );
-  }
-
-  private toggleCharacterPanel(): void {
-    this.characterPanel.toggle();
-    this.model.characterPanelVisible = this.characterPanel.isVisible();
-    if (!this.model.characterPanelVisible) {
-      this.slotPicker?.close();
-      this.slotPicker = null;
-    } else if (this.isNarrow() && this.model.inventoryPanelVisible) {
-      this.inventoryPanel.setVisible(false);
-      this.model.inventoryPanelVisible = false;
-    }
-  }
-
-  private toggleInventoryPanel(): void {
-    this.inventoryPanel.toggle();
-    this.model.inventoryPanelVisible = this.inventoryPanel.isVisible();
-    if (this.model.inventoryPanelVisible && this.isNarrow() && this.model.characterPanelVisible) {
-      this.characterPanel.setVisible(false);
-      this.model.characterPanelVisible = false;
-      this.slotPicker?.close();
-      this.slotPicker = null;
-    }
   }
 
   // ZoneScene leaves this in the registry on the boot that resolved a parked
@@ -634,11 +652,6 @@ export class UIScene extends Phaser.Scene {
         this.optionsPanel = null;
       },
     });
-  }
-
-  private toggleCombatLog(): void {
-    this.combatLogPanel.toggle();
-    this.model.combatLogVisible = this.combatLogPanel.isVisible();
   }
 
   // Capacity moves with the strength gear and levels buy, so this is refreshed
@@ -724,7 +737,12 @@ export class UIScene extends Phaser.Scene {
     this.model.inventory = inventory;
     this.inventoryPanel.update(inventory);
     this.refreshEncumbrance();
-    this.shopPanel?.update({ inventory, currency: this.model.currency });
+    this.shopPanel?.update(this.shopState());
+    // Quest progress is counted off the bag, so every pickup can move it.
+    this.questTracker.update(this.model.quests, inventory);
+    if (this.model.openSheet === 'quests') {
+      this.questPanel.update(this.model.quests, inventory);
+    }
   };
 
   private handleSkillXpGained = (progress: SkillProgressInfo): void => {
@@ -776,7 +794,7 @@ export class UIScene extends Phaser.Scene {
 
   private handleAfkStateChanged = (active: boolean): void => {
     this.model.afkActive = active;
-    this.refreshAfkButton();
+    this.tabBar.setCamping(active);
     this.showToast(active ? 'Camping (Z)' : 'Camp ended', THEME.color.skillUp);
   };
 

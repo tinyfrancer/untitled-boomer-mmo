@@ -22,26 +22,28 @@ export const LOOT_TABLES: Record<string, LootTable> = {
     entries: [
       { itemId: 'rat-bones', chance: 0.6 },
       { itemId: 'rat-meat', chance: 0.5 },
-      { itemId: 'brown-chestplate', chance: 0.05 },
-      { itemId: 'brown-helmet', chance: 0.04 },
-      { itemId: 'brown-legs', chance: 0.04 },
-      { itemId: 'brown-axe', chance: 0.03 },
     ],
   },
   crab: {
     id: 'crab',
-    entries: [{ itemId: 'crab-meat', chance: 0.8 }],
+    entries: [{ itemId: 'crab-meat', chance: 0.85 }],
   },
   bandit: {
     id: 'bandit',
+    // The only gear and coin in the game, and it covers both armor types on
+    // purpose: cloth is otherwise shop-only, which left a wizard unable to wear
+    // a single thing the world drops.
     entries: [
       { itemId: 'cooked-fish', chance: 0.15 },
-      { itemId: 'brown-chestplate', chance: 0.05 },
-      { itemId: 'brown-helmet', chance: 0.05 },
-      { itemId: 'brown-legs', chance: 0.05 },
-      { itemId: 'brown-axe', chance: 0.05 },
+      { itemId: 'brown-chestplate', chance: 0.06 },
+      { itemId: 'brown-helmet', chance: 0.06 },
+      { itemId: 'brown-legs', chance: 0.06 },
+      { itemId: 'brown-robe', chance: 0.06 },
+      { itemId: 'brown-cloth-hat', chance: 0.06 },
+      { itemId: 'brown-cloth-pants', chance: 0.06 },
+      { itemId: 'brown-axe', chance: 0.04 },
     ],
-    // Humanoids carry coin; the animals above never do.
+    // Humanoids carry coin; the beasts above never do.
     currency: { min: 8, max: 25, chance: 0.9 },
   },
 };

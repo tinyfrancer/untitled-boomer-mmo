@@ -15,7 +15,16 @@ import {
   inventoryWeight,
 } from './EncumbranceSystem';
 import { computeEffectiveStats } from './StatsSystem';
-import type { CombatSkillId, GearSlotId, SkillId, ZoneId } from '../types/ids';
+import {
+  acceptQuest,
+  canAccept,
+  canTurnIn,
+  completeQuest,
+  questProgress,
+  type QuestProgress,
+} from './QuestSystem';
+import { QUESTS } from '../data/quests';
+import type { CombatSkillId, GearSlotId, QuestId, SkillId, ZoneId } from '../types/ids';
 
 export interface CombatXpGain {
   level: number;
@@ -31,6 +40,16 @@ export interface SkillXpGain {
   xpToNext: number;
   leveledUp: boolean;
 }
+
+export type QuestTurnIn =
+  | { ok: false; reason: string }
+  | {
+      ok: true;
+      questId: QuestId;
+      rewardItemId: string;
+      copper: number;
+      xp: CombatXpGain;
+    };
 
 /**
  * The one place CharacterState gets mutated during play. Scenes call these and
@@ -147,6 +166,51 @@ export class CharacterController {
 
   skillLevelOf(skillId: SkillId): number {
     return skillLevel(this.state.skills, skillId);
+  }
+
+  questProgress(questId: QuestId): QuestProgress {
+    return questProgress(QUESTS[questId], this.state.inventory);
+  }
+
+  acceptQuest(questId: QuestId): boolean {
+    if (!canAccept(QUESTS[questId], this.state.quests)) {
+      return false;
+    }
+    this.state.quests = acceptQuest(this.state.quests, questId);
+    return true;
+  }
+
+  /**
+   * Hands the objective over for the reward, or changes nothing at all. The
+   * pack can refuse the reward gear, and a turn-in that took the items and
+   * dropped the reward on the floor is the one outcome that can't be undone —
+   * so a full pack fails the whole thing rather than half of it.
+   */
+  turnInQuest(questId: QuestId): QuestTurnIn {
+    const definition = QUESTS[questId];
+    if (!canTurnIn(definition, this.state.quests, this.state.inventory)) {
+      return { ok: false, reason: 'You do not have what was asked for.' };
+    }
+
+    const rewardItemId = definition.reward.gear[this.state.classId];
+    const { itemId, quantity } = definition.objective;
+    // Weight only frees up once the objective is handed over, so check the
+    // reward against the pack as it will be, not as it is.
+    const after = removeItemFromInventory(this.state.inventory, itemId, quantity);
+    if (!canCarry(after, rewardItemId, 1, this.carryCapacity())) {
+      return { ok: false, reason: 'Your pack is too full for the reward.' };
+    }
+
+    this.state.inventory = addItemToInventory(after, rewardItemId, 1);
+    this.state.quests = completeQuest(this.state.quests, questId);
+    this.addCurrency(definition.reward.copper);
+    return {
+      ok: true,
+      questId,
+      rewardItemId,
+      copper: definition.reward.copper,
+      xp: this.awardXp(definition.reward.xp),
+    };
   }
 
   recordLocation(zoneId: ZoneId, x: number, y: number): void {

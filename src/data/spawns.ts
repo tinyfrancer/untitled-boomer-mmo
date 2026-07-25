@@ -44,14 +44,16 @@ export const TOWN_NODE_SPAWNS: NodeSpawnPoint[] = [
 ];
 
 // Crabs live on the sand band (see beachMap.ts), away from the grass strip
-// where the road from town arrives. Same weighting-by-level idea as the rats.
+// where the road from town arrives. Same weighting-by-level idea as the rats:
+// all three zones are level 1-3, so which one to visit is a question of what
+// you need — parts, food, or gear — rather than what you can survive.
 export const BEACH_MOB_SPAWNS: MobSpawnPoint[] = [
-  { dx: -384, dy: 32, enemyId: 'crab', level: 4 },
-  { dx: 64, dy: 128, enemyId: 'crab', level: 4 },
-  { dx: 384, dy: 0, enemyId: 'crab', level: 4 },
-  { dx: -192, dy: 256, enemyId: 'crab', level: 5 },
-  { dx: 256, dy: 288, enemyId: 'crab', level: 5 },
-  { dx: 576, dy: 224, enemyId: 'crab', level: 6 },
+  { dx: -384, dy: 32, enemyId: 'crab', level: 1 },
+  { dx: 64, dy: 128, enemyId: 'crab', level: 1 },
+  { dx: 384, dy: 0, enemyId: 'crab', level: 1 },
+  { dx: -192, dy: 256, enemyId: 'crab', level: 2 },
+  { dx: 256, dy: 288, enemyId: 'crab', level: 2 },
+  { dx: 576, dy: 224, enemyId: 'crab', level: 3 },
 ];
 
 // On the ocean's northern row, fished from the shore like the town pond.
@@ -64,10 +66,10 @@ export const BEACH_NODE_SPAWNS: NodeSpawnPoint[] = [
 // All inside the dirt clearing (see banditCampMap.ts), far enough east that
 // arriving from town never lands inside an aggro radius.
 export const BANDIT_CAMP_MOB_SPAWNS: MobSpawnPoint[] = [
-  { dx: 160, dy: -160, enemyId: 'bandit', level: 7 },
-  { dx: 192, dy: 160, enemyId: 'bandit', level: 7 },
-  { dx: 384, dy: 0, enemyId: 'bandit', level: 7 },
-  { dx: 480, dy: -224, enemyId: 'bandit', level: 8 },
-  { dx: 512, dy: 224, enemyId: 'bandit', level: 8 },
-  { dx: 576, dy: 0, enemyId: 'bandit', level: 9 },
+  { dx: 160, dy: -160, enemyId: 'bandit', level: 1 },
+  { dx: 192, dy: 160, enemyId: 'bandit', level: 1 },
+  { dx: 384, dy: 0, enemyId: 'bandit', level: 1 },
+  { dx: 480, dy: -224, enemyId: 'bandit', level: 2 },
+  { dx: 512, dy: 224, enemyId: 'bandit', level: 2 },
+  { dx: 576, dy: 0, enemyId: 'bandit', level: 3 },
 ];

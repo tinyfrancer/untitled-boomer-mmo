@@ -26,6 +26,12 @@ export const SHOP_CLOSED_EVENT = 'shop-closed';
 export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
 export const SELL_ITEM_REQUESTED_EVENT = 'sell-item-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
+// Quests. Taken and handed in at the shopkeeper, so these ride the same
+// ask/decide split as buying: the HUD forwards the tap, ZoneScene re-checks
+// that the player is still standing at the NPC, and answers with the new log.
+export const ACCEPT_QUEST_REQUESTED_EVENT = 'accept-quest-requested';
+export const TURN_IN_QUEST_REQUESTED_EVENT = 'turn-in-quest-requested';
+export const QUEST_LOG_CHANGED_EVENT = 'quest-log-changed';
 // Abilities: the HUD asks, ZoneScene decides (it owns range, mana and targets)
 // and answers with the state the bar draws itself from.
 export const ABILITY_REQUESTED_EVENT = 'ability-requested';

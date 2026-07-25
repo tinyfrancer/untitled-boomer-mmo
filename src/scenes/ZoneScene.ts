@@ -41,6 +41,9 @@ import {
   AFK_TOGGLE_REQUESTED_EVENT,
   AFK_STATE_CHANGED_EVENT,
   OFFLINE_AFK_RESOLVED_EVENT,
+  ACCEPT_QUEST_REQUESTED_EVENT,
+  TURN_IN_QUEST_REQUESTED_EVENT,
+  QUEST_LOG_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import { resolveOfflineAfk } from '../systems/OfflineAfkSystem';
 import {
@@ -71,12 +74,15 @@ import {
   logLevelUp,
   logLoot,
   logNotice,
+  logQuestAccepted,
+  logQuestCompleted,
   logSkillLevelUp,
   logSpellFailed,
   logXpGain,
   type CombatLogEntry,
 } from '../systems/CombatLogSystem';
 import { THEME, worldZoom } from '../ui/theme';
+import { worldViewportHeight } from '../ui/layout';
 import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
 import { rollLootTable } from '../systems/LootSystem';
@@ -86,6 +92,7 @@ import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
 import { consumableFor, describeItemName, itemValue } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { SHOP_CLOSE_RADIUS, SHOP_INTERACT_RADIUS, shopPriceFor } from '../data/shop';
+import { QUESTS } from '../data/quests';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { Shopkeeper } from '../entities/Shopkeeper';
 import {
@@ -95,7 +102,7 @@ import {
   rollGatherQuantity,
   type GatherState,
 } from '../systems/GatherSystem';
-import { CharacterController } from '../systems/CharacterController';
+import { CharacterController, type CombatXpGain } from '../systems/CharacterController';
 import {
   SIGNPOST_INTERACT_RADIUS,
   arrivalPoint,
@@ -106,7 +113,7 @@ import {
 } from '../systems/ZoneSystem';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
-import type { AbilityId, GearSlotId, SkillId, ZoneId } from '../types/ids';
+import type { AbilityId, GearSlotId, QuestId, SkillId, ZoneId } from '../types/ids';
 
 const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
@@ -314,6 +321,8 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.on(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
     this.game.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
     this.game.events.on(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
+    this.game.events.on(ACCEPT_QUEST_REQUESTED_EVENT, this.handleAcceptQuestRequested, this);
+    this.game.events.on(TURN_IN_QUEST_REQUESTED_EVENT, this.handleTurnInQuestRequested, this);
 
     this.time.addEvent({
       delay: AUTOSAVE_INTERVAL_MS,
@@ -337,6 +346,8 @@ export class ZoneScene extends Phaser.Scene {
       this.game.events.off(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
       this.game.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
       this.game.events.off(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
+      this.game.events.off(ACCEPT_QUEST_REQUESTED_EVENT, this.handleAcceptQuestRequested, this);
+      this.game.events.off(TURN_IN_QUEST_REQUESTED_EVENT, this.handleTurnInQuestRequested, this);
     });
 
     // Last, so the player, the mobs and the log are all there to pay it into.
@@ -414,6 +425,33 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
   }
 
+  private handleAcceptQuestRequested(questId: QuestId): void {
+    if (!this.shopNpc) return;
+    if (!this.character.acceptQuest(questId)) return;
+    this.log(logQuestAccepted(QUESTS[questId].name));
+    this.announceQuests();
+    this.persistCharacter();
+  }
+
+  private handleTurnInQuestRequested(questId: QuestId): void {
+    if (!this.shopNpc) return;
+    const result = this.character.turnInQuest(questId);
+    if (!result.ok) {
+      this.game.events.emit(GATHER_REFUSED_EVENT, result.reason);
+      return;
+    }
+    this.log(logQuestCompleted(QUESTS[questId].name));
+    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+    this.announceQuests();
+    this.publishXpGain(result.xp);
+    this.persistCharacter();
+  }
+
+  private announceQuests(): void {
+    this.game.events.emit(QUEST_LOG_CHANGED_EVENT, this.character.state.quests);
+  }
+
   private checkZoneExit(): void {
     const exit = findExit(
       this.zone.exits,
@@ -453,9 +491,21 @@ export class ZoneScene extends Phaser.Scene {
     this.scene.restart(data);
   }
 
+  /**
+   * Fits the world camera into the screen *above* the tab bar.
+   *
+   * The bar is opaque HUD furniture that eats every tap landing on it, so any
+   * world drawn underneath it is unreachable — which is exactly what happened
+   * to the south signpost in town, rendering four pixels inside the bar on a
+   * portrait phone with no way to tap it. Shrinking the viewport instead of
+   * nudging pixels makes "every world object can be tapped" true by
+   * construction rather than by luck.
+   */
   private applyCameraZoom(): void {
+    const height = worldViewportHeight(this.scale.width, this.scale.height);
+    this.cameras.main.setViewport(0, 0, this.scale.width, height);
     this.cameras.main.setZoom(
-      worldZoom(this.scale.width, this.scale.height, this.worldWidth, this.worldHeight),
+      worldZoom(this.scale.width, height, this.worldWidth, this.worldHeight),
     );
   }
 
@@ -1171,11 +1221,18 @@ export class ZoneScene extends Phaser.Scene {
 
   private awardXp(reward: number): void {
     // The one choke point both the swing and the ability paths run through, so
-    // it is the one place the AFK penalty has to be applied.
+    // it is the one place the AFK penalty has to be applied. A quest reward is
+    // not one of them — handing a quest in is something the player did — so it
+    // comes in through publishXpGain instead.
     const amount = afkXpReward(reward, this.afkActive);
     const gain = this.character.awardXp(amount);
     this.showFloatingText(this.player.x, this.player.y - 20, `+${amount} XP`, THEME.color.levelUp);
     this.log(logXpGain(amount));
+    this.publishXpGain(gain);
+  }
+
+  // Everything a level costs the rest of the world, for XP however it arrived.
+  private publishXpGain(gain: CombatXpGain): void {
     this.game.events.emit(XP_GAINED_EVENT, gain.level, gain.xp, gain.xpToNext);
 
     if (gain.leveledUp) {

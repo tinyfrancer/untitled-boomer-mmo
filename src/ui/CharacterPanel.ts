@@ -116,7 +116,7 @@ export class CharacterPanel {
     const pad = px(THEME.padding, scale);
 
     const background = scene.add
-      .rectangle(0, 0, width, height, THEME.panelBg, THEME.panelAlpha)
+      .rectangle(0, 0, width, height, THEME.panelBg, THEME.sheetAlpha)
       .setOrigin(0, 0)
       .setStrokeStyle(px(1, scale), THEME.panelStroke)
       // Interactive so a click on the panel is seen as a HUD hit and never

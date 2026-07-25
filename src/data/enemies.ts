@@ -1,4 +1,4 @@
-import type { EnemyId } from '../types/ids';
+import type { EnemyFamilyId, EnemyId } from '../types/ids';
 
 export interface WanderConfig {
   radius: number;
@@ -17,6 +17,10 @@ export interface EnemyDefinition {
   id: EnemyId;
   name: string;
   textureKey: string;
+  // Decides what the loot table is allowed to hold: only humanoids drop gear
+  // and coin. Enforced by a test over LOOT_TABLES rather than by construction,
+  // since the tables are hand-written data.
+  family: EnemyFamilyId;
   // Whether the enemy opens combat on its own; rats only ever retaliate.
   aggressive: boolean;
   // How close a wandering aggressive enemy lets the player get before
@@ -39,6 +43,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'rat',
     name: 'Rat',
     textureKey: 'rat',
+    family: 'beast',
     aggressive: false,
     // Tuned so a fresh level 1 melee character beats a level 1 rat comfortably,
     // sweats against a level 2, and loses to a level 3 without gear or kiting.
@@ -62,12 +67,13 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'crab',
     name: 'Crab',
     textureKey: 'crab',
+    family: 'beast',
     aggressive: false,
-    // Tanky and slow-swinging: at beach levels (4-6) a brown-geared warrior
-    // beats an even-level crab with room to spare, sweats +1, loses to +2 —
-    // verified by the duel simulation in EnemySystem.test.ts.
-    base: { maxHp: 35, attackPower: 3, xpReward: 10 },
-    perLevel: { maxHp: 18, attackPower: 2, xpReward: 6 },
+    // Tanky and slow-swinging, which is what makes the beach the zone you fight
+    // while gathering: far more HP than a rat of the same level but half the
+    // swing rate, so a fight is long rather than dangerous.
+    base: { maxHp: 30, attackPower: 3, xpReward: 9 },
+    perLevel: { maxHp: 22, attackPower: 2, xpReward: 7 },
     attackRange: 64,
     attackCooldownMs: 2000,
     respawnDelayMs: 8000,
@@ -86,13 +92,15 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'bandit',
     name: 'Bandit',
     textureKey: 'bandit',
+    family: 'humanoid',
     // The first enemy that opens combat itself: walk too close and it swings.
     aggressive: true,
     aggroRadius: 180,
-    // Fast-swinging humanoid; at camp levels (7-9) an even fight is a sweaty
-    // win, +2 is death — see the duel simulation in EnemySystem.test.ts.
-    base: { maxHp: 30, attackPower: 4, xpReward: 15 },
-    perLevel: { maxHp: 16, attackPower: 1.5, xpReward: 7 },
+    // The dangerous end of a level 1-3 world, and the reason the camp is worth
+    // the walk: it hits harder than anything else at its level and aggros on
+    // sight, which is what the gear and coin on its table pay for.
+    base: { maxHp: 26, attackPower: 5, xpReward: 13 },
+    perLevel: { maxHp: 18, attackPower: 3, xpReward: 9 },
     attackRange: 72,
     attackCooldownMs: 1400,
     respawnDelayMs: 10000,

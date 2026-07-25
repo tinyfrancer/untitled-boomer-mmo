@@ -85,9 +85,9 @@ describe('resolveOfflineAfk', () => {
   it('is worth at most one level, however long the session and however rich the zone', () => {
     for (const [level, zoneId] of [
       [1, 'town'],
-      [5, 'beach'],
-      [7, 'bandit-camp'],
-      [9, 'bandit-camp'],
+      [1, 'bandit-camp'],
+      [3, 'beach'],
+      [3, 'bandit-camp'],
     ] as const) {
       const report = resolveOfflineAfk(
         sessionStartedAgo(OFFLINE_CAP_MS, zoneId),

@@ -8,6 +8,10 @@ export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
 export type EnemyId = 'rat' | 'crab' | 'bandit';
 
+// What an enemy is, which is what decides what it can carry: humanoids have
+// pockets and wear gear, beasts drop the parts they are made of.
+export type EnemyFamilyId = 'beast' | 'humanoid';
+
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
 
 export type GatherSkillId = 'fishing' | 'woodcutting' | 'cooking';
@@ -23,5 +27,7 @@ export type ResourceNodeId = 'tree' | 'fishing-spot' | 'ocean-fishing-spot';
 export type ZoneId = 'town' | 'beach' | 'bandit-camp';
 
 export type NpcId = 'shopkeeper';
+
+export type QuestId = 'rat-bones' | 'crab-feast';
 
 export type AbilityId = 'fireball' | 'mana-shield' | 'power-slash' | 'battle-fury';

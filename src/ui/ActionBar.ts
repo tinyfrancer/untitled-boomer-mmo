@@ -1,10 +1,9 @@
 import Phaser from 'phaser';
 import { abilitiesFor } from '../systems/AbilitySystem';
 import { THEME, fontPx, px } from './theme';
+import type { Rect } from './layout';
 import type { AbilityState } from './uiEvents';
 import type { AbilityId, ClassId } from '../types/ids';
-
-const LABEL_ROW = 16;
 
 interface AbilityButton {
   background: Phaser.GameObjects.Rectangle;
@@ -21,6 +20,9 @@ interface AbilityButton {
  * bottom middle of the screen is where the ground and the signposts just south
  * of them are tapped — a bar there swallows the mobile way out of a zone.
  * Keyboard players get 1 and 2 for the same two slots.
+ *
+ * Where it sits comes from ui/layout.ts rather than from the screen height, so
+ * the stack above the tab bar is one piece of arithmetic under test.
  */
 export class ActionBar {
   private readonly container: Phaser.GameObjects.Container;
@@ -32,15 +34,14 @@ export class ActionBar {
     scene: Phaser.Scene,
     scale: number,
     classId: ClassId,
+    rect: Rect,
     onUse: (abilityId: AbilityId) => void,
   ) {
     const abilities = abilitiesFor(classId);
     const size = px(THEME.touchMin + 8, scale);
     const gap = px(THEME.padding, scale);
-    const left = px(THEME.margin, scale);
-    // Clear of the very bottom edge, where phone gesture bars live, and of the
-    // corner line the scene prints below that.
-    const top = scene.scale.height - size - px(THEME.margin + LABEL_ROW * 2 + 6, scale);
+    const left = rect.x;
+    const top = rect.y;
 
     const children: Phaser.GameObjects.GameObject[] = [];
 
