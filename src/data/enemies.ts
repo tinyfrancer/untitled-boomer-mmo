@@ -1,4 +1,4 @@
-import type { EnemyId } from '../types/ids';
+import type { EnemyFamilyId, EnemyId } from '../types/ids';
 
 export interface WanderConfig {
   radius: number;
@@ -17,6 +17,10 @@ export interface EnemyDefinition {
   id: EnemyId;
   name: string;
   textureKey: string;
+  // Decides what the loot table is allowed to hold: only humanoids drop gear
+  // and coin. Enforced by a test over LOOT_TABLES rather than by construction,
+  // since the tables are hand-written data.
+  family: EnemyFamilyId;
   // Whether the enemy opens combat on its own; rats only ever retaliate.
   aggressive: boolean;
   // How close a wandering aggressive enemy lets the player get before
@@ -39,6 +43,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'rat',
     name: 'Rat',
     textureKey: 'rat',
+    family: 'beast',
     aggressive: false,
     // Tuned so a fresh level 1 melee character beats a level 1 rat comfortably,
     // sweats against a level 2, and loses to a level 3 without gear or kiting.
@@ -62,6 +67,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'crab',
     name: 'Crab',
     textureKey: 'crab',
+    family: 'beast',
     aggressive: false,
     // Tanky and slow-swinging: at beach levels (4-6) a brown-geared warrior
     // beats an even-level crab with room to spare, sweats +1, loses to +2 —
@@ -86,6 +92,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'bandit',
     name: 'Bandit',
     textureKey: 'bandit',
+    family: 'humanoid',
     // The first enemy that opens combat itself: walk too close and it swings.
     aggressive: true,
     aggroRadius: 180,

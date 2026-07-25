@@ -4,19 +4,18 @@ import { LOOT_TABLES } from '../../src/data/lootTables';
 
 describe('rollLootTable', () => {
   it('rolls every entry independently and includes only the ones whose roll beats their chance', () => {
-    // one roll per rat table entry, in order:
-    // bones (0.6) hit, meat (0.5) miss, chestplate (0.05) hit,
-    // helmet (0.04) miss, legs (0.04) hit, axe (0.03) miss
-    const rolls = [0.1, 0.9, 0.01, 0.9, 0.02, 0.9];
+    // one roll per bandit table entry, in order: cooked fish (0.15) hit,
+    // chestplate (0.06) miss, helmet (0.06) hit, then a miss for every
+    // remaining piece, and finally the currency chance roll
+    const rolls = [0.1, 0.9, 0.01, 0.9, 0.9, 0.9, 0.9, 0.9];
     let call = 0;
     const rng = () => rolls[call++];
 
-    const { drops } = rollLootTable('rat', rng);
+    const { drops } = rollLootTable('bandit', rng);
 
     expect(drops).toEqual([
-      { itemId: 'rat-bones', quantity: 1 },
-      { itemId: 'brown-chestplate', quantity: 1 },
-      { itemId: 'brown-legs', quantity: 1 },
+      { itemId: 'cooked-fish', quantity: 1 },
+      { itemId: 'brown-helmet', quantity: 1 },
     ]);
   });
 
@@ -31,7 +30,7 @@ describe('rollLootTable', () => {
   });
 
   it('drops no copper from tables without a currency entry', () => {
-    // rats are animals — even an all-hits roll yields items only
+    // rats are beasts — even an all-hits roll yields items only
     const result = rollLootTable('rat', () => 0);
     expect(result.copper).toBe(0);
   });

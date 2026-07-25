@@ -1,0 +1,16 @@
+We want questing functionality to be added to the game.  Very basic at first, we will have 2 quests.
+
+1. Collect 10 rat bones 
+2. Collect 20 cooked crab meat 
+
+We should utilize this task as our first pass through for adjustments.  I want the three zones we have currently
+to all be level 1-3.  This should be to teach that different mobs have different drops.  Only humanoids should drop gear/coins.
+These three zones will allow the player to get food and gear and finish quests by exploring all three.  Leveling skills and combat should be slower.
+We want the leveling to take long enough that by level 3 the player should have been able to finish those quests and have full gear.
+
+These quests should be given by the shopkeeper.  They should be able to be tracked through some UI element
+
+With the addition of all of these ui elements, we are beginning to run into a cluttered ui.  We want it to still be an enjoyable
+phone experience.  Analyze and see how we can clean it up for user-friendlyness.
+
+Ask any questions for further guidance on implementation.

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
+import { LOOT_TABLES } from '../../src/data/lootTables';
+import { ITEMS, armorTypeOf } from '../../src/data/items';
 import { TOWN_MOB_SPAWNS } from '../../src/data/spawns';
 import { conColor, enemyDisplayName, scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { THEME } from '../../src/ui/theme';
@@ -195,9 +197,57 @@ describe('new zone spawn tables', () => {
     BANDIT_CAMP_MOB_SPAWNS.forEach((s) => expect(s.enemyId).toBe('bandit'));
   });
 
-  it('only humanoids drop currency', () => {
-    expect(ENEMIES.bandit.aggressive).toBe(true);
-    expect(ENEMIES.crab.aggressive).toBe(false);
-    expect(ENEMIES.rat.aggressive).toBe(false);
+});
+
+// The rule the whole starter arc is built on: each zone teaches a different
+// drop table, and gear and coin come from the humanoids. Asserted over the data
+// rather than over the three tables we happen to have, so a new beast can't
+// quietly reintroduce a gear drop.
+describe('only humanoids carry gear and coin', () => {
+  const tableFor = (enemy: (typeof ENEMIES)[EnemyId]) =>
+    enemy.lootTableId ? LOOT_TABLES[enemy.lootTableId] : undefined;
+
+  it('gives no beast a currency drop', () => {
+    Object.values(ENEMIES)
+      .filter((enemy) => enemy.family === 'beast')
+      .forEach((enemy) => {
+        expect(tableFor(enemy)?.currency).toBeUndefined();
+      });
+  });
+
+  it('gives no beast an equipment drop', () => {
+    Object.values(ENEMIES)
+      .filter((enemy) => enemy.family === 'beast')
+      .forEach((enemy) => {
+        const dropped = (tableFor(enemy)?.entries ?? []).map((entry) => ITEMS[entry.itemId].kind);
+        expect(dropped).not.toContain('equipment');
+      });
+  });
+
+  it('leaves the humanoids as the only source of both', () => {
+    const humanoids = Object.values(ENEMIES).filter((enemy) => enemy.family === 'humanoid');
+    expect(humanoids.length).toBeGreaterThan(0);
+    humanoids.forEach((enemy) => {
+      const table = tableFor(enemy);
+      expect(table?.currency).toBeDefined();
+      expect(
+        (table?.entries ?? []).some((entry) => ITEMS[entry.itemId].kind === 'equipment'),
+      ).toBe(true);
+    });
+  });
+
+  // Cloth is shop-only among craftable gear, so without it on a humanoid table
+  // a wizard cannot wear a single thing the world drops.
+  it('drops gear both armor types can wear', () => {
+    const armorTypes = new Set(
+      Object.values(ENEMIES)
+        .filter((enemy) => enemy.family === 'humanoid')
+        .flatMap((enemy) => tableFor(enemy)?.entries ?? [])
+        .map((entry) => armorTypeOf(entry.itemId))
+        .filter((type): type is NonNullable<typeof type> => type != null),
+    );
+
+    expect(armorTypes.has('leather')).toBe(true);
+    expect(armorTypes.has('cloth')).toBe(true);
   });
 });
