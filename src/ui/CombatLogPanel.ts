@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { recentEntries, type CombatLogEntry } from '../systems/CombatLogSystem';
+import { Panel } from './Panel';
 import { THEME, fontPx, px } from './theme';
 
 const TITLE_ROW = 20;
@@ -23,26 +24,21 @@ export function combatLogPanelHeight(scale: number): number {
  * cover most of the playfield.
  */
 export class CombatLogPanel {
-  private readonly container: Phaser.GameObjects.Container;
+  private readonly panel: Panel;
   private readonly lines: Phaser.GameObjects.Text[];
 
-  constructor(scene: Phaser.Scene, x: number, y: number, scale: number) {
-    const width = combatLogPanelWidth(scale);
-    const height = combatLogPanelHeight(scale);
+  constructor(scene: Phaser.Scene, x: number, y: number, scale: number, width?: number) {
+    const panelWidth = width ?? combatLogPanelWidth(scale);
     const pad = px(THEME.padding, scale);
 
-    const background = scene.add
-      .rectangle(0, 0, width, height, THEME.panelBg, THEME.panelAlpha)
-      .setOrigin(0, 0)
-      .setStrokeStyle(px(1, scale), THEME.panelStroke)
-      // Interactive so a tap on the log is a HUD hit and never falls through to
-      // the world as a move order.
-      .setInteractive();
-
-    const title = scene.add.text(pad, pad, 'Combat Log', {
-      fontSize: fontPx(THEME.font.sm, scale),
-      color: THEME.color.text,
-      fontStyle: 'bold',
+    this.panel = new Panel(scene, {
+      x,
+      y,
+      width: panelWidth,
+      height: combatLogPanelHeight(scale),
+      scale,
+      title: 'Combat Log',
+      titleSize: THEME.font.sm,
     });
 
     const linesTop = pad + px(TITLE_ROW, scale);
@@ -52,13 +48,10 @@ export class CombatLogPanel {
         color: THEME.color.muted,
         // Wrapping would push older lines off the bottom mid-render; the
         // formatters keep messages short enough to fit instead.
-        wordWrap: { width: width - pad * 2 },
+        wordWrap: { width: panelWidth - pad * 2 },
       }),
     );
-
-    this.container = scene.add
-      .container(x, y, [background, title, ...this.lines])
-      .setScrollFactor(0);
+    this.panel.add(...this.lines);
   }
 
   update(log: CombatLogEntry[]): void {
@@ -74,18 +67,18 @@ export class CombatLogPanel {
   }
 
   isVisible(): boolean {
-    return this.container.visible;
+    return this.panel.isVisible();
   }
 
   setVisible(visible: boolean): void {
-    this.container.setVisible(visible);
+    this.panel.setVisible(visible);
   }
 
   toggle(): void {
-    this.container.setVisible(!this.container.visible);
+    this.panel.toggle();
   }
 
   destroy(): void {
-    this.container.destroy(true);
+    this.panel.destroy();
   }
 }

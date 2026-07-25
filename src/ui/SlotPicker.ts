@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { describeItemBonuses, describeItemName } from '../data/items';
 import { SLOT_LABELS } from './CharacterPanel';
+import { Button } from './Button';
+import { Panel } from './Panel';
 import { THEME, fontPx, px } from './theme';
 import type { GearSlotId } from '../types/ids';
 
@@ -12,10 +14,8 @@ const TITLE_ROW = 22;
  * destroyed on close rather than kept around and toggled.
  */
 export class SlotPicker {
-  private readonly scene: Phaser.Scene;
-  private readonly container: Phaser.GameObjects.Container;
+  private readonly panel: Panel;
   private readonly bounds: Phaser.Geom.Rectangle;
-  private readonly escapeHandler: () => void;
   private readonly outsideHandler: (pointer: Phaser.Input.Pointer) => void;
   private closed = false;
 
@@ -28,31 +28,38 @@ export class SlotPicker {
     itemIds: string[],
     onPick: (itemId: string) => void,
   ) {
-    this.scene = scene;
-
     const width = px(THEME.panelWidth.character, scale);
     const pad = px(THEME.padding, scale);
     const rowHeight = px(THEME.touchMin, scale);
     const height = pad * 2 + px(TITLE_ROW, scale) + Math.max(itemIds.length, 1) * rowHeight;
 
-    const background = scene.add
-      .rectangle(0, 0, width, height, THEME.panelBg, 0.92)
-      .setOrigin(0, 0)
-      .setStrokeStyle(px(1, scale), 0xffee58)
-      // Interactive so a click on the picker never falls through to the world.
-      .setInteractive();
+    // Keep the picker on screen when the slot it belongs to sits low or right.
+    const clampedX = Phaser.Math.Clamp(x, 0, Math.max(0, scene.scale.width - width));
+    const clampedY = Phaser.Math.Clamp(y, 0, Math.max(0, scene.scale.height - height));
+    this.bounds = new Phaser.Geom.Rectangle(clampedX, clampedY, width, height);
 
-    const title = scene.add.text(pad, pad, `Equip ${SLOT_LABELS[slot]}`, {
-      fontSize: fontPx(THEME.font.md, scale),
-      color: THEME.color.text,
-      fontStyle: 'bold',
+    this.panel = new Panel(scene, {
+      x: clampedX,
+      y: clampedY,
+      width,
+      height,
+      scale,
+      title: `Equip ${SLOT_LABELS[slot]}`,
+      alpha: 0.92,
+      depth: 2000,
+      closeOnEscape: true,
+      onClose: () => {
+        this.closed = true;
+        scene.input.off(Phaser.Input.Events.POINTER_DOWN, this.outsideHandler);
+      },
     });
+    // The picker's own accent, so it reads as a choice rather than a panel.
+    this.panel.background.setStrokeStyle(px(1, scale), 0xffee58);
 
-    const children: Phaser.GameObjects.GameObject[] = [background, title];
     const rowsTop = pad + px(TITLE_ROW, scale);
 
     if (itemIds.length === 0) {
-      children.push(
+      this.panel.add(
         scene.add.text(pad * 2, rowsTop + px(10, scale), '(nothing for this slot)', {
           fontSize: fontPx(THEME.font.sm, scale),
           color: THEME.color.dim,
@@ -61,41 +68,26 @@ export class SlotPicker {
     }
 
     itemIds.forEach((itemId, index) => {
-      const rowY = rowsTop + index * rowHeight;
-      const hit = scene.add
-        .rectangle(pad, rowY, width - pad * 2, rowHeight, 0xffffff, 0.06)
-        .setOrigin(0, 0)
-        .setInteractive({ useHandCursor: true });
-      hit.on('pointerdown', () => {
-        onPick(itemId);
-        this.close();
+      const row = new Button(scene, {
+        x: pad,
+        y: rowsTop + index * rowHeight,
+        width: width - pad * 2,
+        height: rowHeight,
+        scale,
+        label: describeItemName(itemId),
+        subLabel: describeItemBonuses(itemId),
+        color: THEME.color.equippable,
+        fontSize: THEME.font.sm,
+        fill: 0xffffff,
+        fillAlpha: 0.06,
+        strokeColor: null,
+        onClick: () => {
+          onPick(itemId);
+          this.close();
+        },
       });
-
-      children.push(
-        hit,
-        scene.add.text(pad * 2, rowY + px(6, scale), describeItemName(itemId), {
-          fontSize: fontPx(THEME.font.sm, scale),
-          color: THEME.color.equippable,
-        }),
-        scene.add.text(pad * 2, rowY + px(22, scale), describeItemBonuses(itemId), {
-          fontSize: fontPx(THEME.font.xs, scale),
-          color: THEME.color.muted,
-        }),
-      );
+      this.panel.add(...row.objects);
     });
-
-    // Keep the picker on screen when the slot it belongs to sits low or right.
-    const clampedX = Phaser.Math.Clamp(x, 0, Math.max(0, scene.scale.width - width));
-    const clampedY = Phaser.Math.Clamp(y, 0, Math.max(0, scene.scale.height - height));
-    this.bounds = new Phaser.Geom.Rectangle(clampedX, clampedY, width, height);
-
-    this.container = scene.add
-      .container(clampedX, clampedY, children)
-      .setScrollFactor(0)
-      .setDepth(2000);
-
-    this.escapeHandler = () => this.close();
-    scene.input.keyboard?.on('keydown-ESC', this.escapeHandler);
 
     this.outsideHandler = (pointer: Phaser.Input.Pointer) => {
       if (!this.bounds.contains(pointer.x, pointer.y)) {
@@ -113,12 +105,6 @@ export class SlotPicker {
   }
 
   close(): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
-    this.scene.input.keyboard?.off('keydown-ESC', this.escapeHandler);
-    this.scene.input.off(Phaser.Input.Events.POINTER_DOWN, this.outsideHandler);
-    this.container.destroy(true);
+    this.panel.close();
   }
 }
