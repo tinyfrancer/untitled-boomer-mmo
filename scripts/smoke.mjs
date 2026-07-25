@@ -1158,6 +1158,10 @@ try {
     cameraH: window.game.scene.getScene('Zone').cameras.main.height,
     tabBarY: window.game.scene.getScene('UI').layout.tabBar.y,
     uiActive: window.game.scene.getScene('UI').scene.isActive(),
+    // The visible viewport, against which the canvas must not overhang.
+    innerH: window.innerHeight,
+    appH: document.getElementById('app').clientHeight,
+    canvasH: window.game.canvas.getBoundingClientRect().height,
   }));
   check(
     'portrait viewport resizes the canvas 1:1',
@@ -1177,6 +1181,16 @@ try {
     `camera ${portrait.cameraH}, tab bar at ${portrait.tabBarY}`,
   );
   check('UI scene survives the resize', portrait.uiActive === true);
+  // The tab bar sits flush against the bottom of the canvas, so a canvas taller
+  // than the visible viewport hides it outright — which is what 100vh did on
+  // iOS Safari, where vh is the viewport as if the toolbars were retracted.
+  // Headless Chromium can't reproduce that discrepancy, so this is a guard
+  // against a fixed or overhanging height rather than a reproduction.
+  check(
+    'the canvas never overhangs the visible viewport',
+    portrait.appH <= portrait.innerH && Math.round(portrait.canvasH) <= portrait.innerH,
+    `app ${portrait.appH}, canvas ${Math.round(portrait.canvasH)}, viewport ${portrait.innerH}`,
+  );
   await page.screenshot({ path: `${OUT}/7-portrait.png` });
 
   // --- Mobile zone travel: tapping the exit signpost must work. Edge-walk

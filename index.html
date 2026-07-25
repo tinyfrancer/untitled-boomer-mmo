@@ -17,7 +17,19 @@
       }
       #app {
         width: 100vw;
+        /*
+          dvh, not vh. On iOS Safari 100vh is the *large* viewport — the height
+          the page would have if the browser's toolbars were retracted — so a
+          canvas sized to it runs underneath the bottom toolbar. That was
+          invisible while nothing lived in the bottom band; the HUD's tab bar
+          sits flush against it, and disappeared entirely.
+
+          The vh line is the fallback for browsers without dvh (iOS < 15.4),
+          which is also where the bug still bites; the tab bar keeps its own
+          padding so the bar's buttons are not flush to the edge either way.
+        */
         height: 100vh;
+        height: 100dvh;
       }
     </style>
   </head>
