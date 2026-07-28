@@ -1,6 +1,13 @@
 # Upgrade plan: dependencies
 
-**Status:** planned, not started. Written 2026-07-28 against `74f4b86`.
+**Status:** PR 1 and PR 2 implemented 2026-07-28. PR 3 remains blocked upstream. Written against
+`74f4b86`.
+
+> **What the plan got wrong, corrected below.** PR 2 predicted the masks were a place the new
+> renderer "gets subtly wrong". That was understated: geometry masks are **Canvas-only** in Phaser
+> 4, so under WebGL the clip did not degrade, it stopped entirely and the bag drew over the world.
+> The section is corrected in place. Everything else measured out as written — 0 type errors, and
+> the bump needed no code migration beyond that one fix.
 
 Five packages are behind. They are not one job — they are three, with wildly different risk, and
 they should land as three PRs in this order. Every claim in this doc was verified by running the
@@ -82,11 +89,24 @@ specific things to look at:
    upgrade silently flips it. On a game built out of procedurally generated placeholder shapes,
    the plausible symptom is sub-pixel blurring on sprites and text. If anything looks soft, set
    `render: { roundPixels: true }` in the game config and note _why_ in a comment.
-2. **The two geometry masks.** `ui/InventoryPanel.ts:154` and `ui/AchievementPanel.ts:71` both
-   call `createGeometryMask()` to clip a scrolling viewport. Masks were reworked in v4
-   (`BitmapMask` became a filter). These typecheck, but scroll-clipping is exactly the kind of
-   thing a new renderer gets subtly wrong — open the Bag and the Feats sheet and confirm rows
-   still clip at the viewport edge instead of bleeding past it.
+2. **The two geometry masks — this one fired.** `ui/InventoryPanel.ts:154` and
+   `ui/AchievementPanel.ts:71` both called `createGeometryMask()` to clip a scrolling viewport.
+   The migration guide's line on this is easy to under-read: "`GeometryMask` remains available in
+   **Canvas only**." Under WebGL — which is what `Phaser.AUTO` picks — the call still typechecks,
+   still runs, and silently clips nothing. The bag's overflowing rows drew straight down over the
+   game world. Nothing caught it: typecheck passed, all 105 smoke checks passed, and the existing
+   "rows scrolled out of the viewport stop taking input" check passed too, because input hit-areas
+   are computed separately from the clip.
+
+   The fix is `ui/clipToMask.ts`, which picks per renderer: `enableFilters()` then
+   `filters.internal.addMask()` on WebGL, falling back to the geometry mask on Canvas, where it
+   still works. Note `filters` is `null` until `enableFilters()` is called, so an optional-chained
+   `filters?.internal.addMask(...)` no-ops silently — the same failure shape a second time.
+   `autoUpdate` must be set or the clip freezes at the first frame's rect.
+
+   Smoke grew a check that asserts the clip is installed for whichever renderer is live. It was
+   confirmed to fail against the broken implementation before being kept.
+
 3. **GL orientation is now Y-up (Y=0 at the bottom).** This bites compressed textures and custom
    shaders, neither of which exist here — listed only so a later reader does not re-derive it.
 
@@ -99,12 +119,21 @@ cache, this is why, and the fix is the timeout, not the test.
 
 ### Shape of the work
 
-Genuinely just the dependency bump — there is no code migration to write, which is the unusual
-part and the reason this is worth doing now rather than deferring.
+Almost just the dependency bump. Two things came with it:
 
 ```bash
 npm i phaser@4.2.1
 ```
+
+- **The mask fix above** (`ui/clipToMask.ts`), which is the only source change the renderer forced.
+- **`scripts/smoke.mjs` reached for a `Phaser` global.** Phaser 3 left one on `window` that the
+  `page.evaluate` bodies used for `Phaser.Math.Distance.Between`; Phaser 4 does not, so those threw
+  `ReferenceError` in the browser and the run died on its second check. They are now `Math.hypot`,
+  which is what they were computing and cares about no version at all. Worth knowing that this is
+  the first thing that breaks, before any of the interesting failures are reachable.
+
+`roundPixels` was checked and needed nothing — before/after screenshots show text and sprite edges
+equally crisp, so no config line was added.
 
 **Verification, in this order:**
 
