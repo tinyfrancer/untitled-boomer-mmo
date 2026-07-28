@@ -5,14 +5,12 @@ export interface ShopStockEntry {
   price: number;
 }
 
+// Tools only. Armor used to be stocked here and is now the world's job alone:
+// the bandit camp drops both types, so gearing up is something every class has
+// to go and take rather than something one class could buy.
 export const SHOP_STOCK: ShopStockEntry[] = [
   { itemId: 'felling-axe', price: 60 },
   { itemId: 'fishing-pole', price: 60 },
-  // The cloth set is the only place a wizard can gear up: every armor drop in
-  // the game is leather, which they can't wear and can only sell.
-  { itemId: 'brown-cloth-hat', price: 45 },
-  { itemId: 'brown-robe', price: 60 },
-  { itemId: 'brown-cloth-pants', price: 55 },
 ];
 
 export function shopPriceFor(itemId: string): number | null {

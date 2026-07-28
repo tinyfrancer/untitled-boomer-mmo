@@ -31,8 +31,8 @@ export const LOOT_TABLES: Record<string, LootTable> = {
   bandit: {
     id: 'bandit',
     // The only gear and coin in the game, and it covers both armor types on
-    // purpose: cloth is otherwise shop-only, which left a wizard unable to wear
-    // a single thing the world drops.
+    // purpose: the shop sells tools only, so this table plus the two quest
+    // rewards is the whole of a wizard's — and a warrior's — armor supply.
     entries: [
       { itemId: 'cooked-fish', chance: 0.15 },
       { itemId: 'brown-chestplate', chance: 0.06 },
