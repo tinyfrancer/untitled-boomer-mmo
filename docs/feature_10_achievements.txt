@@ -1,0 +1,6 @@
+We want to add an achievement system. For starters we will have achievements for killing 25/50/100 of the available creatures. 
+
+Certain achievements should reward titles. For now, 100 kills will be <enemy> Slayer. 
+Adventurer, Rat Slayer
+
+Shop should not include armor.  Only fishing pole and woodcutting axe.

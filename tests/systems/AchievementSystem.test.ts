@@ -22,7 +22,6 @@ import {
 import type { EnemyId } from '../../src/types/ids';
 
 const ratCuller = ACHIEVEMENTS['rat-slayer-25'];
-const ratSlayer = ACHIEVEMENTS['rat-slayer-100'];
 const enemyIds = Object.keys(ENEMIES) as EnemyId[];
 
 describe('the achievement grid', () => {

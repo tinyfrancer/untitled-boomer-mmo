@@ -80,9 +80,7 @@ export function crossedAchievements(
   const has = killCount(after, enemyId);
   return allAchievements().filter(
     (definition) =>
-      definition.enemyId === enemyId &&
-      definition.threshold > had &&
-      definition.threshold <= has,
+      definition.enemyId === enemyId && definition.threshold > had && definition.threshold <= has,
   );
 }
 

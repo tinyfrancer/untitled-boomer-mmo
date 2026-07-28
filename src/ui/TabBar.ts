@@ -3,7 +3,7 @@ import { Button } from './Button';
 import { THEME, px } from './theme';
 import type { Rect } from './layout';
 
-export type TabId = 'character' | 'inventory' | 'quests' | 'log' | 'camp' | 'options';
+export type TabId = 'character' | 'inventory' | 'quests' | 'feats' | 'log' | 'camp' | 'options';
 
 // Distinct from the selected-tab blue, so "a sheet is open" and "you are
 // camping" never read as the same state.
@@ -16,10 +16,14 @@ export interface TabDefinition {
   kind: 'sheet' | 'action';
 }
 
+// Labels are short because the bar splits its width evenly: at seven tabs a
+// 375px phone gives each one 44px, which is exactly THEME.touchMin and leaves
+// no room for a word like "Achievements". "Quests" is the longest that fits.
 export const TABS: TabDefinition[] = [
   { id: 'character', label: 'Char', kind: 'sheet' },
   { id: 'inventory', label: 'Bag', kind: 'sheet' },
   { id: 'quests', label: 'Quests', kind: 'sheet' },
+  { id: 'feats', label: 'Feats', kind: 'sheet' },
   { id: 'log', label: 'Log', kind: 'sheet' },
   { id: 'camp', label: 'Camp', kind: 'action' },
   { id: 'options', label: '⚙', kind: 'action' },

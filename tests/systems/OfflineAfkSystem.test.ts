@@ -120,9 +120,7 @@ describe('resolveOfflineAfk', () => {
   // creature — which is what lets a camp count toward a slayer achievement.
   it('names the creature the session was camped on', () => {
     expect(resolveOfflineAfk(sessionStartedAgo(HOUR_MS), context()).enemyId).toBe('rat');
-    expect(
-      resolveOfflineAfk(sessionStartedAgo(HOUR_MS, 'beach'), context()).enemyId,
-    ).toBe('crab');
+    expect(resolveOfflineAfk(sessionStartedAgo(HOUR_MS, 'beach'), context()).enemyId).toBe('crab');
   });
 
   it('names no creature when nothing died', () => {
