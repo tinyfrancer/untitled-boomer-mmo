@@ -269,8 +269,9 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(ACHIEVEMENT_UNLOCKED_EVENT, this.handleAchievementUnlocked, this);
       this.game.events.off(TITLE_CHANGED_EVENT, this.handleTitleChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-      // Owns an off-display-list mask that a scene teardown won't reach.
+      // Both own an off-display-list mask that a scene teardown won't reach.
       this.inventoryPanel?.destroy();
+      this.achievementPanel?.destroy();
     });
   }
 
