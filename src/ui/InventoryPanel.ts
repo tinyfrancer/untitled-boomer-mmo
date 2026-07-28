@@ -3,6 +3,7 @@ import { consumableFor, describeItemBonuses, describeItemName, isEquippable } fr
 import { formatCurrency } from '../systems/CurrencySystem';
 import { encumbranceLevel } from '../systems/EncumbranceSystem';
 import type { ItemAction, ItemActionId } from '../systems/ItemActionsSystem';
+import { clipToMask } from './clipToMask';
 import { THEME, fontPx, px } from './theme';
 
 // Tall enough for the title and the carried-weight line under it.
@@ -151,7 +152,7 @@ export class InventoryPanel {
     // so the panel's fixed position doubles as its screen rect. Not on the
     // display list — destroy() owns it.
     this.maskGraphics = scene.make.graphics({}, false);
-    this.rowsViewport.setMask(this.maskGraphics.createGeometryMask());
+    clipToMask(this.rowsViewport, this.maskGraphics);
 
     this.scene.input.on(Phaser.Input.Events.POINTER_WHEEL, this.handleWheel, this);
     this.scene.input.on(Phaser.Input.Events.POINTER_DOWN, this.handleDragStart, this);

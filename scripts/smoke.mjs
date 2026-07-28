@@ -1075,6 +1075,24 @@ try {
     `${invScrolled.enabledRows}/${invScrolled.inputRows} rows live`,
   );
 
+  // The clip is the one thing here with no visible failure mode: Phaser 4 made
+  // geometry masks Canvas-only, so under WebGL setMask still ran, still passed
+  // every check above, and simply stopped clipping — overflowing rows drew over
+  // the world. Assert the clip is actually installed for the live renderer.
+  const clip = await page.evaluate(() => {
+    const vp = window.game.scene.getScene('UI').inventoryPanel.rowsViewport;
+    return {
+      gl: !!window.game.renderer.gl,
+      filters: vp.filters?.internal?.list?.length ?? 0,
+      geometryMask: !!vp.mask,
+    };
+  });
+  check(
+    'the bag viewport is really clipped on this renderer',
+    clip.gl ? clip.filters > 0 : clip.geometryMask,
+    clip.gl ? `WebGL, ${clip.filters} mask filter(s)` : 'Canvas, geometry mask',
+  );
+
   // A tap selects; a drag of the same press must not.
   await page.mouse.move(invCenter.x, invCenter.y);
   await page.mouse.down();
