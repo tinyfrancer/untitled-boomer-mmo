@@ -42,6 +42,11 @@ page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
 page.on('pageerror', (e) => consoleErrors.push(String(e)));
 
 // Scene helpers. `game` is the dev-only handle installed in src/main.ts.
+//
+// Distances here are Math.hypot rather than Phaser.Math.Distance.Between: Phaser 3
+// left a `Phaser` global on window that these page.evaluate bodies could reach, and
+// Phaser 4 does not, so the engine call threw ReferenceError inside the browser.
+// The scaffolding never needed the engine for a hypotenuse anyway.
 const townState = () =>
   page.evaluate(() => {
     // Phaser sleeps its TimeStep when the page blurs, and a CI runner has no
@@ -61,9 +66,9 @@ const townState = () =>
       alive: r.isAlive(),
       x: Math.round(r.x),
       y: Math.round(r.y),
-      dist: Math.round(Phaser.Math.Distance.Between(r.x, r.y, p.x, p.y)),
+      dist: Math.round(Math.hypot(r.x - p.x, r.y - p.y)),
       state: r.aiState,
-      fromSpawn: Math.round(Phaser.Math.Distance.Between(r.x, r.y, r.spawnX, r.spawnY)),
+      fromSpawn: Math.round(Math.hypot(r.x - r.spawnX, r.y - r.spawnY)),
       vel: [Math.round(r.body.velocity.x), Math.round(r.body.velocity.y)],
       bodyOn: r.body.enable,
     }));
@@ -73,7 +78,7 @@ const townState = () =>
       available: n.isAvailable(),
       x: Math.round(n.x),
       y: Math.round(n.y),
-      dist: Math.round(Phaser.Math.Distance.Between(n.x, n.y, p.x, p.y)),
+      dist: Math.round(Math.hypot(n.x - p.x, n.y - p.y)),
     }));
     return {
       zoneId: town.zone.id,
@@ -620,11 +625,7 @@ try {
     const p = town.player;
     const rat = town.mobs
       .filter((r) => r.level === 1)
-      .sort(
-        (a, b) =>
-          Phaser.Math.Distance.Between(a.x, a.y, p.x, p.y) -
-          Phaser.Math.Distance.Between(b.x, b.y, p.x, p.y),
-      )[0];
+      .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
     // walk the player onto the rat so the real range check passes
     p.setPosition(rat.x, rat.y - 40);
     town.setTarget(rat);
