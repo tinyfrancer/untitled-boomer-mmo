@@ -1,6 +1,8 @@
 # Refactor plan: tighten the systems seam
 
-**Status:** planned, not started. Written 2026-07-24 for a later session.
+**Status:** in progress. Written 2026-07-24 for a later session; picked up as phase 0 of
+`docs/3d_port_plan.md`, which depends on it. Item 2 landed in `d80df26`; item 4 landed with
+`tests/architecture/phaserFreeSeam.test.ts`.
 
 ## Why
 
