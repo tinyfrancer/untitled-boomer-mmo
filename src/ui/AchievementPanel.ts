@@ -3,6 +3,7 @@ import { ENEMIES } from '../data/enemies';
 import { allAchievements, killCount, earnedTitles, titleName } from '../systems/AchievementSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import { Button } from './Button';
+import { clipToMask } from './clipToMask';
 import { Panel } from './Panel';
 import { THEME, fontPx, px } from './theme';
 import type { Rect } from './layout';
@@ -68,7 +69,7 @@ export class AchievementPanel {
     this.panel.add(this.viewport);
 
     this.maskGraphics = scene.make.graphics({ x: 0, y: 0 });
-    this.viewport.setMask(this.maskGraphics.createGeometryMask());
+    clipToMask(this.viewport, this.maskGraphics);
 
     scene.input.on(Phaser.Input.Events.POINTER_WHEEL, this.handleWheel);
     scene.input.on(Phaser.Input.Events.POINTER_DOWN, this.handlePointerDown);
