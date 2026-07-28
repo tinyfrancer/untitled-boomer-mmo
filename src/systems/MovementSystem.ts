@@ -30,6 +30,15 @@ export const ARRIVE_RADIUS = 8;
  */
 const ARRIVE_STEP_FRACTION = 0.6;
 
+export function distance(a: Point, b: Point): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+/** Whether `b` is inside `radius` of `a`, counting the boundary as inside. */
+export function withinRadius(a: Point, b: Point, radius: number): boolean {
+  return distance(a, b) <= radius;
+}
+
 export function arriveRadius(speed: number, deltaMs: number): number {
   const frameTravel = (speed * Math.max(0, deltaMs)) / 1000;
   return Math.max(ARRIVE_RADIUS, frameTravel * ARRIVE_STEP_FRACTION);

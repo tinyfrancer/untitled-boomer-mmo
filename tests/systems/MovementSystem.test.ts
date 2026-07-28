@@ -1,7 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { ARRIVE_RADIUS, arriveRadius, stepToward } from '../../src/systems/MovementSystem';
+import {
+  ARRIVE_RADIUS,
+  arriveRadius,
+  distance,
+  stepToward,
+  withinRadius,
+} from '../../src/systems/MovementSystem';
 
 const FRAME_60FPS_MS = 1000 / 60;
+
+describe('distance', () => {
+  it('measures a straight line, not a per-axis gap', () => {
+    expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
+  });
+
+  it('does not care which point comes first', () => {
+    expect(distance({ x: 10, y: -20 }, { x: -5, y: 4 })).toBeCloseTo(
+      distance({ x: -5, y: 4 }, { x: 10, y: -20 }),
+    );
+  });
+});
+
+describe('withinRadius', () => {
+  it('counts the boundary as inside, matching every interact radius in the game', () => {
+    expect(withinRadius({ x: 0, y: 0 }, { x: 0, y: 50 }, 50)).toBe(true);
+  });
+
+  it('excludes a point just past it', () => {
+    expect(withinRadius({ x: 0, y: 0 }, { x: 0, y: 50.5 }, 50)).toBe(false);
+  });
+
+  it('is round, not square', () => {
+    // Inside a 50px box on both axes, outside a 50px circle.
+    expect(withinRadius({ x: 0, y: 0 }, { x: 40, y: 40 }, 50)).toBe(false);
+  });
+});
 
 describe('stepToward', () => {
   it('moves at full speed straight toward the target', () => {
