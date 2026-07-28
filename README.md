@@ -7,7 +7,7 @@ character creation, leveling, gear, and local save/load. See
 
 ## Stack
 
-TypeScript + [Phaser 3](https://phaser.io/) (2D game framework), bundled with
+TypeScript + [Phaser 4](https://phaser.io/) (2D game framework), bundled with
 [Vite](https://vite.dev/). No backend yet — character data is saved to the browser's
 `localStorage` behind a `SaveService` interface, so a networked backend can be swapped
 in later without touching game logic.
