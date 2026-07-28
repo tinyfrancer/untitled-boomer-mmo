@@ -15,6 +15,7 @@ import {
   inventoryWeight,
 } from './EncumbranceSystem';
 import { computeEffectiveStats } from './StatsSystem';
+import type { Point } from './MovementSystem';
 import {
   acceptQuest,
   canAccept,
@@ -275,9 +276,16 @@ export class CharacterController {
     return formatDisplayName(this.state.name, this.state.activeTitleId);
   }
 
-  recordLocation(zoneId: ZoneId, x: number, y: number): void {
+  /**
+   * Where the character is, for the next load to put them back. A null
+   * `position` records the zone without a spot in it — the character owes a
+   * respawn, and the zone's default spawn is the honest answer.
+   */
+  recordLocation(zoneId: ZoneId, position: Point | null): void {
     this.state.zoneId = zoneId;
-    this.state.position = { x: Math.round(x), y: Math.round(y) };
+    this.state.position = position
+      ? { x: Math.round(position.x), y: Math.round(position.y) }
+      : null;
     this.state.updatedAt = new Date().toISOString();
   }
 }

@@ -1,5 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
-import type { ZoneEdge, ZoneExit } from '../data/zones';
+import type { ZoneDefinition, ZoneEdge, ZoneExit } from '../data/zones';
 
 export interface ArrivalPoint {
   x: number;
@@ -89,6 +89,31 @@ export function edgeFraction(
 ): number {
   const fraction = edge === 'north' || edge === 'south' ? x / worldWidth : y / worldHeight;
   return Math.min(Math.max(fraction, 0), 1);
+}
+
+/** A zone's map measured in pixels rather than tiles. */
+export function zoneWorldSize(zone: ZoneDefinition): { width: number; height: number } {
+  return {
+    width: (zone.map[0]?.length ?? 0) * TILE_SIZE,
+    height: zone.map.length * TILE_SIZE,
+  };
+}
+
+/**
+ * Where a character saved in this zone comes back in. The saved spot, but held
+ * `inset` clear of the world edge: a map edited smaller than it was when the
+ * save was written would otherwise drop them in the edge-walk band and bounce
+ * them straight into the next zone before they could move.
+ */
+export function resumePoint(
+  saved: ArrivalPoint,
+  worldWidth: number,
+  worldHeight: number,
+  inset: number,
+): ArrivalPoint {
+  const clamp = (value: number, max: number): number =>
+    Math.min(Math.max(value, inset), Math.max(inset, max - inset));
+  return { x: clamp(saved.x, worldWidth), y: clamp(saved.y, worldHeight) };
 }
 
 // Spawn position for a player entering on `edge` of a zone. `inset` pushes

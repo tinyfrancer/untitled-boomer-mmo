@@ -183,6 +183,13 @@ indirection is the intended swap point for a future networked backend. `Characte
 `persistence/migrations.ts` so existing saves upgrade on load instead of being wiped — a save
 with no chain of steps to the current version is dropped.
 
+`CharacterState.position` is **honoured on load**: a save resumes at the spot it names, and only
+when `zoneId` matches the zone being entered. `null` means "no particular spot" — a new character,
+or one who owes a respawn — and the zone puts them at its default spawn (the middle of the map)
+instead. Walking through an exit records the arrival point in the zone being _entered_, not the
+spot being left, so the pair is never self-contradictory; keep it that way if you add another way
+to change zones. Only smoke can check any of this, and it does.
+
 **Data-driven definitions** (`src/data/`): class stats (`classes.ts`), items/gear (`items.ts`),
 enemy definitions (`enemies.ts`), where and at what level they spawn (`spawns.ts`), loot
 (`lootTables.ts`), quests (`quests.ts`), the XP curve (`xpTable.ts`), zones (`zones.ts`), and the

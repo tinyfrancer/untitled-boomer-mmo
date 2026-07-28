@@ -119,7 +119,9 @@ import {
   edgeFraction,
   findExit,
   oppositeEdge,
+  resumePoint,
   signpostPoint,
+  zoneWorldSize,
 } from '../systems/ZoneSystem';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
@@ -260,16 +262,7 @@ export class ZoneScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
     this.spawnPoint.set(this.worldWidth / 2, this.worldHeight / 2);
-    const start =
-      this.initData.entryEdge !== undefined
-        ? arrivalPoint(
-            this.initData.entryEdge,
-            this.initData.entryFraction ?? 0.5,
-            this.worldWidth,
-            this.worldHeight,
-            ARRIVAL_INSET,
-          )
-        : this.spawnPoint;
+    const start = this.startPoint(state);
     this.player = new Player(
       this,
       start.x,
@@ -495,8 +488,29 @@ export class ZoneScene extends Phaser.Scene {
     }
   }
 
+  // Where the player stands when this scene opens: the arrival point if they
+  // walked in through an exit, the spot the save was left at if they are
+  // resuming into the zone that save names, and the middle of the map
+  // otherwise — a new character, or one who owes a respawn.
+  private startPoint(state: CharacterState): Point {
+    if (this.initData.entryEdge !== undefined) {
+      return arrivalPoint(
+        this.initData.entryEdge,
+        this.initData.entryFraction ?? 0.5,
+        this.worldWidth,
+        this.worldHeight,
+        ARRIVAL_INSET,
+      );
+    }
+    if (state.position && state.zoneId === this.zone.id) {
+      return resumePoint(state.position, this.worldWidth, this.worldHeight, ARRIVAL_INSET);
+    }
+    return this.spawnPoint;
+  }
+
   private changeZone(exit: ZoneExit): void {
     this.changingZone = true;
+    const entryEdge = oppositeEdge(exit.edge);
     const fraction = edgeFraction(
       exit.edge,
       this.player.x,
@@ -509,11 +523,18 @@ export class ZoneScene extends Phaser.Scene {
     this.stopGathering();
     this.clearTarget();
     this.closeShop();
-    this.character.recordLocation(exit.to, this.player.x, this.player.y);
+    // Save the spot in the zone being *entered*, not the one being left: a tab
+    // closed mid-walk should come back where the walk was going. The scene is
+    // about to compute the same point from the entry edge below.
+    const destination = zoneWorldSize(ZONES[exit.to]);
+    this.character.recordLocation(
+      exit.to,
+      arrivalPoint(entryEdge, fraction, destination.width, destination.height, ARRIVAL_INSET),
+    );
     saveService.save(this.character.state);
     const data: ZoneSceneData = {
       zoneId: exit.to,
-      entryEdge: oppositeEdge(exit.edge),
+      entryEdge,
       entryFraction: fraction,
       hp: this.player.hp,
     };
@@ -1182,7 +1203,9 @@ export class ZoneScene extends Phaser.Scene {
     // of a hostile zone would just feed the same bandit again.
     if (this.zone.id !== 'town') {
       this.changingZone = true;
-      this.character.recordLocation('town', this.spawnPoint.x, this.spawnPoint.y);
+      // No spot: a corpse owes a respawn, and town's default spawn is where
+      // the restart below puts them anyway.
+      this.character.recordLocation('town', null);
       saveService.save(this.character.state);
       this.scene.restart({ zoneId: 'town' } satisfies ZoneSceneData);
       return;
@@ -1459,7 +1482,7 @@ export class ZoneScene extends Phaser.Scene {
   }
 
   private persistCharacter(): void {
-    this.character.recordLocation(this.zone.id, this.player.x, this.player.y);
+    this.character.recordLocation(this.zone.id, this.player);
     saveService.save(this.character.state);
   }
 

@@ -263,10 +263,19 @@ describe('CharacterController location', () => {
   it('records zone, rounded position, and touches updatedAt', () => {
     const character = makeController();
     const before = character.state.updatedAt;
-    character.recordLocation('town', 123.6, 456.4);
+    character.recordLocation('town', { x: 123.6, y: 456.4 });
     expect(character.state.zoneId).toBe('town');
     expect(character.state.position).toEqual({ x: 124, y: 456 });
     expect(Date.parse(character.state.updatedAt)).toBeGreaterThanOrEqual(Date.parse(before));
+  });
+
+  // A character who owes a respawn has a zone but no spot in it.
+  it('records a zone with no position at all', () => {
+    const character = makeController();
+    character.recordLocation('beach', { x: 10, y: 20 });
+    character.recordLocation('town', null);
+    expect(character.state.zoneId).toBe('town');
+    expect(character.state.position).toBeNull();
   });
 });
 
