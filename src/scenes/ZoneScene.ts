@@ -1098,8 +1098,6 @@ export class ZoneScene extends Phaser.Scene {
     });
     this.showFloatingText(this.target.x, this.target.y, `-${damage}`, THEME.color.equippable);
     this.log(logDamageDealt(this.target.name, damage));
-    const xpReward = this.target.xpReward;
-    const lootTableId = this.target.lootTableId;
     this.player.markInCombat();
     this.target.takeDamage(damage);
     // Anything the player hits fights back, whether or not it opens combat itself.
@@ -1108,9 +1106,7 @@ export class ZoneScene extends Phaser.Scene {
     // Skill comes from swinging, not from killing: a landed hit is the rep.
     this.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
     if (!this.target.isAlive()) {
-      this.log(logKill(this.target.name));
-      this.awardXp(xpReward);
-      this.grantLoot(lootTableId);
+      this.resolveKill(this.target);
     }
   }
 
@@ -1217,6 +1213,20 @@ export class ZoneScene extends Phaser.Scene {
     if (this.player.hp === this.lastReportedHp) return;
     this.lastReportedHp = this.player.hp;
     this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
+  }
+
+  /**
+   * Everything a corpse is worth, for a mob that has already died this frame.
+   * Both the swing path and the ability path end here so a new reward can only
+   * ever be added once — the two used to carry their own copy of this, which is
+   * how a reward gets wired into melee and silently missed on spellcasting.
+   * Safe to read the mob after death: its reward fields are readonly and set in
+   * the constructor, so dying does not clear them.
+   */
+  private resolveKill(mob: Mob): void {
+    this.log(logKill(mob.name));
+    this.awardXp(mob.xpReward);
+    this.grantLoot(mob.lootTableId);
   }
 
   private awardXp(reward: number): void {
@@ -1331,15 +1341,11 @@ export class ZoneScene extends Phaser.Scene {
         this.castBolt(target, ability);
         this.showFloatingText(target.x, target.y, `-${damage}`, THEME.color.levelUp);
         this.log(logDamageDealt(target.name, damage));
-        const xpReward = target.xpReward;
-        const lootTableId = target.lootTableId;
         target.takeDamage(damage);
         target.engage();
         this.publishTarget();
         if (!target.isAlive()) {
-          this.log(logKill(target.name));
-          this.awardXp(xpReward);
-          this.grantLoot(lootTableId);
+          this.resolveKill(target);
         }
         return;
       }
