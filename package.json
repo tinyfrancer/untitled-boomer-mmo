@@ -14,11 +14,11 @@
     "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
-    "eslint": "^10.7.0",
+    "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^29.1.1",
-    "playwright": "^1.61.1",
-    "prettier": "^3.9.5",
+    "playwright": "^1.62.0",
+    "prettier": "^3.9.6",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.65.0",
     "vite": "^8.1.1",
