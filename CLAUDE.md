@@ -90,7 +90,7 @@ takes seconds instead of three minutes a guess. Delete the copy when you're done
 
 ## Architecture
 
-**Stack**: TypeScript + Phaser 3 (2D game framework), bundled with Vite. No backend — everything
+**Stack**: TypeScript + Phaser 4 (2D game framework), bundled with Vite. No backend — everything
 is a static site. Character data lives in the browser's `localStorage`.
 
 **The core seam: Phaser-free vs. Phaser-coupled code.** `systems/`, `data/`, `persistence/`,
@@ -136,6 +136,17 @@ that lands on it, so `ZoneScene.applyCameraZoom` shrinks the world camera's view
 `worldViewportHeight()`. This is not decoration: the south signpost in town rendered four pixels
 inside the bar on a portrait phone and could not be tapped at all. If you add bottom furniture,
 reserve its height there rather than hoping nothing important lands in the last sixty pixels.
+
+**Clip a scrolling sheet with `ui/clipToMask.ts`, never `createGeometryMask()` directly.** Phaser 4
+made geometry masks Canvas-only, and the API did not go away with them: under WebGL — which is what
+`Phaser.AUTO` picks — `setMask(g.createGeometryMask())` still typechecks, still runs, and silently
+clips nothing, so the bag's overflowing rows draw down over the world. `clipToMask` picks per
+renderer, using the Mask filter on WebGL and the geometry mask on the Canvas path `Phaser.AUTO` can
+still fall back to. Two traps if you touch it: `filters` is `null` until `enableFilters()` is
+called, so `filters?.internal.addMask(...)` no-ops silently and reproduces the original bug; and
+`autoUpdate` has to be set or the clip freezes at whatever rect the first frame drew.
+`npm run smoke` asserts a clip is installed for the live renderer, because this failure is
+invisible to every other kind of test — a full green suite is what it looked like the first time.
 
 **Scene-to-scene communication** goes through `this.game.events` (a global Phaser event emitter),
 not direct references between scenes — see `src/ui/uiEvents.ts` for the event name constants
