@@ -50,14 +50,14 @@ export type InteractionKind = 'gather' | 'shop' | 'signpost';
 
 export interface PendingInteraction {
   kind: InteractionKind;
-  point: Point;          // reuse Point from MovementSystem
+  point: Point; // reuse Point from MovementSystem
   radius: number;
 }
 
 export type ApproachResult =
-  | { kind: 'act' }        // inside radius — caller performs the interaction
-  | { kind: 'walking' }    // still en route
-  | { kind: 'abandon' };   // walk ended without arriving
+  | { kind: 'act' } // inside radius — caller performs the interaction
+  | { kind: 'walking' } // still en route
+  | { kind: 'abandon' }; // walk ended without arriving
 
 export function resolveApproach(
   pending: PendingInteraction,
@@ -68,7 +68,7 @@ export function resolveApproach(
 
 **Scene side.** Replace the three fields with one `pending: PendingInteraction | null` plus the
 target object reference needed to act on arrival (a small `{ interaction, node }`-style holder is
-fine — the *rule* moves, the Phaser object reference stays in the scene). `updateApproach`
+fine — the _rule_ moves, the Phaser object reference stays in the scene). `updateApproach`
 collapses to one call and a three-way switch.
 
 Keep the existing radii as the values passed in: `SIGNPOST_INTERACT_RADIUS`,
@@ -89,14 +89,14 @@ parameter. Worth deciding explicitly rather than by omission.
 
 **Problem.** The kill path is written twice, once in `updateCombat` (`ZoneScene.ts:1075`) and
 once in `applyAbilityEffect` (`ZoneScene.ts:1325`). Both must capture `xpReward` and
-`lootTableId` *before* `takeDamage`, then log the kill, award XP and grant loot. Two copies of a
+`lootTableId` _before_ `takeDamage`, then log the kill, award XP and grant loot. Two copies of a
 "read these fields before mutating" rule is a bug farm — the next reward type (quest credit, a
 kill counter, a faction hit) gets added to one path and silently missed on the other.
 
 **Fix.** One private `resolveKill(mob)` on the scene, called from both. This is a dedup, not a
 systems extraction — the orchestration legitimately belongs to the scene. Keep it small.
 
-If a rule emerges about *what* a kill awards beyond the current three things, that part goes to
+If a rule emerges about _what_ a kill awards beyond the current three things, that part goes to
 `systems/` instead.
 
 ---
@@ -105,7 +105,7 @@ If a rule emerges about *what* a kill awards beyond the current three things, th
 
 **Problem.** 15 `Phaser.Math.Distance.Between` calls in `ZoneScene` and 5 in `Mob`. None is real
 Phaser coupling — each is `Math.hypot` in disguise — but each marks a place where a distance
-*rule* sits in a renderer file. Several are literally the same "is X within radius R" predicate:
+_rule_ sits in a renderer file. Several are literally the same "is X within radius R" predicate:
 
 - `updateShopRange` (`:386`) — close the shop past `SHOP_CLOSE_RADIUS`
 - `isNearFire` (`:933`) — `FIRE_COOK_RADIUS`
