@@ -1,9 +1,10 @@
 import { CLASSES } from '../data/classes';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
+import type { KillCounts } from '../systems/AchievementSystem';
 import type { QuestLog } from '../systems/QuestSystem';
-import type { ClassId, GearSlotId, ZoneId } from '../types/ids';
+import type { ClassId, GearSlotId, TitleId, ZoneId } from '../types/ids';
 
-export const CHARACTER_STATE_VERSION = 9;
+export const CHARACTER_STATE_VERSION = 10;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -29,6 +30,13 @@ export interface CharacterState {
   // Which quests are accepted or finished. Progress is not stored — it is
   // counted off the inventory on read (see QuestSystem).
   quests: QuestLog;
+  // Kills per creature. The one counter that has to be stored: a corpse leaves
+  // nothing in the bag to count it off. Which achievements and titles it has
+  // earned is derived from this on read (see AchievementSystem).
+  kills: KillCounts;
+  // Which earned title is worn, if any. Only the choice is state — the right to
+  // wear it comes from kills.
+  activeTitleId: TitleId | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +68,8 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     position: { x: 0, y: 0 },
     afk: null,
     quests: {},
+    kills: {},
+    activeTitleId: null,
     createdAt: now,
     updatedAt: now,
   };

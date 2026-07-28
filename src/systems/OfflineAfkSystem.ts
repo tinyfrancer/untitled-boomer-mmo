@@ -7,6 +7,7 @@ import { canCarry } from './EncumbranceSystem';
 import { scaleEnemyStats } from './EnemySystem';
 import { addItemToInventory, type Inventory } from './InventorySystem';
 import { rollLootTable } from './LootSystem';
+import type { EnemyId } from '../types/ids';
 
 // Nothing accrues past this. A tab closed over a long weekend hands back a
 // night's play, not a finished character.
@@ -35,6 +36,10 @@ export interface OfflineAfkContext {
 export interface OfflineAfkReport {
   elapsedMs: number;
   kills: number;
+  // What the camp was parked on. A session only ever grinds one spawn, so the
+  // whole kill count belongs to this one creature — which is what lets an
+  // offline session count toward a slayer achievement. Null when nothing died.
+  enemyId: EnemyId | null;
   xp: number;
   copper: number;
   drops: Inventory;
@@ -45,6 +50,7 @@ export interface OfflineAfkReport {
 const NOTHING: OfflineAfkReport = {
   elapsedMs: 0,
   kills: 0,
+  enemyId: null,
   xp: 0,
   copper: 0,
   drops: {},
@@ -148,6 +154,7 @@ export function resolveOfflineAfk(
   return {
     elapsedMs,
     kills,
+    enemyId: quarry.enemyId,
     xp,
     copper: Math.floor(copper * OFFLINE_RATE_MULTIPLIER),
     drops,

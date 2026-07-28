@@ -40,6 +40,10 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // can pick both up from the shopkeeper; anything already in their bag counts
   // toward the objective, since progress is read off the inventory.
   8: (state) => ({ ...state, quests: {} }),
+  // v9 → v10: achievements arrive. Kills before this point were never counted
+  // and cannot be reconstructed, so an existing character starts the slayer
+  // chains from zero rather than being credited a guess.
+  9: (state) => ({ ...state, kills: {}, activeTitleId: null }),
 };
 
 /**

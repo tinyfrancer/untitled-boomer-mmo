@@ -31,3 +31,12 @@ export type NpcId = 'shopkeeper';
 export type QuestId = 'rat-bones' | 'crab-feast';
 
 export type AbilityId = 'fireball' | 'mana-shield' | 'power-slash' | 'battle-fury';
+
+// How many of a creature a slayer achievement asks for. Built into the ids
+// below rather than listed separately, so the compiler knows the full grid and
+// a new enemy cannot quietly ship without its chain.
+export type SlayerTier = 25 | 50 | 100;
+
+export type AchievementId = `${EnemyId}-slayer-${SlayerTier}`;
+
+export type TitleId = `${EnemyId}-slayer`;

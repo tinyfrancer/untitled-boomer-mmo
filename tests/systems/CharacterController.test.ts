@@ -269,3 +269,73 @@ describe('CharacterController location', () => {
     expect(Date.parse(character.state.updatedAt)).toBeGreaterThanOrEqual(Date.parse(before));
   });
 });
+
+describe('CharacterController achievements', () => {
+  it('counts kills per creature', () => {
+    const character = makeController();
+    character.recordKill('rat');
+    character.recordKill('rat');
+    character.recordKill('crab');
+    expect(character.state.kills).toEqual({ rat: 2, crab: 1 });
+  });
+
+  it('reports the achievement a kill completed', () => {
+    const character = makeController();
+    character.recordKill('rat', 24);
+    expect(character.recordKill('rat').map((a) => a.id)).toEqual(['rat-slayer-25']);
+  });
+
+  it('reports nothing for a kill that completed no tier', () => {
+    const character = makeController();
+    expect(character.recordKill('rat')).toEqual([]);
+  });
+
+  // An offline camp credits its whole session at once, so it has to be able to
+  // report more than one achievement from a single call.
+  it('reports every tier a whole camp session cleared', () => {
+    const character = makeController();
+    expect(character.recordKill('bandit', 100).map((a) => a.id)).toEqual([
+      'bandit-slayer-25',
+      'bandit-slayer-50',
+      'bandit-slayer-100',
+    ]);
+  });
+
+  // A title nobody put on is not a reward anyone sees, so the first one is
+  // worn automatically. Later ones do not steal the player's choice.
+  it('wears the first title earned, then leaves the choice alone', () => {
+    const character = makeController();
+    character.recordKill('rat', 100);
+    expect(character.state.activeTitleId).toBe('rat-slayer');
+    character.recordKill('crab', 100);
+    expect(character.state.activeTitleId).toBe('rat-slayer');
+  });
+
+  it('lets an earned title be chosen and taken off again', () => {
+    const character = makeController();
+    character.recordKill('rat', 100);
+    character.recordKill('crab', 100);
+    expect(character.setActiveTitle('crab-slayer')).toBe(true);
+    expect(character.displayName()).toBe('Testy, Crab Slayer');
+    expect(character.setActiveTitle(null)).toBe(true);
+    expect(character.displayName()).toBe('Testy');
+  });
+
+  it('refuses a title the kills do not back, leaving the worn one alone', () => {
+    const character = makeController();
+    character.recordKill('rat', 100);
+    expect(character.setActiveTitle('bandit-slayer')).toBe(false);
+    expect(character.state.activeTitleId).toBe('rat-slayer');
+  });
+
+  it('tracks progress toward a tier off the stored count', () => {
+    const character = makeController();
+    character.recordKill('crab', 30);
+    expect(character.achievementProgress('crab-slayer-50')).toEqual({
+      have: 30,
+      need: 50,
+      met: false,
+    });
+    expect(character.earnedTitles()).toEqual([]);
+  });
+});

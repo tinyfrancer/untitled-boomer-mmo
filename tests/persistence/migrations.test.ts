@@ -118,6 +118,22 @@ describe('migrateCharacterState', () => {
     expect(migrated?.quests).toEqual({});
   });
 
+  // Kills before v10 were never counted and can't be reconstructed, so the
+  // slayer chains start from zero rather than from a guess.
+  it('gives a v9 save no kills and no title', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 9,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+    });
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.kills).toEqual({});
+    expect(migrated?.activeTitleId).toBeNull();
+  });
+
   it('carries the combat skills a v6 save never had all the way to current', () => {
     const migrated = migrateCharacterState({ ...v4Save(), version: 6, currency: 0 });
     expect(migrated?.skills['one-handed']).toEqual({ level: 1, xp: 0 });
