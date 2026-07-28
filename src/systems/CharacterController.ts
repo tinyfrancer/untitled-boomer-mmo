@@ -23,8 +23,28 @@ import {
   questProgress,
   type QuestProgress,
 } from './QuestSystem';
+import {
+  achievementProgress,
+  crossedAchievements,
+  earnedTitles,
+  formatDisplayName,
+  hasEarnedTitle,
+  recordKill,
+  type AchievementProgress,
+} from './AchievementSystem';
+import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
-import type { CombatSkillId, GearSlotId, QuestId, SkillId, ZoneId } from '../types/ids';
+import type { AchievementDefinition } from '../data/achievements';
+import type {
+  AchievementId,
+  CombatSkillId,
+  EnemyId,
+  GearSlotId,
+  QuestId,
+  SkillId,
+  TitleId,
+  ZoneId,
+} from '../types/ids';
 
 export interface CombatXpGain {
   level: number;
@@ -211,6 +231,48 @@ export class CharacterController {
       copper: definition.reward.copper,
       xp: this.awardXp(definition.reward.xp),
     };
+  }
+
+  achievementProgress(achievementId: AchievementId): AchievementProgress {
+    return achievementProgress(ACHIEVEMENTS[achievementId], this.state.kills);
+  }
+
+  earnedTitles(): TitleId[] {
+    return earnedTitles(this.state.kills);
+  }
+
+  /**
+   * Credits kills and reports back the achievements they completed. Takes a
+   * count because an offline camp pays out a whole session at once and can
+   * clear more than one tier in a single call.
+   *
+   * A character with no title wears the first one they earn: a title nobody
+   * put on is not a reward anyone sees.
+   */
+  recordKill(enemyId: EnemyId, count = 1): AchievementDefinition[] {
+    const before = this.state.kills;
+    this.state.kills = recordKill(before, enemyId, count);
+    const crossed = crossedAchievements(before, this.state.kills, enemyId);
+
+    if (this.state.activeTitleId === null) {
+      const firstTitle = crossed.find((definition) => definition.titleId)?.titleId;
+      if (firstTitle) {
+        this.state.activeTitleId = firstTitle;
+      }
+    }
+    return crossed;
+  }
+
+  setActiveTitle(titleId: TitleId | null): boolean {
+    if (titleId !== null && !hasEarnedTitle(this.state.kills, titleId)) {
+      return false;
+    }
+    this.state.activeTitleId = titleId;
+    return true;
+  }
+
+  displayName(): string {
+    return formatDisplayName(this.state.name, this.state.activeTitleId);
   }
 
   recordLocation(zoneId: ZoneId, x: number, y: number): void {

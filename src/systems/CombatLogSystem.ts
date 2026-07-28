@@ -88,6 +88,14 @@ export function logQuestCompleted(questName: string): CombatLogEntry {
   return { text: `Quest complete: ${questName}!`, color: THEME.color.levelUp };
 }
 
+export function logAchievement(achievementName: string): CombatLogEntry {
+  return { text: `Achievement earned: ${achievementName}!`, color: THEME.color.levelUp };
+}
+
+export function logTitleEarned(titleName: string): CombatLogEntry {
+  return { text: `You are now known as ${titleName}.`, color: THEME.color.levelUp };
+}
+
 export function logNotice(message: string): CombatLogEntry {
   return { text: message, color: THEME.color.muted };
 }

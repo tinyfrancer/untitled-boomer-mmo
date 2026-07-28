@@ -1389,6 +1389,155 @@ try {
   check("another class's ability can't be cast", gated.wrongClass === true);
   await page.screenshot({ path: `${OUT}/11-abilities.png` });
 
+  // --- Achievements: kills have to be counted on BOTH paths. The swing path
+  // and the ability path used to carry their own copy of the kill resolution,
+  // and a counter added to one of them would be silently missing from the
+  // other — which is invisible to the unit suite, since it can't kill a mob.
+  // The wizard loaded above is what makes the ability half reachable here. ---
+  const killCounted = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.state.kills = {};
+    const mob = z.mobs.find((m) => m.isAlive());
+    const enemyId = mob.definition.id;
+    z.target = mob;
+    // Straight to the resolution rather than swinging for real: the point is
+    // that the kill path credits the counter, not that damage adds up.
+    mob.takeDamage(mob.hp);
+    z.resolveKill(mob);
+    return { enemyId, counted: z.character.state.kills[enemyId] ?? 0 };
+  });
+  check(
+    'a melee kill counts toward that creature',
+    killCounted.counted === 1,
+    `${killCounted.enemyId}: ${killCounted.counted}`,
+  );
+
+  const abilityKillCounted = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.state.kills = {};
+    z.lastAbilityAt.clear();
+    z.player.mana = z.player.maxMana;
+    z.player.manaFloat = z.player.maxMana;
+    const mob = z.mobs.find((m) => m.isAlive());
+    const enemyId = mob.definition.id;
+    z.target = mob;
+    z.player.setPosition(mob.x, mob.y);
+    // Fireball fizzles a fair fraction of the time, so cast until one lands
+    // rather than letting a spell failure read as a missing counter.
+    let casts = 0;
+    while (mob.isAlive() && casts < 40) {
+      mob.hp = 1;
+      z.lastAbilityAt.clear();
+      z.player.mana = z.player.maxMana;
+      z.player.manaFloat = z.player.maxMana;
+      z.handleAbilityRequested('fireball');
+      casts += 1;
+    }
+    return {
+      enemyId,
+      casts,
+      dead: !mob.isAlive(),
+      counted: z.character.state.kills[enemyId] ?? 0,
+    };
+  });
+  check(
+    'an ability kill counts too, not just a swing',
+    abilityKillCounted.dead === true && abilityKillCounted.counted === 1,
+    `${abilityKillCounted.enemyId}: ${abilityKillCounted.counted} after ${abilityKillCounted.casts} cast(s)`,
+  );
+
+  const slayer = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    z.character.state.kills = {};
+    z.character.state.activeTitleId = null;
+    // Credit the whole chain at once, the way an offline camp payout does.
+    const unlocks = z.creditKill('rat', 100);
+    return {
+      unlocked: unlocks.map((u) => u.achievementId),
+      title: z.character.state.activeTitleId,
+      display: z.character.displayName(),
+    };
+  });
+  check(
+    'one payout can complete every tier it passed',
+    slayer.unlocked.length === 3,
+    slayer.unlocked.join(', '),
+  );
+  check(
+    'the hundredth kill grants and wears the title',
+    slayer.title === 'rat-slayer' && slayer.display.endsWith(', Rat Slayer'),
+    slayer.display,
+  );
+
+  const feats = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    ui.selectTab('feats');
+    return {
+      open: ui.model.openSheet === 'feats',
+      visible: ui.achievementPanel.isVisible(),
+    };
+  });
+  check('the Feats tab opens the achievements sheet', feats.open && feats.visible);
+  await page.screenshot({ path: `${OUT}/12-achievements.png` });
+
+  // The title has to survive the round trip the picker actually uses: HUD asks,
+  // ZoneScene re-checks the kills back it, and the player column redraws. It
+  // gets its own line there, so the column has to grow to hold it.
+  const wornTitle = await page.evaluate(async () => {
+    const ui = window.game.scene.getScene('UI');
+    const before = ui.layout.playerColumn.height;
+    window.game.events.emit('set-title-requested', 'rat-slayer');
+    await new Promise((r) => setTimeout(r, 250));
+    const after = window.game.scene.getScene('UI');
+    return {
+      before,
+      after: after.layout.playerColumn.height,
+      model: after.model.activeTitleId,
+      shown: after.children.list.some((o) => o.text === 'Rat Slayer'),
+    };
+  });
+  check(
+    'wearing a title redraws the player column with room for it',
+    wornTitle.model === 'rat-slayer' && wornTitle.shown && wornTitle.after > wornTitle.before,
+    `column ${wornTitle.before} -> ${wornTitle.after}`,
+  );
+
+  const refusedTitle = await page.evaluate(async () => {
+    const z = window.game.scene.getScene('Zone');
+    window.game.events.emit('set-title-requested', 'bandit-slayer');
+    await new Promise((r) => setTimeout(r, 250));
+    return z.character.state.activeTitleId;
+  });
+  check(
+    'a title the kills do not back is refused, leaving the worn one alone',
+    refusedTitle === 'rat-slayer',
+    `still ${refusedTitle}`,
+  );
+  await page.screenshot({ path: `${OUT}/12c-title-worn.png` });
+
+  // The tab bar is the HUD's only permanent furniture, and a seventh tab is
+  // what makes its per-button width tight. 375px is the narrowest phone worth
+  // supporting; below ~372 the buttons drop under the 44px touch minimum.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.waitForTimeout(600);
+  const tabWidth = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    // The rendered hit areas, not the formula: objects[0] is the interactive
+    // background, which is the thing a thumb actually has to land on.
+    const widths = [...ui.tabBar.buttons.values()].map((button) => button.objects[0].width);
+    return {
+      canvasWidth: window.game.scale.width,
+      count: widths.length,
+      narrowest: Math.min(...widths),
+    };
+  });
+  check(
+    'seven tabs still clear the 44px touch minimum on a 375px phone',
+    tabWidth.canvasWidth === 375 && tabWidth.count === 7 && tabWidth.narrowest >= 44,
+    `${tabWidth.count} tabs, narrowest ${tabWidth.narrowest.toFixed(1)}px at ${tabWidth.canvasWidth}px`,
+  );
+  await page.screenshot({ path: `${OUT}/12b-tabbar-375.png` });
+
   // --- Offline camping: a session parked in the save pays out on the next
   // load. Done last, because it reloads the page. Travelling an hour back in
   // the save is the only way to reach this path at all — hence the unit tests

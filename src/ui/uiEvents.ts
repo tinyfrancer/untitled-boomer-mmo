@@ -1,4 +1,4 @@
-import type { AbilityId, SkillId } from '../types/ids';
+import type { AbilityId, AchievementId, SkillId, TitleId } from '../types/ids';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -49,6 +49,15 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 // What a camp earned while the tab was closed. Emitted once, on the load that
 // resolved the session; carries an OfflineAfkReport.
 export const OFFLINE_AFK_RESOLVED_EVENT = 'offline-afk-resolved';
+// Achievements. ZoneScene owns the kill counts, so it announces both the new
+// totals (KILLS_CHANGED) and the moment a tier completes (ACHIEVEMENT_UNLOCKED,
+// carrying an AchievementUnlock). Wearing a title is an ask/answer pair like
+// the quests above: the HUD forwards the tap, the controller re-checks that the
+// kills back it, and the answer is the title actually worn.
+export const KILLS_CHANGED_EVENT = 'kills-changed';
+export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
+export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
+export const TITLE_CHANGED_EVENT = 'title-changed';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -84,4 +93,16 @@ export interface SkillProgressInfo {
   xp: number;
   xpToNext: number;
   leveledUp: boolean;
+}
+
+// Payload for ACHIEVEMENT_UNLOCKED_EVENT. Carries the title separately from the
+// achievement because only the top tier grants one, and because the HUD shows a
+// title being worn differently from a tier merely being completed.
+export interface AchievementUnlock {
+  achievementId: AchievementId;
+  name: string;
+  titleId?: TitleId;
+  // Whether this unlock also put the title on, which only happens when the
+  // character had none.
+  titleWorn: boolean;
 }

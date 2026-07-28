@@ -116,6 +116,19 @@ describe('resolveOfflineAfk', () => {
     expect(veteran.xp).toBeGreaterThan(lowbie.xp);
   });
 
+  // The whole session grinds one spawn, so the kill count belongs to a single
+  // creature — which is what lets a camp count toward a slayer achievement.
+  it('names the creature the session was camped on', () => {
+    expect(resolveOfflineAfk(sessionStartedAgo(HOUR_MS), context()).enemyId).toBe('rat');
+    expect(resolveOfflineAfk(sessionStartedAgo(HOUR_MS, 'beach'), context()).enemyId).toBe('crab');
+  });
+
+  it('names no creature when nothing died', () => {
+    const report = resolveOfflineAfk(sessionStartedAgo(1000), context());
+    expect(report.kills).toBe(0);
+    expect(report.enemyId).toBeNull();
+  });
+
   it('takes loot into a pack with room for it', () => {
     // Two kills' worth: short enough that everything dropping still fits.
     const report = resolveOfflineAfk(sessionStartedAgo(130000), context());

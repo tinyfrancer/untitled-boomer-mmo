@@ -44,7 +44,12 @@ import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
+  KILLS_CHANGED_EVENT,
+  ACHIEVEMENT_UNLOCKED_EVENT,
+  SET_TITLE_REQUESTED_EVENT,
+  TITLE_CHANGED_EVENT,
   type AbilityState,
+  type AchievementUnlock,
   type SkillProgressInfo,
   type TargetInfo,
 } from '../ui/uiEvents';
@@ -53,10 +58,12 @@ import { CombatLogPanel } from '../ui/CombatLogPanel';
 import { OptionsPanel } from '../ui/OptionsPanel';
 import { AwayReportPanel } from '../ui/AwayReportPanel';
 import { QuestPanel } from '../ui/QuestPanel';
+import { AchievementPanel } from '../ui/AchievementPanel';
 import { QuestTrackerStrip } from '../ui/QuestTrackerStrip';
 import { TabBar, type TabId } from '../ui/TabBar';
-import { hudLayout, sheetRect, type HudLayout } from '../ui/layout';
+import { hudLayout, sheetRect, TITLE_LINE_HEIGHT, type HudLayout } from '../ui/layout';
 import { activeQuests, type QuestLog } from '../systems/QuestSystem';
+import { titleName, type KillCounts } from '../systems/AchievementSystem';
 import type { OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { abilitiesFor } from '../systems/AbilitySystem';
@@ -70,7 +77,7 @@ import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { SKILLS } from '../data/skills';
 import { CLASSES } from '../data/classes';
 import type { CharacterState } from '../persistence/CharacterState';
-import type { ClassId, GearSlotId } from '../types/ids';
+import type { ClassId, GearSlotId, TitleId } from '../types/ids';
 
 const DEFAULT_GEAR: Record<GearSlotId, string | null> = {
   helmet: null,
@@ -98,6 +105,8 @@ interface HudModel {
   // rather than a flag per panel, because only one is ever open.
   openSheet: TabId | null;
   quests: QuestLog;
+  kills: KillCounts;
+  activeTitleId: TitleId | null;
   shopOpen: boolean;
   actions: AvailableActions;
   afkActive: boolean;
@@ -127,6 +136,7 @@ export class UIScene extends Phaser.Scene {
   private slotPicker: SlotPicker | null = null;
   private shopPanel: ShopPanel | null = null;
   private questPanel!: QuestPanel;
+  private achievementPanel!: AchievementPanel;
   private questTracker!: QuestTrackerStrip;
   private tabBar!: TabBar;
   private layout!: HudLayout;
@@ -147,6 +157,8 @@ export class UIScene extends Phaser.Scene {
     combatLog: [],
     openSheet: null,
     quests: {},
+    kills: {},
+    activeTitleId: null,
     shopOpen: false,
     actions: { nearFire: false },
     afkActive: false,
@@ -175,6 +187,8 @@ export class UIScene extends Phaser.Scene {
       currency: character?.currency ?? 0,
       skills: character?.skills ?? createInitialSkills(),
       quests: character?.quests ?? {},
+      kills: character?.kills ?? {},
+      activeTitleId: character?.activeTitleId ?? null,
       hp: startingStats.maxHp,
       mana: startingStats.maxMana,
       maxMana: startingStats.maxMana,
@@ -207,11 +221,15 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on(COMBAT_LOG_EVENT, this.handleCombatLog, this);
     this.game.events.on(AFK_STATE_CHANGED_EVENT, this.handleAfkStateChanged, this);
     this.game.events.on(QUEST_LOG_CHANGED_EVENT, this.handleQuestLogChanged, this);
+    this.game.events.on(KILLS_CHANGED_EVENT, this.handleKillsChanged, this);
+    this.game.events.on(ACHIEVEMENT_UNLOCKED_EVENT, this.handleAchievementUnlocked, this);
+    this.game.events.on(TITLE_CHANGED_EVENT, this.handleTitleChanged, this);
 
     this.input.keyboard?.on('keydown-I', () => this.selectTab('inventory'));
     this.input.keyboard?.on('keydown-C', () => this.selectTab('character'));
     this.input.keyboard?.on('keydown-L', () => this.selectTab('log'));
     this.input.keyboard?.on('keydown-Q', () => this.selectTab('quests'));
+    this.input.keyboard?.on('keydown-V', () => this.selectTab('feats'));
     this.input.keyboard?.on('keydown-Z', () => this.game.events.emit(AFK_TOGGLE_REQUESTED_EVENT));
     // The action bar's two slots, in the order it draws them.
     abilitiesFor(this.classId).forEach((ability, index) => {
@@ -247,9 +265,13 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off(COMBAT_LOG_EVENT, this.handleCombatLog, this);
       this.game.events.off(AFK_STATE_CHANGED_EVENT, this.handleAfkStateChanged, this);
       this.game.events.off(QUEST_LOG_CHANGED_EVENT, this.handleQuestLogChanged, this);
+      this.game.events.off(KILLS_CHANGED_EVENT, this.handleKillsChanged, this);
+      this.game.events.off(ACHIEVEMENT_UNLOCKED_EVENT, this.handleAchievementUnlocked, this);
+      this.game.events.off(TITLE_CHANGED_EVENT, this.handleTitleChanged, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-      // Owns an off-display-list mask that a scene teardown won't reach.
+      // Both own an off-display-list mask that a scene teardown won't reach.
       this.inventoryPanel?.destroy();
+      this.achievementPanel?.destroy();
     });
   }
 
@@ -279,6 +301,7 @@ export class UIScene extends Phaser.Scene {
     // Explicit: the inventory panel owns scene-level input listeners and an
     // off-list mask that children.removeAll can't reach.
     this.inventoryPanel?.destroy();
+    this.achievementPanel?.destroy();
     this.children.removeAll(true);
     this.buildHud();
   };
@@ -298,6 +321,7 @@ export class UIScene extends Phaser.Scene {
     this.layout = hudLayout(this.scale.width, this.scale.height, {
       scale: this.uiScale,
       hasMana: this.model.maxMana > 0,
+      hasTitle: this.model.activeTitleId !== null,
       trackedQuests: activeQuests(this.model.quests).length,
     });
 
@@ -312,6 +336,7 @@ export class UIScene extends Phaser.Scene {
     this.createCharacterPanel();
     this.createInventoryPanel();
     this.createQuestPanel();
+    this.createAchievementPanel();
     this.createGatherBar();
     this.createManaBar();
     this.actionBar = new ActionBar(
@@ -368,6 +393,7 @@ export class UIScene extends Phaser.Scene {
     this.characterPanel.setVisible(open === 'character');
     this.inventoryPanel.setVisible(open === 'inventory');
     this.questPanel.setVisible(open === 'quests');
+    this.achievementPanel.setVisible(open === 'feats');
     this.combatLogPanel.setVisible(open === 'log');
     this.tabBar?.setSelected(open);
     if (open !== 'character') {
@@ -376,6 +402,9 @@ export class UIScene extends Phaser.Scene {
     }
     if (open === 'quests') {
       this.questPanel.update(this.model.quests, this.model.inventory);
+    }
+    if (open === 'feats') {
+      this.achievementPanel.update(this.model.kills, this.model.activeTitleId);
     }
   }
 
@@ -425,6 +454,24 @@ export class UIScene extends Phaser.Scene {
     this.handleResize();
   };
 
+  private handleKillsChanged = (kills: KillCounts): void => {
+    this.model.kills = kills;
+    if (this.model.openSheet === 'feats') {
+      this.achievementPanel.update(kills, this.model.activeTitleId);
+    }
+  };
+
+  private handleAchievementUnlocked = (unlock: AchievementUnlock): void => {
+    this.showToast(`Achievement: ${unlock.name}`, THEME.color.skillUp);
+  };
+
+  private handleTitleChanged = (titleId: TitleId | null): void => {
+    this.model.activeTitleId = titleId;
+    // Whether a title is worn decides whether the player column carries an
+    // extra line, which is a layout input — so this rebuilds like a quest does.
+    this.handleResize();
+  };
+
   // Player info sits top-left under the target frame.
   private playerBlockTop(): number {
     return this.layout.playerColumn.y;
@@ -444,14 +491,25 @@ export class UIScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setScrollFactor(0);
+    // On its own line rather than appended to the name: the two together
+    // overrun the 190px column, and the title is not the part to shrink.
+    const titleOffset = this.titleOffset();
+    if (this.model.activeTitleId) {
+      this.add
+        .text(margin, top + px(18, scale), titleName(this.model.activeTitleId), {
+          fontSize: fontPx(THEME.font.sm, scale),
+          color: THEME.color.levelUp,
+        })
+        .setScrollFactor(0);
+    }
     this.levelText = this.add
-      .text(margin, top + px(20, scale), 'Level 1', {
+      .text(margin, top + titleOffset + px(20, scale), 'Level 1', {
         fontSize: fontPx(THEME.font.md, scale),
         color: THEME.color.text,
       })
       .setScrollFactor(0);
 
-    const barY = top + px(40, scale);
+    const barY = top + titleOffset + px(40, scale);
     this.add
       .rectangle(margin, barY, this.xpBarWidth, barHeight, 0x000000, 0.5)
       .setOrigin(0, 0)
@@ -468,9 +526,16 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0);
   }
 
+  // How far a worn title pushes everything under the name down.
+  private titleOffset(): number {
+    return this.model.activeTitleId ? px(TITLE_LINE_HEIGHT, this.uiScale) : 0;
+  }
+
   // Where the XP bar's detail line ends — the top of the mana bar's slot.
   private manaBarTop(): number {
-    return this.playerBlockTop() + px(40 + THEME.xpBar.height + 18, this.uiScale);
+    return (
+      this.playerBlockTop() + this.titleOffset() + px(40 + THEME.xpBar.height + 18, this.uiScale)
+    );
   }
 
   // Sits under the XP bar, and only for a class that has a pool to show.
@@ -562,6 +627,16 @@ export class UIScene extends Phaser.Scene {
     this.questPanel.update(this.model.quests, this.model.inventory);
   }
 
+  private createAchievementPanel(): void {
+    this.achievementPanel = new AchievementPanel(
+      this,
+      this.sheetFor(px(THEME.panelWidth.character, this.uiScale)),
+      this.uiScale,
+      (titleId) => this.game.events.emit(SET_TITLE_REQUESTED_EVENT, titleId),
+    );
+    this.achievementPanel.update(this.model.kills, this.model.activeTitleId);
+  }
+
   private createInventoryPanel(): void {
     const sheet = this.sheetFor(inventoryPanelWidth(this.uiScale));
     this.inventoryPanel = new InventoryPanel(
@@ -637,7 +712,21 @@ export class UIScene extends Phaser.Scene {
     this.registry.remove(OFFLINE_AFK_RESOLVED_EVENT);
     this.awayReportPanel = new AwayReportPanel(this, this.uiScale, report, () => {
       this.awayReportPanel = null;
+      // Held until the report is dismissed so the two don't talk over each
+      // other; a chain finished overnight is news worth its own line.
+      this.showOfflineUnlocks();
     });
+  }
+
+  private showOfflineUnlocks(): void {
+    const unlocks = this.registry.get(ACHIEVEMENT_UNLOCKED_EVENT) as
+      AchievementUnlock[] | undefined;
+    if (!unlocks || unlocks.length === 0) {
+      return;
+    }
+    this.registry.remove(ACHIEVEMENT_UNLOCKED_EVENT);
+    // Only the last one gets the toast; the sheet is where the full list lives.
+    this.handleAchievementUnlocked(unlocks[unlocks.length - 1]);
   }
 
   private openOptions(): void {

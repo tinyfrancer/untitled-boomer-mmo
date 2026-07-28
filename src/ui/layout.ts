@@ -20,6 +20,10 @@ const TARGET_FRAME_HEIGHT = 52;
 // and its own label underneath.
 const PLAYER_COLUMN_HEIGHT = 82;
 const MANA_BLOCK_HEIGHT = 34;
+// A worn title gets its own line under the name. "Adventurer, Rat Slayer" on
+// one line overruns the 190px column, and shrinking the name to fit made the
+// thing the player is proudest of the smallest text on screen.
+export const TITLE_LINE_HEIGHT = 16;
 const TRACKER_LINE_HEIGHT = 18;
 // The ability buttons plus the mana-cost line printed under them.
 const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 16;
@@ -42,6 +46,8 @@ export interface HudLayout {
 export interface HudLayoutOptions {
   scale?: number;
   hasMana?: boolean;
+  // Whether a title is worn, which costs the player column an extra line.
+  hasTitle?: boolean;
   trackedQuests?: number;
 }
 
@@ -61,7 +67,7 @@ export function hudLayout(
   height: number,
   options: HudLayoutOptions = {},
 ): HudLayout {
-  const { scale = 1, hasMana = false, trackedQuests = 0 } = options;
+  const { scale = 1, hasMana = false, hasTitle = false, trackedQuests = 0 } = options;
   const margin = px(THEME.margin, scale);
   const padding = px(THEME.padding, scale);
 
@@ -101,7 +107,12 @@ export function hudLayout(
       x: margin,
       y: targetFrame.y + targetFrame.height + margin,
       width: px(THEME.xpBar.width, scale),
-      height: px(PLAYER_COLUMN_HEIGHT + (hasMana ? MANA_BLOCK_HEIGHT : 0), scale),
+      height: px(
+        PLAYER_COLUMN_HEIGHT +
+          (hasMana ? MANA_BLOCK_HEIGHT : 0) +
+          (hasTitle ? TITLE_LINE_HEIGHT : 0),
+        scale,
+      ),
     },
     tracker,
     actionBar,

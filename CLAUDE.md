@@ -9,9 +9,9 @@ side project by a professional software engineer with no prior game-dev experien
 v1: single-player only; three zones (town with leveled rats and a shop, a beach with crabs and
 ocean fishing, a bandit camp with aggressive humanoids); character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency and vendoring;
-a weight-limited pack; two collection quests from the shopkeeper; an AFK camping mode that
-also pays out offline; click/tap-to-move with a mobile-first HUD; and local save/load with
-versioned migrations. All three zones are level 1-3 starter content — what separates them is
+a weight-limited pack; two collection quests from the shopkeeper; slayer achievements and the
+titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
+mobile-first HUD; and local save/load with versioned migrations. All three zones are level 1-3 starter content — what separates them is
 what they drop, not how hard they are.
 Per-feature briefs live in `docs/feature_N_*.txt`. Full long-term vision is in
 `docs/initial_design.txt` (multiplayer, more zones, more skills) — most of it is intentionally
@@ -116,13 +116,20 @@ in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both 
 new scene class.
 
 **The HUD is a bottom tab bar plus sheets** (`scenes/UIScene.ts`, `ui/TabBar.ts`). Char / Bag /
-Quests / Log open one sheet at a time — the model holds a single `openSheet`, not a visible flag per
-panel — while Camp and the gear icon are actions that open nothing. Layout arithmetic lives in the
-Phaser-free `ui/layout.ts` and is unit-tested at real viewport sizes; put new HUD geometry there
-rather than inline in the scene. The breakpoint keys on **height as well as width**, because a
+Quests / Feats / Log open one sheet at a time — the model holds a single `openSheet`, not a visible
+flag per panel — while Camp and the gear icon are actions that open nothing. Layout arithmetic lives
+in the Phaser-free `ui/layout.ts` and is unit-tested at real viewport sizes; put new HUD geometry
+there rather than inline in the scene. The breakpoint keys on **height as well as width**, because a
 landscape phone (844x390) is wide by any measure and has less vertical room than a portrait one.
 `ui/Button.ts` and `ui/Panel.ts` are the shared chrome — use them rather than hand-rolling a
 rectangle, a label and a hit area again.
+
+**The tab bar is full.** It splits its width evenly across seven tabs, which on a 375px phone is
+44.4px each against a `THEME.touchMin` of 44 — four tenths of a pixel of headroom, and under the
+minimum below ~372px. An eighth tab does not fit; fold new surfaces into an existing sheet, or
+change how the bar lays out. Labels have to stay short for the same reason ("Quests" is the longest
+that fits). `npm run smoke` measures the rendered hit areas at 375px rather than trusting the
+arithmetic, so this fails the build rather than shipping an untappable button.
 
 **Nothing in the world may be drawn under the tab bar.** The bar is opaque and swallows every tap
 that lands on it, so `ZoneScene.applyCameraZoom` shrinks the world camera's viewport to stop at
@@ -167,7 +174,8 @@ with no chain of steps to the current version is dropped.
 enemy definitions (`enemies.ts`), where and at what level they spawn (`spawns.ts`), loot
 (`lootTables.ts`), quests (`quests.ts`), the XP curve (`xpTable.ts`), zones (`zones.ts`), and the
 tilemap layouts (`tiles.ts`, `townMap.ts`) are plain data tables keyed by id. `types/ids.ts` holds
-the id unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`, `QuestId`) that key into them. Prefer
+the id unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`, `QuestId`, `AchievementId`,
+`TitleId`) that key into them. Prefer
 adding a row to one of these tables over hardcoding values in a scene/entity — a new enemy type
 should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numbers baked in.
 
@@ -175,8 +183,8 @@ should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numb
 what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by
 a test rather than by construction, since the tables are hand-written. It is also the thing that
 makes three same-level zones worth visiting: rats give quest parts, crabs give food, bandits give
-gear and coin. The bandit table carries **both** armor types on purpose; cloth is otherwise
-shop-only, which left a wizard unable to wear anything the world dropped.
+gear and coin. The bandit table carries **both** armor types on purpose: the shop sells tools
+only, so that table plus the two class-keyed quest rewards is the whole of anyone's armor supply.
 
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
 only `active | done` per quest; how far along a "bring me N of X" objective is gets counted off the
@@ -184,6 +192,19 @@ inventory on read. Items reach the bag from loot, gathering, cooking, buying and
 and counting on read means none of those paths can forget to bump a counter. `turnInQuest` on
 `CharacterController` refuses as a whole rather than half-applying — taking the objective and
 finding no room for the reward is the one outcome that can't be undone.
+
+**Kills are the one counter that is stored** (`systems/AchievementSystem.ts`). Everything else
+derives its progress from state that already exists — a quest counts the bag — but a corpse leaves
+nothing behind, so `CharacterState.kills` holds a real per-creature tally. What comes _off_ it
+still derives: which achievements are unlocked and which titles are earned are computed on read,
+and only the player's choice of worn title is stored alongside. Keep that split when adding to it.
+
+Because the count is stored, every path that kills something has to credit it — which is why
+`ZoneScene.resolveKill` exists as the single funnel for the auto-attack and ability paths, and why
+offline camping widens `OfflineAfkReport` with the creature it was parked on. Add a new reward for
+a kill there, not at a call site. Achievement ids are a template literal over `EnemyId` and
+`SlayerTier` and the rows are generated from `ENEMIES`, so a new enemy gets its whole 25/50/100
+chain by construction; a test still asserts the grid is complete.
 
 **Acquiring an item can fail.** The pack has a weight limit (`systems/EncumbranceSystem.ts`,
 capacity from strength), so gathering, loot and buying all go through
@@ -208,6 +229,9 @@ a per-kill rate alone is not safe, since eight hours in the richest zone out-ear
 level 1-10 curve several times over. Keep that cap if you add a zone or change the XP curve.
 The camp penalty is for XP a character earns unattended, so a quest reward goes through
 `ZoneScene.publishXpGain` rather than `awardXp` — handing a quest in is something the player did.
+Kills are the exception to the penalty: an offline session credits its full count to the slayer
+chains, since a kill either happened or it didn't. It grinds a single spawn, which is what makes
+one `enemyId` on the report enough to credit them all.
 
 **Levels scale both sides.** Enemies carry a `level` and derive HP/damage/XP from
 `base + perLevel` via `scaleEnemyStats()`; characters grow through `perLevel` on their class and

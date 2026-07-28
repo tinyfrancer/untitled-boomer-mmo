@@ -34,6 +34,12 @@ describe('createNewCharacter', () => {
     Object.values(character.skills).forEach((skill) => expect(skill).toEqual({ level: 1, xp: 0 }));
   });
 
+  it('starts with nothing killed and no title worn', () => {
+    const character = createNewCharacter('Aria', 'wizard');
+    expect(character.kills).toEqual({});
+    expect(character.activeTitleId).toBeNull();
+  });
+
   it('stamps the current CHARACTER_STATE_VERSION', () => {
     const character = createNewCharacter('Aria', 'wizard');
     expect(character.version).toBe(CHARACTER_STATE_VERSION);

@@ -44,7 +44,13 @@ import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
+  KILLS_CHANGED_EVENT,
+  ACHIEVEMENT_UNLOCKED_EVENT,
+  SET_TITLE_REQUESTED_EVENT,
+  TITLE_CHANGED_EVENT,
+  type AchievementUnlock,
 } from '../ui/uiEvents';
+import { titleName } from '../systems/AchievementSystem';
 import { resolveOfflineAfk } from '../systems/OfflineAfkSystem';
 import {
   AFK_ANCHOR_RADIUS,
@@ -66,6 +72,7 @@ import type { AbilityDefinition } from '../data/abilities';
 import {
   logAbilityUsed,
   logAbsorbed,
+  logAchievement,
   logCoin,
   logDamageDealt,
   logDamageTaken,
@@ -78,6 +85,7 @@ import {
   logQuestCompleted,
   logSkillLevelUp,
   logSpellFailed,
+  logTitleEarned,
   logXpGain,
   type CombatLogEntry,
 } from '../systems/CombatLogSystem';
@@ -113,7 +121,15 @@ import {
 } from '../systems/ZoneSystem';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
-import type { AbilityId, GearSlotId, QuestId, SkillId, ZoneId } from '../types/ids';
+import type {
+  AbilityId,
+  EnemyId,
+  GearSlotId,
+  QuestId,
+  SkillId,
+  TitleId,
+  ZoneId,
+} from '../types/ids';
 
 const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
@@ -323,6 +339,7 @@ export class ZoneScene extends Phaser.Scene {
     this.game.events.on(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
     this.game.events.on(ACCEPT_QUEST_REQUESTED_EVENT, this.handleAcceptQuestRequested, this);
     this.game.events.on(TURN_IN_QUEST_REQUESTED_EVENT, this.handleTurnInQuestRequested, this);
+    this.game.events.on(SET_TITLE_REQUESTED_EVENT, this.handleSetTitleRequested, this);
 
     this.time.addEvent({
       delay: AUTOSAVE_INTERVAL_MS,
@@ -348,6 +365,7 @@ export class ZoneScene extends Phaser.Scene {
       this.game.events.off(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
       this.game.events.off(ACCEPT_QUEST_REQUESTED_EVENT, this.handleAcceptQuestRequested, this);
       this.game.events.off(TURN_IN_QUEST_REQUESTED_EVENT, this.handleTurnInQuestRequested, this);
+      this.game.events.off(SET_TITLE_REQUESTED_EVENT, this.handleSetTitleRequested, this);
     });
 
     // Last, so the player, the mobs and the log are all there to pay it into.
@@ -778,6 +796,7 @@ export class ZoneScene extends Phaser.Scene {
     }
     this.character.addCurrency(report.copper);
     this.awardXp(report.xp);
+    const unlocks = report.enemyId ? this.creditKill(report.enemyId, report.kills) : [];
     this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
     // Handed over through the registry rather than as an event, because the
@@ -785,6 +804,12 @@ export class ZoneScene extends Phaser.Scene {
     // scene — a zone change clears the camp on its way out — and the HUD is
     // not listening yet at that point.
     this.registry.set(OFFLINE_AFK_RESOLVED_EVENT, report);
+    // Same reason as the report above: a chain finished while the tab was shut
+    // has nobody listening for the event, so it is left where the HUD can pick
+    // it up once it builds.
+    if (unlocks.length > 0) {
+      this.registry.set(ACHIEVEMENT_UNLOCKED_EVENT, unlocks);
+    }
     this.persistCharacter();
   }
 
@@ -1098,8 +1123,6 @@ export class ZoneScene extends Phaser.Scene {
     });
     this.showFloatingText(this.target.x, this.target.y, `-${damage}`, THEME.color.equippable);
     this.log(logDamageDealt(this.target.name, damage));
-    const xpReward = this.target.xpReward;
-    const lootTableId = this.target.lootTableId;
     this.player.markInCombat();
     this.target.takeDamage(damage);
     // Anything the player hits fights back, whether or not it opens combat itself.
@@ -1108,9 +1131,7 @@ export class ZoneScene extends Phaser.Scene {
     // Skill comes from swinging, not from killing: a landed hit is the rep.
     this.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
     if (!this.target.isAlive()) {
-      this.log(logKill(this.target.name));
-      this.awardXp(xpReward);
-      this.grantLoot(lootTableId);
+      this.resolveKill(this.target);
     }
   }
 
@@ -1217,6 +1238,63 @@ export class ZoneScene extends Phaser.Scene {
     if (this.player.hp === this.lastReportedHp) return;
     this.lastReportedHp = this.player.hp;
     this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
+  }
+
+  /**
+   * Everything a corpse is worth, for a mob that has already died this frame.
+   * Both the swing path and the ability path end here so a new reward can only
+   * ever be added once — the two used to carry their own copy of this, which is
+   * how a reward gets wired into melee and silently missed on spellcasting.
+   * Safe to read the mob after death: its reward fields are readonly and set in
+   * the constructor, so dying does not clear them.
+   */
+  private resolveKill(mob: Mob): void {
+    this.log(logKill(mob.name));
+    this.awardXp(mob.xpReward);
+    this.grantLoot(mob.lootTableId);
+    this.announceUnlocks(this.creditKill(mob.definition.id));
+  }
+
+  /**
+   * Credits kills to the slayer chains and reports what they completed. Does
+   * not announce anything itself: a live kill can emit, but an offline camp
+   * settles up during create() when the HUD is not listening yet, so the caller
+   * decides how the news travels.
+   */
+  private creditKill(enemyId: EnemyId, count = 1): AchievementUnlock[] {
+    const worn = this.character.state.activeTitleId;
+    const crossed = this.character.recordKill(enemyId, count);
+    this.game.events.emit(KILLS_CHANGED_EVENT, this.character.state.kills);
+    if (crossed.length > 0) {
+      this.persistCharacter();
+    }
+    return crossed.map((definition) => ({
+      achievementId: definition.id,
+      name: definition.name,
+      titleId: definition.titleId,
+      titleWorn:
+        definition.titleId !== undefined &&
+        worn === null &&
+        this.character.state.activeTitleId === definition.titleId,
+    }));
+  }
+
+  private announceUnlocks(unlocks: AchievementUnlock[]): void {
+    for (const unlock of unlocks) {
+      this.log(logAchievement(unlock.name));
+      this.showFloatingText(this.player.x, this.player.y - 60, unlock.name, THEME.color.skillUp);
+      this.game.events.emit(ACHIEVEMENT_UNLOCKED_EVENT, unlock);
+      if (unlock.titleWorn && unlock.titleId) {
+        this.log(logTitleEarned(titleName(unlock.titleId)));
+        this.game.events.emit(TITLE_CHANGED_EVENT, unlock.titleId);
+      }
+    }
+  }
+
+  private handleSetTitleRequested(titleId: TitleId | null): void {
+    if (!this.character.setActiveTitle(titleId)) return;
+    this.game.events.emit(TITLE_CHANGED_EVENT, this.character.state.activeTitleId);
+    this.persistCharacter();
   }
 
   private awardXp(reward: number): void {
@@ -1331,15 +1409,11 @@ export class ZoneScene extends Phaser.Scene {
         this.castBolt(target, ability);
         this.showFloatingText(target.x, target.y, `-${damage}`, THEME.color.levelUp);
         this.log(logDamageDealt(target.name, damage));
-        const xpReward = target.xpReward;
-        const lootTableId = target.lootTableId;
         target.takeDamage(damage);
         target.engage();
         this.publishTarget();
         if (!target.isAlive()) {
-          this.log(logKill(target.name));
-          this.awardXp(xpReward);
-          this.grantLoot(lootTableId);
+          this.resolveKill(target);
         }
         return;
       }

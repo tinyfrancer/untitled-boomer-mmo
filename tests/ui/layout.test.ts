@@ -79,6 +79,22 @@ describe('hudLayout', () => {
     expect(wizard).toBeGreaterThan(warrior);
   });
 
+  // A worn title takes its own line under the name rather than being appended
+  // to it, so the column has to grow by one line when there is one.
+  it('makes room for a title only once one is worn', () => {
+    const untitled = layoutFor(PHONE_PORTRAIT).playerColumn.height;
+    const titled = layoutFor(PHONE_PORTRAIT, { hasTitle: true }).playerColumn.height;
+    expect(titled).toBeGreaterThan(untitled);
+  });
+
+  it('stacks a title and a mana bar rather than overlapping them', () => {
+    const both = layoutFor(PHONE_PORTRAIT, { hasMana: true, hasTitle: true }).playerColumn.height;
+    const manaOnly = layoutFor(PHONE_PORTRAIT, { hasMana: true }).playerColumn.height;
+    const titleOnly = layoutFor(PHONE_PORTRAIT, { hasTitle: true }).playerColumn.height;
+    const plain = layoutFor(PHONE_PORTRAIT).playerColumn.height;
+    expect(both - plain).toBe(manaOnly - plain + (titleOnly - plain));
+  });
+
   it('keeps the player column clear of the target frame', () => {
     const layout = layoutFor(PHONE_PORTRAIT);
     expect(layout.playerColumn.y).toBeGreaterThanOrEqual(
