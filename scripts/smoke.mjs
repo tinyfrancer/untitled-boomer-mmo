@@ -1003,6 +1003,28 @@ try {
     z.player.setPosition(z.worldWidth / 2, 33);
   });
   await waitFor((s) => s.zoneId === 'town', 'the north exit to return to town');
+  // A zone change is a view rebuild, not a scene restart, so everything the
+  // last zone drew has to come down by hand. Nothing in the simulation can see
+  // this failing: a leak is a second ground layer under the first, or a
+  // shopkeeper's name still floating over the beach.
+  const rebuilt = await page.evaluate(() => {
+    const drawn = window.game.scene.getScene('Zone').children.list;
+    return {
+      layers: drawn.filter((o) => o.type === 'TilemapLayer').length,
+      signposts: drawn.filter((o) => o.texture?.key === 'zone-signpost').length,
+      shopkeepers: drawn.filter((o) => o.texture?.key === 'npc-shopkeeper').length,
+      names: drawn.filter((o) => o.type === 'Text' && o.text === 'Shopkeeper').length,
+    };
+  });
+  check(
+    'the view of the zone left behind comes down with it',
+    rebuilt.layers === 1 &&
+      rebuilt.signposts === 2 &&
+      rebuilt.shopkeepers === 1 &&
+      rebuilt.names === 1,
+    `${rebuilt.layers} ground layer(s), ${rebuilt.signposts} signpost(s), ` +
+      `${rebuilt.shopkeepers} shopkeeper(s), ${rebuilt.names} name label(s)`,
+  );
   await page.evaluate(() => {
     const z = window.game.scene.getScene('Zone');
     const bounds = { width: z.worldWidth, height: z.worldHeight };

@@ -127,13 +127,34 @@ add to it:
 
 **Scene flow** (registered in `src/main.ts`, one `Phaser.Game` instance):
 `Boot` → `Preload` (generates placeholder textures at runtime, no image assets; loads any
-existing save and routes straight to `Zone`, else to `CharacterCreate`) → `CharacterCreate`
-(builds a `CharacterState` and saves it) → `Zone` (the gameplay scene) with `UI` launched
-alongside it as a parallel HUD scene.
+existing save, starts a `GameContext` with it and routes straight to `Zone`, else to
+`CharacterCreate`) → `CharacterCreate` (builds a `CharacterState`, saves it and starts the
+`GameContext`) → `Zone` (the gameplay scene) with `UI` launched alongside it as a parallel HUD
+scene. Each of those runs once per page load: nothing restarts a scene any more.
+
+**`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
+Phaser-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
+and the autosave accumulator, and it is the **only** thing that builds or tears down a world:
+`update(delta)` steps the current one and answers `{ events, zoneChanged }`, having already loaded
+the next zone when a `zone-exit` or a fatal `death` asked it to. `startGame` / `gameContext()` /
+`endGame` are how the host reaches it; there is no Phaser registry involved, and `CharacterState`
+does not travel through one. Two things follow that are easy to get wrong:
+
+- **A zone change is a view rebuild, not a scene restart.** `ZoneScene` tears its own sprites,
+  labels, tilemap and tweens down and builds them again against the new world. Scene restart used
+  to do that for free, which is why a shopkeeper's name label could be scene-owned and forgotten
+  about; now whatever creates a display object destroys it (see the `destroy()` overrides in
+  `entities/`). `npm run smoke` counts ground layers, signposts and name labels after a round trip,
+  because a leak here is invisible to every state assertion — 10 round trips took the display list
+  from 44 objects to 764 while every unit test stayed green. This is rehearsal for Three.js, where
+  the same omission is a GPU memory leak instead of a stray label.
+- **Anything the HUD must hear but is not yet mounted for goes in the notification queue**, not an
+  event: `takeNotifications()` is drained once by `UIScene.create`. The offline AFK payout is
+  resolved on the load that finds a parked session, which is necessarily before the HUD exists.
 
 **Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
-node spawns, exits), each built into one `ZoneWorld` and drawn by the single `ZoneScene` — a zone
-change is `scene.restart({ zoneId })`, and the `UI` scene stays running across it. Each exit spawns a
+node spawns, exits), each built into one `ZoneWorld` by the `GameContext` and drawn by the single
+`ZoneScene`; the `UI` scene keeps running across a change untouched. Each exit spawns a
 tappable `ZoneSignpost` (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not a
@@ -196,10 +217,12 @@ another scene. An event carrying more than two or three values should pass one o
 `TargetInfo` in `uiEvents.ts`) rather than growing a positional argument list.
 
 **`ZoneWorld` does not load zones, and that is on purpose.** Walking onto an exit emits
-`{kind: 'zone-exit', to, edge, fraction}` and stops the world; `ZoneScene` acts on it with
-`scene.restart`. Building the next world is the host's job because tearing this one down is too —
-a scene restart today, a pile of `.dispose()` calls once Three.js is rendering. Player death away
-from town comes back the same way, as `{kind: 'death', on: 'player', respawnZone: 'town'}`.
+`{kind: 'zone-exit', to, edge, fraction}` and stops the world; the `GameContext` acts on it,
+because tearing this world down is its job too. Player death away from town comes back the same
+way, as `{kind: 'death', on: 'player', respawnZone: 'town'}`. HP rides across an exit walk and is
+deliberately dropped on a respawn — arriving at full is the point of dying. A frame that changed
+zone hands its events back with `zoneChanged: true`; they belong to a world that no longer exists,
+so a view rebuilds instead of drawing them.
 
 **There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate
 themselves each frame against the Phaser-free `systems/CollisionSystem.ts`, which is the only thing

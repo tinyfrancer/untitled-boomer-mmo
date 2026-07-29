@@ -48,4 +48,9 @@ export class MobSprite extends Phaser.GameObjects.Sprite {
     this.setVisible(faded < 1);
     this.healthBar.setVisible(false);
   }
+
+  override destroy(fromScene?: boolean): void {
+    this.healthBar.destroy();
+    super.destroy(fromScene);
+  }
 }

@@ -66,4 +66,11 @@ export class HealthBar {
     this.graphics.setVisible(visible);
     this.labelText?.setVisible(visible);
   }
+
+  // Both pieces are scene-level objects rather than children of the sprite this
+  // hangs over, so nothing else will take them down with it.
+  destroy(): void {
+    this.graphics.destroy();
+    this.labelText?.destroy();
+  }
 }

@@ -8,8 +8,9 @@
   where.
 - **PR 7 merged** — `ZoneWorld` exists, `src/world/` is in the Phaser-free seam, and `ZoneScene` is
   a view. See the retrospective under PR 7 below.
-- **Next: PR 8.** Phase 1's remaining two PRs are each a session on their own — see the sizing
-  note below.
+- **PR 8 merged** — `GameContext` owns the session, `scene.restart` is gone, and the registry with
+  it. See the retrospective under PR 8 below.
+- **Next: PR 9**, the smoke migration — a session on its own, and the one least worth rushing.
 
 ## Context
 
@@ -260,7 +261,37 @@ _Verify:_ a headless vitest harness ticks a full combat → death → respawn cy
 
 </details>
 
-### PR 8 — `world.loadZone()` replaces `scene.restart`; `GameContext` replaces the registry
+### PR 8 — `GameContext` replaces `scene.restart` and the registry — done, merged
+
+What landed that this document did not predict, and that PR 9 onwards inherits:
+
+- **`loadZone` is on the session, not the world.** `ZoneWorld` still refuses to load zones; the new
+  Phaser-free `world/GameContext.ts` owns the character, the `InputState`, the running world and the
+  save clock, and `update(delta)` returns `{ events, zoneChanged }` having already built the next
+  world when the frame asked for one. `zoneChanged` is the whole contract with a view: the events
+  came from a world that no longer exists, so rebuild rather than draw them.
+- **The view teardown was the work, not the loading.** Restarting the scene was destroying a
+  display list nobody had ever had to think about — the floating labels over shopkeepers and
+  signposts were literally commented as "scene-owned, so a zone change cleans it up". Every view
+  class now destroys what it created, `ZoneScene` tracks its transient floats and bolts in a group,
+  and 10 town↔beach round trips hold the display list at 44 objects. Without the teardown it reaches
+  **764** with the entire unit suite still green, which is the shape of the Three.js leak this PR
+  exists to make impossible. A smoke check counts ground layers, signposts and name labels now.
+- **Phaser shuts its plugins down before any `SHUTDOWN` listener we can register.** `this.cameras.main`
+  is already `undefined` inside the handler, so a teardown that touches the camera or the tween
+  manager throws — and a throw there leaves the scene manager wedged: the character-create screen
+  never starts, which is how it presented (a smoke timeout with no failing assertion). The teardown
+  runs from `resetCharacter` while the scene is whole, with the shutdown handler as an idempotent
+  backstop.
+- **`OFFLINE_AFK_RESOLVED_EVENT` is gone, not moved.** It was never an event — it was a registry
+  key read once on mount. It is a typed `PendingNotification` on the context now, drained by
+  `UIScene.create`. The achievement unlocks that can accompany it ride the same queue.
+- **A reset can end the session from inside a tick** — the F9 that asks for one is drained by the
+  world being stepped — so `GameContext` carries a `destroyed` flag. Without it the autosave later
+  in that same frame writes the character straight back over the save the reset just cleared.
+
+<details>
+<summary>Original PR 8 specification, kept for the record</summary>
 
 **One session.** Depends on PR 7 having landed the entity split.
 
@@ -279,6 +310,8 @@ report silently never shows, **which smoke does not cover.**
 Also fold in the autosave timer (`ZoneScene.ts:344`) and the `pagehide`/`beforeunload` pair — they
 become an accumulator in the world tick. Small, but unnamed means a save-loss bug.
 _Verify:_ 10 town→beach round trips with no leaked listeners; offline AFK report still displays.
+
+</details>
 
 ### PR 9 — Migrate the smoke check while everything is still green
 
