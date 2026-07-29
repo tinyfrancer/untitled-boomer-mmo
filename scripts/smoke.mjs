@@ -727,11 +727,32 @@ try {
     `engaged ${fought.afk.target} unprompted`,
   );
 
-  // Real keyboard input through Phaser's own plugin, not a method call.
+  // Real key events, not a method call: InputState is fed by its own DOM
+  // listeners now, so nothing but a browser proves the wiring is live.
   await page.keyboard.down('w');
   const released = await waitFor((s) => !s.afk.active, 'walking to end the camp');
   await page.keyboard.up('w');
   check('moving by hand takes the controls back from the camp', released.afk.active === false);
+
+  // Escape reaches the scene as a drained action rather than a key listener, so
+  // it is worth pressing for real. Select the furthest live mob: one in range
+  // would be auto-attacked to death, and a kill clears the target by itself.
+  const selected = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const furthest = z.mobs
+      .filter((m) => m.isAlive())
+      .sort(
+        (a, b) =>
+          Math.hypot(b.x - z.player.x, b.y - z.player.y) -
+          Math.hypot(a.x - z.player.x, a.y - z.player.y),
+      )[0];
+    z.setTarget(furthest);
+    return z.target?.name ?? null;
+  });
+  check('a target can be selected to press Escape against', selected !== null, `${selected}`);
+  await page.keyboard.press('Escape');
+  const cleared = await waitFor((s) => s.afk.target === null, 'Escape to drop the target');
+  check('pressing Escape clears the selected target', cleared.afk.target === null);
 
   // --- Leash: a chasing rat that loses the player resets and heals. ---
   // Set this up from scratch rather than reusing the rat from the fight above,

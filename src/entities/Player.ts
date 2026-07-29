@@ -6,6 +6,7 @@ import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { stepToward, type Point } from '../systems/MovementSystem';
+import type { InputState } from '../systems/InputState';
 import { ensurePlayerTexture, ensureWalkAnimation } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
@@ -16,13 +17,6 @@ const NO_GEAR: Record<GearSlotId, string | null> = {
   pants: null,
   weapon: null,
 };
-
-interface WasdKeys {
-  W: Phaser.Input.Keyboard.Key;
-  A: Phaser.Input.Keyboard.Key;
-  S: Phaser.Input.Keyboard.Key;
-  D: Phaser.Input.Keyboard.Key;
-}
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly classId: ClassId;
@@ -38,7 +32,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   attackRange: number;
   attackCooldownMs: number;
   private readonly healthBar: HealthBar;
-  private readonly keys: WasdKeys;
+  private readonly keyboard: InputState;
   private moveTarget: Point | null = null;
   private gear: Record<GearSlotId, string | null>;
   // Regen accrues in fractions of a point per frame, so current HP is tracked
@@ -62,6 +56,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     x: number,
     y: number,
     classId: ClassId,
+    input: InputState,
     gear: Record<GearSlotId, string | null> = NO_GEAR,
     name = 'Adventurer',
     level = 1,
@@ -91,17 +86,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.attackCooldownMs = stats.attackCooldownMs;
 
     this.healthBar = new HealthBar(scene, { width: 64, height: 10, offsetY: 52, label: name });
-
-    const keyboard = scene.input.keyboard;
-    if (!keyboard) {
-      throw new Error('Keyboard input plugin is not available');
-    }
-    this.keys = {
-      W: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      A: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      S: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      D: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-    };
+    this.keyboard = input;
   }
 
   // Click/tap-to-move: walk toward this world point until arrival, a new
@@ -119,7 +104,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   isKeyboardMoving(): boolean {
-    return this.keys.A.isDown || this.keys.D.isDown || this.keys.W.isDown || this.keys.S.isDown;
+    return this.keyboard.isMoving();
   }
 
   setGear(gear: Record<GearSlotId, string | null>): void {
@@ -303,19 +288,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.manaShield = tickBuff(this.manaShield, deltaMs);
     this.haste = tickBuff(this.haste, deltaMs);
 
-    let vx = 0;
-    let vy = 0;
-    if (this.keys.A.isDown) vx -= 1;
-    if (this.keys.D.isDown) vx += 1;
-    if (this.keys.W.isDown) vy -= 1;
-    if (this.keys.S.isDown) vy += 1;
+    const keyboard = this.keyboard.moveVector();
+    let vx = keyboard.x * this.speed;
+    let vy = keyboard.y * this.speed;
 
     if (vx !== 0 || vy !== 0) {
       // Keyboard overrides and cancels any click destination.
       this.moveTarget = null;
-      const length = Math.hypot(vx, vy);
-      vx = (vx / length) * this.speed;
-      vy = (vy / length) * this.speed;
     } else if (this.moveTarget) {
       const step = stepToward(this.x, this.y, this.moveTarget, this.speed, deltaMs);
       if (step.arrived) {
