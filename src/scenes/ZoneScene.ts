@@ -112,6 +112,7 @@ import {
 } from '../systems/GatherSystem';
 import { CharacterController, type CombatXpGain } from '../systems/CharacterController';
 import { arriveRadius, distance, withinRadius, type Point } from '../systems/MovementSystem';
+import { InputState, bindKeyboard } from '../systems/InputState';
 import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
 import {
   SIGNPOST_INTERACT_RADIUS,
@@ -213,6 +214,8 @@ export class ZoneScene extends Phaser.Scene {
   private afkAnchor = new Phaser.Math.Vector2();
   private afkRecovering = false;
   private changingZone = false;
+  private readonly inputState = new InputState();
+  private unbindKeyboard: (() => void) | null = null;
   private handleWindowUnload = (): void => this.persistCharacter();
 
   constructor() {
@@ -268,6 +271,7 @@ export class ZoneScene extends Phaser.Scene {
       start.x,
       start.y,
       state.classId,
+      this.inputState,
       state.gear,
       state.name,
       state.level,
@@ -333,9 +337,7 @@ export class ZoneScene extends Phaser.Scene {
     this.selectionRing.setVisible(false);
 
     this.input.on('pointerdown', this.handlePointerDown, this);
-    this.input.keyboard?.on('keydown-ESC', () => this.clearTarget());
-    // Kept as a desktop shortcut; the options menu is the way a phone gets here.
-    this.input.keyboard?.on('keydown-F9', () => this.resetCharacter());
+    this.unbindKeyboard = bindKeyboard(this.inputState, window);
     this.game.events.on(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
     this.game.events.on(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
     this.game.events.on(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
@@ -359,6 +361,11 @@ export class ZoneScene extends Phaser.Scene {
     window.addEventListener('pagehide', this.handleWindowUnload);
     window.addEventListener('beforeunload', this.handleWindowUnload);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      // Rebound in create(), and deliberately not cleared: a zone change is a
+      // scene restart, and a key still held through it should not need
+      // releasing and pressing again on the far side.
+      this.unbindKeyboard?.();
+      this.unbindKeyboard = null;
       window.removeEventListener('pagehide', this.handleWindowUnload);
       window.removeEventListener('beforeunload', this.handleWindowUnload);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
@@ -390,6 +397,7 @@ export class ZoneScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     if (this.changingZone) return;
+    this.applyInputActions();
     this.updateAfk();
     this.updateApproach(delta);
     this.player.update(delta);
@@ -701,6 +709,19 @@ export class ZoneScene extends Phaser.Scene {
   // The UI's close button already tore the panel down; just drop the state.
   private handleShopClosedByUi(): void {
     this.shopNpc = null;
+  }
+
+  // One-shot keys, taken once a frame rather than fired from a listener, so the
+  // whole of a tick's input arrives through the same door the port will use.
+  // F9 stays a desktop shortcut; the options menu is the way a phone gets there.
+  private applyInputActions(): void {
+    this.inputState.takeActions().forEach((action) => {
+      if (action === 'clear-target') {
+        this.clearTarget();
+      } else {
+        this.resetCharacter();
+      }
+    });
   }
 
   // Drives the click-to-move approaches: closing on a combat target, walking
