@@ -40,7 +40,6 @@ import {
   RESET_CHARACTER_REQUESTED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   AFK_STATE_CHANGED_EVENT,
-  OFFLINE_AFK_RESOLVED_EVENT,
   ACCEPT_QUEST_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
@@ -64,7 +63,6 @@ import { TabBar, type TabId } from '../ui/TabBar';
 import { hudLayout, sheetRect, TITLE_LINE_HEIGHT, type HudLayout } from '../ui/layout';
 import { activeQuests, type QuestLog } from '../systems/QuestSystem';
 import { titleName, type KillCounts } from '../systems/AchievementSystem';
-import type { OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { abilitiesFor } from '../systems/AbilitySystem';
 import { formatXpProgress, xpToNextLevel } from '../systems/LevelingSystem';
@@ -76,7 +74,7 @@ import { computeEffectiveStats } from '../systems/StatsSystem';
 import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { SKILLS } from '../data/skills';
 import { CLASSES } from '../data/classes';
-import type { CharacterState } from '../persistence/CharacterState';
+import { gameContext } from '../world/GameContext';
 import type { ClassId, GearSlotId, TitleId } from '../types/ids';
 
 const DEFAULT_GEAR: Record<GearSlotId, string | null> = {
@@ -170,7 +168,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
-    const character = this.registry.get('character') as CharacterState | undefined;
+    const character = gameContext()?.character.state;
     this.classId = character?.classId ?? 'warrior';
     const startingStats = computeEffectiveStats(
       this.classId,
@@ -701,32 +699,25 @@ export class UIScene extends Phaser.Scene {
     );
   }
 
-  // ZoneScene leaves this in the registry on the boot that resolved a parked
-  // camp; it had already paid the character out by then, so a missed panel
-  // costs the player nothing but the news.
+  // The session queues these on the boot that resolved a parked camp, which is
+  // necessarily before this scene exists to hear an event. It had already paid
+  // the character out by then, so a missed panel costs nothing but the news.
   private showAwayReport(): void {
-    const report = this.registry.get(OFFLINE_AFK_RESOLVED_EVENT) as OfflineAfkReport | undefined;
+    const pending = gameContext()?.takeNotifications() ?? [];
+    const report = pending.find((item) => item.kind === 'offline-afk');
     if (!report) {
       return;
     }
-    this.registry.remove(OFFLINE_AFK_RESOLVED_EVENT);
-    this.awayReportPanel = new AwayReportPanel(this, this.uiScale, report, () => {
+    const unlocked = pending.find((item) => item.kind === 'achievements');
+    this.awayReportPanel = new AwayReportPanel(this, this.uiScale, report.report, () => {
       this.awayReportPanel = null;
       // Held until the report is dismissed so the two don't talk over each
-      // other; a chain finished overnight is news worth its own line.
-      this.showOfflineUnlocks();
+      // other; a chain finished overnight is news worth its own line. Only the
+      // last one gets the toast; the sheet is where the full list lives.
+      if (unlocked) {
+        this.handleAchievementUnlocked(unlocked.unlocks[unlocked.unlocks.length - 1]);
+      }
     });
-  }
-
-  private showOfflineUnlocks(): void {
-    const unlocks = this.registry.get(ACHIEVEMENT_UNLOCKED_EVENT) as
-      AchievementUnlock[] | undefined;
-    if (!unlocks || unlocks.length === 0) {
-      return;
-    }
-    this.registry.remove(ACHIEVEMENT_UNLOCKED_EVENT);
-    // Only the last one gets the toast; the sheet is where the full list lives.
-    this.handleAchievementUnlocked(unlocks[unlocks.length - 1]);
   }
 
   private openOptions(): void {

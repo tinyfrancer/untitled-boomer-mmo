@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
-import { ZONES, type ZoneDefinition, type ZoneEdge } from '../data/zones';
+import type { ZoneDefinition } from '../data/zones';
 import { PlayerSprite } from '../entities/PlayerSprite';
 import { MobSprite } from '../entities/MobSprite';
 import { ResourceNodeSprite } from '../entities/ResourceNodeSprite';
@@ -8,17 +8,19 @@ import { CampfireSprite } from '../entities/CampfireSprite';
 import { Shopkeeper } from '../entities/Shopkeeper';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { TILESET_KEY } from './generateTextures';
-import {
-  ACHIEVEMENT_UNLOCKED_EVENT,
-  LEVEL_UP_EVENT,
-  OFFLINE_AFK_RESOLVED_EVENT,
-  RESET_CHARACTER_REQUESTED_EVENT,
-} from '../ui/uiEvents';
+import { LEVEL_UP_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
 import { THEME, worldZoom } from '../ui/theme';
 import { worldViewportHeight } from '../ui/layout';
-import { InputState, bindKeyboard } from '../systems/InputState';
-import { createNewCharacter, saveService, type CharacterState } from '../persistence';
-import { CharacterController } from '../systems/CharacterController';
+import { bindKeyboard } from '../systems/InputState';
+import { createNewCharacter } from '../persistence';
+import type { CharacterController } from '../systems/CharacterController';
+import {
+  bindUnloadPersist,
+  gameContext,
+  resetGame,
+  startGame,
+  type GameContext,
+} from '../world/GameContext';
 import { ZoneWorld, type WorldNpc, type WorldSignpost, type WorldTap } from '../world/ZoneWorld';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
 import type { Player } from '../world/Player';
@@ -28,12 +30,11 @@ import type { Campfire } from '../world/Campfire';
 import type { GatherState } from '../systems/GatherSystem';
 import type { Point } from '../systems/MovementSystem';
 import type { AchievementUnlock } from '../ui/uiEvents';
-import type { AbilityId, EnemyId, ZoneId } from '../types/ids';
+import type { AbilityId, EnemyId } from '../types/ids';
 
 const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
-const AUTOSAVE_INTERVAL_MS = 30000;
 
 const FLOAT_COLORS: Record<FloatTone, string> = {
   damage: THEME.color.equippable,
@@ -44,123 +45,147 @@ const FLOAT_COLORS: Record<FloatTone, string> = {
   dim: THEME.color.dim,
 };
 
-// Passed through scene.restart on a zone change; absent on the first boot.
-interface ZoneSceneData {
-  zoneId?: ZoneId;
-  entryEdge?: ZoneEdge;
-  entryFraction?: number;
-  // Carried across the restart so walking through an exit is never a heal;
-  // omitted on death, where respawning at full is the point.
-  hp?: number;
-}
-
 /**
  * The view onto one ZoneWorld: a tilemap, a camera, a sprite per simulated
  * thing, and the pointer. Everything the game *does* lives in the world; this
  * scene translates taps into world commands and the frame's WorldEvent[] into
  * things you can see.
  *
- * It also still owns the two jobs the world deliberately refuses: loading a
- * zone (a scene restart today) and the autosave clock. Both are PR 8's.
+ * It no longer restarts itself to change zone. The session (GameContext) builds
+ * the next world and this rebuilds its view against it — one scene, many worlds,
+ * which is what the Three.js view will do with `.dispose()` calls where this has
+ * `.destroy()` ones.
  */
 export class ZoneScene extends Phaser.Scene {
-  private world!: ZoneWorld;
-  private zone!: ZoneDefinition;
-  private initData: ZoneSceneData = {};
+  private context!: GameContext;
   private playerSprite!: PlayerSprite;
   private mobSprites: MobSprite[] = [];
   private nodeSprites: ResourceNodeSprite[] = [];
   private npcSprites: Shopkeeper[] = [];
   private signpostSprites: ZoneSignpost[] = [];
   private campfireSprite: CampfireSprite | null = null;
+  private tilemap: Phaser.Tilemaps.Tilemap | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
-  private readonly inputState = new InputState();
+  // Floating numbers and bolts: scene-owned, short-lived and mid-tween when a
+  // zone change takes their world away, so they are tracked rather than left to
+  // finish over terrain they were never thrown across.
+  private fx!: Phaser.GameObjects.Group;
   private unbindKeyboard: (() => void) | null = null;
-  private handleWindowUnload = (): void => this.world.persistCharacter();
+  private unbindUnloadPersist: (() => void) | null = null;
+  private viewLive = false;
 
   constructor() {
     super('Zone');
   }
 
-  init(data: ZoneSceneData): void {
-    this.initData = data ?? {};
-  }
-
   create(): void {
-    const state =
-      (this.registry.get('character') as CharacterState | undefined) ??
-      createNewCharacter('Adventurer', 'warrior');
-    this.zone = ZONES[this.initData.zoneId ?? state.zoneId ?? 'town'];
+    // Preload and CharacterCreate both start a session before coming here; the
+    // fallback only covers being dropped straight into the zone with no save.
+    this.context =
+      gameContext() ??
+      startGame({
+        character: createNewCharacter('Adventurer', 'warrior'),
+        events: this.game.events,
+      });
 
-    this.buildTilemap();
-    this.world = new ZoneWorld({
-      zone: this.zone,
-      character: new CharacterController(state),
-      events: this.game.events,
-      input: this.inputState,
-      entry:
-        this.initData.entryEdge !== undefined
-          ? { edge: this.initData.entryEdge, fraction: this.initData.entryFraction ?? 0.5 }
-          : undefined,
-      hp: this.initData.hp,
-    });
-    this.buildSprites();
-
-    this.cameras.main.setBounds(0, 0, this.world.worldWidth, this.world.worldHeight);
-    this.cameras.main.startFollow(this.playerSprite, true);
-    this.applyCameraZoom();
+    this.buildView();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
 
-    this.selectionRing = this.add.graphics();
-    this.selectionRing.setVisible(false);
-
     this.input.on('pointerdown', this.handlePointerDown, this);
-    this.unbindKeyboard = bindKeyboard(this.inputState, window);
+    this.unbindKeyboard = bindKeyboard(this.context.input, window);
+    this.unbindUnloadPersist = bindUnloadPersist(this.context, window);
     this.game.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
     // Con colors are relative to the player, so every enemy name has to be
     // redrawn when they level.
     this.game.events.on(LEVEL_UP_EVENT, this.refreshMobLabels, this);
 
-    this.time.addEvent({
-      delay: AUTOSAVE_INTERVAL_MS,
-      loop: true,
-      callback: () => this.world.persistCharacter(),
-    });
-    window.addEventListener('pagehide', this.handleWindowUnload);
-    window.addEventListener('beforeunload', this.handleWindowUnload);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      // Rebound in create(), and deliberately not cleared: a zone change is a
-      // scene restart, and a key still held through it should not need
-      // releasing and pressing again on the far side.
       this.unbindKeyboard?.();
       this.unbindKeyboard = null;
-      window.removeEventListener('pagehide', this.handleWindowUnload);
-      window.removeEventListener('beforeunload', this.handleWindowUnload);
+      this.unbindUnloadPersist?.();
+      this.unbindUnloadPersist = null;
       this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
       this.game.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
       this.game.events.off(LEVEL_UP_EVENT, this.refreshMobLabels, this);
-      this.world.destroy();
+      // A backstop: the one path that ends this scene tears the view down
+      // first, while the camera and tween managers it needs still exist. By
+      // the time this fires they may already be gone — Phaser shuts its
+      // plugins down in the order they registered, which is before us.
+      this.teardownView();
+      // The world is not destroyed here: it belongs to the session, which
+      // outlives this scene. Only a reset ends one, and it does it itself.
     });
 
-    // Last, so the sprites and the log are all there to pay it into.
-    this.deliverParkedAfk();
+    // The HUD survives zone changes: launched once on first boot, and left
+    // running for every world after it.
+    if (!this.scene.isActive('UI')) {
+      this.scene.launch('UI');
+    }
+  }
+
+  private get world(): ZoneWorld {
+    return this.context.currentWorld;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Building and unbuilding the view
+  // ---------------------------------------------------------------------------
+
+  private buildView(): void {
+    this.viewLive = true;
+    this.buildTilemap();
+    this.buildSprites();
+
+    this.cameras.main.setBounds(0, 0, this.world.worldWidth, this.world.worldHeight);
+    this.cameras.main.startFollow(this.playerSprite, true);
+    this.applyCameraZoom();
+
+    // After the sprites, so a target's ring draws over it rather than under.
+    this.selectionRing = this.add.graphics();
+    this.selectionRing.setVisible(false);
+    this.fx = this.add.group();
 
     // Dev-only handle on the live simulation, for the devtools console and the
     // smoke check. Re-set on every zone change, since each builds a new world.
     if (import.meta.env.DEV) {
       (window as unknown as { world: ZoneWorld }).world = this.world;
     }
+  }
 
-    // The HUD survives zone changes: launched once on first boot, and left
-    // running when this scene restarts into another zone.
-    if (!this.scene.isActive('UI')) {
-      this.scene.launch('UI');
-    }
+  /**
+   * Everything `buildView` made, taken back down. Scene restart used to do this
+   * for free, which is exactly why the labels over shopkeepers and signposts
+   * could be scene-owned and forgotten about: now the sprite that put one there
+   * takes it away in its own `destroy()`.
+   */
+  private teardownView(): void {
+    if (!this.viewLive) return;
+    this.viewLive = false;
+    // Every tween this scene runs is on something built here — a float rising
+    // off a corpse, a bolt in flight, the campfire's flicker — so none of them
+    // has anywhere to land once the world underneath is gone.
+    this.tweens.killAll();
+    this.cameras.main.stopFollow();
+    this.playerSprite.destroy();
+    this.mobSprites.forEach((sprite) => sprite.destroy());
+    this.mobSprites = [];
+    this.nodeSprites.forEach((sprite) => sprite.destroy());
+    this.nodeSprites = [];
+    this.npcSprites.forEach((sprite) => sprite.destroy());
+    this.npcSprites = [];
+    this.signpostSprites.forEach((sprite) => sprite.destroy());
+    this.signpostSprites = [];
+    this.campfireSprite?.extinguish();
+    this.campfireSprite = null;
+    this.fx.destroy(true);
+    this.selectionRing.destroy();
+    this.tilemap?.destroy();
+    this.tilemap = null;
   }
 
   private buildTilemap(): void {
     const tilemap = this.make.tilemap({
-      data: this.zone.map,
+      data: this.world.zone.map,
       tileWidth: TILE_SIZE,
       tileHeight: TILE_SIZE,
     });
@@ -175,6 +200,7 @@ export class ZoneScene extends Phaser.Scene {
     // Below everything, so flat decals drawn onto the terrain (fishing spots)
     // can sit at a negative depth and still be visible above it.
     groundLayer.setDepth(GROUND_DEPTH);
+    this.tilemap = tilemap;
   }
 
   private buildSprites(): void {
@@ -195,7 +221,14 @@ export class ZoneScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    const events = this.world.update(delta);
+    const { events, zoneChanged } = this.context.update(delta);
+    if (zoneChanged) {
+      // The events belong to a world that has already been torn down — a float
+      // over a corpse in the zone being left has nowhere to land.
+      this.teardownView();
+      this.buildView();
+      return;
+    }
     this.syncSprites();
     this.updateSelectionRing();
     events.forEach((event) => this.render(event));
@@ -253,22 +286,11 @@ export class ZoneScene extends Phaser.Scene {
       case 'bolt-cast':
         this.castBolt(event.from, event.to);
         return;
-      case 'death':
-        if (event.on === 'player' && event.respawnZone) {
-          this.scene.restart({ zoneId: event.respawnZone } satisfies ZoneSceneData);
-        }
-        return;
-      case 'zone-exit':
-        this.scene.restart({
-          zoneId: event.to,
-          entryEdge: event.edge,
-          entryFraction: event.fraction,
-          hp: this.world.player.hp,
-        } satisfies ZoneSceneData);
-        return;
       default:
         // spawn and gather-tick have nothing to draw in 2D: the sprites read the
-        // simulation directly. The 3D view is what they exist for.
+        // simulation directly, and the 3D view is what they exist for. death and
+        // zone-exit belong to the session: a frame that changed zone rebuilds
+        // instead of drawing, and dying at home just puts the player back.
         return;
     }
   }
@@ -278,6 +300,7 @@ export class ZoneScene extends Phaser.Scene {
   private castBolt(from: { x: number; y: number }, to: { x: number; y: number }): void {
     const bolt = this.add.circle(from.x, from.y, 8, 0xff7043, 1);
     bolt.setStrokeStyle(2, 0xffd54f, 1);
+    this.fx.add(bolt);
     this.tweens.add({
       targets: bolt,
       x: to.x,
@@ -296,6 +319,7 @@ export class ZoneScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
+    this.fx.add(text);
 
     this.tweens.add({
       targets: text,
@@ -392,24 +416,12 @@ export class ZoneScene extends Phaser.Scene {
   // Host duties the world refuses
   // ---------------------------------------------------------------------------
 
-  /**
-   * Stashes an offline camp's payout where the HUD can find it. It goes through
-   * the registry rather than an event because the only load that can find a
-   * parked session is the first boot into this scene — a zone change clears the
-   * camp on its way out — and the HUD is not listening yet at that point.
-   */
-  private deliverParkedAfk(): void {
-    const resolved = this.world.resolveParkedAfk();
-    if (!resolved) return;
-    this.registry.set(OFFLINE_AFK_RESOLVED_EVENT, resolved.report);
-    if (resolved.unlocks.length > 0) {
-      this.registry.set(ACHIEVEMENT_UNLOCKED_EVENT, resolved.unlocks);
-    }
-  }
-
   private resetCharacter(): void {
-    saveService.clear();
-    this.registry.remove('character');
+    resetGame();
+    // Before the scene stops, while the camera and tween managers this needs
+    // are still up: Phaser takes those down ahead of any SHUTDOWN listener we
+    // could register.
+    this.teardownView();
     this.scene.stop('UI');
     this.scene.start('CharacterCreate');
   }
@@ -419,6 +431,9 @@ export class ZoneScene extends Phaser.Scene {
   // live state; PR 9 of the port retargets it at `window.world` and these go.
   // ---------------------------------------------------------------------------
 
+  get zone(): ZoneDefinition {
+    return this.world.zone;
+  }
   get player(): Player {
     return this.world.player;
   }

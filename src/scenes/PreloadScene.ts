@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { generatePlaceholderTextures } from './generateTextures';
 import { saveService } from '../persistence';
+import { startGame } from '../world/GameContext';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -12,7 +13,7 @@ export class PreloadScene extends Phaser.Scene {
 
     const savedCharacter = saveService.load();
     if (savedCharacter) {
-      this.registry.set('character', savedCharacter);
+      startGame({ character: savedCharacter, events: this.game.events });
       this.scene.start('Zone');
     } else {
       this.scene.start('CharacterCreate');

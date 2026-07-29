@@ -5,6 +5,7 @@ import { THEME, fontPx, px, scenePxScale } from '../ui/theme';
 import { ensurePlayerTexture } from './generateTextures';
 import type { ClassId } from '../types/ids';
 import { createNewCharacter, saveService } from '../persistence';
+import { startGame } from '../world/GameContext';
 
 const CLASS_IDS: ClassId[] = ['warrior', 'wizard'];
 const DEFAULT_NAME = 'Adventurer';
@@ -151,7 +152,7 @@ export class CharacterCreateScene extends Phaser.Scene {
     const character = createNewCharacter(name, this.selectedClassId);
 
     saveService.save(character);
-    this.registry.set('character', character);
+    startGame({ character, events: this.game.events });
     this.scene.start('Zone');
   }
 }
