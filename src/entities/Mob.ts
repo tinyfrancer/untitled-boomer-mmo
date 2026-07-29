@@ -1,11 +1,17 @@
 import Phaser from 'phaser';
 import { HealthBar } from './HealthBar';
 import { conColor, enemyDisplayName, scaleEnemyStats } from '../systems/EnemySystem';
+import { distance, stepToward } from '../systems/MovementSystem';
+import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import type { EnemyDefinition } from '../data/enemies';
 
 type AiState = 'wander' | 'chase' | 'returning';
 
-export class Mob extends Phaser.Physics.Arcade.Sprite {
+/**
+ * An enemy. Like Player it owns its own position and velocity and integrates
+ * them against CollisionSystem — Phaser draws it and nothing else.
+ */
+export class Mob extends Phaser.GameObjects.Sprite {
   readonly definition: EnemyDefinition;
   readonly level: number;
   readonly maxHp: number;
@@ -16,6 +22,8 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
   readonly lootTableId?: string;
   hp: number;
   lastAttackAt = 0;
+  vx = 0;
+  vy = 0;
 
   private readonly spawnX: number;
   private readonly spawnY: number;
@@ -35,7 +43,6 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
   ) {
     super(scene, x, y, definition.textureKey);
     scene.add.existing(this);
-    scene.physics.add.existing(this);
 
     const stats = scaleEnemyStats(definition, level);
     this.definition = definition;
@@ -58,21 +65,50 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     this.scheduleNextWander();
   }
 
-  update(playerX: number, playerY: number): void {
+  /** The box the world collides this mob as; its whole sprite, as arcade had it. */
+  bounds(): Aabb {
+    return { x: this.x, y: this.y, halfWidth: this.width / 2, halfHeight: this.height / 2 };
+  }
+
+  setVelocity(vx: number, vy: number): void {
+    this.vx = vx;
+    this.vy = vy;
+  }
+
+  update(playerX: number, playerY: number, deltaMs: number, world: CollisionWorld): void {
     if (!this.alive) return;
-    this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
     this.maybeAggro(playerX, playerY);
 
     switch (this.aiState) {
       case 'chase':
-        this.updateChase(playerX, playerY);
+        this.updateChase(playerX, playerY, deltaMs);
         break;
       case 'returning':
-        this.updateReturning();
+        this.updateReturning(deltaMs);
         break;
       default:
-        this.updateWander();
+        this.updateWander(deltaMs);
     }
+
+    if (this.vx !== 0 || this.vy !== 0) {
+      const moved = moveWithCollision(
+        this.bounds(),
+        (this.vx * deltaMs) / 1000,
+        (this.vy * deltaMs) / 1000,
+        world,
+      );
+      this.setPosition(moved.x, moved.y);
+    }
+    this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
+  }
+
+  // Arrival is stepToward's business now, so the three AI states share one
+  // frame-rate-aware band instead of the fixed 2px and 4px thresholds they each
+  // carried — at single-digit fps a 4px band is a mob orbiting its spawn point.
+  private stepTo(target: { x: number; y: number }, speed: number, deltaMs: number): boolean {
+    const step = stepToward(this.x, this.y, target, speed, deltaMs);
+    this.setVelocity(step.vx, step.vy);
+    return step.arrived;
   }
 
   // Aggressive enemies open combat themselves when the player wanders too
@@ -81,7 +117,7 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
   private maybeAggro(playerX: number, playerY: number): void {
     const { aggressive, aggroRadius } = this.definition;
     if (!aggressive || !aggroRadius || this.aiState !== 'wander') return;
-    if (Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY) <= aggroRadius) {
+    if (distance(this, { x: playerX, y: playerY }) <= aggroRadius) {
       this.engage();
     }
   }
@@ -127,54 +163,36 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  private updateWander(): void {
+  private updateWander(deltaMs: number): void {
     if (!this.wanderTarget) return;
 
-    const distance = Phaser.Math.Distance.Between(
-      this.x,
-      this.y,
-      this.wanderTarget.x,
-      this.wanderTarget.y,
-    );
-    if (distance < 2) {
-      this.setVelocity(0, 0);
+    if (this.stepTo(this.wanderTarget, this.definition.wander.speed, deltaMs)) {
       this.wanderTarget = null;
       this.scheduleNextWander();
-    } else {
-      this.scene.physics.moveTo(
-        this,
-        this.wanderTarget.x,
-        this.wanderTarget.y,
-        this.definition.wander.speed,
-      );
     }
   }
 
-  private updateChase(playerX: number, playerY: number): void {
-    const fromSpawn = Phaser.Math.Distance.Between(this.x, this.y, this.spawnX, this.spawnY);
-    if (fromSpawn > this.definition.leashRadius) {
+  private updateChase(playerX: number, playerY: number, deltaMs: number): void {
+    const spawn = { x: this.spawnX, y: this.spawnY };
+    if (distance(this, spawn) > this.definition.leashRadius) {
       this.disengage();
       return;
     }
 
     // Stop a little inside attack range rather than at it, so a mob that is
     // already swinging doesn't jitter in and out of range with the player.
-    const toPlayer = Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY);
-    if (toPlayer <= this.attackRange * 0.7) {
+    const player = { x: playerX, y: playerY };
+    if (distance(this, player) <= this.attackRange * 0.7) {
       this.setVelocity(0, 0);
     } else {
-      this.scene.physics.moveTo(this, playerX, playerY, this.definition.chaseSpeed);
+      this.stepTo(player, this.definition.chaseSpeed, deltaMs);
     }
   }
 
-  private updateReturning(): void {
-    const distance = Phaser.Math.Distance.Between(this.x, this.y, this.spawnX, this.spawnY);
-    if (distance < 4) {
-      this.setVelocity(0, 0);
+  private updateReturning(deltaMs: number): void {
+    if (this.stepTo({ x: this.spawnX, y: this.spawnY }, this.definition.chaseSpeed, deltaMs)) {
       this.aiState = 'wander';
       this.scheduleNextWander();
-    } else {
-      this.scene.physics.moveTo(this, this.spawnX, this.spawnY, this.definition.chaseSpeed);
     }
   }
 
@@ -198,7 +216,6 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     this.healthBar.setVisible(false);
     this.wanderTimer?.remove();
     this.setVelocity(0, 0);
-    (this.body as Phaser.Physics.Arcade.Body).enable = false;
 
     this.scene.tweens.add({
       targets: this,
@@ -220,7 +237,6 @@ export class Mob extends Phaser.Physics.Arcade.Sprite {
     this.setPosition(this.spawnX, this.spawnY);
     this.setAlpha(1);
     this.setVisible(true);
-    (this.body as Phaser.Physics.Arcade.Body).enable = true;
     this.healthBar.setVisible(true);
     this.healthBar.update(this.spawnX, this.spawnY, this.hp, this.maxHp);
     this.scheduleNextWander();

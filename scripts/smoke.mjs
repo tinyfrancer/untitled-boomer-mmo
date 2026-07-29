@@ -69,8 +69,7 @@ const townState = () =>
       dist: Math.round(Math.hypot(r.x - p.x, r.y - p.y)),
       state: r.aiState,
       fromSpawn: Math.round(Math.hypot(r.x - r.spawnX, r.y - r.spawnY)),
-      vel: [Math.round(r.body.velocity.x), Math.round(r.body.velocity.y)],
-      bodyOn: r.body.enable,
+      vel: [Math.round(r.vx), Math.round(r.vy)],
     }));
     const nodes = town.nodes.map((n) => ({
       id: n.definition.id,
@@ -841,7 +840,7 @@ try {
     const rat = town.mobs[index];
     rat.takeDamage(Math.floor(rat.maxHp / 2)); // a wound, so healing is visible
     rat.engage();
-    const bounds = town.physics.world.bounds;
+    const bounds = { width: town.worldWidth, height: town.worldHeight };
     const margin = 48;
     town.player.setPosition(
       rat.spawnX < bounds.width / 2 ? bounds.width - margin : margin,
@@ -923,7 +922,7 @@ try {
   // table. EXIT_MARGIN is 38.4px, so 33px from the edge is inside it. ---
   await page.evaluate(() => {
     const town = window.game.scene.getScene('Zone');
-    const bounds = town.physics.world.bounds;
+    const bounds = { width: town.worldWidth, height: town.worldHeight };
     // wounded on purpose: crossing a zone line must not be a free heal
     town.player.takeDamage(15);
     town.player.setPosition(bounds.width / 2, bounds.height - 33);
@@ -968,12 +967,12 @@ try {
   // Walk back north to town, then east into the bandit camp.
   await page.evaluate(() => {
     const z = window.game.scene.getScene('Zone');
-    z.player.setPosition(z.physics.world.bounds.width / 2, 33);
+    z.player.setPosition(z.worldWidth / 2, 33);
   });
   await waitFor((s) => s.zoneId === 'town', 'the north exit to return to town');
   await page.evaluate(() => {
     const z = window.game.scene.getScene('Zone');
-    const bounds = z.physics.world.bounds;
+    const bounds = { width: z.worldWidth, height: z.worldHeight };
     z.player.setPosition(bounds.width - 33, bounds.height / 2);
   });
   await waitFor((s) => s.zoneId === 'bandit-camp', 'the east exit to load the bandit camp');

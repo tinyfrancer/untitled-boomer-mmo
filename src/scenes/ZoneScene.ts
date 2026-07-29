@@ -260,7 +260,6 @@ export class ZoneScene extends Phaser.Scene {
 
     this.worldWidth = tilemap.widthInPixels;
     this.worldHeight = tilemap.heightInPixels;
-    this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
     this.spawnPoint.set(this.worldWidth / 2, this.worldHeight / 2);
@@ -322,20 +321,16 @@ export class ZoneScene extends Phaser.Scene {
       return new ZoneSignpost(this, point.x, point.y, exit, ZONES[exit.to].name);
     });
 
-    // Nothing walks into the pond. Mobs are still separated by arcade; the
-    // player integrates itself against this description of the same world.
-    groundLayer.setCollision(BLOCKING_TILES);
-    this.mobs.forEach((mob) => this.physics.add.collider(mob, groundLayer));
-    const solidNodes = this.nodes.filter((node) => node.definition.solid);
-    solidNodes.forEach((node) => {
-      this.mobs.forEach((mob) => this.physics.add.collider(mob, node));
-    });
+    // Nothing walks into the pond. One description of the world, which the
+    // player and every mob integrate themselves against.
     this.collisionWorld = {
       grid: this.zone.map,
       blockingTiles: new Set(BLOCKING_TILES),
       worldWidth: this.worldWidth,
       worldHeight: this.worldHeight,
-      blockers: solidNodes.map((node) => node.blockerRect()),
+      blockers: this.nodes
+        .filter((node) => node.definition.solid)
+        .map((node) => node.blockerRect()),
     };
 
     this.selectionRing = this.add.graphics();
@@ -410,7 +405,9 @@ export class ZoneScene extends Phaser.Scene {
     if (healed > 0) {
       this.showFloatingText(this.player.x, this.player.y, `+${healed}`, THEME.color.heal);
     }
-    this.mobs.forEach((mob) => mob.update(this.player.x, this.player.y));
+    this.mobs.forEach((mob) =>
+      mob.update(this.player.x, this.player.y, delta, this.collisionWorld),
+    );
     this.updateSelectionRing();
     this.updateGathering(delta);
     this.updateCombat(time);

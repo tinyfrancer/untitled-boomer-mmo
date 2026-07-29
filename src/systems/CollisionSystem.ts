@@ -38,32 +38,30 @@ const MAX_SUBSTEPS = 8;
 const EDGE_EPSILON = 1e-6;
 
 /**
- * Whether the four-corner tile test is exact for this body. It is, for anything
- * that fits inside a tile: such a box spans at most two columns and two rows, so
- * its corners visit every cell it touches. A wider body could straddle a
- * blocking column with no corner in it, which is why this is asserted rather
- * than assumed.
+ * Every cell the box overlaps, not just the four it has corners in. Corners
+ * alone are exact only for a body that fits inside a tile, and not everything
+ * that collides does: the rat's box is 80px wide against a 64px tile — wide
+ * enough to straddle a one-tile blocking column with no corner inside it. The
+ * scan is the same four cells for a body that does fit, so exactness here is
+ * free.
  */
-export function fitsCornerTest(box: Aabb): boolean {
-  return box.halfWidth * 2 <= TILE_SIZE && box.halfHeight * 2 <= TILE_SIZE;
-}
-
-function isBlockingAt(world: CollisionWorld, px: number, py: number): boolean {
-  const tile = world.grid[Math.floor(py / TILE_SIZE)]?.[Math.floor(px / TILE_SIZE)];
-  return tile !== undefined && world.blockingTiles.has(tile);
-}
-
 export function hitsBlockingTile(world: CollisionWorld, box: Aabb): boolean {
-  const left = box.x - box.halfWidth;
-  const top = box.y - box.halfHeight;
-  const right = box.x + box.halfWidth - EDGE_EPSILON;
-  const bottom = box.y + box.halfHeight - EDGE_EPSILON;
-  return (
-    isBlockingAt(world, left, top) ||
-    isBlockingAt(world, right, top) ||
-    isBlockingAt(world, left, bottom) ||
-    isBlockingAt(world, right, bottom)
-  );
+  // Right and bottom edges are exclusive: a body resting exactly on a tile
+  // boundary is touching that tile, not standing in it.
+  const firstCol = Math.floor((box.x - box.halfWidth) / TILE_SIZE);
+  const lastCol = Math.floor((box.x + box.halfWidth - EDGE_EPSILON) / TILE_SIZE);
+  const firstRow = Math.floor((box.y - box.halfHeight) / TILE_SIZE);
+  const lastRow = Math.floor((box.y + box.halfHeight - EDGE_EPSILON) / TILE_SIZE);
+
+  for (let row = firstRow; row <= lastRow; row += 1) {
+    for (let col = firstCol; col <= lastCol; col += 1) {
+      const tile = world.grid[row]?.[col];
+      if (tile !== undefined && world.blockingTiles.has(tile)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 export function hitsBlocker(world: CollisionWorld, box: Aabb): boolean {
