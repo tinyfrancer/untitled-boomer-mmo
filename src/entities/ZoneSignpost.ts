@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import type { ZoneExit } from '../data/zones';
 import { SIGNPOST_TEXTURE_KEY } from '../scenes/generateTextures';
 import { THEME } from '../ui/theme';
+import type { WorldSignpost } from '../world/ZoneWorld';
 
 /**
  * A visible, tappable exit marker. Clicking it (handled by ZoneScene) walks
@@ -11,18 +11,18 @@ import { THEME } from '../ui/theme';
  * everything else.
  */
 export class ZoneSignpost extends Phaser.GameObjects.Sprite {
-  readonly exit: ZoneExit;
+  readonly signpost: WorldSignpost;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, exit: ZoneExit, label: string) {
-    super(scene, x, y, SIGNPOST_TEXTURE_KEY);
+  constructor(scene: Phaser.Scene, signpost: WorldSignpost) {
+    super(scene, signpost.x, signpost.y, SIGNPOST_TEXTURE_KEY);
     scene.add.existing(this);
-    this.exit = exit;
+    this.signpost = signpost;
     this.setInteractive({ useHandCursor: true });
     // Behind the player, so walking past reads as passing in front of it.
     this.setDepth(-1);
 
     scene.add
-      .text(x, y - 36, label, {
+      .text(signpost.x, signpost.y - 36, signpost.label, {
         fontSize: '12px',
         color: THEME.color.levelUp,
         fontStyle: 'bold',

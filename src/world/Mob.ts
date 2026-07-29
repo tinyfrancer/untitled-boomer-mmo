@@ -1,17 +1,24 @@
-import Phaser from 'phaser';
-import { HealthBar } from './HealthBar';
-import { conColor, enemyDisplayName, scaleEnemyStats } from '../systems/EnemySystem';
 import { distance, stepToward } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
+import { scaleEnemyStats } from '../systems/EnemySystem';
 import type { EnemyDefinition } from '../data/enemies';
 
 type AiState = 'wander' | 'chase' | 'returning';
 
 /**
- * An enemy. Like Player it owns its own position and velocity and integrates
- * them against CollisionSystem — Phaser draws it and nothing else.
+ * How long a corpse lingers before its respawn timer starts. It was the length
+ * of the fade-out tween the scene used to play; keeping it in the simulation is
+ * what makes the delay the same whether or not anything is drawing the fade.
  */
-export class Mob extends Phaser.GameObjects.Sprite {
+export const DEATH_FADE_MS = 400;
+
+/**
+ * An enemy, as simulation only. Like Player it owns its transform and
+ * integrates against CollisionSystem; unlike the old version it also owns its
+ * own clocks — wandering, the death fade and the respawn were three Phaser
+ * timers, and a headless world has none.
+ */
+export class Mob {
   readonly definition: EnemyDefinition;
   readonly level: number;
   readonly maxHp: number;
@@ -20,31 +27,37 @@ export class Mob extends Phaser.GameObjects.Sprite {
   readonly attackRange: number;
   readonly attackCooldownMs: number;
   readonly lootTableId?: string;
+  readonly name: string;
+  x: number;
+  y: number;
   hp: number;
-  lastAttackAt = 0;
+  // Never zero, so a mob that has not swung yet is off cooldown rather than
+  // waiting one out. The world's clock starts at zero, which the old
+  // scene-wide Phaser clock never did.
+  lastAttackAt = -Infinity;
   vx = 0;
   vy = 0;
+  /** How long this mob has been dead, for the view's fade and the respawn. */
+  deadForMs = 0;
 
   private readonly spawnX: number;
   private readonly spawnY: number;
-  private readonly healthBar: HealthBar;
+  private readonly rng: () => number;
   private aiState: AiState = 'wander';
-  private wanderTarget: Phaser.Math.Vector2 | null = null;
-  private wanderTimer?: Phaser.Time.TimerEvent;
+  private wanderTarget: { x: number; y: number } | null = null;
+  private wanderPauseMs = 0;
   private alive = true;
 
   constructor(
-    scene: Phaser.Scene,
     x: number,
     y: number,
     definition: EnemyDefinition,
     level: number,
-    playerLevel: number,
+    rng: () => number = Math.random,
   ) {
-    super(scene, x, y, definition.textureKey);
-    scene.add.existing(this);
-
     const stats = scaleEnemyStats(definition, level);
+    this.x = x;
+    this.y = y;
     this.definition = definition;
     this.level = level;
     this.name = definition.name;
@@ -57,17 +70,20 @@ export class Mob extends Phaser.GameObjects.Sprite {
     this.attackRange = definition.attackRange;
     this.attackCooldownMs = definition.attackCooldownMs;
     this.lootTableId = definition.lootTableId;
-
-    this.healthBar = new HealthBar(scene, { label: definition.name });
-    this.healthBar.update(x, y, this.hp, this.maxHp);
-    this.refreshLabel(playerLevel);
+    this.rng = rng;
 
     this.scheduleNextWander();
   }
 
-  /** The box the world collides this mob as; its whole sprite, as arcade had it. */
+  /** The box the world collides this mob as; its whole body, as arcade had it. */
   bounds(): Aabb {
-    return { x: this.x, y: this.y, halfWidth: this.width / 2, halfHeight: this.height / 2 };
+    const { width, height } = this.definition.body;
+    return { x: this.x, y: this.y, halfWidth: width / 2, halfHeight: height / 2 };
+  }
+
+  setPosition(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
   }
 
   setVelocity(vx: number, vy: number): void {
@@ -75,8 +91,17 @@ export class Mob extends Phaser.GameObjects.Sprite {
     this.vy = vy;
   }
 
-  update(playerX: number, playerY: number, deltaMs: number, world: CollisionWorld): void {
-    if (!this.alive) return;
+  /** Steps this mob a frame. Returns whether it came back to life on this one. */
+  update(playerX: number, playerY: number, deltaMs: number, world: CollisionWorld): boolean {
+    if (!this.alive) {
+      this.deadForMs += deltaMs;
+      if (this.deadForMs < DEATH_FADE_MS + this.definition.respawnDelayMs) {
+        return false;
+      }
+      this.respawn();
+      return true;
+    }
+
     this.maybeAggro(playerX, playerY);
 
     switch (this.aiState) {
@@ -99,10 +124,10 @@ export class Mob extends Phaser.GameObjects.Sprite {
       );
       this.setPosition(moved.x, moved.y);
     }
-    this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
+    return false;
   }
 
-  // Arrival is stepToward's business now, so the three AI states share one
+  // Arrival is stepToward's business, so the three AI states share one
   // frame-rate-aware band instead of the fixed 2px and 4px thresholds they each
   // carried — at single-digit fps a 4px band is a mob orbiting its spawn point.
   private stepTo(target: { x: number; y: number }, speed: number, deltaMs: number): boolean {
@@ -133,7 +158,6 @@ export class Mob extends Phaser.GameObjects.Sprite {
   engage(): void {
     if (!this.alive || this.aiState === 'chase') return;
     this.aiState = 'chase';
-    this.wanderTimer?.remove();
     this.wanderTarget = null;
   }
 
@@ -144,15 +168,8 @@ export class Mob extends Phaser.GameObjects.Sprite {
     this.hp = this.maxHp;
     this.aiState = 'returning';
     this.wanderTarget = null;
-    this.lastAttackAt = 0;
+    this.lastAttackAt = -Infinity;
     this.setVelocity(0, 0);
-  }
-
-  refreshLabel(playerLevel: number): void {
-    this.healthBar.setLabel(
-      enemyDisplayName(this.definition, this.level),
-      conColor(playerLevel, this.level),
-    );
   }
 
   takeDamage(amount: number): void {
@@ -164,7 +181,18 @@ export class Mob extends Phaser.GameObjects.Sprite {
   }
 
   private updateWander(deltaMs: number): void {
-    if (!this.wanderTarget) return;
+    if (!this.wanderTarget) {
+      this.wanderPauseMs -= deltaMs;
+      if (this.wanderPauseMs > 0) return;
+      const { radius } = this.definition.wander;
+      const angle = this.rng() * Math.PI * 2;
+      const dist = this.rng() * radius;
+      this.wanderTarget = {
+        x: this.spawnX + Math.cos(angle) * dist,
+        y: this.spawnY + Math.sin(angle) * dist,
+      };
+      return;
+    }
 
     if (this.stepTo(this.wanderTarget, this.definition.wander.speed, deltaMs)) {
       this.wanderTarget = null;
@@ -197,35 +225,16 @@ export class Mob extends Phaser.GameObjects.Sprite {
   }
 
   private scheduleNextWander(): void {
-    const { minPauseMs, maxPauseMs, radius } = this.definition.wander;
-    const delay = Phaser.Math.Between(minPauseMs, maxPauseMs);
-    this.wanderTimer = this.scene.time.delayedCall(delay, () => {
-      if (!this.alive || this.aiState !== 'wander') return;
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const dist = Phaser.Math.FloatBetween(0, radius);
-      this.wanderTarget = new Phaser.Math.Vector2(
-        this.spawnX + Math.cos(angle) * dist,
-        this.spawnY + Math.sin(angle) * dist,
-      );
-    });
+    const { minPauseMs, maxPauseMs } = this.definition.wander;
+    this.wanderPauseMs = minPauseMs + this.rng() * (maxPauseMs - minPauseMs);
   }
 
   private die(): void {
     this.alive = false;
     this.aiState = 'wander';
-    this.healthBar.setVisible(false);
-    this.wanderTimer?.remove();
+    this.wanderTarget = null;
+    this.deadForMs = 0;
     this.setVelocity(0, 0);
-
-    this.scene.tweens.add({
-      targets: this,
-      alpha: 0,
-      duration: 400,
-      onComplete: () => {
-        this.setVisible(false);
-        this.scene.time.delayedCall(this.definition.respawnDelayMs, () => this.respawn());
-      },
-    });
   }
 
   private respawn(): void {
@@ -233,12 +242,9 @@ export class Mob extends Phaser.GameObjects.Sprite {
     this.alive = true;
     this.aiState = 'wander';
     this.wanderTarget = null;
-    this.lastAttackAt = 0;
+    this.lastAttackAt = -Infinity;
+    this.deadForMs = 0;
     this.setPosition(this.spawnX, this.spawnY);
-    this.setAlpha(1);
-    this.setVisible(true);
-    this.healthBar.setVisible(true);
-    this.healthBar.update(this.spawnX, this.spawnY, this.hp, this.maxHp);
     this.scheduleNextWander();
   }
 }

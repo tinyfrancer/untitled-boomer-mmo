@@ -155,21 +155,54 @@ try {
     scaled,
     boot.mobs.map((r) => `L${r.level}:${r.maxHp}`).join(' '),
   );
+  // Collision boxes are data now (EnemyDefinition.body, ResourceNodeDefinition
+  // .body) rather than measurements off a texture that is going away with the
+  // 2D renderer. Nothing in the unit suite can see a generated texture, so this
+  // is the only place the two can be held together — and a drift here is a mob
+  // that collides with something other than what you can see.
+  const bodies = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const drawn = (key) => {
+      const frame = window.game.textures.get(key).get();
+      return { width: frame.width, height: frame.height };
+    };
+    const rat = z.mobs.find((m) => m.definition.id === 'rat');
+    const tree = z.nodes.find((n) => n.definition.id === 'tree');
+    return [
+      { id: 'rat', body: rat.definition.body, texture: drawn(rat.definition.textureKey) },
+      { id: 'tree', body: tree.definition.body, texture: drawn(tree.definition.textureKey) },
+    ];
+  });
+  // The old canvases truncated to whole pixels, so a fraction of a pixel apart
+  // is the data being right rather than the texture disagreeing.
+  const bodiesMatch = bodies.every(
+    (b) =>
+      Math.abs(b.body.width - b.texture.width) < 1 &&
+      Math.abs(b.body.height - b.texture.height) < 1,
+  );
+  check(
+    'collision bodies match the textures drawn for them',
+    bodiesMatch,
+    bodies.map((b) => `${b.id} ${b.body.width}x${b.body.height}`).join(', '),
+  );
+
   await page.screenshot({ path: `${OUT}/2-town.png` });
 
   // The stick figure's legs: walking plays the baked leg-phase animation and
-  // standing still puts it back on the neutral frame.
+  // standing still puts it back on the neutral frame. The walk belongs to the
+  // sprite rather than the simulation, so this is the one check that has to
+  // ask `figure` instead of `player`.
   const walking = await page.evaluate(async () => {
     const s = window.game.scene.getScene('Zone');
     s.player.moveTo(s.player.x + 300, s.player.y);
     await new Promise((r) => setTimeout(r, 300));
     const moving = {
-      playing: s.player.anims.isPlaying,
-      frame: s.player.anims.currentFrame?.textureKey,
+      playing: s.figure.anims.isPlaying,
+      frame: s.figure.anims.currentFrame?.textureKey,
     };
     s.player.stopMoving();
     await new Promise((r) => setTimeout(r, 300));
-    return { moving, idleTexture: s.player.texture.key, playing: s.player.anims.isPlaying };
+    return { moving, idleTexture: s.figure.texture.key, playing: s.figure.anims.isPlaying };
   });
   check(
     'the figure animates its legs while walking',

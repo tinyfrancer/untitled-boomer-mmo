@@ -1,5 +1,3 @@
-import Phaser from 'phaser';
-import { computeAppearance } from '../systems/AppearanceSystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import { OUT_OF_COMBAT_DELAY_MS, manaRegenTick, regenTick } from '../systems/RegenSystem';
 import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/AbilitySystem';
@@ -9,8 +7,6 @@ import { stepToward, type Point } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import { PLAYER_HALF_EXTENT } from '../config/constants';
 import type { InputState } from '../systems/InputState';
-import { ensurePlayerTexture, ensureWalkAnimation } from '../scenes/generateTextures';
-import { HealthBar } from './HealthBar';
 import type { ClassId, GearSlotId } from '../types/ids';
 
 const NO_GEAR: Record<GearSlotId, string | null> = {
@@ -20,15 +16,21 @@ const NO_GEAR: Record<GearSlotId, string | null> = {
   weapon: null,
 };
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 /**
- * The player figure. It owns its own position and velocity and integrates them
- * against CollisionSystem rather than riding an arcade body: transform
- * ownership and integration ownership are the same thing, since arcade writes
- * the body's position every physics step whether or not anything asked it to.
- * Phaser is left holding only the drawing.
+ * The player, as simulation only: position, velocity, stats, pools and buffs.
+ * It owns its transform and integrates itself against CollisionSystem, and it
+ * knows nothing about how any of that is drawn — a sprite, a mesh or nothing at
+ * all follows it (see entities/PlayerSprite.ts for today's).
  */
-export class Player extends Phaser.GameObjects.Sprite {
+export class Player {
   readonly classId: ClassId;
+  name: string;
+  x: number;
+  y: number;
   vx = 0;
   vy = 0;
   level: number;
@@ -42,7 +44,6 @@ export class Player extends Phaser.GameObjects.Sprite {
   attackPower: number;
   attackRange: number;
   attackCooldownMs: number;
-  private readonly healthBar: HealthBar;
   private readonly keyboard: InputState;
   private moveTarget: Point | null = null;
   private gear: Record<GearSlotId, string | null>;
@@ -57,13 +58,8 @@ export class Player extends Phaser.GameObjects.Sprite {
   private foodBuff: FoodBuff | null = null;
   private healPulse: HealPulseState = createHealPulse();
   private pendingHealPulse = 0;
-  // The looping walk and the standing frame for the current gear, rebuilt
-  // whenever the figure's look changes.
-  private walkAnimKey = '';
-  private idleTextureKey = '';
 
   constructor(
-    scene: Phaser.Scene,
     x: number,
     y: number,
     classId: ClassId,
@@ -72,14 +68,12 @@ export class Player extends Phaser.GameObjects.Sprite {
     name = 'Adventurer',
     level = 1,
   ) {
-    super(scene, x, y, ensurePlayerTexture(scene, computeAppearance(gear)));
-    scene.add.existing(this);
-
+    this.x = x;
+    this.y = y;
     this.name = name;
     this.classId = classId;
     this.level = level;
     this.gear = gear;
-    this.applyAppearance();
     const stats = computeEffectiveStats(classId, gear, level);
     this.maxHp = stats.maxHp;
     this.hp = stats.maxHp;
@@ -93,9 +87,12 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.attackPower = stats.attackPower;
     this.attackRange = stats.attackRange;
     this.attackCooldownMs = stats.attackCooldownMs;
-
-    this.healthBar = new HealthBar(scene, { width: 64, height: 10, offsetY: 52, label: name });
     this.keyboard = input;
+  }
+
+  setPosition(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
   }
 
   // Click/tap-to-move: walk toward this world point until arrival, a new
@@ -112,25 +109,22 @@ export class Player extends Phaser.GameObjects.Sprite {
     return this.moveTarget !== null;
   }
 
+  isMoving(): boolean {
+    return this.vx !== 0 || this.vy !== 0;
+  }
+
   isKeyboardMoving(): boolean {
     return this.keyboard.isMoving();
+  }
+
+  /** What the figure is wearing, for whatever is drawing it. */
+  currentGear(): Record<GearSlotId, string | null> {
+    return this.gear;
   }
 
   setGear(gear: Record<GearSlotId, string | null>): void {
     this.gear = gear;
     this.applyStats();
-    this.applyAppearance();
-  }
-
-  // Bakes the standing frame and the walk for the current gear, and puts the
-  // sprite back on the standing frame — the update loop starts the walk again on
-  // the next frame the player is actually moving.
-  private applyAppearance(): void {
-    const appearance = computeAppearance(this.gear);
-    this.idleTextureKey = ensurePlayerTexture(this.scene, appearance);
-    this.walkAnimKey = ensureWalkAnimation(this.scene, appearance);
-    this.anims.stop();
-    this.setTexture(this.idleTextureKey);
   }
 
   setLevel(level: number): void {
@@ -144,13 +138,13 @@ export class Player extends Phaser.GameObjects.Sprite {
     const stats = computeEffectiveStats(this.classId, this.gear, this.level);
     const maxHpDelta = stats.maxHp - this.maxHp;
     this.maxHp = stats.maxHp;
-    this.hpFloat = Phaser.Math.Clamp(this.hpFloat + maxHpDelta, 0, this.maxHp);
+    this.hpFloat = clamp(this.hpFloat + maxHpDelta, 0, this.maxHp);
     this.hp = Math.round(this.hpFloat);
     // Mana rides its own ceiling the same way, so a level never costs a caster
     // the mana they were holding.
     const maxManaDelta = stats.maxMana - this.maxMana;
     this.maxMana = stats.maxMana;
-    this.manaFloat = Phaser.Math.Clamp(this.manaFloat + maxManaDelta, 0, this.maxMana);
+    this.manaFloat = clamp(this.manaFloat + maxManaDelta, 0, this.maxMana);
     this.mana = Math.round(this.manaFloat);
     this.strength = stats.strength;
     this.intellect = stats.intellect;
@@ -160,7 +154,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.attackRange = stats.attackRange;
   }
 
-  /** Returns how much a mana shield soaked, for the scene to show. */
+  /** Returns how much a mana shield soaked, for the caller to show. */
   takeDamage(amount: number): number {
     const absorb = absorbDamage(this.manaShield, amount);
     this.manaShield = absorb.shield;
@@ -197,8 +191,8 @@ export class Player extends Phaser.GameObjects.Sprite {
     return this.haste !== null;
   }
 
-  // What the scene's cooldown check should actually use — Battle Fury shortens
-  // it while it lasts.
+  // What the cooldown check should actually use — Battle Fury shortens it while
+  // it lasts.
   effectiveAttackCooldownMs(): number {
     return this.attackCooldownMs * (this.haste?.cooldownMultiplier ?? 1);
   }
@@ -231,10 +225,10 @@ export class Player extends Phaser.GameObjects.Sprite {
     return this.msSinceCombat < OUT_OF_COMBAT_DELAY_MS;
   }
 
-  // Used when the player crosses zones: the scene rebuilds the sprite, and
-  // without this the rebuild would silently heal them to full.
+  // Used when the player crosses zones: the world is rebuilt on the far side,
+  // and without this the rebuild would silently heal them to full.
   setHp(hp: number): void {
-    this.hpFloat = Phaser.Math.Clamp(hp, 0, this.maxHp);
+    this.hpFloat = clamp(hp, 0, this.maxHp);
     this.hp = Math.round(this.hpFloat);
   }
 
@@ -262,17 +256,6 @@ export class Player extends Phaser.GameObjects.Sprite {
     return this.hp > 0;
   }
 
-  private updateWalkAnimation(moving: boolean): void {
-    if (moving) {
-      this.anims.play(this.walkAnimKey, true);
-      return;
-    }
-    if (this.anims.isPlaying) {
-      this.anims.stop();
-      this.setTexture(this.idleTextureKey);
-    }
-  }
-
   /** The box the world collides against, centred where the figure stands. */
   bounds(): Aabb {
     return {
@@ -298,7 +281,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.foodBuff = food.buff;
     this.hpFloat = Math.min(this.hpFloat + food.healed, this.maxHp);
 
-    // Batch regen/food healing into a visible pulse for the scene to draw.
+    // Batch regen/food healing into a visible pulse for the view to draw.
     const healTick = healPulseTick(this.healPulse, this.hpFloat - beforeHealing, deltaMs);
     this.healPulse = healTick.state;
     this.pendingHealPulse += healTick.pulse;
@@ -343,8 +326,5 @@ export class Player extends Phaser.GameObjects.Sprite {
       world,
     );
     this.setPosition(moved.x, moved.y);
-
-    this.updateWalkAnimation(vx !== 0 || vy !== 0);
-    this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
   }
 }

@@ -1,168 +1,48 @@
 import Phaser from 'phaser';
-import { EXIT_MARGIN, TILE_SIZE } from '../config/constants';
-import { BLOCKING_TILES } from '../data/tiles';
-import { ZONES, type ZoneDefinition, type ZoneEdge, type ZoneExit } from '../data/zones';
-import { ENEMIES } from '../data/enemies';
-import { RESOURCE_NODES } from '../data/resourceNodes';
-import { Player } from '../entities/Player';
-import { Mob } from '../entities/Mob';
-import { ResourceNode } from '../entities/ResourceNode';
+import { TILE_SIZE } from '../config/constants';
+import { ZONES, type ZoneDefinition, type ZoneEdge } from '../data/zones';
+import { PlayerSprite } from '../entities/PlayerSprite';
+import { MobSprite } from '../entities/MobSprite';
+import { ResourceNodeSprite } from '../entities/ResourceNodeSprite';
+import { CampfireSprite } from '../entities/CampfireSprite';
+import { Shopkeeper } from '../entities/Shopkeeper';
+import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { TILESET_KEY } from './generateTextures';
 import {
-  ACTIONS_CHANGED_EVENT,
-  COOK_REQUESTED_EVENT,
-  EAT_ITEM_REQUESTED_EVENT,
-  EQUIP_ITEM_REQUESTED_EVENT,
-  GATHER_ENDED_EVENT,
-  LIGHT_FIRE_REQUESTED_EVENT,
-  GATHER_PROGRESS_EVENT,
-  GATHER_REFUSED_EVENT,
-  GATHER_STARTED_EVENT,
-  GEAR_CHANGED_EVENT,
-  INVENTORY_CHANGED_EVENT,
-  LEVEL_UP_EVENT,
-  PLAYER_DIED_EVENT,
-  PLAYER_HP_CHANGED_EVENT,
-  SKILL_XP_GAINED_EVENT,
-  TARGET_CLEARED_EVENT,
-  TARGET_SELECTED_EVENT,
-  UNEQUIP_SLOT_REQUESTED_EVENT,
-  XP_GAINED_EVENT,
-  BUY_ITEM_REQUESTED_EVENT,
-  SELL_ITEM_REQUESTED_EVENT,
-  SHOP_OPENED_EVENT,
-  SHOP_CLOSED_EVENT,
-  CURRENCY_CHANGED_EVENT,
-  ABILITY_REQUESTED_EVENT,
-  ABILITY_STATE_CHANGED_EVENT,
-  PLAYER_MANA_CHANGED_EVENT,
-  COMBAT_LOG_EVENT,
-  RESET_CHARACTER_REQUESTED_EVENT,
-  AFK_TOGGLE_REQUESTED_EVENT,
-  AFK_STATE_CHANGED_EVENT,
-  OFFLINE_AFK_RESOLVED_EVENT,
-  ACCEPT_QUEST_REQUESTED_EVENT,
-  TURN_IN_QUEST_REQUESTED_EVENT,
-  QUEST_LOG_CHANGED_EVENT,
-  KILLS_CHANGED_EVENT,
   ACHIEVEMENT_UNLOCKED_EVENT,
-  SET_TITLE_REQUESTED_EVENT,
-  TITLE_CHANGED_EVENT,
-  type AchievementUnlock,
+  LEVEL_UP_EVENT,
+  OFFLINE_AFK_RESOLVED_EVENT,
+  RESET_CHARACTER_REQUESTED_EVENT,
 } from '../ui/uiEvents';
-import { titleName } from '../systems/AchievementSystem';
-import { resolveOfflineAfk } from '../systems/OfflineAfkSystem';
-import {
-  AFK_ANCHOR_RADIUS,
-  afkXpReward,
-  chooseAfkFood,
-  decideAfkAction,
-  shouldAfkEat,
-} from '../systems/AfkSystem';
-import {
-  abilitiesFor,
-  abilityById,
-  canUseAbility,
-  resolveAbilityDamage,
-  rollSpellFailure,
-  startHaste,
-  startManaShield,
-} from '../systems/AbilitySystem';
-import type { AbilityDefinition } from '../data/abilities';
-import {
-  logAbilityUsed,
-  logAbsorbed,
-  logAchievement,
-  logCoin,
-  logDamageDealt,
-  logDamageTaken,
-  logDefense,
-  logKill,
-  logLevelUp,
-  logLoot,
-  logNotice,
-  logQuestAccepted,
-  logQuestCompleted,
-  logSkillLevelUp,
-  logSpellFailed,
-  logTitleEarned,
-  logXpGain,
-  type CombatLogEntry,
-} from '../systems/CombatLogSystem';
 import { THEME, worldZoom } from '../ui/theme';
 import { worldViewportHeight } from '../ui/layout';
-import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
-import { conColor } from '../systems/EnemySystem';
-import { rollLootTable } from '../systems/LootSystem';
-import { canCook, findCookableItem, recipeForInput, rollCook } from '../systems/CookingSystem';
-import { Campfire } from '../entities/Campfire';
-import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
-import { consumableFor, describeItemName, itemValue } from '../data/items';
-import { SKILLS } from '../data/skills';
-import { SHOP_CLOSE_RADIUS, SHOP_INTERACT_RADIUS, shopPriceFor } from '../data/shop';
-import { QUESTS } from '../data/quests';
-import { formatCurrency } from '../systems/CurrencySystem';
-import { Shopkeeper } from '../entities/Shopkeeper';
-import {
-  advanceGather,
-  beginGather,
-  canGather,
-  rollGatherQuantity,
-  type GatherState,
-} from '../systems/GatherSystem';
-import { CharacterController, type CombatXpGain } from '../systems/CharacterController';
-import { arriveRadius, distance, withinRadius, type Point } from '../systems/MovementSystem';
 import { InputState, bindKeyboard } from '../systems/InputState';
-import type { CollisionWorld } from '../systems/CollisionSystem';
-import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
-import {
-  SIGNPOST_INTERACT_RADIUS,
-  arrivalPoint,
-  edgeFraction,
-  findExit,
-  oppositeEdge,
-  resumePoint,
-  signpostPoint,
-  zoneWorldSize,
-} from '../systems/ZoneSystem';
-import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { createNewCharacter, saveService, type CharacterState } from '../persistence';
-import type {
-  AbilityId,
-  EnemyId,
-  GearSlotId,
-  QuestId,
-  SkillId,
-  TitleId,
-  ZoneId,
-} from '../types/ids';
+import { CharacterController } from '../systems/CharacterController';
+import { ZoneWorld, type WorldNpc, type WorldSignpost, type WorldTap } from '../world/ZoneWorld';
+import type { FloatTone, WorldEvent } from '../world/worldEvents';
+import type { Player } from '../world/Player';
+import type { Mob } from '../world/Mob';
+import type { ResourceNode } from '../world/ResourceNode';
+import type { Campfire } from '../world/Campfire';
+import type { GatherState } from '../systems/GatherSystem';
+import type { Point } from '../systems/MovementSystem';
+import type { AchievementUnlock } from '../ui/uiEvents';
+import type { AbilityId, EnemyId, ZoneId } from '../types/ids';
 
 const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
 const AUTOSAVE_INTERVAL_MS = 30000;
-// Far enough inside the new zone that the player doesn't stand on the return
-// exit and bounce straight back.
-const ARRIVAL_INSET = TILE_SIZE * 1.5;
-// Combat skills are earned a rep at a time — one landed swing, one hit turned
-// aside — rather than in the lumps a gather or a kill pays out.
-const WEAPON_SKILL_XP_PER_HIT = 1;
-const DEFENSE_SKILL_XP_PER_SAVE = 1;
-// A cast is worth more than a swing: abilities sit behind long cooldowns, so
-// paying a swing's rate would make Destruction unlevellable.
-const ABILITY_SKILL_XP_PER_CAST = 3;
-// A walk up to a node has to finish a little inside the radius that lets a tap
-// gather from where the player already stands: the gather channel cancels the
-// moment the player is further out than that radius, so ending the approach
-// exactly on it makes the first tick a coin toss.
-const GATHER_APPROACH_FRACTION = 0.9;
 
-// What the scene still owns once InteractionSystem has the rule: the thing to
-// do when the walk arrives.
-interface PendingApproach {
-  interaction: PendingInteraction;
-  act: () => void;
-}
+const FLOAT_COLORS: Record<FloatTone, string> = {
+  damage: THEME.color.equippable,
+  'player-damage': THEME.color.playerDamage,
+  heal: THEME.color.heal,
+  reward: THEME.color.levelUp,
+  skill: THEME.color.skillUp,
+  dim: THEME.color.dim,
+};
 
 // Passed through scene.restart on a zone change; absent on the first boot.
 interface ZoneSceneData {
@@ -174,48 +54,29 @@ interface ZoneSceneData {
   hp?: number;
 }
 
+/**
+ * The view onto one ZoneWorld: a tilemap, a camera, a sprite per simulated
+ * thing, and the pointer. Everything the game *does* lives in the world; this
+ * scene translates taps into world commands and the frame's WorldEvent[] into
+ * things you can see.
+ *
+ * It also still owns the two jobs the world deliberately refuses: loading a
+ * zone (a scene restart today) and the autosave clock. Both are PR 8's.
+ */
 export class ZoneScene extends Phaser.Scene {
+  private world!: ZoneWorld;
   private zone!: ZoneDefinition;
-  private worldWidth = 0;
-  private worldHeight = 0;
   private initData: ZoneSceneData = {};
-  private player!: Player;
-  private mobs: Mob[] = [];
-  private nodes: ResourceNode[] = [];
-  private gatherState: GatherState | null = null;
-  private gatherNode: ResourceNode | null = null;
-  // Click-to-move approach state: the node, shopkeeper or signpost the player
-  // tapped and is walking toward, and whether they are closing on the current
-  // combat target. Chasing a target is a different rule — it stops inside
-  // attack range and never abandons — so it stays its own flag.
-  private pendingApproach: PendingApproach | null = null;
-  private pursuingTarget = false;
-  private npcs: Shopkeeper[] = [];
-  private signposts: ZoneSignpost[] = [];
-  // The shopkeeper the open shop belongs to; null when the shop is closed.
-  private shopNpc: Shopkeeper | null = null;
-  private campfire: Campfire | null = null;
-  private lastActions = { nearFire: false };
-  private target: Mob | null = null;
+  private playerSprite!: PlayerSprite;
+  private mobSprites: MobSprite[] = [];
+  private nodeSprites: ResourceNodeSprite[] = [];
+  private npcSprites: Shopkeeper[] = [];
+  private signpostSprites: ZoneSignpost[] = [];
+  private campfireSprite: CampfireSprite | null = null;
   private selectionRing!: Phaser.GameObjects.Graphics;
-  private lastAttackAt = 0;
-  // When each ability was last cast, for the cooldown check and the bar's sweep.
-  private lastAbilityAt = new Map<AbilityId, number>();
-  private lastAbilitySignature = '';
-  private spawnPoint = new Phaser.Math.Vector2();
-  private lastReportedHp = 0;
-  private lastReportedMana = -1;
-  private character!: CharacterController;
-  // AFK camping: whether it is on, the spot the character settled at (fights
-  // are leashed to it), and whether they are currently standing down to heal.
-  private afkActive = false;
-  private afkAnchor = new Phaser.Math.Vector2();
-  private afkRecovering = false;
-  private changingZone = false;
-  private collisionWorld!: CollisionWorld;
   private readonly inputState = new InputState();
   private unbindKeyboard: (() => void) | null = null;
-  private handleWindowUnload = (): void => this.persistCharacter();
+  private handleWindowUnload = (): void => this.world.persistCharacter();
 
   constructor() {
     super('Zone');
@@ -229,18 +90,75 @@ export class ZoneScene extends Phaser.Scene {
     const state =
       (this.registry.get('character') as CharacterState | undefined) ??
       createNewCharacter('Adventurer', 'warrior');
-    this.character = new CharacterController(state);
     this.zone = ZONES[this.initData.zoneId ?? state.zoneId ?? 'town'];
-    this.changingZone = false;
-    // A restart reuses this instance, and the camp was a spot in the zone being
-    // left; nothing carries over.
-    this.afkActive = false;
-    this.afkRecovering = false;
-    // For the same reason: an approach left in flight by walking out of the
-    // zone would otherwise hold a destroyed sprite from the zone behind us.
-    this.pendingApproach = null;
-    this.pursuingTarget = false;
 
+    this.buildTilemap();
+    this.world = new ZoneWorld({
+      zone: this.zone,
+      character: new CharacterController(state),
+      events: this.game.events,
+      input: this.inputState,
+      entry:
+        this.initData.entryEdge !== undefined
+          ? { edge: this.initData.entryEdge, fraction: this.initData.entryFraction ?? 0.5 }
+          : undefined,
+      hp: this.initData.hp,
+    });
+    this.buildSprites();
+
+    this.cameras.main.setBounds(0, 0, this.world.worldWidth, this.world.worldHeight);
+    this.cameras.main.startFollow(this.playerSprite, true);
+    this.applyCameraZoom();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+
+    this.selectionRing = this.add.graphics();
+    this.selectionRing.setVisible(false);
+
+    this.input.on('pointerdown', this.handlePointerDown, this);
+    this.unbindKeyboard = bindKeyboard(this.inputState, window);
+    this.game.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
+    // Con colors are relative to the player, so every enemy name has to be
+    // redrawn when they level.
+    this.game.events.on(LEVEL_UP_EVENT, this.refreshMobLabels, this);
+
+    this.time.addEvent({
+      delay: AUTOSAVE_INTERVAL_MS,
+      loop: true,
+      callback: () => this.world.persistCharacter(),
+    });
+    window.addEventListener('pagehide', this.handleWindowUnload);
+    window.addEventListener('beforeunload', this.handleWindowUnload);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      // Rebound in create(), and deliberately not cleared: a zone change is a
+      // scene restart, and a key still held through it should not need
+      // releasing and pressing again on the far side.
+      this.unbindKeyboard?.();
+      this.unbindKeyboard = null;
+      window.removeEventListener('pagehide', this.handleWindowUnload);
+      window.removeEventListener('beforeunload', this.handleWindowUnload);
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+      this.game.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
+      this.game.events.off(LEVEL_UP_EVENT, this.refreshMobLabels, this);
+      this.world.destroy();
+    });
+
+    // Last, so the sprites and the log are all there to pay it into.
+    this.deliverParkedAfk();
+
+    // Dev-only handle on the live simulation, for the devtools console and the
+    // smoke check. Re-set on every zone change, since each builds a new world.
+    if (import.meta.env.DEV) {
+      (window as unknown as { world: ZoneWorld }).world = this.world;
+    }
+
+    // The HUD survives zone changes: launched once on first boot, and left
+    // running when this scene restarts into another zone.
+    if (!this.scene.isActive('UI')) {
+      this.scene.launch('UI');
+    }
+  }
+
+  private buildTilemap(): void {
     const tilemap = this.make.tilemap({
       data: this.zone.map,
       tileWidth: TILE_SIZE,
@@ -257,298 +175,147 @@ export class ZoneScene extends Phaser.Scene {
     // Below everything, so flat decals drawn onto the terrain (fishing spots)
     // can sit at a negative depth and still be visible above it.
     groundLayer.setDepth(GROUND_DEPTH);
-
-    this.worldWidth = tilemap.widthInPixels;
-    this.worldHeight = tilemap.heightInPixels;
-    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
-
-    this.spawnPoint.set(this.worldWidth / 2, this.worldHeight / 2);
-    const start = this.startPoint(state);
-    this.player = new Player(
-      this,
-      start.x,
-      start.y,
-      state.classId,
-      this.inputState,
-      state.gear,
-      state.name,
-      state.level,
-    );
-    if (this.initData.hp !== undefined) {
-      this.player.setHp(this.initData.hp);
-    }
-    this.lastReportedHp = this.player.hp;
-    // The HUD may be carrying HP from before a restart (a zone walk, or the
-    // death that sent us here) — resync it unconditionally.
-    this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
-    this.cameras.main.startFollow(this.player, true);
-    this.applyCameraZoom();
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
-
-    this.mobs = this.zone.mobSpawns.map(({ dx, dy, enemyId, level }) => {
-      const mob = new Mob(
-        this,
-        this.spawnPoint.x + dx,
-        this.spawnPoint.y + dy,
-        ENEMIES[enemyId],
-        level,
-        state.level,
-      );
-      mob.setInteractive();
-      return mob;
-    });
-
-    this.nodes = this.zone.nodeSpawns.map(({ dx, dy, nodeId }) => {
-      const node = new ResourceNode(
-        this,
-        this.spawnPoint.x + dx,
-        this.spawnPoint.y + dy,
-        RESOURCE_NODES[nodeId],
-      );
-      node.setInteractive();
-      return node;
-    });
-
-    // All NPCs are shopkeepers today; a second npcId would branch here.
-    this.npcs = this.zone.npcSpawns.map(
-      ({ dx, dy }) => new Shopkeeper(this, this.spawnPoint.x + dx, this.spawnPoint.y + dy),
-    );
-    this.shopNpc = null;
-
-    // One tappable signpost per exit — the mobile way out of a zone.
-    this.signposts = this.zone.exits.map((exit) => {
-      const point = signpostPoint(exit.edge, this.worldWidth, this.worldHeight);
-      return new ZoneSignpost(this, point.x, point.y, exit, ZONES[exit.to].name);
-    });
-
-    // Nothing walks into the pond. One description of the world, which the
-    // player and every mob integrate themselves against.
-    this.collisionWorld = {
-      grid: this.zone.map,
-      blockingTiles: new Set(BLOCKING_TILES),
-      worldWidth: this.worldWidth,
-      worldHeight: this.worldHeight,
-      blockers: this.nodes
-        .filter((node) => node.definition.solid)
-        .map((node) => node.blockerRect()),
-    };
-
-    this.selectionRing = this.add.graphics();
-    this.selectionRing.setVisible(false);
-
-    this.input.on('pointerdown', this.handlePointerDown, this);
-    this.unbindKeyboard = bindKeyboard(this.inputState, window);
-    this.game.events.on(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
-    this.game.events.on(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
-    this.game.events.on(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
-    this.game.events.on(COOK_REQUESTED_EVENT, this.handleCookRequested, this);
-    this.game.events.on(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
-    this.game.events.on(BUY_ITEM_REQUESTED_EVENT, this.handleBuyRequested, this);
-    this.game.events.on(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
-    this.game.events.on(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
-    this.game.events.on(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
-    this.game.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
-    this.game.events.on(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
-    this.game.events.on(ACCEPT_QUEST_REQUESTED_EVENT, this.handleAcceptQuestRequested, this);
-    this.game.events.on(TURN_IN_QUEST_REQUESTED_EVENT, this.handleTurnInQuestRequested, this);
-    this.game.events.on(SET_TITLE_REQUESTED_EVENT, this.handleSetTitleRequested, this);
-
-    this.time.addEvent({
-      delay: AUTOSAVE_INTERVAL_MS,
-      loop: true,
-      callback: () => this.persistCharacter(),
-    });
-    window.addEventListener('pagehide', this.handleWindowUnload);
-    window.addEventListener('beforeunload', this.handleWindowUnload);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      // Rebound in create(), and deliberately not cleared: a zone change is a
-      // scene restart, and a key still held through it should not need
-      // releasing and pressing again on the far side.
-      this.unbindKeyboard?.();
-      this.unbindKeyboard = null;
-      window.removeEventListener('pagehide', this.handleWindowUnload);
-      window.removeEventListener('beforeunload', this.handleWindowUnload);
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
-      this.game.events.off(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested, this);
-      this.game.events.off(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested, this);
-      this.game.events.off(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested, this);
-      this.game.events.off(COOK_REQUESTED_EVENT, this.handleCookRequested, this);
-      this.game.events.off(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested, this);
-      this.game.events.off(BUY_ITEM_REQUESTED_EVENT, this.handleBuyRequested, this);
-      this.game.events.off(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested, this);
-      this.game.events.off(SHOP_CLOSED_EVENT, this.handleShopClosedByUi, this);
-      this.game.events.off(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested, this);
-      this.game.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter, this);
-      this.game.events.off(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk, this);
-      this.game.events.off(ACCEPT_QUEST_REQUESTED_EVENT, this.handleAcceptQuestRequested, this);
-      this.game.events.off(TURN_IN_QUEST_REQUESTED_EVENT, this.handleTurnInQuestRequested, this);
-      this.game.events.off(SET_TITLE_REQUESTED_EVENT, this.handleSetTitleRequested, this);
-    });
-
-    // Last, so the player, the mobs and the log are all there to pay it into.
-    this.resolveParkedAfk();
-
-    // The HUD survives zone changes: launched once on first boot, and left
-    // running when this scene restarts into another zone.
-    if (!this.scene.isActive('UI')) {
-      this.scene.launch('UI');
-    }
   }
 
-  update(time: number, delta: number): void {
-    if (this.changingZone) return;
-    this.applyInputActions();
-    this.updateAfk();
-    this.updateApproach(delta);
-    this.player.update(delta, this.collisionWorld);
-    const healed = this.player.takeHealPulse();
-    if (healed > 0) {
-      this.showFloatingText(this.player.x, this.player.y, `+${healed}`, THEME.color.heal);
-    }
-    this.mobs.forEach((mob) =>
-      mob.update(this.player.x, this.player.y, delta, this.collisionWorld),
-    );
+  private buildSprites(): void {
+    const level = this.world.character.state.level;
+    this.playerSprite = new PlayerSprite(this, this.world.player);
+    this.mobSprites = this.world.mobs.map((mob) => {
+      const sprite = new MobSprite(this, mob, level);
+      sprite.setInteractive();
+      return sprite;
+    });
+    this.nodeSprites = this.world.nodes.map((node) => {
+      const sprite = new ResourceNodeSprite(this, node);
+      sprite.setInteractive();
+      return sprite;
+    });
+    this.npcSprites = this.world.npcs.map((npc) => new Shopkeeper(this, npc));
+    this.signpostSprites = this.world.signposts.map((signpost) => new ZoneSignpost(this, signpost));
+  }
+
+  update(_time: number, delta: number): void {
+    const events = this.world.update(delta);
+    this.syncSprites();
     this.updateSelectionRing();
-    this.updateGathering(delta);
-    this.updateCombat(time);
-    this.updateEnemyAttacks(time);
-    this.publishPlayerHp();
-    this.publishPlayerMana();
-    this.publishAbilityState();
-    this.publishActions();
-    this.updateShopRange();
-    this.checkZoneExit();
+    events.forEach((event) => this.render(event));
   }
 
-  // Walking off mid-trade closes the window, like any vendor would.
-  private updateShopRange(): void {
-    if (!this.shopNpc) return;
-    if (!withinRadius(this.player, this.shopNpc, SHOP_CLOSE_RADIUS)) {
-      this.closeShop();
+  private syncSprites(): void {
+    this.playerSprite.sync();
+    this.mobSprites.forEach((sprite) => sprite.sync());
+    this.nodeSprites.forEach((sprite) => sprite.sync());
+
+    const campfire = this.world.campfire;
+    if (campfire && !this.campfireSprite) {
+      this.campfireSprite = new CampfireSprite(this, campfire);
+    } else if (!campfire && this.campfireSprite) {
+      this.campfireSprite.extinguish();
+      this.campfireSprite = null;
     }
   }
 
-  private handleBuyRequested(itemId: string): void {
-    if (!this.shopNpc) return;
-    const price = shopPriceFor(itemId);
-    if (price === null) return;
-    // Checked before the coin leaves the purse, so a full pack never sells the
-    // player something they can't take home.
-    if (!this.character.canCarryItem(itemId, 1)) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, 'Your pack is too full to carry that.');
+  private refreshMobLabels(level: number): void {
+    this.mobSprites.forEach((sprite) => sprite.refreshLabel(level));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Drawing what happened
+  // ---------------------------------------------------------------------------
+
+  private render(event: WorldEvent): void {
+    switch (event.kind) {
+      case 'hit': {
+        const tone: FloatTone = event.on === 'player' ? 'player-damage' : 'damage';
+        if (event.absorbed > 0) {
+          this.float(event.at.x, event.at.y - 16, `(${event.absorbed} absorbed)`, 'skill');
+        }
+        if (event.damage > event.absorbed) {
+          const shown = event.on === 'player' ? event.damage - event.absorbed : event.damage;
+          this.float(
+            event.at.x,
+            event.at.y,
+            `-${shown}`,
+            event.via === 'ability' ? 'reward' : tone,
+          );
+        }
+        return;
+      }
+      case 'defend':
+        this.float(event.at.x, event.at.y, event.skillName, 'heal');
+        return;
+      case 'heal':
+        this.float(event.at.x, event.at.y, `+${event.amount}`, 'heal');
+        return;
+      case 'float':
+        this.float(event.at.x, event.at.y, event.text, event.tone);
+        return;
+      case 'bolt-cast':
+        this.castBolt(event.from, event.to);
+        return;
+      case 'death':
+        if (event.on === 'player' && event.respawnZone) {
+          this.scene.restart({ zoneId: event.respawnZone } satisfies ZoneSceneData);
+        }
+        return;
+      case 'zone-exit':
+        this.scene.restart({
+          zoneId: event.to,
+          entryEdge: event.edge,
+          entryFraction: event.fraction,
+          hp: this.world.player.hp,
+        } satisfies ZoneSceneData);
+        return;
+      default:
+        // spawn and gather-tick have nothing to draw in 2D: the sprites read the
+        // simulation directly. The 3D view is what they exist for.
+        return;
+    }
+  }
+
+  // A bolt thrown from the caster to the target. Purely cosmetic, but a ranged
+  // nuke that produced only a number over the mob read as nothing happening.
+  private castBolt(from: { x: number; y: number }, to: { x: number; y: number }): void {
+    const bolt = this.add.circle(from.x, from.y, 8, 0xff7043, 1);
+    bolt.setStrokeStyle(2, 0xffd54f, 1);
+    this.tweens.add({
+      targets: bolt,
+      x: to.x,
+      y: to.y,
+      duration: 180,
+      onComplete: () => bolt.destroy(),
+    });
+  }
+
+  private float(x: number, y: number, message: string, tone: FloatTone): void {
+    const text = this.add
+      // world-space, so this scales with the camera rather than the ui scale
+      .text(x, y - 20, message, {
+        fontSize: '20px',
+        color: FLOAT_COLORS[tone],
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
+    this.tweens.add({
+      targets: text,
+      y: y - 50,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => text.destroy(),
+    });
+  }
+
+  private updateSelectionRing(): void {
+    const target = this.world.target;
+    if (!target) {
+      this.selectionRing.setVisible(false);
       return;
     }
-    if (!this.character.spendCurrency(price)) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, "You can't afford that.");
-      return;
-    }
-    this.character.addItem(itemId, 1);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
-  }
-
-  private handleSellRequested(itemId: string): void {
-    if (!this.shopNpc) return;
-    const value = itemValue(itemId);
-    if (value === null || this.character.itemCount(itemId) <= 0) return;
-    this.character.removeItem(itemId, 1);
-    this.character.addCurrency(value);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
-  }
-
-  private handleAcceptQuestRequested(questId: QuestId): void {
-    if (!this.shopNpc) return;
-    if (!this.character.acceptQuest(questId)) return;
-    this.log(logQuestAccepted(QUESTS[questId].name));
-    this.announceQuests();
-    this.persistCharacter();
-  }
-
-  private handleTurnInQuestRequested(questId: QuestId): void {
-    if (!this.shopNpc) return;
-    const result = this.character.turnInQuest(questId);
-    if (!result.ok) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, result.reason);
-      return;
-    }
-    this.log(logQuestCompleted(QUESTS[questId].name));
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
-    this.announceQuests();
-    this.publishXpGain(result.xp);
-    this.persistCharacter();
-  }
-
-  private announceQuests(): void {
-    this.game.events.emit(QUEST_LOG_CHANGED_EVENT, this.character.state.quests);
-  }
-
-  private checkZoneExit(): void {
-    const exit = findExit(
-      this.zone.exits,
-      this.player.x,
-      this.player.y,
-      this.worldWidth,
-      this.worldHeight,
-      EXIT_MARGIN,
-    );
-    if (exit) {
-      this.changeZone(exit);
-    }
-  }
-
-  // Where the player stands when this scene opens: the arrival point if they
-  // walked in through an exit, the spot the save was left at if they are
-  // resuming into the zone that save names, and the middle of the map
-  // otherwise — a new character, or one who owes a respawn.
-  private startPoint(state: CharacterState): Point {
-    if (this.initData.entryEdge !== undefined) {
-      return arrivalPoint(
-        this.initData.entryEdge,
-        this.initData.entryFraction ?? 0.5,
-        this.worldWidth,
-        this.worldHeight,
-        ARRIVAL_INSET,
-      );
-    }
-    if (state.position && state.zoneId === this.zone.id) {
-      return resumePoint(state.position, this.worldWidth, this.worldHeight, ARRIVAL_INSET);
-    }
-    return this.spawnPoint;
-  }
-
-  private changeZone(exit: ZoneExit): void {
-    this.changingZone = true;
-    const entryEdge = oppositeEdge(exit.edge);
-    const fraction = edgeFraction(
-      exit.edge,
-      this.player.x,
-      this.player.y,
-      this.worldWidth,
-      this.worldHeight,
-    );
-    // The camp is a spot in the zone being left, so it can't survive the walk.
-    this.setAfk(false);
-    this.stopGathering();
-    this.clearTarget();
-    this.closeShop();
-    // Save the spot in the zone being *entered*, not the one being left: a tab
-    // closed mid-walk should come back where the walk was going. The scene is
-    // about to compute the same point from the entry edge below.
-    const destination = zoneWorldSize(ZONES[exit.to]);
-    this.character.recordLocation(
-      exit.to,
-      arrivalPoint(entryEdge, fraction, destination.width, destination.height, ARRIVAL_INSET),
-    );
-    saveService.save(this.character.state);
-    const data: ZoneSceneData = {
-      zoneId: exit.to,
-      entryEdge,
-      entryFraction: fraction,
-      hp: this.player.hp,
-    };
-    this.scene.restart(data);
+    this.selectionRing.clear();
+    this.selectionRing.lineStyle(2, SELECTION_RING_COLOR, 1);
+    this.selectionRing.strokeCircle(target.x, target.y, SELECTION_RING_RADIUS);
+    this.selectionRing.setVisible(true);
   }
 
   /**
@@ -565,9 +332,13 @@ export class ZoneScene extends Phaser.Scene {
     const height = worldViewportHeight(this.scale.width, this.scale.height);
     this.cameras.main.setViewport(0, 0, this.scale.width, height);
     this.cameras.main.setZoom(
-      worldZoom(this.scale.width, height, this.worldWidth, this.worldHeight),
+      worldZoom(this.scale.width, height, this.world.worldWidth, this.world.worldHeight),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Input
+  // ---------------------------------------------------------------------------
 
   // What world objects are under this pointer, tested explicitly. The
   // currentlyOver list the pointerdown event carries is NOT used: with two
@@ -579,10 +350,10 @@ export class ZoneScene extends Phaser.Scene {
   // array, is deterministic.
   private hitTestWorld(pointer: Phaser.Input.Pointer): Phaser.GameObjects.GameObject[] {
     const candidates: Phaser.GameObjects.GameObject[] = [
-      ...this.nodes,
-      ...this.npcs,
-      ...this.signposts,
-      ...this.mobs,
+      ...this.nodeSprites,
+      ...this.npcSprites,
+      ...this.signpostSprites,
+      ...this.mobSprites,
     ];
     return this.input.manager.hitTest(pointer, candidates, this.cameras.main, []);
   }
@@ -593,920 +364,47 @@ export class ZoneScene extends Phaser.Scene {
     if (ui?.input && ui.input.hitTestPointer(pointer).length > 0) {
       return;
     }
+    this.world.tap(this.resolveTap(pointer));
+  }
 
-    // Touching the world is taking the controls back.
-    this.setAfk(false);
+  // The one piece of hit testing that has to stay here: what a screen pixel is
+  // over is a question about the camera and the sprites, not about the game.
+  private resolveTap(pointer: Phaser.Input.Pointer): WorldTap {
+    const over = this.hitTestWorld(pointer);
 
-    const currentlyOver = this.hitTestWorld(pointer);
+    const node = over.find((obj): obj is ResourceNodeSprite => obj instanceof ResourceNodeSprite);
+    if (node) return { kind: 'node', node: node.node };
 
-    const clickedNode = currentlyOver.find(
-      (obj): obj is ResourceNode => obj instanceof ResourceNode,
-    );
-    if (clickedNode) {
-      this.clearTarget();
-      this.pursuingTarget = false;
-      this.approachAndGather(clickedNode);
-      return;
-    }
+    const signpost = over.find((obj): obj is ZoneSignpost => obj instanceof ZoneSignpost);
+    if (signpost) return { kind: 'signpost', signpost: signpost.signpost };
 
-    // Any other click ends a gather: picking a fight or walking off is a choice
-    // to stop chopping.
-    this.stopGathering();
-    this.pendingApproach = null;
+    const npc = over.find((obj): obj is Shopkeeper => obj instanceof Shopkeeper);
+    if (npc) return { kind: 'npc', npc: npc.npc };
 
-    const clickedSignpost = currentlyOver.find(
-      (obj): obj is ZoneSignpost => obj instanceof ZoneSignpost,
-    );
-    if (clickedSignpost) {
-      this.clearTarget();
-      this.pursuingTarget = false;
-      this.approachSignpost(clickedSignpost);
-      return;
-    }
+    const mob = over.find((obj): obj is MobSprite => obj instanceof MobSprite);
+    if (mob) return { kind: 'mob', mob: mob.mob };
 
-    const clickedNpc = currentlyOver.find((obj): obj is Shopkeeper => obj instanceof Shopkeeper);
-    if (clickedNpc) {
-      this.clearTarget();
-      this.pursuingTarget = false;
-      this.approachShop(clickedNpc);
-      return;
-    }
-
-    const clickedMob = currentlyOver.find((obj): obj is Mob => obj instanceof Mob);
-    if (clickedMob) {
-      this.setTarget(clickedMob);
-      // Auto-approach: walking into range is implied by choosing a target.
-      this.pursuingTarget = true;
-      return;
-    }
-
-    this.clearTarget();
-    this.pursuingTarget = false;
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    this.player.moveTo(worldPoint.x, worldPoint.y);
+    return { kind: 'ground', point: { x: worldPoint.x, y: worldPoint.y } };
   }
 
-  // Walk toward a clicked node and start the gather once inside its
-  // interact radius; startGathering fires immediately when already there.
-  private approachAndGather(node: ResourceNode): void {
-    if (withinRadius(this.player, node, node.definition.interactRadius)) {
-      this.startGathering(node);
-      return;
-    }
-    this.beginApproach(
-      { kind: 'gather', radius: node.definition.interactRadius * GATHER_APPROACH_FRACTION },
-      node,
-      () => this.startGathering(node),
-    );
-  }
-
-  // Walk toward a tapped signpost and take its exit on arrival — the mobile
-  // route out of a zone; walking into the map edge still works for WASD.
-  private approachSignpost(signpost: ZoneSignpost): void {
-    if (withinRadius(this.player, signpost, SIGNPOST_INTERACT_RADIUS)) {
-      this.changeZone(signpost.exit);
-      return;
-    }
-    this.beginApproach({ kind: 'signpost', radius: SIGNPOST_INTERACT_RADIUS }, signpost, () =>
-      this.changeZone(signpost.exit),
-    );
-  }
-
-  private approachShop(npc: Shopkeeper): void {
-    if (withinRadius(this.player, npc, SHOP_INTERACT_RADIUS)) {
-      this.openShop(npc);
-      return;
-    }
-    this.beginApproach({ kind: 'shop', radius: SHOP_INTERACT_RADIUS }, npc, () =>
-      this.openShop(npc),
-    );
-  }
-
-  // Nodes, shopkeepers and signposts all stand still, so the destination is
-  // captured once here rather than re-read from the sprite every frame.
-  private beginApproach(
-    interaction: Pick<PendingInteraction, 'kind' | 'radius'>,
-    at: Point,
-    act: () => void,
-  ): void {
-    this.pendingApproach = {
-      interaction: { ...interaction, point: { x: at.x, y: at.y } },
-      act,
-    };
-    this.player.moveTo(at.x, at.y);
-  }
-
-  private openShop(npc: Shopkeeper): void {
-    this.player.stopMoving();
-    this.shopNpc = npc;
-    this.game.events.emit(SHOP_OPENED_EVENT);
-  }
-
-  private closeShop(): void {
-    if (!this.shopNpc) return;
-    this.shopNpc = null;
-    this.game.events.emit(SHOP_CLOSED_EVENT);
-  }
-
-  // The UI's close button already tore the panel down; just drop the state.
-  private handleShopClosedByUi(): void {
-    this.shopNpc = null;
-  }
-
-  // One-shot keys, taken once a frame rather than fired from a listener, so the
-  // whole of a tick's input arrives through the same door the port will use.
-  // F9 stays a desktop shortcut; the options menu is the way a phone gets there.
-  private applyInputActions(): void {
-    this.inputState.takeActions().forEach((action) => {
-      if (action === 'clear-target') {
-        this.clearTarget();
-      } else {
-        this.resetCharacter();
-      }
-    });
-  }
-
-  // Drives the click-to-move approaches: closing on a combat target, walking
-  // up to a node before gathering, or up to a shopkeeper before trading. WASD
-  // input cancels all of them.
-  private updateApproach(delta: number): void {
-    if (this.player.isKeyboardMoving()) {
-      this.setAfk(false);
-      this.pursuingTarget = false;
-      this.pendingApproach = null;
-      return;
-    }
-
-    if (this.pendingApproach) {
-      const { interaction, act } = this.pendingApproach;
-      const result = resolveApproach(
-        interaction,
-        this.player,
-        this.player.hasMoveTarget(),
-        arriveRadius(this.player.speed, delta),
-      );
-      if (result.kind === 'walking') {
-        return;
-      }
-      this.pendingApproach = null;
-      if (result.kind === 'act') {
-        this.player.stopMoving();
-        act();
-      }
-      return;
-    }
-
-    if (this.pursuingTarget) {
-      if (!this.target || !this.target.isAlive()) {
-        this.pursuingTarget = false;
-        return;
-      }
-      // Stop a little inside attack range, mirroring how mobs close in, so the
-      // player doesn't hover exactly on the boundary of their own reach.
-      if (isInRange(distance(this.player, this.target), this.player.attackRange * 0.8)) {
-        this.pursuingTarget = false;
-        this.player.stopMoving();
-      } else {
-        this.player.moveTo(this.target.x, this.target.y);
-      }
-    }
-  }
-
-  // AFK camping. Deliberately a worse player than the person it stands in for:
-  // it picks targets and eats, but never casts, and everything it earns is
-  // halved on the way in (see awardXp).
-  private toggleAfk(): void {
-    this.setAfk(!this.afkActive);
-  }
-
-  private setAfk(active: boolean): void {
-    if (this.afkActive === active) return;
-    this.afkActive = active;
-    this.afkRecovering = false;
-    if (active) {
-      this.stopGathering();
-      this.closeShop();
-      this.afkAnchor.set(this.player.x, this.player.y);
-      this.log(logNotice('You settle in to camp.'));
-    } else {
-      this.log(logNotice('You snap out of it.'));
-    }
-    // Written to the save, not just held here: it is the only record that
-    // survives the tab closing, and the only thing offline progress is paid on.
-    this.character.state.afk = active
-      ? { startedAt: new Date().toISOString(), zoneId: this.zone.id }
-      : null;
-    this.persistCharacter();
-    this.game.events.emit(AFK_STATE_CHANGED_EVENT, this.afkActive);
-  }
+  // ---------------------------------------------------------------------------
+  // Host duties the world refuses
+  // ---------------------------------------------------------------------------
 
   /**
-   * Pays out a camp that was left running when the tab closed. Runs once, on
-   * the load that finds the session, and clears it either way — a session that
-   * paid nothing must not be able to pay again on the next load.
+   * Stashes an offline camp's payout where the HUD can find it. It goes through
+   * the registry rather than an event because the only load that can find a
+   * parked session is the first boot into this scene — a zone change clears the
+   * camp on its way out — and the HUD is not listening yet at that point.
    */
-  private resolveParkedAfk(): void {
-    const session = this.character.state.afk;
-    if (!session) return;
-    this.character.state.afk = null;
-
-    const report = resolveOfflineAfk(session, {
-      now: Date.now(),
-      characterLevel: this.character.state.level,
-      inventory: this.character.state.inventory,
-      capacity: this.character.carryCapacity(),
-    });
-    if (report.kills <= 0) {
-      this.persistCharacter();
-      return;
+  private deliverParkedAfk(): void {
+    const resolved = this.world.resolveParkedAfk();
+    if (!resolved) return;
+    this.registry.set(OFFLINE_AFK_RESOLVED_EVENT, resolved.report);
+    if (resolved.unlocks.length > 0) {
+      this.registry.set(ACHIEVEMENT_UNLOCKED_EVENT, resolved.unlocks);
     }
-
-    for (const [itemId, quantity] of Object.entries(report.drops)) {
-      this.character.addItem(itemId, quantity);
-    }
-    this.character.addCurrency(report.copper);
-    this.awardXp(report.xp);
-    const unlocks = report.enemyId ? this.creditKill(report.enemyId, report.kills) : [];
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
-    // Handed over through the registry rather than as an event, because the
-    // only load that can find a parked session is the first boot into this
-    // scene — a zone change clears the camp on its way out — and the HUD is
-    // not listening yet at that point.
-    this.registry.set(OFFLINE_AFK_RESOLVED_EVENT, report);
-    // Same reason as the report above: a chain finished while the tab was shut
-    // has nobody listening for the event, so it is left where the HUD can pick
-    // it up once it builds.
-    if (unlocks.length > 0) {
-      this.registry.set(ACHIEVEMENT_UNLOCKED_EVENT, unlocks);
-    }
-    this.persistCharacter();
-  }
-
-  private updateAfk(): void {
-    if (!this.afkActive || !this.player.isAlive()) return;
-
-    // A fight that wandered off the camp is dropped rather than followed: the
-    // anchor is what keeps an unattended character where they were left.
-    if (this.target && !withinRadius(this.afkAnchor, this.target, AFK_ANCHOR_RADIUS)) {
-      this.clearTarget();
-      this.pursuingTarget = false;
-    }
-
-    const action = decideAfkAction(
-      this.mobs.map((mob, index) => ({
-        index,
-        distance: distance(this.afkAnchor, mob),
-        alive: mob.isAlive(),
-        engaged: mob.isEngaged(),
-      })),
-      { hp: this.player.hp, maxHp: this.player.maxHp, recovering: this.afkRecovering },
-    );
-    this.afkRecovering = action.kind === 'recover';
-
-    if (action.kind === 'recover') {
-      this.clearTarget();
-      this.pursuingTarget = false;
-      this.player.stopMoving();
-      this.afkEat();
-      return;
-    }
-    if (action.kind === 'idle') {
-      this.pursuingTarget = false;
-      return;
-    }
-
-    const mob = this.mobs[action.index];
-    if (this.target !== mob) {
-      this.setTarget(mob);
-    }
-    // The existing approach code walks into range and updateCombat swings, so
-    // AFK combat is the same combat, just without a hand on the mouse.
-    this.pursuingTarget = true;
-  }
-
-  private afkEat(): void {
-    if (
-      this.player.isEating() ||
-      !shouldAfkEat(this.player.hp, this.player.maxHp, this.player.isInCombat())
-    ) {
-      return;
-    }
-    const food = chooseAfkFood(this.character.state.inventory);
-    if (food) {
-      this.handleEatRequested(food);
-    }
-  }
-
-  private startGathering(node: ResourceNode): void {
-    if (!node.isAvailable()) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, `The ${node.definition.name} is spent.`);
-      return;
-    }
-
-    const check = canGather(
-      node.definition,
-      this.character.state.skills,
-      this.character.state.gear,
-    );
-    if (!check.ok) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
-      return;
-    }
-
-    this.gatherNode = node;
-    this.gatherState = beginGather(
-      node.definition,
-      this.character.skillLevelOf(node.definition.skill),
-    );
-    this.game.events.emit(GATHER_STARTED_EVENT, node.definition.name);
-  }
-
-  private stopGathering(): void {
-    if (!this.gatherState) return;
-    this.gatherState = null;
-    this.gatherNode = null;
-    this.game.events.emit(GATHER_ENDED_EVENT);
-  }
-
-  private updateGathering(delta: number): void {
-    if (!this.gatherState || !this.gatherNode) return;
-
-    const node = this.gatherNode;
-    const outcome = advanceGather(this.gatherState, delta, distance(this.player, node));
-
-    if (outcome.status === 'gathering') {
-      this.gatherState = outcome.state;
-      this.game.events.emit(GATHER_PROGRESS_EVENT, outcome.progress);
-      return;
-    }
-
-    if (outcome.status === 'cancelled') {
-      this.stopGathering();
-      return;
-    }
-
-    this.completeGather(node);
-  }
-
-  private completeGather(node: ResourceNode): void {
-    const { definition } = node;
-
-    const quantity = rollGatherQuantity(this.character.skillLevelOf(definition.skill));
-    // A haul with nowhere to go is not a gather: the node keeps its charge, the
-    // skill earns nothing, and the channel stops rather than spinning forever.
-    // This is what ends an unattended gathering session.
-    if (!this.character.tryAddItem(definition.yieldItemId, quantity)) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, 'Your pack is full.');
-      this.stopGathering();
-      return;
-    }
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.awardSkillXp(definition.skill, definition.xpReward);
-
-    const emptied = node.consumeCharge();
-    if (emptied) {
-      this.stopGathering();
-      return;
-    }
-
-    // Auto-repeat: re-arm the channel so gathering runs unattended until
-    // something interrupts it.
-    this.gatherState = beginGather(definition, this.character.skillLevelOf(definition.skill));
-    this.game.events.emit(GATHER_PROGRESS_EVENT, 0);
-  }
-
-  private isNearFire(): boolean {
-    if (!this.campfire?.isLit()) return false;
-    return withinRadius(this.player, this.campfire, FIRE_COOK_RADIUS);
-  }
-
-  // The HUD's item actions are driven off what is actually possible right now,
-  // so they show only buttons that would succeed. Emitted on change rather
-  // than every frame, the same way player HP is.
-  private publishActions(): void {
-    const next = { nearFire: this.isNearFire() };
-    if (next.nearFire === this.lastActions.nearFire) {
-      return;
-    }
-    this.lastActions = next;
-    this.game.events.emit(ACTIONS_CHANGED_EVENT, next);
-  }
-
-  private handleLightFireRequested(): void {
-    if (this.character.itemCount(FIRE_INPUT_ITEM_ID) <= 0) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, 'You have no logs to burn.');
-      return;
-    }
-
-    // One fire at a time: lighting a new one replaces the old, rather than
-    // letting the player carpet the town in campfires.
-    this.campfire?.extinguish();
-    this.character.removeItem(FIRE_INPUT_ITEM_ID, 1);
-    this.campfire = new Campfire(this, this.player.x, this.player.y + 32);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-  }
-
-  // With an item selected in the bag the HUD names what to cook; without one
-  // (dev console, older callers) fall back to the first cookable thing.
-  private handleCookRequested(itemId?: string): void {
-    const recipe =
-      (itemId ? recipeForInput(itemId) : null) ?? findCookableItem(this.character.state.inventory);
-    if (!recipe) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, 'You have nothing to cook.');
-      return;
-    }
-
-    const check = canCook(
-      recipe,
-      this.character.state.skills,
-      this.character.state.inventory,
-      this.isNearFire(),
-    );
-    if (!check.ok) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
-      return;
-    }
-
-    const result = rollCook(recipe, this.character.skillLevelOf('cooking'));
-    this.character.removeItem(recipe.inputItemId, 1);
-    this.character.addItem(result.itemId, 1);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    if (result.burnt) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, 'You burn it.');
-    } else {
-      this.awardSkillXp('cooking', result.xp);
-    }
-  }
-
-  private handleEatRequested(itemId: string): void {
-    if (this.character.itemCount(itemId) <= 0 || !consumableFor(itemId)) {
-      return;
-    }
-    if (this.player.hp >= this.player.maxHp) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, 'You are already at full health.');
-      return;
-    }
-    if (!this.player.eat(itemId)) {
-      return;
-    }
-
-    this.character.removeItem(itemId, 1);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-  }
-
-  // Combat skills tick up a point at a time on every swing, which would bury
-  // the screen in floating text — those pass `silent` and are seen only on the
-  // sheet and at the level-up toast.
-  private awardSkillXp(skill: SkillId, amount: number, options?: { silent: boolean }): void {
-    const gain = this.character.awardSkillXp(skill, amount);
-    if (!options?.silent) {
-      this.showFloatingText(
-        this.player.x,
-        this.player.y - 20,
-        `+${amount} ${SKILLS[skill].name} XP`,
-        THEME.color.skillUp,
-      );
-    }
-    this.game.events.emit(SKILL_XP_GAINED_EVENT, gain);
-    if (gain.leveledUp) {
-      this.log(logSkillLevelUp(SKILLS[skill].name, gain.level));
-      this.persistCharacter();
-    }
-  }
-
-  private setTarget(mob: Mob): void {
-    this.target = mob;
-    this.publishTarget();
-  }
-
-  private publishTarget(): void {
-    if (!this.target) return;
-    this.game.events.emit(TARGET_SELECTED_EVENT, {
-      name: this.target.name,
-      level: this.target.level,
-      hp: this.target.hp,
-      maxHp: this.target.maxHp,
-      conColor: conColor(this.character.state.level, this.target.level),
-    });
-  }
-
-  private clearTarget(): void {
-    if (!this.target) return;
-    this.target = null;
-    this.selectionRing.setVisible(false);
-    this.game.events.emit(TARGET_CLEARED_EVENT);
-  }
-
-  private updateSelectionRing(): void {
-    if (!this.target) {
-      return;
-    }
-    if (!this.target.isAlive()) {
-      this.clearTarget();
-      return;
-    }
-    this.selectionRing.clear();
-    this.selectionRing.lineStyle(2, SELECTION_RING_COLOR, 1);
-    this.selectionRing.strokeCircle(this.target.x, this.target.y, SELECTION_RING_RADIUS);
-    this.selectionRing.setVisible(true);
-  }
-
-  private updateCombat(time: number): void {
-    if (!this.target || !this.target.isAlive()) {
-      return;
-    }
-
-    if (!isInRange(distance(this.player, this.target), this.player.attackRange)) {
-      return;
-    }
-    if (!isCooldownReady(time - this.lastAttackAt, this.player.effectiveAttackCooldownMs())) {
-      return;
-    }
-
-    this.lastAttackAt = time;
-    const weaponSkill = this.character.activeWeaponSkill();
-    const { damage } = resolveAttack({
-      attackPower: this.player.attackPower,
-      weaponSkillLevel: this.character.skillLevelOf(weaponSkill),
-    });
-    this.showFloatingText(this.target.x, this.target.y, `-${damage}`, THEME.color.equippable);
-    this.log(logDamageDealt(this.target.name, damage));
-    this.player.markInCombat();
-    this.target.takeDamage(damage);
-    // Anything the player hits fights back, whether or not it opens combat itself.
-    this.target.engage();
-    this.publishTarget();
-    // Skill comes from swinging, not from killing: a landed hit is the rep.
-    this.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
-    if (!this.target.isAlive()) {
-      this.resolveKill(this.target);
-    }
-  }
-
-  private updateEnemyAttacks(time: number): void {
-    if (!this.player.isAlive()) return;
-
-    for (const mob of this.mobs) {
-      if (!mob.isEngaged()) continue;
-
-      if (!isInRange(distance(mob, this.player), mob.attackRange)) continue;
-      if (!isCooldownReady(time - mob.lastAttackAt, mob.attackCooldownMs)) continue;
-
-      mob.lastAttackAt = time;
-
-      // A turned-aside hit trains the skill that turned it aside and stops
-      // there — no damage, and nothing to interrupt a gather.
-      const defense = rollDefense({
-        blockLevel: this.character.skillLevelOf('block'),
-        parryLevel: this.character.skillLevelOf('parry'),
-        hasWeapon: this.character.state.gear.weapon !== null,
-      });
-      if (defense.avoided && defense.skillId) {
-        this.showFloatingText(
-          this.player.x,
-          this.player.y,
-          SKILLS[defense.skillId].name,
-          THEME.color.heal,
-        );
-        this.log(logDefense(SKILLS[defense.skillId].name, mob.name));
-        this.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
-        continue;
-      }
-
-      const { damage } = resolveAttack({ attackPower: mob.attackPower });
-      const absorbed = this.player.takeDamage(damage);
-      if (absorbed > 0) {
-        this.showFloatingText(
-          this.player.x,
-          this.player.y - 16,
-          `(${absorbed} absorbed)`,
-          THEME.color.skillUp,
-        );
-        this.log(logAbsorbed(absorbed));
-      }
-      if (damage > absorbed) {
-        this.showFloatingText(
-          this.player.x,
-          this.player.y,
-          `-${damage - absorbed}`,
-          THEME.color.playerDamage,
-        );
-        this.log(logDamageTaken(mob.name, damage - absorbed));
-      }
-      // Taking a hit breaks the channel, so gathering is never a way to ignore a
-      // mob already chewing on you.
-      if (this.gatherState) {
-        this.game.events.emit(GATHER_REFUSED_EVENT, 'You are interrupted!');
-        this.stopGathering();
-      }
-
-      if (!this.player.isAlive()) {
-        this.handlePlayerDeath();
-        return;
-      }
-    }
-  }
-
-  private handlePlayerDeath(): void {
-    // Dying is where an unattended session ends: it took the camp with it, and
-    // resuming would just feed the same mob until the player came back.
-    this.setAfk(false);
-    this.mobs.forEach((mob) => mob.disengage());
-    this.stopGathering();
-    this.clearTarget();
-    this.closeShop();
-    this.pendingApproach = null;
-    this.pursuingTarget = false;
-    this.player.stopMoving();
-    this.log(logNotice('You have died.'));
-    this.game.events.emit(PLAYER_DIED_EVENT);
-
-    // Dying away from home sends you back to town — respawning in the middle
-    // of a hostile zone would just feed the same bandit again.
-    if (this.zone.id !== 'town') {
-      this.changingZone = true;
-      // No spot: a corpse owes a respawn, and town's default spawn is where
-      // the restart below puts them anyway.
-      this.character.recordLocation('town', null);
-      saveService.save(this.character.state);
-      this.scene.restart({ zoneId: 'town' } satisfies ZoneSceneData);
-      return;
-    }
-
-    this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
-    this.player.setVelocity(0, 0);
-    this.player.restoreToFull();
-    this.persistCharacter();
-  }
-
-  // Regen and enemy hits both move HP outside of any single event, so the HUD is
-  // driven off the rounded value changing rather than off each damage source.
-  private publishPlayerHp(): void {
-    if (this.player.hp === this.lastReportedHp) return;
-    this.lastReportedHp = this.player.hp;
-    this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
-  }
-
-  /**
-   * Everything a corpse is worth, for a mob that has already died this frame.
-   * Both the swing path and the ability path end here so a new reward can only
-   * ever be added once — the two used to carry their own copy of this, which is
-   * how a reward gets wired into melee and silently missed on spellcasting.
-   * Safe to read the mob after death: its reward fields are readonly and set in
-   * the constructor, so dying does not clear them.
-   */
-  private resolveKill(mob: Mob): void {
-    this.log(logKill(mob.name));
-    this.awardXp(mob.xpReward);
-    this.grantLoot(mob.lootTableId);
-    this.announceUnlocks(this.creditKill(mob.definition.id));
-  }
-
-  /**
-   * Credits kills to the slayer chains and reports what they completed. Does
-   * not announce anything itself: a live kill can emit, but an offline camp
-   * settles up during create() when the HUD is not listening yet, so the caller
-   * decides how the news travels.
-   */
-  private creditKill(enemyId: EnemyId, count = 1): AchievementUnlock[] {
-    const worn = this.character.state.activeTitleId;
-    const crossed = this.character.recordKill(enemyId, count);
-    this.game.events.emit(KILLS_CHANGED_EVENT, this.character.state.kills);
-    if (crossed.length > 0) {
-      this.persistCharacter();
-    }
-    return crossed.map((definition) => ({
-      achievementId: definition.id,
-      name: definition.name,
-      titleId: definition.titleId,
-      titleWorn:
-        definition.titleId !== undefined &&
-        worn === null &&
-        this.character.state.activeTitleId === definition.titleId,
-    }));
-  }
-
-  private announceUnlocks(unlocks: AchievementUnlock[]): void {
-    for (const unlock of unlocks) {
-      this.log(logAchievement(unlock.name));
-      this.showFloatingText(this.player.x, this.player.y - 60, unlock.name, THEME.color.skillUp);
-      this.game.events.emit(ACHIEVEMENT_UNLOCKED_EVENT, unlock);
-      if (unlock.titleWorn && unlock.titleId) {
-        this.log(logTitleEarned(titleName(unlock.titleId)));
-        this.game.events.emit(TITLE_CHANGED_EVENT, unlock.titleId);
-      }
-    }
-  }
-
-  private handleSetTitleRequested(titleId: TitleId | null): void {
-    if (!this.character.setActiveTitle(titleId)) return;
-    this.game.events.emit(TITLE_CHANGED_EVENT, this.character.state.activeTitleId);
-    this.persistCharacter();
-  }
-
-  private awardXp(reward: number): void {
-    // The one choke point both the swing and the ability paths run through, so
-    // it is the one place the AFK penalty has to be applied. A quest reward is
-    // not one of them — handing a quest in is something the player did — so it
-    // comes in through publishXpGain instead.
-    const amount = afkXpReward(reward, this.afkActive);
-    const gain = this.character.awardXp(amount);
-    this.showFloatingText(this.player.x, this.player.y - 20, `+${amount} XP`, THEME.color.levelUp);
-    this.log(logXpGain(amount));
-    this.publishXpGain(gain);
-  }
-
-  // Everything a level costs the rest of the world, for XP however it arrived.
-  private publishXpGain(gain: CombatXpGain): void {
-    this.game.events.emit(XP_GAINED_EVENT, gain.level, gain.xp, gain.xpToNext);
-
-    if (gain.leveledUp) {
-      this.log(logLevelUp(gain.level));
-      this.player.setLevel(gain.level);
-      // Con colors are relative to the player, so every name has to be redrawn.
-      this.mobs.forEach((mob) => mob.refreshLabel(gain.level));
-      this.publishTarget();
-      this.game.events.emit(LEVEL_UP_EVENT, gain.level);
-      this.persistCharacter();
-    }
-  }
-
-  private grantLoot(lootTableId?: string): void {
-    if (!lootTableId) return;
-    const { drops, copper } = rollLootTable(lootTableId);
-
-    let took = false;
-    drops.forEach((drop) => {
-      const name = describeItemName(drop.itemId);
-      // A full pack leaves the drop on the corpse rather than silently eating
-      // it: the log line is the only way the player would ever know.
-      if (!this.character.tryAddItem(drop.itemId, drop.quantity)) {
-        this.log(logNotice(`Your pack is too full to carry ${name}.`));
-        return;
-      }
-      this.log(logLoot(name, drop.quantity));
-      took = true;
-    });
-    if (took) {
-      this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    }
-    if (copper > 0) {
-      this.character.addCurrency(copper);
-      this.log(logCoin(copper));
-      this.showFloatingText(
-        this.player.x,
-        this.player.y - 40,
-        `+${formatCurrency(copper)}`,
-        THEME.color.levelUp,
-      );
-      this.game.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
-    }
-  }
-
-  // Abilities. The scene owns the decision because it is the only thing that
-  // knows about targets and range; the HUD just asks.
-  private handleAbilityRequested(abilityId: AbilityId): void {
-    if (!this.player.isAlive()) return;
-    const ability = abilityById(abilityId);
-    if (ability.classId !== this.character.state.classId) return;
-
-    const check = canUseAbility(ability, {
-      mana: this.player.mana,
-      elapsedMs: this.time.now - (this.lastAbilityAt.get(abilityId) ?? -Infinity),
-      hasTarget: this.target !== null && this.target.isAlive(),
-      targetDistance: this.target ? distance(this.player, this.target) : Infinity,
-    });
-    if (!check.ok) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
-      return;
-    }
-
-    if (!this.player.spendMana(ability.manaCost)) return;
-    this.lastAbilityAt.set(abilityId, this.time.now);
-    this.stopGathering();
-    this.player.markInCombat();
-    this.publishAbilityState();
-
-    // A spell that fizzles still costs the mana and the cooldown; that is what
-    // makes Destruction worth levelling.
-    const skillLevel = ability.skill ? this.character.skillLevelOf(ability.skill) : 0;
-    this.log(logAbilityUsed(ability.name));
-    if (ability.skill && rollSpellFailure(ability, skillLevel)) {
-      this.showFloatingText(this.player.x, this.player.y, 'Fizzle!', THEME.color.dim);
-      this.log(logSpellFailed(ability.name));
-      this.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
-      return;
-    }
-
-    this.applyAbilityEffect(ability, skillLevel);
-    if (ability.skill) {
-      this.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
-    }
-  }
-
-  private applyAbilityEffect(ability: AbilityDefinition, skillLevel: number): void {
-    switch (ability.effect.kind) {
-      case 'damage': {
-        if (!this.target?.isAlive()) return;
-        const damage = resolveAbilityDamage(ability, this.player.attackPower, skillLevel);
-        const target = this.target;
-        this.castBolt(target, ability);
-        this.showFloatingText(target.x, target.y, `-${damage}`, THEME.color.levelUp);
-        this.log(logDamageDealt(target.name, damage));
-        target.takeDamage(damage);
-        target.engage();
-        this.publishTarget();
-        if (!target.isAlive()) {
-          this.resolveKill(target);
-        }
-        return;
-      }
-      case 'absorb': {
-        const shield = startManaShield(ability);
-        if (shield) this.player.applyManaShield(shield);
-        this.showFloatingText(this.player.x, this.player.y, ability.name, THEME.color.skillUp);
-        return;
-      }
-      case 'haste': {
-        const haste = startHaste(ability);
-        if (haste) this.player.applyHaste(haste);
-        this.showFloatingText(this.player.x, this.player.y, ability.name, THEME.color.levelUp);
-        return;
-      }
-    }
-  }
-
-  // A bolt thrown from the caster to the target. Purely cosmetic, but a ranged
-  // nuke that produced only a number over the mob read as nothing happening.
-  private castBolt(target: Mob, ability: AbilityDefinition): void {
-    if (ability.range <= 0) return;
-    const bolt = this.add.circle(this.player.x, this.player.y, 8, 0xff7043, 1);
-    bolt.setStrokeStyle(2, 0xffd54f, 1);
-    this.tweens.add({
-      targets: bolt,
-      x: target.x,
-      y: target.y,
-      duration: 180,
-      onComplete: () => bolt.destroy(),
-    });
-  }
-
-  // The bar redraws off this; emitted only when a button's rendered state moves.
-  private publishAbilityState(): void {
-    const states = abilitiesFor(this.character.state.classId).map((ability) => {
-      const elapsedMs = this.time.now - (this.lastAbilityAt.get(ability.id) ?? -Infinity);
-      const cooldownRemaining = Phaser.Math.Clamp(
-        (ability.cooldownMs - elapsedMs) / ability.cooldownMs,
-        0,
-        1,
-      );
-      return {
-        abilityId: ability.id,
-        cooldownRemaining,
-        usable: cooldownRemaining === 0 && this.player.mana >= ability.manaCost,
-      };
-    });
-
-    const signature = states
-      .map((s) => `${s.abilityId}:${s.cooldownRemaining.toFixed(2)}:${s.usable}`)
-      .join('|');
-    if (signature === this.lastAbilitySignature) return;
-    this.lastAbilitySignature = signature;
-    this.game.events.emit(ABILITY_STATE_CHANGED_EVENT, states);
-  }
-
-  private publishPlayerMana(): void {
-    if (this.player.mana === this.lastReportedMana) return;
-    this.lastReportedMana = this.player.mana;
-    this.game.events.emit(PLAYER_MANA_CHANGED_EVENT, this.player.mana, this.player.maxMana);
-  }
-
-  private handleEquipRequested(itemId: string): void {
-    const check = this.character.equip(itemId);
-    if (!check.ok) {
-      this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);
-      return;
-    }
-    this.applyGearChange();
-  }
-
-  private handleUnequipRequested(slot: GearSlotId): void {
-    this.character.unequip(slot);
-    this.applyGearChange();
-  }
-
-  // Gear moves max HP, so the HUD needs the new current HP alongside the gear.
-  private applyGearChange(): void {
-    this.player.setGear(this.character.state.gear);
-    this.game.events.emit(GEAR_CHANGED_EVENT, this.character.state.gear);
-    this.game.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.game.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
-  }
-
-  private persistCharacter(): void {
-    this.character.recordLocation(this.zone.id, this.player);
-    saveService.save(this.character.state);
   }
 
   private resetCharacter(): void {
@@ -1516,26 +414,113 @@ export class ZoneScene extends Phaser.Scene {
     this.scene.start('CharacterCreate');
   }
 
-  private log(entry: CombatLogEntry): void {
-    this.game.events.emit(COMBAT_LOG_EVENT, entry);
+  // ---------------------------------------------------------------------------
+  // Smoke-check surface. `scripts/smoke.mjs` still reaches into the scene for
+  // live state; PR 9 of the port retargets it at `window.world` and these go.
+  // ---------------------------------------------------------------------------
+
+  get player(): Player {
+    return this.world.player;
+  }
+  /** The figure, as opposed to the simulation: the walk cycle lives out here. */
+  get figure(): PlayerSprite {
+    return this.playerSprite;
+  }
+  get mobs(): Mob[] {
+    return this.world.mobs;
+  }
+  get nodes(): ResourceNode[] {
+    return this.world.nodes;
+  }
+  get npcs(): WorldNpc[] {
+    return this.world.npcs;
+  }
+  get signposts(): WorldSignpost[] {
+    return this.world.signposts;
+  }
+  get campfire(): Campfire | null {
+    return this.world.campfire;
+  }
+  get character(): CharacterController {
+    return this.world.character;
+  }
+  get spawnPoint(): Point {
+    return this.world.spawnPoint;
+  }
+  get worldWidth(): number {
+    return this.world.worldWidth;
+  }
+  get worldHeight(): number {
+    return this.world.worldHeight;
+  }
+  get gatherState(): GatherState | null {
+    return this.world.gatherState;
+  }
+  get afkActive(): boolean {
+    return this.world.afkActive;
+  }
+  get lastAbilityAt(): Map<AbilityId, number> {
+    return this.world.lastAbilityAt;
+  }
+  get target(): Mob | null {
+    return this.world.target;
+  }
+  set target(mob: Mob | null) {
+    this.world.target = mob;
+  }
+  get shopNpc(): WorldNpc | null {
+    return this.world.shopNpc;
+  }
+  set shopNpc(npc: WorldNpc | null) {
+    this.world.shopNpc = npc;
   }
 
-  private showFloatingText(x: number, y: number, message: string, color: string): void {
-    const text = this.add
-      // world-space, so this scales with the camera rather than the ui scale
-      .text(x, y - 20, message, {
-        fontSize: '20px',
-        color,
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-
-    this.tweens.add({
-      targets: text,
-      y: y - 50,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => text.destroy(),
-    });
+  setTarget(mob: Mob): void {
+    this.world.setTarget(mob);
+  }
+  clearTarget(): void {
+    this.world.clearTarget();
+  }
+  closeShop(): void {
+    this.world.closeShop();
+  }
+  startGathering(node: ResourceNode): void {
+    this.world.startGathering(node);
+  }
+  stopGathering(): void {
+    this.world.stopGathering();
+  }
+  updateShopRange(): void {
+    this.world.updateShopRange();
+  }
+  approachShop(npc: WorldNpc): void {
+    this.world.approachShop(npc);
+  }
+  resolveKill(mob: Mob): void {
+    this.world.resolveKill(mob);
+  }
+  creditKill(enemyId: EnemyId, count = 1): AchievementUnlock[] {
+    return this.world.creditKill(enemyId, count);
+  }
+  handleBuyRequested(itemId: string): void {
+    this.world.handleBuyRequested(itemId);
+  }
+  handleSellRequested(itemId: string): void {
+    this.world.handleSellRequested(itemId);
+  }
+  handleEquipRequested(itemId: string): void {
+    this.world.handleEquipRequested(itemId);
+  }
+  handleEatRequested(itemId: string): void {
+    this.world.handleEatRequested(itemId);
+  }
+  handleCookRequested(itemId?: string): void {
+    this.world.handleCookRequested(itemId);
+  }
+  handleLightFireRequested(): void {
+    this.world.handleLightFireRequested();
+  }
+  handleAbilityRequested(abilityId: AbilityId): void {
+    this.world.handleAbilityRequested(abilityId);
   }
 }

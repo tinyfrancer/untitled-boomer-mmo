@@ -1,35 +1,31 @@
-import Phaser from 'phaser';
 import type { Rect } from '../systems/CollisionSystem';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 
-// How much of a solid node's sprite is trunk. Only the trunk blocks movement —
+// How much of a solid node's body is trunk. Only the trunk blocks movement —
 // walking "behind" a tree means walking through its canopy, which is the usual
 // top-down convention.
 const TRUNK_FRACTION = 0.3;
 
 /**
  * A gatherable thing in the world: a tree, a fishing spot. Deliberately much
- * thinner than Mob — no AI, no health bar, no combat. It owns only how many
- * gathers are left in it and when it comes back.
+ * thinner than Mob — no AI, no health, no combat. It owns only how many gathers
+ * are left in it and when it comes back.
  */
-export class ResourceNode extends Phaser.GameObjects.Sprite {
+export class ResourceNode {
   readonly definition: ResourceNodeDefinition;
+  readonly x: number;
+  readonly y: number;
+  readonly name: string;
   private chargesLeft: number;
   private depleted = false;
+  private respawnInMs = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, definition: ResourceNodeDefinition) {
-    super(scene, x, y, definition.textureKey);
-    scene.add.existing(this);
-
+  constructor(x: number, y: number, definition: ResourceNodeDefinition) {
+    this.x = x;
+    this.y = y;
     this.definition = definition;
     this.name = definition.name;
     this.chargesLeft = definition.charges ?? Number.POSITIVE_INFINITY;
-
-    // A fishing spot is a marking on the water, not an object: nothing to walk
-    // into, and drawn under the player rather than over their feet.
-    if (!definition.solid) {
-      this.setDepth(-1);
-    }
   }
 
   isAvailable(): boolean {
@@ -37,18 +33,19 @@ export class ResourceNode extends Phaser.GameObjects.Sprite {
   }
 
   /**
-   * What actually stops the player: the trunk, anchored to the sprite's foot
+   * What actually stops the player: the trunk, anchored to the body's foot
    * rather than centred on its origin. A tree stands a tile and a half tall, so
    * a blocker centred on the origin would sit ~30px too high and put anything
    * standing at the tree's feet inside it.
    */
   blockerRect(): Rect {
-    const trunkWidth = this.width * TRUNK_FRACTION;
-    const bottom = this.y + this.height / 2;
+    const { width, height } = this.definition.body;
+    const trunkWidth = width * TRUNK_FRACTION;
+    const bottom = this.y + height / 2;
     return {
       left: this.x - trunkWidth / 2,
       right: this.x + trunkWidth / 2,
-      top: bottom - this.height * TRUNK_FRACTION,
+      top: bottom - height * TRUNK_FRACTION,
       bottom,
     };
   }
@@ -66,22 +63,22 @@ export class ResourceNode extends Phaser.GameObjects.Sprite {
     return true;
   }
 
+  /** Returns whether the node came back on this frame. */
+  update(deltaMs: number): boolean {
+    if (!this.depleted) return false;
+    this.respawnInMs -= deltaMs;
+    if (this.respawnInMs > 0) return false;
+    this.respawn();
+    return true;
+  }
+
   private deplete(): void {
     this.depleted = true;
-    if (this.definition.depletedTextureKey) {
-      this.setTexture(this.definition.depletedTextureKey);
-    } else {
-      this.setVisible(false);
-    }
-    // A stump is still solid, and keeps the tree's footprint, so the blocker
-    // the zone took at spawn stays correct through depletion and respawn.
-    this.scene.time.delayedCall(this.definition.respawnDelayMs, () => this.respawn());
+    this.respawnInMs = this.definition.respawnDelayMs;
   }
 
   private respawn(): void {
     this.depleted = false;
     this.chargesLeft = this.definition.charges ?? Number.POSITIVE_INFINITY;
-    this.setTexture(this.definition.textureKey);
-    this.setVisible(true);
   }
 }
