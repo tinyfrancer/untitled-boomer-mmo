@@ -94,12 +94,14 @@ takes seconds instead of three minutes a guess. Delete the copy when you're done
 is a static site. Character data lives in the browser's `localStorage`.
 
 **The core seam: Phaser-free vs. Phaser-coupled code.** `systems/`, `data/`, `persistence/`,
-and `types/` contain plain TypeScript with no Phaser imports. This is deliberate — it's what
-makes them unit-testable with Vitest (no game engine to mock) and is the same boundary that
+`types/` and `config/` contain plain TypeScript with no Phaser imports. This is deliberate — it's
+what makes them unit-testable with Vitest (no game engine to mock) and is the same boundary that
 would let a real backend swap in later without touching game logic. When adding game logic,
 default to putting the math/rules in one of these Phaser-free modules and call it from a scene
 or entity, rather than inlining logic into a Scene or a Phaser.GameObjects subclass. Tests in
 `tests/` mirror this split (`tests/systems/`, `tests/persistence/`) and test only these modules.
+The rule is enforced, not just documented: `tests/architecture/phaserFreeSeam.test.ts` reads every
+file under those five directories and fails on an `import` of `phaser`.
 
 **Scene flow** (registered in `src/main.ts`, one `Phaser.Game` instance):
 `Boot` → `Preload` (generates placeholder textures at runtime, no image assets; loads any
