@@ -4,7 +4,7 @@ import type { KillCounts } from '../systems/AchievementSystem';
 import type { QuestLog } from '../systems/QuestSystem';
 import type { ClassId, GearSlotId, TitleId, ZoneId } from '../types/ids';
 
-export const CHARACTER_STATE_VERSION = 10;
+export const CHARACTER_STATE_VERSION = 11;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -22,7 +22,10 @@ export interface CharacterState {
   currency: number;
   skills: Skills;
   zoneId: ZoneId;
-  position: { x: number; y: number };
+  // Where in `zoneId` the character was left, honoured on load. Null means "no
+  // particular spot" — a new character, or one who died and owes a respawn —
+  // and the zone puts them at its default spawn instead.
+  position: { x: number; y: number } | null;
   // The camp the character was left at, if they were left at one. Present only
   // between an AFK toggle-on and the next load, which is what makes offline
   // progress something the player opted into rather than a background trickle.
@@ -65,7 +68,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     currency: STARTING_COPPER,
     skills: createInitialSkills(),
     zoneId: 'town',
-    position: { x: 0, y: 0 },
+    position: null,
     afk: null,
     quests: {},
     kills: {},

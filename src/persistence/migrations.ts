@@ -7,6 +7,12 @@ import type { ClassId } from '../types/ids';
 // Each step upgrades a save from exactly `fromVersion` to `fromVersion + 1`.
 // Saves older than the earliest step here can't be migrated and are dropped —
 // versions 1–3 predate any live character worth preserving.
+//
+// A step is owed when the *shape or meaning* of the save changes, which is not
+// the same thing as the game changing around it. The 3D port in
+// `docs/3d_port_plan.md` needs no step of its own: the simulation keeps the
+// same 2D (x = east, y = south) coordinates and the renderer maps them, so
+// every field here means exactly what it meant before.
 type MigrationStep = (state: Record<string, unknown>) => Record<string, unknown>;
 
 const MIGRATIONS: Record<number, MigrationStep> = {
@@ -44,6 +50,13 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // and cannot be reconstructed, so an existing character starts the slayer
   // chains from zero rather than being credited a guess.
   9: (state) => ({ ...state, kills: {}, activeTitleId: null }),
+  // v10 → v11: `position` starts being read on load instead of only written.
+  // Every stored value was written by a zone *change*, which tagged the spot
+  // being left with the id of the zone being entered, so honouring one as-is
+  // would drop the character wherever the previous map's geometry happens to
+  // land — off the map, or inside the pond. Null sends them to the zone's
+  // default spawn, which is where every load put them until now anyway.
+  10: (state) => ({ ...state, position: null }),
 };
 
 /**

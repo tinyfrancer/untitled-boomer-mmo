@@ -7,7 +7,9 @@ import {
   edgeFraction,
   findExit,
   oppositeEdge,
+  resumePoint,
   signpostPoint,
+  zoneWorldSize,
 } from '../../src/systems/ZoneSystem';
 import { TILE_SIZE } from '../../src/config/constants';
 import { BLOCKING_TILES } from '../../src/data/tiles';
@@ -88,6 +90,52 @@ describe('arrivalPoint', () => {
     const back: ZoneExit[] = [{ edge: 'north', to: 'town' }];
     const arrive = arrivalPoint('north', 0.5, WORLD_W, WORLD_H, inset);
     expect(findExit(back, arrive.x, arrive.y, WORLD_W, WORLD_H, margin)).toBeNull();
+  });
+});
+
+describe('zoneWorldSize', () => {
+  it('measures a zone in pixels, not tiles', () => {
+    const town = ZONES.town;
+    expect(zoneWorldSize(town)).toEqual({
+      width: town.map[0].length * TILE_SIZE,
+      height: town.map.length * TILE_SIZE,
+    });
+  });
+
+  it('agrees with what the exit math is handed for every zone', () => {
+    Object.values(ZONES).forEach((zone) => {
+      const { width, height } = zoneWorldSize(zone);
+      expect(width).toBeGreaterThan(0);
+      expect(height).toBeGreaterThan(0);
+      // Rectangular maps only — arrivalPoint's fraction assumes one width.
+      zone.map.forEach((row) => expect(row.length * TILE_SIZE).toBe(width));
+    });
+  });
+});
+
+describe('resumePoint', () => {
+  const inset = TILE_SIZE * 1.5;
+
+  it('puts a character back exactly where the save left them', () => {
+    expect(resumePoint({ x: 700, y: 500 }, WORLD_W, WORLD_H, inset)).toEqual({ x: 700, y: 500 });
+  });
+
+  it('holds a spot from a since-shrunk map clear of the edge-walk band', () => {
+    const resumed = resumePoint({ x: 3000, y: -40 }, WORLD_W, WORLD_H, inset);
+    expect(resumed).toEqual({ x: WORLD_W - inset, y: inset });
+    // Which is the point: landing in the band leaves for the next zone before
+    // the player can move.
+    const exits: ZoneExit[] = [
+      { edge: 'east', to: 'beach' },
+      { edge: 'north', to: 'beach' },
+    ];
+    expect(findExit(exits, resumed.x, resumed.y, WORLD_W, WORLD_H, TILE_SIZE * 0.6)).toBeNull();
+  });
+
+  it('survives a world smaller than two insets rather than inverting', () => {
+    const tiny = TILE_SIZE;
+    const resumed = resumePoint({ x: 0, y: 0 }, tiny, tiny, inset);
+    expect(resumed).toEqual({ x: inset, y: inset });
   });
 });
 

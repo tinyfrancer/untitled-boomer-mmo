@@ -134,6 +134,28 @@ describe('migrateCharacterState', () => {
     expect(migrated?.activeTitleId).toBeNull();
   });
 
+  // Every stored position was written by a zone change, which tagged the spot
+  // being left with the id of the zone being entered — so the one value in a
+  // v10 save is the one value that must not be honoured now that positions are
+  // read back.
+  it('drops the position a v10 save carried, sending it to the default spawn', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 10,
+      currency: 0,
+      zoneId: 'beach',
+      afk: null,
+      quests: {},
+      kills: {},
+      activeTitleId: null,
+      position: { x: 800, y: 608 },
+    });
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.position).toBeNull();
+    // The zone itself is still honoured; it was never the unreliable half.
+    expect(migrated?.zoneId).toBe('beach');
+  });
+
   it('carries the combat skills a v6 save never had all the way to current', () => {
     const migrated = migrateCharacterState({ ...v4Save(), version: 6, currency: 0 });
     expect(migrated?.skills['one-handed']).toEqual({ level: 1, xp: 0 });

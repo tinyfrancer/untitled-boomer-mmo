@@ -1557,6 +1557,40 @@ try {
   );
   await page.screenshot({ path: `${OUT}/12b-tabbar-375.png` });
 
+  // --- Resuming: a save comes back where it was left, not at the middle of
+  // the map. The position was written and never read until now, so this is the
+  // only check that the load path honours it. Reloads the page, so it sits
+  // next to the other reload at the end. ---
+  // Parked on a mob's spawn point: known walkable, known well off centre, and
+  // the player doesn't collide with mobs.
+  const parked = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    const spot = { x: Math.round(z.mobs[0].spawnX), y: Math.round(z.mobs[0].spawnY) };
+    z.player.setPosition(spot.x, spot.y);
+    z.player.setVelocity(0, 0);
+    z.player.stopMoving();
+    return {
+      spot,
+      zoneId: z.zone.id,
+      fromCentre: Math.round(Math.hypot(spot.x - z.spawnPoint.x, spot.y - z.spawnPoint.y)),
+    };
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.game?.scene?.getScene('Zone')?.scene.isActive(), null, {
+    timeout: 60000,
+  });
+  const resumedAt = await page.evaluate(() => {
+    const z = window.game.scene.getScene('Zone');
+    return { x: Math.round(z.player.x), y: Math.round(z.player.y), zoneId: z.zone.id };
+  });
+  check(
+    'a save resumes where it was left, not at the middle of the map',
+    resumedAt.zoneId === parked.zoneId &&
+      parked.fromCentre > 32 &&
+      Math.hypot(resumedAt.x - parked.spot.x, resumedAt.y - parked.spot.y) <= 4,
+    `left at ${parked.spot.x},${parked.spot.y} (${parked.fromCentre}px off centre), back at ${resumedAt.x},${resumedAt.y}`,
+  );
+
   // --- Offline camping: a session parked in the save pays out on the next
   // load. Done last, because it reloads the page. Travelling an hour back in
   // the save is the only way to reach this path at all — hence the unit tests
