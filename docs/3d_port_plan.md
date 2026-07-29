@@ -1,6 +1,13 @@
 # Port plan: 2D Phaser → 3D Three.js
 
-**Status:** planned, not started. Written 2026-07-28 against `03a1c45`.
+**Status:** in progress. Written 2026-07-28 against `03a1c45`.
+
+- **Phase 0 (PRs 1-3) merged** 2026-07-29.
+- **Phase 1 PRs 4-6 merged** 2026-07-29, as one stack. Arcade physics is gone: `main.ts` has no
+  `physics` config, and `systems/CollisionSystem.ts` is the only thing deciding what may move
+  where.
+- **Next: PR 7.** Phase 1's remaining three PRs are each a session on their own — see the sizing
+  note below.
 
 ## Context
 
@@ -95,6 +102,40 @@ _Verify:_ migration test from a v10 save.
 
 The backbone. Nothing visual changes; the game becomes testable.
 
+> **Sizing, learned by doing it.** PRs 4-6 fit comfortably in one session together. **PRs 7, 8 and
+> 9 do not — take one per session.** Each is larger than the three before it put together: 7
+> rehomes ~900 lines of `ZoneScene` and has a prerequisite the original plan understated (below),
+> 8 replaces a lifecycle Phaser was providing for free, and 9 rewrites a 1,609-line script that
+> blocks merges. A half-finished one of these leaves nothing mergeable, which is the failure mode
+> to avoid on a stack that publishes on merge.
+
+### PRs 4-6 — done, merged 2026-07-29
+
+PRs #42, #43, #44. What landed that this document did not predict, and that PR 7 onwards inherits:
+
+- **Arcade is gone entirely, one PR early.** PR 6's line item was mobs; taking them off left
+  `ResourceNode`'s static body with nothing to collide against, so it came off too and the
+  `physics` config left `main.ts`. `scene.physics` is no longer configured — don't reach for it.
+- **Solid nodes block as rectangles, not the circles specified in PR 5.** Same bottom-anchored
+  trunk the plan was protecting, taken from the same numbers the old arcade body used, but exact.
+  AABB-vs-AABB is also what axis-separated resolution wants.
+- **The four-corner tile test was replaced by a cell-range scan.** Corners are exact only for a
+  body that fits in a tile, which held while only the player used it. A rat's box is 80px against a
+  64px tile — wide enough to straddle a one-tile blocking column with every corner on dry land. For
+  a body that does fit, the scan is the same four cells.
+- **"A body already inside a blocker may always move" is a required rule, and was missing.**
+  Revert-based movement is not arcade separation: it prevents entering but never pushes out, so
+  without this anything teleported into a blocker freezes there permanently. Smoke stages gathering
+  at `player.setPosition(tree.x, tree.y + 40)`, which is inside the trunk.
+- **Mobs are bounds-clamped now and never were.** `setCollideWorldBounds` was only ever on the
+  player, so a long chase could walk a mob off the map.
+- **Fixed arrival bands are gone from the AI.** Wander stopped at `distance < 2` and returning at
+  `< 4` — the same slow-frame bug `arriveRadius` exists to fix, one level down. All three AI states
+  steer through `stepToward` now.
+
+<details>
+<summary>Original PR 4-6 specifications, kept for the record</summary>
+
 **PR 4 — Phaser-free `InputState`.**
 WASD currently lives inside `Player.update()` via `keyboard.addKey`; ESC and F9 are on the scene;
 `isKeyboardMoving()` gates AFK. This is a hidden dependency of transform ownership — the same code
@@ -153,9 +194,23 @@ replace the three `physics.moveTo` calls (`Mob.ts:144, 166, 177`) with the exist
 _Verify:_ smoke's leash, aggro and chase checks — these are behavioural tuning, so watch them
 closely. Throttled run.
 
-**PR 7 — Extract `ZoneWorld`.**
+</details>
+
+### PR 7 — Extract `ZoneWorld`
+
+**One session. Do not bundle PR 8 with it.**
+
 A Phaser-free class owning entities, spawning and the update loop. `ZoneScene` becomes a thin view.
 Expose `window.world`.
+
+> **Prerequisite this document understated.** `ZoneWorld` cannot be Phaser-free while it owns
+> entities that are still `Phaser.GameObjects.Sprite` subclasses — importing them pulls the engine
+> straight back in, and `tests/architecture/phaserFreeSeam.test.ts` will say so. So **splitting
+> `Player` and `Mob` into a Phaser-free simulation object plus a sprite that follows it is part of
+> PR 7, not a later tidy-up.** That is most of its weight, and it is what makes the headless vitest
+> harness below possible at all. PRs 5 and 6 deliberately did not do this: transform ownership had
+> to land first, and doing both at once would have put the arcade removal and the entity split in
+> one un-bisectable change.
 
 The part that makes this more than a rename: **`ZoneWorld` must emit a `WorldEvent[]` per tick** —
 `hit`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `zone-exit`. Today `castBolt` and
@@ -167,7 +222,10 @@ way to know a bolt was cast.
 `scene.restart` too.
 _Verify:_ a headless vitest harness ticks a full combat → death → respawn cycle. Smoke unchanged.
 
-**PR 8 — `world.loadZone()` replaces `scene.restart`; `GameContext` replaces the registry.**
+### PR 8 — `world.loadZone()` replaces `scene.restart`; `GameContext` replaces the registry
+
+**One session.** Depends on PR 7 having landed the entity split.
+
 `scene.restart` is currently doing teardown-and-rebuild for free, and "UIScene survives it" is a
 documented architectural fact. This needs to be explicit **before** the Three.js view exists, because
 Three.js leaks GPU memory without `.dispose()` on geometries/materials/textures — and a zone-walk
@@ -184,7 +242,11 @@ Also fold in the autosave timer (`ZoneScene.ts:344`) and the `pagehide`/`beforeu
 become an accumulator in the world tick. Small, but unnamed means a save-loss bug.
 _Verify:_ 10 town→beach round trips with no leaked listeners; offline AFK report still displays.
 
-**PR 9 — Migrate the smoke check while everything is still green.**
+### PR 9 — Migrate the smoke check while everything is still green
+
+**One session, and the one least worth rushing** — it gates merges, so a bad day here blocks
+everything behind it.
+
 `scripts/smoke.mjs` is 1,609 lines and gates merges. Do **not** rewrite it wholesale at peak
 uncertainty later; migrate it now, when every check passes:
 
@@ -198,6 +260,10 @@ uncertainty later; migrate it now, when every check passes:
    headless-Chromium throttling is a real CI-only risk. Add `?loop=manual` with
    `window.view.step(ms)` so smoke drives ticks deterministically. This makes smoke faster and less
    flaky than today.
+
+Two couplings PRs 5-6 already had to break, so the counts above are slightly lower now:
+`physics.world.bounds` became `worldWidth`/`worldHeight`, and the mob dump's `body.velocity` /
+`body.enable` became `vx`/`vy`. Both were reads of things that stopped existing, not migrations.
 
 Then **move whole categories out of smoke into vitest**, now that the world is headless: leashing,
 aggro engage, death reset, gather-refusal-on-full-pack, AFK anchor.
