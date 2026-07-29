@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE } from '../config/constants';
+import { EXIT_MARGIN, TILE_SIZE } from '../config/constants';
 import { BLOCKING_TILES } from '../data/tiles';
 import { ZONES, type ZoneDefinition, type ZoneEdge, type ZoneExit } from '../data/zones';
 import { ENEMIES } from '../data/enemies';
@@ -113,6 +113,7 @@ import {
 import { CharacterController, type CombatXpGain } from '../systems/CharacterController';
 import { arriveRadius, distance, withinRadius, type Point } from '../systems/MovementSystem';
 import { InputState, bindKeyboard } from '../systems/InputState';
+import type { CollisionWorld } from '../systems/CollisionSystem';
 import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
 import {
   SIGNPOST_INTERACT_RADIUS,
@@ -140,9 +141,6 @@ const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
 const AUTOSAVE_INTERVAL_MS = 30000;
-// Wider than half the player's body, since world-bounds collision stops the
-// sprite's center that far from the edge.
-const EXIT_MARGIN = TILE_SIZE * 0.6;
 // Far enough inside the new zone that the player doesn't stand on the return
 // exit and bounce straight back.
 const ARRIVAL_INSET = TILE_SIZE * 1.5;
@@ -214,6 +212,7 @@ export class ZoneScene extends Phaser.Scene {
   private afkAnchor = new Phaser.Math.Vector2();
   private afkRecovering = false;
   private changingZone = false;
+  private collisionWorld!: CollisionWorld;
   private readonly inputState = new InputState();
   private unbindKeyboard: (() => void) | null = null;
   private handleWindowUnload = (): void => this.persistCharacter();
@@ -323,15 +322,21 @@ export class ZoneScene extends Phaser.Scene {
       return new ZoneSignpost(this, point.x, point.y, exit, ZONES[exit.to].name);
     });
 
-    // Nothing walks into the pond.
+    // Nothing walks into the pond. Mobs are still separated by arcade; the
+    // player integrates itself against this description of the same world.
     groundLayer.setCollision(BLOCKING_TILES);
-    this.physics.add.collider(this.player, groundLayer);
     this.mobs.forEach((mob) => this.physics.add.collider(mob, groundLayer));
     const solidNodes = this.nodes.filter((node) => node.definition.solid);
     solidNodes.forEach((node) => {
-      this.physics.add.collider(this.player, node);
       this.mobs.forEach((mob) => this.physics.add.collider(mob, node));
     });
+    this.collisionWorld = {
+      grid: this.zone.map,
+      blockingTiles: new Set(BLOCKING_TILES),
+      worldWidth: this.worldWidth,
+      worldHeight: this.worldHeight,
+      blockers: solidNodes.map((node) => node.blockerRect()),
+    };
 
     this.selectionRing = this.add.graphics();
     this.selectionRing.setVisible(false);
@@ -400,7 +405,7 @@ export class ZoneScene extends Phaser.Scene {
     this.applyInputActions();
     this.updateAfk();
     this.updateApproach(delta);
-    this.player.update(delta);
+    this.player.update(delta, this.collisionWorld);
     const healed = this.player.takeHealPulse();
     if (healed > 0) {
       this.showFloatingText(this.player.x, this.player.y, `+${healed}`, THEME.color.heal);

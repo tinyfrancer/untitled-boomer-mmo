@@ -6,6 +6,8 @@ import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { stepToward, type Point } from '../systems/MovementSystem';
+import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
+import { PLAYER_HALF_EXTENT } from '../config/constants';
 import type { InputState } from '../systems/InputState';
 import { ensurePlayerTexture, ensureWalkAnimation } from '../scenes/generateTextures';
 import { HealthBar } from './HealthBar';
@@ -18,8 +20,17 @@ const NO_GEAR: Record<GearSlotId, string | null> = {
   weapon: null,
 };
 
-export class Player extends Phaser.Physics.Arcade.Sprite {
+/**
+ * The player figure. It owns its own position and velocity and integrates them
+ * against CollisionSystem rather than riding an arcade body: transform
+ * ownership and integration ownership are the same thing, since arcade writes
+ * the body's position every physics step whether or not anything asked it to.
+ * Phaser is left holding only the drawing.
+ */
+export class Player extends Phaser.GameObjects.Sprite {
   readonly classId: ClassId;
+  vx = 0;
+  vy = 0;
   level: number;
   maxHp: number;
   hp: number;
@@ -63,8 +74,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   ) {
     super(scene, x, y, ensurePlayerTexture(scene, computeAppearance(gear)));
     scene.add.existing(this);
-    scene.physics.add.existing(this);
-    this.setCollideWorldBounds(true);
 
     this.name = name;
     this.classId = classId;
@@ -264,7 +273,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  update(deltaMs: number): void {
+  /** The box the world collides against, centred where the figure stands. */
+  bounds(): Aabb {
+    return {
+      x: this.x,
+      y: this.y,
+      halfWidth: PLAYER_HALF_EXTENT,
+      halfHeight: PLAYER_HALF_EXTENT,
+    };
+  }
+
+  /** Kept for the respawn and the debug teleport, which both stop the player dead. */
+  setVelocity(vx: number, vy: number): void {
+    this.vx = vx;
+    this.vy = vy;
+  }
+
+  update(deltaMs: number, world: CollisionWorld): void {
     this.msSinceCombat += deltaMs;
     const beforeHealing = this.hpFloat;
     this.hpFloat += regenTick(this.hpFloat, this.maxHp, this.msSinceCombat, deltaMs);
@@ -304,7 +329,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       vy = step.vy;
     }
 
-    this.setVelocity(vx, vy);
+    this.vx = vx;
+    this.vy = vy;
+    // Deliberately integrating the raw velocity over this frame's delta, with
+    // no clamp to the distance left. Owning the integrator makes that clamp
+    // correct — the note it contradicts in MovementSystem was about Phaser's
+    // timestep — but changing the integrator and the movement math in one step
+    // makes a smoke failure un-bisectable. It is a separate change.
+    const moved = moveWithCollision(
+      this.bounds(),
+      (vx * deltaMs) / 1000,
+      (vy * deltaMs) / 1000,
+      world,
+    );
+    this.setPosition(moved.x, moved.y);
+
     this.updateWalkAnimation(vx !== 0 || vy !== 0);
     this.healthBar.update(this.x, this.y, this.hp, this.maxHp);
   }
