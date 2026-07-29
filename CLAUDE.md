@@ -58,12 +58,15 @@ Merging to `main` triggers a Vercel production deploy, so a merge publishes.
 The unit suite only covers Phaser-free modules, so it can't tell you whether the game actually
 runs. `scripts/smoke.mjs` (Playwright + headless Chromium) drives the real dev server and asserts
 on live scene state — scenes booting, mobs engaging and leashing, player death resetting the
-world. Reach for it whenever a change touches a scene, an entity, or the AI, and add a check
-there rather than trying to unit-test Phaser. Screenshots land in gitignored `.smoke/`.
+world. Reach for it whenever a change touches a scene or a sprite; the world and the AI are
+unit-testable now (`tests/world/`), so prefer that and keep smoke for what only a browser can
+see. Screenshots land in gitignored `.smoke/`.
 
-It works because `src/main.ts` puts the `Phaser.Game` instance on `window.game` behind an
-`import.meta.env.DEV` guard (Vite strips it from production builds). That handle is also the way
-to inspect live state from the devtools console: `game.scene.getScene('Zone').mobs`.
+It works because `src/main.ts` puts the `Phaser.Game` instance on `window.game` and `ZoneScene`
+puts the live `ZoneWorld` on `window.world`, both behind an `import.meta.env.DEV` guard (Vite strips
+them from production builds). Those are also the way to inspect live state from the devtools
+console: `world.mobs`, `world.player.hp`. `window.world` is re-set on every zone change, since each
+builds a new world.
 
 Two environment notes that will otherwise waste your time:
 
@@ -94,14 +97,33 @@ takes seconds instead of three minutes a guess. Delete the copy when you're done
 is a static site. Character data lives in the browser's `localStorage`.
 
 **The core seam: Phaser-free vs. Phaser-coupled code.** `systems/`, `data/`, `persistence/`,
-`types/` and `config/` contain plain TypeScript with no Phaser imports. This is deliberate — it's
-what makes them unit-testable with Vitest (no game engine to mock) and is the same boundary that
-would let a real backend swap in later without touching game logic. When adding game logic,
-default to putting the math/rules in one of these Phaser-free modules and call it from a scene
-or entity, rather than inlining logic into a Scene or a Phaser.GameObjects subclass. Tests in
-`tests/` mirror this split (`tests/systems/`, `tests/persistence/`) and test only these modules.
-The rule is enforced, not just documented: `tests/architecture/phaserFreeSeam.test.ts` reads every
-file under those five directories and fails on an `import` of `phaser`.
+`types/`, `config/` and `world/` contain plain TypeScript with no Phaser imports. This is
+deliberate — it's what makes them unit-testable with Vitest (no game engine to mock) and is the
+same boundary that would let a real backend swap in later without touching game logic. When adding
+game logic, default to putting the math/rules in one of these Phaser-free modules and call it from a
+scene, rather than inlining logic into a Scene or a Phaser.GameObjects subclass. Tests in `tests/`
+mirror this split (`tests/systems/`, `tests/world/`, `tests/persistence/`) and test only these
+modules. The rule is enforced, not just documented:
+`tests/architecture/phaserFreeSeam.test.ts` reads every file under those six directories and fails
+on an `import` of `phaser`.
+
+**The simulation is `src/world/`; `src/entities/` only draws it.** `ZoneWorld` owns the player, the
+mobs, the nodes and every rule that moves them — combat both ways, gathering, the shop, abilities,
+the AFK camp, what a corpse is worth — and steps it all from `update(deltaMs)`. `world/Player.ts`,
+`world/Mob.ts`, `world/ResourceNode.ts` and `world/Campfire.ts` are the simulated things; the
+`*Sprite` classes in `entities/` hold a reference to one and catch up to it in `sync()` once a
+frame. New gameplay goes in the world, not the scene. Two consequences worth knowing before you
+add to it:
+
+- **Nothing in `world/` may own a Phaser timer or tween.** Mob wandering, the death fade and the
+  respawn were three `scene.time` calls; they are accumulators counted down against the frame delta
+  now, which is what lets a whole zone run in vitest with nothing rendering it. A view may still
+  tween — `MobSprite` reads `mob.deadForMs` and fades against it — but the clock that decides
+  anything has to be the world's.
+- **Collision bodies are data** (`EnemyDefinition.body`, `ResourceNodeDefinition.body`), not
+  measurements off a sprite, for the same reason `PLAYER_HALF_EXTENT` is: the placeholder textures
+  go away with the 2D renderer and the boxes do not. `npm run smoke` asserts the two still agree,
+  because nothing in the unit suite can see a generated texture.
 
 **Scene flow** (registered in `src/main.ts`, one `Phaser.Game` instance):
 `Boot` → `Preload` (generates placeholder textures at runtime, no image assets; loads any
@@ -110,8 +132,8 @@ existing save and routes straight to `Zone`, else to `CharacterCreate`) → `Cha
 alongside it as a parallel HUD scene.
 
 **Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
-node spawns, exits), all played through the single `ZoneScene` — a zone change is
-`scene.restart({ zoneId })`, and the `UI` scene stays running across it. Each exit spawns a
+node spawns, exits), each built into one `ZoneWorld` and drawn by the single `ZoneScene` — a zone
+change is `scene.restart({ zoneId })`, and the `UI` scene stays running across it. Each exit spawns a
 tappable `ZoneSignpost` (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not a
@@ -150,26 +172,44 @@ called, so `filters?.internal.addMask(...)` no-ops silently and reproduces the o
 `npm run smoke` asserts a clip is installed for the live renderer, because this failure is
 invisible to every other kind of test — a full green suite is what it looked like the first time.
 
-**Scene-to-scene communication** goes through `this.game.events` (a global Phaser event emitter),
-not direct references between scenes — see `src/ui/uiEvents.ts` for the event name constants
-(`target-selected`, `xp-gained`, `level-up`, `equip-item-requested`, etc.). `ZoneScene` owns gameplay
-state and emits events; `UIScene` only listens and renders. Mutations of `CharacterState`
-itself (inventory, gear, xp, skills, location) go through the Phaser-free
-`systems/CharacterController.ts` rather than being inlined in the scene. Add new HUD-facing state changes by
-adding an event constant and emitting/listening to it, not by reaching into the other scene. An
-event carrying more than two or three values should pass one object (see `TargetInfo` in
-`uiEvents.ts`) rather than growing a positional argument list.
+**There are two channels out of the simulation, and they are not interchangeable.**
 
-**Entities** (`src/entities/`): **there is no physics engine.** Every entity is a plain
-`Phaser.GameObjects.Sprite`; `Player` and `Mob` own `{x, y, vx, vy}` and integrate themselves each
-frame against the Phaser-free `systems/CollisionSystem.ts`, which is the only thing that decides
-what may move where. Arcade was carrying four colliders — player and mobs against blocking tiles
-and against tree trunks — and nothing else: player↔mob, mob↔mob and player↔NPC never collided, and
-every combat and interaction check is distance-based. Don't reach for `scene.physics`; it is not
-configured. `Mob` is instantiated directly from an `ENEMIES` definition (no per-enemy
-subclasses) and owns HP, death/respawn timers, and a `wander | chase | returning` AI state
-machine. Combat math itself (damage rolls, range/cooldown checks) is _not_ on these classes —
-it lives in `systems/CombatSystem.ts` and is called from `ZoneScene`, which resolves both
+The **HUD channel** is `this.game.events` (a global Phaser event emitter), not direct references
+between scenes — see `src/ui/uiEvents.ts` for the event name constants (`target-selected`,
+`xp-gained`, `level-up`, `equip-item-requested`, etc.). `ZoneScene` passes it into `ZoneWorld` as
+an `EventBus`, which is why the world can emit to the HUD without importing Phaser; the world also
+subscribes to the HUD's requests itself and drops them in `destroy()`. `UIScene` only listens and
+renders. Every one of these carries state the HUD re-renders from, so the latest one always
+describes the present.
+
+The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: `hit`, `defend`,
+`heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `zone-exit`. These are moments, not
+state — a bolt left the caster's hand, a number floated off a corpse — and a view that misses one
+cannot recover it from anywhere. They deliberately name a `tone` rather than a colour: the view
+decides what "reward" looks like. Anything the 3D renderer will need to know about but cannot read
+off the state belongs here.
+
+Mutations of `CharacterState` itself (inventory, gear, xp, skills, location) go through the
+Phaser-free `systems/CharacterController.ts` rather than being inlined anywhere. Add new HUD-facing
+state changes by adding an event constant and emitting/listening to it, not by reaching into
+another scene. An event carrying more than two or three values should pass one object (see
+`TargetInfo` in `uiEvents.ts`) rather than growing a positional argument list.
+
+**`ZoneWorld` does not load zones, and that is on purpose.** Walking onto an exit emits
+`{kind: 'zone-exit', to, edge, fraction}` and stops the world; `ZoneScene` acts on it with
+`scene.restart`. Building the next world is the host's job because tearing this one down is too —
+a scene restart today, a pile of `.dispose()` calls once Three.js is rendering. Player death away
+from town comes back the same way, as `{kind: 'death', on: 'player', respawnZone: 'town'}`.
+
+**There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate
+themselves each frame against the Phaser-free `systems/CollisionSystem.ts`, which is the only thing
+that decides what may move where. Arcade was carrying four colliders — player and mobs against
+blocking tiles and against tree trunks — and nothing else: player↔mob, mob↔mob and player↔NPC never
+collided, and every combat and interaction check is distance-based. Don't reach for
+`scene.physics`; it is not configured. `Mob` is instantiated directly from an `ENEMIES` definition
+(no per-enemy subclasses) and owns HP, death/respawn timers, and a `wander | chase | returning` AI
+state machine. Combat math itself (damage rolls, range/cooldown checks) is _not_ on these classes —
+it lives in `systems/CombatSystem.ts` and is called from `ZoneWorld`, which resolves both
 directions: `updateCombat()` for the player's swings and `updateEnemyAttacks()` for everything
 hitting back.
 
@@ -229,7 +269,7 @@ still derives: which achievements are unlocked and which titles are earned are c
 and only the player's choice of worn title is stored alongside. Keep that split when adding to it.
 
 Because the count is stored, every path that kills something has to credit it — which is why
-`ZoneScene.resolveKill` exists as the single funnel for the auto-attack and ability paths, and why
+`ZoneWorld.resolveKill` exists as the single funnel for the auto-attack and ability paths, and why
 offline camping widens `OfflineAfkReport` with the creature it was parked on. Add a new reward for
 a kill there, not at a call site. Achievement ids are a template literal over `EnemyId` and
 `SlayerTier` and the rows are generated from `ENEMIES`, so a new enemy gets its whole 25/50/100
@@ -271,7 +311,7 @@ accrues only from a session parked with the toggle, and is capped at **one level
 a per-kill rate alone is not safe, since eight hours in the richest zone out-earned the entire
 level 1-10 curve several times over. Keep that cap if you add a zone or change the XP curve.
 The camp penalty is for XP a character earns unattended, so a quest reward goes through
-`ZoneScene.publishXpGain` rather than `awardXp` — handing a quest in is something the player did.
+`ZoneWorld.publishXpGain` rather than `awardXp` — handing a quest in is something the player did.
 Kills are the exception to the penalty: an offline session credits its full count to the slayer
 chains, since a kill either happened or it didn't. It grinds a single spawn, which is what makes
 one `enemyId` on the report enough to credit them all.

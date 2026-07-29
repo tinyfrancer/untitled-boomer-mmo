@@ -6,7 +6,9 @@
 - **Phase 1 PRs 4-6 merged** 2026-07-29, as one stack. Arcade physics is gone: `main.ts` has no
   `physics` config, and `systems/CollisionSystem.ts` is the only thing deciding what may move
   where.
-- **Next: PR 7.** Phase 1's remaining three PRs are each a session on their own — see the sizing
+- **PR 7 merged** — `ZoneWorld` exists, `src/world/` is in the Phaser-free seam, and `ZoneScene` is
+  a view. See the retrospective under PR 7 below.
+- **Next: PR 8.** Phase 1's remaining two PRs are each a session on their own — see the sizing
   note below.
 
 ## Context
@@ -104,10 +106,11 @@ The backbone. Nothing visual changes; the game becomes testable.
 
 > **Sizing, learned by doing it.** PRs 4-6 fit comfortably in one session together. **PRs 7, 8 and
 > 9 do not — take one per session.** Each is larger than the three before it put together: 7
-> rehomes ~900 lines of `ZoneScene` and has a prerequisite the original plan understated (below),
+> rehomed ~900 lines of `ZoneScene` and had a prerequisite the original plan understated (below),
 > 8 replaces a lifecycle Phaser was providing for free, and 9 rewrites a 1,609-line script that
 > blocks merges. A half-finished one of these leaves nothing mergeable, which is the failure mode
-> to avoid on a stack that publishes on merge.
+> to avoid on a stack that publishes on merge. PR 7 confirmed the sizing: one session, and it used
+> most of it.
 
 ### PRs 4-6 — done, merged 2026-07-29
 
@@ -196,7 +199,40 @@ closely. Throttled run.
 
 </details>
 
-### PR 7 — Extract `ZoneWorld`
+### PR 7 — Extract `ZoneWorld` — done, merged
+
+What landed that this document did not predict, and that PR 8 onwards inherits:
+
+- **`src/world/` is a sixth Phaser-free directory**, guarded by the same seam test. `ZoneWorld`,
+  `Player`, `Mob`, `ResourceNode` and `Campfire` live there; `entities/` is now `*Sprite` views that
+  hold a reference to one and `sync()` to it once a frame.
+- **There are two channels out, not one.** The `WorldEvent[]` this document specified is the _view_
+  channel — moments a renderer cannot recover from state. The HUD's ~30 events stayed on
+  `game.events`, injected as an `EventBus` interface that Phaser's emitter satisfies structurally.
+  Collapsing them into one channel would have made every HUD event a thing the 3D view had to
+  forward. The world subscribes to the HUD's _requests_ itself and drops them in `destroy()`.
+- **Floating text names a `tone`, not a colour.** `THEME` is Phaser-free and could have been
+  imported, but a view that is told "reward" can draw a reward however it likes; one told
+  `#ffd54f` cannot.
+- **Three Phaser timers had to become accumulators**, not just move: mob wander scheduling, the
+  death fade and the respawn. The fade's 400ms is now `DEATH_FADE_MS` in the sim and the sprite
+  fades against `mob.deadForMs` — the respawn has to take the same total time whether or not
+  anything is drawing it.
+- **The world's clock starts at zero and Phaser's never did.** `lastAttackAt = 0` meant "ready" for
+  a scene-wide clock that was already seconds old at zone entry; against a fresh accumulator it
+  means "wait a full cooldown". Both the player's and the mob's markers are `-Infinity` now. This is
+  the kind of thing that would have shown up as a vague "combat feels laggy after a zone change".
+- **Collision bodies moved into the data tables** (`EnemyDefinition.body`,
+  `ResourceNodeDefinition.body`). `Mob.bounds()` and `ResourceNode.blockerRect()` were reading
+  `sprite.width` — a texture measurement, which is exactly what `PLAYER_HALF_EXTENT` exists to avoid.
+  A smoke check now asserts the data and the generated textures still agree.
+- **Smoke needed one line changed, not none.** Every state read still resolves, through a
+  clearly-marked block of delegating getters on `ZoneScene` that PR 9 deletes. The exception was the
+  walk-animation check, which reads `anims` and `texture` — genuinely the sprite's now, so it asks
+  the new `figure` getter. A throttled run at `rate: 8` also passes.
+
+<details>
+<summary>Original PR 7 specification, kept for the record</summary>
 
 **One session. Do not bundle PR 8 with it.**
 
@@ -221,6 +257,8 @@ way to know a bolt was cast.
 `{kind: 'zone-exit', to, edge, fraction}` and let the host act, or this PR has to solve
 `scene.restart` too.
 _Verify:_ a headless vitest harness ticks a full combat → death → respawn cycle. Smoke unchanged.
+
+</details>
 
 ### PR 8 — `world.loadZone()` replaces `scene.restart`; `GameContext` replaces the registry
 
