@@ -158,18 +158,20 @@ try {
   await page.screenshot({ path: `${OUT}/2-town.png` });
 
   // The stick figure's legs: walking plays the baked leg-phase animation and
-  // standing still puts it back on the neutral frame.
+  // standing still puts it back on the neutral frame. The walk belongs to the
+  // sprite rather than the simulation, so this is the one check that has to
+  // ask `figure` instead of `player`.
   const walking = await page.evaluate(async () => {
     const s = window.game.scene.getScene('Zone');
     s.player.moveTo(s.player.x + 300, s.player.y);
     await new Promise((r) => setTimeout(r, 300));
     const moving = {
-      playing: s.player.anims.isPlaying,
-      frame: s.player.anims.currentFrame?.textureKey,
+      playing: s.figure.anims.isPlaying,
+      frame: s.figure.anims.currentFrame?.textureKey,
     };
     s.player.stopMoving();
     await new Promise((r) => setTimeout(r, 300));
-    return { moving, idleTexture: s.player.texture.key, playing: s.player.anims.isPlaying };
+    return { moving, idleTexture: s.figure.texture.key, playing: s.figure.anims.isPlaying };
   });
   check(
     'the figure animates its legs while walking',
