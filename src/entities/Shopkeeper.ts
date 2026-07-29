@@ -5,11 +5,11 @@ import type { WorldNpc } from '../world/ZoneWorld';
 
 /**
  * A stationary, non-combat NPC. Clicking it (handled by ZoneScene) opens the
- * shop. The name label is scene-owned, so a zone change cleans it up with
- * everything else.
+ * shop.
  */
 export class Shopkeeper extends Phaser.GameObjects.Sprite {
   readonly npc: WorldNpc;
+  private readonly label: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, npc: WorldNpc) {
     super(scene, npc.x, npc.y, SHOPKEEPER_TEXTURE_KEY);
@@ -17,11 +17,16 @@ export class Shopkeeper extends Phaser.GameObjects.Sprite {
     this.npc = npc;
     this.setInteractive({ useHandCursor: true });
 
-    scene.add
+    this.label = scene.add
       .text(npc.x, npc.y - 44, 'Shopkeeper', {
         fontSize: '12px',
         color: THEME.color.levelUp,
       })
       .setOrigin(0.5, 1);
+  }
+
+  override destroy(fromScene?: boolean): void {
+    this.label.destroy();
+    super.destroy(fromScene);
   }
 }

@@ -19,7 +19,11 @@ export class CampfireSprite extends Phaser.GameObjects.Image {
   }
 
   extinguish(): void {
-    this.flicker.stop();
     this.destroy();
+  }
+
+  override destroy(fromScene?: boolean): void {
+    this.flicker.stop();
+    super.destroy(fromScene);
   }
 }

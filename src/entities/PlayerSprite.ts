@@ -63,4 +63,9 @@ export class PlayerSprite extends Phaser.GameObjects.Sprite {
     }
     this.healthBar.update(this.player.x, this.player.y, this.player.hp, this.player.maxHp);
   }
+
+  override destroy(fromScene?: boolean): void {
+    this.healthBar.destroy();
+    super.destroy(fromScene);
+  }
 }
