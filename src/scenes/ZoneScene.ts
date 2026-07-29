@@ -111,6 +111,8 @@ import {
   type GatherState,
 } from '../systems/GatherSystem';
 import { CharacterController, type CombatXpGain } from '../systems/CharacterController';
+import { arriveRadius, distance, withinRadius, type Point } from '../systems/MovementSystem';
+import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
 import {
   SIGNPOST_INTERACT_RADIUS,
   arrivalPoint,
@@ -148,6 +150,18 @@ const DEFENSE_SKILL_XP_PER_SAVE = 1;
 // A cast is worth more than a swing: abilities sit behind long cooldowns, so
 // paying a swing's rate would make Destruction unlevellable.
 const ABILITY_SKILL_XP_PER_CAST = 3;
+// A walk up to a node has to finish a little inside the radius that lets a tap
+// gather from where the player already stands: the gather channel cancels the
+// moment the player is further out than that radius, so ending the approach
+// exactly on it makes the first tick a coin toss.
+const GATHER_APPROACH_FRACTION = 0.9;
+
+// What the scene still owns once InteractionSystem has the rule: the thing to
+// do when the walk arrives.
+interface PendingApproach {
+  interaction: PendingInteraction;
+  act: () => void;
+}
 
 // Passed through scene.restart on a zone change; absent on the first boot.
 interface ZoneSceneData {
@@ -169,12 +183,11 @@ export class ZoneScene extends Phaser.Scene {
   private nodes: ResourceNode[] = [];
   private gatherState: GatherState | null = null;
   private gatherNode: ResourceNode | null = null;
-  // Click-to-move approach state: a node the player is walking toward to
-  // gather, a shopkeeper they are walking toward to trade, or whether they
-  // are closing on the current combat target.
-  private pendingGatherNode: ResourceNode | null = null;
-  private pendingShopNpc: Shopkeeper | null = null;
-  private pendingSignpost: ZoneSignpost | null = null;
+  // Click-to-move approach state: the node, shopkeeper or signpost the player
+  // tapped and is walking toward, and whether they are closing on the current
+  // combat target. Chasing a target is a different rule — it stops inside
+  // attack range and never abandons — so it stays its own flag.
+  private pendingApproach: PendingApproach | null = null;
   private pursuingTarget = false;
   private npcs: Shopkeeper[] = [];
   private signposts: ZoneSignpost[] = [];
@@ -219,6 +232,10 @@ export class ZoneScene extends Phaser.Scene {
     // left; nothing carries over.
     this.afkActive = false;
     this.afkRecovering = false;
+    // For the same reason: an approach left in flight by walking out of the
+    // zone would otherwise hold a destroyed sprite from the zone behind us.
+    this.pendingApproach = null;
+    this.pursuingTarget = false;
 
     const tilemap = this.make.tilemap({
       data: this.zone.map,
@@ -381,7 +398,7 @@ export class ZoneScene extends Phaser.Scene {
   update(time: number, delta: number): void {
     if (this.changingZone) return;
     this.updateAfk();
-    this.updateApproach();
+    this.updateApproach(delta);
     this.player.update(delta);
     const healed = this.player.takeHealPulse();
     if (healed > 0) {
@@ -403,13 +420,7 @@ export class ZoneScene extends Phaser.Scene {
   // Walking off mid-trade closes the window, like any vendor would.
   private updateShopRange(): void {
     if (!this.shopNpc) return;
-    const distance = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      this.shopNpc.x,
-      this.shopNpc.y,
-    );
-    if (distance > SHOP_CLOSE_RADIUS) {
+    if (!withinRadius(this.player, this.shopNpc, SHOP_CLOSE_RADIUS)) {
       this.closeShop();
     }
   }
@@ -570,9 +581,7 @@ export class ZoneScene extends Phaser.Scene {
     // Any other click ends a gather: picking a fight or walking off is a choice
     // to stop chopping.
     this.stopGathering();
-    this.pendingGatherNode = null;
-    this.pendingShopNpc = null;
-    this.pendingSignpost = null;
+    this.pendingApproach = null;
 
     const clickedSignpost = currentlyOver.find(
       (obj): obj is ZoneSignpost => obj instanceof ZoneSignpost,
@@ -609,40 +618,51 @@ export class ZoneScene extends Phaser.Scene {
   // Walk toward a clicked node and start the gather once inside its
   // interact radius; startGathering fires immediately when already there.
   private approachAndGather(node: ResourceNode): void {
-    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, node.x, node.y);
-    if (distance <= node.definition.interactRadius) {
+    if (withinRadius(this.player, node, node.definition.interactRadius)) {
       this.startGathering(node);
       return;
     }
-    this.pendingGatherNode = node;
-    this.player.moveTo(node.x, node.y);
+    this.beginApproach(
+      { kind: 'gather', radius: node.definition.interactRadius * GATHER_APPROACH_FRACTION },
+      node,
+      () => this.startGathering(node),
+    );
   }
 
   // Walk toward a tapped signpost and take its exit on arrival — the mobile
   // route out of a zone; walking into the map edge still works for WASD.
   private approachSignpost(signpost: ZoneSignpost): void {
-    const distance = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      signpost.x,
-      signpost.y,
-    );
-    if (distance <= SIGNPOST_INTERACT_RADIUS) {
+    if (withinRadius(this.player, signpost, SIGNPOST_INTERACT_RADIUS)) {
       this.changeZone(signpost.exit);
       return;
     }
-    this.pendingSignpost = signpost;
-    this.player.moveTo(signpost.x, signpost.y);
+    this.beginApproach({ kind: 'signpost', radius: SIGNPOST_INTERACT_RADIUS }, signpost, () =>
+      this.changeZone(signpost.exit),
+    );
   }
 
   private approachShop(npc: Shopkeeper): void {
-    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
-    if (distance <= SHOP_INTERACT_RADIUS) {
+    if (withinRadius(this.player, npc, SHOP_INTERACT_RADIUS)) {
       this.openShop(npc);
       return;
     }
-    this.pendingShopNpc = npc;
-    this.player.moveTo(npc.x, npc.y);
+    this.beginApproach({ kind: 'shop', radius: SHOP_INTERACT_RADIUS }, npc, () =>
+      this.openShop(npc),
+    );
+  }
+
+  // Nodes, shopkeepers and signposts all stand still, so the destination is
+  // captured once here rather than re-read from the sprite every frame.
+  private beginApproach(
+    interaction: Pick<PendingInteraction, 'kind' | 'radius'>,
+    at: Point,
+    act: () => void,
+  ): void {
+    this.pendingApproach = {
+      interaction: { ...interaction, point: { x: at.x, y: at.y } },
+      act,
+    };
+    this.player.moveTo(at.x, at.y);
   }
 
   private openShop(npc: Shopkeeper): void {
@@ -665,57 +685,29 @@ export class ZoneScene extends Phaser.Scene {
   // Drives the click-to-move approaches: closing on a combat target, walking
   // up to a node before gathering, or up to a shopkeeper before trading. WASD
   // input cancels all of them.
-  private updateApproach(): void {
+  private updateApproach(delta: number): void {
     if (this.player.isKeyboardMoving()) {
       this.setAfk(false);
       this.pursuingTarget = false;
-      this.pendingGatherNode = null;
-      this.pendingShopNpc = null;
-      this.pendingSignpost = null;
+      this.pendingApproach = null;
       return;
     }
 
-    if (this.pendingSignpost) {
-      const signpost = this.pendingSignpost;
-      const distance = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        signpost.x,
-        signpost.y,
+    if (this.pendingApproach) {
+      const { interaction, act } = this.pendingApproach;
+      const result = resolveApproach(
+        interaction,
+        this.player,
+        this.player.hasMoveTarget(),
+        arriveRadius(this.player.speed, delta),
       );
-      if (distance <= SIGNPOST_INTERACT_RADIUS) {
-        this.pendingSignpost = null;
-        this.player.stopMoving();
-        this.changeZone(signpost.exit);
-      } else if (!this.player.hasMoveTarget()) {
-        this.pendingSignpost = null;
+      if (result.kind === 'walking') {
+        return;
       }
-      return;
-    }
-
-    if (this.pendingShopNpc) {
-      const npc = this.pendingShopNpc;
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
-      if (distance <= SHOP_INTERACT_RADIUS) {
-        this.pendingShopNpc = null;
-        this.openShop(npc);
-      } else if (!this.player.hasMoveTarget()) {
-        this.pendingShopNpc = null;
-      }
-      return;
-    }
-
-    if (this.pendingGatherNode) {
-      const node = this.pendingGatherNode;
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, node.x, node.y);
-      if (distance <= node.definition.interactRadius * 0.9) {
-        this.pendingGatherNode = null;
+      this.pendingApproach = null;
+      if (result.kind === 'act') {
         this.player.stopMoving();
-        this.startGathering(node);
-      } else if (!this.player.hasMoveTarget()) {
-        // The walk ended short (blocked or arrived at a stale point) — give up
-        // rather than pushing into a wall forever.
-        this.pendingGatherNode = null;
+        act();
       }
       return;
     }
@@ -725,15 +717,9 @@ export class ZoneScene extends Phaser.Scene {
         this.pursuingTarget = false;
         return;
       }
-      const distance = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.target.x,
-        this.target.y,
-      );
       // Stop a little inside attack range, mirroring how mobs close in, so the
       // player doesn't hover exactly on the boundary of their own reach.
-      if (isInRange(distance, this.player.attackRange * 0.8)) {
+      if (isInRange(distance(this.player, this.target), this.player.attackRange * 0.8)) {
         this.pursuingTarget = false;
         this.player.stopMoving();
       } else {
@@ -818,15 +804,7 @@ export class ZoneScene extends Phaser.Scene {
 
     // A fight that wandered off the camp is dropped rather than followed: the
     // anchor is what keeps an unattended character where they were left.
-    if (
-      this.target &&
-      Phaser.Math.Distance.Between(
-        this.afkAnchor.x,
-        this.afkAnchor.y,
-        this.target.x,
-        this.target.y,
-      ) > AFK_ANCHOR_RADIUS
-    ) {
+    if (this.target && !withinRadius(this.afkAnchor, this.target, AFK_ANCHOR_RADIUS)) {
       this.clearTarget();
       this.pursuingTarget = false;
     }
@@ -834,7 +812,7 @@ export class ZoneScene extends Phaser.Scene {
     const action = decideAfkAction(
       this.mobs.map((mob, index) => ({
         index,
-        distance: Phaser.Math.Distance.Between(this.afkAnchor.x, this.afkAnchor.y, mob.x, mob.y),
+        distance: distance(this.afkAnchor, mob),
         alive: mob.isAlive(),
         engaged: mob.isEngaged(),
       })),
@@ -911,8 +889,7 @@ export class ZoneScene extends Phaser.Scene {
     if (!this.gatherState || !this.gatherNode) return;
 
     const node = this.gatherNode;
-    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, node.x, node.y);
-    const outcome = advanceGather(this.gatherState, delta, distance);
+    const outcome = advanceGather(this.gatherState, delta, distance(this.player, node));
 
     if (outcome.status === 'gathering') {
       this.gatherState = outcome.state;
@@ -957,13 +934,7 @@ export class ZoneScene extends Phaser.Scene {
 
   private isNearFire(): boolean {
     if (!this.campfire?.isLit()) return false;
-    const distance = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      this.campfire.x,
-      this.campfire.y,
-    );
-    return distance <= FIRE_COOK_RADIUS;
+    return withinRadius(this.player, this.campfire, FIRE_COOK_RADIUS);
   }
 
   // The HUD's item actions are driven off what is actually possible right now,
@@ -1102,13 +1073,7 @@ export class ZoneScene extends Phaser.Scene {
       return;
     }
 
-    const distance = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      this.target.x,
-      this.target.y,
-    );
-    if (!isInRange(distance, this.player.attackRange)) {
+    if (!isInRange(distance(this.player, this.target), this.player.attackRange)) {
       return;
     }
     if (!isCooldownReady(time - this.lastAttackAt, this.player.effectiveAttackCooldownMs())) {
@@ -1141,8 +1106,7 @@ export class ZoneScene extends Phaser.Scene {
     for (const mob of this.mobs) {
       if (!mob.isEngaged()) continue;
 
-      const distance = Phaser.Math.Distance.Between(mob.x, mob.y, this.player.x, this.player.y);
-      if (!isInRange(distance, mob.attackRange)) continue;
+      if (!isInRange(distance(mob, this.player), mob.attackRange)) continue;
       if (!isCooldownReady(time - mob.lastAttackAt, mob.attackCooldownMs)) continue;
 
       mob.lastAttackAt = time;
@@ -1208,9 +1172,7 @@ export class ZoneScene extends Phaser.Scene {
     this.stopGathering();
     this.clearTarget();
     this.closeShop();
-    this.pendingGatherNode = null;
-    this.pendingShopNpc = null;
-    this.pendingSignpost = null;
+    this.pendingApproach = null;
     this.pursuingTarget = false;
     this.player.stopMoving();
     this.log(logNotice('You have died.'));
@@ -1363,14 +1325,11 @@ export class ZoneScene extends Phaser.Scene {
     const ability = abilityById(abilityId);
     if (ability.classId !== this.character.state.classId) return;
 
-    const distance = this.target
-      ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.target.x, this.target.y)
-      : Infinity;
     const check = canUseAbility(ability, {
       mana: this.player.mana,
       elapsedMs: this.time.now - (this.lastAbilityAt.get(abilityId) ?? -Infinity),
       hasTarget: this.target !== null && this.target.isAlive(),
-      targetDistance: distance,
+      targetDistance: this.target ? distance(this.player, this.target) : Infinity,
     });
     if (!check.ok) {
       this.game.events.emit(GATHER_REFUSED_EVENT, check.reason);

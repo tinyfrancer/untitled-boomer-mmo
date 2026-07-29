@@ -1,8 +1,11 @@
 # Refactor plan: tighten the systems seam
 
-**Status:** in progress. Written 2026-07-24 for a later session; picked up as phase 0 of
+**Status:** done. Written 2026-07-24 for a later session; picked up as phase 0 of
 `docs/3d_port_plan.md`, which depends on it. Item 2 landed in `d80df26`; item 4 landed with
-`tests/architecture/phaserFreeSeam.test.ts`.
+`tests/architecture/phaserFreeSeam.test.ts`; items 1 and 3 landed together with
+`systems/InteractionSystem.ts` and the `distance`/`withinRadius` helpers, since most of item 3
+fell out of item 1 as predicted. The frame-rate question item 1 left open was answered yes:
+`resolveApproach` takes the frame's arrival band, see the note in that file.
 
 ## Why
 
