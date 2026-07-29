@@ -1357,10 +1357,17 @@ try {
   const shielded = await page.evaluate(async () => {
     const z = window.game.scene.getScene('Zone');
     const before = z.player.mana;
-    // Cast until one gets through: the spell can genuinely fizzle.
+    // Cast until one gets through: the spell can genuinely fizzle. The pool has
+    // to be topped up between attempts or this is not a 40-try loop at all —
+    // the shield costs 12 of 30, so mana refusals swallow every try after the
+    // second, and two fizzles in a row (1%) failed the check outright.
     for (let i = 0; i < 40 && !z.player.hasManaShield(); i += 1) {
       z.lastAbilityAt.clear();
       z.handleAbilityRequested('mana-shield');
+      if (!z.player.hasManaShield()) {
+        z.player.mana = z.player.maxMana;
+        z.player.manaFloat = z.player.maxMana;
+      }
       await new Promise((r) => setTimeout(r, 20));
     }
     return { before, after: z.player.mana, up: z.player.hasManaShield() };
