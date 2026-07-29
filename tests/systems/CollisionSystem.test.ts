@@ -3,7 +3,6 @@ import { EXIT_MARGIN, PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/con
 import { BLOCKING_TILES, GRASS_TILE, WATER_TILE } from '../../src/data/tiles';
 import {
   clampToWorld,
-  fitsCornerTest,
   isBlocked,
   moveWithCollision,
   type Aabb,
@@ -33,16 +32,14 @@ function player(x: number, y: number): Aabb {
   return { x, y, halfWidth: PLAYER_HALF_EXTENT, halfHeight: PLAYER_HALF_EXTENT };
 }
 
-describe('the four-corner tile test', () => {
-  // Corners are exact only for a body that fits in a tile. The player's is
-  // exactly one tile square, which is the edge of that guarantee — a body any
-  // wider could straddle a blocking column with no corner inside it.
-  it('is exact for the body it is actually used on', () => {
-    expect(fitsCornerTest(player(0, 0))).toBe(true);
-  });
-
-  it('reports itself inexact for a body wider than a tile', () => {
-    expect(fitsCornerTest({ x: 0, y: 0, halfWidth: TILE_SIZE, halfHeight: 8 })).toBe(false);
+describe('the tile test', () => {
+  // The case a four-corner test gets wrong. A rat's box is 80px against a 64px
+  // tile, so it can sit astride a one-tile blocking column with all four
+  // corners on dry land.
+  it('catches a blocking column no corner of a wide body lands in', () => {
+    const map = world(['.#.']);
+    const wide = { x: TILE_SIZE * 1.5, y: TILE_SIZE / 2, halfWidth: 40, halfHeight: 19 };
+    expect(isBlocked(map, wide)).toBe(true);
   });
 
   it('counts a body resting exactly on a boundary as touching, not inside', () => {

@@ -12,7 +12,7 @@ const TRUNK_FRACTION = 0.3;
  * thinner than Mob — no AI, no health bar, no combat. It owns only how many
  * gathers are left in it and when it comes back.
  */
-export class ResourceNode extends Phaser.Physics.Arcade.Sprite {
+export class ResourceNode extends Phaser.GameObjects.Sprite {
   readonly definition: ResourceNodeDefinition;
   private chargesLeft: number;
   private depleted = false;
@@ -20,25 +20,14 @@ export class ResourceNode extends Phaser.Physics.Arcade.Sprite {
   constructor(scene: Phaser.Scene, x: number, y: number, definition: ResourceNodeDefinition) {
     super(scene, x, y, definition.textureKey);
     scene.add.existing(this);
-    scene.physics.add.existing(this, true);
 
     this.definition = definition;
     this.name = definition.name;
     this.chargesLeft = definition.charges ?? Number.POSITIVE_INFINITY;
 
-    if (definition.solid) {
-      const trunk = this.blockerRect();
-      const body = this.body as Phaser.Physics.Arcade.StaticBody;
-      body.setSize(trunk.right - trunk.left, trunk.bottom - trunk.top);
-      body.setOffset(
-        trunk.left - (this.x - this.width / 2),
-        trunk.top - (this.y - this.height / 2),
-      );
-      body.updateFromGameObject();
-    } else {
-      // A fishing spot is a marking on the water, not an object: no body, and
-      // drawn under the player rather than over their feet.
-      (this.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+    // A fishing spot is a marking on the water, not an object: nothing to walk
+    // into, and drawn under the player rather than over their feet.
+    if (!definition.solid) {
       this.setDepth(-1);
     }
   }
@@ -84,11 +73,8 @@ export class ResourceNode extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.setVisible(false);
     }
-    if (this.definition.solid) {
-      // A stump is still solid; only its charges are gone.
-      (this.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-    }
-
+    // A stump is still solid, and keeps the tree's footprint, so the blocker
+    // the zone took at spawn stays correct through depletion and respawn.
     this.scene.time.delayedCall(this.definition.respawnDelayMs, () => this.respawn());
   }
 
@@ -97,8 +83,5 @@ export class ResourceNode extends Phaser.Physics.Arcade.Sprite {
     this.chargesLeft = this.definition.charges ?? Number.POSITIVE_INFINITY;
     this.setTexture(this.definition.textureKey);
     this.setVisible(true);
-    if (this.definition.solid) {
-      (this.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-    }
   }
 }

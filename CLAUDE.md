@@ -160,12 +160,13 @@ adding an event constant and emitting/listening to it, not by reaching into the 
 event carrying more than two or three values should pass one object (see `TargetInfo` in
 `uiEvents.ts`) rather than growing a positional argument list.
 
-**Entities** (`src/entities/`): `Mob` and `ResourceNode` are still `Phaser.Physics.Arcade.Sprite`
-subclasses; **`Player` is not** — it is a plain `Phaser.GameObjects.Sprite` that owns `{x, y, vx,
-vy}` and integrates itself each frame against the Phaser-free `systems/CollisionSystem.ts`.
-Transform ownership and integration ownership are the same thing (arcade writes body position
-every physics step, and `moves = false` disables separation too), so entities come off arcade one
-at a time rather than in halves. `Mob` is instantiated directly from an `ENEMIES` definition (no per-enemy
+**Entities** (`src/entities/`): **there is no physics engine.** Every entity is a plain
+`Phaser.GameObjects.Sprite`; `Player` and `Mob` own `{x, y, vx, vy}` and integrate themselves each
+frame against the Phaser-free `systems/CollisionSystem.ts`, which is the only thing that decides
+what may move where. Arcade was carrying four colliders — player and mobs against blocking tiles
+and against tree trunks — and nothing else: player↔mob, mob↔mob and player↔NPC never collided, and
+every combat and interaction check is distance-based. Don't reach for `scene.physics`; it is not
+configured. `Mob` is instantiated directly from an `ENEMIES` definition (no per-enemy
 subclasses) and owns HP, death/respawn timers, and a `wander | chase | returning` AI state
 machine. Combat math itself (damage rolls, range/cooldown checks) is _not_ on these classes —
 it lives in `systems/CombatSystem.ts` and is called from `ZoneScene`, which resolves both
@@ -177,7 +178,11 @@ to full_ on its way back to spawn. Enemies with `aggressive: true` and an `aggro
 on their own when a wandering mob sees the player inside that radius (bandits); passive enemies
 only ever retaliate. Both leashing (running past `leashRadius`) and player death
 route through `disengage()`, so a fight always restarts from a clean slate — reuse it rather than
-resetting mob state by hand. `Mob.update()` takes the player's position, since chasing needs it.
+resetting mob state by hand. `Mob.update()` takes the player's position, since chasing needs it,
+plus the frame delta and the collision world, since it moves itself. All three AI states steer
+through `stepToward`, so the arrival band is `arriveRadius` — never a fixed one. The 2px and 4px
+thresholds they used to carry were the same slow-frame bug `arriveRadius` exists to fix, one level
+down: below 30fps a mob stepped straight over a 4px band and orbited its own spawn point.
 
 **Persistence** (`src/persistence/`): `SaveService` is an interface; `LocalStorageSaveService` is
 the only implementation today. Always import the `saveService` singleton from
@@ -252,7 +257,7 @@ The other half of a slow frame is tunnelling: 46px of travel can step clean over
 `moveWithCollision` cuts the frame into substeps of at most half a tile (capped at 8), which at
 normal frame rates is exactly one substep and costs nothing. It resolves **one axis at a time,
 reverting only the blocked one** — that is what makes walking diagonally into the pond slide along
-the shore, which arcade gave away for free and which players notice losing. Two rules there are
+the shore, which arcade used to give away for free and which players notice losing. Two rules there are
 load-bearing and tested: a body already inside a blocker may always move (otherwise a teleport
 onto a tree freezes it there for good), and the world-bounds clamp uses the named
 `PLAYER_HALF_EXTENT`, which **must stay below `EXIT_MARGIN`** — the clamp stops the player exactly
