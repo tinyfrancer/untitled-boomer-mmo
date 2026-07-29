@@ -160,8 +160,12 @@ adding an event constant and emitting/listening to it, not by reaching into the 
 event carrying more than two or three values should pass one object (see `TargetInfo` in
 `uiEvents.ts`) rather than growing a positional argument list.
 
-**Entities** (`src/entities/`): `Player` and `Mob` are `Phaser.Physics.Arcade.Sprite`
-subclasses. `Mob` is instantiated directly from an `ENEMIES` definition (no per-enemy
+**Entities** (`src/entities/`): `Mob` and `ResourceNode` are still `Phaser.Physics.Arcade.Sprite`
+subclasses; **`Player` is not** — it is a plain `Phaser.GameObjects.Sprite` that owns `{x, y, vx,
+vy}` and integrates itself each frame against the Phaser-free `systems/CollisionSystem.ts`.
+Transform ownership and integration ownership are the same thing (arcade writes body position
+every physics step, and `moves = false` disables separation too), so entities come off arcade one
+at a time rather than in halves. `Mob` is instantiated directly from an `ENEMIES` definition (no per-enemy
 subclasses) and owns HP, death/respawn timers, and a `wander | chase | returning` AI state
 machine. Combat math itself (damage rolls, range/cooldown checks) is _not_ on these classes —
 it lives in `systems/CombatSystem.ts` and is called from `ZoneScene`, which resolves both
@@ -236,10 +240,24 @@ a full pack is what ends an unattended gathering session. Currency is weightless
 game at single-digit fps, where one frame carries the player ~46px. Anything comparing a distance
 against a fixed threshold has to scale that threshold with the frame's travel — see
 `arriveRadius` in `systems/MovementSystem.ts`, which exists because a fixed 8px arrival band left
-the player orbiting a tap destination forever below 30fps. Note also that returning a velocity
-above normal speed to "land exactly" does not work: Phaser integrates velocity over the physics
-world's own timestep, not over the `delta` handed to the scene, and the mismatch shows up as an
-overshoot.
+the player orbiting a tap destination forever below 30fps. The comment on `stepToward` saying a
+velocity above normal speed can never be returned is now true only for mobs: it existed because
+Phaser integrates velocity over the physics world's own timestep rather than the scene `delta`,
+and the player no longer goes through Phaser at all. The constraint inverts once you own the
+integrator — clamping the last step to the distance remaining becomes the correct thing — but
+that change and the integrator change must not ship together, or a smoke failure has two
+suspects and no bisect.
+
+The other half of a slow frame is tunnelling: 46px of travel can step clean over a wall.
+`moveWithCollision` cuts the frame into substeps of at most half a tile (capped at 8), which at
+normal frame rates is exactly one substep and costs nothing. It resolves **one axis at a time,
+reverting only the blocked one** — that is what makes walking diagonally into the pond slide along
+the shore, which arcade gave away for free and which players notice losing. Two rules there are
+load-bearing and tested: a body already inside a blocker may always move (otherwise a teleport
+onto a tree freezes it there for good), and the world-bounds clamp uses the named
+`PLAYER_HALF_EXTENT`, which **must stay below `EXIT_MARGIN`** — the clamp stops the player exactly
+that far from the edge, so a half-extent that grew past the margin would silently stop zone
+transitions firing with nothing to show for it.
 
 **AFK play must stay behind active play** (`systems/AfkSystem.ts`, `systems/OfflineAfkSystem.ts`).
 Two mechanisms hold that, and both matter: the AFK loop never uses an ability, so the action bar
