@@ -1,19 +1,17 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
-import type { ZoneDefinition } from '../data/zones';
 import { PlayerSprite } from '../entities/PlayerSprite';
 import { MobSprite } from '../entities/MobSprite';
 import { ResourceNodeSprite } from '../entities/ResourceNodeSprite';
 import { CampfireSprite } from '../entities/CampfireSprite';
 import { Shopkeeper } from '../entities/Shopkeeper';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
-import { TILESET_KEY } from './generateTextures';
+import { SHOPKEEPER_TEXTURE_KEY, SIGNPOST_TEXTURE_KEY, TILESET_KEY } from './generateTextures';
 import { LEVEL_UP_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
 import { THEME, worldZoom } from '../ui/theme';
 import { worldViewportHeight } from '../ui/layout';
 import { bindKeyboard } from '../systems/InputState';
 import { createNewCharacter } from '../persistence';
-import type { CharacterController } from '../systems/CharacterController';
 import {
   bindUnloadPersist,
   gameContext,
@@ -21,20 +19,26 @@ import {
   startGame,
   type GameContext,
 } from '../world/GameContext';
-import { ZoneWorld, type WorldNpc, type WorldSignpost, type WorldTap } from '../world/ZoneWorld';
+import { ZoneWorld, type WorldTap } from '../world/ZoneWorld';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
-import type { Player } from '../world/Player';
-import type { Mob } from '../world/Mob';
-import type { ResourceNode } from '../world/ResourceNode';
-import type { Campfire } from '../world/Campfire';
-import type { GatherState } from '../systems/GatherSystem';
-import type { Point } from '../systems/MovementSystem';
-import type { AchievementUnlock } from '../ui/uiEvents';
-import type { AbilityId, EnemyId } from '../types/ids';
+import type { DebugView, DrawnCounts } from '../types/debugView';
 
 const GROUND_DEPTH = -10;
 const SELECTION_RING_RADIUS = 36;
 const SELECTION_RING_COLOR = 0xffee58;
+
+/**
+ * `?loop=manual` hands the simulation's clock to `window.view.step()`.
+ *
+ * The frame loop still runs — it draws, it reads the mouse — but it no longer
+ * advances the game, so the smoke check steps a known number of milliseconds
+ * instead of polling and hoping. That removes the whole class of CI flake that
+ * came of Phaser sleeping its TimeStep on a runner with nothing to focus the
+ * window, and it makes a slow frame something a test can ask for by passing a
+ * bigger delta rather than something it has to throttle a CPU to reproduce.
+ */
+const MANUAL_LOOP =
+  import.meta.env.DEV && new URLSearchParams(window.location.search).get('loop') === 'manual';
 
 const FLOAT_COLORS: Record<FloatTone, string> = {
   damage: THEME.color.equippable,
@@ -89,6 +93,9 @@ export class ZoneScene extends Phaser.Scene {
       });
 
     this.buildView();
+    if (import.meta.env.DEV) {
+      this.installDebugView();
+    }
     this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
 
     this.input.on('pointerdown', this.handlePointerDown, this);
@@ -181,6 +188,12 @@ export class ZoneScene extends Phaser.Scene {
     this.selectionRing.destroy();
     this.tilemap?.destroy();
     this.tilemap = null;
+    // Cleared rather than left pointing at a world that has stopped: a zone
+    // change replaces it in the same tick, but a reset does not, and a stale
+    // handle is one that answers questions about a game nobody is playing.
+    if (import.meta.env.DEV) {
+      (window as unknown as { world: ZoneWorld | null }).world = null;
+    }
   }
 
   private buildTilemap(): void {
@@ -221,6 +234,11 @@ export class ZoneScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (MANUAL_LOOP) return;
+    this.tick(delta);
+  }
+
+  private tick(delta: number): void {
     const { events, zoneChanged } = this.context.update(delta);
     if (zoneChanged) {
       // The events belong to a world that has already been torn down — a float
@@ -427,115 +445,62 @@ export class ZoneScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------------------
-  // Smoke-check surface. `scripts/smoke.mjs` still reaches into the scene for
-  // live state; PR 9 of the port retargets it at `window.world` and these go.
+  // Debug handles
   // ---------------------------------------------------------------------------
 
-  get zone(): ZoneDefinition {
-    return this.world.zone;
-  }
-  get player(): Player {
-    return this.world.player;
-  }
-  /** The figure, as opposed to the simulation: the walk cycle lives out here. */
-  get figure(): PlayerSprite {
-    return this.playerSprite;
-  }
-  get mobs(): Mob[] {
-    return this.world.mobs;
-  }
-  get nodes(): ResourceNode[] {
-    return this.world.nodes;
-  }
-  get npcs(): WorldNpc[] {
-    return this.world.npcs;
-  }
-  get signposts(): WorldSignpost[] {
-    return this.world.signposts;
-  }
-  get campfire(): Campfire | null {
-    return this.world.campfire;
-  }
-  get character(): CharacterController {
-    return this.world.character;
-  }
-  get spawnPoint(): Point {
-    return this.world.spawnPoint;
-  }
-  get worldWidth(): number {
-    return this.world.worldWidth;
-  }
-  get worldHeight(): number {
-    return this.world.worldHeight;
-  }
-  get gatherState(): GatherState | null {
-    return this.world.gatherState;
-  }
-  get afkActive(): boolean {
-    return this.world.afkActive;
-  }
-  get lastAbilityAt(): Map<AbilityId, number> {
-    return this.world.lastAbilityAt;
-  }
-  get target(): Mob | null {
-    return this.world.target;
-  }
-  set target(mob: Mob | null) {
-    this.world.target = mob;
-  }
-  get shopNpc(): WorldNpc | null {
-    return this.world.shopNpc;
-  }
-  set shopNpc(npc: WorldNpc | null) {
-    this.world.shopNpc = npc;
+  /**
+   * `window.view`: the handful of questions about the running game that only
+   * the thing drawing it can answer. Everything else `scripts/smoke.mjs` and
+   * the devtools console ask goes to `window.world`, which is why this scene no
+   * longer carries a block of delegating getters for them.
+   */
+  private installDebugView(): void {
+    const view: DebugView = {
+      worldToScreen: (x, y) => {
+        const camera = this.cameras.main;
+        return {
+          x: camera.x + (x - camera.worldView.x) * camera.zoom,
+          y: camera.y + (y - camera.worldView.y) * camera.zoom,
+        };
+      },
+      step: (deltaMs, frames = 1) => {
+        // Phaser sleeps its TimeStep when the page blurs, and a CI runner has
+        // no window manager to ever focus it. Drawing and input go with it —
+        // the simulation no longer does — so the crank nudges it awake too.
+        // The flag is `running`: `loop.sleeping`, which the smoke check used to
+        // test, has never existed on TimeStep and was always undefined.
+        if (!this.game.loop.running) {
+          this.game.loop.wake();
+        }
+        for (let frame = 0; frame < frames; frame += 1) {
+          this.tick(deltaMs);
+        }
+      },
+      drawnCounts: () => this.drawnCounts(),
+      playerFigure: () => {
+        const { anims, texture } = this.playerSprite;
+        return {
+          walking: anims.isPlaying,
+          pose: anims.isPlaying ? (anims.currentFrame?.textureKey ?? '') : texture.key,
+        };
+      },
+    };
+    (window as unknown as { view: DebugView }).view = view;
   }
 
-  setTarget(mob: Mob): void {
-    this.world.setTarget(mob);
-  }
-  clearTarget(): void {
-    this.world.clearTarget();
-  }
-  closeShop(): void {
-    this.world.closeShop();
-  }
-  startGathering(node: ResourceNode): void {
-    this.world.startGathering(node);
-  }
-  stopGathering(): void {
-    this.world.stopGathering();
-  }
-  updateShopRange(): void {
-    this.world.updateShopRange();
-  }
-  approachShop(npc: WorldNpc): void {
-    this.world.approachShop(npc);
-  }
-  resolveKill(mob: Mob): void {
-    this.world.resolveKill(mob);
-  }
-  creditKill(enemyId: EnemyId, count = 1): AchievementUnlock[] {
-    return this.world.creditKill(enemyId, count);
-  }
-  handleBuyRequested(itemId: string): void {
-    this.world.handleBuyRequested(itemId);
-  }
-  handleSellRequested(itemId: string): void {
-    this.world.handleSellRequested(itemId);
-  }
-  handleEquipRequested(itemId: string): void {
-    this.world.handleEquipRequested(itemId);
-  }
-  handleEatRequested(itemId: string): void {
-    this.world.handleEatRequested(itemId);
-  }
-  handleCookRequested(itemId?: string): void {
-    this.world.handleCookRequested(itemId);
-  }
-  handleLightFireRequested(): void {
-    this.world.handleLightFireRequested();
-  }
-  handleAbilityRequested(abilityId: AbilityId): void {
-    this.world.handleAbilityRequested(abilityId);
+  // Off the display list rather than off the arrays this scene keeps: what a
+  // missed teardown leaves behind is precisely the object nothing holds a
+  // reference to any more, so counting our own references would never see it.
+  private drawnCounts(): DrawnCounts {
+    const drawn = this.children.list;
+    const textured = (key: string): number =>
+      drawn.filter((object) => (object as Phaser.GameObjects.Image).texture?.key === key).length;
+    return {
+      total: drawn.length,
+      ground: drawn.filter((object) => object instanceof Phaser.Tilemaps.TilemapLayer).length,
+      signposts: textured(SIGNPOST_TEXTURE_KEY),
+      npcs: textured(SHOPKEEPER_TEXTURE_KEY),
+      labels: drawn.filter((object) => object instanceof Phaser.GameObjects.Text).length,
+    };
   }
 }

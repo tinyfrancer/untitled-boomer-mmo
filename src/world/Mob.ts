@@ -40,8 +40,10 @@ export class Mob {
   /** How long this mob has been dead, for the view's fade and the respawn. */
   deadForMs = 0;
 
-  private readonly spawnX: number;
-  private readonly spawnY: number;
+  /** Where this mob belongs: leashing, returning and respawning all aim here. */
+  readonly spawnX: number;
+  readonly spawnY: number;
+
   private readonly rng: () => number;
   private aiState: AiState = 'wander';
   private wanderTarget: { x: number; y: number } | null = null;

@@ -481,6 +481,20 @@ export class ZoneWorld {
   // Taps and approaches
   // ---------------------------------------------------------------------------
 
+  /**
+   * Puts the player somewhere with no walk left over and no momentum. Almost
+   * every scenario in `scripts/smoke.mjs` is staged with this; it goes through
+   * the world rather than reaching into `player` so it is one call to keep
+   * renderer-agnostic, and one place to clear anything a teleport should void.
+   */
+  teleport(x: number, y: number): void {
+    this.player.setPosition(x, y);
+    this.player.setVelocity(0, 0);
+    this.player.stopMoving();
+    this.pendingApproach = null;
+    this.pursuingTarget = false;
+  }
+
   /** What the view calls when the player touches the world. */
   tap(target: WorldTap): void {
     // Touching the world is taking the controls back.
