@@ -18,7 +18,9 @@
   is `clipToMask.ts`. See the retrospective under PR 11 below.
 - **PR 12 merged** — the creation screen is plain HTML, `Boot` and `CharacterCreate` are gone and
   `dom.createContainer` with them. **Phase 2 is done.** See the retrospective under PR 12 below.
-- **Next: PR 13**, the start of phase 3 — the Three.js renderer bootstrap.
+- **PR 13 merged** — `?renderer=3d` boots a Three.js client over the same world and the same HUD,
+  and draws the ground under it. See the retrospective under PR 13 below.
+- **Next: PR 14** — entity meshes.
 
 ## Context
 
@@ -519,12 +521,61 @@ Two constraints to settle in this phase rather than rediscover:
 
 ## Phase 3 — Three.js
 
+### PR 13 — Renderer bootstrap — done, merged
+
+What landed that this document did not predict, and that PR 14 onwards inherits:
+
+- **A renderer owes the boot flow a host, and that was the prerequisite.** `bootFlow.ts` had a
+  `Phaser.Game` in its signature, so the 3D path could only reach it by importing the engine or
+  copying the if-statement. It takes a `GameHost` now — an `EventBus` and `startZone()` — and moved
+  out of `scenes/` to sit beside `main.ts`. Everything `ZoneScene` does other than draw (the frame
+  loop, the keyboard, mounting the HUD, the reset) is duplicated in `render3d/start3d.ts`, and that
+  is the honest shape: the two hosts are peers until PR 20 deletes one.
+- **The HUD channel needed an implementation, not just an interface.** `EventBus` was satisfied
+  structurally by Phaser's global emitter, and a page with no Phaser on it has nothing to satisfy it
+  with. `world/eventBus.ts` is forty lines, and the two semantics that would have bitten are a
+  listener being identified by its function _and_ its context (`on(EVENT, this.method, this)` is
+  every subscription in the scenes) and a handler that unsubscribes mid-delivery not disturbing that
+  delivery.
+- **`main.ts` picks the renderer by dynamic import, so only one engine is downloaded.** A 3D page
+  never fetches Phaser at all, which smoke asserts directly (`window.game === undefined`). The
+  production build splits 1,394 kB of Phaser from 524 kB of Three.js, which is the difference
+  between measuring the 3D view on a phone and measuring both engines at once.
+- **The plan's yaw formula was one convention off, exactly as it warned.** For a mesh whose forward
+  is +z — the convention every primitive in `render3d/` will be built to — it is `atan2(vx, vy)`,
+  not `-atan2(vy, vx) - π/2`. It is in `coords.ts` with a test that rotates a forward vector and
+  checks where it lands, which is the form that cannot be wrong about a sign.
+- **The tab-bar rule does not disappear in 3D, it changes hands.** This document expected the DOM
+  overlay to make `applyCameraZoom` unnecessary, and it does make the _hit test_ unnecessary — but
+  a full-bleed canvas still draws world under an opaque bar, and a perspective camera cannot shrink
+  its viewport without changing what it shows. So the requirement lands on the camera's framing, and
+  it is not symmetric for free: ground nearer the camera spreads over more pixels than ground
+  further away, so a centred player has visibly less room below them than above. Pitch, distance and
+  a look point aimed 80px short of the player are what put the south signpost back in reach, and
+  `tests/render3d/camera.test.ts` measures it at three phone sizes.
+- **`projectToScreen` has to update the camera's world matrix itself.** Projection reads
+  `matrixWorldInverse`, which the renderer rebuilds once a frame — so a `worldToScreen` asked
+  _between_ frames, which is exactly what a smoke check does, otherwise answers from wherever the
+  camera was standing last. It was off by four hundred pixels and looked like a framing bug.
+- **A raw rAF loop has to clamp its own delta.** Phaser's `TimeStep` was doing it: a backgrounded
+  tab comes back with an hour on the clock, and handing that to `update()` as one frame resolves an
+  entire AFK session through code written for tens of milliseconds.
+- **The 2D camera clamped to the world bounds and the 3D one does not**, so the void beyond the map
+  edge is visible on a portrait phone even from the middle of town. Known and left: the fix is a
+  terrain skirt or a camera bound, and it wants to be decided alongside the meshes and the orbit
+  rather than guessed at now.
+
+<details>
+<summary>Original PR 13 specification, kept for the record</summary>
+
 **PR 13 — Renderer bootstrap.** `three` dep, a **production-readable** `?renderer=3d` flag (not
 `import.meta.env.DEV`-guarded like `window.game` is — merging publishes to Vercel, and this needs to
 be dogfoodable from a preview URL on a real phone). Ground mesh from the tile grid, lighting, fixed
 3/4 camera, resize, and `dispose()` wired into `loadZone`. Default stays 2D.
 _Verify:_ a zone-walk loop shows flat `renderer.info.memory`; the camera keeps the south signpost
 above the HUD.
+
+</details>
 
 **PR 14 — Entity meshes.** Primitives driven by the surviving `computeAppearance()` (gear → colours):
 capsule figures, box rat, ellipsoid crab, cylinder+cone tree, plane fishing spot, signpost, campfire.

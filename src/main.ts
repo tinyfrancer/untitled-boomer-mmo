@@ -1,32 +1,16 @@
-import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from './config/constants';
-import { PreloadScene } from './scenes/PreloadScene';
-import { ZoneScene } from './scenes/ZoneScene';
+import { rendererChoice } from './config/flags';
 
-const config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
-  parent: 'app',
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
-  backgroundColor: '#1a1a2e',
-  scale: {
-    // The canvas is always the viewport's size, so UI code works in real CSS
-    // pixels; the world camera compensates with zoom (see worldZoom in
-    // ui/theme.ts). FIT letterboxed a fixed canvas, which shrank the HUD into
-    // illegibility on phones.
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-  // No `dom` container: the only DOM Phaser was hosting was the name box on the
-  // creation screen, and that screen is plain HTML now.
-  scene: [PreloadScene, ZoneScene],
-};
-
-const game = new Phaser.Game(config);
-
-// Dev-only handle on the running game, for the generated textures and the frame
-// loop. Everything about the simulation is on window.world and everything about
-// the HUD is in the DOM. Stripped from production builds by the guard.
-if (import.meta.env.DEV) {
-  (window as unknown as { game: Phaser.Game }).game = game;
+/**
+ * Which renderer draws the game, decided before either one is loaded.
+ *
+ * The two halves are imported dynamically so only the chosen one is fetched:
+ * `?renderer=3d` never downloads Phaser, which is the difference between
+ * measuring the Three.js view on a phone and measuring both engines at once.
+ * The flag is readable in production on purpose — merging publishes to Vercel,
+ * and dogfooding the port's middle means opening a preview URL on a real phone.
+ */
+if (rendererChoice(window.location.search) === '3d') {
+  void import('./render3d/start3d').then((module) => module.start3d());
+} else {
+  void import('./scenes/phaserGame').then((module) => module.start2d());
 }
