@@ -40,3 +40,12 @@ export function place(node: HTMLElement, rect: Rect, sized: 'both' | 'position' 
 export function toggleClass(node: HTMLElement, className: string, on: boolean): void {
   node.classList.toggle(className, on);
 }
+
+/**
+ * Where every DOM screen mounts: the same box the canvas is in, so an overlay
+ * is measured against the visible viewport rather than the layout one (see the
+ * dvh note in `index.html`).
+ */
+export function uiRoot(): HTMLElement {
+  return document.getElementById('app') ?? document.body;
+}

@@ -632,6 +632,80 @@ function hudCss(): string {
   padding: 4px 0;
 }
 
+/* --- Character creation -------------------------------------------------- */
+
+.create {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${THEME.margin}px;
+  padding: ${THEME.margin}px;
+  overflow-y: auto;
+  background: #1a1a2e;
+  color: ${THEME.color.text};
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+.create * {
+  box-sizing: border-box;
+}
+.create__title {
+  margin: 0;
+  font-size: ${THEME.font.xl}px;
+  font-weight: normal;
+}
+.create__name {
+  width: 220px;
+  max-width: 100%;
+  padding: 8px 10px;
+  /* 16px or larger, or iOS Safari zooms the page when it takes focus. */
+  font-size: 16px;
+  text-align: center;
+}
+.create__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: ${THEME.margin * 2}px;
+}
+.create__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${THEME.padding}px;
+  width: 200px;
+  padding: ${THEME.padding}px;
+  border: 2px solid ${cssColor(0x555577)};
+  background: #2a2a4a;
+  color: ${THEME.color.text};
+  font: inherit;
+  cursor: pointer;
+}
+.create__card.is-selected {
+  border-color: ${cssColor(0xffee58)};
+}
+.create__card-name {
+  font-size: ${THEME.font.lg}px;
+  font-weight: bold;
+}
+.create__card-text {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+  text-align: center;
+}
+.create__begin {
+  width: 220px;
+  max-width: 100%;
+  font-size: ${THEME.font.lg}px;
+}
+.create__begin:disabled {
+  color: ${THEME.color.dim};
+}
+
 /* --- Slot picker --------------------------------------------------------- */
 
 .hud-picker {

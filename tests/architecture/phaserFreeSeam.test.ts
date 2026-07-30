@@ -4,7 +4,16 @@ import { describe, expect, it } from 'vitest';
 // held by discipline everywhere else: a stray `import Phaser` here typechecks,
 // lints and passes CI, and only surfaces later as a unit suite that needs a
 // game engine to run.
-const PHASER_FREE_DIRS = ['systems', 'data', 'persistence', 'types', 'config', 'world', 'hud'];
+const PHASER_FREE_DIRS = [
+  'systems',
+  'data',
+  'persistence',
+  'types',
+  'config',
+  'world',
+  'hud',
+  'ui',
+];
 
 // Read as text rather than imported, so a violation is reported rather than
 // pulling Phaser into the test run. The patterns have to be literals, so they
@@ -19,6 +28,7 @@ const SOURCES: Record<string, string> = import.meta.glob(
     '../../src/config/**/*.ts',
     '../../src/world/**/*.ts',
     '../../src/hud/**/*.ts',
+    '../../src/ui/**/*.ts',
   ],
   { query: '?raw', import: 'default', eager: true },
 );

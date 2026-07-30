@@ -1,8 +1,12 @@
 import Phaser from 'phaser';
 import { generatePlaceholderTextures } from './generateTextures';
-import { saveService } from '../persistence';
-import { startGame } from '../world/GameContext';
+import { bootIntoGame } from './bootFlow';
 
+/**
+ * The one thing that still has to be a scene before the world exists: the
+ * placeholder textures are baked with Phaser's `Graphics`, so they need a live
+ * scene to be drawn into. Everything after that is plain TypeScript.
+ */
 export class PreloadScene extends Phaser.Scene {
   constructor() {
     super('Preload');
@@ -10,13 +14,6 @@ export class PreloadScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
-
-    const savedCharacter = saveService.load();
-    if (savedCharacter) {
-      startGame({ character: savedCharacter, events: this.game.events });
-      this.scene.start('Zone');
-    } else {
-      this.scene.start('CharacterCreate');
-    }
+    bootIntoGame(this.game);
   }
 }

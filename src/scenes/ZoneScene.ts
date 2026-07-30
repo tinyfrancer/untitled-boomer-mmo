@@ -8,6 +8,8 @@ import { Shopkeeper } from '../entities/Shopkeeper';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { SHOPKEEPER_TEXTURE_KEY, SIGNPOST_TEXTURE_KEY, TILESET_KEY } from './generateTextures';
 import { hudMounted, mountHud, unmountHud } from '../hud/Hud';
+import { uiRoot } from '../hud/dom';
+import { showCharacterCreate } from './bootFlow';
 import { LEVEL_UP_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
 import { THEME, worldZoom } from '../ui/theme';
 import { worldViewportHeight } from '../ui/layout';
@@ -84,8 +86,8 @@ export class ZoneScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Preload and CharacterCreate both start a session before coming here; the
-    // fallback only covers being dropped straight into the zone with no save.
+    // The boot flow starts a session before coming here; the fallback only
+    // covers being dropped straight into the zone with no save.
     this.context =
       gameContext() ??
       startGame({
@@ -129,7 +131,7 @@ export class ZoneScene extends Phaser.Scene {
     // does not touch it and neither will the renderer swap.
     if (!hudMounted()) {
       mountHud({
-        parent: document.getElementById('app') ?? document.body,
+        parent: uiRoot(),
         events: this.game.events,
         character: this.context.character.state,
         notifications: this.context.takeNotifications(),
@@ -447,7 +449,10 @@ export class ZoneScene extends Phaser.Scene {
     // could register.
     this.teardownView();
     unmountHud();
-    this.scene.start('CharacterCreate');
+    // Stopped rather than started-over: the creation screen is not a scene any
+    // more, and the one it hands back to is this one.
+    this.scene.stop();
+    showCharacterCreate(this.game);
   }
 
   // ---------------------------------------------------------------------------

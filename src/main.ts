@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from './config/constants';
-import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
-import { CharacterCreateScene } from './scenes/CharacterCreateScene';
 import { ZoneScene } from './scenes/ZoneScene';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -19,17 +17,16 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  dom: {
-    createContainer: true,
-  },
-  scene: [BootScene, PreloadScene, CharacterCreateScene, ZoneScene],
+  // No `dom` container: the only DOM Phaser was hosting was the name box on the
+  // creation screen, and that screen is plain HTML now.
+  scene: [PreloadScene, ZoneScene],
 };
 
 const game = new Phaser.Game(config);
 
-// Dev-only handle on the running game, so the devtools console and the
-// scripted smoke check can inspect live scene state. Stripped from production
-// builds by the import.meta.env.DEV guard.
+// Dev-only handle on the running game, for the generated textures and the frame
+// loop. Everything about the simulation is on window.world and everything about
+// the HUD is in the DOM. Stripped from production builds by the guard.
 if (import.meta.env.DEV) {
   (window as unknown as { game: Phaser.Game }).game = game;
 }
