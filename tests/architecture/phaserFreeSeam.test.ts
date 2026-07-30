@@ -4,6 +4,11 @@ import { describe, expect, it } from 'vitest';
 // held by discipline everywhere else: a stray `import Phaser` here typechecks,
 // lints and passes CI, and only surfaces later as a unit suite that needs a
 // game engine to run.
+//
+// `render3d` is the one member that is not engine-*free* — it is the Three.js
+// renderer. It is guarded for the other half of the same rule: the two
+// renderers must not reach into each other, or deleting Phaser in PR 20 stops
+// being a deletion.
 const PHASER_FREE_DIRS = [
   'systems',
   'data',
@@ -13,6 +18,7 @@ const PHASER_FREE_DIRS = [
   'world',
   'hud',
   'ui',
+  'render3d',
 ];
 
 // Read as text rather than imported, so a violation is reported rather than
@@ -29,6 +35,7 @@ const SOURCES: Record<string, string> = import.meta.glob(
     '../../src/world/**/*.ts',
     '../../src/hud/**/*.ts',
     '../../src/ui/**/*.ts',
+    '../../src/render3d/**/*.ts',
   ],
   { query: '?raw', import: 'default', eager: true },
 );

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
+import { GRASS_TILE, PATH_TILE, SAND_TILE, TILE_COLORS, WATER_TILE } from '../data/tiles';
 import {
   LEG_PHASES,
   SKIN_COLOR,
@@ -512,7 +513,7 @@ function generateTilesetTexture(scene: Phaser.Scene): void {
 
 function drawSandTile(graphics: Phaser.GameObjects.Graphics, index: number): void {
   const x = index * TILE_SIZE;
-  graphics.fillStyle(0xe0c184, 1);
+  graphics.fillStyle(TILE_COLORS[SAND_TILE], 1);
   graphics.fillRect(x, 0, TILE_SIZE, TILE_SIZE);
 
   // darker speckles so the beach doesn't read as a flat color
@@ -536,7 +537,7 @@ function drawSandTile(graphics: Phaser.GameObjects.Graphics, index: number): voi
 
 function drawWaterTile(graphics: Phaser.GameObjects.Graphics, index: number): void {
   const x = index * TILE_SIZE;
-  graphics.fillStyle(0x1565c0, 1);
+  graphics.fillStyle(TILE_COLORS[WATER_TILE], 1);
   graphics.fillRect(x, 0, TILE_SIZE, TILE_SIZE);
 
   // a couple of lighter wave strokes so the surface isn't a flat block of blue
@@ -560,7 +561,7 @@ function drawWaterTile(graphics: Phaser.GameObjects.Graphics, index: number): vo
 
 function drawGrassTile(graphics: Phaser.GameObjects.Graphics, index: number): void {
   const x = index * TILE_SIZE;
-  graphics.fillStyle(0x2e7d32, 1);
+  graphics.fillStyle(TILE_COLORS[GRASS_TILE], 1);
   graphics.fillRect(x, 0, TILE_SIZE, TILE_SIZE);
 
   // scattered darker flecks so the field doesn't read as a flat color
@@ -584,7 +585,7 @@ function drawGrassTile(graphics: Phaser.GameObjects.Graphics, index: number): vo
 
 function drawPathTile(graphics: Phaser.GameObjects.Graphics, index: number): void {
   const x = index * TILE_SIZE;
-  graphics.fillStyle(0x8d6e63, 1);
+  graphics.fillStyle(TILE_COLORS[PATH_TILE], 1);
   graphics.fillRect(x, 0, TILE_SIZE, TILE_SIZE);
 
   // a few pebbles for texture

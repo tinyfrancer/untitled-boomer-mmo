@@ -25,6 +25,13 @@ export interface DebugView {
   drawnCounts(): DrawnCounts;
   /** The player's figure, as opposed to the simulation: its walk cycle. */
   playerFigure(): { walking: boolean; pose: string };
+  /**
+   * What the renderer is holding on the GPU, for a renderer that has one.
+   * Absent in 2D, where a forgotten object costs a stray label rather than
+   * memory the card never gets back — which is the whole reason the Three.js
+   * view has to answer it.
+   */
+  gpuMemory?(): { geometries: number; textures: number };
 }
 
 export interface DrawnCounts {
