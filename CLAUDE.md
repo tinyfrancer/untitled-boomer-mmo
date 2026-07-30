@@ -118,14 +118,15 @@ await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
 is a static site. Character data lives in the browser's `localStorage`.
 
 **The core seam: Phaser-free vs. Phaser-coupled code.** `systems/`, `data/`, `persistence/`,
-`types/`, `config/`, `world/` and `hud/` contain plain TypeScript with no Phaser imports. This is
+`types/`, `config/`, `world/`, `hud/` and `ui/` contain plain TypeScript with no Phaser imports.
+Only `main.ts`, `scenes/` and `entities/` know the engine exists at all. This is
 deliberate — it's what makes them unit-testable with Vitest (no game engine to mock) and is the
 same boundary that would let a real backend swap in later without touching game logic. When adding
 game logic, default to putting the math/rules in one of these Phaser-free modules and call it from a
 scene, rather than inlining logic into a Scene or a Phaser.GameObjects subclass. Tests in `tests/`
 mirror this split (`tests/systems/`, `tests/world/`, `tests/persistence/`) and test only these
 modules. The rule is enforced, not just documented:
-`tests/architecture/phaserFreeSeam.test.ts` reads every file under those seven directories and fails
+`tests/architecture/phaserFreeSeam.test.ts` reads every file under those eight directories and fails
 on an `import` of `phaser`.
 
 **The simulation is `src/world/`; `src/entities/` only draws it.** `ZoneWorld` owns the player, the
@@ -146,13 +147,12 @@ add to it:
   go away with the 2D renderer and the boxes do not. `npm run smoke` asserts the two still agree,
   because nothing in the unit suite can see a generated texture.
 
-**Scene flow** (registered in `src/main.ts`, one `Phaser.Game` instance):
-`Boot` → `Preload` (generates placeholder textures at runtime, no image assets; loads any
-existing save, starts a `GameContext` with it and routes straight to `Zone`, else to
-`CharacterCreate`) → `CharacterCreate` (builds a `CharacterState`, saves it and starts the
-`GameContext`) → `Zone` (the gameplay scene), which mounts the DOM HUD alongside itself. Each of
-those runs once per page load: nothing restarts a scene any more, and `Zone` is the only scene left
-that draws anything but the creation screen.
+**There are two scenes left, and one of them draws nothing.** `Preload` generates the placeholder
+textures — the one thing before the world that genuinely needs a live Phaser scene, since they are
+baked with `Graphics` — and then hands over to `scenes/bootFlow.ts`, which is an if-statement:
+resume the save, or mount the plain-HTML creation screen (`hud/CharacterCreate.ts`) and start the
+session with what it produces. `Zone` is the gameplay scene and mounts the DOM HUD alongside itself.
+Neither restarts; a reset stops `Zone` and shows the creation screen again.
 
 **`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
 Phaser-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
@@ -213,6 +213,11 @@ from `THEME` — which stores fills as `0x` numbers for Phaser and `#` strings f
 side goes through `cssColor`/`cssRgba` rather than keeping a second copy of the palette. `hud-hidden`
 is `display: none !important` on purpose: it is a utility and has to beat whatever display the
 element sets for itself.
+
+**`ui/` is the vocabulary, `hud/` is the DOM that renders it.** `ui/layout.ts` (geometry),
+`ui/theme.ts` (palette and scale), `ui/tabs.ts` (the tab table) and `ui/uiEvents.ts` (the event
+names and payloads) are shared, tested, engine-free definitions; everything that builds an element
+lives in `hud/`.
 
 **The paperdoll is SVG built from the same rig the sprite texture is baked from**
 (`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by

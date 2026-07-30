@@ -159,3 +159,12 @@ function svgEl(tag: string, attributes: Record<string, string | number>): SVGEle
   }
   return node;
 }
+
+/**
+ * A bare figure holding one weapon, for the class previews on the creation
+ * screen. Classes look alike apart from what they start holding, so that is the
+ * whole of the difference the preview has to show.
+ */
+export function weaponPreviewSvg(weaponItemId: string): SVGSVGElement {
+  return paperdollSvg({ helmet: null, chest: null, pants: null, weapon: weaponItemId });
+}

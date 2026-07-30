@@ -16,7 +16,9 @@
   Phaser-free seam); `UIScene` is down to the sheets. See the retrospective under PR 10 below.
 - **PR 11 merged** — every panel is DOM, `UIScene` and the 18 Phaser `ui/` files are gone, and so
   is `clipToMask.ts`. See the retrospective under PR 11 below.
-- **Next: PR 12** — the character-create and boot flow.
+- **PR 12 merged** — the creation screen is plain HTML, `Boot` and `CharacterCreate` are gone and
+  `dom.createContainer` with them. **Phase 2 is done.** See the retrospective under PR 12 below.
+- **Next: PR 13**, the start of phase 3 — the Three.js renderer bootstrap.
 
 ## Context
 
@@ -477,9 +479,31 @@ _Original spec:_ port all panels to DOM; delete `UIScene`, the 18 Phaser `ui/` f
 `clipToMask.ts`; every sheet opens, scrolls and clips; smoke's UI assertions rewritten against the
 DOM.
 
-**PR 12 — `CharacterCreate` + `Boot`/`Preload` flow to plain DOM/TS.** Removes `dom.createContainer`
-from `main.ts`.
-_Verify:_ the fresh-save first-run path in smoke.
+### PR 12 — `CharacterCreate` and the boot flow to plain DOM — done, merged
+
+What landed that this document did not predict, and that phase 3 inherits:
+
+- **`Preload` has to stay a scene, and that is fine.** The placeholder textures are baked with
+  Phaser's `Graphics`, so something has to be a live scene until the 3D view stops needing them.
+  What moved out is the _flow_: `scenes/bootFlow.ts` is an if-statement — resume the save, or mount
+  the creation screen and start the session with what it produces — and `Boot` was deleted outright,
+  since all it ever did was start `Preload`.
+- **A reset stops `Zone` rather than starting another scene.** There is no scene to hand to any
+  more, so `resetCharacter` calls `scene.stop()` and `showCharacterCreate(game)`; the screen hands
+  back to `Zone` by starting it again.
+- **`src/ui/` is now Phaser-free in its entirety** and joined the seam guard. What is left of it is
+  vocabulary — layout arithmetic, the palette, the tab table, the event names — with every element
+  that draws any of it in `hud/`. Only `main.ts`, `scenes/` and `entities/` know the engine exists.
+- **The class previews came free from PR 11's paperdoll.** They were `ensurePlayerTexture` +
+  `add.image`; they are `weaponPreviewSvg(classDef.startingWeaponId)` now, which is the same rig and
+  needs no scene to draw into.
+- **The name box was always the awkward part, and now it is not.** It was a real `<input>` riding in
+  on `add.dom`, which is the only reason `dom.createContainer` was in the config at all. Its
+  font-size stays at 16px on purpose: anything smaller and iOS Safari zooms the page when it takes
+  focus.
+
+_Original spec:_ `CharacterCreate` + `Boot`/`Preload` flow to plain DOM/TS, removing
+`dom.createContainer` from `main.ts`; the fresh-save first-run path in smoke.
 
 Two constraints to settle in this phase rather than rediscover:
 
