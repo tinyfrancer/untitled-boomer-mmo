@@ -7,6 +7,7 @@ import { CampfireSprite } from '../entities/CampfireSprite';
 import { Shopkeeper } from '../entities/Shopkeeper';
 import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { SHOPKEEPER_TEXTURE_KEY, SIGNPOST_TEXTURE_KEY, TILESET_KEY } from './generateTextures';
+import { hudMounted, mountHud, unmountHud } from '../hud/Hud';
 import { LEVEL_UP_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
 import { THEME, worldZoom } from '../ui/theme';
 import { worldViewportHeight } from '../ui/layout';
@@ -123,8 +124,16 @@ export class ZoneScene extends Phaser.Scene {
       // outlives this scene. Only a reset ends one, and it does it itself.
     });
 
-    // The HUD survives zone changes: launched once on first boot, and left
-    // running for every world after it.
+    // The HUD survives zone changes: mounted once on first boot, and left
+    // running for every world after it. The DOM half is the overlay above the
+    // canvas; UIScene is the sheets it has not taken over yet.
+    if (!hudMounted()) {
+      mountHud({
+        parent: document.getElementById('app') ?? document.body,
+        events: this.game.events,
+        character: this.context.character.state,
+      });
+    }
     if (!this.scene.isActive('UI')) {
       this.scene.launch('UI');
     }
@@ -440,6 +449,7 @@ export class ZoneScene extends Phaser.Scene {
     // are still up: Phaser takes those down ahead of any SHUTDOWN listener we
     // could register.
     this.teardownView();
+    unmountHud();
     this.scene.stop('UI');
     this.scene.start('CharacterCreate');
   }

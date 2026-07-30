@@ -54,6 +54,10 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 // carrying an AchievementUnlock). Wearing a title is an ask/answer pair like
 // the quests above: the HUD forwards the tap, the controller re-checks that the
 // kills back it, and the answer is the title actually worn.
+// Phase 2 scaffolding. The DOM HUD owns which sheet the tab bar has open while
+// UIScene still draws the sheets themselves; this is how it tells them. It goes
+// away with UIScene, along with the last Phaser panel.
+export const SHEET_CHANGED_EVENT = 'sheet-changed';
 export const KILLS_CHANGED_EVENT = 'kills-changed';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';

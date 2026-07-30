@@ -16,6 +16,10 @@
         height: 100%;
       }
       #app {
+        /* The HUD is an absolutely-positioned overlay inside this box, so it
+           has to be the containing block. Sized in dvh below rather than fixed
+           to the layout viewport for the same reason the canvas is. */
+        position: relative;
         width: 100vw;
         /*
           dvh, not vh. On iOS Safari 100vh is the *large* viewport — the height
