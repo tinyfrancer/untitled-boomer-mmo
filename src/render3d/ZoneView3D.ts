@@ -89,6 +89,12 @@ export class ZoneView3D {
   dispose(): void {
     this.teardown();
     this.renderer.dispose();
+    // `dispose()` frees what three allocated but leaves the WebGL context to be
+    // collected whenever the browser gets round to it, and a browser allows
+    // only a handful at once. The one path here is a reset, which builds a
+    // fresh view straight afterwards, so the old context has to go now rather
+    // than eventually.
+    this.renderer.forceContextLoss();
     this.canvas.remove();
   }
 

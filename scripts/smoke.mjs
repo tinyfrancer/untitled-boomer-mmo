@@ -1061,6 +1061,29 @@ try {
     `signpost at y=${Math.round(sign3d.y)}, tab bar at ${sign3d.tabBarY}`,
   );
 
+  // The reset is the only path that disposes a renderer and builds another one,
+  // and it is where the 2D port's worst failure lived — a teardown that threw
+  // left the scene manager wedged, presenting as a timeout with no failing
+  // assertion. Two taps on the real panel, the way a phone does it.
+  await page3d.click('.hud-tabs__tab[data-tab="options"]');
+  await page3d.waitForTimeout(80);
+  await page3d.click('.hud-modal [data-action="reset-character"]');
+  await page3d.click('.hud-modal [data-action="reset-character"]');
+  await page3d.waitForSelector('.create', { timeout: 20000 });
+  check(
+    'a 3D reset tears the renderer down and returns to character creation',
+    (await page3d.evaluate(
+      () => document.querySelector('.hud') === null && document.querySelector('canvas') === null,
+    )) === true,
+  );
+  await page3d.click('.create__card[data-class="wizard"]');
+  await page3d.click('.create__begin');
+  await page3d.waitForFunction(() => window.world != null, null, { timeout: 20000 });
+  check(
+    'and builds a fresh one for the next character',
+    (await page3d.evaluate(() => window.view.drawnCounts().ground)) === 1,
+  );
+
   check(
     'no console errors in the 3D view',
     errors3d.length === 0,
