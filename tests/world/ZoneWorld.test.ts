@@ -1,89 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ZoneWorld } from '../../src/world/ZoneWorld';
-import type { WorldEvent } from '../../src/world/worldEvents';
+import { harness, nodeNamed } from './harness';
 import type { EventBus } from '../../src/world/worldEvents';
-import { CharacterController } from '../../src/systems/CharacterController';
-import { InputState } from '../../src/systems/InputState';
-import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { ZONES } from '../../src/data/zones';
 import { PLAYER_DIED_EVENT } from '../../src/ui/uiEvents';
-import type { ZoneId } from '../../src/types/ids';
 
 /**
- * The payoff of the extraction: a whole zone, driven for as long as you like,
- * with no engine underneath it. Everything here is what the smoke check used to
- * be the only way to test.
+ * The core loop, with nothing rendering it: what a zone is made of, a fight
+ * fought to a corpse and back, and the two ways a world hands the player to the
+ * next one.
  */
-
-type Emitted = { event: string; args: unknown[] };
-
-function recordingBus(emitted: Emitted[]): EventBus {
-  const handlers = new Map<string, Array<(...args: unknown[]) => void>>();
-  return {
-    emit(event: string, ...args: unknown[]) {
-      emitted.push({ event, args });
-      handlers.get(event)?.forEach((fn) => fn(...args));
-    },
-    on(event: string, fn: (...args: never[]) => void) {
-      const list = handlers.get(event) ?? [];
-      list.push(fn as (...args: unknown[]) => void);
-      handlers.set(event, list);
-    },
-    off(event: string, fn: (...args: never[]) => void) {
-      const list = handlers.get(event) ?? [];
-      const at = list.indexOf(fn as (...args: unknown[]) => void);
-      if (at >= 0) list.splice(at, 1);
-    },
-  };
-}
-
-interface Harness {
-  world: ZoneWorld;
-  state: CharacterState;
-  emitted: Emitted[];
-  /** Steps the world and returns everything it asked to be drawn. */
-  tick(steps: number, deltaMs?: number): WorldEvent[];
-  /** Steps until `done` sees the events so far, or gives up. */
-  tickUntil(done: (events: WorldEvent[]) => boolean, budgetMs?: number): WorldEvent[];
-}
-
-function harness(options: { zoneId?: ZoneId; level?: number } = {}): Harness {
-  const state = createNewCharacter('Tester', 'warrior');
-  state.level = options.level ?? 1;
-  const emitted: Emitted[] = [];
-  const world = new ZoneWorld({
-    zone: ZONES[options.zoneId ?? 'town'],
-    character: new CharacterController(state),
-    events: recordingBus(emitted),
-    input: new InputState(),
-    // Every wander picks the same angle and half the radius, so a run that
-    // fails does so for a reason and not because a rat drifted.
-    rng: () => 0.5,
-  });
-
-  const tick = (steps: number, deltaMs = 200): WorldEvent[] => {
-    const events: WorldEvent[] = [];
-    for (let i = 0; i < steps; i += 1) {
-      events.push(...world.update(deltaMs));
-    }
-    return events;
-  };
-
-  return {
-    world,
-    state,
-    emitted,
-    tick,
-    tickUntil(done, budgetMs = 60000) {
-      const events: WorldEvent[] = [];
-      for (let elapsed = 0; elapsed < budgetMs; elapsed += 200) {
-        events.push(...tick(1));
-        if (done(events)) break;
-      }
-      return events;
-    },
-  };
-}
 
 beforeEach(() => {
   localStorage.clear();
@@ -100,6 +25,29 @@ describe('ZoneWorld', () => {
     expect(world.player.x).toBe(world.worldWidth / 2);
   });
 
+  it('weights town spawns toward level 1 and scales their HP with level', () => {
+    const { world } = harness();
+    const count = (level: number): number => world.mobs.filter((mob) => mob.level === level).length;
+
+    expect(count(1)).toBeGreaterThan(count(2));
+    expect(count(2)).toBeGreaterThan(count(3));
+    expect(count(3)).toBeGreaterThan(0);
+    expect(world.mobs.every((mob) => mob.maxHp === 20 + 20 * (mob.level - 1))).toBe(true);
+  });
+
+  it('gives each zone its own table, which is what makes three level 1-3 zones worth visiting', () => {
+    const beach = harness({ zoneId: 'beach' }).world;
+    const camp = harness({ zoneId: 'bandit-camp' }).world;
+
+    expect([...new Set(beach.mobs.map((mob) => mob.definition.id))]).toEqual(['crab']);
+    expect([...new Set(beach.nodes.map((node) => node.definition.id))]).toEqual([
+      'ocean-fishing-spot',
+    ]);
+    expect(Math.min(...beach.mobs.map((mob) => mob.level))).toBe(1);
+    expect(Math.max(...beach.mobs.map((mob) => mob.level))).toBe(3);
+    expect([...new Set(camp.mobs.map((mob) => mob.definition.id))]).toEqual(['bandit']);
+  });
+
   it('runs a full kill, credit and respawn cycle with nothing rendering it', () => {
     // Enough level that the fight's outcome is the loop being tested rather
     // than the damage rolls.
@@ -107,7 +55,7 @@ describe('ZoneWorld', () => {
     const rat = world.mobs.find((mob) => mob.level === 1);
     if (!rat) throw new Error('town has no level 1 rat');
 
-    world.player.setPosition(rat.x - 40, rat.y);
+    world.teleport(rat.x - 40, rat.y);
     world.setTarget(rat);
 
     const fight = tickUntil((events) => events.some((e) => e.kind === 'death'));
@@ -133,7 +81,7 @@ describe('ZoneWorld', () => {
     const { world, emitted, tickUntil } = harness();
     const rat = world.mobs[0];
 
-    world.player.setPosition(rat.x - 40, rat.y);
+    world.teleport(rat.x - 40, rat.y);
     world.player.takeDamage(world.player.hp - 1);
     rat.engage();
 
@@ -151,7 +99,7 @@ describe('ZoneWorld', () => {
     const { world, tickUntil } = harness({ zoneId: 'bandit-camp' });
     const bandit = world.mobs[0];
 
-    world.player.setPosition(bandit.x - 40, bandit.y);
+    world.teleport(bandit.x - 40, bandit.y);
     world.player.takeDamage(world.player.hp - 1);
     bandit.engage();
 
@@ -165,7 +113,7 @@ describe('ZoneWorld', () => {
     const { world, tick } = harness();
     // Walking into the south edge. The bounds clamp stops the player inside
     // EXIT_MARGIN, which is what makes the transition fire at all.
-    world.player.setPosition(world.worldWidth / 2, world.worldHeight - 10);
+    world.teleport(world.worldWidth / 2, world.worldHeight - 10);
 
     const events = tick(1);
     expect(events).toContainEqual({
@@ -179,13 +127,36 @@ describe('ZoneWorld', () => {
     expect(tick(10)).toEqual([]);
   });
 
+  it('walks the player to a tapped point on the ground', () => {
+    const { world, until } = harness();
+    const destination = { x: world.player.x + 200, y: world.player.y + 100 };
+
+    world.tap({ kind: 'ground', point: destination });
+    // How close "arrived" is scales with how far one frame carries the player
+    // (see arriveRadius), so this asserts the walk finished, not a pixel.
+    until(
+      () => !world.player.hasMoveTarget(),
+      'the player to walk to the tapped destination',
+      20000,
+    );
+    expect(Math.abs(world.player.x - destination.x)).toBeLessThanOrEqual(48);
+    expect(Math.abs(world.player.y - destination.y)).toBeLessThanOrEqual(48);
+  });
+
+  it('regenerates the player out of combat', () => {
+    const { world, until } = harness();
+    world.player.takeDamage(Math.floor(world.player.maxHp / 2));
+    const wounded = world.player.hp;
+
+    until(() => world.player.hp > wounded, 'HP to come back on its own');
+  });
+
   it('reports gathering progress to the view while the channel runs', () => {
     const { world, tick } = harness();
     world.character.state.gear.weapon = 'felling-axe';
-    const tree = world.nodes.find((node) => node.definition.id === 'tree');
-    if (!tree) throw new Error('town has no tree');
+    const tree = nodeNamed(world, 'tree');
 
-    world.player.setPosition(tree.x, tree.y + 40);
+    world.teleport(tree.x, tree.y + 40);
     world.startGathering(tree);
 
     const ticks = tick(2, 100).filter((event) => event.kind === 'gather-tick');

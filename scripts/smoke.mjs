@@ -1,9 +1,25 @@
 /**
- * Browser smoke check for the gameplay loop.
+ * Browser smoke check: what only a real run in a real browser can show.
  *
- * The unit suite covers the Phaser-free systems; this covers what only a real
- * run can show — that scenes boot, the AI state machine moves between wander,
- * chase and returning, and the player death path resets the world.
+ * The simulation is headless and unit-tested now — `tests/world/` drives whole
+ * zones through combat, leashing, gathering, trading, camping and casting with
+ * no engine underneath. So this covers the other half, and nothing else:
+ *
+ *   - the scenes boot, and the flows that cross between them work
+ *   - real mouse and real key events reach the game
+ *   - the view builds and *unbuilds* itself, which no state assertion can see
+ *   - the HUD's geometry at real viewport sizes, and its scrolling and clipping
+ *   - the save round trip through an actual page reload
+ *
+ * It reaches the game through two dev-only handles, neither of which mentions
+ * Phaser: `window.world` for everything about the simulation and `window.view`
+ * for the few questions only the renderer can answer (see src/types/debugView.ts).
+ * That is deliberate — most of this file should survive the Three.js port
+ * unchanged.
+ *
+ * The game runs under `?loop=manual`, so nothing advances until this script
+ * cranks it with `view.step()`. Waits are therefore in *game* milliseconds and
+ * are deterministic; a loaded CI runner makes the script slower, not flakier.
  *
  * Usage: npm run dev, then `node scripts/smoke.mjs [--headed]`.
  * Screenshots land in .smoke/.
@@ -11,9 +27,16 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
-const URL = process.env.SMOKE_URL ?? 'http://localhost:5173';
+const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173';
+const URL = `${BASE}${BASE.includes('?') ? '&' : '?'}loop=manual`;
 const OUT = '.smoke';
 const headed = process.argv.includes('--headed');
+
+// One simulated frame. 40ms is 25fps: fast enough that arrival bands behave the
+// way they do on a real machine, slow enough that a few hundred frames cover a
+// minute of game time.
+const FRAME_MS = 40;
+const FRAMES_PER_POLL = 12;
 
 mkdirSync(OUT, { recursive: true });
 
@@ -23,10 +46,9 @@ function check(name, passed, detail = '') {
   console.log(`${passed ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
-// Phaser drives its update loop off requestAnimationFrame, and headless Chromium
-// will background an idle renderer and stop firing it — mid-run the game freezes
-// with velocities set but positions never integrating. These flags keep the
-// renderer awake for the whole session.
+// Rendering and input still run off requestAnimationFrame even with the
+// simulation on a hand crank, and headless Chromium will background an idle
+// renderer. These flags keep it drawing and listening for the whole session.
 const browser = await chromium.launch({
   headless: !headed,
   args: [
@@ -41,77 +63,80 @@ const consoleErrors = [];
 page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
 page.on('pageerror', (e) => consoleErrors.push(String(e)));
 
-// Scene helpers. `game` is the dev-only handle installed in src/main.ts.
-//
-// Distances here are Math.hypot rather than Phaser.Math.Distance.Between: Phaser 3
-// left a `Phaser` global on window that these page.evaluate bodies could reach, and
-// Phaser 4 does not, so the engine call threw ReferenceError inside the browser.
-// The scaffolding never needed the engine for a hypotenuse anyway.
-const townState = () =>
-  page.evaluate(() => {
-    // Phaser sleeps its TimeStep when the page blurs, and a CI runner has no
-    // window manager to ever focus it — the game silently stops stepping with
-    // velocities still set. Nudge it awake on every poll.
-    const loop = window.game.loop;
-    if (loop.sleeping) loop.wake();
+// --- Driving the game ------------------------------------------------------
 
-    const town = window.game.scene.getScene('Zone');
-    if (!town?.scene.isActive()) return null;
-    const p = town.player;
-    const mobs = town.mobs.map((r) => ({
-      level: r.level,
-      hp: r.hp,
-      maxHp: r.maxHp,
-      engaged: r.isEngaged(),
-      alive: r.isAlive(),
-      x: Math.round(r.x),
-      y: Math.round(r.y),
-      dist: Math.round(Math.hypot(r.x - p.x, r.y - p.y)),
-      state: r.aiState,
-      fromSpawn: Math.round(Math.hypot(r.x - r.spawnX, r.y - r.spawnY)),
-      vel: [Math.round(r.vx), Math.round(r.vy)],
-    }));
-    const nodes = town.nodes.map((n) => ({
-      id: n.definition.id,
-      skill: n.definition.skill,
-      available: n.isAvailable(),
-      x: Math.round(n.x),
-      y: Math.round(n.y),
-      dist: Math.round(Math.hypot(n.x - p.x, n.y - p.y)),
-    }));
+/** Advances the simulation by hand. Returns once those frames have been run. */
+const step = (frames = 1, deltaMs = FRAME_MS) =>
+  page.evaluate(([f, d]) => window.view.step(d, f), [frames, deltaMs]);
+
+/**
+ * Lets the browser draw. The camera follows the player on the render loop
+ * rather than on our steps, so anything about to read a screen coordinate has
+ * to give it a frame first.
+ */
+const draw = () => page.waitForTimeout(80);
+
+// Distances here are Math.hypot rather than Phaser.Math.Distance.Between:
+// Phaser 3 left a `Phaser` global these evaluate bodies could reach and Phaser
+// 4 does not, so the engine call threw ReferenceError inside the browser. The
+// scaffolding never needed the engine for a hypotenuse anyway.
+const worldState = () =>
+  page.evaluate(() => {
+    const world = window.world;
+    if (!world) return null;
+    const p = world.player;
     return {
-      zoneId: town.zone.id,
+      zoneId: world.zone.id,
       player: { hp: p.hp, maxHp: p.maxHp, level: p.level, x: Math.round(p.x), y: Math.round(p.y) },
-      mobs,
-      nodes,
-      gathering: town.gatherState !== null,
-      inventory: { ...town.character.state.inventory },
-      skills: JSON.parse(JSON.stringify(town.character.state.skills)),
-      gear: { ...town.character.state.gear },
-      fireLit: town.campfire?.isLit() === true,
-      afk: { active: town.afkActive, target: town.target?.name ?? null },
-      eating: p.isEating(),
-      loop: { sleeping: loop.sleeping, running: loop.running, fps: Math.round(loop.actualFps) },
+      mobs: world.mobs.map((m) => ({
+        name: m.name,
+        level: m.level,
+        hp: m.hp,
+        maxHp: m.maxHp,
+        alive: m.isAlive(),
+        engaged: m.isEngaged(),
+        dist: Math.round(Math.hypot(m.x - p.x, m.y - p.y)),
+      })),
+      nodes: world.nodes.map((n) => n.definition.id),
+      target: world.target?.name ?? null,
+      shopOpen: world.shopNpc !== null,
+      afk: world.afkActive,
+      inventory: { ...world.character.state.inventory },
     };
   });
 
-// Generous by default: a loaded CI runner steps the game far slower than wall
-// clock — runs have been seen at 5fps, where a second of game time costs the
-// better part of a minute. Every wait here is on a condition that either
-// happens or hangs, so a high ceiling only costs time on a genuine failure.
-const waitFor = async (fn, label, timeoutMs = 60000) => {
-  const start = Date.now();
-  let last = null;
-  for (;;) {
-    last = (await townState()) ?? last;
+/**
+ * Steps until the world satisfies `fn`. The budget is in game milliseconds, so
+ * it means the same thing on a fast laptop and a loaded CI runner — which is
+ * the whole point of `?loop=manual`.
+ */
+const stepUntil = async (fn, label, budgetMs = 120000) => {
+  let last = await worldState();
+  for (let elapsed = 0; elapsed < budgetMs; elapsed += FRAMES_PER_POLL * FRAME_MS) {
     if (last && fn(last)) return last;
-    if (Date.now() - start > timeoutMs) {
-      // Dump the last state seen: these timeouts are usually only reproducible
-      // on CI, so the failure message has to carry enough to diagnose it.
-      throw new Error(`timed out waiting for: ${label}\nlast state: ${JSON.stringify(last)}`);
-    }
-    await page.waitForTimeout(150);
+    await step(FRAMES_PER_POLL);
+    last = (await worldState()) ?? last;
   }
+  if (last && fn(last)) return last;
+  throw new Error(`timed out waiting for: ${label}\nlast state: ${JSON.stringify(last)}`);
+};
+
+/** Drops the player back on the zone's spawn point with nothing selected. */
+const park = async () => {
+  await page.evaluate(() => {
+    window.world.clearTarget();
+    window.world.teleport(window.world.spawnPoint.x, window.world.spawnPoint.y);
+  });
+  await step(2);
+  await draw();
+};
+
+/** A real press-and-release at a screen point, given a frame to be processed. */
+const clickAt = async (point) => {
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await draw();
 };
 
 try {
@@ -120,7 +145,7 @@ try {
   // which takes far longer than any later wait in this script.
   await page.waitForFunction(() => window.game?.scene?.getScene('Boot'), null, { timeout: 120000 });
 
-  // Fresh character: clear any save, then drive the real creation screen.
+  // --- Booting: a fresh character through the real creation screen. ---
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForFunction(
@@ -131,43 +156,33 @@ try {
   check('character creation scene boots', true);
   await page.screenshot({ path: `${OUT}/1-character-create.png` });
 
-  // Click the warrior card and Begin Adventure through real canvas input.
   await page.evaluate(() => {
     const s = window.game.scene.getScene('CharacterCreate');
     s.selectClass('warrior');
     s.tryBeginAdventure();
   });
-  const boot = await waitFor((s) => s.mobs.length > 0, 'Town scene with rats');
-  check('town scene spawns rats', boot.mobs.length === 9, `${boot.mobs.length} rats`);
-
-  const levels = boot.mobs.map((r) => r.level).sort();
-  const dist = { 1: 0, 2: 0, 3: 0 };
-  levels.forEach((l) => (dist[l] += 1));
+  await page.waitForFunction(() => window.world != null && window.view != null, null, {
+    timeout: 20000,
+  });
+  const boot = await worldState();
   check(
-    'spawn levels are weighted toward level 1',
-    dist[1] > dist[2] && dist[2] > dist[3] && dist[3] > 0,
-    `lvl1=${dist[1]} lvl2=${dist[2]} lvl3=${dist[3]}`,
+    'the zone scene builds a view of the world it was handed',
+    boot.mobs.length === 9 && boot.nodes.length === 6,
+    `${boot.mobs.length} mobs, ${boot.nodes.length} nodes`,
   );
 
-  const scaled = boot.mobs.every((r) => r.maxHp === 20 + 20 * (r.level - 1));
-  check(
-    'rat max HP scales with level',
-    scaled,
-    boot.mobs.map((r) => `L${r.level}:${r.maxHp}`).join(' '),
-  );
   // Collision boxes are data now (EnemyDefinition.body, ResourceNodeDefinition
   // .body) rather than measurements off a texture that is going away with the
   // 2D renderer. Nothing in the unit suite can see a generated texture, so this
   // is the only place the two can be held together — and a drift here is a mob
   // that collides with something other than what you can see.
   const bodies = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
     const drawn = (key) => {
       const frame = window.game.textures.get(key).get();
       return { width: frame.width, height: frame.height };
     };
-    const rat = z.mobs.find((m) => m.definition.id === 'rat');
-    const tree = z.nodes.find((n) => n.definition.id === 'tree');
+    const rat = window.world.mobs.find((m) => m.definition.id === 'rat');
+    const tree = window.world.nodes.find((n) => n.definition.id === 'tree');
     return [
       { id: 'rat', body: rat.definition.body, texture: drawn(rat.definition.textureKey) },
       { id: 'tree', body: tree.definition.body, texture: drawn(tree.definition.textureKey) },
@@ -185,619 +200,140 @@ try {
     bodiesMatch,
     bodies.map((b) => `${b.id} ${b.body.width}x${b.body.height}`).join(', '),
   );
-
   await page.screenshot({ path: `${OUT}/2-town.png` });
 
-  // The stick figure's legs: walking plays the baked leg-phase animation and
-  // standing still puts it back on the neutral frame. The walk belongs to the
-  // sprite rather than the simulation, so this is the one check that has to
-  // ask `figure` instead of `player`.
-  const walking = await page.evaluate(async () => {
-    const s = window.game.scene.getScene('Zone');
-    s.player.moveTo(s.player.x + 300, s.player.y);
-    await new Promise((r) => setTimeout(r, 300));
-    const moving = {
-      playing: s.figure.anims.isPlaying,
-      frame: s.figure.anims.currentFrame?.textureKey,
-    };
-    s.player.stopMoving();
-    await new Promise((r) => setTimeout(r, 300));
-    return { moving, idleTexture: s.figure.texture.key, playing: s.figure.anims.isPlaying };
-  });
+  // --- The view's own teardown. A zone change is a view rebuild, not a scene
+  // restart, so everything the last zone drew has to come down by hand. This is
+  // invisible to every state assertion: ten round trips once took the display
+  // list from 44 objects to 764 with the whole unit suite still green. Run
+  // before anything fights, so no floating number is mid-flight in either
+  // count. ---
+  const drawn = () => page.evaluate(() => window.view.drawnCounts());
+  const beforeTrip = await drawn();
+  for (let trip = 0; trip < 3; trip += 1) {
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+    });
+    await stepUntil((s) => s.zoneId === 'beach', 'the south exit to load the beach');
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, 33);
+    });
+    await stepUntil((s) => s.zoneId === 'town', 'the north exit to return to town');
+  }
+  const afterTrip = await drawn();
   check(
-    'the figure animates its legs while walking',
-    walking.moving.playing === true,
-    `frame ${walking.moving.frame}`,
+    'three zone round trips leave the view exactly as they found it',
+    JSON.stringify(beforeTrip) === JSON.stringify(afterTrip),
+    `${JSON.stringify(beforeTrip)} -> ${JSON.stringify(afterTrip)}`,
   );
   check(
+    'the rebuilt view has one of everything it should',
+    afterTrip.ground === 1 && afterTrip.signposts === 2 && afterTrip.npcs === 1,
+    `${afterTrip.ground} ground layer(s), ${afterTrip.signposts} signpost(s), ` +
+      `${afterTrip.npcs} shopkeeper(s), ${afterTrip.labels} label(s)`,
+  );
+
+  // Walking east into the third zone, so the round trip above is not the only
+  // exit ever taken.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth - 33, w.worldHeight / 2);
+  });
+  await stepUntil((s) => s.zoneId === 'bandit-camp', 'the east exit to load the bandit camp');
+  await page.screenshot({ path: `${OUT}/9-bandit-camp.png` });
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(33, w.worldHeight / 2);
+  });
+  await stepUntil((s) => s.zoneId === 'town', 'the west exit to return to town');
+  check('zone travel round-trips town -> beach -> town -> bandit camp -> town', true);
+
+  // --- The figure's legs: walking plays the baked leg-phase animation and
+  // standing still puts it back on the neutral frame. The walk belongs to the
+  // sprite rather than the simulation, so it is the view that is asked. ---
+  await park();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.player.moveTo(w.player.x + 300, w.player.y);
+  });
+  await step(4);
+  const walking = await page.evaluate(() => window.view.playerFigure());
+  await page.evaluate(() => window.world.player.stopMoving());
+  await step(4);
+  const standing = await page.evaluate(() => window.view.playerFigure());
+  check('the figure animates its legs while walking', walking.walking === true, walking.pose);
+  check(
     'the figure returns to its standing frame when it stops',
-    walking.playing === false && walking.idleTexture.endsWith(':0'),
-    walking.idleTexture,
+    standing.walking === false && standing.pose.endsWith(':0'),
+    standing.pose,
   );
 
   // --- Real input: genuine mouse clicks must select world objects. The
   // pointerdown event's own currentlyOver list proved timing-flaky with two
-  // active scenes (see ZoneScene.hitTestWorld), and every other combat check
-  // here calls setTarget directly — so this is the only coverage of the real
-  // click path. Three attempts, because the original bug was intermittent.
-  const resetForClick = () =>
-    page.evaluate(() => {
-      const z = window.game.scene.getScene('Zone');
-      z.clearTarget();
-      z.player.stopMoving();
-      z.player.setPosition(z.spawnPoint.x, z.spawnPoint.y);
-      z.player.setVelocity(0, 0);
-    });
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    await resetForClick();
-    await page.waitForTimeout(200);
+  // active scenes (see ZoneScene.hitTestWorld), and every world test calls
+  // setTarget directly — so this is the only coverage of the real click path.
+  // Three attempts, because the original bug was intermittent. ---
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await park();
     const ratScreen = await page.evaluate(() => {
-      const z = window.game.scene.getScene('Zone');
-      const cam = z.cameras.main;
-      const m = z.mobs.find((mob) => mob.isAlive());
-      return {
-        x: Math.round((m.x - cam.worldView.x) * cam.zoom),
-        y: Math.round((m.y - cam.worldView.y) * cam.zoom),
-      };
+      const mob = window.world.mobs.find((m) => m.isAlive());
+      return window.view.worldToScreen(mob.x, mob.y);
     });
-    await page.mouse.move(ratScreen.x, ratScreen.y);
-    await page.mouse.down();
-    await page.mouse.up();
-    await page.waitForTimeout(150);
-    const targeted = await page.evaluate(
-      () => window.game.scene.getScene('Zone').target?.name ?? null,
-    );
+    await clickAt(ratScreen);
+    const targeted = await page.evaluate(() => window.world.target?.name ?? null);
     check(`real mouse click selects a rat (attempt ${attempt})`, targeted === 'Rat');
   }
 
-  await resetForClick();
-  await page.waitForTimeout(200);
+  // The shopkeeper is out of interact range from the spawn point, so this also
+  // covers the click walking the player over before the shop opens.
+  await park();
   const npcScreen = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const cam = z.cameras.main;
-    const npc = z.children.list.find((o) => o.texture?.key === 'npc-shopkeeper');
-    return {
-      x: Math.round((npc.x - cam.worldView.x) * cam.zoom),
-      y: Math.round((npc.y - cam.worldView.y) * cam.zoom),
-    };
+    const npc = window.world.npcs[0];
+    return window.view.worldToScreen(npc.x, npc.y);
   });
-  await page.mouse.move(npcScreen.x, npcScreen.y);
-  await page.mouse.down();
-  await page.mouse.up();
-  // Out of interact range from spawn, so the click walks the player over first.
-  await page.waitForFunction(
-    () => {
-      const loop = window.game.loop;
-      if (loop.sleeping) loop.wake();
-      return window.game.scene.getScene('Zone').shopNpc !== null;
-    },
-    null,
-    { timeout: 60000 },
-  );
+  await clickAt(npcScreen);
+  await stepUntil((s) => s.shopOpen, 'the tapped shopkeeper to open the shop');
   check('real mouse click walks to the shopkeeper and opens the shop', true);
-  await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.closeShop();
-  });
-  await resetForClick();
 
-  // --- Gathering: tools gate it, the channel yields, and range cancels it. ---
-  check(
-    'town spawns resource nodes',
-    boot.nodes.length === 6,
-    boot.nodes.map((n) => n.id).join(' '),
-  );
-
-  // The starting sword is not a woodcutting tool, so this must be refused
-  // outright rather than silently starting a channel.
-  const refused = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const tree = town.nodes.find((n) => n.definition.id === 'tree');
-    town.player.setPosition(tree.x, tree.y + 40);
-    town.startGathering(tree);
-    return town.gatherState !== null;
-  });
-  check('gathering is refused without the right tool equipped', refused === false);
-
-  // --- Shop: tools no longer start on the character; they are bought. ---
-  const freshWallet = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    return { copper: town.character.state.currency, inv: { ...town.character.state.inventory } };
-  });
-  check(
-    'a new character starts with copper and an empty bag',
-    freshWallet.copper > 0 && Object.keys(freshWallet.inv).length === 0,
-    `copper=${freshWallet.copper}`,
-  );
-
-  const cantAfford = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const npc = town.children.list.find((obj) => obj.texture?.key === 'npc-shopkeeper');
-    town.player.setPosition(npc.x, npc.y + 50);
-    town.approachShop(npc);
-    const open = town.shopNpc !== null;
-    // 75 starting copper buys one 60c tool, not two
-    town.handleBuyRequested('felling-axe');
-    town.handleBuyRequested('fishing-pole');
-    return {
-      open,
-      copper: town.character.state.currency,
-      inv: { ...town.character.state.inventory },
-    };
-  });
-  check('clicking the shopkeeper in range opens the shop', cantAfford.open === true);
-  check(
-    'the shop refuses a purchase the player cannot afford',
-    cantAfford.inv['felling-axe'] === 1 && cantAfford.inv['fishing-pole'] === undefined,
-    `copper=${cantAfford.copper}`,
-  );
-
-  const traded = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    // earn the second tool by selling vendor trash
-    town.character.state.inventory['rat-bones'] = 30;
-    for (let i = 0; i < 30; i++) town.handleSellRequested('rat-bones');
-    town.handleBuyRequested('fishing-pole');
-    return { copper: town.character.state.currency, inv: { ...town.character.state.inventory } };
-  });
-  check(
-    'selling loot funds the second tool',
-    traded.inv['fishing-pole'] === 1 && traded.inv['rat-bones'] === undefined,
-    `copper left=${traded.copper}`,
-  );
-
-  // --- Quests: taken and handed in at the same NPC, with progress counted off
-  // the bag rather than tracked, so the objective can be in hand beforehand. ---
-  const questTaken = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const ui = window.game.scene.getScene('UI');
+  // The HUD hears the world through game.events and renders off its own model;
+  // the quest rules themselves are covered in tests/world/quests.test.ts.
+  const questHeard = await page.evaluate(() => {
     window.game.events.emit('accept-quest-requested', 'rat-bones');
     return {
-      log: { ...z.character.state.quests },
-      uiLog: { ...ui.model.quests },
-      progress: z.character.questProgress('rat-bones'),
+      world: { ...window.world.character.state.quests },
+      hud: { ...window.game.scene.getScene('UI').model.quests },
     };
   });
   check(
-    'the shopkeeper hands out a quest, and the HUD hears about it',
-    questTaken.log['rat-bones'] === 'active' && questTaken.uiLog['rat-bones'] === 'active',
+    'a quest taken in the world reaches the HUD',
+    questHeard.world['rat-bones'] === 'active' && questHeard.hud['rat-bones'] === 'active',
   );
-  check(
-    'a freshly taken quest starts at zero',
-    questTaken.progress.have === 0 && questTaken.progress.need === 10,
-    `${questTaken.progress.have}/${questTaken.progress.need}`,
-  );
+  await page.evaluate(() => window.world.closeShop());
 
-  const notYet = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.addItem('rat-bones', 9);
-    const before = { ...z.character.state.inventory };
-    window.game.events.emit('turn-in-quest-requested', 'rat-bones');
-    return {
-      status: z.character.state.quests['rat-bones'],
-      kept: z.character.itemCount('rat-bones'),
-      unchanged: JSON.stringify(before) === JSON.stringify(z.character.state.inventory),
-      tracker: z.character.questProgress('rat-bones'),
-    };
-  });
-  check(
-    'handing in short of the objective is refused and takes nothing',
-    notYet.status === 'active' && notYet.kept === 9 && notYet.unchanged === true,
-    `${notYet.tracker.have}/${notYet.tracker.need}`,
-  );
-
-  const handedIn = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.addItem('rat-bones', 3); // twelve: two more than asked for
-    const copperBefore = z.character.state.currency;
-    const xpBefore = z.character.state.xp;
-    window.game.events.emit('turn-in-quest-requested', 'rat-bones');
-    return {
-      status: z.character.state.quests['rat-bones'],
-      leftover: z.character.itemCount('rat-bones'),
-      reward: z.character.itemCount('brown-helmet'),
-      copperGained: z.character.state.currency - copperBefore,
-      xpMoved: z.character.state.xp !== xpBefore,
-    };
-  });
-  check(
-    'handing in pays coin, xp and the class-appropriate gear',
-    handedIn.status === 'done' &&
-      handedIn.reward === 1 &&
-      handedIn.copperGained === 120 &&
-      handedIn.xpMoved === true,
-    `+${handedIn.copperGained}c, helmet x${handedIn.reward}`,
-  );
-  check(
-    'handing in eats exactly the objective and leaves the surplus',
-    handedIn.leftover === 2,
-    `${handedIn.leftover} bones left`,
-  );
-
-  const secondTurnIn = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.addItem('rat-bones', 10);
-    const copperBefore = z.character.state.currency;
-    window.game.events.emit('turn-in-quest-requested', 'rat-bones');
-    return {
-      copperGained: z.character.state.currency - copperBefore,
-      helmets: z.character.itemCount('brown-helmet'),
-    };
-  });
-  check(
-    'a finished quest cannot be handed in twice',
-    secondTurnIn.copperGained === 0 && secondTurnIn.helmets === 1,
-  );
-
-  const shopClosed = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    // Clean up the quest props so later bag assertions see what they expect.
-    town.character.removeItem('rat-bones', town.character.itemCount('rat-bones'));
-    town.character.removeItem('brown-helmet', 1);
-    const npc = town.shopNpc;
-    town.player.setPosition(npc.x + 400, npc.y);
-    town.updateShopRange();
-    return town.shopNpc === null;
-  });
-  check('walking away closes the shop', shopClosed === true);
-
-  // Quests are conversations with an NPC, so they can't be taken from anywhere.
-  const awayFromNpc = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    window.game.events.emit('accept-quest-requested', 'crab-feast');
-    return z.character.state.quests['crab-feast'] ?? null;
-  });
-  check('a quest cannot be accepted away from the shopkeeper', awayFromNpc === null);
-
-  const beforeChop = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.handleEquipRequested('felling-axe');
-    const tree = town.nodes.find((n) => n.definition.id === 'tree');
-    town.player.setPosition(tree.x, tree.y + 40);
-    town.startGathering(tree);
-    return {
-      gathering: town.gatherState !== null,
-      xp: town.character.state.skills.woodcutting.xp,
-    };
-  });
-  check('equipping the axe starts a woodcutting channel', beforeChop.gathering === true);
-
-  const chopped = await waitFor((s) => (s.inventory.logs ?? 0) > 0, 'the tree to yield logs');
-  check(
-    'chopping yields logs and woodcutting xp',
-    chopped.skills.woodcutting.xp > beforeChop.xp,
-    `logs=${chopped.inventory.logs} wc xp ${beforeChop.xp} -> ${chopped.skills.woodcutting.xp}`,
-  );
-  check('the channel auto-repeats after a yield', chopped.gathering === true);
-
-  // Walking off must drop the channel — this is the AFK-safety valve.
-  // North-east rather than south, which since zones would walk out the exit.
+  // --- A real fight, for the HUD's benefit: the combat log is fed by events
+  // crossing between two live scenes, which nothing headless can show. ---
   await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const tree = town.nodes.find((n) => n.definition.id === 'tree');
-    town.player.setPosition(tree.x + 400, tree.y - 400);
+    const w = window.world;
+    const rat = w.mobs.find((m) => m.level === 3) ?? w.mobs[0];
+    w.teleport(rat.x, rat.y - 40);
+    w.setTarget(rat);
   });
-  const walkedOff = await waitFor((s) => !s.gathering, 'the channel to cancel out of range');
-  check('walking out of range cancels the channel', walkedOff.gathering === false);
-
-  // --- Encumbrance: a full pack is the other thing that ends an unattended
-  // gathering session, and only a live channel can show it. ---
-  const packed = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    // Weight-1 bones, exactly to the brim.
-    town.character.addItem('rat-bones', town.character.carryCapacity());
-    const tree = town.nodes.find((n) => n.definition.id === 'tree' && n.isAvailable());
-    town.player.setPosition(tree.x, tree.y + 40);
-    town.startGathering(tree);
-    return { started: town.gatherState !== null, logs: town.character.itemCount('logs') };
-  });
-  const stopped = await waitFor((s) => !s.gathering, 'the full pack to stop the channel');
-  check(
-    'a full pack stops the gathering channel instead of looping forever',
-    packed.started === true && stopped.gathering === false,
+  const fought = await stepUntil(
+    (s) => s.player.hp < s.player.maxHp && s.mobs.some((m) => m.engaged && m.hp < m.maxHp),
+    'a fight to land hits in both directions',
   );
-  const spared = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const logs = town.character.itemCount('logs');
-    // Put the pack back the way it was for the tests downstream.
-    town.character.removeItem('rat-bones', town.character.itemCount('rat-bones'));
-    return { logs };
-  });
   check(
-    'the refused haul is not silently added to the pack',
-    spared.logs === packed.logs,
-    `logs stayed at ${spared.logs}`,
-  );
-
-  const buying = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.character.addItem('rat-bones', town.character.carryCapacity());
-    const before = town.character.state.currency;
-    town.shopNpc = town.npcs[0];
-    town.handleBuyRequested('felling-axe');
-    const after = town.character.state.currency;
-    town.shopNpc = null;
-    town.character.removeItem('rat-bones', town.character.itemCount('rat-bones'));
-    return { before, after };
-  });
-  check(
-    'a full pack refuses a purchase before the coin is spent',
-    buying.before === buying.after,
-    `currency stayed at ${buying.after}`,
-  );
-
-  // Fishing runs the same path through a different tool and an endless node.
-  const fished = await page.evaluate(async () => {
-    const town = window.game.scene.getScene('Zone');
-    town.handleEquipRequested('fishing-pole');
-    const spot = town.nodes.find((n) => n.definition.id === 'fishing-spot');
-    // On the shore north of the spot: the spot itself is on water, which the
-    // player cannot stand on.
-    town.player.setPosition(spot.x, spot.y - 64);
-    town.startGathering(spot);
-    return town.gatherState !== null;
-  });
-  check('fishing starts with the pole equipped', fished === true);
-  const caught = await waitFor((s) => (s.inventory['raw-fish'] ?? 0) > 0, 'a fish to be caught');
-  check(
-    'fishing yields raw fish and fishing xp',
-    caught.skills.fishing.xp > 0,
-    `fish=${caught.inventory['raw-fish']} fishing xp=${caught.skills.fishing.xp}`,
-  );
-  await page.screenshot({ path: `${OUT}/5-gathering.png` });
-
-  // --- Cooking chain: logs -> fire -> cooked fish -> eaten for health. ---
-  // Stock the bag directly. Gathering enough by hand is already covered above,
-  // and doing it again would just be a slow way to reach the same state.
-  const lit = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.stopGathering();
-    town.character.state.inventory.logs = 3;
-    town.character.state.inventory['raw-fish'] = 6;
-    town.handleLightFireRequested();
-    return {
-      fire: town.campfire?.isLit() === true,
-      logs: town.character.state.inventory.logs ?? 0,
-    };
-  });
-  check(
-    'lighting a fire consumes a log and places it',
-    lit.fire === true && lit.logs === 2,
-    `fire=${lit.fire} logs=${lit.logs}`,
-  );
-
-  // Cooking near the fire must produce one of the two outcomes and consume the
-  // raw fish either way; which one is a dice roll, so don't assert on it.
-  const cooked = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const before = town.character.state.inventory['raw-fish'];
-    // Cook the lot, so at least one succeeds despite the level 1 burn chance.
-    for (let i = 0; i < before; i++) town.handleCookRequested();
-    const inv = town.character.state.inventory;
-    return {
-      raw: inv['raw-fish'] ?? 0,
-      cooked: inv['cooked-fish'] ?? 0,
-      burnt: inv['burnt-fish'] ?? 0,
-      xp: town.character.state.skills.cooking.xp,
-    };
-  });
-  check(
-    'cooking consumes the raw fish',
-    cooked.raw === 0,
-    `cooked=${cooked.cooked} burnt=${cooked.burnt}`,
-  );
-  check('cooking produces food or a burnt mess', cooked.cooked + cooked.burnt === 6);
-  check(
-    'a successful cook grants cooking xp',
-    cooked.cooked === 0 || cooked.xp > 0,
-    `cooking xp=${cooked.xp}`,
-  );
-
-  // Cooking away from a fire has to be refused.
-  const awayFromFire = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.character.state.inventory['raw-fish'] = 1;
-    // West, toward town center: east would carry the player out the zone exit.
-    town.player.setPosition(town.campfire.x - 600, town.campfire.y);
-    town.handleCookRequested();
-    return town.character.state.inventory['raw-fish'];
-  });
-  check('cooking away from a fire is refused', awayFromFire === 1);
-
-  // --- Eating: a heal over time that outpaces baseline regen. ---
-  const beforeEat = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.character.state.inventory['cooked-fish'] = 1;
-    town.player.takeDamage(Math.floor(town.player.maxHp / 2));
-    // Past the regen lockout, so any healing seen is food doing its job on top
-    // of a baseline that is also running — see the regen check above.
-    town.player.msSinceCombat = 5000;
-    town.handleEatRequested('cooked-fish');
-    return {
-      hp: town.player.hp,
-      eating: town.player.isEating(),
-      fish: town.character.state.inventory['cooked-fish'] ?? 0,
-    };
-  });
-  check(
-    'eating consumes the food and starts a heal',
-    beforeEat.eating === true && beforeEat.fish === 0,
-  );
-
-  const ate = await waitFor((s) => s.player.hp > beforeEat.hp, 'food to heal the player');
-  check('eating heals the player over time', true, `${beforeEat.hp} -> ${ate.player.hp}`);
-
-  // Getting hit has to cancel it, since food is out-of-combat only.
-  const interrupted = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.character.state.inventory['cooked-fish'] = 1;
-    town.handleEatRequested('cooked-fish');
-    const started = town.player.isEating();
-    town.player.takeDamage(1);
-    return { started, stillEating: town.player.isEating() };
-  });
-  check(
-    'taking a hit cancels the food buff',
-    interrupted.started === true && interrupted.stillEating === false,
-  );
-  await page.screenshot({ path: `${OUT}/6-cooking.png` });
-
-  // Back to the starting loadout so the combat checks below run on the gear
-  // they were written against.
-  await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.stopGathering();
-    town.handleEquipRequested('rusty-sword');
-    town.player.restoreToFull();
-  });
-
-  // --- Retaliation: target the nearest level 1 rat and let combat run. ---
-  await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const p = town.player;
-    const rat = town.mobs
-      .filter((r) => r.level === 1)
-      .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
-    // walk the player onto the rat so the real range check passes
-    p.setPosition(rat.x, rat.y - 40);
-    town.setTarget(rat);
-  });
-
-  const engaged = await waitFor((s) => s.mobs.some((r) => r.engaged), 'a rat to engage');
-  check(
-    'attacked rat retaliates (enters chase)',
+    'both halves of a fight reach the screen',
     true,
-    `rat hp ${engaged.mobs.find((r) => r.engaged).hp}`,
+    `player ${fought.player.hp}/${fought.player.maxHp}`,
   );
-
-  const hurt = await waitFor((s) => s.player.hp < s.player.maxHp, 'player to take damage');
-  check('enemy damages the player', true, `player ${hurt.player.hp}/${hurt.player.maxHp}`);
   await page.screenshot({ path: `${OUT}/3-combat.png` });
 
-  // --- Combat skills: swinging trains the weapon skill, and a level 1
-  // character's cap is 10 no matter how long they swing for. ---
-  const swung = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const s = z.character.state.skills;
-    return { weapon: z.character.activeWeaponSkill(), oneHanded: { ...s['one-handed'] } };
-  });
-  check(
-    'landing hits trains the weapon skill the equipped weapon uses',
-    swung.weapon === 'one-handed' && swung.oneHanded.xp + swung.oneHanded.level > 1,
-    `${swung.weapon} lv${swung.oneHanded.level} xp${swung.oneHanded.xp}`,
-  );
-
-  const capped = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.awardSkillXp('one-handed', 999999);
-    z.character.awardSkillXp('woodcutting', 999999);
-    return {
-      level: z.character.state.level,
-      oneHanded: z.character.skillLevelOf('one-handed'),
-      woodcutting: z.character.skillLevelOf('woodcutting'),
-    };
-  });
-  check(
-    'a combat skill caps at ten times the character level',
-    capped.oneHanded === capped.level * 10,
-    `char lv${capped.level}, 1 handed ${capped.oneHanded}`,
-  );
-  check(
-    'a gathering skill keeps its own flat cap',
-    capped.woodcutting === 10,
-    `woodcutting ${capped.woodcutting}`,
-  );
-
-  // --- Reach: a live weapon swap has to move attackRange, which is the half of
-  // the fix the unit suite can't see (it tests the stats, not the sprite). ---
-  const reach = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const original = { ...z.character.state.gear };
-    const rangeWith = (weapon) => {
-      z.player.setGear({ ...original, weapon });
-      return z.player.attackRange;
-    };
-    const measured = {
-      sword: rangeWith('rusty-sword'),
-      wand: rangeWith('apprentice-wand'),
-      bare: rangeWith(null),
-    };
-    z.player.setGear(original);
-    return measured;
-  });
-  check(
-    'swapping weapons changes auto-attack reach on the live player',
-    reach.sword === 80 && reach.wand === 200 && reach.bare === 64,
-    `sword ${reach.sword}, wand ${reach.wand}, bare-handed ${reach.bare}`,
-  );
-
-  // --- AFK camping: the mode has to fight without a hand on the mouse, and
-  // give the controls straight back to one. ---
-  const camped = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const rat = z.mobs.find((m) => m.level === 1 && m.isAlive());
-    // Park beside the rat with nothing selected and nothing wrong with us, so
-    // anything that happens next is the camp's doing.
-    z.player.setPosition(rat.x - 60, rat.y);
-    z.player.restoreToFull();
-    z.clearTarget();
-    window.game.events.emit('afk-toggle-requested');
-    return { active: z.afkActive, target: z.target?.name ?? null };
-  });
-  check(
-    'the AFK toggle starts a camp with nothing selected',
-    camped.active === true && camped.target === null,
-  );
-
-  const fought = await waitFor(
-    (s) => s.afk.target !== null && s.mobs.some((m) => m.engaged),
-    'the camp to pick a fight on its own',
-  );
-  check(
-    'camping picks a target and opens combat with no input',
-    fought.afk.target !== null,
-    `engaged ${fought.afk.target} unprompted`,
-  );
-
-  // Real key events, not a method call: InputState is fed by its own DOM
-  // listeners now, so nothing but a browser proves the wiring is live.
-  await page.keyboard.down('w');
-  const released = await waitFor((s) => !s.afk.active, 'walking to end the camp');
-  await page.keyboard.up('w');
-  check('moving by hand takes the controls back from the camp', released.afk.active === false);
-
-  // Escape reaches the scene as a drained action rather than a key listener, so
-  // it is worth pressing for real. Select the furthest live mob: one in range
-  // would be auto-attacked to death, and a kill clears the target by itself.
-  const selected = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const furthest = z.mobs
-      .filter((m) => m.isAlive())
-      .sort(
-        (a, b) =>
-          Math.hypot(b.x - z.player.x, b.y - z.player.y) -
-          Math.hypot(a.x - z.player.x, a.y - z.player.y),
-      )[0];
-    z.setTarget(furthest);
-    return z.target?.name ?? null;
-  });
-  check('a target can be selected to press Escape against', selected !== null, `${selected}`);
-  await page.keyboard.press('Escape');
-  const cleared = await waitFor((s) => s.afk.target === null, 'Escape to drop the target');
-  check('pressing Escape clears the selected target', cleared.afk.target === null);
-
-  // --- Leash: a chasing rat that loses the player resets and heals. ---
-  // Set this up from scratch rather than reusing the rat from the fight above,
-  // which the player may well have finished off by now. Aim the player at the
-  // in-bounds corner furthest from that rat's own spawn: a fixed offset can be
-  // clipped by the world bounds to somewhere inside the leash radius.
-  // --- Combat log: the fight above must have left a trail in it. ---
   const logged = await page.evaluate(() => {
     const ui = window.game.scene.getScene('UI');
-    return {
-      lines: ui.model.combatLog.map((e) => e.text),
-      openSheet: ui.model.openSheet,
-    };
+    return { lines: ui.model.combatLog.map((e) => e.text), openSheet: ui.model.openSheet };
   });
   check(
     'the combat log records the fight',
@@ -812,13 +348,52 @@ try {
     logged.openSheet === 'character',
   );
 
+  // --- Real key events, not method calls: InputState is fed by its own DOM
+  // listeners, so nothing but a browser proves that wiring is live. ---
+  await page.evaluate(() => {
+    const w = window.world;
+    const rat = w.mobs.find((m) => m.level === 1 && m.isAlive());
+    w.clearTarget();
+    w.teleport(rat.x - 60, rat.y);
+    w.player.restoreToFull();
+    window.game.events.emit('afk-toggle-requested');
+  });
+  const camped = await stepUntil((s) => s.afk && s.target !== null, 'the camp to pick a fight');
+  check('the AFK camp fights unprompted', true, `engaged ${camped.target}`);
+
+  await page.keyboard.down('w');
+  await step(2);
+  const released = await worldState();
+  await page.keyboard.up('w');
+  check('a real movement key takes the controls back from the camp', released.afk === false);
+
+  // Escape reaches the world as a drained action rather than a key listener.
+  // Select the furthest live mob: one in range would be auto-attacked to death,
+  // and a kill clears the target by itself.
+  const selected = await page.evaluate(() => {
+    const w = window.world;
+    const furthest = w.mobs
+      .filter((m) => m.isAlive())
+      .sort(
+        (a, b) =>
+          Math.hypot(b.x - w.player.x, b.y - w.player.y) -
+          Math.hypot(a.x - w.player.x, a.y - w.player.y),
+      )[0];
+    w.setTarget(furthest);
+    return w.target?.name ?? null;
+  });
+  check('a target can be selected to press Escape against', selected !== null, `${selected}`);
+  await page.keyboard.press('Escape');
+  await step(2);
+  const cleared = await worldState();
+  check('a real Escape press clears the selected target', cleared.target === null);
+
+  // --- The HUD: tabs, sheets and the log's cap. Rewritten as DOM in phase 2 of
+  // the port; until then this is the only cover it has. ---
   const tabbed = await page.evaluate(() => {
     const ui = window.game.scene.getScene('UI');
     ui.selectTab('log');
-    const opened = {
-      log: ui.combatLogPanel.isVisible(),
-      character: ui.characterPanel.isVisible(),
-    };
+    const opened = { log: ui.combatLogPanel.isVisible(), character: ui.characterPanel.isVisible() };
     ui.selectTab('log');
     return { opened, closedAgain: ui.combatLogPanel.isVisible() };
   });
@@ -828,8 +403,6 @@ try {
   );
   check('tapping the open tab again closes it', tabbed.closedAgain === false);
 
-  // Every sheet is exclusive now, not just the character sheet and the bag —
-  // the log used to be able to sit on top of an open bag.
   const exclusive = await page.evaluate(() => {
     const ui = window.game.scene.getScene('UI');
     const seen = [];
@@ -866,219 +439,55 @@ try {
     `${cappedLog.length} lines`,
   );
 
-  const leashTarget = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.clearTarget(); // stop swinging, so the rat survives to leash
-    const index = town.mobs.findIndex((r) => r.isAlive() && r.hp === r.maxHp);
-    const rat = town.mobs[index];
-    rat.takeDamage(Math.floor(rat.maxHp / 2)); // a wound, so healing is visible
-    rat.engage();
-    const bounds = { width: town.worldWidth, height: town.worldHeight };
-    const margin = 48;
-    town.player.setPosition(
-      rat.spawnX < bounds.width / 2 ? bounds.width - margin : margin,
-      rat.spawnY < bounds.height / 2 ? bounds.height - margin : margin,
-    );
-    // Start the rat just inside its leash boundary rather than making it run the
-    // full radius. What is under test is that crossing leashRadius disengages
-    // and heals it, not how fast the runner can step the game — CI has been seen
-    // stepping this at 5fps, where the old setup timed out with the rat still
-    // 12px short of the line.
-    const toPlayerX = town.player.x - rat.spawnX;
-    const toPlayerY = town.player.y - rat.spawnY;
-    const length = Math.hypot(toPlayerX, toPlayerY);
-    const edge = rat.definition.leashRadius - 16;
-    rat.setPosition(
-      rat.spawnX + (toPlayerX / length) * edge,
-      rat.spawnY + (toPlayerY / length) * edge,
-    );
-    return { index, hp: rat.hp, maxHp: rat.maxHp };
-  });
-  const leashed = await waitFor(
-    (s) => !s.mobs[leashTarget.index].engaged,
-    'the chasing rat to leash off',
-  );
-  check(
-    'rat leashes and heals to full on the way home',
-    leashed.mobs[leashTarget.index].hp === leashTarget.maxHp,
-    `${leashTarget.hp} -> ${leashed.mobs[leashTarget.index].hp}/${leashTarget.maxHp}`,
-  );
-
-  // --- Out-of-combat regen: player HP must climb back on its own. ---
-  // Set the starting point explicitly rather than inheriting whatever the
-  // fight left behind: dropping the target stops the player swinging (which
-  // counts as combat), and the damage both guarantees a deficit to heal and
-  // restarts the out-of-combat timer from a known instant.
-  const beforeRegen = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    town.clearTarget();
-    town.player.takeDamage(Math.floor(town.player.maxHp / 2));
-    // Skip ahead to the end of the out-of-combat lockout rather than waiting it
-    // out. It is 5s of *game* time, which on a slow runner costs minutes of wall
-    // clock, and RegenSystem's unit tests already cover the lockout itself.
-    // What only a real run can show is that regen reaches the player at all.
-    town.player.msSinceCombat = 5000;
-    return town.player.hp;
-  });
-  const regened = await waitFor((s) => s.player.hp > beforeRegen, 'player HP to regenerate');
-  check('player regenerates out of combat', true, `${beforeRegen} -> ${regened.player.hp}`);
-
-  // --- Death: stand on the level 3 rat with 1 HP and let it finish the job. ---
-  const spawnBefore = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const rat = town.mobs.find((r) => r.level === 3);
-    town.player.setPosition(rat.x, rat.y - 30);
-    town.player.takeDamage(town.player.hp - 1);
-    town.setTarget(rat);
-    return { x: Math.round(town.spawnPoint.x), y: Math.round(town.spawnPoint.y) };
-  });
-
-  const died = await waitFor(
-    (s) =>
-      s.player.x === spawnBefore.x &&
-      s.player.y === spawnBefore.y &&
-      s.player.hp === s.player.maxHp,
-    'player death and respawn at town center',
-  );
-  check(
-    'player death respawns at town center at full HP',
-    true,
-    `hp ${died.player.hp}/${died.player.maxHp}`,
-  );
-  check(
-    'all mobs reset after player death',
-    died.mobs.filter((r) => r.alive).every((r) => r.hp === r.maxHp && !r.engaged),
-  );
-  await page.screenshot({ path: `${OUT}/4-after-death.png` });
-
-  // --- Zones: edge walks load the neighbours, and each side spawns its own
-  // table. EXIT_MARGIN is 38.4px, so 33px from the edge is inside it. ---
-  await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const bounds = { width: town.worldWidth, height: town.worldHeight };
-    // wounded on purpose: crossing a zone line must not be a free heal
-    town.player.takeDamage(15);
-    town.player.setPosition(bounds.width / 2, bounds.height - 33);
-  });
-  await waitFor((s) => s.zoneId === 'beach', 'the south exit to load the beach');
-  const beachInfo = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
+  // --- Achievements in the HUD. Crediting the chain and earning the title are
+  // tested headlessly; what needs a browser is the sheet and the player column
+  // redrawing around a worn title. ---
+  const slayer = await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.kills = {};
+    w.character.state.activeTitleId = null;
+    const unlocks = w.creditKill('rat', 100);
+    const ui = window.game.scene.getScene('UI');
+    ui.selectTab('feats');
     return {
-      enemies: [...new Set(z.mobs.map((m) => m.definition.id))],
-      levels: z.mobs.map((m) => m.level).sort(),
-      nodes: [...new Set(z.nodes.map((n) => n.definition.id))],
-      arrivalY: Math.round(z.player.y),
-      hp: z.player.hp,
-      maxHp: z.player.maxHp,
+      unlocked: unlocks.length,
+      open: ui.model.openSheet === 'feats',
+      visible: ui.achievementPanel.isVisible(),
+      kills: ui.model.kills.rat ?? 0,
     };
   });
   check(
-    'hp carries across the zone walk instead of resetting to full',
-    beachInfo.hp <= beachInfo.maxHp - 12,
-    `hp=${beachInfo.hp}/${beachInfo.maxHp}`,
+    'the Feats tab opens the achievements sheet, populated from the world',
+    slayer.open && slayer.visible && slayer.kills === 100,
+    `${slayer.unlocked} tier(s) unlocked, HUD sees ${slayer.kills} kills`,
   );
-  check(
-    'the beach spawns crabs 1-3 and ocean fishing spots',
-    beachInfo.enemies.join(',') === 'crab' &&
-      beachInfo.levels[0] === 1 &&
-      beachInfo.levels[beachInfo.levels.length - 1] === 3 &&
-      beachInfo.nodes.join(',') === 'ocean-fishing-spot',
-    `levels=${beachInfo.levels} arrivalY=${beachInfo.arrivalY}`,
-  );
-  await page.screenshot({ path: `${OUT}/8-beach.png` });
+  await page.screenshot({ path: `${OUT}/12-achievements.png` });
 
-  // Ocean fishing is gated on fishing level 5, which this character lacks.
-  const oceanRefused = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const spot = z.nodes[0];
-    z.player.setPosition(spot.x, spot.y - 64);
-    z.startGathering(spot);
-    return z.gatherState === null;
-  });
-  check('ocean fishing spots refuse a low-level fisher', oceanRefused === true);
-
-  // Walk back north to town, then east into the bandit camp.
-  await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.player.setPosition(z.worldWidth / 2, 33);
-  });
-  await waitFor((s) => s.zoneId === 'town', 'the north exit to return to town');
-  // A zone change is a view rebuild, not a scene restart, so everything the
-  // last zone drew has to come down by hand. Nothing in the simulation can see
-  // this failing: a leak is a second ground layer under the first, or a
-  // shopkeeper's name still floating over the beach.
-  const rebuilt = await page.evaluate(() => {
-    const drawn = window.game.scene.getScene('Zone').children.list;
+  // The title has to survive the round trip the picker actually uses: the HUD
+  // asks, the world re-checks the kills back it, and the player column redraws.
+  // It gets its own line there, so the column has to grow to hold it.
+  const wornTitle = await page.evaluate(async () => {
+    const ui = window.game.scene.getScene('UI');
+    const before = ui.layout.playerColumn.height;
+    window.game.events.emit('set-title-requested', 'rat-slayer');
+    await new Promise((r) => setTimeout(r, 250));
+    const after = window.game.scene.getScene('UI');
     return {
-      layers: drawn.filter((o) => o.type === 'TilemapLayer').length,
-      signposts: drawn.filter((o) => o.texture?.key === 'zone-signpost').length,
-      shopkeepers: drawn.filter((o) => o.texture?.key === 'npc-shopkeeper').length,
-      names: drawn.filter((o) => o.type === 'Text' && o.text === 'Shopkeeper').length,
+      before,
+      after: after.layout.playerColumn.height,
+      model: after.model.activeTitleId,
+      shown: after.children.list.some((o) => o.text === 'Rat Slayer'),
     };
   });
   check(
-    'the view of the zone left behind comes down with it',
-    rebuilt.layers === 1 &&
-      rebuilt.signposts === 2 &&
-      rebuilt.shopkeepers === 1 &&
-      rebuilt.names === 1,
-    `${rebuilt.layers} ground layer(s), ${rebuilt.signposts} signpost(s), ` +
-      `${rebuilt.shopkeepers} shopkeeper(s), ${rebuilt.names} name label(s)`,
+    'wearing a title redraws the player column with room for it',
+    wornTitle.model === 'rat-slayer' && wornTitle.shown && wornTitle.after > wornTitle.before,
+    `column ${wornTitle.before} -> ${wornTitle.after}`,
   );
-  await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const bounds = { width: z.worldWidth, height: z.worldHeight };
-    z.player.setPosition(bounds.width - 33, bounds.height / 2);
-  });
-  await waitFor((s) => s.zoneId === 'bandit-camp', 'the east exit to load the bandit camp');
-  check('zone travel round-trips town -> beach -> town -> bandit camp', true);
+  await page.screenshot({ path: `${OUT}/12c-title-worn.png` });
 
-  // --- Aggro: bandits open combat unprovoked, and the beating that follows
-  // sends the level 1 player home to town. ---
-  await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const bandit = z.mobs[0];
-    // inside the 180px aggro radius, outside the 72px attack range
-    z.player.setPosition(bandit.x + 150, bandit.y);
-  });
-  const ambushed = await waitFor(
-    (s) => s.mobs.some((m) => m.engaged),
-    'a bandit to aggro unprovoked',
-  );
-  check('bandits aggro unprovoked', true, `bandit hp ${ambushed.mobs.find((m) => m.engaged).hp}`);
-  await page.screenshot({ path: `${OUT}/9-bandit-aggro.png` });
-
-  const sentHome = await waitFor(
-    (s) => s.zoneId === 'town' && s.player.hp === s.player.maxHp,
-    'death in the camp to send the player home',
-  );
-  check('dying away from town respawns the player in town', true, `hp ${sentHome.player.hp}`);
-
-  // --- Click-to-move: a tap destination pulls the player across the map. ---
-  const moveTarget = await page.evaluate(() => {
-    const town = window.game.scene.getScene('Zone');
-    const target = { x: town.player.x + 200, y: town.player.y + 100 };
-    town.player.moveTo(target.x, target.y);
-    return { x: Math.round(target.x), y: Math.round(target.y) };
-  });
-  // Generous, and deliberately so: how close "arrived" is scales with how far
-  // one frame carries the player (see arriveRadius), so a runner stepping the
-  // game at 7fps legitimately stops ~27px out where a 60fps one stops within 8.
-  const ARRIVED_WITHIN = 48;
-  const moved = await waitFor(
-    (s) =>
-      Math.abs(s.player.x - moveTarget.x) <= ARRIVED_WITHIN &&
-      Math.abs(s.player.y - moveTarget.y) <= ARRIVED_WITHIN,
-    'player to walk to the click destination',
-  );
-  check(
-    'click-to-move walks the player to the destination',
-    true,
-    `at ${moved.player.x},${moved.player.y}`,
-  );
-
-  // --- Inventory scrolling: a full bag must stay on screen and scroll,
-  // and a scroll drag must never be mistaken for a row tap. ---
+  // --- Inventory scrolling: a full bag must stay on screen and scroll, and a
+  // scroll drag must never be mistaken for a row tap. ---
   const invPanel = () =>
     page.evaluate(() => {
       const p = window.game.scene.getScene('UI').inventoryPanel;
@@ -1095,8 +504,8 @@ try {
       };
     });
   await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.state.inventory = {
+    const w = window.world;
+    w.character.state.inventory = {
       'rat-bones': 12,
       'rat-meat': 7,
       logs: 5,
@@ -1112,7 +521,7 @@ try {
       'fishing-pole': 1,
       'cooked-crab': 2,
     };
-    z.game.events.emit('inventory-changed', z.character.state.inventory);
+    window.game.events.emit('inventory-changed', w.character.state.inventory);
   });
   await page.waitForTimeout(200);
   if (!(await invPanel()).visible) {
@@ -1169,16 +578,14 @@ try {
   );
 
   // A tap selects; a drag of the same press must not.
-  await page.mouse.move(invCenter.x, invCenter.y);
-  await page.mouse.down();
-  await page.mouse.up();
+  await clickAt(invCenter);
   await page.waitForTimeout(250);
   const invTapped = await invPanel();
   check('tapping a row selects the item', invTapped.selected !== null, `${invTapped.selected}`);
 
   await page.mouse.move(invCenter.x, invCenter.y);
   await page.mouse.down();
-  for (let i = 1; i <= 8; i++) {
+  for (let i = 1; i <= 8; i += 1) {
     await page.mouse.move(invCenter.x, invCenter.y + i * 12);
     await page.waitForTimeout(16);
   }
@@ -1195,9 +602,8 @@ try {
   // A resize rebuilds the whole HUD, and the selection lives on the panel
   // instance — so without carrying it across, a resize deselects. On a phone a
   // tap hides the URL bar, which resizes, so the item you just tapped would
-  // lose its action row a frame later. The selection and its Equip button must
-  // survive the rebuild. brown-legs is in the injected bag and a warrior can
-  // wear it, so its row is guaranteed an Equip action.
+  // lose its action row a frame later. brown-legs is in the injected bag and a
+  // warrior can wear it, so its row is guaranteed an Equip action.
   const equipShown = () =>
     page.evaluate(() =>
       window.game.scene
@@ -1223,9 +629,9 @@ try {
   );
   // And a selection whose item is gone must still clear across a resize.
   await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.removeItem('brown-legs', z.character.itemCount('brown-legs'));
-    z.game.events.emit('inventory-changed', z.character.state.inventory);
+    const w = window.world;
+    w.character.removeItem('brown-legs', w.character.itemCount('brown-legs'));
+    window.game.events.emit('inventory-changed', w.character.state.inventory);
   });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.waitForTimeout(300);
@@ -1235,19 +641,21 @@ try {
   );
 
   await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.state.inventory = { logs: 1 };
-    z.game.events.emit('inventory-changed', z.character.state.inventory);
+    const w = window.world;
+    w.character.state.inventory = { logs: 1 };
+    window.game.events.emit('inventory-changed', w.character.state.inventory);
     window.game.scene.getScene('UI').inventoryPanel.setVisible(false);
   });
 
-  // --- Portrait phone: the canvas tracks the viewport 1:1 and the camera
-  // zooms in rather than shrinking the world. ---
+  // --- Portrait phone: the canvas tracks the viewport 1:1 and the camera zooms
+  // in rather than shrinking the world. ---
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(600);
   const portrait = await page.evaluate(() => ({
     w: window.game.scale.width,
     h: window.game.scale.height,
+    // The 2D renderer's own arrangement, which goes with it in phase 3: the
+    // camera's viewport is what keeps the world out from under the tab bar.
     zoom: window.game.scene.getScene('Zone').cameras.main.zoom,
     cameraH: window.game.scene.getScene('Zone').cameras.main.height,
     tabBarY: window.game.scene.getScene('UI').layout.tabBar.y,
@@ -1267,8 +675,6 @@ try {
     portrait.zoom < 1 && portrait.cameraH / portrait.zoom <= 1216,
     `zoom=${portrait.zoom.toFixed(2)}, camera ${portrait.cameraH}px of ${portrait.h}`,
   );
-  // The camera stops above the tab bar, so nothing in the world can be drawn
-  // under opaque HUD furniture that would swallow the tap.
   check(
     'the world camera stops above the tab bar',
     portrait.cameraH === portrait.tabBarY,
@@ -1288,333 +694,28 @@ try {
   await page.screenshot({ path: `${OUT}/7-portrait.png` });
 
   // --- Mobile zone travel: tapping the exit signpost must work. Edge-walk
-  // transitions need pixel-precision taps a phone can't make (the landing
-  // strip is ~4 screen px in portrait), which is why signposts exist. ---
-  await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.clearTarget();
-    z.player.stopMoving();
-    z.player.setPosition(z.spawnPoint.x, z.spawnPoint.y);
-    z.player.setVelocity(0, 0);
-  });
-  await page.waitForTimeout(400);
+  // transitions need pixel-precision taps a phone can't make (the landing strip
+  // is ~4 screen px in portrait), which is why signposts exist. The signpost
+  // being *reachable* is the durable requirement behind the camera viewport
+  // above: it has to render clear of the opaque bar that would eat the tap. ---
+  await park();
   const signScreen = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const cam = z.cameras.main;
-    const post = z.signposts.find((s) => s.exit.edge === 'south');
-    return {
-      x: Math.round((post.x - cam.worldView.x) * cam.zoom),
-      y: Math.round((post.y - cam.worldView.y) * cam.zoom),
-      fromBottom: window.game.scale.height - Math.round((post.y - cam.worldView.y) * cam.zoom),
-    };
+    const post = window.world.signposts.find((s) => s.exit.edge === 'south');
+    const at = window.view.worldToScreen(post.x, post.y);
+    return { ...at, tabBarY: window.game.scene.getScene('UI').layout.tabBar.y };
   });
-  await page.mouse.move(signScreen.x, signScreen.y);
-  await page.mouse.down();
-  await page.mouse.up();
-  const viaSignpost = await waitFor(
+  check(
+    'the south signpost renders clear of the tab bar on a portrait phone',
+    signScreen.y < signScreen.tabBarY,
+    `signpost at y=${signScreen.y}, tab bar at ${signScreen.tabBarY}`,
+  );
+  await clickAt(signScreen);
+  const viaSignpost = await stepUntil(
     (s) => s.zoneId === 'beach',
     'the tapped signpost to walk the player over and load the beach',
   );
-  check(
-    'tapping the south signpost travels to the beach on a phone viewport',
-    viaSignpost.zoneId === 'beach',
-    `tap was ${signScreen.fromBottom}px above the screen bottom`,
-  );
-
-  // --- Armor types: a wizard may wear cloth and not leather, and the refusal
-  // has to reach the player rather than silently doing nothing. Done last,
-  // because it throws the warrior away and rerolls as a wizard. ---
-  await page.setViewportSize({ width: 1280, height: 900 });
-  // The RESIZE this fires rebuilds the HUD and closes any open panel, so let it
-  // land before opening one.
-  await page.waitForTimeout(500);
-  // --- Options menu: the mobile route to a character reset, which used to be
-  // bound to F9 and so unreachable on a phone. Two taps, on purpose. ---
-  const options = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    ui.openOptions();
-    const opened = ui.optionsPanel !== null;
-    window.__optionsOpen = opened;
-    // First press only arms the confirm; the save must still be there after it.
-    ui.optionsPanel.handleResetPressed(() => {});
-    const armed = ui.optionsPanel.confirmingReset;
-    const saveIntact = localStorage.length > 0;
-    return { opened, armed, saveIntact };
-  });
-  await page.screenshot({ path: `${OUT}/12-options.png` });
-  await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    ui.optionsPanel.close();
-    ui.optionsPanel = null;
-  });
-  check('the options menu opens from the HUD', options.opened === true);
-  check(
-    'the first reset press only arms a confirm, leaving the save alone',
-    options.armed === true && options.saveIntact === true,
-  );
-
-  await page.evaluate(() => {
-    // The real path a phone takes: the panel asks, the scene does the work.
-    window.game.events.emit('reset-character-requested');
-  });
-  await page.waitForFunction(
-    () => window.game.scene.getScene('CharacterCreate')?.scene.isActive(),
-    null,
-    { timeout: 20000 },
-  );
-  await page.evaluate(() => {
-    const s = window.game.scene.getScene('CharacterCreate');
-    s.selectClass('wizard');
-    s.tryBeginAdventure();
-  });
-  await waitFor((s) => s.mobs.length > 0, 'town as a wizard');
-
-  const armor = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.addItem('brown-chestplate', 1);
-    z.character.addItem('brown-robe', 1);
-    const leather = z.character.equip('brown-chestplate');
-    const cloth = z.character.equip('brown-robe');
-    return {
-      leatherRefused: leather.ok === false,
-      reason: leather.ok === false ? leather.reason : '',
-      chest: z.character.state.gear.chest,
-      clothOk: cloth.ok,
-      stillBagged: z.character.itemCount('brown-chestplate'),
-    };
-  });
-  check(
-    'a wizard is refused leather, with a reason',
-    armor.leatherRefused && armor.reason.length > 0,
-    armor.reason,
-  );
-  check(
-    'the refused piece stays in the bag and the slot stays empty of it',
-    armor.stillBagged === 1 && armor.chest === 'brown-robe',
-    `chest=${armor.chest}`,
-  );
-  check('a wizard can wear the cloth robe', armor.clothOk === true);
-
-  // --- Abilities: the wizard is already loaded, so cast with them. ---
-  const bar = await page.evaluate(() => ({
-    hasBar: window.game.scene.getScene('UI').actionBar !== undefined,
-    mana: window.game.scene.getScene('Zone').player.mana,
-    maxMana: window.game.scene.getScene('Zone').player.maxMana,
-  }));
-  check(
-    'a caster starts with a full mana pool and an action bar',
-    bar.hasBar && bar.mana > 0 && bar.mana === bar.maxMana,
-    `${bar.mana}/${bar.maxMana} mana`,
-  );
-
-  // Mana Shield is self-cast, so it needs no target and always resolves.
-  const shielded = await page.evaluate(async () => {
-    const z = window.game.scene.getScene('Zone');
-    const before = z.player.mana;
-    // Cast until one gets through: the spell can genuinely fizzle. The pool has
-    // to be topped up between attempts or this is not a 40-try loop at all —
-    // the shield costs 12 of 30, so mana refusals swallow every try after the
-    // second, and two fizzles in a row (1%) failed the check outright.
-    for (let i = 0; i < 40 && !z.player.hasManaShield(); i += 1) {
-      z.lastAbilityAt.clear();
-      z.handleAbilityRequested('mana-shield');
-      if (!z.player.hasManaShield()) {
-        z.player.mana = z.player.maxMana;
-        z.player.manaFloat = z.player.maxMana;
-      }
-      await new Promise((r) => setTimeout(r, 20));
-    }
-    return { before, after: z.player.mana, up: z.player.hasManaShield() };
-  });
-  check(
-    'casting Mana Shield spends mana and raises a shield',
-    shielded.up && shielded.after < shielded.before,
-    `mana ${shielded.before} -> ${shielded.after}`,
-  );
-
-  const absorbed = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const hpBefore = z.player.hp;
-    const soaked = z.player.takeDamage(5);
-    return { soaked, hpBefore, hpAfter: z.player.hp };
-  });
-  check(
-    'the shield soaks damage instead of the player taking it',
-    absorbed.soaked === 5 && absorbed.hpAfter === absorbed.hpBefore,
-    `soaked ${absorbed.soaked}, hp ${absorbed.hpBefore} -> ${absorbed.hpAfter}`,
-  );
-
-  const fizzles = await page.evaluate(async () => {
-    const z = window.game.scene.getScene('Zone');
-    // A fresh Destruction skill fizzles ~1 cast in 5, so over many casts some
-    // must fail and some must land.
-    let attempts = 0;
-    let shields = 0;
-    for (let i = 0; i < 60; i += 1) {
-      z.player.applyManaShield(null);
-      z.player.mana = z.player.maxMana;
-      z.player.manaFloat = z.player.maxMana;
-      z.lastAbilityAt.clear();
-      z.handleAbilityRequested('mana-shield');
-      attempts += 1;
-      if (z.player.hasManaShield()) shields += 1;
-      await new Promise((r) => setTimeout(r, 5));
-    }
-    return { attempts, shields, destruction: z.character.skillLevelOf('destruction') };
-  });
-  check(
-    'spells sometimes fail to cast',
-    fizzles.shields > 0 && fizzles.shields < fizzles.attempts,
-    `${fizzles.attempts - fizzles.shields}/${fizzles.attempts} fizzled`,
-  );
-  check(
-    'casting trains Destruction',
-    fizzles.destruction >= 1,
-    `destruction lv${fizzles.destruction}`,
-  );
-
-  const gated = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.lastAbilityAt.clear();
-    z.player.mana = 0;
-    z.player.manaFloat = 0;
-    z.handleAbilityRequested('fireball');
-    const noMana = z.lastAbilityAt.has('fireball') === false;
-    // A warrior ability must not be castable by a wizard at all.
-    z.player.mana = z.player.maxMana;
-    z.player.manaFloat = z.player.maxMana;
-    z.handleAbilityRequested('power-slash');
-    return { noMana, wrongClass: z.lastAbilityAt.has('power-slash') === false };
-  });
-  check('an ability with no mana behind it is refused', gated.noMana === true);
-  check("another class's ability can't be cast", gated.wrongClass === true);
-  await page.screenshot({ path: `${OUT}/11-abilities.png` });
-
-  // --- Achievements: kills have to be counted on BOTH paths. The swing path
-  // and the ability path used to carry their own copy of the kill resolution,
-  // and a counter added to one of them would be silently missing from the
-  // other — which is invisible to the unit suite, since it can't kill a mob.
-  // The wizard loaded above is what makes the ability half reachable here. ---
-  const killCounted = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.state.kills = {};
-    const mob = z.mobs.find((m) => m.isAlive());
-    const enemyId = mob.definition.id;
-    z.target = mob;
-    // Straight to the resolution rather than swinging for real: the point is
-    // that the kill path credits the counter, not that damage adds up.
-    mob.takeDamage(mob.hp);
-    z.resolveKill(mob);
-    return { enemyId, counted: z.character.state.kills[enemyId] ?? 0 };
-  });
-  check(
-    'a melee kill counts toward that creature',
-    killCounted.counted === 1,
-    `${killCounted.enemyId}: ${killCounted.counted}`,
-  );
-
-  const abilityKillCounted = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.state.kills = {};
-    z.lastAbilityAt.clear();
-    z.player.mana = z.player.maxMana;
-    z.player.manaFloat = z.player.maxMana;
-    const mob = z.mobs.find((m) => m.isAlive());
-    const enemyId = mob.definition.id;
-    z.target = mob;
-    z.player.setPosition(mob.x, mob.y);
-    // Fireball fizzles a fair fraction of the time, so cast until one lands
-    // rather than letting a spell failure read as a missing counter.
-    let casts = 0;
-    while (mob.isAlive() && casts < 40) {
-      mob.hp = 1;
-      z.lastAbilityAt.clear();
-      z.player.mana = z.player.maxMana;
-      z.player.manaFloat = z.player.maxMana;
-      z.handleAbilityRequested('fireball');
-      casts += 1;
-    }
-    return {
-      enemyId,
-      casts,
-      dead: !mob.isAlive(),
-      counted: z.character.state.kills[enemyId] ?? 0,
-    };
-  });
-  check(
-    'an ability kill counts too, not just a swing',
-    abilityKillCounted.dead === true && abilityKillCounted.counted === 1,
-    `${abilityKillCounted.enemyId}: ${abilityKillCounted.counted} after ${abilityKillCounted.casts} cast(s)`,
-  );
-
-  const slayer = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.state.kills = {};
-    z.character.state.activeTitleId = null;
-    // Credit the whole chain at once, the way an offline camp payout does.
-    const unlocks = z.creditKill('rat', 100);
-    return {
-      unlocked: unlocks.map((u) => u.achievementId),
-      title: z.character.state.activeTitleId,
-      display: z.character.displayName(),
-    };
-  });
-  check(
-    'one payout can complete every tier it passed',
-    slayer.unlocked.length === 3,
-    slayer.unlocked.join(', '),
-  );
-  check(
-    'the hundredth kill grants and wears the title',
-    slayer.title === 'rat-slayer' && slayer.display.endsWith(', Rat Slayer'),
-    slayer.display,
-  );
-
-  const feats = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    ui.selectTab('feats');
-    return {
-      open: ui.model.openSheet === 'feats',
-      visible: ui.achievementPanel.isVisible(),
-    };
-  });
-  check('the Feats tab opens the achievements sheet', feats.open && feats.visible);
-  await page.screenshot({ path: `${OUT}/12-achievements.png` });
-
-  // The title has to survive the round trip the picker actually uses: HUD asks,
-  // ZoneScene re-checks the kills back it, and the player column redraws. It
-  // gets its own line there, so the column has to grow to hold it.
-  const wornTitle = await page.evaluate(async () => {
-    const ui = window.game.scene.getScene('UI');
-    const before = ui.layout.playerColumn.height;
-    window.game.events.emit('set-title-requested', 'rat-slayer');
-    await new Promise((r) => setTimeout(r, 250));
-    const after = window.game.scene.getScene('UI');
-    return {
-      before,
-      after: after.layout.playerColumn.height,
-      model: after.model.activeTitleId,
-      shown: after.children.list.some((o) => o.text === 'Rat Slayer'),
-    };
-  });
-  check(
-    'wearing a title redraws the player column with room for it',
-    wornTitle.model === 'rat-slayer' && wornTitle.shown && wornTitle.after > wornTitle.before,
-    `column ${wornTitle.before} -> ${wornTitle.after}`,
-  );
-
-  const refusedTitle = await page.evaluate(async () => {
-    const z = window.game.scene.getScene('Zone');
-    window.game.events.emit('set-title-requested', 'bandit-slayer');
-    await new Promise((r) => setTimeout(r, 250));
-    return z.character.state.activeTitleId;
-  });
-  check(
-    'a title the kills do not back is refused, leaving the worn one alone',
-    refusedTitle === 'rat-slayer',
-    `still ${refusedTitle}`,
-  );
-  await page.screenshot({ path: `${OUT}/12c-title-worn.png` });
+  check('tapping the south signpost travels to the beach', viaSignpost.zoneId === 'beach');
+  await page.screenshot({ path: `${OUT}/8-beach.png` });
 
   // The tab bar is the HUD's only permanent furniture, and a seventh tab is
   // what makes its per-button width tight. 375px is the narrowest phone worth
@@ -1639,32 +740,88 @@ try {
   );
   await page.screenshot({ path: `${OUT}/12b-tabbar-375.png` });
 
-  // --- Resuming: a save comes back where it was left, not at the middle of
-  // the map. The position was written and never read until now, so this is the
-  // only check that the load path honours it. Reloads the page, so it sits
-  // next to the other reload at the end. ---
-  // Parked on a mob's spawn point: known walkable, known well off centre, and
-  // the player doesn't collide with mobs.
+  // --- Resetting: the mobile route to a fresh character, which used to be
+  // bound to F9 and so unreachable on a phone. Two taps, on purpose, and it
+  // crosses back to a scene that has not run since boot. ---
+  await page.setViewportSize({ width: 1280, height: 900 });
+  // The RESIZE this fires rebuilds the HUD and closes any open panel, so let it
+  // land before opening one.
+  await page.waitForTimeout(500);
+  const options = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    ui.openOptions();
+    const opened = ui.optionsPanel !== null;
+    // First press only arms the confirm; the save must still be there after it.
+    ui.optionsPanel.handleResetPressed(() => {});
+    return {
+      opened,
+      armed: ui.optionsPanel.confirmingReset,
+      saveIntact: localStorage.length > 0,
+    };
+  });
+  await page.screenshot({ path: `${OUT}/12-options.png` });
+  await page.evaluate(() => {
+    const ui = window.game.scene.getScene('UI');
+    ui.optionsPanel.close();
+    ui.optionsPanel = null;
+  });
+  check('the options menu opens from the HUD', options.opened === true);
+  check(
+    'the first reset press only arms a confirm, leaving the save alone',
+    options.armed === true && options.saveIntact === true,
+  );
+
+  await page.evaluate(() => {
+    // The real path a phone takes: the panel asks, the scene does the work.
+    window.game.events.emit('reset-character-requested');
+  });
+  await page.waitForFunction(
+    () => window.game.scene.getScene('CharacterCreate')?.scene.isActive(),
+    null,
+    { timeout: 20000 },
+  );
+  check('a reset ends the session and returns to character creation', true);
+  await page.evaluate(() => {
+    const s = window.game.scene.getScene('CharacterCreate');
+    s.selectClass('wizard');
+    s.tryBeginAdventure();
+  });
+  // `window.world` is cleared when a view is torn down, so this cannot pass on
+  // the world the reset just ended.
+  await page.waitForFunction(() => window.world != null, null, { timeout: 20000 });
+  const caster = await page.evaluate(() => ({
+    hasBar: window.game.scene.getScene('UI').actionBar !== undefined,
+    mana: window.world.player.mana,
+    maxMana: window.world.player.maxMana,
+  }));
+  check(
+    'rerolling as a caster brings up an action bar and a full mana pool',
+    caster.hasBar && caster.mana > 0 && caster.mana === caster.maxMana,
+    `${caster.mana}/${caster.maxMana} mana`,
+  );
+  await page.screenshot({ path: `${OUT}/11-wizard.png` });
+
+  // --- Resuming: a save comes back where it was left, not at the middle of the
+  // map. Only a real reload goes through the load path at all. Parked on a
+  // mob's spawn point: known walkable, known well off centre, and the player
+  // does not collide with mobs. ---
   const parked = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const spot = { x: Math.round(z.mobs[0].spawnX), y: Math.round(z.mobs[0].spawnY) };
-    z.player.setPosition(spot.x, spot.y);
-    z.player.setVelocity(0, 0);
-    z.player.stopMoving();
+    const w = window.world;
+    const spot = { x: Math.round(w.mobs[0].spawnX), y: Math.round(w.mobs[0].spawnY) };
+    w.teleport(spot.x, spot.y);
     return {
       spot,
-      zoneId: z.zone.id,
-      fromCentre: Math.round(Math.hypot(spot.x - z.spawnPoint.x, spot.y - z.spawnPoint.y)),
+      zoneId: w.zone.id,
+      fromCentre: Math.round(Math.hypot(spot.x - w.spawnPoint.x, spot.y - w.spawnPoint.y)),
     };
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.game?.scene?.getScene('Zone')?.scene.isActive(), null, {
-    timeout: 60000,
-  });
-  const resumedAt = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    return { x: Math.round(z.player.x), y: Math.round(z.player.y), zoneId: z.zone.id };
-  });
+  await page.waitForFunction(() => window.world != null, null, { timeout: 60000 });
+  const resumedAt = await page.evaluate(() => ({
+    x: Math.round(window.world.player.x),
+    y: Math.round(window.world.player.y),
+    zoneId: window.world.zone.id,
+  }));
   check(
     'a save resumes where it was left, not at the middle of the map',
     resumedAt.zoneId === parked.zoneId &&
@@ -1674,32 +831,28 @@ try {
   );
 
   // --- Offline camping: a session parked in the save pays out on the next
-  // load. Done last, because it reloads the page. Travelling an hour back in
-  // the save is the only way to reach this path at all — hence the unit tests
-  // around resolveOfflineAfk, with `now` injected, doing the harder cases. ---
-  // Written through the live game rather than into localStorage directly: the
-  // page's own beforeunload handler persists on reload and would overwrite a
-  // hand-written save. Only the clock is faked; the session itself is the one
-  // the real toggle wrote.
+  // load, and the report waits in the notification queue until the HUD mounts.
+  // Travelling an hour back in the save is the only way to reach that path —
+  // hence the unit tests around resolveOfflineAfk, with `now` injected, doing
+  // the harder cases. Written through the live game rather than into
+  // localStorage directly: the page's own unload handler persists on reload and
+  // would overwrite a hand-written save. Only the clock is faked. ---
   await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    z.character.state.level = 1;
-    z.character.state.xp = 0;
+    const w = window.world;
+    w.character.state.level = 1;
+    w.character.state.xp = 0;
     window.game.events.emit('afk-toggle-requested');
-    z.character.state.afk.startedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    w.character.state.afk.startedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.game?.scene?.getScene('Zone')?.scene.isActive(), null, {
-    timeout: 60000,
-  });
+  await page.waitForFunction(() => window.world != null, null, { timeout: 60000 });
   const resumed = await page.evaluate(() => {
-    const z = window.game.scene.getScene('Zone');
-    const ui = window.game.scene.getScene('UI');
+    const state = window.world.character.state;
     return {
-      xp: z.character.state.xp,
-      level: z.character.state.level,
-      afk: z.character.state.afk,
-      panel: ui?.awayReportPanel != null,
+      xp: state.xp,
+      level: state.level,
+      afk: state.afk,
+      panel: window.game.scene.getScene('UI')?.awayReportPanel != null,
     };
   });
   check(
@@ -1707,7 +860,7 @@ try {
     resumed.xp > 0 || resumed.level > 1,
     `level ${resumed.level}, xp ${resumed.xp}`,
   );
-  check('the away report is shown for it', resumed.panel === true);
+  check('the away report reaches a HUD that was not listening yet', resumed.panel === true);
   // Cleared on the load that paid it, so a second load can't pay it twice.
   check('the parked session is cleared once resolved', resumed.afk === null);
   await page.screenshot({ path: `${OUT}/13-away-report.png` });

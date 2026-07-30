@@ -10,7 +10,9 @@
   a view. See the retrospective under PR 7 below.
 - **PR 8 merged** — `GameContext` owns the session, `scene.restart` is gone, and the registry with
   it. See the retrospective under PR 8 below.
-- **Next: PR 9**, the smoke migration — a session on its own, and the one least worth rushing.
+- **PR 9 merged** — smoke is renderer-agnostic and half its old size, and the gameplay it used to
+  be the only cover for is in `tests/world/`. Phase 1 is done.
+- **Next: PR 10**, the start of phase 2 — the DOM HUD shell.
 
 ## Context
 
@@ -110,8 +112,8 @@ The backbone. Nothing visual changes; the game becomes testable.
 > rehomed ~900 lines of `ZoneScene` and had a prerequisite the original plan understated (below),
 > 8 replaces a lifecycle Phaser was providing for free, and 9 rewrites a 1,609-line script that
 > blocks merges. A half-finished one of these leaves nothing mergeable, which is the failure mode
-> to avoid on a stack that publishes on merge. PR 7 confirmed the sizing: one session, and it used
-> most of it.
+> to avoid on a stack that publishes on merge. All three confirmed the sizing: one session each, and
+> each used most of it.
 
 ### PRs 4-6 — done, merged 2026-07-29
 
@@ -313,7 +315,45 @@ _Verify:_ 10 town→beach round trips with no leaked listeners; offline AFK repo
 
 </details>
 
-### PR 9 — Migrate the smoke check while everything is still green
+### PR 9 — Migrate the smoke check — done, merged
+
+What landed that this document did not predict, and that phase 2 onwards inherits:
+
+- **Smoke needed a second handle, not just a retarget.** `window.view` is a Phaser-free interface
+  (`src/types/debugView.ts`) with four members: `worldToScreen`, `step`, `drawnCounts` and
+  `playerFigure`. The plan named the first two; the other two are what the leak check and the
+  walk-cycle check needed, and both were reaching straight into `children.list` and `anims`. The
+  Three.js view implements the same interface, so those checks port rather than get rewritten.
+- **`?loop=manual` was much cheaper than expected, because it does not stop Phaser's loop.** Only
+  `ZoneScene.update` stops stepping the game; drawing, input and tweens keep running off rAF. A
+  genuinely stopped loop would have broken every real-mouse-click check outright, since Phaser
+  processes pointer events inside its own step.
+- **`loop.sleeping` has never existed.** Every poll in the old smoke ran
+  `if (loop.sleeping) loop.wake()`, which read `undefined` on Phaser 3 and 4 alike — the flag is
+  `running`. What actually kept the renderer awake was the three `--disable-background-*` launch
+  flags. The crank nudges `wake()` off the real flag now, but nothing was ever relying on it.
+- **The leak check got stronger by getting renderer-agnostic.** Counting exact objects (one ground
+  layer, two signposts, one shopkeeper, one name label) became: snapshot `drawnCounts()`, take three
+  town↔beach round trips, assert it is unchanged. That is the 44-objects-to-764 story asserted
+  directly, and it does not need editing when a zone gains furniture.
+- **`ZoneWorld.teleport(x, y)`** replaced about twenty `setPosition` + `setVelocity` + `stopMoving`
+  triples. It also clears the pending approach, which the old smoke's `resetForClick` did by hand
+  and every other site forgot.
+- **The AFK anchor only drops a target that is not chasing.** Found writing the test for it:
+  `decideAfkAction` answers anything engaged whatever its distance, on purpose, so the anchor rule
+  is what stops the camp following a mob that has _leashed off_ — not one mid-fight. The test has to
+  disengage the mob to isolate the rule at all.
+- **Roughly 600 lines was the wrong target.** Smoke went 1,725 → 876, and the remainder is over half
+  HUD assertions plus the file's own comments; phase 2 deletes the former along with `UIScene`. The
+  unit suite went from 21 world cases to 77 across nine files, all on one
+  `tests/world/harness.ts`.
+- **Two things stayed that read as renderer-specific**, because the requirement behind them is not:
+  the camera-viewport-equals-tab-bar assertion is the 2D arrangement and goes with it, so the
+  durable form of it — the south signpost's `worldToScreen` y is above the tab bar — was added
+  alongside rather than instead.
+
+<details>
+<summary>Original PR 9 specification, kept for the record</summary>
 
 **One session, and the one least worth rushing** — it gates merges, so a bad day here blocks
 everything behind it.
@@ -340,6 +380,8 @@ Then **move whole categories out of smoke into vitest**, now that the world is h
 aggro engage, death reset, gather-refusal-on-full-pack, AFK anchor.
 _Verify:_ smoke green at roughly 600 lines; unit suite visibly larger. This is the highest-leverage
 risk reduction in the plan — it de-risks every remaining PR.
+
+</details>
 
 ---
 
@@ -438,9 +480,11 @@ _Verify:_ bundle size drops; extend PR 1's guard test to forbid `phaser` repo-wi
   reward changes.
 - `npm run smoke` **locally before every PR** — it blocks merges, and finding out from CI wastes a
   cycle.
-- **CPU-throttled smoke** (`Emulation.setCPUThrottlingRate: 8`, per the reproduction recipe in
-  `CLAUDE.md`) on PRs 5, 6 and 18 specifically. Copy `scripts/smoke.mjs` into `scripts/` under
-  another name so `playwright` resolves, then delete the copy.
+- **Slow frames are asked for rather than throttled into existence**, since PR 9: `view.step(140, 50)`
+  and the vitest harness's `tick(steps, deltaMs)` both take the delta. A CPU-throttled run
+  (`Emulation.setCPUThrottlingRate: 8`, per the recipe in `CLAUDE.md`) is still the right tool for
+  **PR 18** specifically, where the question is what a real WebGL frame costs rather than how our
+  maths behaves at a given delta.
 - The combat curve is tuning, not code: a fresh level 1 beats a level 1 rat comfortably, sweats
   against a level 2, loses to a level 3. Re-check after PR 6.
 

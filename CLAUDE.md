@@ -55,18 +55,36 @@ Merging to `main` triggers a Vercel production deploy, so a merge publishes.
 
 ## Verifying gameplay changes
 
-The unit suite only covers Phaser-free modules, so it can't tell you whether the game actually
-runs. `scripts/smoke.mjs` (Playwright + headless Chromium) drives the real dev server and asserts
-on live scene state — scenes booting, mobs engaging and leashing, player death resetting the
-world. Reach for it whenever a change touches a scene or a sprite; the world and the AI are
-unit-testable now (`tests/world/`), so prefer that and keep smoke for what only a browser can
-see. Screenshots land in gitignored `.smoke/`.
+**Gameplay rules belong in `tests/world/`, not in smoke.** The simulation is headless, so a whole
+zone can be driven through combat, leashing, aggro, gathering, trading, cooking, camping and
+casting in vitest — `tests/world/harness.ts` is what every test there is built on, and it hands
+back the world, the character, the keyboard and a `tick`/`until` pair measured in game
+milliseconds. That is the first place to add cover for anything the game _does_.
 
-It works because `src/main.ts` puts the `Phaser.Game` instance on `window.game` and `ZoneScene`
-puts the live `ZoneWorld` on `window.world`, both behind an `import.meta.env.DEV` guard (Vite strips
-them from production builds). Those are also the way to inspect live state from the devtools
-console: `world.mobs`, `world.player.hp`. `window.world` is re-set on every zone change, since each
-builds a new world.
+`scripts/smoke.mjs` (Playwright + headless Chromium) covers the other half and deliberately
+nothing else: scenes booting and the flows that cross between them, real mouse and key events
+reaching the game, the view building and _unbuilding_ itself, the HUD's geometry at real viewport
+sizes, and the save round trip through an actual page reload. Reach for it whenever a change
+touches a scene, a sprite or the HUD. Screenshots land in gitignored `.smoke/`.
+
+It reaches the game through two dev-only handles, neither of which mentions Phaser:
+
+- **`window.world`** — the live `ZoneWorld`, set by `ZoneScene` and re-set on every zone change
+  since each builds a new world: `world.mobs`, `world.player.hp`, `world.teleport(x, y)`.
+- **`window.view`** — the handful of questions only whatever is drawing can answer:
+  `worldToScreen(x, y)`, `drawnCounts()`, `playerFigure()` and `step()`. The interface is
+  `src/types/debugView.ts`, and the Three.js view will implement the same one — which is what keeps
+  most of smoke portable across the renderer swap.
+
+`window.game` (the `Phaser.Game` instance, from `src/main.ts`) is still there for the HUD
+assertions and the character-create screen, both of which phase 2 of the port rewrites. All three
+handles sit behind an `import.meta.env.DEV` guard, so Vite strips them from production builds. They
+are also how you inspect live state from the devtools console.
+
+**`?loop=manual` puts the simulation on a hand crank.** Under that flag `ZoneScene.update` stops
+stepping the game and `window.view.step(deltaMs, frames)` does it instead; the frame loop still
+draws and still reads the mouse. Smoke always runs this way, which is why every wait in it is a
+number of _game_ milliseconds and a loaded CI runner makes it slower rather than flakier.
 
 Two environment notes that will otherwise waste your time:
 
@@ -77,19 +95,21 @@ Two environment notes that will otherwise waste your time:
 - **The first `npm run dev` request cold-compiles all of Phaser** (~1.2 MB) and can take far
   longer than a normal page load, so browser waits need generous timeouts on a cold cache.
 
-**Reproducing a smoke failure that only happens on CI.** The runner steps the game far slower
-than a dev machine — 7fps has been seen — and frame-rate-dependent bugs hide there. Don't guess
-across CI cycles: copy `scripts/smoke.mjs` into `scripts/` under another name (it has to stay in
-that directory so `playwright` resolves), add CPU throttling after the page is created, and run
-it with `node`.
+**Reproducing a frame-rate-dependent bug.** A cheap phone steps the game at single-digit fps and
+bugs hide there (see "Frame rate is not an assumption you may make" below). Ask for the frame you
+want rather than throttling a machine into producing it: `view.step(140, 50)` is fifty frames at
+~7fps, deterministically, and in vitest the harness's `tick(steps, deltaMs)` does the same thing.
+
+That covers bugs in our own maths, which is all of them so far. If you ever need a genuinely slow
+_machine_ — a bug in Phaser's own timing, or in the browser's — the old recipe still stands: copy
+`scripts/smoke.mjs` into `scripts/` under another name (it has to stay in that directory so
+`playwright` resolves), throttle the CPU after the page is created, and run it with `node`. Delete
+the copy when you're done.
 
 ```js
 const client = await page.context().newCDPSession(page);
 await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
 ```
-
-A rate of 8 lands around 20fps and reproduced the last such bug every run. Iterating that way
-takes seconds instead of three minutes a guess. Delete the copy when you're done.
 
 ## Architecture
 
