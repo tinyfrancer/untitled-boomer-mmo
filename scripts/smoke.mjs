@@ -143,24 +143,28 @@ try {
   await page.goto(URL, { waitUntil: 'domcontentloaded' });
   // Generous: on a cold Vite cache the first request compiles all of Phaser,
   // which takes far longer than any later wait in this script.
-  await page.waitForFunction(() => window.game?.scene?.getScene('Boot'), null, { timeout: 120000 });
+  await page.waitForFunction(() => window.game?.scene?.getScene('Preload'), null, {
+    timeout: 120000,
+  });
 
-  // --- Booting: a fresh character through the real creation screen. ---
+  // --- Booting: a fresh character through the real creation screen, which is
+  // plain HTML — so this is the form a player fills in, typed and clicked. ---
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(
-    () => window.game?.scene?.getScene('CharacterCreate')?.scene.isActive(),
-    null,
-    { timeout: 20000 },
+  await page.waitForSelector('.create', { timeout: 20000 });
+  check(
+    'the creation screen boots with no class chosen',
+    (await page.isDisabled('.create__begin')) === true,
   );
-  check('character creation scene boots', true);
   await page.screenshot({ path: `${OUT}/1-character-create.png` });
 
-  await page.evaluate(() => {
-    const s = window.game.scene.getScene('CharacterCreate');
-    s.selectClass('warrior');
-    s.tryBeginAdventure();
-  });
+  await page.fill('.create__name', 'Adventurer');
+  await page.click('.create__card[data-class="warrior"]');
+  check(
+    'choosing a class arms the begin button',
+    (await page.isDisabled('.create__begin')) === false,
+  );
+  await page.click('.create__begin');
   await page.waitForFunction(() => window.world != null && window.view != null, null, {
     timeout: 20000,
   });
@@ -866,17 +870,13 @@ try {
     // The real path a phone takes: the panel asks, the scene does the work.
     window.game.events.emit('reset-character-requested');
   });
-  await page.waitForFunction(
-    () => window.game.scene.getScene('CharacterCreate')?.scene.isActive(),
-    null,
-    { timeout: 20000 },
+  await page.waitForSelector('.create', { timeout: 20000 });
+  check(
+    'a reset ends the session and returns to character creation',
+    (await page.evaluate(() => document.querySelector('.hud') === null)) === true,
   );
-  check('a reset ends the session and returns to character creation', true);
-  await page.evaluate(() => {
-    const s = window.game.scene.getScene('CharacterCreate');
-    s.selectClass('wizard');
-    s.tryBeginAdventure();
-  });
+  await page.click('.create__card[data-class="wizard"]');
+  await page.click('.create__begin');
   // `window.world` is cleared when a view is torn down, so this cannot pass on
   // the world the reset just ended.
   await page.waitForFunction(() => window.world != null, null, { timeout: 20000 });
