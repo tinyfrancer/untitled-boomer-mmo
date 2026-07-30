@@ -125,17 +125,15 @@ export class ZoneScene extends Phaser.Scene {
     });
 
     // The HUD survives zone changes: mounted once on first boot, and left
-    // running for every world after it. The DOM half is the overlay above the
-    // canvas; UIScene is the sheets it has not taken over yet.
+    // running for every world after it. It is an HTML overlay, so a zone change
+    // does not touch it and neither will the renderer swap.
     if (!hudMounted()) {
       mountHud({
         parent: document.getElementById('app') ?? document.body,
         events: this.game.events,
         character: this.context.character.state,
+        notifications: this.context.takeNotifications(),
       });
-    }
-    if (!this.scene.isActive('UI')) {
-      this.scene.launch('UI');
     }
   }
 
@@ -409,12 +407,11 @@ export class ZoneScene extends Phaser.Scene {
     return this.input.manager.hitTest(pointer, candidates, this.cameras.main, []);
   }
 
+  // A click that lands on the HUD never gets here: it is an HTML overlay above
+  // the canvas, so the browser delivers the event to the element rather than to
+  // Phaser. That used to need an explicit hit test against the UI scene, which
+  // is the sort of thing the 3D view would have had to reimplement.
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
-    // Clicks that land on the HUD belong to it, not the world.
-    const ui = this.scene.get('UI');
-    if (ui?.input && ui.input.hitTestPointer(pointer).length > 0) {
-      return;
-    }
     this.world.tap(this.resolveTap(pointer));
   }
 
@@ -450,7 +447,6 @@ export class ZoneScene extends Phaser.Scene {
     // could register.
     this.teardownView();
     unmountHud();
-    this.scene.stop('UI');
     this.scene.start('CharacterCreate');
   }
 

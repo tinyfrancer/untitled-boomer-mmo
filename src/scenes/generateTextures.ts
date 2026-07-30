@@ -6,9 +6,10 @@ import {
   appearanceTextureKey,
   computeAppearance,
   legOffsets,
+  stickFigure,
   walkAnimationKey,
 } from '../systems/AppearanceSystem';
-import type { Appearance, LegPhase } from '../systems/AppearanceSystem';
+import type { Appearance, LegPhase, StickFigure } from '../systems/AppearanceSystem';
 import type { WeaponShapeId } from '../types/ids';
 
 export const TILESET_KEY = 'tileset';
@@ -36,7 +37,7 @@ export const SHOPKEEPER_TEXTURE_KEY = 'npc-shopkeeper';
 // so an NPC reads as a person but never as another player.
 function generateShopkeeperTexture(scene: Phaser.Scene): void {
   const size = TILE_SIZE;
-  const figure = buildStickFigure(size);
+  const figure = stickFigure(size);
   const graphics = scene.add.graphics();
 
   const torso = (): void => {
@@ -101,20 +102,6 @@ function generateSignpostTexture(scene: Phaser.Scene): void {
   graphics.destroy();
 }
 
-// Landmark points of the stick figure, expressed as fractions of TILE_SIZE so the
-// whole rig (and the class accessories anchored to it) scale cleanly with tile size.
-interface StickFigure {
-  cx: number;
-  headCenterY: number;
-  headRadius: number;
-  shoulderY: number;
-  hipY: number;
-  footY: number;
-  leftHandX: number;
-  rightHandX: number;
-  limbWidth: number;
-}
-
 // Every figure's head: a filled circle rimmed in the same dark outline the limbs
 // use. The rim is what keeps it readable on dark tiles — it used to be white,
 // which read as a halo around the face.
@@ -128,23 +115,6 @@ function drawHead(
   graphics.fillCircle(figure.cx, figure.headCenterY, figure.headRadius);
   graphics.lineStyle(size * 0.03, OUTLINE_COLOR, 1);
   graphics.strokeCircle(figure.cx, figure.headCenterY, figure.headRadius);
-}
-
-function buildStickFigure(size: number): StickFigure {
-  const cx = size / 2;
-  const headRadius = size * 0.11;
-  const headCenterY = size * 0.18;
-  return {
-    cx,
-    headCenterY,
-    headRadius,
-    shoulderY: headCenterY + headRadius + size * 0.03,
-    hipY: size * 0.6,
-    footY: size * 0.92,
-    leftHandX: cx - size * 0.22,
-    rightHandX: cx + size * 0.22,
-    limbWidth: size * 0.055,
-  };
 }
 
 // One baked texture per distinct look and leg phase. The key covers everything
@@ -161,7 +131,7 @@ export function ensurePlayerTexture(
   }
 
   const size = TILE_SIZE;
-  const figure = buildStickFigure(size);
+  const figure = stickFigure(size);
   const stride = legOffsets(phase);
   const graphics = scene.add.graphics();
 
@@ -401,7 +371,7 @@ function generateCrabTexture(scene: Phaser.Scene): void {
 // the face, a dagger in hand — humanoid at a glance, hostile on second look.
 function generateBanditTexture(scene: Phaser.Scene): void {
   const size = TILE_SIZE;
-  const figure = buildStickFigure(size);
+  const figure = stickFigure(size);
   const graphics = scene.add.graphics();
 
   const torso = (): void => {
