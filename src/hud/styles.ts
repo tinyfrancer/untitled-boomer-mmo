@@ -31,10 +31,6 @@ function hudCss(): string {
 .hud * {
   box-sizing: border-box;
 }
-.hud-solid {
-  pointer-events: auto;
-}
-
 /* --- Shared chrome ------------------------------------------------------- */
 
 .hud-panel {
@@ -43,13 +39,6 @@ function hudCss(): string {
   background: ${cssRgba(THEME.panelBg, THEME.panelAlpha)};
   border: 1px solid ${cssColor(THEME.panelStroke)};
   padding: ${THEME.padding}px;
-}
-.hud-panel--sheet {
-  background: ${cssRgba(THEME.panelBg, THEME.sheetAlpha)};
-}
-.hud-title {
-  font-size: ${THEME.font.md}px;
-  font-weight: bold;
 }
 .hud-muted {
   color: ${THEME.color.muted};
@@ -141,9 +130,6 @@ function hudCss(): string {
 }
 .hud-player__mana {
   margin-top: 5px;
-}
-.hud-player--hidden {
-  display: none;
 }
 
 /* --- Target frame -------------------------------------------------------- */
@@ -259,8 +245,10 @@ function hudCss(): string {
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid ${cssColor(THEME.panelStroke)};
 }
+/* A utility, so it has to beat whatever display the element sets for itself —
+   .hud-sheet is declared later in this file and is otherwise flex. */
 .hud-hidden {
-  display: none;
+  display: none !important;
 }
 
 .hud-toast {
@@ -297,6 +285,240 @@ function hudCss(): string {
   padding: 0;
 }
 
+/* --- Sheets -------------------------------------------------------------- */
+
+/* One sheet is open at a time, so each gets the whole column rather than
+   sharing it. 'overflow: hidden' here and 'auto' on the body is the entire
+   clipping story — the Phaser build needed a per-renderer mask for this. */
+.hud-sheet {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  overflow: hidden;
+  background: ${cssRgba(THEME.panelBg, THEME.sheetAlpha)};
+  border: 1px solid ${cssColor(THEME.panelStroke)};
+}
+.hud-sheet__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+  padding: ${THEME.padding}px ${THEME.padding}px 4px;
+  flex: 0 0 auto;
+}
+.hud-sheet__title {
+  font-size: ${THEME.font.md}px;
+  font-weight: bold;
+}
+.hud-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px ${THEME.padding}px ${THEME.padding}px;
+}
+
+/* --- Character sheet ----------------------------------------------------- */
+
+.hud-char__top {
+  display: flex;
+  gap: ${THEME.padding}px;
+  align-items: flex-start;
+}
+.hud-paperdoll {
+  width: ${THEME.paperdollSize}px;
+  height: ${THEME.paperdollSize}px;
+  flex: 0 0 auto;
+}
+.hud-char__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+.hud-slot {
+  display: block;
+  width: 100%;
+  min-height: ${THEME.touchMin}px;
+  padding: 4px 6px;
+  margin-top: 2px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.hud-slot__head {
+  display: flex;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.dim};
+}
+.hud-slot__bonuses {
+  color: ${THEME.color.muted};
+}
+.hud-slot__item {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.dim};
+}
+.hud-slot__item.is-filled {
+  color: ${THEME.color.equippable};
+}
+.hud-section {
+  margin-top: ${THEME.padding}px;
+  font-size: ${THEME.font.sm}px;
+  font-weight: bold;
+}
+.hud-skill {
+  margin-top: 4px;
+}
+.hud-skill__line {
+  display: flex;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+}
+.hud-skill__bar {
+  height: 3px;
+  margin-top: 2px;
+}
+
+/* --- Bag ----------------------------------------------------------------- */
+
+.hud-coin {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.levelUp};
+}
+.hud-weight {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+  padding: 0 ${THEME.padding}px 4px;
+  flex: 0 0 auto;
+}
+.hud-weight.is-heavy {
+  color: ${THEME.color.equippable};
+}
+.hud-weight.is-full {
+  color: ${THEME.color.playerDamage};
+}
+.hud-item {
+  display: block;
+  width: 100%;
+  min-height: ${THEME.touchMin}px;
+  padding: 6px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hud-item.is-selected {
+  background: rgba(255, 255, 255, 0.14);
+}
+.hud-item__name {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+.hud-item__name.is-equippable {
+  color: ${THEME.color.equippable};
+}
+.hud-item__name.is-consumable {
+  color: ${THEME.color.skillUp};
+}
+.hud-item__bonuses {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+}
+.hud-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0 6px 6px;
+}
+.hud-item-actions__none {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.dim};
+  padding: 6px 0 6px 6px;
+}
+.hud-item-actions .hud-button {
+  min-height: 30px;
+  font-size: ${THEME.font.sm}px;
+  border-color: ${cssColor(THEME.panelStroke)};
+  background: ${cssColor(THEME.buttonBg)};
+}
+
+/* --- Quests, feats, log -------------------------------------------------- */
+
+.hud-quest {
+  margin-bottom: ${THEME.padding}px;
+}
+.hud-quest__name {
+  font-size: ${THEME.font.md}px;
+}
+.hud-quest__name.is-done {
+  color: ${THEME.color.dim};
+}
+.hud-quest__line {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  padding-left: ${THEME.padding}px;
+}
+.hud-quest__line.is-ready {
+  color: ${THEME.color.levelUp};
+}
+.hud-quest__line.is-done {
+  color: ${THEME.color.dim};
+}
+.hud-quest__reward {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.dim};
+  padding-left: ${THEME.padding}px;
+}
+
+.hud-titles {
+  display: flex;
+  gap: 6px;
+  padding: 0 ${THEME.padding}px ${THEME.padding}px;
+  flex: 0 0 auto;
+}
+.hud-titles .hud-button {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: ${THEME.font.xs}px;
+}
+.hud-feat-group {
+  margin-bottom: ${THEME.padding}px;
+}
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+}
+.hud-row--group {
+  font-size: ${THEME.font.md}px;
+}
+.hud-row--tier {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  padding-left: ${THEME.padding}px;
+}
+.hud-row--tier.is-earned {
+  color: ${THEME.color.levelUp};
+}
+
+.hud-log__line {
+  font-size: ${THEME.font.xs}px;
+  line-height: 15px;
+}
+
 /* --- Modals -------------------------------------------------------------- */
 
 .hud-modal {
@@ -307,22 +529,138 @@ function hudCss(): string {
   justify-content: center;
   pointer-events: auto;
 }
+/* Modals are not full-screen scrims: a tap outside one still has to reach the
+   world, or opening the shop would stop the player walking away from it. */
+.hud-modal--pass-through {
+  pointer-events: none;
+}
+.hud-modal--pass-through > * {
+  pointer-events: auto;
+}
+.hud-modal--top {
+  align-items: flex-start;
+  padding-top: 60px;
+}
 .hud-modal__box {
   width: 280px;
   max-width: calc(100% - ${THEME.margin * 2}px);
+  max-height: calc(100% - ${THEME.margin * 2}px);
   background: ${cssRgba(THEME.panelBg, 0.95)};
   border: 1px solid ${cssColor(THEME.panelStroke)};
   padding: ${THEME.padding}px;
   display: flex;
   flex-direction: column;
   gap: ${THEME.padding}px;
+  overflow: hidden;
+}
+.hud-modal__box--shop {
+  width: 300px;
+  border-color: ${cssColor(0xffd54f)};
+  gap: 4px;
 }
 .hud-modal__title {
   font-size: ${THEME.font.lg}px;
   font-weight: bold;
 }
+.hud-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+  flex: 0 0 auto;
+}
+.hud-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.hud-modal__close {
+  min-height: 24px;
+  width: 24px;
+  padding: 0;
+  font-size: ${THEME.font.sm}px;
+  border-color: ${cssColor(THEME.panelStroke)};
+  background: ${cssColor(THEME.buttonBg)};
+}
 .hud-modal__danger {
   color: ${THEME.color.playerDamage};
+}
+.hud-modal__line {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  line-height: 20px;
+}
+
+/* A list row that reads as a list item rather than a key: no border, and the
+   value right-aligned for a price or a count. */
+.hud-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 ${THEME.padding}px;
+  margin-bottom: 2px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: ${THEME.color.text};
+  font: inherit;
+  font-size: ${THEME.font.sm}px;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.hud-list-row__value {
+  color: ${THEME.color.levelUp};
+  white-space: nowrap;
+}
+.hud-list-row__sub {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+}
+.hud-list-header {
+  font-size: ${THEME.font.sm}px;
+  font-weight: bold;
+  color: ${THEME.color.muted};
+  margin: ${THEME.padding}px 0 4px;
+}
+.hud-list-empty {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.dim};
+  padding: 4px 0;
+}
+
+/* --- Slot picker --------------------------------------------------------- */
+
+.hud-picker {
+  position: absolute;
+  width: ${THEME.panelWidth.character}px;
+  max-height: 60%;
+  overflow-y: auto;
+  pointer-events: auto;
+  background: ${cssRgba(THEME.panelBg, 0.92)};
+  border: 1px solid ${cssColor(0xffee58)};
+  padding: ${THEME.padding}px;
+}
+.hud-picker__title {
+  font-size: ${THEME.font.md}px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.hud-picker__row {
+  display: block;
+  width: 100%;
+  min-height: ${THEME.touchMin}px;
+  padding: 4px ${THEME.padding}px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: ${THEME.color.equippable};
+  font: inherit;
+  font-size: ${THEME.font.sm}px;
+  text-align: left;
+  cursor: pointer;
 }
 `;
 }

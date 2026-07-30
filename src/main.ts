@@ -4,7 +4,6 @@ import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { CharacterCreateScene } from './scenes/CharacterCreateScene';
 import { ZoneScene } from './scenes/ZoneScene';
-import { UIScene } from './scenes/UIScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -23,7 +22,7 @@ const config: Phaser.Types.Core.GameConfig = {
   dom: {
     createContainer: true,
   },
-  scene: [BootScene, PreloadScene, CharacterCreateScene, ZoneScene, UIScene],
+  scene: [BootScene, PreloadScene, CharacterCreateScene, ZoneScene],
 };
 
 const game = new Phaser.Game(config);

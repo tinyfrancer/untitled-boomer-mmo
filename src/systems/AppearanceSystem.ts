@@ -29,6 +29,41 @@ export function legOffsets(phase: LegPhase): LegOffsets {
   }
 }
 
+/**
+ * The stick figure's landmark points, as fractions of whatever box it is drawn
+ * in. Two things draw from this rig — the generated sprite texture and the
+ * character sheet's paperdoll — and they have to agree about where a shoulder
+ * is or the sheet stops being a picture of your character.
+ */
+export interface StickFigure {
+  cx: number;
+  headCenterY: number;
+  headRadius: number;
+  shoulderY: number;
+  hipY: number;
+  footY: number;
+  leftHandX: number;
+  rightHandX: number;
+  limbWidth: number;
+}
+
+export function stickFigure(size: number): StickFigure {
+  const cx = size / 2;
+  const headRadius = size * 0.11;
+  const headCenterY = size * 0.18;
+  return {
+    cx,
+    headCenterY,
+    headRadius,
+    shoulderY: headCenterY + headRadius + size * 0.03,
+    hipY: size * 0.6,
+    footY: size * 0.92,
+    leftHandX: cx - size * 0.22,
+    rightHandX: cx + size * 0.22,
+    limbWidth: size * 0.055,
+  };
+}
+
 export interface WeaponAppearance {
   shape: WeaponShapeId;
   color: number;
