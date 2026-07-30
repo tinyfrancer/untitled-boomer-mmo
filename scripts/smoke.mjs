@@ -297,23 +297,34 @@ try {
   await stepUntil((s) => s.shopOpen, 'the tapped shopkeeper to open the shop');
   check('real mouse click walks to the shopkeeper and opens the shop', true);
 
-  // The HUD hears the world through game.events and renders off its own model;
-  // the quest rules themselves are covered in tests/world/quests.test.ts.
-  const questHeard = await page.evaluate(() => {
-    window.game.events.emit('accept-quest-requested', 'rat-bones');
-    return {
-      world: { ...window.world.character.state.quests },
-      hud: { ...window.game.scene.getScene('UI').model.quests },
-    };
-  });
+  // The shop is a DOM panel, so this is the row the player actually taps rather
+  // than the event behind it. The quest rules themselves are covered in
+  // tests/world/quests.test.ts; what needs a browser is the round trip — a tap
+  // on the panel, the world deciding, and the tracker redrawing off the answer.
+  await page.click('.hud-modal .hud-list-row[data-quest="rat-bones"]');
+  await page.waitForTimeout(150);
+  const questHeard = await page.evaluate(() => ({
+    world: { ...window.world.character.state.quests },
+    tracker: [...document.querySelectorAll('.hud-tracker__line')].map((n) => n.textContent),
+  }));
   check(
-    'a quest taken in the world reaches the HUD',
-    questHeard.world['rat-bones'] === 'active' && questHeard.hud['rat-bones'] === 'active',
+    'a quest taken at the shopkeeper reaches the world and the tracker',
+    questHeard.world['rat-bones'] === 'active' && questHeard.tracker.length === 1,
+    questHeard.tracker.join(' | '),
   );
-  await page.evaluate(() => window.world.closeShop());
+  await page.screenshot({ path: `${OUT}/4-shop.png` });
+
+  // Closing from the panel's own X, which asks the world rather than telling it.
+  await page.click('.hud-modal [data-action="close-shop"]');
+  await stepUntil((s) => !s.shopOpen, 'the shop panel to close the shop');
+  check(
+    'the shop panel closes the shop it was opened by',
+    (await page.evaluate(() => document.querySelector('.hud-modal__box--shop') === null)) === true,
+  );
 
   // --- A real fight, for the HUD's benefit: the combat log is fed by events
-  // crossing between two live scenes, which nothing headless can show. ---
+  // crossing from the simulation into the overlay, which nothing headless can
+  // show. ---
   await page.evaluate(() => {
     const w = window.world;
     const rat = w.mobs.find((m) => m.level === 3) ?? w.mobs[0];
@@ -331,21 +342,21 @@ try {
   );
   await page.screenshot({ path: `${OUT}/3-combat.png` });
 
-  const logged = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    return { lines: ui.model.combatLog.map((e) => e.text), openSheet: ui.model.openSheet };
-  });
+  const logged = await page.evaluate(() => ({
+    lines: [...document.querySelectorAll('.hud-log__line')].map((n) => n.textContent),
+    openTab: document.querySelector('.hud-tabs__tab.is-selected')?.dataset.tab ?? null,
+  }));
   check(
     'the combat log records the fight',
     logged.lines.some((l) => l.includes('You hit')) &&
       logged.lines.some((l) => l.includes('hits you for')),
-    `${logged.lines.length} lines, last: ${logged.lines[logged.lines.length - 1]}`,
+    `last: ${logged.lines.filter((l) => l.trim()).at(-1)}`,
   );
   // The tab bar opens one sheet at a time, so the log starts closed even on a
   // desktop: the character sheet is what a roomy screen opens by default.
   check(
     'the character sheet is the default sheet on a desktop viewport',
-    logged.openSheet === 'character',
+    logged.openTab === 'character',
   );
 
   // --- Real key events, not method calls: InputState is fed by its own DOM
@@ -391,19 +402,26 @@ try {
   // --- The HUD: tabs, sheets and the log's cap. The tab bar is a DOM overlay
   // now, so these are real clicks on real buttons rather than method calls —
   // which is also what proves a tap landing on the bar never reaches the world
-  // underneath it. The sheets are still Phaser until PR 11. ---
+  // underneath it. ---
   const tapTab = async (tab) => {
     await page.click(`.hud-tabs__tab[data-tab="${tab}"]`);
     await page.waitForTimeout(80);
   };
   const sheetVisibility = () =>
     page.evaluate(() => {
-      const ui = window.game.scene.getScene('UI');
+      // Computed display, not the class: a hidden sheet that still lays out is
+      // an invisible wall over the tab bar, and asking the class would have
+      // called that closed.
+      const open = (id) => {
+        const node = document.querySelector(`.hud-sheet[data-sheet="${id}"]`);
+        return node !== null && getComputedStyle(node).display !== 'none';
+      };
       return {
-        character: ui.characterPanel.isVisible(),
-        inventory: ui.inventoryPanel.isVisible(),
-        quests: ui.questPanel.isVisible(),
-        log: ui.combatLogPanel.isVisible(),
+        character: open('character'),
+        inventory: open('inventory'),
+        quests: open('quests'),
+        feats: open('feats'),
+        log: open('log'),
         selectedTab: document.querySelector('.hud-tabs__tab.is-selected')?.dataset.tab ?? null,
       };
     });
@@ -458,17 +476,20 @@ try {
     `${beforeBarTap.player.x},${beforeBarTap.player.y} -> ${afterBarTap.player.x},${afterBarTap.player.y}`,
   );
 
+  // How long the log is kept is CombatLogSystem's business and unit-tested
+  // there; what only a browser shows is that the sheet stays pinned to the
+  // newest line rather than scrolling away from it.
   const cappedLog = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
     for (let i = 0; i < 200; i += 1) {
       window.game.events.emit('combat-log', { text: `filler ${i}`, color: '#fff' });
     }
-    return { length: ui.model.combatLog.length, last: ui.model.combatLog.at(-1).text };
+    const lines = [...document.querySelectorAll('.hud-log__line')].map((n) => n.textContent);
+    return { shown: lines.length, last: lines.at(-1) };
   });
   check(
-    'the log caps its length and keeps the newest line',
-    cappedLog.length === 50 && cappedLog.last === 'filler 199',
-    `${cappedLog.length} lines`,
+    'the log keeps the newest line on screen after two hundred more',
+    cappedLog.shown === 8 && cappedLog.last === 'filler 199',
+    `${cappedLog.shown} lines, last: ${cappedLog.last}`,
   );
 
   // --- Achievements in the HUD. Crediting the chain and earning the title are
@@ -482,38 +503,46 @@ try {
   });
   await tapTab('feats');
   const slayer = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
+    const sheet = document.querySelector('.hud-sheet[data-sheet="feats"]');
+    const rows = [...sheet.querySelectorAll('.hud-row--group')].map((n) => n.textContent);
     return {
-      unlocked: 0,
-      open: ui.model.openSheet === 'feats',
-      visible: ui.achievementPanel.isVisible(),
-      kills: ui.model.kills.rat ?? 0,
+      visible: getComputedStyle(sheet).display !== 'none',
+      rat: rows.find((row) => row.startsWith('Rat')) ?? '',
+      earnedTiers: sheet.querySelectorAll('.hud-row--tier.is-earned').length,
+      titles: [...sheet.querySelectorAll('.hud-titles .hud-button')].map((n) => n.textContent),
     };
   });
-  slayer.unlocked = unlockedTiers;
   check(
     'the Feats tab opens the achievements sheet, populated from the world',
-    slayer.open && slayer.visible && slayer.kills === 100,
-    `${slayer.unlocked} tier(s) unlocked, HUD sees ${slayer.kills} kills`,
+    slayer.visible && slayer.rat === 'Rat100 slain' && slayer.earnedTiers === unlockedTiers,
+    `${unlockedTiers} tier(s) unlocked, sheet shows "${slayer.rat}"`,
+  );
+  check(
+    'a completed chain offers its title in the picker',
+    slayer.titles.includes('Rat Slayer'),
+    slayer.titles.join(', '),
   );
   await page.screenshot({ path: `${OUT}/12-achievements.png` });
 
   // The title has to survive the round trip the picker actually uses: the HUD
   // asks, the world re-checks the kills back it, and the player column redraws.
   // It gets its own line there, so the column has to grow to hold it.
-  const wornTitle = await page.evaluate(async () => {
-    const column = () => document.querySelector('.hud-player').getBoundingClientRect().height;
-    const before = column();
-    window.game.events.emit('set-title-requested', 'rat-slayer');
-    await new Promise((r) => setTimeout(r, 250));
+  const columnHeight = () =>
+    page.evaluate(() =>
+      Math.round(document.querySelector('.hud-player').getBoundingClientRect().height),
+    );
+  const beforeTitle = await columnHeight();
+  await page.click('.hud-titles .hud-button[data-title="rat-slayer"]');
+  await page.waitForTimeout(250);
+  const wornTitle = await page.evaluate(() => {
     const line = document.querySelector('.hud-player__title');
     return {
-      before: Math.round(before),
-      after: Math.round(column()),
       model: window.world.character.state.activeTitleId,
-      shown: line.textContent === 'Rat Slayer' && !line.classList.contains('hud-hidden'),
+      shown: line.textContent === 'Rat Slayer' && getComputedStyle(line).display !== 'none',
     };
   });
+  wornTitle.before = beforeTitle;
+  wornTitle.after = await columnHeight();
   check(
     'wearing a title redraws the player column with room for it',
     wornTitle.model === 'rat-slayer' && wornTitle.shown && wornTitle.after > wornTitle.before,
@@ -521,21 +550,25 @@ try {
   );
   await page.screenshot({ path: `${OUT}/12c-title-worn.png` });
 
-  // --- Inventory scrolling: a full bag must stay on screen and scroll, and a
-  // scroll drag must never be mistaken for a row tap. ---
-  const invPanel = () =>
+  // --- The bag: a full one must stay on screen, scroll inside itself, and clip
+  // what hangs over. The clip used to be the one thing here with no visible
+  // failure mode — Phaser 4 made geometry masks Canvas-only, so under WebGL
+  // setMask still ran, passed every check, and simply stopped clipping. In DOM
+  // it is `overflow: hidden`, so what is worth asserting is the consequence: a
+  // row scrolled out of view is not on screen and cannot be hit. ---
+  const bag = () =>
     page.evaluate(() => {
-      const p = window.game.scene.getScene('UI').inventoryPanel;
+      const sheet = document.querySelector('.hud-sheet[data-sheet="inventory"]');
+      const body = sheet.querySelector('.hud-sheet__body');
+      const selected = sheet.querySelector('.hud-item.is-selected');
       return {
-        visible: p.isVisible(),
-        scrollY: Math.round(p.scrollY),
-        maxScroll: Math.round(Math.max(0, p.contentHeight - p.viewportHeight)),
-        bottom: Math.round(p.panelY + p.background.height),
-        thumb: p.scrollThumb.visible,
-        selected: p.selectedItemId,
-        // Rows scrolled out of the viewport must not still catch taps.
-        enabledRows: p.rowObjects.filter((o) => o.input?.enabled).length,
-        inputRows: p.rowObjects.filter((o) => o.input).length,
+        visible: getComputedStyle(sheet).display !== 'none',
+        scrollTop: Math.round(body.scrollTop),
+        maxScroll: Math.round(body.scrollHeight - body.clientHeight),
+        bottom: Math.round(sheet.getBoundingClientRect().bottom),
+        rows: sheet.querySelectorAll('.hud-item').length,
+        selected: selected?.dataset.item ?? null,
+        actions: [...sheet.querySelectorAll('[data-item-action]')].map((n) => n.textContent),
       };
     });
   await page.evaluate(() => {
@@ -559,110 +592,85 @@ try {
     window.game.events.emit('inventory-changed', w.character.state.inventory);
   });
   await page.waitForTimeout(200);
-  if (!(await invPanel()).visible) {
+  if (!(await bag()).visible) {
     await page.keyboard.press('i');
     await page.waitForTimeout(300);
   }
-  const invFull = await invPanel();
-  check(
-    'a full inventory panel stays within the screen',
-    invFull.bottom <= 900,
-    `bottom=${invFull.bottom} of 900`,
+  const bagFull = await bag();
+  const tabBarTop = await page.evaluate(() =>
+    Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top),
   );
   check(
-    'an overflowing inventory becomes scrollable',
-    invFull.maxScroll > 0 && invFull.thumb === true,
-    `maxScroll=${invFull.maxScroll}`,
+    'a full bag stays clear of the tab bar rather than running off the screen',
+    bagFull.bottom <= tabBarTop,
+    `bag bottom ${bagFull.bottom}, tab bar at ${tabBarTop}`,
+  );
+  check(
+    'an overflowing bag becomes scrollable',
+    bagFull.maxScroll > 0 && bagFull.rows === 14,
+    `${bagFull.rows} rows, ${bagFull.maxScroll}px of overflow`,
   );
 
-  const invCenter = await page.evaluate(() => {
-    const p = window.game.scene.getScene('UI').inventoryPanel;
-    return { x: p.panelX + 100, y: p.panelY + p.rowsTop() + p.viewportHeight / 2 };
+  const bagCenter = await page.evaluate(() => {
+    const box = document
+      .querySelector('.hud-sheet[data-sheet="inventory"] .hud-sheet__body')
+      .getBoundingClientRect();
+    return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
   });
-  await page.mouse.move(invCenter.x, invCenter.y);
+  await page.mouse.move(bagCenter.x, bagCenter.y);
   await page.mouse.wheel(0, 5000);
   await page.waitForTimeout(250);
-  const invScrolled = await invPanel();
+  const bagScrolled = await bag();
   check(
     'the wheel scrolls the bag and clamps at the end',
-    invScrolled.scrollY === invScrolled.maxScroll && invScrolled.scrollY > 0,
-    `scrollY=${invScrolled.scrollY}/${invScrolled.maxScroll}`,
-  );
-  check(
-    'rows scrolled out of the viewport stop taking input',
-    invScrolled.enabledRows < invScrolled.inputRows,
-    `${invScrolled.enabledRows}/${invScrolled.inputRows} rows live`,
+    bagScrolled.scrollTop === bagScrolled.maxScroll && bagScrolled.scrollTop > 0,
+    `scrollTop=${bagScrolled.scrollTop}/${bagScrolled.maxScroll}`,
   );
 
-  // The clip is the one thing here with no visible failure mode: Phaser 4 made
-  // geometry masks Canvas-only, so under WebGL setMask still ran, still passed
-  // every check above, and simply stopped clipping — overflowing rows drew over
-  // the world. Assert the clip is actually installed for the live renderer.
-  const clip = await page.evaluate(() => {
-    const vp = window.game.scene.getScene('UI').inventoryPanel.rowsViewport;
-    return {
-      gl: !!window.game.renderer.gl,
-      filters: vp.filters?.internal?.list?.length ?? 0,
-      geometryMask: !!vp.mask,
-    };
+  // The clip, asserted by its consequence rather than by its implementation: the
+  // first row is scrolled out of the body now, so it must be outside the sheet
+  // and whatever is at that point must not be it.
+  const clipped = await page.evaluate(() => {
+    const sheet = document.querySelector('.hud-sheet[data-sheet="inventory"]');
+    const first = sheet.querySelector('.hud-item');
+    const row = first.getBoundingClientRect();
+    const box = sheet.getBoundingClientRect();
+    const at = document.elementFromPoint(Math.round(row.x + 4), Math.round(row.y + 4));
+    return { above: row.bottom <= box.top, hits: first.contains(at) };
   });
   check(
-    'the bag viewport is really clipped on this renderer',
-    clip.gl ? clip.filters > 0 : clip.geometryMask,
-    clip.gl ? `WebGL, ${clip.filters} mask filter(s)` : 'Canvas, geometry mask',
+    'a row scrolled out of the bag is clipped away rather than drawn over the world',
+    clipped.above && !clipped.hits,
+    `off the top: ${clipped.above}, still hittable: ${clipped.hits}`,
   );
 
-  // A tap selects; a drag of the same press must not.
-  await clickAt(invCenter);
-  await page.waitForTimeout(250);
-  const invTapped = await invPanel();
-  check('tapping a row selects the item', invTapped.selected !== null, `${invTapped.selected}`);
-
-  await page.mouse.move(invCenter.x, invCenter.y);
-  await page.mouse.down();
-  for (let i = 1; i <= 8; i += 1) {
-    await page.mouse.move(invCenter.x, invCenter.y + i * 12);
-    await page.waitForTimeout(16);
-  }
-  await page.mouse.up();
-  await page.waitForTimeout(250);
-  const invDragged = await invPanel();
+  // A tap selects and unfolds the row's actions. Whether a scroll drag also
+  // counts as a tap is the browser's business now — a touch drag scrolls the
+  // list and the click that would follow is suppressed — which is the whole of
+  // what the Phaser panel needed a hand-rolled drag threshold for.
+  await page.click('.hud-sheet[data-sheet="inventory"] .hud-item[data-item="brown-legs"]');
+  await page.waitForTimeout(200);
+  const bagTapped = await bag();
   check(
-    'a scroll drag scrolls without changing the selection',
-    invDragged.scrollY < invScrolled.scrollY && invDragged.selected === invTapped.selected,
-    `scrollY ${invScrolled.scrollY} -> ${invDragged.scrollY}, selection kept`,
+    'tapping a row selects the item and unfolds its actions',
+    bagTapped.selected === 'brown-legs' && bagTapped.actions.includes('Equip'),
+    `${bagTapped.selected}: ${bagTapped.actions.join(', ')}`,
   );
   await page.screenshot({ path: `${OUT}/10-inventory-scroll.png` });
 
-  // A resize rebuilds the whole HUD, and the selection lives on the panel
-  // instance — so without carrying it across, a resize deselects. On a phone a
-  // tap hides the URL bar, which resizes, so the item you just tapped would
-  // lose its action row a frame later. brown-legs is in the injected bag and a
-  // warrior can wear it, so its row is guaranteed an Equip action.
-  const equipShown = () =>
-    page.evaluate(() =>
-      window.game.scene
-        .getScene('UI')
-        .inventoryPanel.rowObjects.some((o) => o.type === 'Text' && o.text === 'Equip'),
-    );
-  await page.evaluate(() => {
-    const p = window.game.scene.getScene('UI').inventoryPanel;
-    p.selectedItemId = 'brown-legs';
-    p.render();
-  });
-  const beforeResize = { selected: (await invPanel()).selected, equip: await equipShown() };
+  // A resize is a reflow now rather than a rebuild, so the open row survives by
+  // construction — on a phone a tap hides the URL bar, which resizes, and the
+  // Phaser HUD had to carry the selection across by hand not to lose it.
   await page.setViewportSize({ width: 1280, height: 864 });
   await page.waitForTimeout(300);
-  const afterResize = { selected: (await invPanel()).selected, equip: await equipShown() };
+  const bagResized = await bag();
   check(
     'the selected item and its Equip button survive a resize',
-    beforeResize.selected === 'brown-legs' &&
-      beforeResize.equip &&
-      afterResize.selected === 'brown-legs' &&
-      afterResize.equip,
-    `equip before/after resize: ${beforeResize.equip}/${afterResize.equip}`,
+    bagResized.selected === 'brown-legs' && bagResized.actions.includes('Equip'),
+    `${bagResized.selected}: ${bagResized.actions.join(', ')}`,
   );
-  // And a selection whose item is gone must still clear across a resize.
+
+  // A selection whose item is gone must clear rather than linger.
   await page.evaluate(() => {
     const w = window.world;
     w.character.removeItem('brown-legs', w.character.itemCount('brown-legs'));
@@ -672,15 +680,54 @@ try {
   await page.waitForTimeout(300);
   check(
     'a selection whose item is gone clears rather than lingering',
-    (await invPanel()).selected === null,
+    (await bag()).selected === null,
   );
+
+  // --- The character sheet: the paperdoll is SVG built from the same rig the
+  // world sprite's texture is baked from, and an empty slot opens a picker
+  // rather than needing the bag. Equipping from it is the round trip that
+  // proves the sheet is self-sufficient. ---
+  await tapTab('character');
+  await page.click('.hud-sheet[data-sheet="character"] .hud-slot[data-slot="helmet"]');
+  await page.waitForTimeout(200);
+  const picker = await page.evaluate(() => {
+    const node = document.querySelector('.hud-picker');
+    if (!node) return null;
+    const box = node.getBoundingClientRect();
+    return {
+      title: node.querySelector('.hud-picker__title').textContent,
+      items: [...node.querySelectorAll('.hud-picker__row')].map((n) => n.dataset.item),
+      onScreen: box.left >= 0 && box.top >= 0 && box.right <= window.innerWidth,
+    };
+  });
+  check(
+    'an empty gear slot opens a picker of what fits it, kept on screen',
+    picker !== null && picker.items.includes('brown-helmet') && picker.onScreen,
+    picker ? `${picker.title}: ${picker.items.join(', ')}` : 'no picker',
+  );
+  await page.click('.hud-picker__row[data-item="brown-helmet"]');
+  await page.waitForTimeout(200);
+  const equipped = await page.evaluate(() => ({
+    world: window.world.character.state.gear.helmet,
+    shown: document.querySelector('.hud-slot[data-slot="helmet"] .hud-slot__item').textContent,
+    pickerGone: document.querySelector('.hud-picker') === null,
+    // The paperdoll is redrawn from the new gear, so the helmet's colour is on
+    // the head circle — the one thing a static picture could not show.
+    headFill: document.querySelector('.hud-paperdoll circle').getAttribute('fill'),
+  }));
+  check(
+    'picking an item equips it and redraws the sheet',
+    equipped.world === 'brown-helmet' && equipped.shown === 'Brown Helmet' && equipped.pickerGone,
+    `${equipped.shown}, head drawn ${equipped.headFill}`,
+  );
+  await page.screenshot({ path: `${OUT}/14-character-sheet.png` });
 
   await page.evaluate(() => {
     const w = window.world;
     w.character.state.inventory = { logs: 1 };
     window.game.events.emit('inventory-changed', w.character.state.inventory);
-    window.game.scene.getScene('UI').inventoryPanel.setVisible(false);
   });
+  await tapTab('character');
 
   // --- Portrait phone: the canvas tracks the viewport 1:1 and the camera zooms
   // in rather than shrinking the world. ---
@@ -694,7 +741,7 @@ try {
     zoom: window.game.scene.getScene('Zone').cameras.main.zoom,
     cameraH: window.game.scene.getScene('Zone').cameras.main.height,
     tabBarY: Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top),
-    uiActive: window.game.scene.getScene('UI').scene.isActive(),
+    hudMounted: document.querySelector('.hud') !== null,
     // The visible viewport, against which the canvas must not overhang.
     innerH: window.innerHeight,
     appH: document.getElementById('app').clientHeight,
@@ -715,7 +762,7 @@ try {
     portrait.cameraH === portrait.tabBarY,
     `camera ${portrait.cameraH}, tab bar at ${portrait.tabBarY}`,
   );
-  check('UI scene survives the resize', portrait.uiActive === true);
+  check('the HUD overlay survives the resize', portrait.hudMounted === true);
   // The tab bar sits flush against the bottom of the canvas, so a canvas taller
   // than the visible viewport hides it outright — which is what 100vh did on
   // iOS Safari, where vh is the viewport as if the toolbars were retracted.
@@ -896,7 +943,7 @@ try {
       xp: state.xp,
       level: state.level,
       afk: state.afk,
-      panel: window.game.scene.getScene('UI')?.awayReportPanel != null,
+      panel: document.querySelector('[data-action="dismiss-away-report"]') !== null,
     };
   });
   check(
