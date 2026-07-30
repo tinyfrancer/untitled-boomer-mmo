@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { generatePlaceholderTextures } from './generateTextures';
-import { bootIntoGame } from './bootFlow';
+import { phaserHost } from './phaserGame';
+import { bootIntoGame } from '../bootFlow';
 
 /**
  * The one thing that still has to be a scene before the world exists: the
@@ -14,6 +15,6 @@ export class PreloadScene extends Phaser.Scene {
 
   create(): void {
     generatePlaceholderTextures(this);
-    bootIntoGame(this.game);
+    bootIntoGame(phaserHost(this.game));
   }
 }

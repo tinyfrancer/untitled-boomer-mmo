@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
+import { manualLoopRequested } from '../config/flags';
 import { PlayerSprite } from '../entities/PlayerSprite';
 import { MobSprite } from '../entities/MobSprite';
 import { ResourceNodeSprite } from '../entities/ResourceNodeSprite';
@@ -9,7 +10,8 @@ import { ZoneSignpost } from '../entities/ZoneSignpost';
 import { SHOPKEEPER_TEXTURE_KEY, SIGNPOST_TEXTURE_KEY, TILESET_KEY } from './generateTextures';
 import { hudMounted, mountHud, unmountHud } from '../hud/Hud';
 import { uiRoot } from '../hud/dom';
-import { showCharacterCreate } from './bootFlow';
+import { showCharacterCreate } from '../bootFlow';
+import { phaserHost } from './phaserGame';
 import { LEVEL_UP_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
 import { THEME, worldZoom } from '../ui/theme';
 import { worldViewportHeight } from '../ui/layout';
@@ -40,8 +42,7 @@ const SELECTION_RING_COLOR = 0xffee58;
  * window, and it makes a slow frame something a test can ask for by passing a
  * bigger delta rather than something it has to throttle a CPU to reproduce.
  */
-const MANUAL_LOOP =
-  import.meta.env.DEV && new URLSearchParams(window.location.search).get('loop') === 'manual';
+const MANUAL_LOOP = import.meta.env.DEV && manualLoopRequested(window.location.search);
 
 const FLOAT_COLORS: Record<FloatTone, string> = {
   damage: THEME.color.equippable,
@@ -452,7 +453,7 @@ export class ZoneScene extends Phaser.Scene {
     // Stopped rather than started-over: the creation screen is not a scene any
     // more, and the one it hands back to is this one.
     this.scene.stop();
-    showCharacterCreate(this.game);
+    showCharacterCreate(phaserHost(this.game));
   }
 
   // ---------------------------------------------------------------------------
