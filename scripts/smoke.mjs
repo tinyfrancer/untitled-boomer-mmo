@@ -388,42 +388,74 @@ try {
   const cleared = await worldState();
   check('a real Escape press clears the selected target', cleared.target === null);
 
-  // --- The HUD: tabs, sheets and the log's cap. Rewritten as DOM in phase 2 of
-  // the port; until then this is the only cover it has. ---
-  const tabbed = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    ui.selectTab('log');
-    const opened = { log: ui.combatLogPanel.isVisible(), character: ui.characterPanel.isVisible() };
-    ui.selectTab('log');
-    return { opened, closedAgain: ui.combatLogPanel.isVisible() };
-  });
+  // --- The HUD: tabs, sheets and the log's cap. The tab bar is a DOM overlay
+  // now, so these are real clicks on real buttons rather than method calls —
+  // which is also what proves a tap landing on the bar never reaches the world
+  // underneath it. The sheets are still Phaser until PR 11. ---
+  const tapTab = async (tab) => {
+    await page.click(`.hud-tabs__tab[data-tab="${tab}"]`);
+    await page.waitForTimeout(80);
+  };
+  const sheetVisibility = () =>
+    page.evaluate(() => {
+      const ui = window.game.scene.getScene('UI');
+      return {
+        character: ui.characterPanel.isVisible(),
+        inventory: ui.inventoryPanel.isVisible(),
+        quests: ui.questPanel.isVisible(),
+        log: ui.combatLogPanel.isVisible(),
+        selectedTab: document.querySelector('.hud-tabs__tab.is-selected')?.dataset.tab ?? null,
+      };
+    });
+
+  await tapTab('log');
+  const tabbedOpen = await sheetVisibility();
+  await tapTab('log');
+  const tabbedClosed = await sheetVisibility();
   check(
     'a tab opens its sheet and closes the one already open',
-    tabbed.opened.log === true && tabbed.opened.character === false,
+    tabbedOpen.log === true && tabbedOpen.character === false,
   );
-  check('tapping the open tab again closes it', tabbed.closedAgain === false);
+  check(
+    'the open sheet lights its tab in the bar',
+    tabbedOpen.selectedTab === 'log' && tabbedClosed.selectedTab === null,
+  );
+  check('tapping the open tab again closes it', tabbedClosed.log === false);
 
-  const exclusive = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    const seen = [];
-    for (const tab of ['character', 'inventory', 'quests', 'log']) {
-      ui.selectTab(tab);
-      seen.push(
-        [
-          ui.characterPanel.isVisible(),
-          ui.inventoryPanel.isVisible(),
-          ui.questPanel.isVisible(),
-          ui.combatLogPanel.isVisible(),
-        ].filter(Boolean).length,
-      );
-    }
-    ui.selectTab(ui.model.openSheet);
-    return seen;
-  });
+  const exclusive = [];
+  for (const tab of ['character', 'inventory', 'quests', 'log']) {
+    await tapTab(tab);
+    const seen = await sheetVisibility();
+    exclusive.push([seen.character, seen.inventory, seen.quests, seen.log].filter(Boolean).length);
+  }
+  await tapTab('log');
+  await tapTab('character');
   check(
     'only one sheet is ever open at a time',
     exclusive.every((count) => count === 1),
     `open counts ${exclusive.join(',')}`,
+  );
+
+  // A tap that lands on the bar is a HUD hit and must never also be a move
+  // order. In 2D this needed an explicit hit test between two Phaser scenes; an
+  // opaque DOM bar over the canvas swallows it by construction, and this is
+  // what says so.
+  await park();
+  const beforeBarTap = await worldState();
+  // The bar's own padding rather than a button in it, so the tap proves the
+  // background swallows the click without also toggling a sheet.
+  const barBox = await page.evaluate(() => {
+    const rect = document.querySelector('.hud-tabs').getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.bottom - 3 };
+  });
+  await clickAt(barBox);
+  await step(6);
+  const afterBarTap = await worldState();
+  check(
+    'a tap on the tab bar never falls through to the world as a move order',
+    afterBarTap.player.x === beforeBarTap.player.x &&
+      afterBarTap.player.y === beforeBarTap.player.y,
+    `${beforeBarTap.player.x},${beforeBarTap.player.y} -> ${afterBarTap.player.x},${afterBarTap.player.y}`,
   );
 
   const cappedLog = await page.evaluate(() => {
@@ -442,20 +474,23 @@ try {
   // --- Achievements in the HUD. Crediting the chain and earning the title are
   // tested headlessly; what needs a browser is the sheet and the player column
   // redrawing around a worn title. ---
-  const slayer = await page.evaluate(() => {
+  const unlockedTiers = await page.evaluate(() => {
     const w = window.world;
     w.character.state.kills = {};
     w.character.state.activeTitleId = null;
-    const unlocks = w.creditKill('rat', 100);
+    return w.creditKill('rat', 100).length;
+  });
+  await tapTab('feats');
+  const slayer = await page.evaluate(() => {
     const ui = window.game.scene.getScene('UI');
-    ui.selectTab('feats');
     return {
-      unlocked: unlocks.length,
+      unlocked: 0,
       open: ui.model.openSheet === 'feats',
       visible: ui.achievementPanel.isVisible(),
       kills: ui.model.kills.rat ?? 0,
     };
   });
+  slayer.unlocked = unlockedTiers;
   check(
     'the Feats tab opens the achievements sheet, populated from the world',
     slayer.open && slayer.visible && slayer.kills === 100,
@@ -467,16 +502,16 @@ try {
   // asks, the world re-checks the kills back it, and the player column redraws.
   // It gets its own line there, so the column has to grow to hold it.
   const wornTitle = await page.evaluate(async () => {
-    const ui = window.game.scene.getScene('UI');
-    const before = ui.layout.playerColumn.height;
+    const column = () => document.querySelector('.hud-player').getBoundingClientRect().height;
+    const before = column();
     window.game.events.emit('set-title-requested', 'rat-slayer');
     await new Promise((r) => setTimeout(r, 250));
-    const after = window.game.scene.getScene('UI');
+    const line = document.querySelector('.hud-player__title');
     return {
-      before,
-      after: after.layout.playerColumn.height,
-      model: after.model.activeTitleId,
-      shown: after.children.list.some((o) => o.text === 'Rat Slayer'),
+      before: Math.round(before),
+      after: Math.round(column()),
+      model: window.world.character.state.activeTitleId,
+      shown: line.textContent === 'Rat Slayer' && !line.classList.contains('hud-hidden'),
     };
   });
   check(
@@ -658,7 +693,7 @@ try {
     // camera's viewport is what keeps the world out from under the tab bar.
     zoom: window.game.scene.getScene('Zone').cameras.main.zoom,
     cameraH: window.game.scene.getScene('Zone').cameras.main.height,
-    tabBarY: window.game.scene.getScene('UI').layout.tabBar.y,
+    tabBarY: Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top),
     uiActive: window.game.scene.getScene('UI').scene.isActive(),
     // The visible viewport, against which the canvas must not overhang.
     innerH: window.innerHeight,
@@ -702,7 +737,10 @@ try {
   const signScreen = await page.evaluate(() => {
     const post = window.world.signposts.find((s) => s.exit.edge === 'south');
     const at = window.view.worldToScreen(post.x, post.y);
-    return { ...at, tabBarY: window.game.scene.getScene('UI').layout.tabBar.y };
+    return {
+      ...at,
+      tabBarY: Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top),
+    };
   });
   check(
     'the south signpost renders clear of the tab bar on a portrait phone',
@@ -723,20 +761,25 @@ try {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.waitForTimeout(600);
   const tabWidth = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    // The rendered hit areas, not the formula: objects[0] is the interactive
-    // background, which is the thing a thumb actually has to land on.
-    const widths = [...ui.tabBar.buttons.values()].map((button) => button.objects[0].width);
+    // The rendered boxes, not the formula: getBoundingClientRect is exactly the
+    // area a thumb has to land on.
+    const boxes = [...document.querySelectorAll('.hud-tabs__tab')].map((tab) =>
+      tab.getBoundingClientRect(),
+    );
     return {
       canvasWidth: window.game.scale.width,
-      count: widths.length,
-      narrowest: Math.min(...widths),
+      count: boxes.length,
+      narrowest: Math.min(...boxes.map((box) => box.width)),
+      shortest: Math.min(...boxes.map((box) => box.height)),
     };
   });
   check(
     'seven tabs still clear the 44px touch minimum on a 375px phone',
-    tabWidth.canvasWidth === 375 && tabWidth.count === 7 && tabWidth.narrowest >= 44,
-    `${tabWidth.count} tabs, narrowest ${tabWidth.narrowest.toFixed(1)}px at ${tabWidth.canvasWidth}px`,
+    tabWidth.canvasWidth === 375 &&
+      tabWidth.count === 7 &&
+      tabWidth.narrowest >= 44 &&
+      tabWidth.shortest >= 44,
+    `${tabWidth.count} tabs, narrowest ${tabWidth.narrowest.toFixed(1)}x${tabWidth.shortest.toFixed(1)}px at ${tabWidth.canvasWidth}px`,
   );
   await page.screenshot({ path: `${OUT}/12b-tabbar-375.png` });
 
@@ -747,24 +790,25 @@ try {
   // The RESIZE this fires rebuilds the HUD and closes any open panel, so let it
   // land before opening one.
   await page.waitForTimeout(500);
-  const options = await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    ui.openOptions();
-    const opened = ui.optionsPanel !== null;
-    // First press only arms the confirm; the save must still be there after it.
-    ui.optionsPanel.handleResetPressed(() => {});
-    return {
-      opened,
-      armed: ui.optionsPanel.confirmingReset,
-      saveIntact: localStorage.length > 0,
-    };
-  });
+  await tapTab('options');
+  const opened = await page.evaluate(() => document.querySelector('.hud-modal') !== null);
+  // First press only arms the confirm; the save must still be there after it.
+  await page.click('.hud-modal [data-action="reset-character"]');
+  const options = await page.evaluate(() => ({
+    opened: true,
+    armed:
+      document.querySelector('.hud-modal [data-action="reset-character"]').textContent ===
+      'Tap again to confirm',
+    saveIntact: localStorage.length > 0,
+  }));
+  options.opened = opened;
   await page.screenshot({ path: `${OUT}/12-options.png` });
-  await page.evaluate(() => {
-    const ui = window.game.scene.getScene('UI');
-    ui.optionsPanel.close();
-    ui.optionsPanel = null;
-  });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(80);
+  check(
+    'escape closes the options modal',
+    await page.evaluate(() => document.querySelector('.hud-modal') === null),
+  );
   check('the options menu opens from the HUD', options.opened === true);
   check(
     'the first reset press only arms a confirm, leaving the save alone',
@@ -790,7 +834,7 @@ try {
   // the world the reset just ended.
   await page.waitForFunction(() => window.world != null, null, { timeout: 20000 });
   const caster = await page.evaluate(() => ({
-    hasBar: window.game.scene.getScene('UI').actionBar !== undefined,
+    hasBar: document.querySelectorAll('.hud-ability').length > 0,
     mana: window.world.player.mana,
     maxMana: window.world.player.maxMana,
   }));
