@@ -102,3 +102,21 @@ export function px(value: number, scale: number): number {
 export function fontPx(value: number, scale: number): string {
   return `${px(value, scale)}px`;
 }
+
+/**
+ * A THEME fill as a CSS colour.
+ *
+ * The palette is stored twice on purpose — `0x` numbers for the shapes Phaser
+ * draws, `#` strings for the text it draws — and the DOM HUD needs the string
+ * form of the numeric half. One conversion here rather than a third copy of the
+ * palette; the numbers go away with the 2D renderer and these two helpers with
+ * them.
+ */
+export function cssColor(value: number): string {
+  return `#${(value >>> 0).toString(16).padStart(6, '0')}`;
+}
+
+export function cssRgba(value: number, alpha: number): string {
+  const channel = (shift: number): number => (value >>> shift) & 0xff;
+  return `rgba(${channel(16)}, ${channel(8)}, ${channel(0)}, ${alpha})`;
+}

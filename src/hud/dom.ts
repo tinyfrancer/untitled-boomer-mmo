@@ -1,0 +1,42 @@
+import type { Rect } from '../ui/layout';
+
+/**
+ * The three lines every DOM builder in here would otherwise repeat. Nothing
+ * clever: a tag, a class and some text is the whole shape of this HUD.
+ */
+export function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className?: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  if (className) {
+    node.className = className;
+  }
+  if (text !== undefined) {
+    node.textContent = text;
+  }
+  return node;
+}
+
+/**
+ * Pins an element to one of `ui/layout.ts`'s rects.
+ *
+ * The always-on furniture keeps coming from that arithmetic rather than from
+ * CSS: it is unit-tested at viewport sizes nobody sits down and tries by hand,
+ * and `worldViewportHeight` — the rule that nothing in the world may be drawn
+ * under the tab bar — is derived from the very same numbers.
+ */
+export function place(node: HTMLElement, rect: Rect, sized: 'both' | 'position' = 'both'): void {
+  node.style.left = `${rect.x}px`;
+  node.style.top = `${rect.y}px`;
+  if (sized === 'both') {
+    node.style.width = `${rect.width}px`;
+    node.style.height = `${rect.height}px`;
+  }
+}
+
+/** Adds or removes a class from one boolean, since that is 90% of a redraw here. */
+export function toggleClass(node: HTMLElement, className: string, on: boolean): void {
+  node.classList.toggle(className, on);
+}
