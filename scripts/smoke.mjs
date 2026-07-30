@@ -957,6 +957,115 @@ try {
   await page.screenshot({ path: `${OUT}/13-away-report.png` });
 
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
+
+  // --- The Three.js bootstrap, behind `?renderer=3d`. Its own page, in its own
+  // context: the two renderers are chosen before either is loaded, so the point
+  // of the flag is that a 3D session never touches Phaser at all. The default
+  // is still 2D, and everything above this line proves it stayed that way.
+  //
+  // What can only be seen here is the teardown. A geometry the view forgot to
+  // dispose is invisible to every state assertion and to the screen — it is
+  // memory the card never gets back, which is the 3D form of the display list
+  // that once went from 44 objects to 764 across ten zone round trips. ---
+  const page3d = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors3d = [];
+  page3d.on('console', (m) => m.type() === 'error' && errors3d.push(m.text()));
+  page3d.on('pageerror', (e) => errors3d.push(String(e)));
+
+  const step3d = (frames = 1, deltaMs = FRAME_MS) =>
+    page3d.evaluate(([f, d]) => window.view.step(d, f), [frames, deltaMs]);
+  const zone3d = () => page3d.evaluate(() => window.world?.zone.id ?? null);
+  const stepUntilZone = async (zoneId, label, budgetMs = 60000) => {
+    for (let elapsed = 0; elapsed < budgetMs; elapsed += FRAMES_PER_POLL * FRAME_MS) {
+      if ((await zone3d()) === zoneId) return;
+      await step3d(FRAMES_PER_POLL);
+    }
+    throw new Error(`timed out waiting for: ${label}`);
+  };
+
+  await page3d.goto(`${BASE}${BASE.includes('?') ? '&' : '?'}renderer=3d&loop=manual`, {
+    waitUntil: 'domcontentloaded',
+  });
+  // A fresh context, so this is also the first-run path: created through the
+  // real form, into a zone with no Phaser anywhere behind it.
+  await page3d.waitForSelector('.create', { timeout: 60000 });
+  await page3d.fill('.create__name', 'Adventurer');
+  await page3d.click('.create__card[data-class="warrior"]');
+  await page3d.click('.create__begin');
+  await page3d.waitForFunction(() => window.world != null && window.view != null, null, {
+    timeout: 60000,
+  });
+  check('the 3D renderer boots a session through the creation screen', true);
+  check(
+    'choosing the 3D renderer never loads Phaser',
+    (await page3d.evaluate(() => window.game === undefined)) === true,
+  );
+
+  const drawn3d = () => page3d.evaluate(() => window.view.drawnCounts());
+  const gpu3d = () => page3d.evaluate(() => window.view.gpuMemory());
+  const before3d = { drawn: await drawn3d(), gpu: await gpu3d() };
+  check(
+    'the zone builds its terrain as a single mesh',
+    before3d.drawn.ground === 1,
+    `${before3d.drawn.total} objects, ${before3d.gpu.geometries} geometries`,
+  );
+  await page3d.screenshot({ path: `${OUT}/14-3d-town.png` });
+
+  for (let trip = 0; trip < 3; trip += 1) {
+    await page3d.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+    });
+    await stepUntilZone('beach', 'the south exit to load the beach in 3D');
+    await page3d.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, 33);
+    });
+    await stepUntilZone('town', 'the north exit to return to town in 3D');
+  }
+  const after3d = { drawn: await drawn3d(), gpu: await gpu3d() };
+  check(
+    'three zone round trips hand every geometry back to the GPU',
+    JSON.stringify(before3d.gpu) === JSON.stringify(after3d.gpu),
+    `${JSON.stringify(before3d.gpu)} -> ${JSON.stringify(after3d.gpu)}`,
+  );
+  check(
+    'three zone round trips leave the 3D scene exactly as they found it',
+    JSON.stringify(before3d.drawn) === JSON.stringify(after3d.drawn),
+    `${JSON.stringify(before3d.drawn)} -> ${JSON.stringify(after3d.drawn)}`,
+  );
+
+  // The 2D camera kept the world out from under the opaque tab bar by shrinking
+  // its viewport. A perspective camera draws full-bleed and cannot, so the same
+  // requirement — the south signpost has to be reachable — is held by how the
+  // camera is framed. This is the measurement of it, at the same phone size the
+  // 2D check above uses.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+  });
+  // The camera follows on the render loop, not on our steps, so it needs a
+  // frame to catch up with the teleport before anything reads a screen point.
+  await page3d.waitForTimeout(80);
+  const sign3d = await page3d.evaluate(() => {
+    const post = window.world.signposts.find((s) => s.exit.edge === 'south');
+    const at = window.view.worldToScreen(post.x, post.y);
+    return {
+      ...at,
+      tabBarY: Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top),
+    };
+  });
+  check(
+    'the 3D camera keeps the south signpost clear of the tab bar',
+    sign3d.y < sign3d.tabBarY,
+    `signpost at y=${Math.round(sign3d.y)}, tab bar at ${sign3d.tabBarY}`,
+  );
+
+  check(
+    'no console errors in the 3D view',
+    errors3d.length === 0,
+    errors3d.slice(0, 3).join(' | '),
+  );
 } catch (err) {
   check('smoke run completed', false, String(err.message ?? err));
   await page.screenshot({ path: `${OUT}/error.png` }).catch(() => {});
