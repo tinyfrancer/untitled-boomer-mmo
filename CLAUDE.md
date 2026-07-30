@@ -76,8 +76,9 @@ It reaches the game through two dev-only handles, neither of which mentions Phas
   `src/types/debugView.ts`, and the Three.js view will implement the same one — which is what keeps
   most of smoke portable across the renderer swap.
 
-`window.game` (the `Phaser.Game` instance, from `src/main.ts`) is still there for the HUD
-assertions and the character-create screen, both of which phase 2 of the port rewrites. All three
+`window.game` (the `Phaser.Game` instance, from `src/main.ts`) is still there for the sheets that
+have not moved to the DOM yet and for the character-create screen, both of which the rest of phase 2
+rewrites. The HUD needs no handle at all — smoke queries and clicks its real elements. All three
 handles sit behind an `import.meta.env.DEV` guard, so Vite strips them from production builds. They
 are also how you inspect live state from the devtools console.
 
@@ -117,14 +118,14 @@ await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
 is a static site. Character data lives in the browser's `localStorage`.
 
 **The core seam: Phaser-free vs. Phaser-coupled code.** `systems/`, `data/`, `persistence/`,
-`types/`, `config/` and `world/` contain plain TypeScript with no Phaser imports. This is
+`types/`, `config/`, `world/` and `hud/` contain plain TypeScript with no Phaser imports. This is
 deliberate — it's what makes them unit-testable with Vitest (no game engine to mock) and is the
 same boundary that would let a real backend swap in later without touching game logic. When adding
 game logic, default to putting the math/rules in one of these Phaser-free modules and call it from a
 scene, rather than inlining logic into a Scene or a Phaser.GameObjects subclass. Tests in `tests/`
 mirror this split (`tests/systems/`, `tests/world/`, `tests/persistence/`) and test only these
 modules. The rule is enforced, not just documented:
-`tests/architecture/phaserFreeSeam.test.ts` reads every file under those six directories and fails
+`tests/architecture/phaserFreeSeam.test.ts` reads every file under those seven directories and fails
 on an `import` of `phaser`.
 
 **The simulation is `src/world/`; `src/entities/` only draws it.** `ZoneWorld` owns the player, the
@@ -149,8 +150,8 @@ add to it:
 `Boot` → `Preload` (generates placeholder textures at runtime, no image assets; loads any
 existing save, starts a `GameContext` with it and routes straight to `Zone`, else to
 `CharacterCreate`) → `CharacterCreate` (builds a `CharacterState`, saves it and starts the
-`GameContext`) → `Zone` (the gameplay scene) with `UI` launched alongside it as a parallel HUD
-scene. Each of those runs once per page load: nothing restarts a scene any more.
+`GameContext`) → `Zone` (the gameplay scene), which mounts the DOM HUD and launches `UI` alongside
+itself for the sheets. Each of those runs once per page load: nothing restarts a scene any more.
 
 **`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
 Phaser-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
@@ -180,27 +181,46 @@ a phone); walking into the map edge still transitions too, for keyboards. Both a
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not a
 new scene class.
 
-**The HUD is a bottom tab bar plus sheets** (`scenes/UIScene.ts`, `ui/TabBar.ts`). Char / Bag /
-Quests / Feats / Log open one sheet at a time — the model holds a single `openSheet`, not a visible
-flag per panel — while Camp and the gear icon are actions that open nothing. Layout arithmetic lives
-in the Phaser-free `ui/layout.ts` and is unit-tested at real viewport sizes; put new HUD geometry
-there rather than inline in the scene. The breakpoint keys on **height as well as width**, because a
-landscape phone (844x390) is wide by any measure and has less vertical room than a portrait one.
-`ui/Button.ts` and `ui/Panel.ts` are the shared chrome — use them rather than hand-rolling a
-rectangle, a label and a hit area again.
+**The HUD is an HTML overlay over the canvas** (`src/hud/`, Phaser-free). `mountHud()` from
+`ZoneScene.create` builds one `<div class="hud">` inside `#app` and it outlives every zone, like the
+session does. It owns the tab bar, the player column, the target frame, the quest tracker, the
+ability bar, the gather bar, the toasts and the options modal — everything permanently on screen.
+The only thing it talks to is `game.events`, which is what makes it renderer-independent by
+construction: the same tree sits over the Three.js canvas unchanged.
 
-**The tab bar is full.** It splits its width evenly across seven tabs, which on a 375px phone is
-44.4px each against a `THEME.touchMin` of 44 — four tenths of a pixel of headroom, and under the
-minimum below ~372px. An eighth tab does not fit; fold new surfaces into an existing sheet, or
-change how the bar lays out. Labels have to stay short for the same reason ("Quests" is the longest
-that fits). `npm run smoke` measures the rendered hit areas at 375px rather than trusting the
-arithmetic, so this fails the build rather than shipping an untappable button.
+Two rules the Phaser HUD arranged by hand come free from CSS. The overlay is `pointer-events: none`
+and each piece of furniture opts back in, so a tap on the HUD never reaches the world and a tap on
+the world never has to be hit-tested against the HUD. And `overflow: hidden` is what clips a
+scrolling sheet, so there is no mask to install.
 
-**Nothing in the world may be drawn under the tab bar.** The bar is opaque and swallows every tap
-that lands on it, so `ZoneScene.applyCameraZoom` shrinks the world camera's viewport to stop at
-`worldViewportHeight()`. This is not decoration: the south signpost in town rendered four pixels
-inside the bar on a portrait phone and could not be tapped at all. If you add bottom furniture,
-reserve its height there rather than hoping nothing important lands in the last sixty pixels.
+**Layout arithmetic still lives in the Phaser-free `ui/layout.ts`**, applied as inline styles rather
+than left to CSS: it is unit-tested at viewport sizes nobody sits down and tries by hand, and
+`worldViewportHeight()` is derived from the same numbers. Put new HUD geometry there. The breakpoint
+keys on **height as well as width**, because a landscape phone (844x390) is wide by any measure and
+has less vertical room than a portrait one. Styling is one stylesheet, `hud/styles.ts`, interpolated
+from `THEME` — which stores fills as `0x` numbers for Phaser and `#` strings for text, so the DOM
+side goes through `cssColor`/`cssRgba` rather than keeping a second copy of the palette.
+
+**What is left of `scenes/UIScene.ts` is the sheets** — Char / Bag / Quests / Feats / Log — plus the
+shop, the slot picker and the away report, all still Phaser panels built on `ui/Button.ts` and
+`ui/Panel.ts`. One sheet is open at a time: the DOM tab bar owns which, and says so on
+`SHEET_CHANGED_EVENT`. That event is phase-2 scaffolding and goes away with the scene.
+
+**The tab bar is full.** It splits its width evenly across seven tabs (`ui/tabs.ts`), which on a
+375px phone is 44.4px each against a `THEME.touchMin` of 44 — four tenths of a pixel of headroom,
+and under the minimum below ~372px. An eighth tab does not fit; fold new surfaces into an existing
+sheet, or change how the bar lays out. Labels have to stay short for the same reason ("Quests" is
+the longest that fits). `tests/ui/tabs.test.ts` holds the arithmetic and `npm run smoke` measures
+the rendered `getBoundingClientRect()` at 375px, so this fails the build rather than shipping an
+untappable button.
+
+**Nothing in the world may be drawn under the tab bar.** The bar is opaque and above the canvas, so
+it swallows every tap that lands on it — a DOM overlay does that by construction, which is why the
+3D view will need no equivalent of `ZoneScene.applyCameraZoom` shrinking the world camera's viewport
+to `worldViewportHeight()`. Until then that hack is what keeps the 2D world out from under the bar:
+the south signpost in town rendered four pixels inside it on a portrait phone and could not be
+tapped at all. If you add bottom furniture, reserve its height in `layout.ts` rather than hoping
+nothing important lands in the last sixty pixels.
 
 **Clip a scrolling sheet with `ui/clipToMask.ts`, never `createGeometryMask()` directly.** Phaser 4
 made geometry masks Canvas-only, and the API did not go away with them: under WebGL — which is what

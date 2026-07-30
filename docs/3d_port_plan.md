@@ -12,7 +12,9 @@
   it. See the retrospective under PR 8 below.
 - **PR 9 merged** — smoke is renderer-agnostic and half its old size, and the gameplay it used to
   be the only cover for is in `tests/world/`. Phase 1 is done.
-- **Next: PR 10**, the start of phase 2 — the DOM HUD shell.
+- **PR 10 merged** — the HUD's permanent furniture is an HTML overlay (`src/hud/`, in the
+  Phaser-free seam); `UIScene` is down to the sheets. See the retrospective under PR 10 below.
+- **Next: PR 11** — port the sheets and delete `UIScene`.
 
 ## Context
 
@@ -400,11 +402,42 @@ risk reduction in the plan — it de-risks every remaining PR.
 > spike against `ZoneWorld` (not merged) is cheap insurance after PR 9 — but keep it out of the
 > stack.
 
-**PR 10 — DOM HUD shell.** Tab bar and sheet container over the Phaser canvas, reusing `layout.ts`,
-`theme.ts` and `uiEvents.ts`. Note `THEME` stores colours as `0x` numbers for Phaser and `#` strings
-for text — the DOM path needs one conversion helper.
-_Verify:_ `getBoundingClientRect().width >= 44` for all 7 tabs at 375px — the existing constraint,
-now measured in CSS.
+### PR 10 — DOM HUD shell — done, merged
+
+What landed that this document did not predict, and that PR 11 onwards inherits:
+
+- **The shell is everything that is not a sheet, not just the bar.** A tab bar over Phaser panels
+  needs a channel to tell them what is open, and that channel is throwaway — so the cheapest split
+  was to take across everything with no Phaser panel behind it at all: player column, target frame,
+  quest tracker, ability bar, gather bar, toasts and the options modal (the gear tab opens it, so
+  leaving it behind would have cost a second scaffolding event). One constant, `SHEET_CHANGED_EVENT`,
+  is the whole of the temporary coupling.
+- **`game.events` being a broadcast is what made the two HUDs cheap.** Both sides subscribe to the
+  same ~30 events independently, so nothing had to be forwarded: the DOM half hears `level-up` and
+  toasts, the scene hears it and refreshes the character sheet. The only thing that could not be
+  broadcast was the initial `openSheet`, because the tab bar decides it before `UIScene.create`
+  runs — so both compute `narrow ? null : 'character'` from the same rule for exactly one PR.
+- **`src/hud/` joined the Phaser-free seam**, guarded by the same test. It was worth the two-line
+  change: it is what says out loud that the HUD is renderer-independent rather than merely intended
+  to be.
+- **`ui/layout.ts` still positions the furniture, as inline styles.** Handing the stack to CSS was
+  tempting and wrong: `worldViewportHeight()` is derived from the same arithmetic, and the layout
+  tests are the only cover for viewport sizes nobody tries by hand. Only the tab bar's internal
+  split is left to flex, which reproduces `(width - padding * (n + 1)) / n` exactly.
+- **The rebuild-on-every-layout-input rule had to go, and that fixed a bug.** `UIScene` re-ran its
+  "crossing to narrow closes the open sheet" check on every rebuild, and a quest being taken is a
+  rebuild — so on a phone, picking up a quest item silently closed whatever sheet was open. The DOM
+  HUD only applies it when `narrow` actually changes.
+- **The tab bar's own tap-swallowing is now assertable.** Smoke clicks the bar's padding and checks
+  the player did not move, which in 2D took an explicit hit test between two Phaser scenes
+  (`ZoneScene.handlePointerDown`) and in DOM is free. That check is the durable half of the
+  camera-viewport hack PR 13 deletes.
+- **Toast fades need a forced reflow.** Setting opacity 1 and then 0 in one turn collapses into a
+  single style recalculation and nothing ever appears; `void root.offsetWidth` between them is the
+  whole fix, and it is not obvious from a green suite that anything is wrong.
+
+_Original spec:_ tab bar and sheet container over the Phaser canvas, reusing `layout.ts`, `theme.ts`
+and `uiEvents.ts`; `getBoundingClientRect().width >= 44` for all 7 tabs at 375px.
 
 **PR 11 — Port all panels to DOM; delete `UIScene`, the 18 Phaser `ui/` files, and `clipToMask.ts`.**
 The documented WebGL geometry-mask trap dies here — CSS `overflow: hidden` replaces it outright.
