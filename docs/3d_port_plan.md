@@ -14,7 +14,9 @@
   be the only cover for is in `tests/world/`. Phase 1 is done.
 - **PR 10 merged** — the HUD's permanent furniture is an HTML overlay (`src/hud/`, in the
   Phaser-free seam); `UIScene` is down to the sheets. See the retrospective under PR 10 below.
-- **Next: PR 11** — port the sheets and delete `UIScene`.
+- **PR 11 merged** — every panel is DOM, `UIScene` and the 18 Phaser `ui/` files are gone, and so
+  is `clipToMask.ts`. See the retrospective under PR 11 below.
+- **Next: PR 12** — the character-create and boot flow.
 
 ## Context
 
@@ -439,9 +441,41 @@ What landed that this document did not predict, and that PR 11 onwards inherits:
 _Original spec:_ tab bar and sheet container over the Phaser canvas, reusing `layout.ts`, `theme.ts`
 and `uiEvents.ts`; `getBoundingClientRect().width >= 44` for all 7 tabs at 375px.
 
-**PR 11 — Port all panels to DOM; delete `UIScene`, the 18 Phaser `ui/` files, and `clipToMask.ts`.**
-The documented WebGL geometry-mask trap dies here — CSS `overflow: hidden` replaces it outright.
-_Verify:_ every sheet opens, scrolls and clips; smoke's UI assertions rewritten against the DOM.
+### PR 11 — Port the panels; delete `UIScene` — done, merged
+
+What landed that this document did not predict, and that PR 12 onwards inherits:
+
+- **The paperdoll was the one thing that could not just become a `<div>`.** It was a Phaser texture
+  baked by `Graphics`, and the HUD may not reach into the renderer for a canvas. It is inline SVG
+  now, built from the same rig — `stickFigure()` moved into `AppearanceSystem` and both the texture
+  and the sheet read it, so the two agree about where a shoulder is. That is also what keeps the
+  sheet working once the world is meshes.
+- **`hud-hidden` needs `!important`, and this is a real bug the DOM makes easy to write.** A
+  single-class utility loses to a single-class rule declared later in the stylesheet, so
+  `.hud-sheet { display: flex }` beat it and every "closed" sheet stayed laid out — an invisible
+  wall over the tab bar. Smoke asked the class rather than the computed style and called it closed;
+  it asks `getComputedStyle` now, which is what caught it.
+- **Three hand-rolled mechanisms deleted outright, not ported.** The per-renderer mask
+  (`clipToMask.ts`), the two scroll implementations with their own drag thresholds, and the
+  enable/disable bookkeeping for rows scrolled out of a viewport are all `overflow` plus the
+  browser's own gesture handling. The smoke check for the clip became a check on its _consequence_
+  — a scrolled-away row is off the sheet and `elementFromPoint` does not return it — which is
+  renderer-agnostic in a way the mask assertion never was.
+- **A modal must not be a scrim by default.** `inset: 0` with `pointer-events: auto` is the obvious
+  way to centre a panel and it silently stops the player walking away from the shopkeeper. The shop
+  and the away report pass taps through; only the options menu, which can wipe a save, blocks.
+- **Smoke got shorter and more honest at the same time.** Every HUD assertion is a real click on a
+  real element now — the quest is taken by clicking the shop row, the title by clicking the picker,
+  the helmet by clicking the slot and then the item — where the Phaser version had to emit the
+  event and inspect `ui.model`. `window.game` survives only for the generated textures and the
+  creation screen.
+- **`ZoneScene.handlePointerDown` lost its HUD hit test.** A click on an overlay element never
+  reaches the canvas, so the explicit `ui.input.hitTestPointer` check — a thing the 3D view would
+  have had to reimplement — is simply gone.
+
+_Original spec:_ port all panels to DOM; delete `UIScene`, the 18 Phaser `ui/` files and
+`clipToMask.ts`; every sheet opens, scrolls and clips; smoke's UI assertions rewritten against the
+DOM.
 
 **PR 12 — `CharacterCreate` + `Boot`/`Preload` flow to plain DOM/TS.** Removes `dom.createContainer`
 from `main.ts`.

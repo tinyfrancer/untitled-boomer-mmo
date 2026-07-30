@@ -76,11 +76,11 @@ It reaches the game through two dev-only handles, neither of which mentions Phas
   `src/types/debugView.ts`, and the Three.js view will implement the same one — which is what keeps
   most of smoke portable across the renderer swap.
 
-`window.game` (the `Phaser.Game` instance, from `src/main.ts`) is still there for the sheets that
-have not moved to the DOM yet and for the character-create screen, both of which the rest of phase 2
-rewrites. The HUD needs no handle at all — smoke queries and clicks its real elements. All three
-handles sit behind an `import.meta.env.DEV` guard, so Vite strips them from production builds. They
-are also how you inspect live state from the devtools console.
+`window.game` (the `Phaser.Game` instance, from `src/main.ts`) is still there for the generated
+textures and the character-create screen, which PR 12 of the port rewrites. The HUD needs no handle
+at all — smoke queries and clicks its real elements, which is what a user does. All three handles sit
+behind an `import.meta.env.DEV` guard, so Vite strips them from production builds. They are also how
+you inspect live state from the devtools console.
 
 **`?loop=manual` puts the simulation on a hand crank.** Under that flag `ZoneScene.update` stops
 stepping the game and `window.view.step(deltaMs, frames)` does it instead; the frame loop still
@@ -150,8 +150,9 @@ add to it:
 `Boot` → `Preload` (generates placeholder textures at runtime, no image assets; loads any
 existing save, starts a `GameContext` with it and routes straight to `Zone`, else to
 `CharacterCreate`) → `CharacterCreate` (builds a `CharacterState`, saves it and starts the
-`GameContext`) → `Zone` (the gameplay scene), which mounts the DOM HUD and launches `UI` alongside
-itself for the sheets. Each of those runs once per page load: nothing restarts a scene any more.
+`GameContext`) → `Zone` (the gameplay scene), which mounts the DOM HUD alongside itself. Each of
+those runs once per page load: nothing restarts a scene any more, and `Zone` is the only scene left
+that draws anything but the creation screen.
 
 **`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
 Phaser-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
@@ -170,28 +171,38 @@ does not travel through one. Two things follow that are easy to get wrong:
   from 44 objects to 764 while every unit test stayed green. This is rehearsal for Three.js, where
   the same omission is a GPU memory leak instead of a stray label.
 - **Anything the HUD must hear but is not yet mounted for goes in the notification queue**, not an
-  event: `takeNotifications()` is drained once by `UIScene.create`. The offline AFK payout is
-  resolved on the load that finds a parked session, which is necessarily before the HUD exists.
+  event: `takeNotifications()` is drained once, by `ZoneScene` on the boot that mounts the HUD and
+  handed straight to it. The offline AFK payout is resolved on the load that finds a parked
+  session, which is necessarily before the HUD exists.
 
 **Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
 node spawns, exits), each built into one `ZoneWorld` by the `GameContext` and drawn by the single
-`ZoneScene`; the `UI` scene keeps running across a change untouched. Each exit spawns a
+`ZoneScene`; the DOM HUD keeps running across a change untouched. Each exit spawns a
 tappable `ZoneSignpost` (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not a
 new scene class.
 
-**The HUD is an HTML overlay over the canvas** (`src/hud/`, Phaser-free). `mountHud()` from
-`ZoneScene.create` builds one `<div class="hud">` inside `#app` and it outlives every zone, like the
-session does. It owns the tab bar, the player column, the target frame, the quest tracker, the
-ability bar, the gather bar, the toasts and the options modal — everything permanently on screen.
-The only thing it talks to is `game.events`, which is what makes it renderer-independent by
-construction: the same tree sits over the Three.js canvas unchanged.
+**The HUD is an HTML overlay over the canvas** (`src/hud/`, Phaser-free, no Phaser scene involved).
+`mountHud()` from `ZoneScene.create` builds one `<div class="hud">` inside `#app` and it outlives
+every zone, like the session does. The only thing it talks to is `game.events`, which is what makes
+it renderer-independent by construction: the same tree sits over the Three.js canvas unchanged, and
+nothing drawing the world knows it exists.
 
-Two rules the Phaser HUD arranged by hand come free from CSS. The overlay is `pointer-events: none`
-and each piece of furniture opts back in, so a tap on the HUD never reaches the world and a tap on
-the world never has to be hit-tested against the HUD. And `overflow: hidden` is what clips a
-scrolling sheet, so there is no mask to install.
+`Hud.ts` owns the model and the subscriptions; everything else in `hud/` is a piece that draws part
+of it. Char / Bag / Quests / Feats / Log are `Sheet` subclasses and one is open at a time — `Hud`
+holds a single `openSheet`, not a visible flag per panel — while Camp and the gear icon are actions
+that open nothing. The shop, the slot picker, the options menu and the away report are overlays
+built on open and removed on close.
+
+Three rules the Phaser HUD arranged by hand come free from CSS, and are worth not undoing:
+
+- The overlay is `pointer-events: none` and each piece of furniture opts back in, so a tap on the
+  HUD never reaches the world and a tap on the world never has to be hit-tested against the HUD.
+- `overflow: hidden` on a sheet and `auto` on its body is the whole of clipping and scrolling — no
+  mask, no hit-area bookkeeping for rows scrolled out of view.
+- A touch drag on a list scrolls it and the browser suppresses the click that would follow, which
+  is the drag-versus-tap threshold the Phaser panels each had their own copy of.
 
 **Layout arithmetic still lives in the Phaser-free `ui/layout.ts`**, applied as inline styles rather
 than left to CSS: it is unit-tested at viewport sizes nobody sits down and tries by hand, and
@@ -199,12 +210,14 @@ than left to CSS: it is unit-tested at viewport sizes nobody sits down and tries
 keys on **height as well as width**, because a landscape phone (844x390) is wide by any measure and
 has less vertical room than a portrait one. Styling is one stylesheet, `hud/styles.ts`, interpolated
 from `THEME` — which stores fills as `0x` numbers for Phaser and `#` strings for text, so the DOM
-side goes through `cssColor`/`cssRgba` rather than keeping a second copy of the palette.
+side goes through `cssColor`/`cssRgba` rather than keeping a second copy of the palette. `hud-hidden`
+is `display: none !important` on purpose: it is a utility and has to beat whatever display the
+element sets for itself.
 
-**What is left of `scenes/UIScene.ts` is the sheets** — Char / Bag / Quests / Feats / Log — plus the
-shop, the slot picker and the away report, all still Phaser panels built on `ui/Button.ts` and
-`ui/Panel.ts`. One sheet is open at a time: the DOM tab bar owns which, and says so on
-`SHEET_CHANGED_EVENT`. That event is phase-2 scaffolding and goes away with the scene.
+**The paperdoll is SVG built from the same rig the sprite texture is baked from**
+(`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by
+`scenes/generateTextures.ts`). The HUD does not reach into the renderer for a canvas — that is what
+lets the sheet keep showing what you are wearing once the world is meshes.
 
 **The tab bar is full.** It splits its width evenly across seven tabs (`ui/tabs.ts`), which on a
 375px phone is 44.4px each against a `THEME.touchMin` of 44 — four tenths of a pixel of headroom,
@@ -222,24 +235,13 @@ the south signpost in town rendered four pixels inside it on a portrait phone an
 tapped at all. If you add bottom furniture, reserve its height in `layout.ts` rather than hoping
 nothing important lands in the last sixty pixels.
 
-**Clip a scrolling sheet with `ui/clipToMask.ts`, never `createGeometryMask()` directly.** Phaser 4
-made geometry masks Canvas-only, and the API did not go away with them: under WebGL — which is what
-`Phaser.AUTO` picks — `setMask(g.createGeometryMask())` still typechecks, still runs, and silently
-clips nothing, so the bag's overflowing rows draw down over the world. `clipToMask` picks per
-renderer, using the Mask filter on WebGL and the geometry mask on the Canvas path `Phaser.AUTO` can
-still fall back to. Two traps if you touch it: `filters` is `null` until `enableFilters()` is
-called, so `filters?.internal.addMask(...)` no-ops silently and reproduces the original bug; and
-`autoUpdate` has to be set or the clip freezes at whatever rect the first frame drew.
-`npm run smoke` asserts a clip is installed for the live renderer, because this failure is
-invisible to every other kind of test — a full green suite is what it looked like the first time.
-
 **There are two channels out of the simulation, and they are not interchangeable.**
 
-The **HUD channel** is `this.game.events` (a global Phaser event emitter), not direct references
-between scenes — see `src/ui/uiEvents.ts` for the event name constants (`target-selected`,
+The **HUD channel** is `this.game.events` (a global Phaser event emitter, and the last thing the HUD
+needs Phaser for) — see `src/ui/uiEvents.ts` for the event name constants (`target-selected`,
 `xp-gained`, `level-up`, `equip-item-requested`, etc.). `ZoneScene` passes it into `ZoneWorld` as
 an `EventBus`, which is why the world can emit to the HUD without importing Phaser; the world also
-subscribes to the HUD's requests itself and drops them in `destroy()`. `UIScene` only listens and
+subscribes to the HUD's requests itself and drops them in `destroy()`. The DOM HUD only listens and
 renders. Every one of these carries state the HUD re-renders from, so the latest one always
 describes the present.
 
