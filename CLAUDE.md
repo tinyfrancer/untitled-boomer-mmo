@@ -176,8 +176,8 @@ restarts; a reset stops `Zone` and shows the creation screen again.
 **A host is what a renderer owes the boot flow**, and there are two: `phaserHost()` in
 `scenes/phaserGame.ts` and the `ThreeHost` in `render3d/start3d.ts`. A host is an `events` channel
 plus `startZone()`, and beyond that it does what `ZoneScene` does other than draw — the frame loop,
-the keyboard binding, mounting the HUD, and the reset that ends a session. New host duties belong in
-both or in neither.
+the keyboard binding, the pointer, mounting the HUD, and the reset that ends a session. New host
+duties belong in both or in neither.
 
 **`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
 Phaser-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
@@ -467,6 +467,17 @@ it). An actor is three layers on purpose: an outer group holding the world posit
 holding the yaw from `facingYaw`, and the nameplate — which is billboarded by having its own
 rotation overwritten from the camera each frame, and so cannot live under something being turned to
 face where the creature is walking.
+
+**A tap is picked against boxes, not against the meshes** (`render3d/picking.ts`). Each actor
+answers `pickBox()` with the box a ray has to cross — its collision footprint, standing as tall as
+it is drawn, and never smaller than `MIN_PICK_SPAN`. Raycasting the real geometry looks more honest
+and is wrong twice over: a ray aimed at a figure's feet — which is what `view.worldToScreen(x, y)`
+answers, and roughly where a player aims — passes between its legs and out the other side, and a
+crab is 18 screen pixels wide on a phone. `pickTap` then tries node → signpost → NPC → mob →
+ground, which is `ZoneScene.resolveTap`'s order and is a **priority, not a depth sort**: a rat in
+front of the shopkeeper does not stop you shopping. Only within one kind does the nearest win. The
+ground is the mathematical `y = 0` plane rather than the terrain mesh, because the mesh stops at
+the map edge and the simulation does not.
 
 ## Conventions
 

@@ -22,7 +22,9 @@
   and draws the ground under it. See the retrospective under PR 13 below.
 - **PR 14 merged** — every simulated thing has a mesh drawing it, with a billboarded nameplate over
   it. See the retrospective under PR 14 below.
-- **Next: PR 15** — raycast picking.
+- **PR 15 merged** — a tap on the 3D canvas moves, targets, gathers, shops and travels. See the
+  retrospective under PR 15 below.
+- **Next: PR 16** — drag-orbit and gesture disambiguation.
 
 ## Context
 
@@ -633,10 +635,57 @@ _Verify:_ every entity type present and correct in all three zones.
 
 </details>
 
+### PR 15 — Raycast picking — done, merged
+
+What landed that this document did not predict, and that PR 16 onwards inherits:
+
+- **Picking the meshes would have been wrong, and the failure is silent.** A ray aimed at a
+  figure's feet — which is exactly what `view.worldToScreen(x, y)` answers, and roughly what a
+  player aims at — passes up through the gap between its legs and out the other side without
+  touching anything: the shopkeeper would have been untappable at the one point every other part of
+  the codebase calls their position. So each actor answers `pickBox()` with a box instead — its
+  collision footprint, standing as tall as it is drawn. `buildSignpost`'s comment in PR 14 promising
+  "PR 15's raycast will pick it by the same geometry a thumb aims at" was right only for things
+  solid at their base.
+- **A box is also the touch-target answer.** The camera frames twelve tiles across the short side,
+  so on a 390px phone a simulation pixel is worth half a screen pixel and a crab's 35-unit body is
+  18px of thumb. `MIN_PICK_SPAN` rounds every volume up to three quarters of a tile, which costs
+  nothing when the things being picked are tiles apart. It is the 3D form of the same argument
+  `THEME.touchMin` makes about the tab bar.
+- **The order is a priority and not a depth sort**, which is why each kind is asked separately
+  rather than intersecting one list: a rat wandering in front of the shopkeeper does not stop you
+  shopping. Within a kind the nearest does win — you tapped a pixel, and what is drawn there is
+  whichever the ray meets first.
+- **The ground is the mathematical `y = 0` plane, not the terrain mesh.** The mesh stops at the map
+  edge and the simulation does not — walking into the edge is how a zone is left — so a tap past
+  the shore has to answer with a point out there, the way the 2D camera's `getWorldPoint` did.
+  There is no sky to tap either: the camera is pitched further down than half its field of view, so
+  the horizon is off the top of the screen. The `null` a ray-that-never-lands returns is a guard
+  against PR 16's movable camera, not a case a player can reach today, and there is a test saying
+  so both ways.
+- **A corpse is not a target now, where in 2D it was.** Phaser's hit test only skipped an object
+  that had stopped rendering, so a mob mid-death-fade could still be clicked and selected; a
+  `pickBox()` that answers `null` the moment `isAlive()` does is both simpler and the behaviour that
+  was always intended.
+- **This is the first PR where the two renderers' input paths are genuinely peers.** `ThreeHost`
+  binds `pointerdown` on the canvas and asks `ZoneView3D.resolveTap(x, y)`, which is
+  `ZoneScene.handlePointerDown` / `resolveTap` with the hit test swapped — and a tap on the HUD
+  still never arrives, because it is an HTML overlay above the canvas.
+- **Nearly all of it is unit-testable, which was not obvious.** Intersecting `Box3`s against a
+  `Ray` needs no WebGL context, so `tests/render3d/picking.test.ts` projects a point to the screen
+  with the real camera and casts back through it — the round trip where a sign error in either
+  direction would otherwise cancel out and hide. Smoke covers only what a browser adds: a real
+  `PointerEvent` in page coordinates against a camera the render loop has already moved.
+
+<details>
+<summary>Original PR 15 specification, kept for the record</summary>
+
 **PR 15 — Raycast picking.** Tap ground to move, tap entity to target / gather / shop / signpost.
 Preserve the existing hit-test priority order exactly — node → signpost → NPC → mob → ground
 (`ZoneScene.ts:560-606`). Fixed camera still.
 _Verify:_ smoke taps via `view.worldToScreen` in 3D mode.
+
+</details>
 
 **PR 16 — Drag-orbit and gesture disambiguation.** Yaw rotation, plus a movement+time threshold
 separating drag-to-rotate from tap-to-move, pointer capture, and `touch-action: none`. This is the
