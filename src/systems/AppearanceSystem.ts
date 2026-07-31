@@ -101,6 +101,35 @@ export function computeAppearance(gear: Record<GearSlotId, string | null>): Appe
   };
 }
 
+/**
+ * The two figures nobody is wearing gear for: the shopkeeper and the bandit.
+ *
+ * They are the same rig as the player with no `CharacterState` behind them, so
+ * the colours have to come from somewhere — and from here rather than from
+ * either renderer, for the reason `TILE_COLORS` is shared: a bandit in outlaw
+ * grey on one renderer and in something else on the other is two renderers
+ * drawing different games. The flourishes each one carries beyond the rig (the
+ * shopkeeper's coin, the bandit's bandana) stay with whatever is drawing them.
+ */
+export const NPC_APPEARANCES = {
+  shopkeeper: {
+    headColor: SKIN_COLOR,
+    torsoColor: 0xffb300,
+    legColor: 0x8d6e63,
+    weapon: null,
+  },
+  bandit: {
+    headColor: SKIN_COLOR,
+    torsoColor: 0x757575,
+    legColor: 0x424242,
+    // The short dagger it holds; a sword's blade-up shape at a smaller size.
+    weapon: { shape: 'sword', color: 0xb0bec5 },
+  },
+} as const satisfies Record<'shopkeeper' | 'bandit', Appearance>;
+
+/** The bandana over the bandit's face, which is not part of the rig. */
+export const BANDIT_MASK_COLOR = 0xc62828;
+
 // The key is a pure function of everything the figure draws, which is what makes
 // it safe to cache one generated texture per distinct look. The leg phase is part
 // of that, so one appearance bakes one texture per frame of its walk.

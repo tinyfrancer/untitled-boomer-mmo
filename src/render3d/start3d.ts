@@ -7,8 +7,19 @@ import { RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
 import { createEventBus } from '../world/eventBus';
 import { bindUnloadPersist, gameContext, resetGame, type GameContext } from '../world/GameContext';
 import { ZoneView3D } from './ZoneView3D';
-import type { DebugView } from '../types/debugView';
+import type { DebugView, DrawnCounts } from '../types/debugView';
 import type { ZoneWorld } from '../world/ZoneWorld';
+
+/** What a view that has been taken down is drawing: nothing. */
+const EMPTY_COUNTS: DrawnCounts = {
+  total: 0,
+  ground: 0,
+  mobs: 0,
+  nodes: 0,
+  signposts: 0,
+  npcs: 0,
+  labels: 0,
+};
 
 /** `?loop=manual` hands the simulation's clock to `window.view.step()`. */
 const MANUAL_LOOP = import.meta.env.DEV && manualLoopRequested(window.location.search);
@@ -163,11 +174,8 @@ class ThreeHost implements GameHost {
           this.tick(deltaMs);
         }
       },
-      drawnCounts: () =>
-        this.view?.drawnCounts() ?? { total: 0, ground: 0, signposts: 0, npcs: 0, labels: 0 },
-      // Nothing draws the player yet, so nothing is animating: the figure and
-      // its walk cycle arrive with the meshes in PR 14.
-      playerFigure: () => ({ walking: false, pose: 'none' }),
+      drawnCounts: () => this.view?.drawnCounts() ?? EMPTY_COUNTS,
+      playerFigure: () => this.view?.playerFigure() ?? { walking: false, pose: 'none' },
       gpuMemory: () => this.view?.gpuMemory() ?? { geometries: 0, textures: 0 },
     };
     (window as unknown as { view: DebugView }).view = view;

@@ -37,6 +37,14 @@ export interface DebugView {
 export interface DrawnCounts {
   total: number;
   ground: number;
+  /**
+   * One per simulated mob and node, whatever a renderer draws them as. These
+   * are the counts a check can compare against `window.world` directly — the
+   * view is wrong if it is drawing a different number of rats than the zone
+   * spawned, and that is a question neither handle can answer alone.
+   */
+  mobs: number;
+  nodes: number;
   signposts: number;
   npcs: number;
   labels: number;

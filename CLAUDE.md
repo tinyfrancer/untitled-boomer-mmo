@@ -67,7 +67,10 @@ reaching the game, the view building and _unbuilding_ itself, the HUD's geometry
 sizes, and the save round trip through an actual page reload. Reach for it whenever a change
 touches a scene, a sprite or the HUD. Screenshots land in gitignored `.smoke/`. Its last section
 boots the 3D renderer on its own page: what only a browser can show there is the GPU teardown —
-three zone round trips have to leave `renderer.info.memory` where they found it.
+three zone round trips have to leave `renderer.info.memory` where they found it. That number counts
+what has actually been _uploaded_, which is why both snapshots are taken after sweeping the camera
+over the whole zone: compared from wherever the player happened to be standing, it would move with
+a rat wandering into frame.
 
 It reaches the game through two dev-only handles, neither of which mentions Phaser:
 
@@ -243,9 +246,12 @@ names and payloads) are shared, tested, engine-free definitions; everything that
 lives in `hud/`.
 
 **The paperdoll is SVG built from the same rig the sprite texture is baked from**
-(`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by
-`scenes/generateTextures.ts`). The HUD does not reach into the renderer for a canvas — that is what
-lets the sheet keep showing what you are wearing once the world is meshes.
+(`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts`, by
+`scenes/generateTextures.ts` and by `render3d/figure.ts`). The HUD does not reach into the renderer
+for a canvas — that is what lets the sheet keep showing what you are wearing once the world is
+meshes. Three things now read that rig, so a shoulder is in the same place in all of them;
+`NPC_APPEARANCES` beside it is the same argument for the two figures nobody is wearing gear for, the
+shopkeeper and the bandit.
 
 **The tab bar is full.** It splits its width evenly across seven tabs (`ui/tabs.ts`), which on a
 375px phone is 44.4px each against a `THEME.touchMin` of 44 — four tenths of a pixel of headroom,
@@ -443,10 +449,24 @@ stats or a weapon swap won't change reach until the scene rebuilds.
 **Textures are generated procedurally at runtime** (`src/scenes/generateTextures.ts`) using
 Phaser's `Graphics.generateTexture`, not loaded from image files — there are no art assets yet
 (placeholder circles/shapes only, per the "no art skills" constraint in `docs/initial_design.txt`).
-The 3D view has no textures at all: terrain is one vertex-coloured mesh (`render3d/ground.ts`).
-Both take their tile colours from `TILE_COLORS` in `data/tiles.ts` — the same argument as the
-stick-figure rig behind the paperdoll, since two renderers that disagree about the colour of grass
-are two renderers drawing different games.
+The 3D view loads no image either: terrain is one vertex-coloured mesh (`render3d/ground.ts`) and
+every entity is untextured primitives (`render3d/figure.ts`, `creatures.ts`, `props.ts`). The one
+texture it does upload is a nameplate's name, baked onto a canvas — which is also the reason
+`disposeTree` names `material.map` explicitly. Both renderers take their tile colours from
+`TILE_COLORS` in `data/tiles.ts` — the same argument as the stick-figure rig behind the paperdoll,
+since two renderers that disagree about the colour of grass are two renderers drawing different
+games. Creature colours are deliberately _not_ shared: `render3d/palette.ts` mirrors the hexes
+`generateTextures.ts` bakes, because nobody sees both renderers at once and that file is deleted in
+PR 20.
+
+**`render3d/actors.ts` is the 3D `entities/`.** One actor per simulated thing, catching up to it in
+`sync()` exactly as a `*Sprite` does — and where a 2D view that forgets its teardown leaks a stray
+label, an actor that forgets `dispose()` leaks GPU memory, so every one of them ends in
+`disposeTree` (`render3d/dispose.ts`, which frees geometry, material _and_ any texture hanging off
+it). An actor is three layers on purpose: an outer group holding the world position, a facing group
+holding the yaw from `facingYaw`, and the nameplate — which is billboarded by having its own
+rotation overwritten from the camera each frame, and so cannot live under something being turned to
+face where the creature is walking.
 
 ## Conventions
 
