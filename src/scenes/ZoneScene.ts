@@ -510,6 +510,8 @@ export class ZoneScene extends Phaser.Scene {
     return {
       total: drawn.length,
       ground: drawn.filter((object) => object instanceof Phaser.Tilemaps.TilemapLayer).length,
+      mobs: drawn.filter((object) => object instanceof MobSprite).length,
+      nodes: drawn.filter((object) => object instanceof ResourceNodeSprite).length,
       signposts: textured(SIGNPOST_TEXTURE_KEY),
       npcs: textured(SHOPKEEPER_TEXTURE_KEY),
       labels: drawn.filter((object) => object instanceof Phaser.GameObjects.Text).length,

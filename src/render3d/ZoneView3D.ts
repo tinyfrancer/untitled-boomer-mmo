@@ -7,10 +7,19 @@ import {
   Scene,
   WebGLRenderer,
   type Mesh,
-  type MeshLambertMaterial,
 } from 'three';
+import {
+  CampfireActor,
+  MobActor,
+  NodeActor,
+  NpcActor,
+  PlayerActor,
+  SignpostActor,
+  type Actor,
+} from './actors';
 import { createCamera, frameCamera, projectToScreen, resizeCamera } from './camera';
 import { simToWorld } from './coords';
+import { disposeTree } from './dispose';
 import { buildGround } from './ground';
 import type { ZoneWorld } from '../world/ZoneWorld';
 import type { DrawnCounts } from '../types/debugView';
@@ -38,6 +47,17 @@ export class ZoneView3D {
   private readonly camera: PerspectiveCamera = createCamera();
   private world: ZoneWorld | null = null;
   private ground: Mesh | null = null;
+  private player: PlayerActor | null = null;
+  private mobActors: MobActor[] = [];
+  private nodeActors: NodeActor[] = [];
+  private npcActors: NpcActor[] = [];
+  private signpostActors: SignpostActor[] = [];
+  private campfireActor: CampfireActor | null = null;
+  // The level the enemy name colours were drawn against. Con colours are
+  // relative to the player, so they go stale on a level-up; asking the
+  // character each frame is cheaper than a subscription only one host would own.
+  private labelledLevel = 0;
+  private readonly startedAt = performance.now();
 
   constructor(parent: HTMLElement) {
     this.parent = parent;
@@ -64,6 +84,16 @@ export class ZoneView3D {
     this.world = world;
     this.ground = buildGround(world.zone.map);
     this.scene.add(this.ground);
+
+    this.labelledLevel = world.character.state.level;
+    this.player = new PlayerActor(world.player);
+    this.mobActors = world.mobs.map((mob) => new MobActor(mob, this.labelledLevel));
+    this.nodeActors = world.nodes.map((node) => new NodeActor(node));
+    this.npcActors = world.npcs.map((npc) => new NpcActor(npc));
+    this.signpostActors = world.signposts.map((signpost) => new SignpostActor(signpost));
+    this.actors().forEach((actor) => this.scene.add(actor.object));
+
+    this.sync();
     this.follow();
   }
 
@@ -77,11 +107,16 @@ export class ZoneView3D {
    */
   teardown(): void {
     if (this.ground) {
-      this.scene.remove(this.ground);
-      this.ground.geometry.dispose();
-      (this.ground.material as MeshLambertMaterial).dispose();
+      disposeTree(this.ground);
       this.ground = null;
     }
+    this.actors().forEach((actor) => actor.dispose());
+    this.player = null;
+    this.mobActors = [];
+    this.nodeActors = [];
+    this.npcActors = [];
+    this.signpostActors = [];
+    this.campfireActor = null;
     this.world = null;
   }
 
@@ -100,8 +135,67 @@ export class ZoneView3D {
 
   /** One drawn frame. The simulation is stepped elsewhere. */
   render(): void {
+    this.sync();
     this.follow();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * Catches every actor up to the simulation.
+   *
+   * Called from `render` rather than from the host's tick, which is what keeps
+   * `?loop=manual` honest: under the hand crank the game stops advancing but the
+   * frame loop keeps drawing, so what is on screen is always this frame's view
+   * of whatever the last step left behind.
+   */
+  private sync(): void {
+    const world = this.world;
+    if (!world) return;
+    const elapsedMs = performance.now() - this.startedAt;
+
+    // Levelling recolours every enemy name at once, since the shades are
+    // relative to the player rather than fixed.
+    const level = world.character.state.level;
+    if (level !== this.labelledLevel) {
+      this.labelledLevel = level;
+      this.mobActors.forEach((actor) => actor.refreshLabel(level));
+    }
+
+    this.player?.sync(elapsedMs);
+    this.mobActors.forEach((actor) => actor.sync(elapsedMs));
+    this.nodeActors.forEach((actor) => actor.sync());
+    this.syncCampfire(world);
+    this.campfireActor?.sync(elapsedMs);
+
+    // Billboards last, against the camera this frame is about to be drawn with.
+    this.player?.faceCamera(this.camera);
+    this.mobActors.forEach((actor) => actor.faceCamera(this.camera));
+    this.npcActors.forEach((actor) => actor.faceCamera(this.camera));
+    this.signpostActors.forEach((actor) => actor.faceCamera(this.camera));
+  }
+
+  // A campfire is the one thing that appears and goes out mid-zone, so it is
+  // built and disposed against the world's rather than at build time.
+  private syncCampfire(world: ZoneWorld): void {
+    const campfire = world.campfire;
+    if (campfire && !this.campfireActor) {
+      this.campfireActor = new CampfireActor(campfire);
+      this.scene.add(this.campfireActor.object);
+    } else if (!campfire && this.campfireActor) {
+      this.campfireActor.dispose();
+      this.campfireActor = null;
+    }
+  }
+
+  private actors(): Actor[] {
+    return [
+      ...(this.player ? [this.player] : []),
+      ...this.mobActors,
+      ...this.nodeActors,
+      ...this.npcActors,
+      ...this.signpostActors,
+      ...(this.campfireActor ? [this.campfireActor] : []),
+    ];
   }
 
   resize(): void {
@@ -130,7 +224,7 @@ export class ZoneView3D {
   /**
    * What the scene is holding, counted off the graph rather than off this
    * class's own fields — a leak is precisely the object nothing here still
-   * references. The kinds beyond ground arrive with the meshes in PR 14.
+   * references.
    */
   drawnCounts(): DrawnCounts {
     const byKind = new Map<string, number>();
@@ -146,10 +240,17 @@ export class ZoneView3D {
     return {
       total,
       ground: byKind.get('ground') ?? 0,
+      mobs: byKind.get('mob') ?? 0,
+      nodes: byKind.get('node') ?? 0,
       signposts: byKind.get('signpost') ?? 0,
       npcs: byKind.get('npc') ?? 0,
       labels: byKind.get('label') ?? 0,
     };
+  }
+
+  /** The player's figure, as opposed to the simulation: its walk cycle. */
+  playerFigure(): { walking: boolean; pose: string } {
+    return this.player?.figureState() ?? { walking: false, pose: 'none' };
   }
 
   /** What the card is holding. Flat across a zone walk, or the teardown lies. */
