@@ -20,7 +20,9 @@
   `dom.createContainer` with them. **Phase 2 is done.** See the retrospective under PR 12 below.
 - **PR 13 merged** — `?renderer=3d` boots a Three.js client over the same world and the same HUD,
   and draws the ground under it. See the retrospective under PR 13 below.
-- **Next: PR 14** — entity meshes.
+- **PR 14 merged** — every simulated thing has a mesh drawing it, with a billboarded nameplate over
+  it. See the retrospective under PR 14 below.
+- **Next: PR 15** — raycast picking.
 
 ## Context
 
@@ -577,11 +579,59 @@ above the HUD.
 
 </details>
 
+### PR 14 — Entity meshes — done, merged
+
+What landed that this document did not predict, and that PR 15 onwards inherits:
+
+- **`render3d/actors.ts` is the 3D `entities/`, and an actor is three layers rather than one.** An
+  outer group holds the world position, a facing group holds the yaw, and the nameplate hangs off
+  the outer one — because a billboard is made by overwriting its rotation from the camera every
+  frame, which cannot survive being parented to something already being turned toward where the
+  creature is walking. Getting that wrong is invisible until the camera rotates, which is PR 16.
+- **The rig paid off a second time.** `stickFigure()` already had a shoulder, a hip and a hand in it
+  for the sprite and the paperdoll, so the 3D figure is the same landmarks read as heights above the
+  feet — one `footY - y` conversion and nothing new to keep in step. Its walk borrows the same
+  `legOffsets`: the stance is the anatomical gap between the legs and the stride amplitude is how
+  far phase 1 moves a foot out of it, so both renderers walk the same walk and `playerFigure()`
+  answers `stand:0` / `walk:1` / `walk:2` on either. That is what let the smoke check for the walk be
+  written twice from one idea rather than invented again.
+- **`NPC_APPEARANCES` had to become shared, and the creature colours deliberately did not.** The
+  shopkeeper and the bandit are the rig with no `CharacterState` behind them, so their colours moved
+  into `AppearanceSystem` and `generateTextures.ts` reads them too. A rat's brown stayed duplicated
+  in `render3d/palette.ts` on purpose: nobody sees both renderers at once, and inventing a data
+  schema for art that PR 20 deletes costs more than it saves.
+- **`renderer.info.memory` counts what has been _uploaded_, not what exists.** With one ground mesh
+  that distinction never showed; with a hundred and twenty geometries it makes the leak check a
+  question about where the camera has looked. Three runs passed by luck before this was noticed. The
+  smoke sweeps the camera over the whole zone before both snapshots now, which makes the comparison
+  the zone's entire GPU footprint and is a stronger check than the one it replaces.
+- **A nameplate is the only texture in the 3D client**, baked from a canvas, and it is what made
+  `disposeTree` name `material.map` explicitly — a `SpriteMaterial.dispose()` leaves its texture on
+  the card. It is also why the unit suite stubs a 2D context: jsdom has none, and skipping the label
+  would skip the con colour, which is a gameplay signal rather than decoration.
+- **`DrawnCounts` grew `mobs` and `nodes`, in both renderers.** Neither handle could see a view that
+  quietly drew fewer rats than the zone spawned: the leak check compares the view only against
+  itself, and `window.world` cannot tell whether anything drew anything. Comparing the two is the
+  check the plan asked for by "every entity type present and correct in all three zones".
+- **The camera's pitch and a standing figure are in tension, and PR 16 inherits it.** At 58° from
+  the horizon a 64-unit figure foreshortens to about half its height while a rat's 80-unit footprint
+  does not, so the player reads smaller than the thing attacking them. A shallower pitch fixes it and
+  pushes the south signpost back down toward the tab bar, which is the constraint
+  `tests/render3d/camera.test.ts` holds. Weigh it there rather than here.
+- **Occlusion is real and already visible.** Standing a player north of a tree hides them completely
+  behind its canopy — the fixed camera does not make this rare, it only makes it predictable. The
+  plan already schedules the decision for PR 16; this is the confirmation that it cannot be skipped.
+
+<details>
+<summary>Original PR 14 specification, kept for the record</summary>
+
 **PR 14 — Entity meshes.** Primitives driven by the surviving `computeAppearance()` (gear → colours):
 capsule figures, box rat, ellipsoid crab, cylinder+cone tree, plane fishing spot, signpost, campfire.
 Facing from velocity via the yaw helper. Billboard health bars. `generateTextures.ts` becomes unused
 by the 3D path but is not yet deleted.
 _Verify:_ every entity type present and correct in all three zones.
+
+</details>
 
 **PR 15 — Raycast picking.** Tap ground to move, tap entity to target / gather / shop / signpost.
 Preserve the existing hit-test priority order exactly — node → signpost → NPC → mob → ground
