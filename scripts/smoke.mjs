@@ -1003,12 +1003,88 @@ try {
 
   const drawn3d = () => page3d.evaluate(() => window.view.drawnCounts());
   const gpu3d = () => page3d.evaluate(() => window.view.gpuMemory());
+  // The meshes are built and synced on the render loop, and a geometry is only
+  // counted against `info.memory` once it has actually been uploaded — so
+  // everything below waits for a drawn frame rather than for wall-clock time.
+  const draw3d = () =>
+    page3d.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+
+  const spawned3d = () =>
+    page3d.evaluate(() => ({
+      mobs: window.world.mobs.length,
+      nodes: window.world.nodes.length,
+      npcs: window.world.npcs.length,
+      signposts: window.world.signposts.length,
+    }));
+
+  /**
+   * Every simulated thing has exactly one thing drawing it. Neither handle can
+   * answer that alone — the leak check compares the view only against itself,
+   * and `window.world` cannot see whether a rat was ever drawn — so this is
+   * where a zone that quietly builds no crabs would show up.
+   */
+  const checkZoneDrawn = async (zoneId) => {
+    await draw3d();
+    const drawn = await drawn3d();
+    const spawned = await spawned3d();
+    check(
+      `every mob, node, npc and signpost in the ${zoneId} is drawn in 3D`,
+      drawn.ground === 1 &&
+        drawn.mobs === spawned.mobs &&
+        drawn.nodes === spawned.nodes &&
+        drawn.npcs === spawned.npcs &&
+        drawn.signposts === spawned.signposts,
+      `drew ${JSON.stringify(drawn)} for ${JSON.stringify(spawned)}`,
+    );
+    check(
+      `and gives each of them in the ${zoneId} its floating name`,
+      drawn.labels === spawned.mobs + spawned.npcs + spawned.signposts + 1,
+      `${drawn.labels} labels`,
+    );
+  };
+
+  /**
+   * Walks the camera over the whole zone, so everything in it has been drawn at
+   * least once.
+   *
+   * `renderer.info.memory` counts what has actually been *uploaded* to the
+   * card, which is what makes it an honest measure of a leak — and also means
+   * it counts only what the camera has looked at. Comparing two snapshots taken
+   * from wherever the player happened to be standing would therefore move with
+   * a rat wandering into frame. Sweeping first makes both snapshots the zone's
+   * entire GPU footprint instead.
+   */
+  const sweep3d = async () => {
+    const spans = [0.17, 0.5, 0.83];
+    for (const fx of spans) {
+      for (const fy of spans) {
+        await page3d.evaluate(
+          ([x, y]) => {
+            const w = window.world;
+            w.teleport(w.worldWidth * x, w.worldHeight * y);
+          },
+          [fx, fy],
+        );
+        await draw3d();
+      }
+    }
+    await page3d.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+    });
+    await draw3d();
+  };
+
+  await sweep3d();
   const before3d = { drawn: await drawn3d(), gpu: await gpu3d() };
   check(
     'the zone builds its terrain as a single mesh',
     before3d.drawn.ground === 1,
     `${before3d.drawn.total} objects, ${before3d.gpu.geometries} geometries`,
   );
+  await checkZoneDrawn('town');
   await page3d.screenshot({ path: `${OUT}/14-3d-town.png` });
 
   for (let trip = 0; trip < 3; trip += 1) {
@@ -1017,12 +1093,17 @@ try {
       w.teleport(w.worldWidth / 2, w.worldHeight - 33);
     });
     await stepUntilZone('beach', 'the south exit to load the beach in 3D');
+    if (trip === 0) {
+      await checkZoneDrawn('beach');
+      await page3d.screenshot({ path: `${OUT}/15-3d-beach.png` });
+    }
     await page3d.evaluate(() => {
       const w = window.world;
       w.teleport(w.worldWidth / 2, 33);
     });
     await stepUntilZone('town', 'the north exit to return to town in 3D');
   }
+  await sweep3d();
   const after3d = { drawn: await drawn3d(), gpu: await gpu3d() };
   check(
     'three zone round trips hand every geometry back to the GPU',
@@ -1033,6 +1114,47 @@ try {
     'three zone round trips leave the 3D scene exactly as they found it',
     JSON.stringify(before3d.drawn) === JSON.stringify(after3d.drawn),
     `${JSON.stringify(before3d.drawn)} -> ${JSON.stringify(after3d.drawn)}`,
+  );
+
+  // The third zone, so every creature the game has is drawn at least once: the
+  // bandit is a figure where the rat and the crab are beasts, and it is the
+  // only zone that has none of the other two.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth - 33, w.worldHeight / 2);
+  });
+  await stepUntilZone('bandit-camp', 'the east exit to load the bandit camp in 3D');
+  await checkZoneDrawn('bandit camp');
+  await page3d.screenshot({ path: `${OUT}/16-3d-bandit-camp.png` });
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.teleport(33, w.worldHeight / 2);
+  });
+  await stepUntilZone('town', 'the west exit to return to town in 3D');
+
+  // --- The figure's legs, asked of the 3D view in the same vocabulary the 2D
+  // check above uses: the walk belongs to whatever is drawing, and both answer
+  // `stand:0` for a figure standing still. ---
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+    w.player.moveTo(w.player.x + 300, w.player.y);
+  });
+  await step3d(4);
+  await draw3d();
+  const walking3d = await page3d.evaluate(() => window.view.playerFigure());
+  await page3d.evaluate(() => {
+    window.world.player.stopMoving();
+    window.world.player.setVelocity(0, 0);
+  });
+  await step3d(1);
+  await draw3d();
+  const standing3d = await page3d.evaluate(() => window.view.playerFigure());
+  check('the 3D figure swings its legs while walking', walking3d.walking === true, walking3d.pose);
+  check(
+    'and returns to its standing pose when it stops',
+    standing3d.walking === false && standing3d.pose.endsWith(':0'),
+    standing3d.pose,
   );
 
   // The 2D camera kept the world out from under the opaque tab bar by shrinking
