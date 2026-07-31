@@ -975,13 +975,16 @@ try {
   const step3d = (frames = 1, deltaMs = FRAME_MS) =>
     page3d.evaluate(([f, d]) => window.view.step(d, f), [frames, deltaMs]);
   const zone3d = () => page3d.evaluate(() => window.world?.zone.id ?? null);
-  const stepUntilZone = async (zoneId, label, budgetMs = 60000) => {
+  /** Cranks the 3D page until the world satisfies `fn`, in game milliseconds. */
+  const stepUntil3d = async (fn, label, budgetMs = 60000) => {
     for (let elapsed = 0; elapsed < budgetMs; elapsed += FRAMES_PER_POLL * FRAME_MS) {
-      if ((await zone3d()) === zoneId) return;
+      if (await fn()) return;
       await step3d(FRAMES_PER_POLL);
     }
     throw new Error(`timed out waiting for: ${label}`);
   };
+  const stepUntilZone = (zoneId, label, budgetMs) =>
+    stepUntil3d(async () => (await zone3d()) === zoneId, label, budgetMs);
 
   await page3d.goto(`${BASE}${BASE.includes('?') ? '&' : '?'}renderer=3d&loop=manual`, {
     waitUntil: 'domcontentloaded',
@@ -1182,6 +1185,104 @@ try {
     sign3d.y < sign3d.tabBarY,
     `signpost at y=${Math.round(sign3d.y)}, tab bar at ${sign3d.tabBarY}`,
   );
+
+  // --- Picking: a real press and release on the canvas, at the screen point
+  // the view says a thing is drawn at.
+  //
+  // The priority order and the boxes themselves are unit-tested in
+  // tests/render3d/picking.test.ts, which can cast a ray with no GPU in the
+  // room. What only a browser shows is the wiring either side of it: a real
+  // PointerEvent landing on the canvas, in page coordinates, against a camera
+  // the render loop has already moved this frame. ---
+
+  /** A real press-and-release on the 3D canvas, given a frame to be processed. */
+  const clickAt3d = async (point) => {
+    await page3d.mouse.move(point.x, point.y);
+    await page3d.mouse.down();
+    await page3d.mouse.up();
+    await draw3d();
+  };
+
+  // Which thing in the world a tap is aimed at, as an expression the page
+  // evaluates: a function cannot be handed across to the browser, and naming
+  // the thing twice — once to stand near, once to click — is what these avoid.
+  const RAT = 'window.world.mobs.find((m) => m.isAlive())';
+  const SHOPKEEPER = 'window.world.npcs[0]';
+  const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
+
+  /** Stands the player a little south of one of those, with nothing selected. */
+  const standSouthOf = async (what) => {
+    await page3d.evaluate(`(() => {
+      const at = ${what};
+      window.world.clearTarget();
+      window.world.teleport(at.x, at.y + 150);
+    })()`);
+    await step3d(2);
+    await draw3d();
+  };
+  /** Where it is drawn — the feet, which is what a player aims at. */
+  const screen3d = (what) =>
+    page3d.evaluate(`(() => {
+      const at = ${what};
+      return window.view.worldToScreen(at.x, at.y);
+    })()`);
+
+  await standSouthOf(RAT);
+  await clickAt3d(await screen3d(RAT));
+  check(
+    'a real click on a rat in 3D selects it',
+    (await page3d.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
+  );
+  await page3d.screenshot({ path: `${OUT}/17-3d-picking.png` });
+
+  // The shopkeeper is the case the pick boxes exist for: a ray at a figure's
+  // real geometry goes straight down the gap between its legs and out the other
+  // side, so aiming at the feet would open nothing.
+  await standSouthOf(SHOPKEEPER);
+  await clickAt3d(await screen3d(SHOPKEEPER));
+  await stepUntil3d(
+    () => page3d.evaluate(() => window.world.shopNpc !== null),
+    'the tapped shopkeeper to open the shop in 3D',
+  );
+  check('a real click on the shopkeeper in 3D walks over and opens the shop', true);
+  await page3d.click('.hud-modal [data-action="close-shop"]');
+
+  // Ground: the tap has to come back out in the coordinates the simulation
+  // walks in, so this asks for a spot well north of the player and checks they
+  // arrive at it rather than setting off in some mirrored direction.
+  const destination = await page3d.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+    return { x: w.spawnPoint.x, y: w.spawnPoint.y - 200 };
+  });
+  await step3d(2);
+  await draw3d();
+  await clickAt3d(
+    await page3d.evaluate((to) => window.view.worldToScreen(to.x, to.y), destination),
+  );
+  await step3d(60);
+  const walked = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+  }));
+  check(
+    'a real click on the ground in 3D walks the player to that spot in the simulation',
+    Math.hypot(walked.x - destination.x, walked.y - destination.y) < 24,
+    `player at ${Math.round(walked.x)},${Math.round(walked.y)} for ${destination.x},${destination.y}`,
+  );
+
+  // And the one that matters most on a phone: the signpost is how a zone is
+  // left, since the edge-walk band is untappably thin under a thumb.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+  });
+  await step3d(2);
+  await draw3d();
+  await clickAt3d(await screen3d(SOUTH_SIGNPOST));
+  await stepUntilZone('beach', 'the tapped signpost to walk the player to the beach in 3D');
+  check('a real click on a signpost in 3D walks over and changes zone', true);
 
   // The reset is the only path that disposes a renderer and builds another one,
   // and it is where the 2D port's worst failure lived — a teardown that threw
