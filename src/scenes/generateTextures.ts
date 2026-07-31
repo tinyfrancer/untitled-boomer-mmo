@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { TILE_SIZE } from '../config/constants';
 import { GRASS_TILE, PATH_TILE, SAND_TILE, TILE_COLORS, WATER_TILE } from '../data/tiles';
 import {
+  BANDIT_MASK_COLOR,
   LEG_PHASES,
-  SKIN_COLOR,
+  NPC_APPEARANCES,
   appearanceTextureKey,
   computeAppearance,
   legOffsets,
@@ -50,15 +51,16 @@ function generateShopkeeperTexture(scene: Phaser.Scene): void {
     graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * 0.13, figure.footY);
   };
 
+  const look = NPC_APPEARANCES.shopkeeper;
   graphics.lineStyle(figure.limbWidth + size * 0.03, OUTLINE_COLOR, 1);
   torso();
   legs();
-  graphics.lineStyle(figure.limbWidth, 0xffb300, 1);
+  graphics.lineStyle(figure.limbWidth, look.torsoColor, 1);
   torso();
-  graphics.lineStyle(figure.limbWidth, 0x8d6e63, 1);
+  graphics.lineStyle(figure.limbWidth, look.legColor, 1);
   legs();
 
-  drawHead(graphics, SKIN_COLOR, figure, size);
+  drawHead(graphics, look.headColor, figure, size);
 
   // the coin
   graphics.fillStyle(0xffd54f, 1);
@@ -384,17 +386,18 @@ function generateBanditTexture(scene: Phaser.Scene): void {
     graphics.lineBetween(figure.cx, figure.hipY, figure.cx + size * 0.13, figure.footY);
   };
 
+  const look = NPC_APPEARANCES.bandit;
   graphics.lineStyle(figure.limbWidth + size * 0.03, OUTLINE_COLOR, 1);
   torso();
   legs();
-  graphics.lineStyle(figure.limbWidth, 0x757575, 1);
+  graphics.lineStyle(figure.limbWidth, look.torsoColor, 1);
   torso();
-  graphics.lineStyle(figure.limbWidth, 0x424242, 1);
+  graphics.lineStyle(figure.limbWidth, look.legColor, 1);
   legs();
 
-  drawHead(graphics, SKIN_COLOR, figure, size);
+  drawHead(graphics, look.headColor, figure, size);
   // the bandana: a red band across the lower half of the face
-  graphics.fillStyle(0xc62828, 1);
+  graphics.fillStyle(BANDIT_MASK_COLOR, 1);
   graphics.fillRect(
     figure.cx - figure.headRadius,
     figure.headCenterY,
@@ -403,7 +406,7 @@ function generateBanditTexture(scene: Phaser.Scene): void {
   );
 
   // a short dagger, blade up from the hand
-  graphics.lineStyle(size * 0.035, 0xb0bec5, 1);
+  graphics.lineStyle(size * 0.035, look.weapon.color, 1);
   graphics.lineBetween(
     figure.rightHandX,
     figure.shoulderY + size * 0.04,
