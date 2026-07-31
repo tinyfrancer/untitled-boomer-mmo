@@ -1,4 +1,5 @@
-import { Group, type Camera } from 'three';
+import { Group, type Box3, type Camera } from 'three';
+import { TILE_SIZE } from '../config/constants';
 import {
   NPC_APPEARANCES,
   appearanceTextureKey,
@@ -12,6 +13,8 @@ import { facingYaw, simToWorld } from './coords';
 import { buildFigure, type Figure } from './figure';
 import { disposeTree, setOpacity } from './dispose';
 import { Nameplate } from './nameplate';
+import { pickBox, type Pickable } from './picking';
+import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildNode, buildSignpost } from './props';
 import type { Campfire } from '../world/Campfire';
 import type { Player } from '../world/Player';
@@ -23,6 +26,15 @@ const PLATE_CLEARANCE = 12;
 
 /** Just clear of the signpost's board, which stands a tile tall. */
 const SIGNPOST_LABEL_HEIGHT = 76;
+
+/**
+ * How much ground a person covers, for a tap.
+ *
+ * The bandit has this as its collision body; the shopkeeper has no body at all,
+ * since nothing ever walks into one, so the figure's own tap target is the same
+ * number written down once.
+ */
+const FIGURE_FOOTPRINT = TILE_SIZE;
 
 /**
  * What draws one simulated thing — the 3D half of `entities/*Sprite`.
@@ -99,7 +111,7 @@ export class PlayerActor implements Actor {
   }
 }
 
-export class MobActor implements Actor {
+export class MobActor implements Actor, Pickable {
   readonly object = new Group();
   readonly mob: Mob;
   private readonly facing = new Group();
@@ -161,12 +173,28 @@ export class MobActor implements Actor {
     this.plate.faceCamera(camera);
   }
 
+  /**
+   * The footprint `CollisionSystem` stops the player at, standing as tall as
+   * the creature does — and nothing at all once the creature is dead. A corpse
+   * fading out of the scene is not a target, which the 2D view got for free
+   * from a sprite that had stopped rendering.
+   */
+  pickBox(): Box3 | null {
+    if (!this.mob.isAlive()) return null;
+    const { width, height } = this.mob.definition.body;
+    return pickBox(this.mob.x, this.mob.y, {
+      width,
+      depth: height,
+      height: this.creature.height,
+    });
+  }
+
   dispose(): void {
     disposeTree(this.object);
   }
 }
 
-export class NodeActor implements Actor {
+export class NodeActor implements Actor, Pickable {
   readonly object = new Group();
   readonly node: ResourceNode;
   private readonly prop: ReturnType<typeof buildNode>;
@@ -188,15 +216,38 @@ export class NodeActor implements Actor {
     this.prop.setAvailable(available);
   }
 
+  /**
+   * Whatever is still drawn is what can still be tapped: a felled tree leaves
+   * its stump to aim at, where a fished-out spot leaves nothing on the water.
+   *
+   * A node's `body` is a top-down footprint, so which of its two spans is a
+   * *height* is the prop's decision rather than the data's, and this reads it
+   * the way `props.ts` draws it — a tree stands `body.height` tall on a square
+   * of `body.width`, a fishing spot lies flat on water the ground mesh sinks.
+   */
+  pickBox(): Box3 | null {
+    if (!this.prop.object.visible) return null;
+    const { width, height } = this.node.definition.body;
+    return this.node.definition.solid
+      ? pickBox(this.node.x, this.node.y, { width, depth: width, height })
+      : pickBox(this.node.x, this.node.y, {
+          width,
+          depth: height,
+          height: 0,
+          base: -WATER_DEPTH,
+        });
+  }
+
   dispose(): void {
     disposeTree(this.object);
   }
 }
 
-export class NpcActor implements Actor {
+export class NpcActor implements Actor, Pickable {
   readonly object = new Group();
   readonly npc: WorldNpc;
   private readonly plate: Nameplate;
+  private readonly height: number;
 
   constructor(npc: WorldNpc) {
     this.npc = npc;
@@ -207,6 +258,7 @@ export class NpcActor implements Actor {
     // Facing south, out of the shop and toward the camera's default position.
     figure.object.rotation.y = facingYaw(0, 1);
     this.object.add(figure.object);
+    this.height = figure.height;
 
     this.plate = new Nameplate(figure.height + PLATE_CLEARANCE, { healthBar: false });
     this.plate.setLabel('Shopkeeper', THEME.color.levelUp);
@@ -217,12 +269,20 @@ export class NpcActor implements Actor {
     this.plate.faceCamera(camera);
   }
 
+  pickBox(): Box3 | null {
+    return pickBox(this.npc.x, this.npc.y, {
+      width: FIGURE_FOOTPRINT,
+      depth: FIGURE_FOOTPRINT,
+      height: this.height,
+    });
+  }
+
   dispose(): void {
     disposeTree(this.object);
   }
 }
 
-export class SignpostActor implements Actor {
+export class SignpostActor implements Actor, Pickable {
   readonly object = new Group();
   readonly signpost: WorldSignpost;
   private readonly plate: Nameplate;
@@ -240,6 +300,19 @@ export class SignpostActor implements Actor {
 
   faceCamera(camera: Camera): void {
     this.plate.faceCamera(camera);
+  }
+
+  /**
+   * A tile in every direction, which is more than the post occupies. On a phone
+   * this is how a zone is left — the edge-walk band is untappably thin — so it
+   * is the one thing here deliberately easier to hit than it looks.
+   */
+  pickBox(): Box3 | null {
+    return pickBox(this.signpost.x, this.signpost.y, {
+      width: TILE_SIZE,
+      depth: TILE_SIZE,
+      height: TILE_SIZE,
+    });
   }
 
   dispose(): void {
