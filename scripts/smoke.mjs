@@ -1272,6 +1272,85 @@ try {
     `player at ${Math.round(walked.x)},${Math.round(walked.y)} for ${destination.x},${destination.y}`,
   );
 
+  // --- The drag, which is the same stream of PointerEvents as the tap and has
+  // to be told apart from it. The gesture arithmetic and the camera framing are
+  // both unit-tested; what only a browser has is a real press-move-release, a
+  // pointer capture, and the fact that both readings of it are the same three
+  // events arriving in the same order. ---
+
+  /** A press, a drag of `dx` pixels in eight moves, and a release. */
+  const drag3d = async (from, dx) => {
+    await page3d.mouse.move(from.x, from.y);
+    await page3d.mouse.down();
+    for (let step = 1; step <= 8; step += 1) {
+      await page3d.mouse.move(from.x + (dx * step) / 8, from.y);
+    }
+    await page3d.mouse.up();
+    await draw3d();
+  };
+
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+  });
+  await step3d(2);
+  await draw3d();
+
+  // Where a fixed spot in the world is drawn, which is how the camera's angle
+  // is read without a handle for it: turn the camera and the world swings.
+  const northOfPlayer = () =>
+    page3d.evaluate(() =>
+      window.view.worldToScreen(window.world.player.x, window.world.player.y - 200),
+    );
+  const before = await northOfPlayer();
+  const stood = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+  }));
+
+  await drag3d({ x: 195, y: 400 }, 140);
+  const after = await northOfPlayer();
+  const stayed = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+    walking: window.world.player.hasMoveTarget(),
+  }));
+  check(
+    'a drag on the 3D canvas turns the camera',
+    after.x - before.x > 40,
+    `the ground north of the player moved from x=${Math.round(before.x)} to ${Math.round(after.x)}`,
+  );
+  check(
+    'a drag on the 3D canvas asks the world for nothing',
+    !stayed.walking && Math.hypot(stayed.x - stood.x, stayed.y - stood.y) < 1,
+    `player at ${Math.round(stayed.x)},${Math.round(stayed.y)}, walking: ${stayed.walking}`,
+  );
+  await page3d.screenshot({ path: `${OUT}/18-3d-orbit.png` });
+
+  // And the gesture has to hand back: a tap straight after a drag is still a
+  // tap, and it has to come back out of the *turned* camera in the coordinates
+  // the simulation walks in. The same spot the tap check above used, which is
+  // known to be walkable ground.
+  const turnedDestination = { x: stood.x, y: stood.y - 200 };
+  await clickAt3d(
+    await page3d.evaluate((to) => window.view.worldToScreen(to.x, to.y), turnedDestination),
+  );
+  await step3d(60);
+  const afterDrag = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+  }));
+  check(
+    'a tap after a drag still walks the player, through the turned camera',
+    Math.hypot(afterDrag.x - turnedDestination.x, afterDrag.y - turnedDestination.y) < 24,
+    `player at ${Math.round(afterDrag.x)},${Math.round(afterDrag.y)} for ${Math.round(turnedDestination.x)},${Math.round(turnedDestination.y)}`,
+  );
+
+  // Straightened out again, so the signpost check below is the framing the
+  // camera test measures rather than whatever the drag left behind.
+  await drag3d({ x: 195, y: 400 }, -140);
+
   // And the one that matters most on a phone: the signpost is how a zone is
   // left, since the edge-walk band is untappably thin under a thumb.
   await page3d.evaluate(() => {
