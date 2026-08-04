@@ -82,6 +82,7 @@ class ThreeHost implements GameHost {
       });
     }
 
+    this.view.canvas.addEventListener('pointerdown', this.handlePointerDown);
     this.unbindKeyboard = bindKeyboard(context.input, window);
     this.unbindUnloadPersist = bindUnloadPersist(context, window);
     this.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter);
@@ -106,6 +107,25 @@ class ThreeHost implements GameHost {
     // the canvas still redraws — so a smoke check that clicks something sees
     // the same frame a player would.
     this.view?.render();
+  };
+
+  /**
+   * A tap on the world: what it landed on is the view's question, what to do
+   * about it is the world's.
+   *
+   * A tap on the HUD never gets here — it is an HTML overlay above the canvas,
+   * so the browser hands the event to the element instead, which is the whole
+   * of the hit test the 2D renderer once had to do by hand.
+   */
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    const context = this.context;
+    const view = this.view;
+    if (!context || !view) return;
+    const bounds = view.canvas.getBoundingClientRect();
+    const tap = view.resolveTap(event.clientX - bounds.left, event.clientY - bounds.top);
+    // Null is a ray that never reaches the ground, which no tap on today's
+    // camera can be — see `groundUnder`.
+    if (tap) context.currentWorld.tap(tap);
   };
 
   private tick(deltaMs: number): void {
@@ -135,6 +155,7 @@ class ThreeHost implements GameHost {
       this.frameHandle = null;
     }
     this.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter);
+    this.view?.canvas.removeEventListener('pointerdown', this.handlePointerDown);
     this.unbindKeyboard?.();
     this.unbindKeyboard = null;
     this.unbindUnloadPersist?.();

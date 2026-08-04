@@ -21,7 +21,8 @@ import { createCamera, frameCamera, projectToScreen, resizeCamera } from './came
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { buildGround } from './ground';
-import type { ZoneWorld } from '../world/ZoneWorld';
+import { pickTap, pointerRay } from './picking';
+import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import type { DrawnCounts } from '../types/debugView';
 
 /** The same background the 2D canvas has, so the world edge reads as sky. */
@@ -215,6 +216,25 @@ export class ZoneView3D {
   worldToScreen(x: number, y: number): { x: number; y: number } {
     const { width, height } = this.viewport();
     return projectToScreen(this.camera, simToWorld(x, y), width, height);
+  }
+
+  /**
+   * What a tap at this point on the canvas is on, in the vocabulary the world
+   * takes — or `null` for a tap on nothing at all, which is the sky.
+   *
+   * The one piece of hit testing that has to live in a view: what a screen
+   * pixel is over is a question about the camera and what is drawn, not about
+   * the game. `ZoneScene.resolveTap` is the same method over Phaser's hit test,
+   * down to the order it tries things in.
+   */
+  resolveTap(x: number, y: number): WorldTap | null {
+    const { width, height } = this.viewport();
+    return pickTap(pointerRay(this.camera, x, y, width, height), {
+      nodes: this.nodeActors,
+      signposts: this.signpostActors,
+      npcs: this.npcActors,
+      mobs: this.mobActors,
+    });
   }
 
   private viewport(): { width: number; height: number } {
