@@ -21,6 +21,13 @@
  * cranks it with `view.step()`. Waits are therefore in *game* milliseconds and
  * are deterministic; a loaded CI runner makes the script slower, not flakier.
  *
+ * The second half is that check again in `?renderer=3d`, on its own page. It is
+ * not a duplicate: the two hosts are peers until Phaser is deleted, so a duty
+ * one of them forgot — binding the keyboard, persisting on unload, resizing the
+ * drawing buffer — is invisible to the other's coverage. It also covers what
+ * only that renderer has: the GPU teardown, a real finger rather than a mouse,
+ * a landscape resize, and a pass under a CPU throttled eight times down.
+ *
  * Usage: npm run dev, then `node scripts/smoke.mjs [--headed]`.
  * Screenshots land in .smoke/.
  */
@@ -967,10 +974,17 @@ try {
   // dispose is invisible to every state assertion and to the screen — it is
   // memory the card never gets back, which is the 3D form of the display list
   // that once went from 44 objects to 764 across ten zone round trips. ---
-  const page3d = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  // A touch-capable context, because the drag/tap disambiguation and
+  // `touch-action: none` are phone rules and a mouse cannot break either of
+  // them: a mouse never pans the page, and a mouse pointer is never a thumb
+  // resting on the screen.
+  const page3d = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
   const errors3d = [];
   page3d.on('console', (m) => m.type() === 'error' && errors3d.push(m.text()));
   page3d.on('pageerror', (e) => errors3d.push(String(e)));
+  // Touch sequences and CPU throttling are both CDP-only; Playwright's
+  // touchscreen can tap but cannot drag.
+  const cdp3d = await page3d.context().newCDPSession(page3d);
 
   const step3d = (frames = 1, deltaMs = FRAME_MS) =>
     page3d.evaluate(([f, d]) => window.view.step(d, f), [frames, deltaMs]);
@@ -1186,6 +1200,91 @@ try {
     `signpost at y=${Math.round(sign3d.y)}, tab bar at ${sign3d.tabBarY}`,
   );
 
+  // --- A resize. The 2D renderer had Phaser's scale manager tracking the
+  // viewport; here it is a ResizeObserver on the app root calling
+  // `view.resize()`, which has to move two things that can be forgotten
+  // separately — the drawing buffer and the camera's aspect ratio. A buffer
+  // that never resized would still draw, stretched, and every assertion in this
+  // file that reads a screen coordinate would still pass.
+  //
+  // Landscape on purpose: `layout.ts` keys its breakpoint on height as well as
+  // width because a landscape phone is wide by any measure and has less
+  // vertical room than a portrait one, and `tests/render3d/camera.test.ts`
+  // measures the tab-bar rule only at portrait sizes. This is the other
+  // orientation of the same rule, and it is not the same statement — a
+  // landscape camera frames twelve tiles of *depth* rather than of width, so
+  // the south signpost is eight tiles behind the player at the spawn point and
+  // simply out of frame there. What has to hold is that walking toward it
+  // brings it into reach, which is measured below. ---
+  await page3d.setViewportSize({ width: 844, height: 390 });
+  await page3d.waitForTimeout(300);
+  await draw3d();
+  const landscape3d = await page3d.evaluate(() => {
+    const canvas = document.querySelector('canvas');
+    const box = canvas.getBoundingClientRect();
+    const post = window.world.signposts.find((s) => s.exit.edge === 'south');
+    return {
+      cssW: Math.round(box.width),
+      cssH: Math.round(box.height),
+      // What the card is actually asked to fill, which is the half of a resize
+      // that has no visible failure mode.
+      bufferW: canvas.width,
+      bufferH: canvas.height,
+      dpr: window.devicePixelRatio,
+      innerH: window.innerHeight,
+      appH: document.getElementById('app').clientHeight,
+      tabBarY: Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top),
+      hudMounted: document.querySelector('.hud') !== null,
+      post: { x: post.x, y: post.y },
+    };
+  });
+  check(
+    'a landscape resize retargets the 3D canvas and its drawing buffer',
+    landscape3d.cssW === 844 &&
+      landscape3d.bufferW === Math.round(844 * landscape3d.dpr) &&
+      landscape3d.bufferH === Math.round(landscape3d.cssH * landscape3d.dpr),
+    `${landscape3d.cssW}x${landscape3d.cssH} css, ${landscape3d.bufferW}x${landscape3d.bufferH} buffer at dpr ${landscape3d.dpr}`,
+  );
+  check(
+    'the 3D canvas never overhangs the visible viewport',
+    landscape3d.appH <= landscape3d.innerH && landscape3d.cssH <= landscape3d.innerH,
+    `app ${landscape3d.appH}, canvas ${landscape3d.cssH}, viewport ${landscape3d.innerH}`,
+  );
+  check('the HUD overlay survives a 3D resize', landscape3d.hudMounted === true);
+
+  // Walking up to the signpost has to bring it into reach, which is the
+  // landscape form of "the way out of a zone is tappable". Three tiles is the
+  // range a player has closed to by the time they aim at it, and it clears the
+  // bar by a comfortable margin there — the camera follows all the way to the
+  // map edge rather than clamping to the world bounds, so approaching keeps
+  // lifting it up the screen.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    const post = w.signposts.find((s) => s.exit.edge === 'south');
+    w.clearTarget();
+    w.teleport(post.x, post.y - 3 * 64);
+  });
+  await step3d(2);
+  await draw3d();
+  const approached3d = await page3d.evaluate(
+    (post) => ({
+      signY: Math.round(window.view.worldToScreen(post.x, post.y).y),
+      tabBarY: Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top),
+    }),
+    landscape3d.post,
+  );
+  check(
+    'and walking up to the south signpost brings it clear of the tab bar in landscape',
+    approached3d.signY < approached3d.tabBarY,
+    `three tiles out it draws at y=${approached3d.signY}, tab bar at ${approached3d.tabBarY}`,
+  );
+  await page3d.screenshot({ path: `${OUT}/21-3d-landscape.png` });
+
+  // Back to the portrait phone every screen coordinate below is written for.
+  await page3d.setViewportSize({ width: 390, height: 844 });
+  await page3d.waitForTimeout(300);
+  await draw3d();
+
   // --- Picking: a real press and release on the canvas, at the screen point
   // the view says a thing is drawn at.
   //
@@ -1249,6 +1348,30 @@ try {
   );
   check('a hit in 3D floats a number over what it landed on', true);
   await page3d.screenshot({ path: `${OUT}/18-3d-combat.png` });
+
+  // The other channel out of the same fight. The HUD's bus is Phaser's global
+  // emitter in 2D and `world/eventBus.ts` here — forty lines of our own with
+  // two semantics that would bite if they were wrong (a listener identified by
+  // its function *and* its context, and a handler unsubscribing mid-delivery).
+  // Nothing else in this script makes it carry a stream of events to the
+  // overlay, and a bus that quietly dropped every second one would still open a
+  // shop.
+  await stepUntil3d(
+    () =>
+      page3d.evaluate(() => {
+        const p = window.world.player;
+        return p.hp < p.maxHp && window.world.mobs.some((m) => m.isEngaged() && m.hp < m.maxHp);
+      }),
+    'the 3D fight to land hits in both directions',
+  );
+  const logged3d = await page3d.evaluate(() =>
+    [...document.querySelectorAll('.hud-log__line')].map((n) => n.textContent),
+  );
+  check(
+    'both directions of the 3D fight reach the HUD over its own event bus',
+    logged3d.some((l) => l.includes('You hit')) && logged3d.some((l) => l.includes('hits you for')),
+    `last: ${logged3d.filter((l) => l.trim()).at(-1)}`,
+  );
 
   // The shopkeeper is the case the pick boxes exist for: a ray at a figure's
   // real geometry goes straight down the gap between its legs and out the other
@@ -1362,9 +1485,191 @@ try {
     `player at ${Math.round(afterDrag.x)},${Math.round(afterDrag.y)} for ${Math.round(turnedDestination.x)},${Math.round(turnedDestination.y)}`,
   );
 
+  // --- W means up the screen, not north.
+  //
+  // The camera is still turned from the drag above, which is the only state in
+  // which this can be wrong: the two meant the same thing until a camera could
+  // be dragged round, and `InputState.setViewYaw` is what keeps them apart. The
+  // 2D host never calls it, so nothing else in this file can see it — and the
+  // failure is a character walking off at an angle to the key that was pressed,
+  // which no state assertion would call a bug. Asserted as what a player sees
+  // (the ground they left slides down the screen) plus the proof it is not
+  // simply north. ---
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.player.stopMoving();
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+  });
+  await step3d(2);
+  await draw3d();
+  const fromW = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+  }));
+  await page3d.keyboard.down('w');
+  // Six frames is ~76 simulation pixels: far enough to read a direction off,
+  // short enough that the spawn point's clear ground is all it crosses.
+  await step3d(6);
+  await page3d.keyboard.up('w');
+  await draw3d();
+  const heldW = await page3d.evaluate((from) => {
+    const p = window.world.player;
+    return {
+      to: { x: p.x, y: p.y },
+      // Both projected through the camera as it stands now, so the pair is one
+      // question about one frame.
+      fromScreen: window.view.worldToScreen(from.x, from.y),
+      toScreen: window.view.worldToScreen(p.x, p.y),
+    };
+  }, fromW);
+  const walkedW = Math.hypot(heldW.to.x - fromW.x, heldW.to.y - fromW.y);
+  // How far off due north the simulation heading ended up, in degrees.
+  const offNorth = Math.round(
+    (Math.abs(Math.atan2(heldW.to.x - fromW.x, fromW.y - heldW.to.y)) * 180) / Math.PI,
+  );
+  check(
+    'a real W press walks the player up the screen rather than north',
+    walkedW > 40 && heldW.toScreen.y < heldW.fromScreen.y - 10 && offNorth > 20,
+    `walked ${Math.round(walkedW)}px, ${offNorth}° off north, screen y ` +
+      `${Math.round(heldW.fromScreen.y)} -> ${Math.round(heldW.toScreen.y)}`,
+  );
+
   // Straightened out again, so the signpost check below is the framing the
   // camera test measures rather than whatever the drag left behind.
   await drag3d({ x: 195, y: 400 }, -140);
+
+  // --- The rest of the keyboard, which the 3D host binds itself. `bindKeyboard`
+  // is shared and unit-tested; what is not shared is the call site, and a host
+  // that forgot it would leave a game that plays perfectly with a mouse and
+  // ignores every key. ---
+  await page3d.evaluate(() => {
+    const w = window.world;
+    const rat = w.mobs.find((m) => m.level === 1 && m.isAlive());
+    w.clearTarget();
+    w.teleport(rat.x - 60, rat.y);
+    w.player.restoreToFull();
+  });
+  // The real button rather than the event behind it: there is no `window.game`
+  // here to emit through, which is the point.
+  await page3d.click('.hud-tabs__tab[data-tab="camp"]');
+  await stepUntil3d(
+    () => page3d.evaluate(() => window.world.afkActive && window.world.target !== null),
+    'the 3D camp to pick a fight',
+  );
+  check('the AFK camp fights unprompted in 3D', true);
+
+  await page3d.keyboard.down('w');
+  await step3d(2);
+  const released3d = await page3d.evaluate(() => window.world.afkActive);
+  await page3d.keyboard.up('w');
+  check('a real movement key takes the controls back from the 3D camp', released3d === false);
+
+  // Escape reaches the world as a drained action rather than a listener. The
+  // furthest live mob, so it is not auto-attacked to death before the key
+  // arrives — a kill clears the target by itself.
+  const selected3d = await page3d.evaluate(() => {
+    const w = window.world;
+    const furthest = w.mobs
+      .filter((m) => m.isAlive())
+      .sort(
+        (a, b) =>
+          Math.hypot(b.x - w.player.x, b.y - w.player.y) -
+          Math.hypot(a.x - w.player.x, a.y - w.player.y),
+      )[0];
+    w.setTarget(furthest);
+    return w.target?.name ?? null;
+  });
+  await page3d.keyboard.press('Escape');
+  await step3d(2);
+  check(
+    'a real Escape press clears the selected target in 3D',
+    selected3d !== null && (await page3d.evaluate(() => window.world.target)) === null,
+    `had ${selected3d} selected`,
+  );
+
+  // A tap that lands on the opaque bar must never also be a move order. In 2D
+  // this is the DOM overlay doing what `ZoneScene` once hit-tested by hand; here
+  // the canvas has its own `pointerdown` listener and `touch-action: none`, so
+  // it is worth asking whether the overlay still gets there first.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.player.stopMoving();
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+  });
+  await step3d(2);
+  const beforeBar3d = await page3d.evaluate(() => ({
+    x: Math.round(window.world.player.x),
+    y: Math.round(window.world.player.y),
+  }));
+  const barBox3d = await page3d.evaluate(() => {
+    const rect = document.querySelector('.hud-tabs').getBoundingClientRect();
+    return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.bottom - 3) };
+  });
+  await page3d.touchscreen.tap(barBox3d.x, barBox3d.y);
+  await step3d(6);
+  const afterBar3d = await page3d.evaluate(() => ({
+    x: Math.round(window.world.player.x),
+    y: Math.round(window.world.player.y),
+  }));
+  check(
+    'a tap on the tab bar never falls through to the 3D world as a move order',
+    afterBar3d.x === beforeBar3d.x && afterBar3d.y === beforeBar3d.y,
+    `${beforeBar3d.x},${beforeBar3d.y} -> ${afterBar3d.x},${afterBar3d.y}`,
+  );
+
+  // --- The same gestures under a thumb. Every drag above was a mouse, and a
+  // mouse cannot break either phone-only rule: it never pans the page, so
+  // `touch-action: none` is untested by it, and it is never a thumb resting on
+  // the screen. Chromium synthesises the pointer events these listeners are
+  // written against, so this is the real path a phone takes. ---
+  const touch3d = (type, points) =>
+    cdp3d.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+  /** A press, a drag of `dx` pixels in eight moves, and a release — by finger. */
+  const touchDrag3d = async (from, dx) => {
+    await touch3d('touchStart', [{ x: from.x, y: from.y }]);
+    for (let move = 1; move <= 8; move += 1) {
+      await touch3d('touchMove', [{ x: Math.round(from.x + (dx * move) / 8), y: from.y }]);
+    }
+    await touch3d('touchEnd', []);
+    await draw3d();
+  };
+
+  const beforeTouch = await northOfPlayer();
+  const stoodTouch = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+  }));
+  await touchDrag3d({ x: 195, y: 400 }, 140);
+  const afterTouch = await northOfPlayer();
+  const stayedTouch = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+    walking: window.world.player.hasMoveTarget(),
+  }));
+  check(
+    'a finger dragged across the 3D canvas turns the camera',
+    afterTouch.x - beforeTouch.x > 40,
+    `the ground north of the player moved from x=${Math.round(beforeTouch.x)} to ${Math.round(afterTouch.x)}`,
+  );
+  check(
+    'and asks the world for nothing, rather than walking where it started',
+    !stayedTouch.walking &&
+      Math.hypot(stayedTouch.x - stoodTouch.x, stayedTouch.y - stoodTouch.y) < 1,
+    `player at ${Math.round(stayedTouch.x)},${Math.round(stayedTouch.y)}, walking: ${stayedTouch.walking}`,
+  );
+
+  // And a real finger tap, which is the other reading of the same three events.
+  await standSouthOf(RAT);
+  const ratTouch = await screen3d(RAT);
+  await page3d.touchscreen.tap(Math.round(ratTouch.x), Math.round(ratTouch.y));
+  await draw3d();
+  check(
+    'and a finger tap still selects what it landed on',
+    (await page3d.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
+  );
+  await touchDrag3d({ x: 195, y: 400 }, -140);
 
   // And the one that matters most on a phone: the signpost is how a zone is
   // left, since the edge-walk band is untappably thin under a thumb.
@@ -1426,6 +1731,184 @@ try {
     `${cast3d} effect(s) in flight`,
   );
   await page3d.screenshot({ path: `${OUT}/20-3d-cast.png` });
+
+  // --- The save round trip, through a real reload of the 3D page.
+  //
+  // Two things only this can show. `bindUnloadPersist` is the host's own call
+  // site rather than shared code, so a 3D session that never persisted would
+  // look perfect until the tab was closed. And every zone reached above came
+  // through the creation screen — this is the *resume* branch of `bootFlow`,
+  // which is the one every session after the first takes, and the one that has
+  // to pick the renderer again from the URL before it knows what to build. ---
+  const parked3d = await page3d.evaluate(() => {
+    const w = window.world;
+    const spot = { x: Math.round(w.mobs[0].spawnX), y: Math.round(w.mobs[0].spawnY) };
+    w.clearTarget();
+    w.teleport(spot.x, spot.y);
+    return {
+      spot,
+      zoneId: w.zone.id,
+      fromCentre: Math.round(Math.hypot(spot.x - w.spawnPoint.x, spot.y - w.spawnPoint.y)),
+    };
+  });
+  await page3d.reload({ waitUntil: 'domcontentloaded' });
+  await page3d.waitForFunction(() => window.world != null && window.view != null, null, {
+    timeout: 60000,
+  });
+  const resumed3d = await page3d.evaluate(() => ({
+    x: Math.round(window.world.player.x),
+    y: Math.round(window.world.player.y),
+    zoneId: window.world.zone.id,
+    ground: window.view.drawnCounts().ground,
+    phaser: window.game !== undefined,
+  }));
+  check(
+    'a 3D session resumes its save where it was left, with a rebuilt view',
+    resumed3d.zoneId === parked3d.zoneId &&
+      parked3d.fromCentre > 32 &&
+      Math.hypot(resumed3d.x - parked3d.spot.x, resumed3d.y - parked3d.spot.y) <= 4 &&
+      resumed3d.ground === 1,
+    `left at ${parked3d.spot.x},${parked3d.spot.y} (${parked3d.fromCentre}px off centre), back at ${resumed3d.x},${resumed3d.y}`,
+  );
+  check('and resuming a save never loads Phaser either', resumed3d.phaser === false);
+
+  // --- The same game on a phone that cannot keep up.
+  //
+  // Everything above runs at 40ms a frame on a machine that renders one in a
+  // fraction of that. A cheap phone drawing a WebGL scene is the case the
+  // simulation was written to survive and the case nothing here has yet asked
+  // for: `Emulation.setCPUThrottlingRate` makes each real frame roughly eight
+  // times more expensive, and the hand crank is turned at 140ms — 7fps, which
+  // carries the player ~45 simulation pixels in a single step.
+  //
+  // Both halves matter and they are different questions. The simulation's is
+  // arithmetic and is unit-tested: `arriveRadius` scales the arrival band with
+  // the frame's travel, because a fixed one leaves the player orbiting a
+  // destination forever. The renderer's cannot be unit-tested at all — whether
+  // a real press and release still reads as a tap when the clock between them
+  // is a slow device's, and whether the camera a ray is cast through has been
+  // moved this frame. ---
+  const SLOW_FRAME_MS = 140;
+  await cdp3d.send('Emulation.setCPUThrottlingRate', { rate: 8 });
+  const errorsBeforeSlow = errors3d.length;
+
+  /** Cranks the throttled page at 7fps until `fn`, in game milliseconds. */
+  const stepUntilSlow = async (fn, label, budgetMs = 30000) => {
+    for (let elapsed = 0; elapsed < budgetMs; elapsed += 4 * SLOW_FRAME_MS) {
+      if (await fn()) return;
+      await step3d(4, SLOW_FRAME_MS);
+    }
+    throw new Error(`timed out at 7fps waiting for: ${label}`);
+  };
+
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.player.stopMoving();
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+  });
+  await step3d(2, SLOW_FRAME_MS);
+  await draw3d();
+
+  // Arrival at 45px a frame. The tap is real and so is the walk: a fixed
+  // arrival band would step over the destination and turn back every frame,
+  // which presents as a character vibrating on the spot and never stopping.
+  const slowDestination = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y - 200,
+  }));
+  await clickAt3d(
+    await page3d.evaluate((to) => window.view.worldToScreen(to.x, to.y), slowDestination),
+  );
+  await stepUntilSlow(
+    () => page3d.evaluate(() => !window.world.player.hasMoveTarget()),
+    'the player to stop walking at 7fps',
+  );
+  const slowWalked = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+  }));
+  check(
+    'a tap walks the player to its destination and stops there at 7fps',
+    Math.hypot(slowWalked.x - slowDestination.x, slowWalked.y - slowDestination.y) < 48,
+    `player at ${Math.round(slowWalked.x)},${Math.round(slowWalked.y)} for ${Math.round(slowDestination.x)},${Math.round(slowDestination.y)}`,
+  );
+
+  // A tap that is still a tap. `TAP_MAX_MS` is wall clock, and wall clock is
+  // exactly what a slow device inflates: press and release are two real events
+  // and the gap between them is the device's, not the game's. A limit that a
+  // cheap phone cannot meet is a phone on which nothing can be tapped at all.
+  await standSouthOf(RAT);
+  await clickAt3d(await screen3d(RAT));
+  check(
+    'a real tap still selects what it landed on at 7fps',
+    (await page3d.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
+    'press and release are a slow device apart',
+  );
+
+  // And the other reading of it, which must not have become the easy one.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.player.stopMoving();
+    w.teleport(w.spawnPoint.x, w.spawnPoint.y);
+  });
+  await step3d(2, SLOW_FRAME_MS);
+  await draw3d();
+  const beforeSlowDrag = await northOfPlayer();
+  const stoodSlow = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+  }));
+  await touchDrag3d({ x: 195, y: 400 }, 140);
+  const afterSlowDrag = await northOfPlayer();
+  const stayedSlow = await page3d.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+    walking: window.world.player.hasMoveTarget(),
+  }));
+  check(
+    'a finger drag still turns the camera and asks for nothing at 7fps',
+    afterSlowDrag.x - beforeSlowDrag.x > 40 &&
+      !stayedSlow.walking &&
+      Math.hypot(stayedSlow.x - stoodSlow.x, stayedSlow.y - stoodSlow.y) < 1,
+    `the ground north of the player moved from x=${Math.round(beforeSlowDrag.x)} to ` +
+      `${Math.round(afterSlowDrag.x)}, walking: ${stayedSlow.walking}`,
+  );
+
+  // Leaving a zone is the case the slow frame was always most likely to break:
+  // 45px of travel is most of the way through the exit band, and the
+  // world-bounds clamp stops the player `PLAYER_HALF_EXTENT` from the edge —
+  // which has to stay inside `EXIT_MARGIN` or the transition silently never
+  // fires. Walked into rather than teleported onto, so the clamp is in play.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.teleport(w.worldWidth / 2, w.worldHeight - 240);
+    w.player.moveTo(w.worldWidth / 2, w.worldHeight + 200);
+  });
+  await stepUntilSlow(
+    async () => (await zone3d()) === 'beach',
+    'the player to walk off the south edge at 7fps',
+  );
+  check('walking into the map edge at 7fps still changes zone', true);
+  await page3d.screenshot({ path: `${OUT}/22-3d-throttled.png` });
+
+  // The render loop itself, which the simulation's hand crank does not drive: a
+  // frame still has to arrive and still has to draw the zone it was handed.
+  await draw3d();
+  const slowDrawn = await page3d.evaluate(() => window.view.drawnCounts());
+  check(
+    'the render loop keeps drawing the zone under an eight-times slower CPU',
+    slowDrawn.ground === 1 && slowDrawn.mobs > 0,
+    `${slowDrawn.total} objects, ${slowDrawn.mobs} mobs`,
+  );
+  check(
+    'and nothing on the page threw while it was struggling',
+    errors3d.length === errorsBeforeSlow,
+    errors3d.slice(errorsBeforeSlow, errorsBeforeSlow + 3).join(' | '),
+  );
+  await cdp3d.send('Emulation.setCPUThrottlingRate', { rate: 1 });
 
   check(
     'no console errors in the 3D view',
