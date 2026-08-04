@@ -123,10 +123,12 @@ export function nearestUnder<T extends Pickable>(
  * so a tap just past the shore has to answer with a point out there the same
  * way the 2D camera's `getWorldPoint` did.
  *
- * `null` is a ray that never comes down. Today's camera cannot produce one: it
- * is pitched further down than half its field of view, so the horizon is off
- * the top of the screen and every pixel in frame is ground. It is a guard
- * against the camera PR 16 makes movable, not a case anyone can tap into.
+ * `null` is a ray that never comes down. The camera cannot produce one: it is
+ * pitched further down than half its field of view, so the horizon is off the
+ * top of the screen and every pixel in frame is ground — and the drag orbits
+ * yaw only, which leaves that true at every angle. It is a guard against a
+ * pitch that ever becomes the player's to change, not a case anyone can tap
+ * into.
  */
 export function groundUnder(raycaster: Raycaster): Point | null {
   const point = raycaster.ray.intersectPlane(GROUND_PLANE, hitPoint);

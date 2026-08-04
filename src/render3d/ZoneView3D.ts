@@ -21,6 +21,8 @@ import { createCamera, frameCamera, projectToScreen, resizeCamera } from './came
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { buildGround } from './ground';
+import { applyOcclusion } from './occlusion';
+import { normalizeYaw } from './orbit';
 import { pickTap, pointerRay } from './picking';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import type { DrawnCounts } from '../types/debugView';
@@ -54,6 +56,11 @@ export class ZoneView3D {
   private npcActors: NpcActor[] = [];
   private signpostActors: SignpostActor[] = [];
   private campfireActor: CampfireActor | null = null;
+  // Where the camera stands around the player. Owned here rather than by the
+  // host because it outlives a zone — a player who has turned the camera to see
+  // past a tree does not expect it snapped back north by walking through a
+  // signpost.
+  private yaw = 0;
   // The level the enemy name colours were drawn against. Con colours are
   // relative to the player, so they go stale on a level-up; asking the
   // character each frame is cheaper than a subscription only one host would own.
@@ -73,6 +80,10 @@ export class ZoneView3D {
     this.canvas.style.display = 'block';
     this.canvas.style.width = '100%';
     this.canvas.style.height = '100%';
+    // Without this the browser claims a drag for itself — a pull-to-refresh, a
+    // pinch-zoom, an overscroll bounce — and the pointermove stream stops
+    // arriving halfway through an orbit.
+    this.canvas.style.touchAction = 'none';
     parent.appendChild(this.canvas);
 
     this.scene.background = new Color(BACKGROUND);
@@ -94,8 +105,8 @@ export class ZoneView3D {
     this.signpostActors = world.signposts.map((signpost) => new SignpostActor(signpost));
     this.actors().forEach((actor) => this.scene.add(actor.object));
 
-    this.sync();
     this.follow();
+    this.sync();
   }
 
   /**
@@ -134,11 +145,29 @@ export class ZoneView3D {
     this.canvas.remove();
   }
 
-  /** One drawn frame. The simulation is stepped elsewhere. */
+  /**
+   * One drawn frame. The simulation is stepped elsewhere.
+   *
+   * The camera moves first: the nameplates are billboarded against it and the
+   * fade is measured along it, so a frame that framed the camera last would
+   * show both of them one frame behind. Nobody could see that while the camera
+   * only ever looked north; a camera being dragged round is exactly when a
+   * frame of lag reads as a wobble.
+   */
   render(): void {
-    this.sync();
     this.follow();
+    this.sync();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Turns the camera around the player — the drag, in radians. */
+  orbitBy(yawDelta: number): void {
+    this.yaw = normalizeYaw(this.yaw + yawDelta);
+  }
+
+  /** Where the camera stands, which is also which way "forward" is at the keyboard. */
+  cameraYaw(): number {
+    return this.yaw;
   }
 
   /**
@@ -167,6 +196,11 @@ export class ZoneView3D {
     this.nodeActors.forEach((actor) => actor.sync());
     this.syncCampfire(world);
     this.campfireActor?.sync(elapsedMs);
+
+    // Whatever the camera has ended up behind. Only the props are asked: a rat
+    // standing in front of the player is not something they need to see past,
+    // and fading creatures would fight the death fade for the same materials.
+    applyOcclusion(this.camera.position, world.player, this.nodeActors);
 
     // Billboards last, against the camera this frame is about to be drawn with.
     this.player?.faceCamera(this.camera);
@@ -280,7 +314,7 @@ export class ZoneView3D {
 
   private follow(): void {
     if (this.world) {
-      frameCamera(this.camera, this.world.player);
+      frameCamera(this.camera, this.world.player, this.yaw);
     }
   }
 }

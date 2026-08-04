@@ -66,9 +66,14 @@ export function cameraDistance(aspect: number): number {
  *
  * `yaw` is where the camera stands, measured the way sim headings are: zero is
  * due south of the player looking north, which reproduces the 2D view's
- * orientation with north up the screen. PR 16 turns it into a drag; until then
- * it is always zero, and everything here is written so that rotating it moves
- * the look point with the camera rather than leaving it stuck facing south.
+ * orientation with north up the screen, and a drag turns it (`orbit.ts`). The
+ * look point is offset along the same vector the camera stands on, so it swings
+ * round with it rather than staying stuck facing south.
+ *
+ * Pitch is deliberately not a parameter. It is what holds the world clear of
+ * the tab bar, and it is the reason a tap can always find the ground: the
+ * camera is pitched further down than half its field of view, so the horizon is
+ * off the top of the screen at every yaw.
  */
 export function frameCamera(camera: PerspectiveCamera, player: Point, yaw = 0): void {
   const distance = cameraDistance(camera.aspect);

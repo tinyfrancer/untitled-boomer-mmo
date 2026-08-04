@@ -46,6 +46,53 @@ describe('InputState movement', () => {
     expect(input.moveVector()).toEqual({ x: 0, y: 0 });
   });
 
+  /**
+   * W is up the screen, and up the screen stopped meaning north the moment the
+   * 3D camera could be dragged round. The 2D renderer never sets a view yaw, so
+   * it keeps the mapping above unchanged.
+   */
+  describe('with the view turned', () => {
+    it('walks away from the camera, wherever it is standing', () => {
+      input.setViewYaw(Math.PI / 2);
+      input.press('KeyW');
+      const move = input.moveVector();
+      // A camera due west of the player looks east, so forward is east.
+      expect(move.x).toBeCloseTo(1);
+      expect(move.y).toBeCloseTo(0);
+    });
+
+    it('keeps D on the right hand of whoever is holding the camera', () => {
+      input.setViewYaw(Math.PI / 2);
+      input.press('KeyD');
+      const move = input.moveVector();
+      expect(move.x).toBeCloseTo(0);
+      expect(move.y).toBeCloseTo(1);
+    });
+
+    it('walks back toward the camera when it is turned all the way round', () => {
+      input.setViewYaw(Math.PI);
+      input.press('KeyW');
+      const move = input.moveVector();
+      expect(move.x).toBeCloseTo(0);
+      expect(move.y).toBeCloseTo(1);
+    });
+
+    it('is still no faster diagonally', () => {
+      input.setViewYaw(0.9);
+      input.press('KeyW');
+      input.press('KeyD');
+      const move = input.moveVector();
+      expect(Math.hypot(move.x, move.y)).toBeCloseTo(1);
+    });
+
+    it('leaves keys that cancel out cancelled', () => {
+      input.setViewYaw(1.3);
+      input.press('KeyA');
+      input.press('KeyD');
+      expect(input.moveVector()).toEqual({ x: 0, y: 0 });
+    });
+  });
+
   it('ignores a repeated press of a key already held', () => {
     input.press('KeyD');
     input.press('KeyD');
