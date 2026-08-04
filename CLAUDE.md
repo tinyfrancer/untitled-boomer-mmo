@@ -67,9 +67,9 @@ reaching the game, the view building and _unbuilding_ itself, the HUD's geometry
 sizes, and the save round trip through an actual page reload. Reach for it whenever a change
 touches a scene, a sprite or the HUD. Screenshots land in gitignored `.smoke/`.
 
-**Its second half is the whole check again in `?renderer=3d`, on its own page**, because the two
-hosts are peers until Phaser is deleted and a duty either host forgot is invisible to the other's
-coverage. Four things there exist nowhere else:
+**Its second half is the whole check again on a default page — which is the 3D one — while its
+first half asks for `?renderer=2d`**, because the two hosts are peers until Phaser is deleted and a
+duty either host forgot is invisible to the other's coverage. Four things there exist nowhere else:
 
 - **The GPU teardown.** Three zone round trips have to leave `renderer.info.memory` where they
   found it. That number counts what has actually been _uploaded_, which is why both snapshots are
@@ -95,17 +95,18 @@ It reaches the game through two dev-only handles, neither of which mentions Phas
   it, which is what keeps most of smoke portable across the swap.
 
 `window.game` (the `Phaser.Game` instance, from `src/scenes/phaserGame.ts`) is still there for the
-generated textures, and exists **only in 2D** — a `?renderer=3d` page never imports Phaser at all,
-which smoke asserts. The HUD needs no handle at all — smoke queries and clicks its real elements,
+generated textures, and exists **only in 2D** — a default page never imports Phaser at all, which
+smoke asserts. The HUD needs no handle at all — smoke queries and clicks its real elements,
 which is what a user does. All three handles sit behind an `import.meta.env.DEV` guard, so Vite
 strips them from production builds. They are also how you inspect live state from the devtools
 console.
 
-**`?renderer=3d` boots the Three.js client instead of Phaser** (`src/config/flags.ts`, parsed in
-`main.ts`, which dynamically imports one half or the other so only the chosen engine is downloaded).
-The default is 2D until phase 4 of the port. Unlike the debug handles it is **readable in
-production**: merging publishes to Vercel, and the point of the flag is opening a preview URL on a
-real phone.
+**Three.js is what a plain URL boots, and `?renderer=2d` is the way back to Phaser**
+(`src/config/flags.ts`, parsed in `main.ts`, which dynamically imports one half or the other so only
+the chosen engine is downloaded). Only the exact string `2d` reaches for Phaser; anything else,
+including a missing flag, is 3D. Unlike the debug handles the flag is **readable in production**:
+merging publishes to Vercel, and comparing the two renderers means opening a preview URL on a real
+phone. It disappears with the renderer it exists for.
 
 **`?loop=manual` puts the simulation on a hand crank.** Under that flag the host — `ZoneScene.update`
 in 2D, the rAF loop in `render3d/start3d.ts` — stops stepping the game and
@@ -119,8 +120,9 @@ Two environment notes that will otherwise waste your time:
   global that vitest's jsdom environment leaves as an unusable stub, which broke every
   persistence test with `localStorage.clear is not a function`. Don't delete that setup file, and
   don't "fix" `LocalStorageSaveService` to work around it — the source was never the problem.
-- **The first `npm run dev` request cold-compiles all of Phaser** (~1.2 MB) and can take far
-  longer than a normal page load, so browser waits need generous timeouts on a cold cache.
+- **The first `npm run dev` request for a renderer cold-compiles that whole engine** — ~1.2 MB of
+  Phaser on a `?renderer=2d` page, ~520 kB of Three.js on a default one — and can take far longer
+  than a normal page load, so browser waits need generous timeouts on a cold cache.
 
 **Reproducing a frame-rate-dependent bug.** A cheap phone steps the game at single-digit fps and
 bugs hide there (see "Frame rate is not an assumption you may make" below). Ask for the frame you
@@ -146,10 +148,10 @@ await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
 
 ## Architecture
 
-**Stack**: TypeScript bundled with Vite, with two renderers over one simulation: Phaser 4 (2D,
-the default) and Three.js (`src/render3d/`, behind `?renderer=3d`, being built out by
-`docs/3d_port_plan.md`). No backend — everything is a static site. Character data lives in the
-browser's `localStorage`.
+**Stack**: TypeScript bundled with Vite, with two renderers over one simulation: Three.js
+(`src/render3d/`, the default since PR 19 of `docs/3d_port_plan.md`) and Phaser 4 (2D, left behind
+`?renderer=2d` until PR 20 deletes it). No backend — everything is a static site. Character data
+lives in the browser's `localStorage`.
 
 **The core seam: Phaser-free vs. Phaser-coupled code.** `systems/`, `data/`, `persistence/`,
 `types/`, `config/`, `world/`, `hud/` and `ui/` contain plain TypeScript with no Phaser imports.

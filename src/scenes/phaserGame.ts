@@ -35,7 +35,7 @@ export function phaserHost(game: Phaser.Game): GameHost {
   };
 }
 
-/** Boots the game with Phaser drawing it. The default until phase 4. */
+/** Boots the game with Phaser drawing it, behind `?renderer=2d` until PR 20 deletes it. */
 export function start2d(): void {
   const game = new Phaser.Game(config);
 
