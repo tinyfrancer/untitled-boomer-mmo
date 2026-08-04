@@ -31,6 +31,23 @@ const STILL: MoveVector = { x: 0, y: 0 };
 export class InputState {
   private readonly held = new Set<string>();
   private pending: InputAction[] = [];
+  private viewYaw = 0;
+
+  /**
+   * Which way the view has "away from the camera" pointing, in the same radians
+   * `frameCamera` stands the camera at: zero is looking north, which is where
+   * the 2D renderer is nailed and where the 3D one starts.
+   *
+   * W is up the screen, not north — that is what a player means by it, and the
+   * two stopped being the same thing the moment the camera could be dragged
+   * round. The rotation is applied here rather than in the view because the
+   * world reads the vector straight off this object, and a renderer-shaped
+   * detour through `ZoneWorld` would be a Phaser-free module learning that
+   * there is more than one renderer.
+   */
+  setViewYaw(yaw: number): void {
+    this.viewYaw = yaw;
+  }
 
   press(code: string): void {
     if (MOVE_KEYS[code]) {
@@ -63,7 +80,7 @@ export class InputState {
     return this.held.size > 0;
   }
 
-  /** Unit length, or zero if nothing is held or the keys cancel out. */
+  /** Unit length in simulation space, or zero if nothing is held or the keys cancel out. */
   moveVector(): MoveVector {
     let x = 0;
     let y = 0;
@@ -76,7 +93,12 @@ export class InputState {
       return STILL;
     }
     const length = Math.hypot(x, y);
-    return { x: x / length, y: y / length };
+    const sin = Math.sin(this.viewYaw);
+    const cos = Math.cos(this.viewYaw);
+    return {
+      x: (x * cos - y * sin) / length,
+      y: (x * sin + y * cos) / length,
+    };
   }
 
   /** The actions pressed since the last call, in press order. */
