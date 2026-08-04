@@ -42,10 +42,10 @@ function stubCanvas(): void {
   } as unknown as CanvasRenderingContext2D);
 }
 
-function cameraOn(player: Point): PerspectiveCamera {
+function cameraOn(player: Point, yaw = 0): PerspectiveCamera {
   const camera = createCamera();
   resizeCamera(camera, VIEWPORT.width, VIEWPORT.height);
-  frameCamera(camera, player);
+  frameCamera(camera, player, yaw);
   return camera;
 }
 
@@ -96,6 +96,39 @@ describe('pickTap', () => {
     const ray = pointerRay(camera, VIEWPORT.width / 2, 0, VIEWPORT.width, VIEWPORT.height);
 
     expect(pickTap(ray, EMPTY)?.kind).toBe('ground');
+  });
+
+  // And it stays true once the camera can be dragged, because the drag is yaw
+  // only: turning on the spot never lifts the horizon into frame.
+  it.each([0.8, Math.PI / 2, 2.4, Math.PI, -1.7])(
+    'still finds ground at the top of the screen with the camera turned to %f',
+    (yaw) => {
+      const camera = cameraOn({ x: 800, y: 700 }, yaw);
+      const ray = pointerRay(camera, VIEWPORT.width / 2, 0, VIEWPORT.width, VIEWPORT.height);
+
+      expect(pickTap(ray, EMPTY)?.kind).toBe('ground');
+    },
+  );
+
+  /**
+   * A tap has to mean the same thing at every angle. This is the round trip
+   * above with the camera turned: what is under the pixel a thing is drawn at
+   * is still that thing, which is where a yaw applied to the camera but not to
+   * the ray would come apart.
+   */
+  it('picks the mob under the pixel it is drawn at with the camera turned', () => {
+    const { world } = harness();
+    const mob = world.mobs[0];
+    mob.setPosition(700, 700);
+    const actor = new MobActor(mob, 1);
+    const camera = cameraOn({ x: 800, y: 800 }, 2.1);
+    const at = projectToScreen(camera, simToWorld(mob.x, mob.y), VIEWPORT.width, VIEWPORT.height);
+
+    const tapped = pickTap(pointerRay(camera, at.x, at.y, VIEWPORT.width, VIEWPORT.height), {
+      ...EMPTY,
+      mobs: [actor],
+    });
+    expect(tapped?.kind).toBe('mob');
   });
 
   it('answers nothing for a ray that never comes down', () => {
