@@ -20,6 +20,7 @@ const EMPTY_COUNTS: DrawnCounts = {
   signposts: 0,
   npcs: 0,
   labels: 0,
+  fx: 0,
 };
 
 /** `?loop=manual` hands the simulation's clock to `window.view.step()`. */
@@ -182,16 +183,16 @@ class ThreeHost implements GameHost {
     const view = this.view;
     if (!context || !view) return;
 
-    const { zoneChanged } = context.update(deltaMs);
+    const { events, zoneChanged } = context.update(deltaMs);
     if (zoneChanged) {
       // The frame's WorldEvents came from a world that has already been torn
       // down, so there is nothing left to draw them over.
       view.teardown();
       view.build(context.currentWorld);
       this.publishWorld();
+      return;
     }
-    // The rest of the WorldEvent channel — floats, bolts, deaths — is PR 17's,
-    // and there is nothing yet on the ground for them to happen to.
+    view.draw(events);
   }
 
   /**

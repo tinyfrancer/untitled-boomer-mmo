@@ -138,6 +138,30 @@ describe('MobActor', () => {
     expect(actor.object.visible).toBe(false);
   });
 
+  // It falls faster than it fades, so there is a moment of corpse on the ground
+  // rather than a creature dissolving mid-air still standing up.
+  it('topples a corpse over before it has finished fading', () => {
+    const { world, until } = harness();
+    const mob = world.mobs[0];
+    const actor = new MobActor(mob, 1);
+    const facing = actor.object.children[0];
+
+    mob.takeDamage(mob.maxHp);
+    actor.sync(0);
+    expect(facing.rotation.x).toBe(0);
+
+    mob.deadForMs = DEATH_FADE_MS * 0.8;
+    actor.sync(0);
+    expect(facing.rotation.x).toBeCloseTo(Math.PI / 2, 6);
+
+    // The same actor is what a respawn comes back into, so the fall has to come
+    // back off it — a rat that stood up still lying on its face is the bug.
+    until(() => mob.isAlive(), 'the rat to respawn');
+    actor.sync(0);
+    expect(facing.rotation.x).toBe(0);
+    expect(opacityOf(actor.object.children[0])).toBe(1);
+  });
+
   // The name colour is relative to the player's level, so it is not fixed: it
   // has to be redrawn whenever they level.
   it('recolours its name when the player levels past it', () => {

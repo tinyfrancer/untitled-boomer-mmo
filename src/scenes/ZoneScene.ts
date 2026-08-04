@@ -13,7 +13,7 @@ import { uiRoot } from '../hud/dom';
 import { showCharacterCreate } from '../bootFlow';
 import { phaserHost } from './phaserGame';
 import { LEVEL_UP_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
-import { THEME, worldZoom } from '../ui/theme';
+import { FLOAT_TONE_COLORS, worldZoom } from '../ui/theme';
 import { worldViewportHeight } from '../ui/layout';
 import { bindKeyboard } from '../systems/InputState';
 import { createNewCharacter } from '../persistence';
@@ -43,15 +43,6 @@ const SELECTION_RING_COLOR = 0xffee58;
  * bigger delta rather than something it has to throttle a CPU to reproduce.
  */
 const MANUAL_LOOP = import.meta.env.DEV && manualLoopRequested(window.location.search);
-
-const FLOAT_COLORS: Record<FloatTone, string> = {
-  damage: THEME.color.equippable,
-  'player-damage': THEME.color.playerDamage,
-  heal: THEME.color.heal,
-  reward: THEME.color.levelUp,
-  skill: THEME.color.skillUp,
-  dim: THEME.color.dim,
-};
 
 /**
  * The view onto one ZoneWorld: a tilemap, a camera, a sprite per simulated
@@ -343,7 +334,7 @@ export class ZoneScene extends Phaser.Scene {
       // world-space, so this scales with the camera rather than the ui scale
       .text(x, y - 20, message, {
         fontSize: '20px',
-        color: FLOAT_COLORS[tone],
+        color: FLOAT_TONE_COLORS[tone],
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
@@ -514,7 +505,12 @@ export class ZoneScene extends Phaser.Scene {
       nodes: drawn.filter((object) => object instanceof ResourceNodeSprite).length,
       signposts: textured(SIGNPOST_TEXTURE_KEY),
       npcs: textured(SHOPKEEPER_TEXTURE_KEY),
-      labels: drawn.filter((object) => object instanceof Phaser.GameObjects.Text).length,
+      // The floats in flight are Text too, and are counted separately below —
+      // this is the furniture: names over shopkeepers, signposts and mobs.
+      labels: drawn.filter(
+        (object) => object instanceof Phaser.GameObjects.Text && !this.fx.contains(object),
+      ).length,
+      fx: this.fx.getLength(),
     };
   }
 }

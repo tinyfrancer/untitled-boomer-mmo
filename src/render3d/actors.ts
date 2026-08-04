@@ -38,6 +38,13 @@ const SIGNPOST_LABEL_HEIGHT = 76;
 const FIGURE_FOOTPRINT = TILE_SIZE;
 
 /**
+ * How a corpse falls: flat, and in the first stretch of the fade rather than
+ * across all of it. Pivoted at the feet, which is where an actor's origin is.
+ */
+const TOPPLE_RADIANS = Math.PI / 2;
+const TOPPLE_FRACTION = 0.6;
+
+/**
  * What draws one simulated thing — the 3D half of `entities/*Sprite`.
  *
  * Every actor is the same three layers: an outer group that holds the world
@@ -154,6 +161,9 @@ export class MobActor implements Actor, Pickable {
 
     if (this.mob.isAlive()) {
       this.object.visible = true;
+      // Back on its feet: this is the same actor the mob respawns into, not a
+      // new one, so a corpse's fall has to be taken back off it.
+      this.facing.rotation.x = 0;
       setOpacity(this.facing, 1);
       this.creature.stride(this.mob.vx !== 0 || this.mob.vy !== 0, elapsedMs + this.phaseOffsetMs);
       this.plate.setVisible(true);
@@ -161,12 +171,14 @@ export class MobActor implements Actor, Pickable {
       return;
     }
 
-    // The fade is read off the simulation's own death clock rather than played
-    // as a tween, which is what lets the world respawn on time with nothing
-    // drawing it at all.
-    const faded = Math.min(1, this.mob.deadForMs / DEATH_FADE_MS);
-    setOpacity(this.facing, 1 - faded);
-    this.object.visible = faded < 1;
+    // The death is read off the simulation's own clock rather than played as a
+    // tween, which is what lets the world respawn on time with nothing drawing
+    // it at all. It falls faster than it fades, so there is a moment of corpse
+    // on the ground rather than a creature dissolving mid-air still standing.
+    const dying = Math.min(1, this.mob.deadForMs / DEATH_FADE_MS);
+    this.facing.rotation.x = TOPPLE_RADIANS * Math.min(1, dying / TOPPLE_FRACTION);
+    setOpacity(this.facing, 1 - dying);
+    this.object.visible = dying < 1;
     this.plate.setVisible(false);
   }
 

@@ -20,11 +20,14 @@ import {
 import { createCamera, frameCamera, projectToScreen, resizeCamera } from './camera';
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
+import { FxLayer } from './fx';
 import { buildGround } from './ground';
 import { applyOcclusion } from './occlusion';
 import { normalizeYaw } from './orbit';
 import { pickTap, pointerRay } from './picking';
+import { SelectionRing } from './selection';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
+import type { WorldEvent } from '../world/worldEvents';
 import type { DrawnCounts } from '../types/debugView';
 
 /** The same background the 2D canvas has, so the world edge reads as sky. */
@@ -56,6 +59,12 @@ export class ZoneView3D {
   private npcActors: NpcActor[] = [];
   private signpostActors: SignpostActor[] = [];
   private campfireActor: CampfireActor | null = null;
+  // Both outlive a zone, like the camera and the lights: a target belongs to
+  // the player and a damage number to the moment it was dealt, and neither is
+  // anything the terrain owns. What they hold *is* the zone's, so a teardown
+  // empties them without taking them out of the scene.
+  private readonly fx = new FxLayer();
+  private readonly selection = new SelectionRing();
   // Where the camera stands around the player. Owned here rather than by the
   // host because it outlives a zone — a player who has turned the camera to see
   // past a tree does not expect it snapped back north by walking through a
@@ -87,7 +96,7 @@ export class ZoneView3D {
     parent.appendChild(this.canvas);
 
     this.scene.background = new Color(BACKGROUND);
-    this.scene.add(...lights());
+    this.scene.add(...lights(), this.fx.object, this.selection.object);
     this.resize();
   }
 
@@ -122,6 +131,10 @@ export class ZoneView3D {
       disposeTree(this.ground);
       this.ground = null;
     }
+    // A number rising off a rat in town has nowhere to land on the beach, and
+    // the ring is under a mob that no longer exists.
+    this.fx.clear();
+    this.selection.follow(null);
     this.actors().forEach((actor) => actor.dispose());
     this.player = null;
     this.mobActors = [];
@@ -135,6 +148,8 @@ export class ZoneView3D {
   /** Ends the session's view: the zone's contents, the context and the canvas. */
   dispose(): void {
     this.teardown();
+    this.fx.dispose();
+    this.selection.dispose();
     this.renderer.dispose();
     // `dispose()` frees what three allocated but leaves the WebGL context to be
     // collected whenever the browser gets round to it, and a browser allows
@@ -158,6 +173,17 @@ export class ZoneView3D {
     this.follow();
     this.sync();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * The frame's `WorldEvent`s, handed to the layer that draws moments.
+   *
+   * Called from the host's tick rather than from `render`, because that is
+   * where they arrive and there is nowhere else to find them: a view that is
+   * not handed one has no way to know it happened.
+   */
+  draw(events: readonly WorldEvent[]): void {
+    events.forEach((event) => this.fx.draw(event));
   }
 
   /** Turns the camera around the player — the drag, in radians. */
@@ -196,6 +222,10 @@ export class ZoneView3D {
     this.nodeActors.forEach((actor) => actor.sync());
     this.syncCampfire(world);
     this.campfireActor?.sync(elapsedMs);
+    // Every frame, not on a target-changed event: a chased mob is moving, and
+    // the ring is under its feet.
+    this.selection.follow(world.target);
+    this.fx.update(elapsedMs);
 
     // Whatever the camera has ended up behind. Only the props are asked: a rat
     // standing in front of the player is not something they need to see past,
@@ -299,6 +329,7 @@ export class ZoneView3D {
       signposts: byKind.get('signpost') ?? 0,
       npcs: byKind.get('npc') ?? 0,
       labels: byKind.get('label') ?? 0,
+      fx: this.fx.count(),
     };
   }
 

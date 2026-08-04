@@ -1,4 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
+import type { FloatTone } from '../world/worldEvents';
 
 // Every size below is authored in CSS pixels. Scale.RESIZE keeps the canvas at
 // the viewport's size, so canvas units and CSS pixels are 1:1 and the HUD can
@@ -59,6 +60,23 @@ export const THEME = {
   // Deeper than the XP bar's blue, so the two stacked bars stay tellable apart.
   manaFill: 0x3949ab,
 } as const;
+
+/**
+ * What each kind of floating number is drawn in.
+ *
+ * A `WorldEvent` names a tone rather than a colour precisely so a view may
+ * decide this for itself — but both views decide the same thing, and two
+ * renderers disagreeing about which shade means "you are the one being hit" is
+ * two renderers drawing different games. Same argument as `TILE_COLORS`.
+ */
+export const FLOAT_TONE_COLORS: Record<FloatTone, string> = {
+  damage: THEME.color.equippable,
+  'player-damage': THEME.color.playerDamage,
+  heal: THEME.color.heal,
+  reward: THEME.color.levelUp,
+  skill: THEME.color.skillUp,
+  dim: THEME.color.dim,
+};
 
 // How many tiles the world camera aims to show across the viewport's smaller
 // axis. Bigger number = further zoomed out.
