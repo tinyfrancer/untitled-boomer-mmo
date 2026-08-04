@@ -479,6 +479,28 @@ front of the shopkeeper does not stop you shopping. Only within one kind does th
 ground is the mathematical `y = 0` plane rather than the terrain mesh, because the mesh stops at
 the map edge and the simulation does not.
 
+**A tap and a drag are the same three events, and `render3d/orbit.ts` is what tells them apart.**
+A drag turns the camera's yaw around the player; a tap asks the world for something. The rule is a
+**latch**, not a comparison: a gesture becomes a drag once its _cumulative_ travel passes
+`TAP_SLOP_PX` and can never go back, because a drag out and back finishes where it started and
+releasing there must not walk the player somewhere. Time is the other half — a thumb resting on the
+screen past `TAP_MAX_MS` is not a request to walk. Only the horizontal component turns anything:
+pitch is not the player's to change, since it is what keeps the world clear of the tab bar _and_
+what guarantees every pixel on screen is ground rather than sky. The host owns the events, the
+pointer capture and `touch-action: none`; `ZoneView3D` owns the angle, and it outlives a zone.
+
+Two things follow from the camera being movable at all:
+
+- **W means up the screen, not north.** `InputState.setViewYaw()` rotates the keyboard's vector into
+  simulation space, and the 3D host sets it whenever a drag moves the camera. The 2D renderer never
+  calls it, so its mapping is unchanged.
+- **Whatever the camera ends up behind gets faded** (`render3d/occlusion.ts`), because you cannot
+  tap what you cannot see and tapping is the whole game. One ray from the camera to the player's
+  feet — the lowest point on them, so it fades a fraction early — against a box per prop. The box is
+  the **drawn** canopy, not the collision trunk it stops you with and not the thumb-sized volume it
+  is picked by: three different questions about the same tree. Fishing spots are excluded on
+  purpose, being the one prop drawn transparent already.
+
 ## Conventions
 
 - Prettier is the source of truth for formatting (single quotes, semicolons, trailing commas,

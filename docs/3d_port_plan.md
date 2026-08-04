@@ -24,7 +24,9 @@
   it. See the retrospective under PR 14 below.
 - **PR 15 merged** — a tap on the 3D canvas moves, targets, gathers, shops and travels. See the
   retrospective under PR 15 below.
-- **Next: PR 16** — drag-orbit and gesture disambiguation.
+- **PR 16 merged** — the camera is dragged round the player, a tap is told apart from a drag, and
+  what the camera ends up behind fades. See the retrospective under PR 16 below.
+- **Next: PR 17** — the feedback layer.
 
 ## Context
 
@@ -687,12 +689,56 @@ _Verify:_ smoke taps via `view.worldToScreen` in 3D mode.
 
 </details>
 
+### PR 16 — Drag-orbit and gesture disambiguation — done, merged
+
+What landed that this document did not predict, and that PR 17 onwards inherits:
+
+- **The threshold has to latch, and "movement + time" is two rules for two different mistakes.** A
+  net-displacement comparison gets the common case right and the ugly one wrong: a drag that goes
+  out and comes back finishes within a pixel of where it started, so releasing there reads as a tap
+  and walks the player off. `OrbitGesture` accumulates travel and, once past `TAP_SLOP_PX`, is a
+  drag for the rest of the gesture whatever happens next. The time limit is the separate, phone-only
+  case of a thumb resting on the screen.
+- **W stopped meaning north, and that is a bug the plan did not schedule.** Yaw rotation makes the
+  keyboard point somewhere other than up the screen the moment the camera moves, which is
+  disorienting in a way no test would have caught. `InputState.setViewYaw()` rotates the move vector
+  into simulation space; the 2D host never calls it, so nothing about the Phaser path changes. It is
+  a Phaser-free system learning about a view, which is the smallest place to put it — the
+  alternative was `ZoneWorld` taking a camera angle.
+- **Occlusion is real but much rarer than expected, because the camera is steep.** At 58° the sight
+  line rises 1.6 units for every unit toward the camera, so a 100-unit canopy only gets in front of
+  a player standing within about a tile and a half of it — which is precisely the range they stand
+  in to gather from it, so it still had to be solved. Fade-on-occlude rather than short props: the
+  alternative pays for the camera in the art forever, and the same argument would come straight
+  back for a building.
+- **A tree needs three different boxes and they are all different sizes.** The trunk stops you
+  walking (`node.blockerRect()`), a thumb-sized volume is what a tap is picked against
+  (`MIN_PICK_SPAN`), and the drawn canopy is what hides the player. Testing occlusion against
+  either of the first two lets the camera look straight through a crown. `NodeProp.sightBlock()`
+  answers the third, from `props.ts`, where the canopy's height is actually decided.
+- **Fishing spots must be excluded from the fade rather than merely unaffected by it.** They are the
+  one prop drawn `transparent: true` on purpose, so a fade that restores opacity to 1 and clears
+  `transparent` puts them back wrong — a bug that only appears after a camera swings past one.
+- **The camera had to start being framed before the actors sync, not after.** Nameplates are
+  billboarded against it and the fade is measured along it, so the old order left both a frame
+  behind. Invisible while the camera only ever looked north; a wobble the moment it turns.
+- **`?loop=manual` still made the smoke check deterministic, and the drag needed no new handle.**
+  The camera's angle is read as its consequence — where a fixed world point is drawn — which is how
+  the check stays a statement about what a player sees rather than about a number only this
+  renderer has. Occlusion got no smoke check at all: intersecting a box with a ray needs no GPU, so
+  the unit suite covers it against the real camera and the real `NodeActor`.
+
+<details>
+<summary>Original PR 16 specification, kept for the record</summary>
+
 **PR 16 — Drag-orbit and gesture disambiguation.** Yaw rotation, plus a movement+time threshold
 separating drag-to-rotate from tap-to-move, pointer capture, and `touch-action: none`. This is the
 fiddliest PR in the plan and must not be bundled with picking. Also handle **occlusion** — a new
 problem 2D never had, since `setDepth` solved it for free: with a rotatable camera, trees will hide
 the player and you cannot tap what you cannot see. Decide fade-on-occlude vs. short props here.
 _Verify:_ mobile-emulation smoke — a drag rotates without issuing a move; a tap still moves.
+
+</details>
 
 **PR 17 — Feedback layer.** Floating combat text, selection ring, ability bolt VFX, death animation,
 campfire flicker.
