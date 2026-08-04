@@ -26,7 +26,9 @@
   retrospective under PR 15 below.
 - **PR 16 merged** — the camera is dragged round the player, a tap is told apart from a drag, and
   what the camera ends up behind fades. See the retrospective under PR 16 below.
-- **Next: PR 17** — the feedback layer.
+- **PR 17 merged** — damage numbers float, a ring marks the target, a bolt flies and a corpse falls
+  over. **Phase 3 is done.** See the retrospective under PR 17 below.
+- **Next: PR 18** — 3D smoke parity, including a CPU-throttled run.
 
 ## Context
 
@@ -740,9 +742,54 @@ _Verify:_ mobile-emulation smoke — a drag rotates without issuing a move; a ta
 
 </details>
 
+### PR 17 — Feedback layer — done, merged
+
+What landed that this document did not predict, and that phase 4 inherits:
+
+- **Two of the five line items were already done, and one of them by accident.** The campfire's
+  flicker shipped with the props in PR 14, and so did the corpse fade — `MobActor` was already
+  reading `mob.deadForMs`, because the death clock had to be the world's for the respawn to happen
+  headlessly. What was left of "death animation" was the fall, six lines against the same clock.
+  What was genuinely missing was the whole `WorldEvent` half: `ThreeHost.tick` was discarding the
+  frame's events entirely, with a comment saying so.
+- **The mapping from event to effect belongs to the fx layer, not to the view.** It started in
+  `ZoneView3D` as a mirror of `ZoneScene.render`, where it needed a WebGL context to reach — which
+  means a soak drawn above its wound, a spell coloured apart from a swing and a fizzle over the
+  caster would all have been smoke's to check or nobody's. Moved into `FxLayer.draw(event)` it is
+  thirteen unit tests against a stubbed canvas, and `ZoneView3D.draw` is a forEach.
+- **The two clocks are the interesting part.** Effects age on the view's clock and the corpse on the
+  world's, which is not an inconsistency: one is a reading-comfort decision and the other has to
+  happen whether or not anything is drawing. The consequence is that under `?loop=manual` a bolt
+  ages while the simulation stands still — which is why the smoke check reads `drawnCounts().fx`
+  immediately after the step that caused it rather than screenshotting a 180ms flight.
+- **`FLOAT_TONE_COLORS` had to be shared, and it points at a small layering question.** The tone to
+  colour map was six lines in `ZoneScene`; a second copy in `render3d/` is exactly the "two
+  renderers drawing different games" hazard `TILE_COLORS` exists to avoid. It is in `ui/theme.ts`
+  now, which costs `ui/` a type-only import of `FloatTone` from `world/` — the first edge in that
+  direction, and erased at build.
+- **`drawnCounts` grew `fx`, and 2D's `labels` count had to get narrower to make room.** A float in
+  2D is a `Phaser.GameObjects.Text` like every name label, so the two were being counted as one
+  thing; the 3D half would have had the same collision had the float sprites kept the nameplate's
+  `userData.kind`. Both now count furniture and moments separately, and the leak check is unchanged
+  because it runs before anything fights.
+- **A jsdom canvas stub was already duplicated in two test files** and this would have made three,
+  so it is `tests/render3d/canvasStub.ts` now. It is not a tidy-up: what the text _says_ is
+  gameplay — a con colour is how difficulty is read, a tone is how a soak is told from a wound — so
+  the stub records rather than swallows.
+- **A bolt is invisible for its first frames, because it starts inside the caster.** Found in the
+  visual pass, where the obvious screenshot (cast, step once, shoot) showed nothing at all. It is
+  not worth solving — 180ms later it is clear of the figure and the whole flight is 180ms — but it
+  is the reason the smoke check asserts that a cast drew _something_ rather than hunting for a
+  sphere.
+
+<details>
+<summary>Original PR 17 specification, kept for the record</summary>
+
 **PR 17 — Feedback layer.** Floating combat text, selection ring, ability bolt VFX, death animation,
 campfire flicker.
 _Verify:_ visual pass plus smoke's existing ability and kill checks in 3D.
+
+</details>
 
 ---
 
