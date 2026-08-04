@@ -288,8 +288,12 @@ The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: 
 `heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `zone-exit`. These are moments, not
 state — a bolt left the caster's hand, a number floated off a corpse — and a view that misses one
 cannot recover it from anywhere. They deliberately name a `tone` rather than a colour: the view
-decides what "reward" looks like. Anything the 3D renderer will need to know about but cannot read
-off the state belongs here.
+decides what "reward" looks like. Anything the 3D renderer needs to know about but cannot read
+off the state belongs here. Both views draw them from the tick that returns them —
+`ZoneScene.render` as tweens, `render3d/fx.ts` as short-lived objects — and both take the tone's
+colour from `FLOAT_TONE_COLORS` in `ui/theme.ts`, which is shared for the same reason `TILE_COLORS`
+is: two renderers disagreeing about which shade means "you are the one being hit" are two renderers
+drawing different games.
 
 Mutations of `CharacterState` itself (inventory, gear, xp, skills, location) go through the
 Phaser-free `systems/CharacterController.ts` rather than being inlined anywhere. Add new HUD-facing
@@ -451,8 +455,9 @@ Phaser's `Graphics.generateTexture`, not loaded from image files — there are n
 (placeholder circles/shapes only, per the "no art skills" constraint in `docs/initial_design.txt`).
 The 3D view loads no image either: terrain is one vertex-coloured mesh (`render3d/ground.ts`) and
 every entity is untextured primitives (`render3d/figure.ts`, `creatures.ts`, `props.ts`). The one
-texture it does upload is a nameplate's name, baked onto a canvas — which is also the reason
-`disposeTree` names `material.map` explicitly. Both renderers take their tile colours from
+textures it does upload are text baked onto a canvas by `render3d/text.ts` — a nameplate's name and
+a floating damage number — which is also the reason `disposeTree` names `material.map` explicitly,
+and the reason the unit suite stubs a 2D context (jsdom has none). Both renderers take their tile colours from
 `TILE_COLORS` in `data/tiles.ts` — the same argument as the stick-figure rig behind the paperdoll,
 since two renderers that disagree about the colour of grass are two renderers drawing different
 games. Creature colours are deliberately _not_ shared: `render3d/palette.ts` mirrors the hexes
@@ -467,6 +472,17 @@ it). An actor is three layers on purpose: an outer group holding the world posit
 holding the yaw from `facingYaw`, and the nameplate — which is billboarded by having its own
 rotation overwritten from the camera each frame, and so cannot live under something being turned to
 face where the creature is walking.
+
+**What is a moment and what is a state are drawn on different clocks** (`render3d/fx.ts`,
+`selection.ts`). A damage number and a bolt come off the `WorldEvent` channel, are handed to
+`FxLayer` by the host's tick, and age against the _view's_ clock — the same one the walk cycles and
+the campfire's flicker run on — because how long a number takes to fade is a decision about what is
+comfortable to read. A corpse's fall and fade are the opposite: `MobActor` reads them off
+`mob.deadForMs`, since the world has to respawn on time with nothing drawing it at all. Both the fx
+layer and the selection ring outlive a zone, like the camera and the lights, so a teardown `clear()`s
+them instead of taking them out of the scene. Effects play from a 0-1 progress rather than a delta,
+which is what makes a dropped frame invisible; `drawnCounts().fx` is how many are in flight, and it
+is the one thing in `DrawnCounts` a browser is genuinely needed for (jsdom cannot bake the text).
 
 **A tap is picked against boxes, not against the meshes** (`render3d/picking.ts`). Each actor
 answers `pickBox()` with the box a ray has to cross — its collision footprint, standing as tall as

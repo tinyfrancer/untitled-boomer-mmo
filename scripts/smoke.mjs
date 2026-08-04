@@ -1235,6 +1235,21 @@ try {
   );
   await page3d.screenshot({ path: `${OUT}/17-3d-picking.png` });
 
+  // --- The feedback layer, which the tap above has just started a fight for.
+  //
+  // What only a browser can show here is the text itself: a damage number is
+  // baked onto a 2D canvas and jsdom has none, so the unit suite draws every
+  // float against a stub. The rise, the fade, the tone-to-colour table and the
+  // corpse's topple are all covered there; this is the check that a real canvas,
+  // a real texture upload and the whole WorldEvent path exist between the swing
+  // and something on screen. ---
+  await stepUntil3d(
+    () => page3d.evaluate(() => window.view.drawnCounts().fx > 0),
+    'the fight to float a damage number in 3D',
+  );
+  check('a hit in 3D floats a number over what it landed on', true);
+  await page3d.screenshot({ path: `${OUT}/18-3d-combat.png` });
+
   // The shopkeeper is the case the pick boxes exist for: a ray at a figure's
   // real geometry goes straight down the gap between its legs and out the other
   // side, so aiming at the feet would open nothing.
@@ -1326,7 +1341,7 @@ try {
     !stayed.walking && Math.hypot(stayed.x - stood.x, stayed.y - stood.y) < 1,
     `player at ${Math.round(stayed.x)},${Math.round(stayed.y)}, walking: ${stayed.walking}`,
   );
-  await page3d.screenshot({ path: `${OUT}/18-3d-orbit.png` });
+  await page3d.screenshot({ path: `${OUT}/19-3d-orbit.png` });
 
   // And the gesture has to hand back: a tap straight after a drag is still a
   // tap, and it has to come back out of the *turned* camera in the coordinates
@@ -1385,6 +1400,32 @@ try {
     'and builds a fresh one for the next character',
     (await page3d.evaluate(() => window.view.drawnCounts().ground)) === 1,
   );
+
+  // A caster is the only class with a projectile to draw, which is why this
+  // waits for the wizard the reset just rolled: the bolt is the one WorldEvent
+  // that exists purely so a ranged nuke does not read as nothing happening.
+  // What is asserted is that the cast drew *something*, because a spell may
+  // fizzle — and a fizzle is a float over the caster rather than a bolt, which
+  // is a moment the player has to see just as much.
+  await page3d.evaluate(() => {
+    const w = window.world;
+    const rat = w.mobs.find((m) => m.isAlive());
+    w.teleport(rat.x, rat.y + 120);
+    w.setTarget(rat);
+  });
+  // Long enough for the world to publish an ability state the bar can enable
+  // its button from: out of range or with nothing targeted it is disabled, and
+  // a disabled button is not clickable.
+  await step3d(3);
+  await page3d.click('.hud-ability__key[data-ability="fireball"]');
+  await step3d(1);
+  const cast3d = await page3d.evaluate(() => window.view.drawnCounts().fx);
+  check(
+    'a real cast in 3D draws itself — a bolt in flight, or a fizzle over the caster',
+    cast3d > 0,
+    `${cast3d} effect(s) in flight`,
+  );
+  await page3d.screenshot({ path: `${OUT}/20-3d-cast.png` });
 
   check(
     'no console errors in the 3D view',

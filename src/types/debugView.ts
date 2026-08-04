@@ -48,4 +48,11 @@ export interface DrawnCounts {
   signposts: number;
   npcs: number;
   labels: number;
+  /**
+   * Feedback in flight: damage numbers rising, a bolt between two points.
+   * Transient by nature, so a check reads it right after the hit that caused
+   * it — but it is also the one thing here a renderer cannot bake in jsdom (a
+   * number is text on a canvas), which is why it is worth asking a browser.
+   */
+  fx: number;
 }

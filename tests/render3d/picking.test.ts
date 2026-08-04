@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { TILE_SIZE } from '../../src/config/constants';
 import { MobActor, NodeActor, NpcActor, SignpostActor } from '../../src/render3d/actors';
 import {
@@ -18,6 +18,7 @@ import {
 import { Raycaster, Vector3 } from 'three';
 import { harness } from '../world/harness';
 import type { PerspectiveCamera } from 'three';
+import { stubCanvas } from './canvasStub';
 import type { Point } from '../../src/systems/MovementSystem';
 import type { WorldTap } from '../../src/world/ZoneWorld';
 
@@ -26,21 +27,6 @@ import type { WorldTap } from '../../src/world/ZoneWorld';
  * back, so a simulation pixel is worth least on screen.
  */
 const VIEWPORT = { width: 390, height: 844 };
-
-/**
- * jsdom has no 2D canvas and a nameplate bakes its name onto one. Nothing here
- * reads the label — the same stub as `actors.test.ts`, without the recording.
- */
-function stubCanvas(): void {
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-    font: '',
-    fillStyle: '',
-    textAlign: '',
-    textBaseline: '',
-    measureText: () => ({ width: 64 }),
-    fillText: () => {},
-  } as unknown as CanvasRenderingContext2D);
-}
 
 function cameraOn(player: Point, yaw = 0): PerspectiveCamera {
   const camera = createCamera();

@@ -1,23 +1,13 @@
-import {
-  CanvasTexture,
-  Group,
-  Mesh,
-  MeshBasicMaterial,
-  PlaneGeometry,
-  SRGBColorSpace,
-  Sprite,
-  SpriteMaterial,
-  type Camera,
-} from 'three';
+import { Group, Mesh, MeshBasicMaterial, PlaneGeometry, Sprite, type Camera } from 'three';
 import { disposeTree } from './dispose';
 import { PALETTE } from './palette';
+import { buildText } from './text';
 
 const DEFAULT_WIDTH = 56;
 const DEFAULT_HEIGHT = 8;
 
 /** How tall the name is, in world units — the 2D label's 10px, near enough. */
 const LABEL_HEIGHT = 12;
-const LABEL_FONT_PX = 32;
 
 /**
  * Anything drawn over a creature's head: the health bar and the floating name.
@@ -80,6 +70,8 @@ export class Nameplate {
     const sprite = buildLabel(text, color);
     if (sprite) {
       sprite.position.y = LABEL_HEIGHT;
+      sprite.renderOrder = 11;
+      sprite.userData.kind = 'label';
       this.label = sprite;
       this.object.add(sprite);
     }
@@ -109,39 +101,11 @@ function bar(width: number, height: number, color: number, opacity: number): Mes
 }
 
 /**
- * The name, baked onto a canvas and hung on a sprite.
- *
- * There is no DOM option here: an HTML label would need the HUD to project
- * every creature's position to the screen once a frame, which is exactly the
- * coupling the port is avoiding (see the floating-text note in the port plan).
- *
- * Returns null where there is no 2D canvas to draw on, which is jsdom — the
- * unit suite builds nameplates and would otherwise die on the text. What the
- * name says is `scripts/smoke.mjs`'s to check, in a browser that has one.
+ * The name over a creature's head — `buildText` at the label's size, and the
+ * only text in the 3D client that is counted as a `label` by `drawnCounts`.
+ * A damage number is the same machinery and deliberately not counted: one is
+ * furniture the view owes every creature, the other is a moment passing.
  */
 function buildLabel(text: string, color: string): Sprite | null {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  if (!context) return null;
-
-  const font = `bold ${LABEL_FONT_PX}px sans-serif`;
-  context.font = font;
-  canvas.width = Math.ceil(context.measureText(text).width) + LABEL_FONT_PX;
-  canvas.height = Math.ceil(LABEL_FONT_PX * 1.4);
-  // Resizing the canvas resets everything set on the context above it.
-  context.font = font;
-  context.fillStyle = color;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(text, canvas.width / 2, canvas.height / 2);
-
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  const sprite = new Sprite(
-    new SpriteMaterial({ map: texture, transparent: true, depthTest: false }),
-  );
-  sprite.scale.set((LABEL_HEIGHT * canvas.width) / canvas.height, LABEL_HEIGHT, 1);
-  sprite.renderOrder = 11;
-  sprite.userData.kind = 'label';
-  return sprite;
+  return buildText(text, color, LABEL_HEIGHT);
 }
