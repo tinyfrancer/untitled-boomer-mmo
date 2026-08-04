@@ -259,7 +259,7 @@ class ThreeHost implements GameHost {
   }
 }
 
-/** Boots the game with Three.js drawing it, behind `?renderer=3d`. */
+/** Boots the game with Three.js drawing it, which is every page but `?renderer=2d`. */
 export function start3d(): void {
   bootIntoGame(new ThreeHost());
 }

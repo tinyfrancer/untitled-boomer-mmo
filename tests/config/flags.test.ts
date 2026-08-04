@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { manualLoopRequested, rendererChoice } from '../../src/config/flags';
 
 describe('rendererChoice', () => {
-  it('defaults to the 2D renderer', () => {
-    expect(rendererChoice('')).toBe('2d');
-    expect(rendererChoice('?loop=manual')).toBe('2d');
+  it('defaults to the 3D renderer', () => {
+    expect(rendererChoice('')).toBe('3d');
+    expect(rendererChoice('?loop=manual')).toBe('3d');
+    expect(rendererChoice('?renderer=3d')).toBe('3d');
   });
 
-  it('takes the 3D renderer only when asked for exactly', () => {
-    expect(rendererChoice('?renderer=3d')).toBe('3d');
-    expect(rendererChoice('?loop=manual&renderer=3d')).toBe('3d');
-    expect(rendererChoice('?renderer=3D')).toBe('2d');
-    expect(rendererChoice('?renderer=three')).toBe('2d');
+  it('falls back to Phaser only when asked for exactly', () => {
     expect(rendererChoice('?renderer=2d')).toBe('2d');
+    expect(rendererChoice('?loop=manual&renderer=2d')).toBe('2d');
+    expect(rendererChoice('?renderer=2D')).toBe('3d');
+    expect(rendererChoice('?renderer=phaser')).toBe('3d');
   });
 });
 

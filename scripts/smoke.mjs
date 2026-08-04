@@ -21,7 +21,8 @@
  * cranks it with `view.step()`. Waits are therefore in *game* milliseconds and
  * are deterministic; a loaded CI runner makes the script slower, not flakier.
  *
- * The second half is that check again in `?renderer=3d`, on its own page. It is
+ * The second half is that check again on a default page, which is the Three.js
+ * renderer — the first half asks for `?renderer=2d` to reach the old one. It is
  * not a duplicate: the two hosts are peers until Phaser is deleted, so a duty
  * one of them forgot — binding the keyboard, persisting on unload, resizing the
  * drawing buffer — is invisible to the other's coverage. It also covers what
@@ -35,7 +36,10 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173';
-const URL = `${BASE}${BASE.includes('?') ? '&' : '?'}loop=manual`;
+const query = (params) => `${BASE}${BASE.includes('?') ? '&' : '?'}${params}`;
+// The Phaser half now has to ask for its renderer; the default is Three.js.
+const URL = query('renderer=2d&loop=manual');
+const URL_3D = query('loop=manual');
 const OUT = '.smoke';
 const headed = process.argv.includes('--headed');
 
@@ -153,6 +157,10 @@ try {
   await page.waitForFunction(() => window.game?.scene?.getScene('Preload'), null, {
     timeout: 120000,
   });
+  // The flag is the only way back to Phaser now, so the whole 2D half of this
+  // script rests on it being honoured — a page that quietly booted Three.js
+  // instead would pass every assertion below and prove nothing about Phaser.
+  check('`?renderer=2d` still boots the Phaser renderer', true);
 
   // --- Booting: a fresh character through the real creation screen, which is
   // plain HTML — so this is the form a player fills in, typed and clicked. ---
@@ -965,10 +973,10 @@ try {
 
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 
-  // --- The Three.js bootstrap, behind `?renderer=3d`. Its own page, in its own
-  // context: the two renderers are chosen before either is loaded, so the point
-  // of the flag is that a 3D session never touches Phaser at all. The default
-  // is still 2D, and everything above this line proves it stayed that way.
+  // --- The Three.js bootstrap, which is now what a plain URL boots. Its own
+  // page, in its own context: the two renderers are chosen before either is
+  // loaded, so a default session never touches Phaser at all, and everything
+  // above this line proves `?renderer=2d` still reaches the old one.
   //
   // What can only be seen here is the teardown. A geometry the view forgot to
   // dispose is invisible to every state assertion and to the screen — it is
@@ -1000,9 +1008,7 @@ try {
   const stepUntilZone = (zoneId, label, budgetMs) =>
     stepUntil3d(async () => (await zone3d()) === zoneId, label, budgetMs);
 
-  await page3d.goto(`${BASE}${BASE.includes('?') ? '&' : '?'}renderer=3d&loop=manual`, {
-    waitUntil: 'domcontentloaded',
-  });
+  await page3d.goto(URL_3D, { waitUntil: 'domcontentloaded' });
   // A fresh context, so this is also the first-run path: created through the
   // real form, into a zone with no Phaser anywhere behind it.
   await page3d.waitForSelector('.create', { timeout: 60000 });
@@ -1014,7 +1020,7 @@ try {
   });
   check('the 3D renderer boots a session through the creation screen', true);
   check(
-    'choosing the 3D renderer never loads Phaser',
+    'a page with no renderer flag on it never loads Phaser',
     (await page3d.evaluate(() => window.game === undefined)) === true,
   );
 
