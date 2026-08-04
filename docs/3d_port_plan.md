@@ -30,7 +30,9 @@
   over. **Phase 3 is done.** See the retrospective under PR 17 below.
 - **PR 18 merged** — smoke's 3D half is a peer of its 2D half, by finger as well as by mouse, and
   runs a pass at 7fps on a CPU throttled eight times down. See the retrospective under PR 18 below.
-- **Next: PR 19** — flip the default to 3D.
+- **PR 19 merged** — Three.js is what a plain URL boots and Phaser is behind `?renderer=2d`. See
+  the retrospective under PR 19 below.
+- **Next: PR 20** — delete Phaser.
 
 ## Context
 
@@ -848,7 +850,34 @@ _Verify:_ full smoke green in `?renderer=3d` at ~7fps.
 
 </details>
 
-**PR 19 — Flip the default.** 2D reachable via `?renderer=2d`.
+### PR 19 — Flip the default — done, merged
+
+What landed that this document did not predict, and that PR 20 inherits:
+
+- **Nothing in either host changed, and that is the whole result.** The flip is one comparison in
+  `rendererChoice` plus the two arms of `main.ts` swapping places; smoke passed 106/106 on the first
+  run of it. That is what PRs 13-18 were buying, and it is the only evidence that says so — a flip
+  that needed fixes afterwards would have meant the 3D client was never really a peer.
+- **Which string is exact-matched is the actual decision, not which one is the default.** It was
+  `renderer === '3d'` and is `renderer === '2d'`, so every unrecognised value — a typo, a stale
+  `?renderer=three` in someone's history, a link written before this PR — now lands on Three.js
+  rather than on the renderer being deleted. `?renderer=3d` still works and still means what it
+  said, which matters because that is the URL every note in this document names.
+- **Smoke's two halves swapped which one carries a flag**, and the resume branch got stronger for
+  free: the 3D page's `page3d.reload()` is now a default URL, so "boot the renderer again from the
+  URL on a save that already exists" is checked against the path a real returning player takes. The
+  2D half gained one assertion it never needed before — that `?renderer=2d` still boots Phaser —
+  because every other check in that half would pass just as happily on a page that had quietly
+  booted Three.js instead, and prove nothing about Phaser.
+- **The landscape bug PR 18 found is off the default path now rather than fixed.** The south exit of
+  town is still unreachable on a landscape phone under `?renderer=2d`; it is simply no longer what
+  anyone loads. This is the PR that "left unfixed on purpose" was waiting for.
+- **The entry chunk a phone downloads went from 1,394 kB to 558 kB** (363 kB gzipped to 141 kB),
+  since the dynamic import in `main.ts` means a default page fetches Three.js and nothing else. Dev
+  is noticeably quicker off a cold cache for the same reason, which is why `CLAUDE.md`'s
+  cold-compile note now names an engine per flag rather than Phaser.
+
+_Original spec:_ flip the default; 2D reachable via `?renderer=2d`.
 _Verify:_ CI green on the flipped default; Vercel preview checked on a real phone.
 
 **PR 20 — Delete Phaser.** The `ZoneScene` view, entity base classes, `generateTextures.ts`, the
