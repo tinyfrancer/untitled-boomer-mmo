@@ -19,6 +19,14 @@ import type { ResourceNode } from '../world/ResourceNode';
 export interface NodeProp {
   readonly object: Group;
   setAvailable(available: boolean): void;
+  /**
+   * How much of the view this prop blocks right now, or `null` for one that
+   * cannot hide anything. Deliberately not the collision body and not the pick
+   * box: what stops you walking is the trunk, what a thumb aims at is a
+   * thumb-sized minimum, and what hides the player is the canopy — three
+   * different questions about the same tree.
+   */
+  sightBlock(): { width: number; height: number } | null;
 }
 
 export function buildNode(node: ResourceNode): NodeProp {
@@ -81,12 +89,19 @@ function buildTree(node: ResourceNode): NodeProp {
   cut.visible = false;
   group.add(cut);
 
+  // The crown is the widest and highest thing here, so it is what decides how
+  // much sky the tree takes up; a felled one is the trunk and nothing else.
+  const crownTop = crown.position.y + width * 0.42;
+
+  let standing = true;
   return {
     object: group,
     setAvailable(available) {
+      standing = available;
       canopy.visible = available;
       cut.visible = !available;
     },
+    sightBlock: () => ({ width, height: standing ? crownTop : trunkHeight }),
   };
 }
 
@@ -124,6 +139,10 @@ function buildFishingSpot(node: ResourceNode): NodeProp {
     setAvailable(available) {
       group.visible = available;
     },
+    // Rings lying flat on the water hide nothing, and they are the one prop
+    // drawn transparent on purpose — fading them and restoring them to solid
+    // would be the fade putting them back wrong.
+    sightBlock: () => null,
   };
 }
 

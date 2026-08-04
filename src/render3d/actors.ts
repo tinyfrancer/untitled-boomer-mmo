@@ -1,4 +1,4 @@
-import { Group, type Box3, type Camera } from 'three';
+import { Box3, Group, Vector3, type Camera } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import {
   NPC_APPEARANCES,
@@ -13,6 +13,7 @@ import { facingYaw, simToWorld } from './coords';
 import { buildFigure, type Figure } from './figure';
 import { disposeTree, setOpacity } from './dispose';
 import { Nameplate } from './nameplate';
+import { OCCLUDED_OPACITY, type Occluder } from './occlusion';
 import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildNode, buildSignpost } from './props';
@@ -194,11 +195,13 @@ export class MobActor implements Actor, Pickable {
   }
 }
 
-export class NodeActor implements Actor, Pickable {
+export class NodeActor implements Actor, Pickable, Occluder {
   readonly object = new Group();
   readonly node: ResourceNode;
   private readonly prop: ReturnType<typeof buildNode>;
   private drawnAvailable = true;
+  private sightBox: Box3 | null = null;
+  private occluded = false;
 
   constructor(node: ResourceNode) {
     this.node = node;
@@ -207,6 +210,7 @@ export class NodeActor implements Actor, Pickable {
     this.prop = buildNode(node);
     this.object.add(this.prop.object);
     this.prop.setAvailable(true);
+    this.measureSight();
   }
 
   sync(): void {
@@ -214,6 +218,7 @@ export class NodeActor implements Actor, Pickable {
     if (available === this.drawnAvailable) return;
     this.drawnAvailable = available;
     this.prop.setAvailable(available);
+    this.measureSight();
   }
 
   /**
@@ -236,6 +241,31 @@ export class NodeActor implements Actor, Pickable {
           height: 0,
           base: -WATER_DEPTH,
         });
+  }
+
+  occluderBox(): Box3 | null {
+    return this.sightBox;
+  }
+
+  setOccluded(occluded: boolean): void {
+    if (occluded === this.occluded) return;
+    this.occluded = occluded;
+    setOpacity(this.prop.object, occluded ? OCCLUDED_OPACITY : 1);
+  }
+
+  // Recomputed only when the prop changes shape — a felled tree is a stump —
+  // since a node never moves and the fade asks this of every node every frame.
+  private measureSight(): void {
+    const block = this.prop.sightBlock();
+    if (!block) {
+      this.sightBox = null;
+      return;
+    }
+    const half = block.width / 2;
+    this.sightBox = new Box3(
+      new Vector3(this.node.x - half, 0, this.node.y - half),
+      new Vector3(this.node.x + half, block.height, this.node.y + half),
+    );
   }
 
   dispose(): void {
