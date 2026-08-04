@@ -65,12 +65,25 @@ milliseconds. That is the first place to add cover for anything the game _does_.
 nothing else: scenes booting and the flows that cross between them, real mouse and key events
 reaching the game, the view building and _unbuilding_ itself, the HUD's geometry at real viewport
 sizes, and the save round trip through an actual page reload. Reach for it whenever a change
-touches a scene, a sprite or the HUD. Screenshots land in gitignored `.smoke/`. Its last section
-boots the 3D renderer on its own page: what only a browser can show there is the GPU teardown —
-three zone round trips have to leave `renderer.info.memory` where they found it. That number counts
-what has actually been _uploaded_, which is why both snapshots are taken after sweeping the camera
-over the whole zone: compared from wherever the player happened to be standing, it would move with
-a rat wandering into frame.
+touches a scene, a sprite or the HUD. Screenshots land in gitignored `.smoke/`.
+
+**Its second half is the whole check again in `?renderer=3d`, on its own page**, because the two
+hosts are peers until Phaser is deleted and a duty either host forgot is invisible to the other's
+coverage. Four things there exist nowhere else:
+
+- **The GPU teardown.** Three zone round trips have to leave `renderer.info.memory` where they
+  found it. That number counts what has actually been _uploaded_, which is why both snapshots are
+  taken after sweeping the camera over the whole zone: compared from wherever the player happened
+  to be standing, it would move with a rat wandering into frame.
+- **A finger, not a mouse.** The drag/tap disambiguation and `touch-action: none` are phone rules
+  and a mouse can break neither — it never pans the page and is never a thumb resting on the
+  screen. Touch sequences go through CDP `Input.dispatchTouchEvent`; Playwright's touchscreen can
+  tap but not drag.
+- **A landscape resize**, which is the one shape `tests/render3d/camera.test.ts` does not measure.
+  A landscape camera frames twelve tiles of _depth_ rather than of width, so the south signpost is
+  out of frame from the spawn point; what holds is that walking toward it brings it into reach.
+- **A CPU-throttled pass at `rate: 8`, cranked at 140ms a frame** — see "Reproducing a
+  frame-rate-dependent bug" below for why that is two questions rather than one.
 
 It reaches the game through two dev-only handles, neither of which mentions Phaser:
 
@@ -114,11 +127,17 @@ bugs hide there (see "Frame rate is not an assumption you may make" below). Ask 
 want rather than throttling a machine into producing it: `view.step(140, 50)` is fifty frames at
 ~7fps, deterministically, and in vitest the harness's `tick(steps, deltaMs)` does the same thing.
 
-That covers bugs in our own maths, which is all of them so far. If you ever need a genuinely slow
-_machine_ — a bug in Phaser's own timing, or in the browser's — the old recipe still stands: copy
-`scripts/smoke.mjs` into `scripts/` under another name (it has to stay in that directory so
-`playwright` resolves), throttle the CPU after the page is created, and run it with `node`. Delete
-the copy when you're done.
+That covers bugs in our own maths, which is all of them so far — and it is only half of what a
+cheap phone is. The other half is a machine that cannot draw a frame in time, and **smoke's 3D
+section throttles itself for it**: `Emulation.setCPUThrottlingRate` at `rate: 8` while the crank is
+turned at 140ms. Keep the two straight, because they fail differently. The delta is the
+simulation's question and is arithmetic — `arriveRadius`, the substep cap, the exit margin — so it
+is unit-testable and mostly unit-tested. The throttle is the renderer's, and is not testable
+anywhere else: whether a real press and release still read as a tap when the only clock between
+them is a slow device's (`TAP_MAX_MS` is wall clock, and wall clock is exactly what a slow device
+inflates), and whether the camera a ray is cast through has been moved this frame.
+
+Reach for the recipe directly only for something smoke's 3D page does not cover:
 
 ```js
 const client = await page.context().newCDPSession(page);
@@ -269,9 +288,19 @@ optional. In 2D, `ZoneScene.applyCameraZoom` shrinks the world camera's viewport
 changing what it shows — so the same requirement is held by how the camera is _framed_
 (`render3d/camera.ts`: pitch, distance, and a look point aimed short of the player, because ground
 nearer the camera spreads over more pixels than ground further away). Both are measured at real
-phone sizes, in `tests/render3d/camera.test.ts` and twice in `npm run smoke`. If you add bottom
+phone sizes, in `tests/render3d/camera.test.ts` and repeatedly in `npm run smoke`. If you add bottom
 furniture, reserve its height in `layout.ts` rather than hoping nothing important lands in the last
 sixty pixels.
+
+**In landscape the rule is about approaching, not about standing still.** Both cameras frame their
+tile budget across the viewport's _smaller_ axis, so a landscape phone spends it on depth: the south
+signpost is eight tiles behind a player on the town spawn point and is simply out of frame there, in
+either renderer. In 3D that resolves itself — the camera follows all the way to the map edge, so
+walking toward the signpost lifts it up the screen and it clears the bar about four tiles out, which
+is what smoke measures. In 2D it does not: that camera clamps to the world bounds, so near the edge
+it stops scrolling and the signpost sits at a fixed y below the viewport at _every_ distance. **The
+south exit of town is unreachable on a landscape phone in 2D**, which is a real bug in the renderer
+being deleted rather than a reason to change the 3D framing.
 
 **There are two channels out of the simulation, and they are not interchangeable.**
 

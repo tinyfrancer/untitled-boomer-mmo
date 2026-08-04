@@ -28,7 +28,9 @@
   what the camera ends up behind fades. See the retrospective under PR 16 below.
 - **PR 17 merged** — damage numbers float, a ring marks the target, a bolt flies and a corpse falls
   over. **Phase 3 is done.** See the retrospective under PR 17 below.
-- **Next: PR 18** — 3D smoke parity, including a CPU-throttled run.
+- **PR 18 merged** — smoke's 3D half is a peer of its 2D half, by finger as well as by mouse, and
+  runs a pass at 7fps on a CPU throttled eight times down. See the retrospective under PR 18 below.
+- **Next: PR 19** — flip the default to 3D.
 
 ## Context
 
@@ -795,9 +797,56 @@ _Verify:_ visual pass plus smoke's existing ability and kill checks in 3D.
 
 ## Phase 4 — cutover
 
+### PR 18 — 3D smoke parity — done, merged
+
+What landed that this document did not predict, and that PR 19 onwards inherits:
+
+- **"Parity" is not the renderer-specific checks; it is the host duties.** The 3D section already
+  covered everything only a GPU can show. What it had no cover for at all was the half of
+  `ThreeHost` that merely _repeats_ `ZoneScene` — `bindKeyboard`, `bindUnloadPersist`, the
+  `ResizeObserver`, the HUD's event bus. Each is shared, unit-tested code reached from a second call
+  site, and a host that forgot one ships a game that plays perfectly with a mouse and ignores every
+  key, or loses the save on the tab closing. That is the shape of every gap this PR filled; none of
+  them needed a new handle.
+- **The throttle and the delta are two different questions, and the plan conflated them.** "This is
+  where PR 5's slow-frame collision work actually gets validated" is not quite right: under
+  `?loop=manual` the simulation's delta is ours to choose and has nothing to do with how fast the
+  machine is, so the collision maths is validated by `view.step(140, n)` and is unit-testable
+  besides. What the CPU throttle uniquely buys is the _renderer's_ half — and the sharpest thing in
+  it is that **`TAP_MAX_MS` is wall clock**, which is precisely what a slow device inflates. A
+  gesture limit a cheap phone cannot meet is a phone on which nothing can be tapped at all. It holds
+  at `rate: 8`, but nothing before this PR could have said so.
+- **A mouse cannot break either phone-only rule.** Every drag in the 3D section was a mouse, and a
+  mouse never pans the page (so `touch-action: none` was untested) and is never a thumb resting on
+  the screen. Touch goes through CDP `Input.dispatchTouchEvent` — Playwright's touchscreen taps but
+  cannot drag — and Chromium synthesises the pointer events the host is written against, so it is
+  the real path rather than a simulation of one.
+- **W meaning up the screen had no browser cover, and it is the one thing here a state assertion
+  cannot call a bug.** `InputState.setViewYaw` is unit-tested and the 2D host never calls it, so
+  nothing outside the 3D page can see it at all; the failure is a character walking off at an angle
+  to the key that was pressed. Asserted as what a player sees — the ground they left slides _down_
+  the screen — plus the proof the heading is not simply north.
+- **The landscape camera was the real find, and the bug is in the 2D renderer.** Both cameras frame
+  their tile budget across the viewport's smaller axis, so landscape spends it on depth and the
+  south signpost is out of frame from the town spawn point in _both_. In 3D that resolves itself:
+  the camera follows to the map edge, so approaching lifts the signpost up the screen and it clears
+  the bar around four tiles out. In 2D it never resolves — that camera clamps to the world bounds,
+  stops scrolling near the edge, and pins the signpost at y=444 on a 390px-tall viewport at every
+  distance. **The south exit of town cannot be reached on a landscape phone in 2D.** Left unfixed on
+  purpose: it argues for PR 19 rather than for changing the 3D framing, and PR 20 deletes the
+  renderer it is in. The "3D camera does not clamp to the world bounds" note under PR 13 was filed
+  as a cost; this is the first time it has been the better behaviour.
+- **The whole 3D section runs on a `hasTouch` context now**, which changed nothing about the mouse
+  checks already there and is what `page3d.touchscreen` needs.
+
+<details>
+<summary>Original PR 18 specification, kept for the record</summary>
+
 **PR 18 — 3D smoke parity**, including a CPU-throttled `rate: 8` run. A WebGL scene costs more per
 frame than a tilemap, so this is where PR 5's slow-frame collision work actually gets validated.
 _Verify:_ full smoke green in `?renderer=3d` at ~7fps.
+
+</details>
 
 **PR 19 — Flip the default.** 2D reachable via `?renderer=2d`.
 _Verify:_ CI green on the flipped default; Vercel preview checked on a real phone.
