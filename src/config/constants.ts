@@ -3,13 +3,10 @@ export const TILE_SIZE = 64;
 export const WORLD_WIDTH_TILES = 25;
 export const WORLD_HEIGHT_TILES = 19;
 
-export const GAME_WIDTH = WORLD_WIDTH_TILES * TILE_SIZE;
-export const GAME_HEIGHT = WORLD_HEIGHT_TILES * TILE_SIZE;
-
 /**
  * Half the player's collision box, which is one tile square. Named rather than
- * measured off the sprite's texture, because that texture is on the way out
- * with the 2D renderer while the collision box is not.
+ * measured off anything drawn: the renderer decides how tall a figure looks,
+ * and the simulation may not inherit that decision.
  */
 export const PLAYER_HALF_EXTENT = TILE_SIZE / 2;
 

@@ -7,9 +7,10 @@ import type { EventBus } from './world/worldEvents';
 /**
  * Whatever is going to draw the world, as little of it as the boot flow needs.
  *
- * Two renderers answer this today: the Phaser scene manager and the Three.js
- * host. Neither appears here, which is what lets one boot flow serve both —
- * and it is why this file sits beside `main.ts` rather than in `scenes/`.
+ * One renderer answers it today. The interface is what let two of them answer
+ * it during the port without either appearing here, and it is what a second
+ * one would need again — so it stays beside `main.ts` rather than inside the
+ * renderer.
  */
 export interface GameHost {
   /** The HUD channel: what the world emits on and the HUD listens to. */

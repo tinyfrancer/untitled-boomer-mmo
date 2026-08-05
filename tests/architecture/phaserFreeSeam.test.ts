@@ -1,44 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-// The engine-agnostic half of src/. The rule is documented in CLAUDE.md and
-// held by discipline everywhere else: a stray `import Phaser` here typechecks,
-// lints and passes CI, and only surfaces later as a unit suite that needs a
-// game engine to run.
+// Phaser is gone. This used to guard the eight directories that were allowed to
+// stay engine-free while `scenes/` and `entities/` drew the game; with the 2D
+// renderer deleted the rule is simply the whole of `src/`, which is both
+// stronger and one thing to remember instead of a list to keep in step.
 //
-// `render3d` is the one member that is not engine-*free* — it is the Three.js
-// renderer. It is guarded for the other half of the same rule: the two
-// renderers must not reach into each other, or deleting Phaser in PR 20 stops
-// being a deletion.
-const PHASER_FREE_DIRS = [
-  'systems',
-  'data',
-  'persistence',
-  'types',
-  'config',
-  'world',
-  'hud',
-  'ui',
-  'render3d',
-];
-
 // Read as text rather than imported, so a violation is reported rather than
-// pulling Phaser into the test run. The patterns have to be literals, so they
-// repeat PHASER_FREE_DIRS — the per-directory count check below is what keeps
-// the two in step.
-const SOURCES: Record<string, string> = import.meta.glob(
-  [
-    '../../src/systems/**/*.ts',
-    '../../src/data/**/*.ts',
-    '../../src/persistence/**/*.ts',
-    '../../src/types/**/*.ts',
-    '../../src/config/**/*.ts',
-    '../../src/world/**/*.ts',
-    '../../src/hud/**/*.ts',
-    '../../src/ui/**/*.ts',
-    '../../src/render3d/**/*.ts',
-  ],
-  { query: '?raw', import: 'default', eager: true },
-);
+// pulling an engine into the test run.
+const SOURCES: Record<string, string> = import.meta.glob('../../src/**/*.ts', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
 
 // `from 'x'`, `import 'x'`, `import('x')` and `require('x')` in one pass.
 const MODULE_SPECIFIER = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*['"]([^'"]+)['"]/g;
@@ -49,19 +22,35 @@ function importsPhaser(source: string): boolean {
   );
 }
 
-describe('the Phaser-free seam', () => {
-  it('has modules to guard in every directory it claims', () => {
-    PHASER_FREE_DIRS.forEach((dir) => {
-      const found = Object.keys(SOURCES).filter((path) => path.includes(`/src/${dir}/`));
-      expect(found.length, `no .ts files found under src/${dir}`).toBeGreaterThan(0);
-    });
+const MANIFEST: Record<string, string> = import.meta.glob('../../package.json', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+
+describe('the engine seam', () => {
+  it('has source to guard', () => {
+    expect(Object.keys(SOURCES).length).toBeGreaterThan(50);
   });
 
-  it('imports Phaser nowhere', () => {
+  it('imports Phaser nowhere in src/', () => {
     const offenders = Object.entries(SOURCES)
       .filter(([, source]) => importsPhaser(source))
       .map(([path]) => path);
     expect(offenders).toEqual([]);
+  });
+
+  // An import the bundler can no longer resolve fails the build loudly; a
+  // dependency nothing imports just sits in the lockfile costing install time
+  // forever, which is the quieter half of the same deletion.
+  it('does not depend on Phaser', () => {
+    const manifest = JSON.parse(Object.values(MANIFEST)[0]) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    expect(Object.keys({ ...manifest.dependencies, ...manifest.devDependencies })).not.toContain(
+      'phaser',
+    );
   });
 });
 

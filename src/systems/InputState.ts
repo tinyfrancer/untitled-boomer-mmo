@@ -24,9 +24,8 @@ const ACTION_KEYS: Record<string, InputAction> = {
 const STILL: MoveVector = { x: 0, y: 0 };
 
 /**
- * Keyboard intent with no engine attached. The same held-key set feeds the
- * Phaser player today and the raw game loop after the port, which is why it is
- * fed key codes rather than events.
+ * Keyboard intent with no engine attached, which is why it is fed key codes
+ * rather than events: the host binds the listeners and this owns the meaning.
  */
 export class InputState {
   private readonly held = new Set<string>();
@@ -36,14 +35,14 @@ export class InputState {
   /**
    * Which way the view has "away from the camera" pointing, in the same radians
    * `frameCamera` stands the camera at: zero is looking north, which is where
-   * the 2D renderer is nailed and where the 3D one starts.
+   * it starts before anything drags it.
    *
    * W is up the screen, not north — that is what a player means by it, and the
    * two stopped being the same thing the moment the camera could be dragged
    * round. The rotation is applied here rather than in the view because the
    * world reads the vector straight off this object, and a renderer-shaped
-   * detour through `ZoneWorld` would be a Phaser-free module learning that
-   * there is more than one renderer.
+   * detour through `ZoneWorld` would be the simulation learning that a camera
+   * exists.
    */
   setViewYaw(yaw: number): void {
     this.viewYaw = yaw;

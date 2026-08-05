@@ -48,9 +48,9 @@ export type WorldEvent =
   | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number };
 
 /**
- * The HUD channel, as much of an emitter as ZoneWorld needs. Phaser's global
- * `game.events` satisfies it structurally, and so does a bare stub in a test —
- * which is the point: nothing here knows what is on the other end.
+ * The HUD channel, as much of an emitter as ZoneWorld needs. `createEventBus`
+ * satisfies it, and so does a bare stub in a test — which is the point:
+ * nothing here knows what is on the other end.
  */
 export interface EventBus {
   emit(event: string, ...args: unknown[]): unknown;

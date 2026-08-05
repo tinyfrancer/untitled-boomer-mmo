@@ -288,8 +288,8 @@ export class ZoneView3D {
    *
    * The one piece of hit testing that has to live in a view: what a screen
    * pixel is over is a question about the camera and what is drawn, not about
-   * the game. `ZoneScene.resolveTap` is the same method over Phaser's hit test,
-   * down to the order it tries things in.
+   * the game. The order it tries things in is the 2D renderer's, which picked
+   * against a hit test rather than a ray but had to answer the same question.
    */
   resolveTap(x: number, y: number): WorldTap | null {
     const { width, height } = this.viewport();

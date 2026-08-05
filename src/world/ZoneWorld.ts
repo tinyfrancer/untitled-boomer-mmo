@@ -202,9 +202,9 @@ export interface ParkedAfkResult {
  * is drawing — the frame's `WorldEvent[]` is everything a view has to be told.
  *
  * It deliberately does **not** load zones. Walking onto an exit emits
- * `zone-exit` and stops the world; building the next one is the host's job,
- * because tearing this one down is too (a Phaser scene restart today, a pile of
- * `.dispose()` calls after the port).
+ * `zone-exit` and stops the world; building the next one is the `GameContext`'s
+ * job, because tearing this one down is too — a pile of `.dispose()` calls the
+ * simulation has no business knowing about.
  */
 export class ZoneWorld {
   readonly zone: ZoneDefinition;

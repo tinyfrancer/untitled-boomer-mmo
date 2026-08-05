@@ -31,10 +31,10 @@ const STRIDE_PERIOD_MS = 500;
 /**
  * What draws a person: the player, the shopkeeper, a bandit.
  *
- * Built from `stickFigure()` — the same rig the sprite texture is baked from
- * and the character sheet's paperdoll is drawn from — so a shoulder is in the
- * same place in all three. The rig measures down from the top of a texture box
- * and a mesh stands up from the ground, which is the only conversion here.
+ * Built from `stickFigure()` — the same rig the character sheet's paperdoll is
+ * drawn from — so a shoulder is in the same place in both. The rig measures
+ * down from the top of a box and a mesh stands up from the ground, which is the
+ * only conversion here.
  */
 export interface Figure {
   readonly object: Group;

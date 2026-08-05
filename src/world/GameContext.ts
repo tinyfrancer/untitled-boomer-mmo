@@ -50,10 +50,9 @@ export interface GameContextOptions {
  * only thing that builds or tears down a world.
  *
  * This is what a scene restart used to do implicitly. Making it explicit is the
- * point: Phaser destroyed a scene's display list for free, and Three.js will
- * leak GPU memory for every geometry, material and texture nobody calls
- * `.dispose()` on. A zone walk is exactly the loop that finds such a leak, so
- * the seam it goes through has to be a named one before the renderer arrives.
+ * point: the renderer leaks GPU memory for every geometry, material and texture
+ * nobody calls `.dispose()` on, and a zone walk is exactly the loop that finds
+ * such a leak. The seam it goes through has to be a named one.
  */
 export class GameContext {
   readonly character: CharacterController;

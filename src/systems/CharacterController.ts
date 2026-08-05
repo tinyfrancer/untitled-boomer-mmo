@@ -74,7 +74,7 @@ export type QuestTurnIn =
 
 /**
  * The one place CharacterState gets mutated during play. Scenes call these and
- * render/emit from the results; the state math itself stays Phaser-free and
+ * render/emit from the results; the state math itself stays engine-free and
  * testable. Holds the same object the registry and save service see, so a
  * mutation here is what gets persisted.
  */

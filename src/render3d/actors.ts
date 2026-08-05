@@ -45,7 +45,7 @@ const TOPPLE_RADIANS = Math.PI / 2;
 const TOPPLE_FRACTION = 0.6;
 
 /**
- * What draws one simulated thing — the 3D half of `entities/*Sprite`.
+ * What draws one simulated thing: an actor per `world/` object.
  *
  * Every actor is the same three layers: an outer group that holds the world
  * position, a facing group that holds the yaw, and whatever hangs above it. The
