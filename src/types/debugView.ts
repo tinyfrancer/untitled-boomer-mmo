@@ -2,11 +2,13 @@
  * What a renderer publishes on `window.view` for the devtools console and the
  * browser smoke check.
  *
- * `window.world` already answers everything about the simulation. This is the
- * short list of questions only whatever is drawing can answer — where a world
- * point lands on screen, how many things are currently drawn — plus the hand
- * crank that steps the game under `?loop=manual`. A check written against this
- * survives the move to Three.js; one written against `cameras.main` does not.
+ * `window.world` already answers everything about the simulation and
+ * `window.events` is the HUD's channel. This is the short list of questions
+ * only whatever is drawing can answer — where a world point lands on screen,
+ * how many things are currently drawn — plus the hand crank that steps the game
+ * under `?loop=manual`. Keeping it this small and this renderer-agnostic is
+ * what let the renderer be replaced underneath the smoke check rather than
+ * alongside it; a check written against `cameras.main` would not have survived.
  */
 export interface DebugView {
   /** Where a simulation point lands on screen, in CSS pixels. */
@@ -26,12 +28,11 @@ export interface DebugView {
   /** The player's figure, as opposed to the simulation: its walk cycle. */
   playerFigure(): { walking: boolean; pose: string };
   /**
-   * What the renderer is holding on the GPU, for a renderer that has one.
-   * Absent in 2D, where a forgotten object costs a stray label rather than
-   * memory the card never gets back — which is the whole reason the Three.js
-   * view has to answer it.
+   * What the renderer is holding on the GPU. An object nobody disposed is
+   * invisible to every state assertion and to the screen: it is memory the card
+   * never gets back, and this is the only thing that can see it.
    */
-  gpuMemory?(): { geometries: number; textures: number };
+  gpuMemory(): { geometries: number; textures: number };
 }
 
 export interface DrawnCounts {

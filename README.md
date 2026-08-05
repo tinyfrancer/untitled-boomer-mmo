@@ -8,10 +8,10 @@ character creation, leveling, gear, and local save/load. See
 ## Stack
 
 TypeScript + [Three.js](https://threejs.org/), bundled with [Vite](https://vite.dev/). The
-game was originally 2D on [Phaser 4](https://phaser.io/), which is still reachable at
-`?renderer=2d` until it is deleted. No backend yet — character data is saved to the browser's
-`localStorage` behind a `SaveService` interface, so a networked backend can be swapped
-in later without touching game logic.
+game was originally 2D on [Phaser 4](https://phaser.io/); `docs/3d_port_plan.md` is the record of
+moving it. No backend yet — character data is saved to the browser's `localStorage` behind a
+`SaveService` interface, so a networked backend can be swapped in later without touching game
+logic.
 
 ## Setup
 
@@ -53,15 +53,16 @@ Progress (level, XP, class, gear) autosaves to your browser and persists across 
 
 ```
 src/
-  scenes/       Phaser scenes (Boot, Preload, CharacterCreate, Town, UI)
-  entities/     Player, Mob/Rat — Phaser game objects
-  systems/      Combat/leveling logic — plain TypeScript, no Phaser imports, unit-tested
-  data/         Class stats, items, xp table, town tilemap layout
+  world/        The simulation — ZoneWorld, Player, Mob, the session
+  render3d/     The Three.js renderer — the only code that knows there is an engine
+  systems/      Combat/leveling/movement logic — plain TypeScript, unit-tested
+  data/         Class stats, items, enemies, zones, xp table, tilemap layouts
   persistence/  CharacterState shape + SaveService (localStorage-backed for now)
-  ui/           HUD components (target frame, virtual joystick)
-tests/          Vitest specs mirroring systems/ and persistence/
+  hud/          The HTML overlay: tab bar, sheets, panels
+  ui/           Layout, theme and event vocabulary the HUD is built from
+tests/          Vitest specs mirroring world/, systems/ and persistence/
 ```
 
-`systems/`, `data/`, and `persistence/` are deliberately Phaser-free, which is what
-makes them unit-testable and is the same seam that will let a real backend swap in
-later.
+Everything but `render3d/` is engine-free, which is what makes it unit-testable, is the
+same seam that will let a real backend swap in later, and is what let a whole renderer
+be replaced without rewriting the game.

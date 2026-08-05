@@ -1,6 +1,6 @@
 # Port plan: 2D Phaser → 3D Three.js
 
-**Status:** in progress. Written 2026-07-28 against `03a1c45`.
+**Status:** done. Written 2026-07-28 against `03a1c45`, finished 2026-08-05.
 
 - **Phase 0 (PRs 1-3) merged** 2026-07-29.
 - **Phase 1 PRs 4-6 merged** 2026-07-29, as one stack. Arcade physics is gone: `main.ts` has no
@@ -32,7 +32,7 @@
   runs a pass at 7fps on a CPU throttled eight times down. See the retrospective under PR 18 below.
 - **PR 19 merged** — Three.js is what a plain URL boots and Phaser is behind `?renderer=2d`. See
   the retrospective under PR 19 below.
-- **Next: PR 20** — delete Phaser.
+- **PR 20 merged** — Phaser is gone. **The port is done.** See the retrospective under PR 20 below.
 
 ## Context
 
@@ -880,7 +880,49 @@ What landed that this document did not predict, and that PR 20 inherits:
 _Original spec:_ flip the default; 2D reachable via `?renderer=2d`.
 _Verify:_ CI green on the flipped default; Vercel preview checked on a real phone.
 
-**PR 20 — Delete Phaser.** The `ZoneScene` view, entity base classes, `generateTextures.ts`, the
+### PR 20 — Delete Phaser — done, merged
+
+What landed that this document did not predict:
+
+- **The bundle does not drop, because PR 19 already spent that win.** The verify line asked for a
+  smaller bundle and the entry chunk is unchanged: a default page fetched 670 kB across three
+  chunks before and fetches 668 kB as one now, because the dynamic import in `main.ts` already
+  meant Phaser was never on the wire. What actually drops is everything either side of the wire —
+  `dist/` loses the 1,394 kB chunk nobody was fetching, `node_modules` loses 96 MB, and the dev
+  server has one engine to cold-compile instead of two. The right way to have written that line
+  was "install and build cost drops"; the download was PR 19's.
+- **Smoke was the deletion, not the renderer.** Deleting `scenes/` and `entities/` is an
+  afternoon — nothing imported them but `main.ts`, which the seam guard had been enforcing for
+  twenty PRs. The work was that smoke ran the whole check twice and only _most_ of the 2D half had
+  a peer in the 3D one. The HUD is what did not: the tab bar's exclusivity, the log's cap, the
+  bag's scrolling and clipping, the gear picker, the feats sheet and the worn title, the options
+  modal's armed confirm, and the offline camping payout. All of it renderer-independent, all of it
+  written against the 2D page purely because that page was written first. 106 checks across two
+  pages became 77 on one.
+- **A third dev handle was needed, and it is the one channel that had no handle.** Those HUD
+  checks reached the bus through `window.game.events`, so deleting `window.game` deleted the only
+  way to put two hundred lines in the log or fourteen items in the bag. `window.events` is the
+  replacement and the set is now honest: `window.world` is the simulation, `window.view` is the
+  drawing, `window.events` is the channel between them and the HUD.
+- **The "desktop opens the character sheet" rule cannot be checked by resizing.** The initial sheet
+  is decided at mount from `narrow`, and crossing back to a wide viewport deliberately does not
+  open one (see PR 10 — re-running that check on every rebuild was a bug). So the desktop block
+  reloads into its viewport rather than resizing into it.
+- **One check is deleted rather than ported.** Collision bodies were asserted against the textures
+  generated for them, because nothing in the unit suite could see a generated texture. There are no
+  textures now, and `render3d/creatures.ts` sizes the mesh _from_ `definition.body` — the two can
+  no longer disagree, so the check has nothing left to hold.
+- **Roughly forty comments named something that no longer exists.** `CLAUDE.md` was a per-PR
+  deliverable throughout and the code comments were not, so they accumulated: `ZoneScene owns the
+shop`, "see `entities/PlayerSprite.ts`", "deleted with `generateTextures.ts` in PR 20", and a
+  `worldZoom` that this PR deletes. Past-tense lineage was kept where it explains why something is
+  shaped as it is ("a rule the Phaser HUD arranged by hand, free from CSS here"); a present-tense
+  claim or a pointer at a deleted file was fixed. Worth budgeting for on the next long port.
+- **Two exported functions were dead the moment the renderer was.** `worldZoom` and `scenePxScale`
+  in `ui/theme.ts` had no caller left, and `noUnusedLocals` does not catch an export. Nothing in CI
+  would have said so.
+
+_Original spec:_ delete the `ZoneScene` view, the entity base classes, `generateTextures.ts`, the
 `main.ts` config, and the dependency itself.
 _Verify:_ bundle size drops; extend PR 1's guard test to forbid `phaser` repo-wide.
 

@@ -62,14 +62,14 @@ back the world, the character, the keyboard and a `tick`/`until` pair measured i
 milliseconds. That is the first place to add cover for anything the game _does_.
 
 `scripts/smoke.mjs` (Playwright + headless Chromium) covers the other half and deliberately
-nothing else: scenes booting and the flows that cross between them, real mouse and key events
-reaching the game, the view building and _unbuilding_ itself, the HUD's geometry at real viewport
-sizes, and the save round trip through an actual page reload. Reach for it whenever a change
-touches a scene, a sprite or the HUD. Screenshots land in gitignored `.smoke/`.
+nothing else: the game booting and the flows that cross between zones, real mouse, touch and key
+events reaching the game, the view building and _unbuilding_ itself, the HUD's geometry at real
+viewport sizes, and the save round trip through an actual page reload. Reach for it whenever a
+change touches the renderer, an actor or the HUD. Screenshots land in gitignored `.smoke/`.
 
-**Its second half is the whole check again on a default page — which is the 3D one — while its
-first half asks for `?renderer=2d`**, because the two hosts are peers until Phaser is deleted and a
-duty either host forgot is invisible to the other's coverage. Four things there exist nowhere else:
+It runs on a **portrait phone in a touch-capable context**, which is what the game is laid out
+for; two sections leave that viewport on purpose and say why (a landscape resize, and a desktop
+block for the HUD rules that differ on a roomy screen). Four things in it exist nowhere else:
 
 - **The GPU teardown.** Three zone round trips have to leave `renderer.info.memory` where they
   found it. That number counts what has actually been _uploaded_, which is why both snapshots are
@@ -85,34 +85,27 @@ duty either host forgot is invisible to the other's coverage. Four things there 
 - **A CPU-throttled pass at `rate: 8`, cranked at 140ms a frame** — see "Reproducing a
   frame-rate-dependent bug" below for why that is two questions rather than one.
 
-It reaches the game through two dev-only handles, neither of which mentions Phaser:
+It reaches the game through three dev-only handles, one per channel:
 
-- **`window.world`** — the live `ZoneWorld`, set by whichever host is running and re-set on every
-  zone change since each builds a new world: `world.mobs`, `world.player.hp`, `world.teleport(x, y)`.
+- **`window.world`** — the live `ZoneWorld`, re-set on every zone change since each builds a new
+  world: `world.mobs`, `world.player.hp`, `world.teleport(x, y)`.
 - **`window.view`** — the handful of questions only whatever is drawing can answer:
-  `worldToScreen(x, y)`, `drawnCounts()`, `playerFigure()`, `step()` and — for a renderer with a GPU
-  to leak — `gpuMemory()`. The interface is `src/types/debugView.ts` and **both** renderers implement
-  it, which is what keeps most of smoke portable across the swap.
+  `worldToScreen(x, y)`, `drawnCounts()`, `playerFigure()`, `gpuMemory()` and `step()`. The
+  interface is `src/types/debugView.ts`, and it is deliberately a small renderer-agnostic one —
+  that is what let the renderer be replaced under smoke rather than alongside it.
+- **`window.events`** — the HUD channel, which is neither of the other two. It is how a check
+  reaches a panel whose state has no cheap route through the world: two hundred combat-log lines,
+  or a bag filled to the brim to scroll.
 
-`window.game` (the `Phaser.Game` instance, from `src/scenes/phaserGame.ts`) is still there for the
-generated textures, and exists **only in 2D** — a default page never imports Phaser at all, which
-smoke asserts. The HUD needs no handle at all — smoke queries and clicks its real elements,
-which is what a user does. All three handles sit behind an `import.meta.env.DEV` guard, so Vite
-strips them from production builds. They are also how you inspect live state from the devtools
-console.
+Nothing else is exposed. The HUD needs no handle — smoke queries and clicks its real elements,
+which is what a user does. All three sit behind an `import.meta.env.DEV` guard, so Vite strips
+them from production builds. They are also how you inspect live state from the devtools console.
 
-**Three.js is what a plain URL boots, and `?renderer=2d` is the way back to Phaser**
-(`src/config/flags.ts`, parsed in `main.ts`, which dynamically imports one half or the other so only
-the chosen engine is downloaded). Only the exact string `2d` reaches for Phaser; anything else,
-including a missing flag, is 3D. Unlike the debug handles the flag is **readable in production**:
-merging publishes to Vercel, and comparing the two renderers means opening a preview URL on a real
-phone. It disappears with the renderer it exists for.
-
-**`?loop=manual` puts the simulation on a hand crank.** Under that flag the host — `ZoneScene.update`
-in 2D, the rAF loop in `render3d/start3d.ts` — stops stepping the game and
-`window.view.step(deltaMs, frames)` does it instead; the frame loop still draws and still reads the
-mouse. Smoke always runs this way, which is why every wait in it is a number of _game_ milliseconds
-and a loaded CI runner makes it slower rather than flakier.
+**`?loop=manual` puts the simulation on a hand crank.** Under that flag the rAF loop in
+`render3d/start3d.ts` stops stepping the game and `window.view.step(deltaMs, frames)` does it
+instead; the frame loop still draws and still reads the mouse. Smoke always runs this way, which is
+why every wait in it is a number of _game_ milliseconds and a loaded CI runner makes it slower
+rather than flakier.
 
 Two environment notes that will otherwise waste your time:
 
@@ -120,9 +113,9 @@ Two environment notes that will otherwise waste your time:
   global that vitest's jsdom environment leaves as an unusable stub, which broke every
   persistence test with `localStorage.clear is not a function`. Don't delete that setup file, and
   don't "fix" `LocalStorageSaveService` to work around it — the source was never the problem.
-- **The first `npm run dev` request for a renderer cold-compiles that whole engine** — ~1.2 MB of
-  Phaser on a `?renderer=2d` page, ~520 kB of Three.js on a default one — and can take far longer
-  than a normal page load, so browser waits need generous timeouts on a cold cache.
+- **The first `npm run dev` request cold-compiles the whole engine** — ~520 kB of Three.js — and
+  can take far longer than a normal page load, so browser waits need generous timeouts on a cold
+  cache.
 
 **Reproducing a frame-rate-dependent bug.** A cheap phone steps the game at single-digit fps and
 bugs hide there (see "Frame rate is not an assumption you may make" below). Ask for the frame you
@@ -130,7 +123,7 @@ want rather than throttling a machine into producing it: `view.step(140, 50)` is
 ~7fps, deterministically, and in vitest the harness's `tick(steps, deltaMs)` does the same thing.
 
 That covers bugs in our own maths, which is all of them so far — and it is only half of what a
-cheap phone is. The other half is a machine that cannot draw a frame in time, and **smoke's 3D
+cheap phone is. The other half is a machine that cannot draw a frame in time, and **smoke's last
 section throttles itself for it**: `Emulation.setCPUThrottlingRate` at `rate: 8` while the crank is
 turned at 140ms. Keep the two straight, because they fail differently. The delta is the
 simulation's question and is arithmetic — `arriveRadius`, the substep cap, the exit margin — so it
@@ -139,7 +132,7 @@ anywhere else: whether a real press and release still read as a tap when the onl
 them is a slow device's (`TAP_MAX_MS` is wall clock, and wall clock is exactly what a slow device
 inflates), and whether the camera a ray is cast through has been moved this frame.
 
-Reach for the recipe directly only for something smoke's 3D page does not cover:
+Reach for the recipe directly only for something smoke does not cover:
 
 ```js
 const client = await page.context().newCDPSession(page);
@@ -148,93 +141,85 @@ await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
 
 ## Architecture
 
-**Stack**: TypeScript bundled with Vite, with two renderers over one simulation: Three.js
-(`src/render3d/`, the default since PR 19 of `docs/3d_port_plan.md`) and Phaser 4 (2D, left behind
-`?renderer=2d` until PR 20 deletes it). No backend — everything is a static site. Character data
-lives in the browser's `localStorage`.
+**Stack**: TypeScript bundled with Vite, rendered in 3D with Three.js (`src/render3d/`). It was
+Phaser 4 in 2D until PR 20 of `docs/3d_port_plan.md` deleted that renderer; the port is done and
+`main` has one engine. No backend — everything is a static site. Character data lives in the
+browser's `localStorage`.
 
-**The core seam: Phaser-free vs. Phaser-coupled code.** `systems/`, `data/`, `persistence/`,
-`types/`, `config/`, `world/`, `hud/` and `ui/` contain plain TypeScript with no Phaser imports.
-Only `scenes/` and `entities/` know the engine exists at all — `main.ts` picks a renderer without
-importing either, and `src/bootFlow.ts` (resume the save, or ask who the player wants to be) takes a
-`GameHost` rather than a `Phaser.Game`, which is what lets one boot flow serve both. This is
-deliberate — it's what makes them unit-testable with Vitest (no game engine to mock) and is the
-same boundary that would let a real backend swap in later without touching game logic. When adding
-game logic, default to putting the math/rules in one of these Phaser-free modules and call it from a
-scene, rather than inlining logic into a Scene or a Phaser.GameObjects subclass. Tests in `tests/`
-mirror this split (`tests/systems/`, `tests/world/`, `tests/persistence/`) and test only these
-modules. The rule is enforced, not just documented:
-`tests/architecture/phaserFreeSeam.test.ts` reads every file under those eight directories and fails
-on an `import` of `phaser`. `render3d/` is guarded by the same test for the other half of the rule:
-it is not engine-_free_, but the two renderers must not reach into each other, or deleting Phaser at
-the end of the port stops being a deletion.
+**The core seam: `render3d/` knows there is an engine and nothing else does.** `systems/`, `data/`,
+`persistence/`, `types/`, `config/`, `world/`, `hud/` and `ui/` are plain TypeScript that would run
+under any renderer or none, and `src/bootFlow.ts` (resume the save, or ask who the player wants to
+be) takes a `GameHost` rather than anything the engine defines. This is deliberate — it is what
+makes them unit-testable with Vitest (no game engine to mock), it is the same boundary that would
+let a real backend swap in later without touching game logic, and it is the boundary a whole
+renderer was in fact swapped across. When adding game logic, default to putting the math/rules in
+one of those modules and calling it from the view, rather than inlining logic into an actor. Tests
+in `tests/` mirror the split (`tests/systems/`, `tests/world/`, `tests/persistence/`).
+`tests/architecture/phaserFreeSeam.test.ts` is what is left of the guard that held it during the
+port: it now reads every file under `src/` and fails on an `import` of `phaser`, and fails again if
+the dependency reappears in `package.json`.
 
-**The simulation is `src/world/`; `src/entities/` only draws it.** `ZoneWorld` owns the player, the
+**The simulation is `src/world/`; `src/render3d/` only draws it.** `ZoneWorld` owns the player, the
 mobs, the nodes and every rule that moves them — combat both ways, gathering, the shop, abilities,
 the AFK camp, what a corpse is worth — and steps it all from `update(deltaMs)`. `world/Player.ts`,
 `world/Mob.ts`, `world/ResourceNode.ts` and `world/Campfire.ts` are the simulated things; the
-`*Sprite` classes in `entities/` hold a reference to one and catch up to it in `sync()` once a
-frame. New gameplay goes in the world, not the scene. Two consequences worth knowing before you
+actor classes in `render3d/actors.ts` hold a reference to one and catch up to it in `sync()` once a
+frame. New gameplay goes in the world, not the view. Two consequences worth knowing before you
 add to it:
 
-- **Nothing in `world/` may own a Phaser timer or tween.** Mob wandering, the death fade and the
+- **Nothing in `world/` may own an engine timer or tween.** Mob wandering, the death fade and the
   respawn were three `scene.time` calls; they are accumulators counted down against the frame delta
   now, which is what lets a whole zone run in vitest with nothing rendering it. A view may still
-  tween — `MobSprite` reads `mob.deadForMs` and fades against it — but the clock that decides
+  animate — `MobActor` reads `mob.deadForMs` and topples against it — but the clock that decides
   anything has to be the world's.
 - **Collision bodies are data** (`EnemyDefinition.body`, `ResourceNodeDefinition.body`), not
-  measurements off a sprite, for the same reason `PLAYER_HALF_EXTENT` is: the placeholder textures
-  go away with the 2D renderer and the boxes do not. `npm run smoke` asserts the two still agree,
-  because nothing in the unit suite can see a generated texture.
+  measurements off anything drawn, for the same reason `PLAYER_HALF_EXTENT` is: how big a rat looks
+  is the renderer's decision and how big a rat _is_ is not. `render3d/creatures.ts` sizes the mesh
+  _from_ the data, which is the direction that keeps the two agreeing.
 
-**There are two scenes left, and one of them draws nothing.** `Preload` generates the placeholder
-textures — the one thing before the world that genuinely needs a live Phaser scene, since they are
-baked with `Graphics` — and then hands over to `src/bootFlow.ts`, which is an if-statement: resume
-the save, or mount the plain-HTML creation screen (`hud/CharacterCreate.ts`) and start the session
-with what it produces. `Zone` is the gameplay scene and mounts the DOM HUD alongside itself. Neither
-restarts; a reset stops `Zone` and shows the creation screen again.
+**The boot flow is an if-statement, not a scene graph.** `src/bootFlow.ts` resumes the save, or
+mounts the plain-HTML creation screen (`hud/CharacterCreate.ts`) and starts the session with what
+it produces. Nothing before the world needs a renderer at all, which is why the creation screen can
+be shown before one exists.
 
-**A host is what a renderer owes the boot flow**, and there are two: `phaserHost()` in
-`scenes/phaserGame.ts` and the `ThreeHost` in `render3d/start3d.ts`. A host is an `events` channel
-plus `startZone()`, and beyond that it does what `ZoneScene` does other than draw — the frame loop,
-the keyboard binding, the pointer, mounting the HUD, and the reset that ends a session. New host
-duties belong in both or in neither.
+**A host is what a renderer owes the boot flow**: an `events` channel plus `startZone()`, and
+beyond that everything that has to happen around a zone without drawing it — the frame loop, the
+keyboard binding, the pointer, mounting the HUD, and the reset that ends a session. `ThreeHost` in
+`render3d/start3d.ts` is the only one now, but the split is what let the renderer be replaced under
+the game, so new host duties belong there rather than leaking into the world or the HUD.
 
 **`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
-Phaser-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
+engine-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
 and the autosave accumulator, and it is the **only** thing that builds or tears down a world:
 `update(delta)` steps the current one and answers `{ events, zoneChanged }`, having already loaded
 the next zone when a `zone-exit` or a fatal `death` asked it to. `startGame` / `gameContext()` /
-`endGame` are how the host reaches it; there is no Phaser registry involved, and `CharacterState`
-does not travel through one. Two things follow that are easy to get wrong:
+`endGame` are how the host reaches it, and `CharacterState` never travels through a global.
+Two things follow that are easy to get wrong:
 
-- **A zone change is a view rebuild, not a scene restart.** `ZoneScene` tears its own sprites,
-  labels, tilemap and tweens down and builds them again against the new world. Scene restart used
-  to do that for free, which is why a shopkeeper's name label could be scene-owned and forgotten
-  about; now whatever creates a display object destroys it (see the `destroy()` overrides in
-  `entities/`). `npm run smoke` counts ground layers, signposts and name labels after a round trip,
-  because a leak here is invisible to every state assertion — 10 round trips took the display list
-  from 44 objects to 764 while every unit test stayed green. This is rehearsal for Three.js, where
-  the same omission is a GPU memory leak instead of a stray label.
+- **A zone change is a view rebuild.** `ZoneView3D` tears its own actors, nameplates and ground
+  mesh down and builds them again against the new world; whatever creates something destroys it
+  (`disposeTree` in `render3d/dispose.ts`, which frees geometry, material _and_ any texture hanging
+  off it). `npm run smoke` compares `drawnCounts()` and `renderer.info.memory` across three round
+  trips, because a leak here is invisible to every state assertion and to the screen — it is memory
+  the card never gets back.
 - **Anything the HUD must hear but is not yet mounted for goes in the notification queue**, not an
-  event: `takeNotifications()` is drained once, by `ZoneScene` on the boot that mounts the HUD and
+  event: `takeNotifications()` is drained once, by the host on the boot that mounts the HUD and
   handed straight to it. The offline AFK payout is resolved on the load that finds a parked
   session, which is necessarily before the HUD exists.
 
 **Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
 node spawns, exits), each built into one `ZoneWorld` by the `GameContext` and drawn by the single
-`ZoneScene`; the DOM HUD keeps running across a change untouched. Each exit spawns a
-tappable `ZoneSignpost` (the mobile path — the invisible edge-walk band is untappably thin on
+`ZoneView3D`; the DOM HUD keeps running across a change untouched. Each exit spawns a
+tappable signpost (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
-in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not a
-new scene class.
+in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not new
+view code.
 
-**The HUD is an HTML overlay over the canvas** (`src/hud/`, Phaser-free, no Phaser scene involved).
-`mountHud()` from whichever host booted builds one `<div class="hud">` inside `#app` and it outlives
-every zone, like the session does. The only thing it talks to is the `EventBus` it was handed, which
-is what makes it renderer-independent by construction: that bus is Phaser's `game.events` in 2D and
-`createEventBus()` in 3D, the same tree sits over either canvas unchanged, and nothing drawing the
-world knows it exists.
+**The HUD is an HTML overlay over the canvas** (`src/hud/`, engine-free). `mountHud()` builds one
+`<div class="hud">` inside `#app` and it outlives every zone, like the session does. The only thing
+it talks to is the `EventBus` it was handed (`world/eventBus.ts`), which is what makes it
+renderer-independent by construction: the same tree sat unchanged over both canvases during the
+port, and nothing drawing the world knows it exists.
 
 `Hud.ts` owns the model and the subscriptions; everything else in `hud/` is a piece that draws part
 of it. Char / Bag / Quests / Feats / Log are `Sheet` subclasses and one is open at a time — `Hud`
@@ -242,22 +227,23 @@ holds a single `openSheet`, not a visible flag per panel — while Camp and the 
 that open nothing. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close.
 
-Three rules the Phaser HUD arranged by hand come free from CSS, and are worth not undoing:
+Three rules the old Phaser HUD arranged by hand come free from CSS, and are worth not undoing:
 
 - The overlay is `pointer-events: none` and each piece of furniture opts back in, so a tap on the
   HUD never reaches the world and a tap on the world never has to be hit-tested against the HUD.
 - `overflow: hidden` on a sheet and `auto` on its body is the whole of clipping and scrolling — no
   mask, no hit-area bookkeeping for rows scrolled out of view.
 - A touch drag on a list scrolls it and the browser suppresses the click that would follow, which
-  is the drag-versus-tap threshold the Phaser panels each had their own copy of.
+  is the drag-versus-tap threshold those panels each had their own copy of.
 
-**Layout arithmetic still lives in the Phaser-free `ui/layout.ts`**, applied as inline styles rather
+**Layout arithmetic still lives in the engine-free `ui/layout.ts`**, applied as inline styles rather
 than left to CSS: it is unit-tested at viewport sizes nobody sits down and tries by hand, and
 `worldViewportHeight()` is derived from the same numbers. Put new HUD geometry there. The breakpoint
 keys on **height as well as width**, because a landscape phone (844x390) is wide by any measure and
 has less vertical room than a portrait one. Styling is one stylesheet, `hud/styles.ts`, interpolated
-from `THEME` — which stores fills as `0x` numbers for Phaser and `#` strings for text, so the DOM
-side goes through `cssColor`/`cssRgba` rather than keeping a second copy of the palette. `hud-hidden`
+from `THEME` — which stores fills as `0x` numbers for the renderer's materials and `#` strings for
+text, so the DOM side goes through `cssColor`/`cssRgba` rather than keeping a second copy of the
+palette. `hud-hidden`
 is `display: none !important` on purpose: it is a utility and has to beat whatever display the
 element sets for itself.
 
@@ -266,13 +252,12 @@ element sets for itself.
 names and payloads) are shared, tested, engine-free definitions; everything that builds an element
 lives in `hud/`.
 
-**The paperdoll is SVG built from the same rig the sprite texture is baked from**
-(`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts`, by
-`scenes/generateTextures.ts` and by `render3d/figure.ts`). The HUD does not reach into the renderer
-for a canvas — that is what lets the sheet keep showing what you are wearing once the world is
-meshes. Three things now read that rig, so a shoulder is in the same place in all of them;
-`NPC_APPEARANCES` beside it is the same argument for the two figures nobody is wearing gear for, the
-shopkeeper and the bandit.
+**The paperdoll is SVG built from the same rig the figure in the world is built from**
+(`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by `render3d/figure.ts`).
+The HUD does not reach into the renderer for a canvas, which is what let the sheet keep showing
+what you are wearing when the world became meshes. Both read that rig, so a shoulder is in the same
+place in either; `NPC_APPEARANCES` beside it is the same argument for the two figures nobody is
+wearing gear for, the shopkeeper and the bandit.
 
 **The tab bar is full.** It splits its width evenly across seven tabs (`ui/tabs.ts`), which on a
 375px phone is 44.4px each against a `THEME.touchMin` of 44 — four tenths of a pixel of headroom,
@@ -283,53 +268,47 @@ the rendered `getBoundingClientRect()` at 375px, so this fails the build rather 
 untappable button.
 
 **Nothing in the world may be drawn under the tab bar.** The bar is opaque and above the canvas, so
-it swallows every tap that lands on it: the south signpost in town rendered four pixels inside it on
-a portrait phone and could not be tapped at all. Each renderer holds that differently and neither is
-optional. In 2D, `ZoneScene.applyCameraZoom` shrinks the world camera's viewport to
-`worldViewportHeight()`. In 3D the canvas is full-bleed — a perspective camera cannot shrink without
-changing what it shows — so the same requirement is held by how the camera is _framed_
-(`render3d/camera.ts`: pitch, distance, and a look point aimed short of the player, because ground
-nearer the camera spreads over more pixels than ground further away). Both are measured at real
-phone sizes, in `tests/render3d/camera.test.ts` and repeatedly in `npm run smoke`. If you add bottom
-furniture, reserve its height in `layout.ts` rather than hoping nothing important lands in the last
-sixty pixels.
+it swallows every tap that lands on it: the south signpost in town once rendered four pixels inside
+it on a portrait phone and could not be tapped at all. The canvas is full-bleed and a perspective
+camera cannot shrink without changing what it shows, so the requirement is held by how the camera is
+_framed_ (`render3d/camera.ts`: pitch, distance, and a look point aimed short of the player, because
+ground nearer the camera spreads over more pixels than ground further away). `worldViewportHeight()`
+in `ui/layout.ts` is where the reserved band is decided. It is measured at real phone sizes, in
+`tests/render3d/camera.test.ts` and repeatedly in `npm run smoke`. If you add bottom furniture,
+reserve its height in `layout.ts` rather than hoping nothing important lands in the last sixty
+pixels.
 
-**In landscape the rule is about approaching, not about standing still.** Both cameras frame their
+**In landscape the rule is about approaching, not about standing still.** The camera frames its
 tile budget across the viewport's _smaller_ axis, so a landscape phone spends it on depth: the south
-signpost is eight tiles behind a player on the town spawn point and is simply out of frame there, in
-either renderer. In 3D that resolves itself — the camera follows all the way to the map edge, so
-walking toward the signpost lifts it up the screen and it clears the bar about four tiles out, which
-is what smoke measures. In 2D it does not: that camera clamps to the world bounds, so near the edge
-it stops scrolling and the signpost sits at a fixed y below the viewport at _every_ distance. **The
-south exit of town is unreachable on a landscape phone in 2D**, which is a real bug in the renderer
-being deleted rather than a reason to change the 3D framing.
+signpost is eight tiles behind a player on the town spawn point and is simply out of frame there.
+That resolves itself — the camera follows all the way to the map edge rather than clamping to the
+world bounds, so walking toward the signpost lifts it up the screen and it clears the bar about four
+tiles out, which is what smoke measures. The 2D camera did clamp, which pinned the signpost below
+the viewport at _every_ distance and made the south exit of town unreachable on a landscape phone;
+that was left unfixed on purpose and went away with the renderer it was in.
 
 **There are two channels out of the simulation, and they are not interchangeable.**
 
-The **HUD channel** is the session's `EventBus` — Phaser's global `game.events` under the 2D host,
-`world/eventBus.ts` under the 3D one, and a bare stub in a test; see `src/ui/uiEvents.ts` for the
-event name constants (`target-selected`, `xp-gained`, `level-up`, `equip-item-requested`, etc.). The
-host passes it into `ZoneWorld`, which is why the world can emit to the HUD without importing an
-engine; the world also
-subscribes to the HUD's requests itself and drops them in `destroy()`. The DOM HUD only listens and
-renders. Every one of these carries state the HUD re-renders from, so the latest one always
-describes the present.
+The **HUD channel** is the session's `EventBus` — `world/eventBus.ts` under the host, a bare stub
+in a test; see `src/ui/uiEvents.ts` for the event name constants (`target-selected`, `xp-gained`,
+`level-up`, `equip-item-requested`, etc.). The host passes it into `ZoneWorld`, which is why the
+world can emit to the HUD without importing an engine; the world also subscribes to the HUD's
+requests itself and drops them in `destroy()`. The DOM HUD only listens and renders. Every one of
+these carries state the HUD re-renders from, so the latest one always describes the present.
 
 The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: `hit`, `defend`,
 `heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `zone-exit`. These are moments, not
 state — a bolt left the caster's hand, a number floated off a corpse — and a view that misses one
 cannot recover it from anywhere. They deliberately name a `tone` rather than a colour: the view
-decides what "reward" looks like. Anything the 3D renderer needs to know about but cannot read
-off the state belongs here. Both views draw them from the tick that returns them —
-`ZoneScene.render` as tweens, `render3d/fx.ts` as short-lived objects — and both take the tone's
-colour from `FLOAT_TONE_COLORS` in `ui/theme.ts`, which is shared for the same reason `TILE_COLORS`
-is: two renderers disagreeing about which shade means "you are the one being hit" are two renderers
-drawing different games.
+decides what "reward" looks like. Anything the renderer needs to know about but cannot read off the
+state belongs here. `render3d/fx.ts` draws them as short-lived objects from the tick that returns
+them, taking the tone's colour from `FLOAT_TONE_COLORS` in `ui/theme.ts` — which lives beside the
+palette the HUD uses rather than in the renderer, for the same reason `TILE_COLORS` does.
 
 Mutations of `CharacterState` itself (inventory, gear, xp, skills, location) go through the
-Phaser-free `systems/CharacterController.ts` rather than being inlined anywhere. Add new HUD-facing
-state changes by adding an event constant and emitting/listening to it, not by reaching into
-another scene. An event carrying more than two or three values should pass one object (see
+engine-free `systems/CharacterController.ts` rather than being inlined anywhere. Add new HUD-facing
+state changes by adding an event constant and emitting/listening to it, not by reaching across
+modules. An event carrying more than two or three values should pass one object (see
 `TargetInfo` in `uiEvents.ts`) rather than growing a positional argument list.
 
 **`ZoneWorld` does not load zones, and that is on purpose.** Walking onto an exit emits
@@ -341,11 +320,11 @@ zone hands its events back with `zoneChanged: true`; they belong to a world that
 so a view rebuilds instead of drawing them.
 
 **There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate
-themselves each frame against the Phaser-free `systems/CollisionSystem.ts`, which is the only thing
-that decides what may move where. Arcade was carrying four colliders — player and mobs against
-blocking tiles and against tree trunks — and nothing else: player↔mob, mob↔mob and player↔NPC never
-collided, and every combat and interaction check is distance-based. Don't reach for
-`scene.physics`; it is not configured. `Mob` is instantiated directly from an `ENEMIES` definition
+themselves each frame against `systems/CollisionSystem.ts`, which is the only thing that decides
+what may move where. The arcade physics this replaced was carrying four colliders — player and mobs
+against blocking tiles and against tree trunks — and nothing else: player↔mob, mob↔mob and
+player↔NPC never collided, and every combat and interaction check is distance-based. `Mob` is
+instantiated directly from an `ENEMIES` definition
 (no per-enemy subclasses) and owns HP, death/respawn timers, and a `wander | chase | returning` AI
 state machine. Combat math itself (damage rolls, range/cooldown checks) is _not_ on these classes —
 it lives in `systems/CombatSystem.ts` and is called from `ZoneWorld`, which resolves both
@@ -426,11 +405,10 @@ against a fixed threshold has to scale that threshold with the frame's travel �
 `arriveRadius` in `systems/MovementSystem.ts`, which exists because a fixed 8px arrival band left
 the player orbiting a tap destination forever below 30fps. The comment on `stepToward` saying a
 velocity above normal speed can never be returned is now true only for mobs: it existed because
-Phaser integrates velocity over the physics world's own timestep rather than the scene `delta`,
-and the player no longer goes through Phaser at all. The constraint inverts once you own the
-integrator — clamping the last step to the distance remaining becomes the correct thing — but
-that change and the integrator change must not ship together, or a smoke failure has two
-suspects and no bisect.
+the old physics engine integrated velocity over its own timestep rather than the frame `delta`, and
+nothing goes through it any more. The constraint inverts once you own the integrator — clamping the
+last step to the distance remaining becomes the correct thing — but that is a change to make on its
+own, so a smoke failure has one suspect.
 
 The other half of a slow frame is tunnelling: 46px of travel can step clean over a wall.
 `moveWithCollision` cuts the frame into substeps of at most half a tile (capped at 8), which at
@@ -479,25 +457,21 @@ Auto-attack **range comes from the equipped weapon, not the class** (`weaponAtta
 `data/items.ts`): a weapon may name an `attackRange`, anything that doesn't is melee, and empty
 hands are shorter still. Abilities carry their own ranges, so a caster's reach is the spell
 rather than the class. `Player.applyStats()` has to reassign `attackRange` alongside the other
-stats or a weapon swap won't change reach until the scene rebuilds.
+stats or a weapon swap won't change reach until the view rebuilds.
 
-**Textures are generated procedurally at runtime** (`src/scenes/generateTextures.ts`) using
-Phaser's `Graphics.generateTexture`, not loaded from image files — there are no art assets yet
-(placeholder circles/shapes only, per the "no art skills" constraint in `docs/initial_design.txt`).
-The 3D view loads no image either: terrain is one vertex-coloured mesh (`render3d/ground.ts`) and
-every entity is untextured primitives (`render3d/figure.ts`, `creatures.ts`, `props.ts`). The one
-textures it does upload are text baked onto a canvas by `render3d/text.ts` — a nameplate's name and
-a floating damage number — which is also the reason `disposeTree` names `material.map` explicitly,
-and the reason the unit suite stubs a 2D context (jsdom has none). Both renderers take their tile colours from
-`TILE_COLORS` in `data/tiles.ts` — the same argument as the stick-figure rig behind the paperdoll,
-since two renderers that disagree about the colour of grass are two renderers drawing different
-games. Creature colours are deliberately _not_ shared: `render3d/palette.ts` mirrors the hexes
-`generateTextures.ts` bakes, because nobody sees both renderers at once and that file is deleted in
-PR 20.
+**There are no art assets, and the renderer loads no image at all** (placeholder shapes only, per
+the "no art skills" constraint in `docs/initial_design.txt`). Terrain is one vertex-coloured mesh
+(`render3d/ground.ts`) and every entity is untextured primitives (`render3d/figure.ts`,
+`creatures.ts`, `props.ts`). The only textures uploaded are text baked onto a canvas by
+`render3d/text.ts` — a nameplate's name and a floating damage number — which is also the reason
+`disposeTree` names `material.map` explicitly, and the reason the unit suite stubs a 2D context
+(jsdom has none). Tile colours live in `TILE_COLORS` in `data/tiles.ts` rather than in the renderer,
+for the same reason the stick-figure rig behind the paperdoll does: the ground the simulation calls
+water is a decision the whole game makes. Creature colour is not — `render3d/palette.ts` is the
+renderer's own, and nothing outside it asks what colour a rat is.
 
-**`render3d/actors.ts` is the 3D `entities/`.** One actor per simulated thing, catching up to it in
-`sync()` exactly as a `*Sprite` does — and where a 2D view that forgets its teardown leaks a stray
-label, an actor that forgets `dispose()` leaks GPU memory, so every one of them ends in
+**`render3d/actors.ts` is one actor per simulated thing**, catching up to it in `sync()` once a
+frame — and an actor that forgets `dispose()` leaks GPU memory, so every one of them ends in
 `disposeTree` (`render3d/dispose.ts`, which frees geometry, material _and_ any texture hanging off
 it). An actor is three layers on purpose: an outer group holding the world position, a facing group
 holding the yaw from `facingYaw`, and the nameplate — which is billboarded by having its own
@@ -521,7 +495,7 @@ it is drawn, and never smaller than `MIN_PICK_SPAN`. Raycasting the real geometr
 and is wrong twice over: a ray aimed at a figure's feet — which is what `view.worldToScreen(x, y)`
 answers, and roughly where a player aims — passes between its legs and out the other side, and a
 crab is 18 screen pixels wide on a phone. `pickTap` then tries node → signpost → NPC → mob →
-ground, which is `ZoneScene.resolveTap`'s order and is a **priority, not a depth sort**: a rat in
+ground, which is a **priority, not a depth sort**: a rat in
 front of the shopkeeper does not stop you shopping. Only within one kind does the nearest win. The
 ground is the mathematical `y = 0` plane rather than the terrain mesh, because the mesh stops at
 the map edge and the simulation does not.
@@ -539,8 +513,9 @@ pointer capture and `touch-action: none`; `ZoneView3D` owns the angle, and it ou
 Two things follow from the camera being movable at all:
 
 - **W means up the screen, not north.** `InputState.setViewYaw()` rotates the keyboard's vector into
-  simulation space, and the 3D host sets it whenever a drag moves the camera. The 2D renderer never
-  calls it, so its mapping is unchanged.
+  simulation space, and the host sets it whenever a drag moves the camera. Without it the two mean
+  the same thing only while the camera is looking north, which is disorienting in a way no state
+  assertion calls a bug.
 - **Whatever the camera ends up behind gets faded** (`render3d/occlusion.ts`), because you cannot
   tap what you cannot see and tapping is the whole game. One ray from the camera to the player's
   feet — the lowest point on them, so it fades a fraction early — against a box per prop. The box is
