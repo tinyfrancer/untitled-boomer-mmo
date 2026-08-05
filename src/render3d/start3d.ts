@@ -9,6 +9,7 @@ import { bindUnloadPersist, gameContext, resetGame, type GameContext } from '../
 import { OrbitGesture } from './orbit';
 import { ZoneView3D } from './ZoneView3D';
 import type { DebugView, DrawnCounts } from '../types/debugView';
+import type { EventBus } from '../world/worldEvents';
 import type { ZoneWorld } from '../world/ZoneWorld';
 
 /** What a view that has been taken down is drawing: nothing. */
@@ -244,6 +245,11 @@ class ThreeHost implements GameHost {
   }
 
   private installDebugView(): void {
+    // The HUD channel, which is neither the simulation nor the drawing and so
+    // is on neither of the other two handles. It is how a check reaches a
+    // panel whose state has no cheap route through the world — two hundred
+    // combat-log lines, or a bag filled to the brim to scroll.
+    (window as unknown as { events: EventBus }).events = this.events;
     const view: DebugView = {
       worldToScreen: (x, y) => this.view?.worldToScreen(x, y) ?? { x: 0, y: 0 },
       step: (deltaMs, frames = 1) => {
