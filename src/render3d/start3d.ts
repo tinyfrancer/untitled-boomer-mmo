@@ -40,13 +40,13 @@ const MANUAL_LOOP = import.meta.env.DEV && manualLoopRequested(window.location.s
 const MAX_FRAME_MS = 100;
 
 /**
- * The Three.js host: everything `ZoneScene` does that is not drawing.
+ * The host: everything that has to happen around a zone without drawing it.
  *
- * It owns the frame loop, the keyboard, the HUD mount and the reset, and it
- * hands the session's world to a `ZoneView3D`. The session itself is the same
- * `GameContext` the 2D host uses, and so is the HUD — which is the point of
- * having done phases 1 and 2 first: nothing below this file knows which
- * renderer is running.
+ * It owns the frame loop, the keyboard, the pointer, the HUD mount and the
+ * reset, and it hands the session's world to a `ZoneView3D`. Neither the
+ * `GameContext` under it nor the HUD over it knows what is drawing — which is
+ * what made swapping the renderer possible, and is why host duties belong
+ * here rather than leaking into either.
  */
 class ThreeHost implements GameHost {
   readonly events = createEventBus();
@@ -123,8 +123,8 @@ class ThreeHost implements GameHost {
    * A press on the world starts a gesture that is not yet either thing.
    *
    * A press on the HUD never gets here — it is an HTML overlay above the
-   * canvas, so the browser hands the event to the element instead, which is the
-   * whole of the hit test the 2D renderer once had to do by hand.
+   * canvas, so the browser hands the event to the element instead — which is
+   * the whole of a hit test the 2D renderer had to do by hand.
    */
   private readonly handlePointerDown = (event: PointerEvent): void => {
     if (!this.context || !this.view || this.pointerId !== null) return;
@@ -259,7 +259,7 @@ class ThreeHost implements GameHost {
   }
 }
 
-/** Boots the game with Three.js drawing it, which is every page but `?renderer=2d`. */
+/** Boots the game. */
 export function start3d(): void {
   bootIntoGame(new ThreeHost());
 }

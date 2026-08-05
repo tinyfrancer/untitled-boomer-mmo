@@ -136,7 +136,7 @@ export function groundUnder(raycaster: Raycaster): Point | null {
 }
 
 /**
- * What a ray is pointing at, in the order `ZoneScene.resolveTap` picks: node,
+ * What a ray is pointing at, in the tap order the 2D renderer set: node,
  * signpost, NPC, mob, ground.
  *
  * The order is a priority and not a depth sort — a rat standing in front of the

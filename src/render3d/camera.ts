@@ -11,9 +11,9 @@ export const CAMERA_PITCH = (58 * Math.PI) / 180;
 
 /**
  * How many tiles the camera aims to show across the viewport's smaller axis.
- * The same framing intent as the 2D camera's `worldZoom`, two tiles wider:
- * ground seen at an angle is not the flat map the 2D camera showed, and the
- * extra pair buys the headroom the constraint below needs.
+ * The same framing intent the 2D camera had at ten, two tiles wider: ground
+ * seen at an angle is not the flat map that one showed, and the extra pair
+ * buys the headroom the constraint below needs.
  */
 const TARGET_TILES_ACROSS = 12;
 
@@ -21,9 +21,9 @@ const TARGET_TILES_ACROSS = 12;
  * How far short of the player the camera actually aims, which lifts them above
  * the middle of the screen.
  *
- * This is the 3D form of a rule the 2D view kept by shrinking its viewport to
- * `worldViewportHeight`: the tab bar is opaque and eats every tap that lands on
- * it, so anything drawn in the bottom sixty pixels cannot be reached. A
+ * The tab bar is opaque and eats every tap that lands on it, so anything drawn
+ * in the bottom sixty pixels cannot be reached — `worldViewportHeight` is where
+ * that band is decided, and the 2D view kept the rule by shrinking to it. A
  * perspective camera cannot solve that by shrinking — it draws full-screen and
  * the bar sits over it — so the framing has to keep the interesting ground
  * clear of the bar instead. It is not symmetrical for free either: ground
@@ -50,8 +50,8 @@ export function createCamera(): PerspectiveCamera {
  *
  * A perspective camera's field of view is vertical, so a portrait phone would
  * otherwise show twelve tiles of height and five of width. This asks for the
- * twelve across the *smaller* axis and lets the longer one show more, which is
- * what `worldZoom` does in 2D. The `sin(pitch)` is the obliquity: ground seen
+ * twelve across the *smaller* axis and lets the longer one show more. The
+ * `sin(pitch)` is the obliquity: ground seen
  * at an angle covers more of itself than ground seen from straight above.
  */
 export function cameraDistance(aspect: number): number {

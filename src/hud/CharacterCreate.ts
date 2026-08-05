@@ -15,10 +15,9 @@ export interface CharacterCreateOptions {
 /**
  * The first screen: a name, a class, and a button.
  *
- * Plain DOM rather than a Phaser scene — it was already half DOM, since the
- * name box had to be a real `<input>` and rode in on `add.dom`. Taking the rest
- * across is what lets `dom.createContainer` leave the game config, and it means
- * the only Phaser scene left is the one drawing the world.
+ * Plain DOM, like the rest of the HUD. The name box has to be a real `<input>`
+ * for a phone's keyboard to behave, and nothing here needs a renderer — which
+ * is what lets the boot flow show this screen before one exists.
  */
 class CharacterCreate {
   readonly root: HTMLElement;

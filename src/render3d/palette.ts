@@ -1,14 +1,12 @@
 /**
  * The colours the placeholder primitives are made of.
  *
- * These deliberately mirror the hexes `scenes/generateTextures.ts` bakes into
- * the 2D textures rather than being shared with it. The things both renderers
- * *have* to agree about are shared — terrain (`TILE_COLORS`) because the ground
- * is the same ground, and the figure rig plus `NPC_APPEARANCES` because the
- * character sheet draws a picture of your character either way. A rat's brown
- * is not in that set: nobody sees both renderers at once, and the 2D copy is
- * deleted with `generateTextures.ts` in PR 20. Inventing a data schema for
- * art that is on its way out would cost more than it saves.
+ * Creature colour is the renderer's own, where terrain (`TILE_COLORS`) and the
+ * figure rig plus `NPC_APPEARANCES` are shared with the HUD: the ground the
+ * simulation calls water and the character the sheet draws a picture of are
+ * decisions the whole game makes, and a rat's brown is not. There are no art
+ * assets behind any of this — see the "no art skills" constraint in
+ * `docs/initial_design.txt` — so these hexes are the art.
  */
 export const PALETTE = {
   ratFur: 0x6d4c41,

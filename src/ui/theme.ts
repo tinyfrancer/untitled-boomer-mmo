@@ -1,11 +1,9 @@
-import { TILE_SIZE } from '../config/constants';
 import type { FloatTone } from '../world/worldEvents';
 
-// Every size below is authored in CSS pixels. Scale.RESIZE keeps the canvas at
-// the viewport's size, so canvas units and CSS pixels are 1:1 and the HUD can
-// be laid out directly in these values. The px()/fontPx() helpers still take a
-// scale factor — it is 1 today (see scenePxScale), kept as the hook for a
-// future accessibility/text-size setting rather than re-threading one later.
+// Every size below is authored in CSS pixels, which is what the HUD lays out
+// in. The px()/fontPx() helpers still take a scale factor — every caller
+// passes 1 today, kept as the hook for a future accessibility/text-size
+// setting rather than re-threading one later.
 export const THEME = {
   font: {
     xs: 11,
@@ -65,9 +63,9 @@ export const THEME = {
  * What each kind of floating number is drawn in.
  *
  * A `WorldEvent` names a tone rather than a colour precisely so a view may
- * decide this for itself — but both views decide the same thing, and two
- * renderers disagreeing about which shade means "you are the one being hit" is
- * two renderers drawing different games. Same argument as `TILE_COLORS`.
+ * decide this for itself. The decision lives beside `THEME.color` rather than
+ * in the renderer because it is made out of it: the number that floats off a
+ * hit and the combat-log line about the same hit are one palette, not two.
  */
 export const FLOAT_TONE_COLORS: Record<FloatTone, string> = {
   damage: THEME.color.equippable,
@@ -77,41 +75,6 @@ export const FLOAT_TONE_COLORS: Record<FloatTone, string> = {
   skill: THEME.color.skillUp,
   dim: THEME.color.dim,
 };
-
-// How many tiles the world camera aims to show across the viewport's smaller
-// axis. Bigger number = further zoomed out.
-const TARGET_TILES_ACROSS = 10;
-
-/**
- * Zoom for the world camera, from the viewport and world pixel sizes.
- *
- * Aims to show roughly the same slice of world on every device (a phone gets
- * a closer camera in absolute pixels, not a miniature map), clamped to at most
- * 1:1 pixels and never further out than the world edge — a camera wider than
- * the world would letterbox it against the page background.
- */
-export function worldZoom(
-  viewportWidth: number,
-  viewportHeight: number,
-  worldWidth: number,
-  worldHeight: number,
-): number {
-  if (
-    !Number.isFinite(viewportWidth) ||
-    !Number.isFinite(viewportHeight) ||
-    viewportWidth <= 0 ||
-    viewportHeight <= 0
-  ) {
-    return 1;
-  }
-  const target = Math.min(viewportWidth, viewportHeight) / (TILE_SIZE * TARGET_TILES_ACROSS);
-  const fillsWorld = Math.max(viewportWidth / worldWidth, viewportHeight / worldHeight);
-  return Math.max(Math.min(target, 1), fillsWorld);
-}
-
-export function scenePxScale(): number {
-  return 1;
-}
 
 export function px(value: number, scale: number): number {
   return Math.round(value * scale);
@@ -124,11 +87,10 @@ export function fontPx(value: number, scale: number): string {
 /**
  * A THEME fill as a CSS colour.
  *
- * The palette is stored twice on purpose — `0x` numbers for the shapes Phaser
- * draws, `#` strings for the text it draws — and the DOM HUD needs the string
- * form of the numeric half. One conversion here rather than a third copy of the
- * palette; the numbers go away with the 2D renderer and these two helpers with
- * them.
+ * The palette is stored two ways on purpose — `0x` numbers for the fills a
+ * renderer hands to a material, `#` strings for text — and the DOM HUD needs
+ * the string form of the numeric half. One conversion here rather than a third
+ * copy of the palette.
  */
 export function cssColor(value: number): string {
   return `#${(value >>> 0).toString(16).padStart(6, '0')}`;

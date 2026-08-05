@@ -2,11 +2,11 @@ import { TILE_SIZE } from '../config/constants';
 import type { EnemyFamilyId, EnemyId } from '../types/ids';
 
 /**
- * The collision box, in world pixels. Named here rather than measured off the
- * sprite's texture for the same reason PLAYER_HALF_EXTENT is: the placeholder
- * textures go away with the 2D renderer and the box does not. These are the
- * sizes those textures are currently drawn to (see generateTextures.ts), to a
- * fraction of a pixel — the old canvases truncated to whole pixels.
+ * The collision box, in world pixels. Named here rather than measured off
+ * anything drawn, for the same reason PLAYER_HALF_EXTENT is: how big a rat
+ * looks is the renderer's decision and how big a rat *is* is not. The renderer
+ * reads these to size the mesh, which is the direction that keeps them
+ * agreeing — see `render3d/creatures.ts`.
  */
 export interface BodySize {
   width: number;

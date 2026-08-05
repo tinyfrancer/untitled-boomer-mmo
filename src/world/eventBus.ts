@@ -5,15 +5,13 @@ type Listener = { fn: (...args: never[]) => void; context?: unknown };
 /**
  * The HUD channel, with no engine underneath it.
  *
- * Phaser's global `game.events` is what satisfies `EventBus` while Phaser is
- * still drawing; the Three.js host has no emitter to borrow, so it brings this
- * one. The subset is exactly what `EventBus` names — the world emits, the HUD
- * subscribes, both unsubscribe — and it matches Phaser's semantics in the two
- * places that would otherwise bite: a listener is identified by its function
- * *and* its context (`on(EVENT, this.method, this)` is the shape every
- * subscription in the scenes uses), and a handler that subscribes or
- * unsubscribes while an event is being delivered does not disturb that
- * delivery.
+ * The world emits, the HUD subscribes, both unsubscribe: exactly the subset
+ * `EventBus` names and nothing more. It was written against the semantics of
+ * the game engine's global emitter, which is where the two rules that would
+ * otherwise bite come from — a listener is identified by its function *and*
+ * its context (`on(EVENT, this.method, this)` is the shape every subscription
+ * in the HUD uses), and a handler that subscribes or unsubscribes while an
+ * event is being delivered does not disturb that delivery.
  */
 export function createEventBus(): EventBus {
   const listeners = new Map<string, Listener[]>();

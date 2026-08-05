@@ -19,20 +19,20 @@ export const EAT_ITEM_REQUESTED_EVENT = 'eat-item-requested';
 export const COOK_REQUESTED_EVENT = 'cook-requested';
 export const LIGHT_FIRE_REQUESTED_EVENT = 'light-fire-requested';
 export const ACTIONS_CHANGED_EVENT = 'actions-changed';
-// Shop flow: ZoneScene owns whether the shop is open (it knows about range);
-// UIScene renders the panel and forwards buy/sell taps back as requests.
+// Shop flow: ZoneWorld owns whether the shop is open (it knows about range);
+// the HUD renders the panel and forwards buy/sell taps back as requests.
 export const SHOP_OPENED_EVENT = 'shop-opened';
 export const SHOP_CLOSED_EVENT = 'shop-closed';
 export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
 export const SELL_ITEM_REQUESTED_EVENT = 'sell-item-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 // Quests. Taken and handed in at the shopkeeper, so these ride the same
-// ask/decide split as buying: the HUD forwards the tap, ZoneScene re-checks
+// ask/decide split as buying: the HUD forwards the tap, ZoneWorld re-checks
 // that the player is still standing at the NPC, and answers with the new log.
 export const ACCEPT_QUEST_REQUESTED_EVENT = 'accept-quest-requested';
 export const TURN_IN_QUEST_REQUESTED_EVENT = 'turn-in-quest-requested';
 export const QUEST_LOG_CHANGED_EVENT = 'quest-log-changed';
-// Abilities: the HUD asks, ZoneScene decides (it owns range, mana and targets)
+// Abilities: the HUD asks, ZoneWorld decides (it owns range, mana and targets)
 // and answers with the state the bar draws itself from.
 export const ABILITY_REQUESTED_EVENT = 'ability-requested';
 export const ABILITY_STATE_CHANGED_EVENT = 'ability-state-changed';
@@ -40,16 +40,16 @@ export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
 // One line of combat commentary. Emitted alongside the floating text it mirrors,
 // so the two can never drift out of step.
 export const COMBAT_LOG_EVENT = 'combat-log';
-// Asked for by the options menu; ZoneScene owns the save, so it does the work.
+// Asked for by the options menu; the host owns the session, so it does the work.
 export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
-// AFK camping. The HUD asks for the toggle; ZoneScene owns whether it is on,
+// AFK camping. The HUD asks for the toggle; ZoneWorld owns whether it is on,
 // since anything in the world can turn it back off, and reports the answer.
 export const AFK_TOGGLE_REQUESTED_EVENT = 'afk-toggle-requested';
 export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 // What a camp earned while the tab was closed is not an event: the load that
 // resolves a parked session is necessarily earlier than the HUD, so it queues
 // on the GameContext and the HUD drains it on mount.
-// Achievements. ZoneScene owns the kill counts, so it announces both the new
+// Achievements. ZoneWorld owns the kill counts, so it announces both the new
 // totals (KILLS_CHANGED) and the moment a tier completes (ACHIEVEMENT_UNLOCKED,
 // carrying an AchievementUnlock). Wearing a title is an ask/answer pair like
 // the quests above: the HUD forwards the tap, the controller re-checks that the
@@ -70,7 +70,7 @@ export interface TargetInfo {
 }
 
 // Payload for ACTIONS_CHANGED_EVENT: what the world around the player allows
-// right now. ZoneScene owns the answer, since it knows about fires and range;
+// right now. ZoneWorld owns the answer, since it knows about fires and range;
 // the HUD combines it with the selected item via ItemActionsSystem.
 export interface AvailableActions {
   nearFire: boolean;

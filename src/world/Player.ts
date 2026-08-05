@@ -24,7 +24,7 @@ function clamp(value: number, min: number, max: number): number {
  * The player, as simulation only: position, velocity, stats, pools and buffs.
  * It owns its transform and integrates itself against CollisionSystem, and it
  * knows nothing about how any of that is drawn — a sprite, a mesh or nothing at
- * all follows it (see entities/PlayerSprite.ts for today's).
+ * all follows it (see `render3d/actors.ts` for today's).
  */
 export class Player {
   readonly classId: ClassId;

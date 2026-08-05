@@ -84,8 +84,7 @@ export class FxLayer {
    *
    * What an event becomes is the view's decision — a `WorldEvent` names a tone
    * and a place and says nothing about colour or duration, which is the whole
-   * point of having the channel — and these are the same decisions
-   * `ZoneScene.render` makes with tweens.
+   * point of having the channel.
    */
   draw(event: WorldEvent): void {
     switch (event.kind) {

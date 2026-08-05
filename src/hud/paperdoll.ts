@@ -8,11 +8,10 @@ const BOX = 100;
 /**
  * The character sheet's paperdoll, as inline SVG.
  *
- * The world sprite is a texture Phaser bakes with `Graphics`; this is the same
- * rig (`stickFigure`) and the same `Appearance` drawn with strokes instead, so
- * the two agree about where a shoulder is without the HUD reaching into the
- * renderer for a canvas. It is also what survives the renderer swap: the sheet
- * still has to show what you are wearing when the world is meshes.
+ * The figure in the world is meshes; this is the same rig (`stickFigure`) and
+ * the same `Appearance` drawn with strokes instead, so the two agree about
+ * where a shoulder is without the HUD ever reaching into the renderer for a
+ * canvas.
  */
 export function paperdollSvg(gear: Record<GearSlotId, string | null>): SVGSVGElement {
   const appearance = computeAppearance(gear);

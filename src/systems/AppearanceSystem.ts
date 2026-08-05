@@ -31,9 +31,10 @@ export function legOffsets(phase: LegPhase): LegOffsets {
 
 /**
  * The stick figure's landmark points, as fractions of whatever box it is drawn
- * in. Two things draw from this rig — the generated sprite texture and the
- * character sheet's paperdoll — and they have to agree about where a shoulder
- * is or the sheet stops being a picture of your character.
+ * in. Two things draw from this rig — the figure in the world
+ * (`render3d/figure.ts`) and the character sheet's paperdoll — and they have to
+ * agree about where a shoulder is or the sheet stops being a picture of your
+ * character.
  */
 export interface StickFigure {
   cx: number;
