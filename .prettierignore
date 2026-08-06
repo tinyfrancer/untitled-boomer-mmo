@@ -1,0 +1,5 @@
+# Prettier already skips everything in .gitignore, so dist/ and .smoke/ need no
+# entry here. What does is generated content that *is* tracked: npm writes
+# package-lock.json in its own format, and reformatting it makes every install
+# a diff.
+package-lock.json

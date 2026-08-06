@@ -1,0 +1,25 @@
+{
+  // `scripts/` is not in the main project's `include`, so the 1,400-line
+  // merge-blocking smoke check was the one file in the repo the compiler never
+  // looked at. It is a `.mjs`, so checking it needs `allowJs` + `checkJs`, and
+  // it runs in Node rather than in a bundler — both of which fight the settings
+  // the app is built with. Hence a second config rather than a weaker one.
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "esnext",
+    // Bundler resolution, like the app's — `scripts/globals.d.ts` imports the
+    // dev handles' real types out of `src/`, which is written extensionless.
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["scripts"]
+}
