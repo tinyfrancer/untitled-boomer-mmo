@@ -5,12 +5,9 @@ import type { ResourceNodeId, SkillId } from '../types/ids';
 export interface ResourceNodeDefinition {
   id: ResourceNodeId;
   name: string;
-  textureKey: string;
-  // The sprite's footprint; a solid node's blocker is a fraction of it. See
-  // BodySize for why this is data rather than a texture measurement.
+  // The node's footprint; a solid node's blocker is a fraction of it. See
+  // BodySize for why this is data rather than a measurement off anything drawn.
   body: BodySize;
-  // Shown in place of the node once its charges run out, until it respawns.
-  depletedTextureKey?: string;
   skill: SkillId;
   requiredLevel: number;
   yieldItemId: string;
@@ -31,8 +28,6 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
   tree: {
     id: 'tree',
     name: 'Tree',
-    textureKey: 'tree',
-    depletedTextureKey: 'tree-stump',
     // A tile wide and a tile and a half tall, so the canopy reads above the
     // player's head; only the trunk blocks.
     body: { width: TILE_SIZE, height: TILE_SIZE * 1.5 },
@@ -49,7 +44,6 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
   'fishing-spot': {
     id: 'fishing-spot',
     name: 'Fishing Spot',
-    textureKey: 'fishing-spot',
     body: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
     skill: 'fishing',
     requiredLevel: 1,
@@ -66,7 +60,6 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
   'ocean-fishing-spot': {
     id: 'ocean-fishing-spot',
     name: 'Ocean Fishing Spot',
-    textureKey: 'fishing-spot',
     body: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
     skill: 'fishing',
     requiredLevel: 5,

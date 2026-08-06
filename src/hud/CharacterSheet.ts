@@ -8,7 +8,7 @@ import { THEME } from '../ui/theme';
 import type { PrimaryStat } from '../data/classes';
 import type { GearSlotId, SkillId } from '../types/ids';
 
-export const SLOT_ORDER: GearSlotId[] = ['weapon', 'helmet', 'chest', 'pants'];
+const SLOT_ORDER: GearSlotId[] = ['weapon', 'helmet', 'chest', 'pants'];
 export const SLOT_LABELS: Record<GearSlotId, string> = {
   weapon: 'Weapon',
   helmet: 'Helmet',

@@ -1,10 +1,6 @@
 import { Box3, Group, Vector3, type Camera } from 'three';
 import { TILE_SIZE } from '../config/constants';
-import {
-  NPC_APPEARANCES,
-  appearanceTextureKey,
-  computeAppearance,
-} from '../systems/AppearanceSystem';
+import { NPC_APPEARANCES, appearanceKey, computeAppearance } from '../systems/AppearanceSystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import { THEME } from '../ui/theme';
 import { DEATH_FADE_MS, type Mob } from '../world/Mob';
@@ -55,8 +51,8 @@ const TOPPLE_FRACTION = 0.6;
  *
  * Nothing here decides anything. The simulation owns position, health, gear and
  * death; an actor catches up to it in `sync()` and hands its geometry back in
- * `dispose()` — which in 2D was a stray label and here is memory the card never
- * gets back.
+ * `dispose()` — an actor that forgets that leaks memory the card never gets
+ * back.
  */
 export interface Actor {
   readonly object: Group;
@@ -77,7 +73,7 @@ export class PlayerActor implements Actor {
     this.object.add(this.facing);
 
     const appearance = computeAppearance(player.currentGear());
-    this.appearanceKey = appearanceTextureKey(appearance);
+    this.appearanceKey = appearanceKey(appearance);
     this.figure = buildFigure(appearance);
     this.facing.add(this.figure.object);
 
@@ -91,8 +87,8 @@ export class PlayerActor implements Actor {
     // a setter: the simulation has no idea anything is drawing it, and a pure
     // function of the gear is cheaper to compare than it is to notify.
     const appearance = computeAppearance(this.player.currentGear());
-    if (appearanceTextureKey(appearance) !== this.appearanceKey) {
-      this.appearanceKey = appearanceTextureKey(appearance);
+    if (appearanceKey(appearance) !== this.appearanceKey) {
+      this.appearanceKey = appearanceKey(appearance);
       disposeTree(this.figure.object);
       this.figure = buildFigure(appearance);
       this.facing.add(this.figure.object);
@@ -188,9 +184,8 @@ export class MobActor implements Actor, Pickable {
 
   /**
    * The footprint `CollisionSystem` stops the player at, standing as tall as
-   * the creature does — and nothing at all once the creature is dead. A corpse
-   * fading out of the scene is not a target, which the 2D view got for free
-   * from a sprite that had stopped rendering.
+   * the creature does — and nothing at all once the creature is dead, since a
+   * corpse still toppling and fading is not a target.
    */
   pickBox(): Box3 | null {
     if (!this.mob.isAlive()) return null;

@@ -23,7 +23,7 @@ const MANA_BLOCK_HEIGHT = 34;
 // A worn title gets its own line under the name. "Adventurer, Rat Slayer" on
 // one line overruns the 190px column, and shrinking the name to fit made the
 // thing the player is proudest of the smallest text on screen.
-export const TITLE_LINE_HEIGHT = 16;
+const TITLE_LINE_HEIGHT = 16;
 const TRACKER_LINE_HEIGHT = 18;
 // The ability buttons plus the mana-cost line printed under them.
 const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 16;
@@ -58,9 +58,10 @@ export function isNarrowViewport(width: number, height: number): boolean {
 /**
  * Where every piece of always-on HUD furniture goes, as plain arithmetic.
  *
- * This lives apart from UIScene so the rules can be tested at viewport sizes
- * nobody is going to sit down and try by hand. Everything stacks off the bottom
- * edge, because that is where the thumb is and where the tab bar anchors.
+ * This is engine-free and applied as inline styles rather than left to CSS, so
+ * the rules can be tested at viewport sizes nobody is going to sit down and try
+ * by hand. Everything stacks off the bottom edge, because that is where the
+ * thumb is and where the tab bar anchors.
  */
 export function hudLayout(
   width: number,
@@ -123,10 +124,16 @@ export function hudLayout(
 /**
  * How tall the world camera may be: the screen, less the tab bar.
  *
- * The bar is opaque and swallows every tap that lands on it, so world drawn
- * under it cannot be reached. Reserving the height here rather than hoping
- * nothing important lands in the last sixty pixels is what keeps every world
- * object tappable.
+ * Nothing in production calls this, and that is not an oversight. The canvas is
+ * full-bleed and a perspective camera cannot shrink without changing what it
+ * shows, so the requirement is held by how the camera is *framed* instead
+ * (`render3d/camera.ts`: pitch, distance, and a look point aimed short of the
+ * player). This is the specification of the band that framing has to keep
+ * clear, and the oracle `tests/render3d/camera.test.ts` measures it against.
+ *
+ * The band exists because the bar is opaque and swallows every tap that lands
+ * on it: the south signpost in town once rendered four pixels inside it and
+ * could not be tapped at all. New bottom furniture reserves its height here.
  */
 export function worldViewportHeight(width: number, height: number, scale = 1): number {
   return hudLayout(width, height, { scale }).tabBar.y;

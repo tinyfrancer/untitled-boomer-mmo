@@ -97,7 +97,7 @@ export function pointerRay(
 }
 
 /** The nearest of these the ray crosses, which is the one in front. */
-export function nearestUnder<T extends Pickable>(
+function nearestUnder<T extends Pickable>(
   raycaster: Raycaster,
   candidates: readonly T[],
 ): T | null {
@@ -120,8 +120,7 @@ export function nearestUnder<T extends Pickable>(
  *
  * The mathematical plane rather than the terrain mesh: the mesh stops at the
  * map edge and the sim does not — walking into the edge is how a zone is left —
- * so a tap just past the shore has to answer with a point out there the same
- * way the 2D camera's `getWorldPoint` did.
+ * so a tap just past the shore has to answer with a point out there.
  *
  * `null` is a ray that never comes down. The camera cannot produce one: it is
  * pitched further down than half its field of view, so the horizon is off the
@@ -136,8 +135,8 @@ export function groundUnder(raycaster: Raycaster): Point | null {
 }
 
 /**
- * What a ray is pointing at, in the tap order the 2D renderer set: node,
- * signpost, NPC, mob, ground.
+ * What a ray is pointing at, in priority order: node, signpost, NPC, mob,
+ * ground.
  *
  * The order is a priority and not a depth sort — a rat standing in front of the
  * shopkeeper does not stop you shopping — which is why each kind is asked

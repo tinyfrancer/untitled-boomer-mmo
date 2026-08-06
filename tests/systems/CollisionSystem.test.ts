@@ -7,12 +7,12 @@ import {
   moveWithCollision,
   type Aabb,
   type CollisionWorld,
-  type Rect,
+  type Bounds,
 } from '../../src/systems/CollisionSystem';
 import { findExit } from '../../src/systems/ZoneSystem';
 
 // A map drawn as rows of characters, one per tile: '.' walkable, '#' water.
-function world(rows: string[], blockers: Rect[] = []): CollisionWorld {
+function world(rows: string[], blockers: Bounds[] = []): CollisionWorld {
   const grid = rows.map((row) => [...row].map((cell) => (cell === '#' ? WATER_TILE : GRASS_TILE)));
   return {
     grid,
@@ -116,7 +116,7 @@ describe('moveWithCollision against solid nodes', () => {
   // A tree stands a tile and a half tall and only its trunk blocks, so the
   // blocker is anchored to the sprite's foot. A blocker centred on the sprite
   // origin would sit ~30px high and stop the player short of the trunk.
-  const trunk: Rect = { left: 190, right: 210, top: 220, bottom: 250 };
+  const trunk: Bounds = { left: 190, right: 210, top: 220, bottom: 250 };
 
   it('refuses a step into the trunk', () => {
     const map = world(['.....', '.....', '.....'], [trunk]);

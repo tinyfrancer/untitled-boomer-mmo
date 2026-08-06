@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { THEME, cssColor, cssRgba, fontPx, px } from '../../src/ui/theme';
+import { THEME, cssColor, cssRgba, px } from '../../src/ui/theme';
 
-describe('px / fontPx', () => {
+describe('px', () => {
   it('rounds to whole canvas units', () => {
     expect(px(11, 2.5)).toBe(28);
-    expect(fontPx(11, 2.5)).toBe('28px');
   });
 });
 

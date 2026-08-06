@@ -9,8 +9,12 @@ export interface Aabb {
   halfHeight: number;
 }
 
-/** A static blocker, in world pixels. */
-export interface Rect {
+/**
+ * A static blocker, in world pixels. Named apart from `ui/layout.ts`'s `Rect`
+ * on purpose: that one is `{x, y, width, height}` and the two are not
+ * interchangeable, which one shared name made easy to miss.
+ */
+export interface Bounds {
   left: number;
   top: number;
   right: number;
@@ -24,7 +28,7 @@ export interface CollisionWorld {
   worldWidth: number;
   worldHeight: number;
   /** Solid things standing in the world — today only tree trunks. */
-  blockers: readonly Rect[];
+  blockers: readonly Bounds[];
 }
 
 /**
@@ -45,7 +49,7 @@ const EDGE_EPSILON = 1e-6;
  * scan is the same four cells for a body that does fit, so exactness here is
  * free.
  */
-export function hitsBlockingTile(world: CollisionWorld, box: Aabb): boolean {
+function hitsBlockingTile(world: CollisionWorld, box: Aabb): boolean {
   // Right and bottom edges are exclusive: a body resting exactly on a tile
   // boundary is touching that tile, not standing in it.
   const firstCol = Math.floor((box.x - box.halfWidth) / TILE_SIZE);
@@ -64,7 +68,7 @@ export function hitsBlockingTile(world: CollisionWorld, box: Aabb): boolean {
   return false;
 }
 
-export function hitsBlocker(world: CollisionWorld, box: Aabb): boolean {
+function hitsBlocker(world: CollisionWorld, box: Aabb): boolean {
   const left = box.x - box.halfWidth;
   const top = box.y - box.halfHeight;
   const right = box.x + box.halfWidth;
@@ -100,8 +104,7 @@ function substepCount(dx: number, dy: number): number {
  *
  * Resolution is one axis at a time, reverting only the blocked one. That is
  * what makes walking diagonally into the pond slide along the shore rather than
- * stopping dead — arcade gave it away for free, and it is the thing players
- * notice losing.
+ * stopping dead, which is the thing players notice losing.
  */
 export function moveWithCollision(box: Aabb, dx: number, dy: number, world: CollisionWorld): Point {
   const at = (x: number, y: number): Aabb => ({ ...box, x, y });

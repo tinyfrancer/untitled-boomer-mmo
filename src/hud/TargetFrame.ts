@@ -16,9 +16,7 @@ export class TargetFrame {
   }
 
   layout(rect: Rect): void {
-    place(this.root, rect, 'position');
-    this.root.style.width = `${rect.width}px`;
-    this.root.style.height = `${rect.height}px`;
+    place(this.root, rect, 'box');
   }
 
   show(target: TargetInfo): void {

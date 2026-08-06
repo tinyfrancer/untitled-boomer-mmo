@@ -14,11 +14,11 @@ import { buildText } from './text';
 import type { Point } from '../systems/MovementSystem';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
 
-/** How long a floating number lives, and how far it climbs. The 2D tween's. */
+/** How long a floating number lives, and how far it climbs. */
 const FLOAT_MS = 600;
 const FLOAT_RISE = 34;
 
-/** How tall the glyphs are drawn, in world units — twice a nameplate's, as in 2D. */
+/** How tall the glyphs are drawn, in world units: twice a nameplate's. */
 const FLOAT_SIZE = 24;
 
 /**
@@ -34,7 +34,7 @@ const FLOAT_LIFT = 90;
 /** How far a soaked hit floats above the wound it soaked, so both can be read at once. */
 const ABSORB_LIFT = 22;
 
-/** A bolt's flight. Cosmetic, and the same 180ms the 2D tween takes. */
+/** A bolt's flight. Cosmetic, so short enough not to lag the hit it announces. */
 const BOLT_MS = 180;
 const BOLT_RADIUS = 8;
 

@@ -36,9 +36,9 @@ export function buildNode(node: ResourceNode): NodeProp {
 /**
  * A trunk you cannot walk through and a canopy you can walk under.
  *
- * The trunk is sized from `node.blockerRect()` rather than from the sprite's
- * footprint, so what stops you is what you can see stopping you — the canopy
- * is the wider half and blocks nothing, which is the top-down convention the
+ * The trunk is sized from `node.blockerRect()` rather than from the node's
+ * whole footprint, so what stops you is what you can see stopping you — the
+ * canopy is the wider half and blocks nothing, which is the convention the
  * collision box already encodes.
  */
 function buildTree(node: ResourceNode): NodeProp {
@@ -207,7 +207,8 @@ export function buildCampfire(): { object: Group; flicker(elapsedMs: number): vo
   return {
     object: group,
     flicker(elapsedMs) {
-      // The same 420ms yoyo the 2D tween runs, on the view's own clock.
+      // A 420ms yoyo on the view's own clock: how a flame flickers is nothing
+      // the simulation has an opinion about.
       const wobble = Math.sin((elapsedMs / 420) * Math.PI);
       flames.scale.set(1, 0.92 + wobble * 0.14, 1);
     },

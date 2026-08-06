@@ -1,9 +1,9 @@
 import type { FloatTone } from '../world/worldEvents';
 
 // Every size below is authored in CSS pixels, which is what the HUD lays out
-// in. The px()/fontPx() helpers still take a scale factor — every caller
-// passes 1 today, kept as the hook for a future accessibility/text-size
-// setting rather than re-threading one later.
+// in. The px() helper still takes a scale factor — every caller passes 1
+// today, kept as the hook for a future accessibility/text-size setting rather
+// than re-threading one later.
 export const THEME = {
   font: {
     xs: 11,
@@ -78,10 +78,6 @@ export const FLOAT_TONE_COLORS: Record<FloatTone, string> = {
 
 export function px(value: number, scale: number): number {
   return Math.round(value * scale);
-}
-
-export function fontPx(value: number, scale: number): string {
-  return `${px(value, scale)}px`;
 }
 
 /**

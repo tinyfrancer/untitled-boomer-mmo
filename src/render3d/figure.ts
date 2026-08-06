@@ -12,20 +12,21 @@ import { legOffsets, stickFigure, type Appearance } from '../systems/AppearanceS
 import { PALETTE } from './palette';
 import type { WeaponShapeId } from '../types/ids';
 
-/** As tall as the box the 2D texture is baked into: one tile. */
+/** As tall as the box the rig is measured in: one tile. */
 export const FIGURE_HEIGHT = TILE_SIZE;
 
 /**
- * How much thicker a limb is here than the line the 2D figure draws.
+ * How much thicker a limb is here than the rig's `limbWidth`.
  *
- * The sprite paints each limb as a stroke with a darker stroke behind it, so a
- * `limbWidth` line reads as half as much again on screen. A bare cylinder has
- * no outline to borrow width from and at this camera distance a 3.5-unit leg
- * disappears, so it is given the width it already appeared to have.
+ * That width is a stroke width for a line drawing, and the paperdoll paints
+ * each limb over a darker backing stroke, so it reads as half as much again. A
+ * bare cylinder has no outline to borrow width from and at this camera distance
+ * a 3.5-unit leg disappears, so it is given the width it already appeared to
+ * have.
  */
 const LIMB_WIDENING = 2;
 
-/** One full stride, in milliseconds: the 2D walk's four frames at 8fps. */
+/** One full stride, in milliseconds. */
 const STRIDE_PERIOD_MS = 500;
 
 /**
@@ -42,7 +43,7 @@ export interface Figure {
   readonly height: number;
   /** Swings the legs for this frame. `elapsedMs` is view time, not the sim's. */
   stride(walking: boolean, elapsedMs: number): void;
-  /** What the legs are doing, in the same vocabulary the 2D texture keys use. */
+  /** What the legs are doing, in the rig's `LegPhase` vocabulary. */
   pose(): string;
 }
 
@@ -53,8 +54,8 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
   const shoulderY = above(rig.shoulderY);
   const headY = above(rig.headCenterY);
   const limb = rig.limbWidth * LIMB_WIDENING;
-  // The stance the 2D rig stands in, read as an anatomical gap rather than as
-  // the splay a top-down sprite draws it as.
+  // The rig's stance is a flat drawing's splay; in three dimensions it is the
+  // gap between the feet.
   const spread = Math.abs(legOffsets(0).rightX) * size;
   // And the stride is how far phase 1 moves a foot out of that stance — taken
   // from the rig rather than picked, so the two renderers walk the same walk.
@@ -116,9 +117,9 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
       const swing = walking ? Math.sin((elapsedMs / STRIDE_PERIOD_MS) * Math.PI * 2) : 0;
       hinges[0].rotation.x = swing * maxSwing;
       hinges[1].rotation.x = -swing * maxSwing;
-      // The 2D walk is three baked phases: a stance and the two halves of a
-      // stride. Reporting the same three is what lets one smoke check ask both
-      // renderers the same question.
+      // Reported as the rig's three leg phases — a stance and the two halves of
+      // a stride — since that is the vocabulary `legOffsets` is keyed by, and
+      // it is what smoke asks a figure about rather than reading a rotation.
       phase = !walking ? 0 : swing >= 0 ? 1 : 2;
     },
     pose() {
@@ -129,7 +130,7 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
 
 /**
  * What hangs from the right hand. Each shape is built pointing up out of the
- * grip, which is how the sprite draws them — a sword point-down read as being
+ * grip, the way the paperdoll draws them — a sword point-down read as being
  * held upside down.
  */
 function buildWeapon(shape: WeaponShapeId, color: number, size: number): Group {

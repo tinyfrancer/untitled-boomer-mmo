@@ -43,7 +43,7 @@ export function allAchievements(): AchievementDefinition[] {
   return ACHIEVEMENT_ORDER.map((id) => ACHIEVEMENTS[id]);
 }
 
-export function unlockedAchievements(kills: KillCounts): AchievementDefinition[] {
+function unlockedAchievements(kills: KillCounts): AchievementDefinition[] {
   return allAchievements().filter((definition) => isUnlocked(definition, kills));
 }
 

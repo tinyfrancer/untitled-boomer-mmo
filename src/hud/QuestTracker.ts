@@ -20,8 +20,7 @@ export class QuestTracker {
   }
 
   layout(rect: Rect): void {
-    place(this.root, rect, 'position');
-    this.root.style.width = `${rect.width}px`;
+    place(this.root, rect, 'width');
   }
 
   update(log: QuestLog, inventory: Record<string, number>): void {
