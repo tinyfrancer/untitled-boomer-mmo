@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_TRACKED_QUESTS,
+  gatherBarTop,
   hudLayout,
   isNarrowViewport,
+  pickerPosition,
   playerColumnBottom,
   sheetRect,
+  toastTop,
   type HudLayout,
 } from '../../src/ui/layout';
 import { THEME } from '../../src/ui/theme';
@@ -160,5 +163,56 @@ describe('sheetRect', () => {
     expect(sheetRect(tracked, PHONE_PORTRAIT.width, 210).height).toBeLessThan(
       sheetRect(bare, PHONE_PORTRAIT.width, 210).height,
     );
+  });
+});
+
+describe('the two lines over the middle of the playfield', () => {
+  // The camera keeps the player centred, so both clear the figure standing
+  // there — the announcement above it, the channel bar below.
+  it('puts the toast above centre and the gather bar below it', () => {
+    const { height } = PHONE_PORTRAIT;
+    expect(toastTop(height)).toBeLessThan(height / 2);
+    expect(gatherBarTop(height)).toBeGreaterThan(height / 2);
+  });
+
+  it('rounds to whole pixels on an odd viewport', () => {
+    expect(Number.isInteger(toastTop(667))).toBe(true);
+    expect(Number.isInteger(gatherBarTop(667))).toBe(true);
+  });
+});
+
+describe('pickerPosition', () => {
+  const BOUNDS = { width: 375, height: 812 };
+  const BOX = { width: 160, height: 200 };
+  const anchorAt = (left: number, top: number, width = 200) => ({
+    left,
+    right: left + width,
+    top,
+  });
+
+  it('opens to the left of the row it was asked from', () => {
+    const anchor = anchorAt(190, 100);
+    const { x } = pickerPosition(anchor, BOX, BOUNDS);
+    expect(x + BOX.width).toBeLessThanOrEqual(anchor.left);
+  });
+
+  it('flips to the right when the left would run off the screen', () => {
+    const anchor = anchorAt(20, 100, 120);
+    const { x } = pickerPosition(anchor, BOX, BOUNDS);
+    expect(x).toBeGreaterThanOrEqual(anchor.right);
+  });
+
+  // The bottom slot: the picker is taller than the room under the row that
+  // opened it, and hung off the screen before it was held inside.
+  it('holds a tall picker inside the viewport', () => {
+    const { y } = pickerPosition(anchorAt(190, 700), BOX, BOUNDS);
+    expect(y + BOX.height).toBeLessThanOrEqual(BOUNDS.height);
+  });
+
+  it('never places one off the top or the left, however little room there is', () => {
+    const tight = { width: 100, height: 100 };
+    const { x, y } = pickerPosition(anchorAt(10, 10), BOX, tight);
+    expect(x).toBeGreaterThanOrEqual(0);
+    expect(y).toBeGreaterThanOrEqual(0);
   });
 });

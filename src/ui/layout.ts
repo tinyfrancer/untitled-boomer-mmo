@@ -1,3 +1,5 @@
+import { clamp } from '../systems/math';
+import type { Point } from '../systems/MovementSystem';
 import { THEME, px } from './theme';
 
 export interface Rect {
@@ -30,6 +32,21 @@ const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 16;
 
 /** How many quests the tracker strip will show before it stops growing. */
 export const MAX_TRACKED_QUESTS = 2;
+
+// The two lines that sit over the middle of the playfield rather than in a
+// corner. The camera keeps the player centred there, so each is offset far
+// enough to clear the figure — the announcement above them, the channel bar
+// below.
+const TOAST_ABOVE_CENTRE = 80;
+const GATHER_BAR_BELOW_CENTRE = 60;
+
+export function toastTop(viewportHeight: number): number {
+  return Math.round(viewportHeight / 2 - TOAST_ABOVE_CENTRE);
+}
+
+export function gatherBarTop(viewportHeight: number): number {
+  return Math.round(viewportHeight / 2 + GATHER_BAR_BELOW_CENTRE);
+}
 
 export interface HudLayout {
   narrow: boolean;
@@ -142,6 +159,36 @@ export function worldViewportHeight(width: number, height: number, scale = 1): n
 /** The first y an open sheet must stay clear of on a roomy screen. */
 export function playerColumnBottom(layout: HudLayout): number {
   return layout.playerColumn.y + layout.playerColumn.height;
+}
+
+/** The row a picker was opened from, in the same coordinates it is placed in. */
+export interface AnchorBox {
+  left: number;
+  right: number;
+  top: number;
+}
+
+/**
+ * Where a picker anchored to `anchor` sits, given how big it turned out to be.
+ *
+ * To the left of the sheet it belongs to, so it never covers the row that
+ * opened it, and flipped to the right when there is no room that side. Both
+ * axes are then held inside the viewport: the picker for the bottom slot is
+ * taller than the space under it and would otherwise hang off the screen.
+ */
+export function pickerPosition(
+  anchor: AnchorBox,
+  box: { width: number; height: number },
+  bounds: { width: number; height: number },
+): Point {
+  const gutter = THEME.padding;
+  const preferredLeft = anchor.left - box.width - gutter;
+  const left =
+    preferredLeft >= 0 ? preferredLeft : Math.min(anchor.right + gutter, bounds.width - box.width);
+  return {
+    x: Math.max(0, left),
+    y: clamp(anchor.top, 0, Math.max(0, bounds.height - box.height)),
+  };
 }
 
 /**

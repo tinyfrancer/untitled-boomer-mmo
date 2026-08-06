@@ -1,4 +1,6 @@
-import { el } from './dom';
+import { Overlay } from './Overlay';
+import { el, emptyLine, row } from './dom';
+import { pickerPosition } from '../ui/layout';
 import type { ItemId } from '../types/ids';
 import { SLOT_LABELS } from './CharacterSheet';
 import { describeItemBonuses, describeItemName } from '../data/items';
@@ -9,11 +11,8 @@ import type { GearSlotId } from '../types/ids';
  * slot on the character sheet. Built fresh on each open and destroyed on close
  * rather than kept around and toggled.
  */
-export class SlotPicker {
-  readonly root: HTMLElement;
+export class SlotPicker extends Overlay {
   private readonly onOutside: (event: MouseEvent) => void;
-  private readonly onClosed: () => void;
-  private closed = false;
 
   constructor(
     slot: GearSlotId,
@@ -23,26 +22,25 @@ export class SlotPicker {
     onPick: (itemId: ItemId) => void,
     onClosed: () => void,
   ) {
-    this.onClosed = onClosed;
-    this.root = el('div', 'hud-picker');
+    super('hud-picker', onClosed);
     this.root.append(el('div', 'hud-picker__title', `Equip ${SLOT_LABELS[slot]}`));
 
     if (itemIds.length === 0) {
-      this.root.append(el('div', 'hud-dim', '(nothing for this slot)'));
+      this.root.append(emptyLine('(nothing for this slot)'));
     }
     for (const itemId of itemIds) {
-      const row = el('button', 'hud-picker__row');
-      row.type = 'button';
-      row.dataset.item = itemId;
-      row.append(
-        el('div', undefined, describeItemName(itemId)),
-        el('div', 'hud-list-row__sub', describeItemBonuses(itemId)),
-      );
-      row.addEventListener('click', () => {
-        onPick(itemId);
-        this.close();
+      const entry = row({
+        className: 'hud-picker__row',
+        label: describeItemName(itemId),
+        value: describeItemBonuses(itemId),
+        valueClass: 'hud-list-row__sub',
+        onClick: () => {
+          onPick(itemId);
+          this.close();
+        },
       });
-      this.root.append(row);
+      entry.root.dataset.item = itemId;
+      this.root.append(entry.root);
     }
 
     // Positioned before it is measured, then clamped once the browser has laid
@@ -60,31 +58,19 @@ export class SlotPicker {
       }
     };
     setTimeout(() => {
-      if (!this.closed) {
+      if (!this.isClosed) {
         window.addEventListener('pointerdown', this.onOutside);
       }
     }, 0);
   }
 
   private clampInto(anchor: DOMRect, bounds: { width: number; height: number }): void {
-    const box = this.root.getBoundingClientRect();
-    // To the left of the sheet it belongs to, so it never covers the row that
-    // opened it; flipped to the right when there is no room that side.
-    const preferredLeft = anchor.left - box.width - 8;
-    const left =
-      preferredLeft >= 0 ? preferredLeft : Math.min(anchor.right + 8, bounds.width - box.width);
-    this.root.style.left = `${Math.max(0, left)}px`;
-    this.root.style.top = `${Math.max(0, Math.min(anchor.top, bounds.height - box.height))}px`;
+    const { x, y } = pickerPosition(anchor, this.root.getBoundingClientRect(), bounds);
+    this.root.style.left = `${x}px`;
+    this.root.style.top = `${y}px`;
   }
 
-  /** Idempotent: closing an already-closed picker does nothing and calls nothing. */
-  close(): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
+  protected override release(): void {
     window.removeEventListener('pointerdown', this.onOutside);
-    this.root.remove();
-    this.onClosed();
   }
 }

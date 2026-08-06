@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { hudMounted, mountHud, unmountHud } from '../../src/hud/Hud';
 import { AwayReportModal } from '../../src/hud/AwayReportModal';
 import { OptionsModal } from '../../src/hud/OptionsModal';
+import type { Overlay } from '../../src/hud/Overlay';
 import { ShopModal } from '../../src/hud/ShopModal';
 import { SlotPicker } from '../../src/hud/SlotPicker';
 import { createNewCharacter, type CharacterState } from '../../src/persistence';
@@ -350,39 +351,38 @@ describe('destroy', () => {
 });
 
 /**
- * `Hud.destroy()` closes the options menu, the slot picker and the away report
- * and silently omits the shop — because `ShopModal` is the only overlay with no
- * `close()` at all, which is also why `Hud` reaches in with
- * `shopModal.root.remove()` in two other places.
- *
- * Nothing about that is visible in the DOM, since every overlay hangs off the
- * root that `destroy()` removes. What is missing is the lifecycle itself, so
- * that is what is asserted.
+ * All four overlays close the same way, which they did not before: three had
+ * independently written copies of the flag and the guard, and the shop had none
+ * at all — so `Hud` reached past it into `root.remove()` and `destroy()` left
+ * it out. None of that was visible in the DOM, since every overlay hangs off
+ * the root `destroy()` removes, so the lifecycle itself is what is asserted.
  */
 describe('every overlay has the same lifecycle', () => {
   const noop = (): void => {};
+  const overlays = (onClosed: () => void): Overlay[] => [
+    new OptionsModal({ onResetCharacter: noop, onClose: onClosed }),
+    new SlotPicker('helmet', [], new DOMRect(), PHONE, noop, onClosed),
+    new AwayReportModal(REPORT, onClosed),
+    new ShopModal(
+      { onBuy: noop, onSell: noop, onAcceptQuest: noop, onTurnInQuest: noop, onDismiss: noop },
+      onClosed,
+    ),
+  ];
 
-  it('gives three of the four an idempotent close()', () => {
-    const options = new OptionsModal({ onResetCharacter: noop, onClose: noop });
-    const picker = new SlotPicker('helmet', [], new DOMRect(), PHONE, noop, noop);
-    const away = new AwayReportModal(REPORT, noop);
-    for (const overlay of [options, picker, away]) {
+  it('takes each one out of the tree and says so once', () => {
+    for (const overlay of overlays(noop)) {
+      document.body.append(overlay.root);
       overlay.close();
-      expect(() => overlay.close()).not.toThrow();
+      expect(overlay.root.isConnected).toBe(false);
     }
   });
 
-  // Red on purpose, and inverted by PR 7 of docs/cleanup_plan.md, which gives
-  // all four one lifecycle and adds the shop to `destroy()`. `it.fails` is what
-  // turns that fix into a failing test until the `.fails` comes off.
-  it.fails('gives the shop modal one too', () => {
-    const shop = new ShopModal({
-      onBuy: noop,
-      onSell: noop,
-      onAcceptQuest: noop,
-      onTurnInQuest: noop,
-      onClose: noop,
-    });
-    expect('close' in shop).toBe(true);
+  it('closes idempotently: the second close does nothing and calls nothing', () => {
+    let closes = 0;
+    for (const overlay of overlays(() => closes++)) {
+      overlay.close();
+      expect(() => overlay.close()).not.toThrow();
+    }
+    expect(closes).toBe(4);
   });
 });

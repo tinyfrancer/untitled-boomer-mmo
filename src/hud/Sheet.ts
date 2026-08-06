@@ -1,4 +1,4 @@
-import { el } from './dom';
+import { el, place } from './dom';
 import { sheetRect, type HudLayout } from '../ui/layout';
 
 /**
@@ -28,9 +28,7 @@ export class Sheet {
 
   layout(layout: HudLayout, viewportWidth: number): void {
     const rect = sheetRect(layout, viewportWidth, this.preferredWidth);
-    this.root.style.left = `${rect.x}px`;
-    this.root.style.top = `${rect.y}px`;
-    this.root.style.width = `${rect.width}px`;
+    place(this.root, rect, 'width');
     // A sheet shorter than its allowance shrinks to its content rather than
     // leaving an empty box; a taller one stops here and scrolls inside.
     this.root.style.maxHeight = `${rect.height}px`;

@@ -69,6 +69,88 @@ export interface WeaponAppearance {
   color: number;
 }
 
+/** The gem a wand is tipped with, which is not the item's own colour. */
+export const WEAPON_GEM_COLOR = 0xffd54f;
+
+export type WeaponHead =
+  | { kind: 'gem'; radius: number }
+  // A wedge biting outward from the end of the haft.
+  | { kind: 'blade'; reach: number; drop: number };
+
+/**
+ * How a weapon hangs off the grip, measured along the weapon's own axis:
+ * `butt` of it runs behind the hand and `tip` in front, and the far end stands
+ * `lean` off the line straight up out of the grip — so the shaft is always
+ * `butt + tip` long, however far it is tipped over.
+ *
+ * Both drawers had their own `switch (shape)` with proportions matched by eye,
+ * which is the argument that put the body's rig here: a sword the sheet draws
+ * two thirds the length the world draws it is the sheet drawing a different
+ * sword. What each one still owns is what it draws them *out of* — strokes on a
+ * 100-unit box, meshes standing in tiles — and the flourishes beyond the rig,
+ * the way the bandit's bandana stays with whatever is drawing the bandit.
+ */
+export interface WeaponRig {
+  butt: number;
+  tip: number;
+  lean: number;
+  thickness: number;
+  /** A crossguard: how far above the grip, and how far out each side. */
+  guard: { above: number; reach: number } | null;
+  head: WeaponHead | null;
+}
+
+// As fractions of the figure's size, which is the only form both drawers can
+// share — one measures in a box a hundred units tall, the other in tiles.
+const WEAPON_RIGS: Record<WeaponShapeId, WeaponRig> = {
+  sword: {
+    butt: 0.07,
+    tip: 0.32,
+    lean: 0,
+    thickness: 0.04,
+    guard: { above: 0.035, reach: 0.05 },
+    head: null,
+  },
+  wand: {
+    butt: 0,
+    tip: 0.23,
+    lean: 0.06,
+    thickness: 0.03,
+    guard: null,
+    head: { kind: 'gem', radius: 0.045 },
+  },
+  pole: { butt: 0.22, tip: 0.36, lean: 0.16, thickness: 0.03, guard: null, head: null },
+  axe: {
+    butt: 0.16,
+    tip: 0.32,
+    lean: 0,
+    thickness: 0.035,
+    guard: null,
+    head: { kind: 'blade', reach: 0.11, drop: 0.14 },
+  },
+};
+
+export function weaponRig(shape: WeaponShapeId, size: number): WeaponRig {
+  const rig = WEAPON_RIGS[shape];
+  return {
+    butt: rig.butt * size,
+    tip: rig.tip * size,
+    lean: rig.lean * size,
+    thickness: rig.thickness * size,
+    guard: rig.guard ? { above: rig.guard.above * size, reach: rig.guard.reach * size } : null,
+    head: scaleHead(rig.head, size),
+  };
+}
+
+function scaleHead(head: WeaponHead | null, size: number): WeaponHead | null {
+  if (!head) {
+    return null;
+  }
+  return head.kind === 'gem'
+    ? { kind: 'gem', radius: head.radius * size }
+    : { kind: 'blade', reach: head.reach * size, drop: head.drop * size };
+}
+
 export interface Appearance {
   headColor: number;
   torsoColor: number;

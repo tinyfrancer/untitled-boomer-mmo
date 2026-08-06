@@ -1,4 +1,5 @@
-import { el } from './dom';
+import { Overlay } from './Overlay';
+import { el, emptyLine, row, sectionHeader } from './dom';
 import { describeItemName, itemValue } from '../data/items';
 import { SHOP_STOCK } from '../data/shop';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -19,7 +20,8 @@ export interface ShopHandlers {
   onSell: (itemId: ItemId) => void;
   onAcceptQuest: (questId: QuestId) => void;
   onTurnInQuest: (questId: QuestId) => void;
-  onClose: () => void;
+  /** The X: the world owns whether the shop is open, so this asks rather than does. */
+  onDismiss: () => void;
 }
 
 /**
@@ -30,15 +32,14 @@ export interface ShopHandlers {
  * Deliberately not a scrim — a tap outside it still has to reach the world, or
  * the player could not walk away from the counter.
  */
-export class ShopModal {
-  readonly root: HTMLElement;
+export class ShopModal extends Overlay {
   private readonly coin: HTMLElement;
   private readonly body: HTMLElement;
   private readonly handlers: ShopHandlers;
 
-  constructor(handlers: ShopHandlers) {
+  constructor(handlers: ShopHandlers, onClosed: () => void) {
+    super('hud-modal hud-modal--pass-through hud-modal--top', onClosed);
     this.handlers = handlers;
-    this.root = el('div', 'hud-modal hud-modal--pass-through hud-modal--top');
     const box = el('div', 'hud-modal__box hud-modal__box--shop');
 
     const head = el('div', 'hud-modal__head');
@@ -47,7 +48,7 @@ export class ShopModal {
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
     close.dataset.action = 'close-shop';
-    close.addEventListener('click', () => handlers.onClose());
+    close.addEventListener('click', () => handlers.onDismiss());
     head.append(this.coin, close);
 
     this.body = el('div', 'hud-modal__body');
@@ -63,11 +64,11 @@ export class ShopModal {
       (offer) => offer.state !== 'done',
     );
     if (offers.length > 0) {
-      this.body.append(header('Work going'));
+      this.body.append(sectionHeader('Work going'));
       offers.forEach((offer) => this.body.append(this.questRow(offer)));
     }
 
-    this.body.append(header('For sale'));
+    this.body.append(sectionHeader('For sale'));
     for (const entry of SHOP_STOCK) {
       this.body.append(
         listRow(
@@ -83,9 +84,9 @@ export class ShopModal {
     const sellable = inventoryEntries(state.inventory).filter(
       ([itemId, quantity]) => quantity > 0 && itemValue(itemId) !== null,
     );
-    this.body.append(header('Sell from your bag'));
+    this.body.append(sectionHeader('Sell from your bag'));
     if (sellable.length === 0) {
-      this.body.append(el('div', 'hud-list-empty', '(nothing worth selling)'));
+      this.body.append(emptyLine('(nothing worth selling)'));
     }
     for (const [itemId, quantity] of sellable) {
       this.body.append(
@@ -123,28 +124,25 @@ export class ShopModal {
   }
 }
 
-function header(label: string): HTMLElement {
-  return el('div', 'hud-list-header', label);
-}
-
 function listRow(
   label: string,
   value: string,
   labelColor: string,
   valueColor: string,
   onClick: () => void,
-  questId?: string,
+  questId?: QuestId,
 ): HTMLElement {
-  const row = el('button', 'hud-list-row');
-  row.type = 'button';
+  const entry = row({
+    className: 'hud-list-row',
+    label,
+    value,
+    valueClass: 'hud-list-row__value',
+    onClick,
+  });
   if (questId) {
-    row.dataset.quest = questId;
+    entry.root.dataset.quest = questId;
   }
-  const name = el('span', undefined, label);
-  name.style.color = labelColor;
-  const amount = el('span', 'hud-list-row__value', value);
-  amount.style.color = valueColor;
-  row.append(name, amount);
-  row.addEventListener('click', onClick);
-  return row;
+  entry.label.style.color = labelColor;
+  entry.value.style.color = valueColor;
+  return entry.root;
 }

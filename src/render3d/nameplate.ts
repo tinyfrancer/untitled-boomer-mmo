@@ -2,6 +2,7 @@ import { Group, Mesh, MeshBasicMaterial, PlaneGeometry, Sprite, type Camera } fr
 import { disposeTree } from './dispose';
 import { PALETTE } from './palette';
 import { buildText } from './text';
+import { barFill } from '../systems/math';
 
 const DEFAULT_WIDTH = 56;
 const DEFAULT_HEIGHT = 8;
@@ -50,7 +51,7 @@ export class Nameplate {
 
   setHealth(hp: number, maxHp: number): void {
     if (!this.fill) return;
-    const ratio = maxHp > 0 ? Math.min(Math.max(hp / maxHp, 0), 1) : 0;
+    const ratio = barFill(hp, maxHp);
     this.fill.scale.x = this.width * ratio;
     // Scaling a centred plane eats both ends; the missing health has to come
     // off the right only, so the bar drains the way every health bar drains.

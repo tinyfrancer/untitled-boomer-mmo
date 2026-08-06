@@ -1,3 +1,4 @@
+import { Overlay } from './Overlay';
 import { el } from './dom';
 import { describeItemName } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -10,13 +11,9 @@ import { formatAwayDuration, type OfflineAfkReport } from '../systems/OfflineAfk
  * ever sees this, and a line that faded after a second would be worse than not
  * reporting it at all.
  */
-export class AwayReportModal {
-  readonly root: HTMLElement;
-  private readonly onClose: () => void;
-  private closed = false;
-
-  constructor(report: OfflineAfkReport, onClose: () => void) {
-    this.onClose = onClose;
+export class AwayReportModal extends Overlay {
+  constructor(report: OfflineAfkReport, onClosed: () => void) {
+    super('hud-modal hud-modal--pass-through', onClosed);
     const lines: string[] = [
       `Away for ${formatAwayDuration(report.elapsedMs)}`,
       `${report.kills} kills, ${report.xp} XP`,
@@ -31,7 +28,6 @@ export class AwayReportModal {
       lines.push('Your pack filled up.');
     }
 
-    this.root = el('div', 'hud-modal hud-modal--pass-through');
     const box = el('div', 'hud-modal__box');
     box.append(el('div', 'hud-modal__title', 'While you were away'));
     const body = el('div', 'hud-modal__body');
@@ -44,15 +40,5 @@ export class AwayReportModal {
 
     box.append(body, dismiss);
     this.root.append(box);
-  }
-
-  /** Idempotent: closing an already-closed report does nothing and calls nothing. */
-  close(): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
-    this.root.remove();
-    this.onClose();
   }
 }

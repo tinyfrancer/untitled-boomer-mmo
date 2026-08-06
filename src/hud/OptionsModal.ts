@@ -1,3 +1,4 @@
+import { Overlay } from './Overlay';
 import { el } from './dom';
 
 export interface OptionsModalHandlers {
@@ -12,16 +13,14 @@ export interface OptionsModalHandlers {
  * Reset asks twice: it deletes the save outright, and a mistap on a touch
  * screen shouldn't be able to do that.
  */
-export class OptionsModal {
-  readonly root: HTMLElement;
+export class OptionsModal extends Overlay {
   private readonly resetButton: HTMLButtonElement;
   private readonly handlers: OptionsModalHandlers;
   private confirmingReset = false;
-  private closed = false;
 
   constructor(handlers: OptionsModalHandlers) {
+    super('hud-modal', handlers.onClose);
     this.handlers = handlers;
-    this.root = el('div', 'hud-modal');
     const box = el('div', 'hud-modal__box');
     box.append(el('div', 'hud-modal__title', 'Options'));
 
@@ -57,15 +56,5 @@ export class OptionsModal {
 
   get armed(): boolean {
     return this.confirmingReset;
-  }
-
-  /** Idempotent: closing an already-closed modal does nothing and calls nothing. */
-  close(): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
-    this.root.remove();
-    this.handlers.onClose();
   }
 }

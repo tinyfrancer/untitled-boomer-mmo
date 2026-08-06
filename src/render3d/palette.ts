@@ -22,7 +22,6 @@ export const PALETTE = {
   ember: 0xe65100,
   emberMid: 0xffb300,
   emberCore: 0xfff59d,
-  coin: 0xffd54f,
   barBackground: 0x000000,
   barFill: 0x66bb6a,
   /** The bolt an ability throws, and the glow around it. */
