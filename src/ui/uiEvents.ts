@@ -19,7 +19,6 @@ export const SKILL_XP_GAINED_EVENT = 'skill-xp-gained';
 export const GATHER_STARTED_EVENT = 'gather-started';
 export const GATHER_PROGRESS_EVENT = 'gather-progress';
 export const GATHER_ENDED_EVENT = 'gather-ended';
-export const GATHER_REFUSED_EVENT = 'gather-refused';
 export const EAT_ITEM_REQUESTED_EVENT = 'eat-item-requested';
 export const COOK_REQUESTED_EVENT = 'cook-requested';
 export const LIGHT_FIRE_REQUESTED_EVENT = 'light-fire-requested';
@@ -45,6 +44,10 @@ export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
 // One line of combat commentary. Emitted alongside the floating text it mirrors,
 // so the two can never drift out of step.
 export const COMBAT_LOG_EVENT = 'combat-log';
+// One toast: why something the player asked for did not happen ("Your pack is
+// full", "You can't afford that"), or a small thing that did ("You burn it").
+// It was named for gathering, which is three of its fourteen callers.
+export const NOTICE_EVENT = 'notice';
 // Asked for by the options menu; the host owns the session, so it does the work.
 export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
 // AFK camping. The HUD asks for the toggle; ZoneWorld owns whether it is on,
@@ -137,7 +140,6 @@ export interface UiEventMap {
   [GATHER_STARTED_EVENT]: [label: string];
   [GATHER_PROGRESS_EVENT]: [progress: number];
   [GATHER_ENDED_EVENT]: [];
-  [GATHER_REFUSED_EVENT]: [message: string];
   [EAT_ITEM_REQUESTED_EVENT]: [itemId: string];
   [COOK_REQUESTED_EVENT]: [itemId: string];
   [LIGHT_FIRE_REQUESTED_EVENT]: [];
@@ -154,6 +156,7 @@ export interface UiEventMap {
   [ABILITY_STATE_CHANGED_EVENT]: [states: AbilityState[]];
   [PLAYER_MANA_CHANGED_EVENT]: [pool: ManaPool];
   [COMBAT_LOG_EVENT]: [entry: CombatLogEntry];
+  [NOTICE_EVENT]: [message: string];
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
   [AFK_TOGGLE_REQUESTED_EVENT]: [];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];

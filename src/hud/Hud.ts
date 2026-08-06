@@ -48,13 +48,13 @@ import {
   EQUIP_ITEM_REQUESTED_EVENT,
   GATHER_ENDED_EVENT,
   GATHER_PROGRESS_EVENT,
-  GATHER_REFUSED_EVENT,
   GATHER_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
+  NOTICE_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
@@ -636,7 +636,7 @@ class Hud {
     this.listen(GATHER_STARTED_EVENT, (label) => this.gatherBar.show(label));
     this.listen(GATHER_PROGRESS_EVENT, (progress) => this.gatherBar.setProgress(progress));
     this.listen(GATHER_ENDED_EVENT, () => this.gatherBar.hide());
-    this.listen(GATHER_REFUSED_EVENT, (reason) => this.toast.show(reason, THEME.color.muted));
+    this.listen(NOTICE_EVENT, (message) => this.toast.show(message, THEME.color.muted));
 
     this.listen(AFK_STATE_CHANGED_EVENT, (active) => {
       this.tabBar.setCamping(active);

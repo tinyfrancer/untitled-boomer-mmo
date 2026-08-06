@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness } from './harness';
-import { GATHER_REFUSED_EVENT } from '../../src/ui/uiEvents';
+import { NOTICE_EVENT } from '../../src/ui/uiEvents';
 import { FIRE_COOK_RADIUS } from '../../src/data/recipes';
 
 /**
@@ -14,7 +14,7 @@ beforeEach(() => {
 });
 
 function refusals(emitted: { event: string; args: unknown[] }[]): string[] {
-  return emitted.filter((e) => e.event === GATHER_REFUSED_EVENT).map((e) => String(e.args[0]));
+  return emitted.filter((e) => e.event === NOTICE_EVENT).map((e) => String(e.args[0]));
 }
 
 describe('the campfire', () => {

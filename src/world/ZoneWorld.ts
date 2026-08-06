@@ -18,13 +18,13 @@ import {
   EQUIP_ITEM_REQUESTED_EVENT,
   GATHER_ENDED_EVENT,
   GATHER_PROGRESS_EVENT,
-  GATHER_REFUSED_EVENT,
   GATHER_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
+  NOTICE_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
@@ -717,11 +717,11 @@ export class ZoneWorld {
     // Checked before the coin leaves the purse, so a full pack never sells the
     // player something they can't take home.
     if (!this.character.canCarryItem(itemId, 1)) {
-      this.events.emit(GATHER_REFUSED_EVENT, 'Your pack is too full to carry that.');
+      this.events.emit(NOTICE_EVENT, 'Your pack is too full to carry that.');
       return;
     }
     if (!this.character.spendCurrency(price)) {
-      this.events.emit(GATHER_REFUSED_EVENT, "You can't afford that.");
+      this.events.emit(NOTICE_EVENT, "You can't afford that.");
       return;
     }
     this.character.addItem(itemId, 1);
@@ -755,7 +755,7 @@ export class ZoneWorld {
     if (!this.shopNpc) return;
     const result = this.character.turnInQuest(questId);
     if (!result.ok) {
-      this.events.emit(GATHER_REFUSED_EVENT, result.reason);
+      this.events.emit(NOTICE_EVENT, result.reason);
       return;
     }
     this.log(logQuestCompleted(QUESTS[questId].name));
@@ -869,7 +869,7 @@ export class ZoneWorld {
 
   startGathering(node: ResourceNode): void {
     if (!node.isAvailable()) {
-      this.events.emit(GATHER_REFUSED_EVENT, `The ${node.definition.name} is spent.`);
+      this.events.emit(NOTICE_EVENT, `The ${node.definition.name} is spent.`);
       return;
     }
 
@@ -879,7 +879,7 @@ export class ZoneWorld {
       this.character.state.gear,
     );
     if (!check.ok) {
-      this.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      this.events.emit(NOTICE_EVENT, check.reason);
       return;
     }
 
@@ -932,7 +932,7 @@ export class ZoneWorld {
     // skill earns nothing, and the channel stops rather than spinning forever.
     // This is what ends an unattended gathering session.
     if (!this.character.tryAddItem(definition.yieldItemId, quantity)) {
-      this.events.emit(GATHER_REFUSED_EVENT, 'Your pack is full.');
+      this.events.emit(NOTICE_EVENT, 'Your pack is full.');
       this.stopGathering();
       return;
     }
@@ -970,7 +970,7 @@ export class ZoneWorld {
 
   handleLightFireRequested(): void {
     if (this.character.itemCount(FIRE_INPUT_ITEM_ID) <= 0) {
-      this.events.emit(GATHER_REFUSED_EVENT, 'You have no logs to burn.');
+      this.events.emit(NOTICE_EVENT, 'You have no logs to burn.');
       return;
     }
 
@@ -988,7 +988,7 @@ export class ZoneWorld {
     const recipe =
       (itemId ? recipeForInput(itemId) : null) ?? findCookableItem(this.character.state.inventory);
     if (!recipe) {
-      this.events.emit(GATHER_REFUSED_EVENT, 'You have nothing to cook.');
+      this.events.emit(NOTICE_EVENT, 'You have nothing to cook.');
       return;
     }
 
@@ -999,7 +999,7 @@ export class ZoneWorld {
       this.isNearFire(),
     );
     if (!check.ok) {
-      this.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      this.events.emit(NOTICE_EVENT, check.reason);
       return;
     }
 
@@ -1008,7 +1008,7 @@ export class ZoneWorld {
     this.character.addItem(result.itemId, 1);
     this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
     if (result.burnt) {
-      this.events.emit(GATHER_REFUSED_EVENT, 'You burn it.');
+      this.events.emit(NOTICE_EVENT, 'You burn it.');
     } else {
       this.awardSkillXp('cooking', result.xp);
     }
@@ -1019,7 +1019,7 @@ export class ZoneWorld {
       return;
     }
     if (this.player.hp >= this.player.maxHp) {
-      this.events.emit(GATHER_REFUSED_EVENT, 'You are already at full health.');
+      this.events.emit(NOTICE_EVENT, 'You are already at full health.');
       return;
     }
     if (!this.player.eat(itemId)) {
@@ -1149,7 +1149,7 @@ export class ZoneWorld {
       // Taking a hit breaks the channel, so gathering is never a way to ignore a
       // mob already chewing on you.
       if (this.gatherState) {
-        this.events.emit(GATHER_REFUSED_EVENT, 'You are interrupted!');
+        this.events.emit(NOTICE_EVENT, 'You are interrupted!');
         this.stopGathering();
       }
 
@@ -1362,7 +1362,7 @@ export class ZoneWorld {
       targetDistance: this.target ? distance(this.player, this.target) : Infinity,
     });
     if (!check.ok) {
-      this.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      this.events.emit(NOTICE_EVENT, check.reason);
       return;
     }
 
@@ -1492,7 +1492,7 @@ export class ZoneWorld {
   handleEquipRequested(itemId: string): void {
     const check = this.character.equip(itemId);
     if (!check.ok) {
-      this.events.emit(GATHER_REFUSED_EVENT, check.reason);
+      this.events.emit(NOTICE_EVENT, check.reason);
       return;
     }
     this.applyGearChange();
