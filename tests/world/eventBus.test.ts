@@ -9,10 +9,11 @@ describe('createEventBus', () => {
     bus.on('xp-gained', first);
     bus.on('xp-gained', second);
 
-    bus.emit('xp-gained', 2, 30, 100);
+    const gain = { level: 2, xp: 30, xpToNext: 100, leveledUp: true };
+    bus.emit('xp-gained', gain);
 
-    expect(first).toHaveBeenCalledWith(2, 30, 100);
-    expect(second).toHaveBeenCalledWith(2, 30, 100);
+    expect(first).toHaveBeenCalledWith(gain);
+    expect(second).toHaveBeenCalledWith(gain);
   });
 
   it('ignores events nobody is listening for', () => {

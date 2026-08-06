@@ -1281,7 +1281,7 @@ export class ZoneWorld {
 
   // Everything a level costs the rest of the world, for XP however it arrived.
   private publishXpGain(gain: CombatXpGain): void {
-    this.events.emit(XP_GAINED_EVENT, gain.level, gain.xp, gain.xpToNext);
+    this.events.emit(XP_GAINED_EVENT, gain);
 
     if (gain.leveledUp) {
       this.log(logLevelUp(gain.level));
@@ -1479,7 +1479,10 @@ export class ZoneWorld {
   private publishPlayerMana(): void {
     if (this.player.mana === this.lastReportedMana) return;
     this.lastReportedMana = this.player.mana;
-    this.events.emit(PLAYER_MANA_CHANGED_EVENT, this.player.mana, this.player.maxMana);
+    this.events.emit(PLAYER_MANA_CHANGED_EVENT, {
+      mana: this.player.mana,
+      maxMana: this.player.maxMana,
+    });
   }
 
   // ---------------------------------------------------------------------------

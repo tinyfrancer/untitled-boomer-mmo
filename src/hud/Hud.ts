@@ -540,10 +540,10 @@ class Hud {
     this.listen(TARGET_SELECTED_EVENT, (target) => this.targetFrame.show(target));
     this.listen(TARGET_CLEARED_EVENT, () => this.targetFrame.hide());
 
-    this.listen(XP_GAINED_EVENT, (level, xp, xpToNext) => {
-      this.model.level = level;
-      this.model.xp = xp;
-      this.playerColumn.setXp(level, xp, xpToNext);
+    this.listen(XP_GAINED_EVENT, (gain) => {
+      this.model.level = gain.level;
+      this.model.xp = gain.xp;
+      this.playerColumn.setXp(gain.level, gain.xp, gain.xpToNext);
     });
     this.listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
@@ -581,7 +581,7 @@ class Hud {
       this.featsSheet.update(kills, this.model.activeTitleId);
     });
 
-    this.listen(PLAYER_MANA_CHANGED_EVENT, (mana, maxMana) => {
+    this.listen(PLAYER_MANA_CHANGED_EVENT, ({ mana, maxMana }) => {
       const gainedPool = maxMana > 0 !== this.model.maxMana > 0;
       this.model.mana = mana;
       this.model.maxMana = maxMana;

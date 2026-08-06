@@ -1,6 +1,6 @@
 import type { AbilityId, AchievementId, GearSlotId, QuestId, TitleId } from '../types/ids';
 import type { KillCounts } from '../systems/AchievementSystem';
-import type { SkillXpGain } from '../systems/CharacterController';
+import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
 import type { QuestLog } from '../systems/QuestSystem';
@@ -91,6 +91,15 @@ export interface AbilityState {
   usable: boolean;
 }
 
+// Payload for PLAYER_MANA_CHANGED_EVENT. The pool and its size are never
+// useful apart — whether there is a pool at all is a layout input, and the bar
+// needs both to have a width — so they travel as one value rather than as two
+// positional numbers a caller could swap.
+export interface ManaPool {
+  mana: number;
+  maxMana: number;
+}
+
 // Payload for ACHIEVEMENT_UNLOCKED_EVENT. Carries the title separately from the
 // achievement because only the top tier grants one, and because the HUD shows a
 // title being worn differently from a tier merely being completed.
@@ -116,7 +125,7 @@ export interface AchievementUnlock {
 export interface UiEventMap {
   [TARGET_SELECTED_EVENT]: [target: TargetInfo];
   [TARGET_CLEARED_EVENT]: [];
-  [XP_GAINED_EVENT]: [level: number, xp: number, xpToNext: number];
+  [XP_GAINED_EVENT]: [gain: CombatXpGain];
   [LEVEL_UP_EVENT]: [level: number];
   [PLAYER_HP_CHANGED_EVENT]: [hp: number];
   [PLAYER_DIED_EVENT]: [];
@@ -143,7 +152,7 @@ export interface UiEventMap {
   [QUEST_LOG_CHANGED_EVENT]: [quests: QuestLog];
   [ABILITY_REQUESTED_EVENT]: [abilityId: AbilityId];
   [ABILITY_STATE_CHANGED_EVENT]: [states: AbilityState[]];
-  [PLAYER_MANA_CHANGED_EVENT]: [mana: number, maxMana: number];
+  [PLAYER_MANA_CHANGED_EVENT]: [pool: ManaPool];
   [COMBAT_LOG_EVENT]: [entry: CombatLogEntry];
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
   [AFK_TOGGLE_REQUESTED_EVENT]: [];
