@@ -10,7 +10,7 @@ import type { ClassId } from '../types/ids';
 //
 // A step is owed when the *shape or meaning* of the save changes, which is not
 // the same thing as the game changing around it. The 3D port in
-// `docs/3d_port_plan.md` needs no step of its own: the simulation keeps the
+// `docs/archive/3d_port_plan.md` needs no step of its own: the simulation keeps the
 // same 2D (x = east, y = south) coordinates and the renderer maps them, so
 // every field here means exactly what it meant before.
 type MigrationStep = (state: Record<string, unknown>) => Record<string, unknown>;

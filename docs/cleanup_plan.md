@@ -42,7 +42,7 @@ is no half-finished state to carry between sessions — if a session ends, it en
 
 **Step 0, before any code: land this document as `docs/cleanup_plan.md`** on its own branch and
 PR. That is where the status table lives, and it is how a future session (or a fresh context)
-knows what is already done without re-deriving any of it. `docs/3d_port_plan.md` and
+knows what is already done without re-deriving any of it. `docs/archive/3d_port_plan.md` and
 `docs/upgrade_plan.md` already use exactly this convention — status line at the top, updated as
 each PR merges.
 
@@ -77,7 +77,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | --- | ---------------------------------------- | ---- | ---------- | ------------ |
 | 0   | Land this plan as `docs/cleanup_plan.md` | S    | —          | ☑ 2026-08-05 |
 | 1   | Tooling and CI gates                     | M    | —          | ☑ 2026-08-06 |
-| 2   | Docs truth pass                          | S    | —          | ☐            |
+| 2   | Docs truth pass                          | S    | —          | ☑ 2026-08-06 |
 | 3   | Dead code and Phaser residue             | M    | —          | ☐            |
 | 4   | The safety net: targeted tests           | M    | —          | ☐            |
 | 5   | Type the event channel                   | M    | —          | ☐            |
@@ -130,31 +130,36 @@ Commits: one per bullet group (CI gates / coverage / tsconfig / smoke sections).
 **Done when:** CI shows a format check, a coverage report, and one `tsc` per job.
 **Landed:** 77/77 smoke, unchanged; coverage 67.6% statements.
 
-## PR 2 — Docs truth pass · `cleanup/02-docs` · S
+## PR 2 — Docs truth pass · `cleanup/02-docs` · S — done, merged
 
 No `src/` changes. The cheapest PR here and the one that stops future sessions being misled.
 
-- [ ] **`README.md`** — says "This is v0: a single-player starting town with rats to kill" (two
+- [x] **`README.md`** — says "This is v0: a single-player starting town with rats to kill" (two
       feature-eras ago) and documents "**drag the on-screen joystick, bottom-right**". There is no
       joystick; zero hits anywhere in `src/`. Rewrite stack and controls (tap-to-move,
       drag-to-orbit, the options menu as the supported reset path); add `npm run smoke` to the
       scripts table.
-- [ ] **`CLAUDE.md:533`** points at `generateTextures.ts` as a comment-style example. Deleted in
+- [x] **`CLAUDE.md:533`** points at `generateTextures.ts` as a comment-style example. Deleted in
       PR 20. Swap in a live one. Add a line noting the `docs/feature_N_*.txt` briefs are original
       prompts, a historical record rather than current spec — `feature_6_v1.txt` says "crabs lvl
       4-6" against `spawns.ts`'s actual 1-3, which is superseded rather than wrong.
-- [ ] **`docs/upgrade_plan.md`** is actively misleading: its central table still reads
+- [x] **`docs/upgrade_plan.md`** is actively misleading: its central table still reads
       `phaser 3.90.0 → 4.2.1, Take deliberately — PR 2`, with a section on Phaser 4 geometry masks
       and a reference to the deleted `scenes/generateTextures.ts`. Only the TypeScript 7 row is
       live. Cut to that row, mark the rest superseded.
-- [ ] **`docs/refactor_systems_seam.md`** is marked done but frames the world in Phaser terms and
+- [x] **`docs/refactor_systems_seam.md`** is marked done but frames the world in Phaser terms and
       points at an `ARCHITECTURE` file that does not exist and a deleted `ZoneScene`.
-- [ ] Move the completed plans into `docs/archive/` so the directory says at a glance which docs
+- [x] Move the completed plans into `docs/archive/` so the directory says at a glance which docs
       describe the present. `docs/3d_port_plan.md` moves but stays **verbatim** — CLAUDE.md leans
       on it as the "why is it like this" reference and it is honestly labelled.
 
 **Verify:** gates only. No smoke needed.
 **Done when:** grepping `docs/` and `README.md` for "Phaser" returns only archived history.
+**Landed:** two hits survive that grep and both are wanted — `README.md` saying the game _was_
+2D on Phaser, and this file, which is live and whose PR 3 is entirely about the residue still in
+`src/`. `docs/archive/` has a README naming what each archived plan was and when it finished.
+The upgrade plan kept its live TypeScript 7 row in `docs/upgrade_plan.md` and archived the rest,
+so both a live and an archived copy exist under that name.
 
 ## PR 3 — Dead code and Phaser residue · `cleanup/03-dead-code` · M
 
@@ -434,7 +439,7 @@ need it.
 Named so they don't get picked up by accident: `hud/styles.ts`'s size (one stylesheet is the right
 shape), the `scale` threading through `ui/layout.ts` (~12 sites kept as a deliberate hook for a
 future text-size setting — `fontPx` goes in PR 3 because it is dead, the hook stays), the
-TypeScript 7 upgrade (still blocked upstream), and `docs/3d_port_plan.md`'s contents, which stay
+TypeScript 7 upgrade (still blocked upstream), and `docs/archive/3d_port_plan.md`'s contents, which stay
 verbatim as the record of why the renderer looks like this.
 
 Housekeeping, not a PR: `.smoke/` holds 62 gitignored PNGs where the script writes 20, including

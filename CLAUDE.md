@@ -13,7 +13,10 @@ a weight-limited pack; two collection quests from the shopkeeper; slayer achieve
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
 mobile-first HUD; and local save/load with versioned migrations. All three zones are level 1-3 starter content — what separates them is
 what they drop, not how hard they are.
-Per-feature briefs live in `docs/feature_N_*.txt`. Full long-term vision is in
+Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
+historical record of what each feature was asked for — not current spec, and superseded by the
+code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
+them at 1-3, and `spawns.ts` is right). Full long-term vision is in
 `docs/initial_design.txt` (multiplayer, more zones, more skills) — most of it is intentionally
 not built yet, so don't assume features from that doc exist in code.
 
@@ -161,7 +164,7 @@ await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
 ## Architecture
 
 **Stack**: TypeScript bundled with Vite, rendered in 3D with Three.js (`src/render3d/`). It was
-Phaser 4 in 2D until PR 20 of `docs/3d_port_plan.md` deleted that renderer; the port is done and
+Phaser 4 in 2D until PR 20 of `docs/archive/3d_port_plan.md` deleted that renderer; the port is done and
 `main` has one engine. No backend — everything is a static site. Character data lives in the
 browser's `localStorage`.
 
@@ -546,8 +549,10 @@ Two things follow from the camera being movable at all:
 
 - Prettier is the source of truth for formatting (single quotes, semicolons, trailing commas,
   100-char width) — run `npm run format` rather than hand-wrapping lines.
-- `noUnusedLocals`/`noUnusedParameters`/`erasableSyntaxOnly` are enabled in `tsconfig.json`; the
-  build (`tsc && vite build`) fails on unused code, so don't leave it behind.
+- `noUnusedLocals`/`noUnusedParameters`/`erasableSyntaxOnly` are enabled in `tsconfig.json`;
+  `npm run typecheck` fails on unused code, so don't leave it behind. `npm run build` will not —
+  it is `vite build` alone, and the typecheck is its own CI step rather than a side effect of it.
 - Comments in this codebase are used sparingly and only to explain non-obvious _why_ (see
-  existing examples like the version-swap note in `persistence/index.ts` or the tileset note in
-  `generateTextures.ts`) — match that style rather than narrating what code does.
+  existing examples like the version-swap note in `persistence/index.ts` or the one on
+  `ARRIVE_STEP_FRACTION` in `systems/MovementSystem.ts`, which explains a constant no reader
+  could derive) — match that style rather than narrating what code does.
