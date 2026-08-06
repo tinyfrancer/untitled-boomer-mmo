@@ -71,7 +71,7 @@ function hudCss(): string {
   border: 2px solid ${cssColor(THEME.xpFill)};
 }
 .hud-button.is-lit {
-  border: 2px solid ${cssColor(0xffee58)};
+  border: 2px solid ${THEME.color.equippable};
 }
 
 /* A bar with a fill, which the player column and the skill lists are made of. */
@@ -555,7 +555,7 @@ function hudCss(): string {
 }
 .hud-modal__box--shop {
   width: 300px;
-  border-color: ${cssColor(0xffd54f)};
+  border-color: ${THEME.color.levelUp};
   gap: 4px;
 }
 .hud-modal__title {
@@ -679,14 +679,14 @@ function hudCss(): string {
   gap: ${THEME.padding}px;
   width: 200px;
   padding: ${THEME.padding}px;
-  border: 2px solid ${cssColor(0x555577)};
+  border: 2px solid ${cssColor(THEME.panelStroke)};
   background: #2a2a4a;
   color: ${THEME.color.text};
   font: inherit;
   cursor: pointer;
 }
 .create__card.is-selected {
-  border-color: ${cssColor(0xffee58)};
+  border-color: ${THEME.color.equippable};
 }
 .create__card-name {
   font-size: ${THEME.font.lg}px;
@@ -715,7 +715,7 @@ function hudCss(): string {
   overflow-y: auto;
   pointer-events: auto;
   background: ${cssRgba(THEME.panelBg, 0.92)};
-  border: 1px solid ${cssColor(0xffee58)};
+  border: 1px solid ${THEME.color.equippable};
   padding: ${THEME.padding}px;
 }
 .hud-picker__title {
