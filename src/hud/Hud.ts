@@ -66,12 +66,26 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
   type AvailableActions,
+  type UiEventName,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
 import type { ItemId, TitleId } from '../types/ids';
+
+/**
+ * Which request each of the inventory panel's buttons is. Lighting a fire is the
+ * one that is about where the player is standing rather than about the item it
+ * was pressed on, which is why its event is the one carrying nothing.
+ */
+const ITEM_ACTION_EVENTS = {
+  equip: EQUIP_ITEM_REQUESTED_EVENT,
+  eat: EAT_ITEM_REQUESTED_EVENT,
+  cook: COOK_REQUESTED_EVENT,
+  sell: SELL_ITEM_REQUESTED_EVENT,
+  'light-fire': LIGHT_FIRE_REQUESTED_EVENT,
+} satisfies Record<ItemActionId, UiEventName>;
 
 export interface HudOptions {
   parent: HTMLElement;
@@ -376,23 +390,12 @@ class Hud {
   }
 
   private dispatchItemAction(actionId: ItemActionId, itemId: ItemId): void {
-    switch (actionId) {
-      case 'equip':
-        this.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId);
-        break;
-      case 'eat':
-        this.events.emit(EAT_ITEM_REQUESTED_EVENT, itemId);
-        break;
-      case 'light-fire':
-        this.events.emit(LIGHT_FIRE_REQUESTED_EVENT);
-        break;
-      case 'cook':
-        this.events.emit(COOK_REQUESTED_EVENT, itemId);
-        break;
-      case 'sell':
-        this.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId);
-        break;
+    const event = ITEM_ACTION_EVENTS[actionId];
+    if (event === LIGHT_FIRE_REQUESTED_EVENT) {
+      this.events.emit(event);
+      return;
     }
+    this.events.emit(event, itemId);
   }
 
   // ---------------------------------------------------------------------------

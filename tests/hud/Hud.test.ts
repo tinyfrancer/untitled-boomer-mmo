@@ -10,12 +10,17 @@ import { recordingBus, type Emitted } from '../world/harness';
 import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSystem';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import {
+  ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
+  COOK_REQUESTED_EVENT,
   CURRENCY_CHANGED_EVENT,
+  EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
+  LIGHT_FIRE_REQUESTED_EVENT,
+  SELL_ITEM_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   SHOP_OPENED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
@@ -295,6 +300,54 @@ describe('the character sheet asks for what it cannot do itself', () => {
     parent.querySelector<HTMLButtonElement>('.hud-slot[data-slot="helmet"]')?.click();
     parent.querySelector<HTMLButtonElement>('.hud-picker button')?.click();
     expect(emitted.filter((e) => e.event === EQUIP_ITEM_REQUESTED_EVENT)).toHaveLength(1);
+  });
+});
+
+/**
+ * Five buttons, five requests, and nothing in between: the panel asks
+ * `ItemActionsSystem` which buttons an item offers and the HUD turns the one
+ * pressed into the event that asks for it. What is worth holding is the pairing
+ * — an Eat that emitted the cook request would look right until it burnt.
+ */
+describe('the inventory panel forwards its buttons', () => {
+  const BAG = { 'brown-helmet': 1, 'cooked-fish': 1, logs: 1, 'raw-fish': 1 };
+
+  function pressAction(itemId: string, action: string): void {
+    parent.querySelector<HTMLButtonElement>(`.hud-item[data-item="${itemId}"]`)?.click();
+    const button = parent.querySelector<HTMLButtonElement>(`[data-item-action="${action}"]`);
+    if (!button) throw new Error(`no ${action} button on ${itemId}`);
+    button.click();
+  }
+
+  beforeEach(() => {
+    mount({ inventory: BAG });
+    tab('inventory').click();
+  });
+
+  it.each([
+    ['brown-helmet', 'equip', EQUIP_ITEM_REQUESTED_EVENT],
+    ['cooked-fish', 'eat', EAT_ITEM_REQUESTED_EVENT],
+  ])('asks to %s the item it was pressed on', (itemId, action, event) => {
+    pressAction(itemId, action);
+    expect(emitted.filter((e) => e.event === event)).toEqual([{ event, args: [itemId] }]);
+  });
+
+  // The two that need the world to allow them first.
+  it('asks to cook once there is a fire, and to sell once the shop is open', () => {
+    events.emit(ACTIONS_CHANGED_EVENT, { nearFire: true });
+    pressAction('raw-fish', 'cook');
+    expect(emitted.at(-1)).toEqual({ event: COOK_REQUESTED_EVENT, args: ['raw-fish'] });
+
+    events.emit(SHOP_OPENED_EVENT);
+    pressAction('cooked-fish', 'sell');
+    expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['cooked-fish'] });
+  });
+
+  // The one button that is about where the player is standing rather than about
+  // what was pressed, so its request carries nothing.
+  it('asks for a fire without naming the logs it would burn', () => {
+    pressAction('logs', 'light-fire');
+    expect(emitted.at(-1)).toEqual({ event: LIGHT_FIRE_REQUESTED_EVENT, args: [] });
   });
 });
 
