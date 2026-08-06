@@ -1,16 +1,13 @@
 import { ActionBar } from './ActionBar';
-import { AwayReportModal } from './AwayReportModal';
 import { CharacterSheet } from './CharacterSheet';
 import { CombatLogSheet } from './CombatLogSheet';
 import { FeatsSheet } from './FeatsSheet';
 import { GatherBar } from './GatherBar';
 import { InventorySheet } from './InventorySheet';
-import { OptionsModal } from './OptionsModal';
+import { OverlayHost } from './OverlayHost';
 import { PlayerColumn } from './PlayerColumn';
 import { QuestSheet } from './QuestSheet';
 import { QuestTracker } from './QuestTracker';
-import { ShopModal } from './ShopModal';
-import { SlotPicker } from './SlotPicker';
 import { TabBar } from './TabBar';
 import { TargetFrame } from './TargetFrame';
 import { Toast } from './Toast';
@@ -35,12 +32,10 @@ import { TABS, type TabId } from '../ui/tabs';
 import {
   ABILITY_REQUESTED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
-  ACCEPT_QUEST_REQUESTED_EVENT,
   ACHIEVEMENT_UNLOCKED_EVENT,
   ACTIONS_CHANGED_EVENT,
   AFK_STATE_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
-  BUY_ITEM_REQUESTED_EVENT,
   COMBAT_LOG_EVENT,
   COOK_REQUESTED_EVENT,
   CURRENCY_CHANGED_EVENT,
@@ -59,7 +54,6 @@ import {
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
-  RESET_CHARACTER_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
@@ -68,7 +62,6 @@ import {
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TITLE_CHANGED_EVENT,
-  TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
   type AvailableActions,
@@ -77,7 +70,7 @@ import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { AbilityId, GearSlotId, ItemId, TitleId } from '../types/ids';
+import type { AbilityId, ItemId, TitleId } from '../types/ids';
 
 export interface HudOptions {
   parent: HTMLElement;
@@ -147,10 +140,7 @@ class Hud {
   private readonly combatLogSheet: CombatLogSheet;
   private readonly sheets: Partial<Record<TabId, Sheet>>;
 
-  private optionsModal: OptionsModal | null = null;
-  private shopModal: ShopModal | null = null;
-  private slotPicker: SlotPicker | null = null;
-  private awayReport: AwayReportModal | null = null;
+  private readonly overlays: OverlayHost;
   private resizeObserver: ResizeObserver | null = null;
 
   private openSheet: TabId | null = null;
@@ -184,6 +174,11 @@ class Hud {
 
     injectHudStyles();
     this.root = el('div', 'hud');
+    this.overlays = new OverlayHost(this.root, events, () => ({
+      inventory: this.model.inventory,
+      currency: this.model.currency,
+      quests: this.model.quests,
+    }));
     this.playerColumn = new PlayerColumn(character.name);
     this.actionBar = new ActionBar(character.classId, (abilityId) =>
       this.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
@@ -192,7 +187,11 @@ class Hud {
 
     this.characterSheet = new CharacterSheet((slot, isEmpty) => {
       if (isEmpty) {
-        this.openSlotPicker(slot);
+        this.overlays.openSlotPicker(
+          slot,
+          equippableFrom(itemsForSlot(this.model.inventory, slot), this.classId),
+          this.characterSheet.slotBounds(slot),
+        );
       } else {
         this.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot);
       }
@@ -258,7 +257,16 @@ class Hud {
     this.subscribe();
     this.observeResize();
     window.addEventListener('keydown', this.handleKeyDown);
-    this.showAwayReport(notifications);
+
+    // Held until the away report is dismissed so the two don't talk over each
+    // other; a chain finished overnight is news worth its own line. Only the
+    // last one is announced; the sheet is where the full list lives.
+    const unlocked = notifications.find((item) => item.kind === 'achievements')?.unlocks.at(-1);
+    this.overlays.showAwayReport(notifications, () => {
+      if (unlocked) {
+        this.toast.show(`Achievement: ${unlocked.name}`, THEME.color.skillUp);
+      }
+    });
   }
 
   destroy(): void {
@@ -266,10 +274,7 @@ class Hud {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     window.removeEventListener('keydown', this.handleKeyDown);
-    this.optionsModal?.close();
-    this.shopModal?.close();
-    this.slotPicker?.close();
-    this.awayReport?.close();
+    this.overlays.closeAll();
     this.root.remove();
   }
 
@@ -342,7 +347,7 @@ class Hud {
       return;
     }
     if (tab === 'options') {
-      this.openOptions();
+      this.overlays.openOptions();
       return;
     }
     this.setOpenSheet(this.openSheet === tab ? null : tab);
@@ -355,86 +360,8 @@ class Hud {
       panel.setVisible(id === sheet);
     }
     if (sheet !== 'character') {
-      this.slotPicker?.close();
+      this.overlays.closeSlotPicker();
     }
-  }
-
-  private openOptions(): void {
-    this.optionsModal?.close();
-    this.optionsModal = new OptionsModal({
-      onResetCharacter: () => {
-        this.optionsModal?.close();
-        this.events.emit(RESET_CHARACTER_REQUESTED_EVENT);
-      },
-      onClose: () => {
-        this.optionsModal = null;
-      },
-    });
-    this.root.append(this.optionsModal.root);
-  }
-
-  private openSlotPicker(slot: GearSlotId): void {
-    this.slotPicker?.close();
-    this.slotPicker = new SlotPicker(
-      slot,
-      equippableFrom(itemsForSlot(this.model.inventory, slot), this.classId),
-      this.characterSheet.slotBounds(slot),
-      { width: this.root.clientWidth, height: this.root.clientHeight },
-      (itemId) => this.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId),
-      () => {
-        this.slotPicker = null;
-      },
-    );
-    this.root.append(this.slotPicker.root);
-  }
-
-  private openShop(): void {
-    this.shopModal?.close();
-    this.shopModal = new ShopModal(
-      {
-        onBuy: (itemId) => this.events.emit(BUY_ITEM_REQUESTED_EVENT, itemId),
-        onSell: (itemId) => this.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId),
-        onAcceptQuest: (questId) => this.events.emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
-        onTurnInQuest: (questId) => this.events.emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
-        // The shop closes when the world says so, which is what this asks for.
-        onDismiss: () => this.events.emit(SHOP_CLOSED_EVENT),
-      },
-      () => {
-        this.shopModal = null;
-      },
-    );
-    this.shopModal.update(this.shopState());
-    this.root.append(this.shopModal.root);
-  }
-
-  private shopState() {
-    return {
-      inventory: this.model.inventory,
-      currency: this.model.currency,
-      quests: this.model.quests,
-    };
-  }
-
-  // The session queues these on the boot that resolved a parked camp. It had
-  // already paid the character out by then, so a missed panel costs nothing but
-  // the news.
-  private showAwayReport(pending: PendingNotification[]): void {
-    const report = pending.find((item) => item.kind === 'offline-afk');
-    if (!report) {
-      return;
-    }
-    const unlocked = pending.find((item) => item.kind === 'achievements');
-    this.awayReport = new AwayReportModal(report.report, () => {
-      this.awayReport = null;
-      // Held until the report is dismissed so the two don't talk over each
-      // other; a chain finished overnight is news worth its own line. Only the
-      // last one is announced; the sheet is where the full list lives.
-      const last = unlocked?.unlocks.at(-1);
-      if (last) {
-        this.toast.show(`Achievement: ${last.name}`, THEME.color.skillUp);
-      }
-    });
-    this.root.append(this.awayReport.root);
   }
 
   private dispatchItemAction(actionId: ItemActionId, itemId: ItemId): void {
@@ -503,13 +430,8 @@ class Hud {
       return;
     }
 
-    if (event.key === 'Escape') {
-      if (this.optionsModal || this.slotPicker || this.awayReport) {
-        this.optionsModal?.close();
-        this.slotPicker?.close();
-        this.awayReport?.close();
-        return;
-      }
+    if (event.key === 'Escape' && this.overlays.closeDismissable()) {
+      return;
     }
 
     const key = event.key.toLowerCase();
@@ -591,7 +513,7 @@ class Hud {
 
     listen(GEAR_CHANGED_EVENT, (gear) => {
       this.model.gear = gear;
-      this.slotPicker?.close();
+      this.overlays.closeSlotPicker();
       this.refreshCharacterSheet();
       this.refreshEncumbrance();
     });
@@ -599,7 +521,7 @@ class Hud {
       this.model.inventory = inventory;
       this.inventorySheet.update(inventory);
       this.refreshEncumbrance();
-      this.shopModal?.update(this.shopState());
+      this.overlays.refreshShop();
       // Quest progress is counted off the bag, so every pickup can move it.
       this.tracker.update(this.model.quests, inventory);
       this.questSheet.update(this.model.quests, inventory);
@@ -607,7 +529,7 @@ class Hud {
     listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
       this.model.currency = totalCopper;
       this.inventorySheet.setCurrency(totalCopper);
-      this.shopModal?.update(this.shopState());
+      this.overlays.refreshShop();
     });
     listen(ACTIONS_CHANGED_EVENT, (actions) => {
       this.model.actions = actions;
@@ -617,13 +539,13 @@ class Hud {
 
     listen(SHOP_OPENED_EVENT, () => {
       this.model.shopOpen = true;
-      this.openShop();
+      this.overlays.openShop();
       // Selling becomes possible, so a selected item may gain a Sell button.
       this.inventorySheet.refreshActions();
     });
     listen(SHOP_CLOSED_EVENT, () => {
       this.model.shopOpen = false;
-      this.shopModal?.close();
+      this.overlays.closeShop();
       this.inventorySheet.refreshActions();
     });
 
@@ -646,7 +568,7 @@ class Hud {
       this.model.quests = quests;
       this.tracker.update(quests, this.model.inventory);
       this.questSheet.update(quests, this.model.inventory);
-      this.shopModal?.update(this.shopState());
+      this.overlays.refreshShop();
       // How many tracker lines there are is a layout input for everything
       // stacked above it.
       this.applyLayout();
