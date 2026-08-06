@@ -13,6 +13,7 @@ import { TargetFrame } from './TargetFrame';
 import { Toast } from './Toast';
 import type { Sheet } from './Sheet';
 import { el } from './dom';
+import { bindHudKeys } from './keys';
 import { injectHudStyles } from './styles';
 import { CLASSES } from '../data/classes';
 import { SKILLS } from '../data/skills';
@@ -28,7 +29,7 @@ import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import { hudLayout } from '../ui/layout';
 import { THEME } from '../ui/theme';
-import { TABS, type TabId } from '../ui/tabs';
+import type { TabId } from '../ui/tabs';
 import {
   ABILITY_REQUESTED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
@@ -70,7 +71,7 @@ import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { AbilityId, ItemId, TitleId } from '../types/ids';
+import type { ItemId, TitleId } from '../types/ids';
 
 export interface HudOptions {
   parent: HTMLElement;
@@ -141,6 +142,7 @@ class Hud {
   private readonly sheets: Partial<Record<TabId, Sheet>>;
 
   private readonly overlays: OverlayHost;
+  private readonly unbindKeys: () => void;
   private resizeObserver: ResizeObserver | null = null;
 
   private openSheet: TabId | null = null;
@@ -256,7 +258,16 @@ class Hud {
 
     this.subscribe();
     this.observeResize();
-    window.addEventListener('keydown', this.handleKeyDown);
+    this.unbindKeys = bindHudKeys({
+      onEscape: () => this.overlays.closeDismissable(),
+      onTab: (tab) => this.selectTab(tab),
+      onAbilitySlot: (slot) => {
+        const abilityId = this.actionBar.abilityAt(slot);
+        if (abilityId) {
+          this.events.emit(ABILITY_REQUESTED_EVENT, abilityId);
+        }
+      },
+    });
 
     // Held until the away report is dismissed so the two don't talk over each
     // other; a chain finished overnight is news worth its own line. Only the
@@ -273,7 +284,7 @@ class Hud {
     this.subscriptions.clear();
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
-    window.removeEventListener('keydown', this.handleKeyDown);
+    this.unbindKeys();
     this.overlays.closeAll();
     this.root.remove();
   }
@@ -414,41 +425,6 @@ class Hud {
       carryCapacity(stats.strength),
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Input
-  // ---------------------------------------------------------------------------
-
-  private handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) {
-      return;
-    }
-    // Never steal a letter from a text field — the name box on the creation
-    // screen is one keystroke away from this listener.
-    const target = event.target as HTMLElement | null;
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-      return;
-    }
-
-    if (event.key === 'Escape' && this.overlays.closeDismissable()) {
-      return;
-    }
-
-    const key = event.key.toLowerCase();
-    const tab = TABS.find((definition) => definition.key === key);
-    if (tab) {
-      this.selectTab(tab.id);
-      return;
-    }
-    // The action bar's two slots, in the order it draws them.
-    const slot = ['1', '2'].indexOf(event.key);
-    if (slot >= 0) {
-      const abilityId = this.actionBar.abilityAt(slot);
-      if (abilityId) {
-        this.events.emit(ABILITY_REQUESTED_EVENT, abilityId as AbilityId);
-      }
-    }
-  };
 
   // ---------------------------------------------------------------------------
   // Listening
