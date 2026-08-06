@@ -7,9 +7,10 @@ import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
 import { THEME } from '../ui/theme';
 import type { PrimaryStat } from '../data/classes';
 import type { Gear } from '../systems/InventorySystem';
+import { exhaustive, mapKeys } from '../types/exhaustive';
 import type { GearSlotId, SkillId } from '../types/ids';
 
-const SLOT_ORDER: GearSlotId[] = ['weapon', 'helmet', 'chest', 'pants'];
+const SLOT_ORDER = exhaustive<GearSlotId>()(['weapon', 'helmet', 'chest', 'pants']);
 export const SLOT_LABELS: Record<GearSlotId, string> = {
   weapon: 'Weapon',
   helmet: 'Helmet',
@@ -56,8 +57,8 @@ interface SkillRow {
 export class CharacterSheet extends Sheet {
   private readonly doll: HTMLElement;
   private readonly statLines: HTMLElement[];
-  private readonly slots = {} as Record<GearSlotId, SlotRow>;
-  private readonly skills = {} as Record<SkillId, SkillRow>;
+  private readonly slots: Record<GearSlotId, SlotRow>;
+  private readonly skills: Record<SkillId, SkillRow>;
   private gear: Gear = {
     helmet: null,
     chest: null,
@@ -77,7 +78,7 @@ export class CharacterSheet extends Sheet {
     top.append(this.doll, stats);
     this.body.append(top);
 
-    for (const slot of SLOT_ORDER) {
+    this.slots = mapKeys(SLOT_ORDER, (slot) => {
       const button = el('button', 'hud-slot');
       button.type = 'button';
       button.dataset.slot = slot;
@@ -87,17 +88,24 @@ export class CharacterSheet extends Sheet {
       const item = el('div', 'hud-slot__item');
       button.append(head, item);
       button.addEventListener('click', () => onSlotClicked(slot, this.gear[slot] === null));
-      this.slots[slot] = { button, item, bonuses };
       this.body.append(button);
-    }
+      return { button, item, bonuses };
+    });
 
-    this.buildSkillBlock('Skills', SKILL_ORDER);
-    this.buildSkillBlock('Combat Skills', COMBAT_SKILL_ORDER);
+    // Two blocks, one record: the spread is what makes the pair cover SkillId,
+    // and each list covers its own half by construction.
+    this.skills = {
+      ...this.buildSkillBlock('Skills', SKILL_ORDER),
+      ...this.buildSkillBlock('Combat Skills', COMBAT_SKILL_ORDER),
+    };
   }
 
-  private buildSkillBlock(title: string, skillIds: SkillId[]): void {
+  private buildSkillBlock<K extends SkillId>(
+    title: string,
+    skillIds: readonly K[],
+  ): Record<K, SkillRow> {
     this.body.append(el('div', 'hud-section', title));
-    for (const skillId of skillIds) {
+    return mapKeys(skillIds, (skillId) => {
       const row = el('div', 'hud-skill');
       const line = el('div', 'hud-skill__line');
       const value = el('span');
@@ -106,9 +114,9 @@ export class CharacterSheet extends Sheet {
       const fill = el('div', 'hud-bar__fill');
       bar.append(fill);
       row.append(line, bar);
-      this.skills[skillId] = { value, fill };
       this.body.append(row);
-    }
+      return { value, fill };
+    });
   }
 
   update(state: CharacterSheetState): void {
