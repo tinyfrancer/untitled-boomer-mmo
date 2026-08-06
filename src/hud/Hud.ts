@@ -267,6 +267,7 @@ class Hud {
     this.resizeObserver = null;
     window.removeEventListener('keydown', this.handleKeyDown);
     this.optionsModal?.close();
+    this.shopModal?.close();
     this.slotPicker?.close();
     this.awayReport?.close();
     this.root.remove();
@@ -388,14 +389,20 @@ class Hud {
   }
 
   private openShop(): void {
-    this.shopModal?.root.remove();
-    this.shopModal = new ShopModal({
-      onBuy: (itemId) => this.events.emit(BUY_ITEM_REQUESTED_EVENT, itemId),
-      onSell: (itemId) => this.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId),
-      onAcceptQuest: (questId) => this.events.emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
-      onTurnInQuest: (questId) => this.events.emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
-      onClose: () => this.events.emit(SHOP_CLOSED_EVENT),
-    });
+    this.shopModal?.close();
+    this.shopModal = new ShopModal(
+      {
+        onBuy: (itemId) => this.events.emit(BUY_ITEM_REQUESTED_EVENT, itemId),
+        onSell: (itemId) => this.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId),
+        onAcceptQuest: (questId) => this.events.emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
+        onTurnInQuest: (questId) => this.events.emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
+        // The shop closes when the world says so, which is what this asks for.
+        onDismiss: () => this.events.emit(SHOP_CLOSED_EVENT),
+      },
+      () => {
+        this.shopModal = null;
+      },
+    );
     this.shopModal.update(this.shopState());
     this.root.append(this.shopModal.root);
   }
@@ -616,8 +623,7 @@ class Hud {
     });
     listen(SHOP_CLOSED_EVENT, () => {
       this.model.shopOpen = false;
-      this.shopModal?.root.remove();
-      this.shopModal = null;
+      this.shopModal?.close();
       this.inventorySheet.refreshActions();
     });
 

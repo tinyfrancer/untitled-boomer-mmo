@@ -1,3 +1,4 @@
+import { Overlay } from './Overlay';
 import { el } from './dom';
 import { describeItemName, itemValue } from '../data/items';
 import { SHOP_STOCK } from '../data/shop';
@@ -19,7 +20,8 @@ export interface ShopHandlers {
   onSell: (itemId: ItemId) => void;
   onAcceptQuest: (questId: QuestId) => void;
   onTurnInQuest: (questId: QuestId) => void;
-  onClose: () => void;
+  /** The X: the world owns whether the shop is open, so this asks rather than does. */
+  onDismiss: () => void;
 }
 
 /**
@@ -30,15 +32,14 @@ export interface ShopHandlers {
  * Deliberately not a scrim — a tap outside it still has to reach the world, or
  * the player could not walk away from the counter.
  */
-export class ShopModal {
-  readonly root: HTMLElement;
+export class ShopModal extends Overlay {
   private readonly coin: HTMLElement;
   private readonly body: HTMLElement;
   private readonly handlers: ShopHandlers;
 
-  constructor(handlers: ShopHandlers) {
+  constructor(handlers: ShopHandlers, onClosed: () => void) {
+    super('hud-modal hud-modal--pass-through hud-modal--top', onClosed);
     this.handlers = handlers;
-    this.root = el('div', 'hud-modal hud-modal--pass-through hud-modal--top');
     const box = el('div', 'hud-modal__box hud-modal__box--shop');
 
     const head = el('div', 'hud-modal__head');
@@ -47,7 +48,7 @@ export class ShopModal {
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
     close.dataset.action = 'close-shop';
-    close.addEventListener('click', () => handlers.onClose());
+    close.addEventListener('click', () => handlers.onDismiss());
     head.append(this.coin, close);
 
     this.body = el('div', 'hud-modal__body');

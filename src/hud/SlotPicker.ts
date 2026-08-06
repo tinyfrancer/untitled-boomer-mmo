@@ -1,3 +1,4 @@
+import { Overlay } from './Overlay';
 import { el } from './dom';
 import { pickerPosition } from '../ui/layout';
 import type { ItemId } from '../types/ids';
@@ -10,11 +11,8 @@ import type { GearSlotId } from '../types/ids';
  * slot on the character sheet. Built fresh on each open and destroyed on close
  * rather than kept around and toggled.
  */
-export class SlotPicker {
-  readonly root: HTMLElement;
+export class SlotPicker extends Overlay {
   private readonly onOutside: (event: MouseEvent) => void;
-  private readonly onClosed: () => void;
-  private closed = false;
 
   constructor(
     slot: GearSlotId,
@@ -24,8 +22,7 @@ export class SlotPicker {
     onPick: (itemId: ItemId) => void,
     onClosed: () => void,
   ) {
-    this.onClosed = onClosed;
-    this.root = el('div', 'hud-picker');
+    super('hud-picker', onClosed);
     this.root.append(el('div', 'hud-picker__title', `Equip ${SLOT_LABELS[slot]}`));
 
     if (itemIds.length === 0) {
@@ -61,7 +58,7 @@ export class SlotPicker {
       }
     };
     setTimeout(() => {
-      if (!this.closed) {
+      if (!this.isClosed) {
         window.addEventListener('pointerdown', this.onOutside);
       }
     }, 0);
@@ -73,14 +70,7 @@ export class SlotPicker {
     this.root.style.top = `${y}px`;
   }
 
-  /** Idempotent: closing an already-closed picker does nothing and calls nothing. */
-  close(): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
+  protected override release(): void {
     window.removeEventListener('pointerdown', this.onOutside);
-    this.root.remove();
-    this.onClosed();
   }
 }
