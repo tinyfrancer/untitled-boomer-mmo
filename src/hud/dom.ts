@@ -24,8 +24,7 @@ export function el<K extends keyof HTMLElementTagNameMap>(
  *
  * The always-on furniture keeps coming from that arithmetic rather than from
  * CSS: it is unit-tested at viewport sizes nobody sits down and tries by hand,
- * and `worldViewportHeight` — the rule that nothing in the world may be drawn
- * under the tab bar — is derived from the very same numbers.
+ * which is not something a stylesheet can be.
  */
 export function place(node: HTMLElement, rect: Rect, sized?: 'width' | 'box'): void {
   node.style.left = `${rect.x}px`;

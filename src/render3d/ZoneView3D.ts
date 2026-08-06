@@ -30,7 +30,7 @@ import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import type { WorldEvent } from '../world/worldEvents';
 import type { DrawnCounts } from '../types/debugView';
 
-/** The same background the 2D canvas has, so the world edge reads as sky. */
+/** Dark enough that the world edge reads as sky rather than as a hole. */
 const BACKGROUND = 0x1a1a2e;
 
 /**
@@ -40,9 +40,9 @@ const BACKGROUND = 0x1a1a2e;
  * The split between what is built once and what is built per zone is the whole
  * point of this class. The renderer, the camera and the lights belong to the
  * session; the terrain belongs to the zone and has to be **disposed** when that
- * zone is left. Phaser destroyed a display list for free and a missed teardown
- * there cost a stray label; here it costs GPU memory that is never handed back,
- * which is why `scripts/smoke.mjs` walks three zone round trips and asserts
+ * zone is left. A missed teardown costs GPU memory that is never handed back
+ * and is invisible to every state assertion and to the screen, which is why
+ * `scripts/smoke.mjs` walks three zone round trips and asserts
  * `renderer.info.memory` came back to where it started.
  */
 export class ZoneView3D {
@@ -269,10 +269,10 @@ export class ZoneView3D {
     // once hid the whole tab bar behind the bottom toolbar. The HUD measures
     // itself the same way, so the two agree about where the bottom is.
     const { width, height } = this.viewport();
-    // Full-bleed rather than stopping above the tab bar, unlike the 2D camera:
-    // an opaque DOM bar over the canvas swallows the taps that land on it by
-    // construction, so the viewport hack it needed is gone. What replaces it is
-    // the camera framing in camera.ts.
+    // Full-bleed rather than stopping above the tab bar: the bar is an opaque
+    // DOM element over the canvas and swallows the taps that land on it by
+    // construction. What keeps the world out from under it is the camera
+    // framing in camera.ts, not the size of the canvas.
     this.renderer.setSize(width, height, false);
     resizeCamera(this.camera, width, height);
   }
@@ -288,8 +288,7 @@ export class ZoneView3D {
    *
    * The one piece of hit testing that has to live in a view: what a screen
    * pixel is over is a question about the camera and what is drawn, not about
-   * the game. The order it tries things in is the 2D renderer's, which picked
-   * against a hit test rather than a ray but had to answer the same question.
+   * the game.
    */
   resolveTap(x: number, y: number): WorldTap | null {
     const { width, height } = this.viewport();

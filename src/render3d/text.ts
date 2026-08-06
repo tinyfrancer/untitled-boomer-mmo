@@ -12,9 +12,9 @@ const FONT_PX = 32;
  *
  * There is no DOM option here: an HTML label would need the HUD to project
  * every creature's position to the screen once a frame, which is exactly the
- * coupling the port is avoiding (see the floating-text note in the port plan).
- * A sprite faces the camera by construction, which is also why a damage number
- * needs no billboarding of its own.
+ * coupling the HUD is kept free of (see the floating-text note in
+ * `docs/archive/3d_port_plan.md`). A sprite faces the camera by construction,
+ * which is also why a damage number needs no billboarding of its own.
  *
  * Returns null where there is no 2D canvas to draw on, which is jsdom — the
  * unit suite builds nameplates and floats and would otherwise die on the text.

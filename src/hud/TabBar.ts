@@ -4,11 +4,10 @@ import { TABS, type TabId } from '../ui/tabs';
 /**
  * The bottom bar, in CSS rather than seven hand-placed rectangles.
  *
- * Two things the Phaser version had to arrange by hand come free here: the bar
- * is opaque and above the canvas, so a tap on it never reaches the world at
- * all, and `flex: 1` splits the width the same way the old arithmetic did —
- * which is still exactly 44.4px per tab on a 375px phone, and still leaves no
- * room for an eighth.
+ * Two things come free here: the bar is opaque and above the canvas, so a tap
+ * on it never reaches the world at all, and `flex: 1` splits the width evenly —
+ * which is exactly 44.4px per tab on a 375px phone against a 44px touch
+ * minimum, and leaves no room for an eighth.
  */
 export class TabBar {
   readonly root: HTMLElement;

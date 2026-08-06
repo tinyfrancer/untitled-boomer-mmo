@@ -4,11 +4,10 @@ import type { Point } from '../systems/MovementSystem';
 /**
  * Fading whatever the camera has ended up behind.
  *
- * A problem 2D never had: `setDepth` sorted the tilemap under everything and
- * the player was always on top. In 3D a tree is a solid object between the
- * camera and the player, and once the camera can be dragged round it stops
- * being a thing you can walk out from behind — you cannot tap what you cannot
- * see, and tap is how the whole game is played.
+ * A tree is a solid object between the camera and the player, and once the
+ * camera can be dragged round it stops being a thing you can simply walk out
+ * from behind — you cannot tap what you cannot see, and tap is how the whole
+ * game is played.
  *
  * Fading is the answer rather than shorter props, because the alternative is
  * paying for the camera in the art forever: a canopy tall enough to walk under

@@ -6,17 +6,18 @@ import type { EnemyDefinition } from '../data/enemies';
 type AiState = 'wander' | 'chase' | 'returning';
 
 /**
- * How long a corpse lingers before its respawn timer starts. It was the length
- * of the fade-out tween the scene used to play; keeping it in the simulation is
- * what makes the delay the same whether or not anything is drawing the fade.
+ * How long a corpse lingers before its respawn timer starts — the length of
+ * the fade a view draws it toppling through. Keeping it in the simulation is
+ * what makes the delay the same whether or not anything is drawing that fade.
  */
 export const DEATH_FADE_MS = 400;
 
 /**
  * An enemy, as simulation only. Like Player it owns its transform and
- * integrates against CollisionSystem; unlike the old version it also owns its
- * own clocks — wandering, the death fade and the respawn were three Phaser
- * timers, and a headless world has none.
+ * integrates against CollisionSystem, and it owns its own clocks too:
+ * wandering, the death fade and the respawn are accumulators counted down
+ * against the frame delta, since a headless world has no timers to hang them
+ * on.
  */
 export class Mob {
   readonly definition: EnemyDefinition;
@@ -32,8 +33,7 @@ export class Mob {
   y: number;
   hp: number;
   // Never zero, so a mob that has not swung yet is off cooldown rather than
-  // waiting one out. The world's clock starts at zero, which the old
-  // scene-wide Phaser clock never did.
+  // waiting one out: the world's clock starts at zero.
   lastAttackAt = -Infinity;
   vx = 0;
   vy = 0;
@@ -77,7 +77,7 @@ export class Mob {
     this.scheduleNextWander();
   }
 
-  /** The box the world collides this mob as; its whole body, as arcade had it. */
+  /** The box the world collides this mob as: its whole body. */
   bounds(): Aabb {
     const { width, height } = this.definition.body;
     return { x: this.x, y: this.y, halfWidth: width / 2, halfHeight: height / 2 };

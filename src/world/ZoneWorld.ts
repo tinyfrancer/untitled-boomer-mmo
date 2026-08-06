@@ -233,8 +233,8 @@ export class ZoneWorld {
   private readonly input: InputState;
   private readonly subscriptions: Array<[string, (...args: never[]) => void]> = [];
   private pending: WorldEvent[] = [];
-  // The world's own clock. It starts at zero, which the scene-wide Phaser clock
-  // it replaces never did — hence the -Infinity "never swung" markers below.
+  // The world's own clock, and it starts at zero — which is why "never swung"
+  // is marked with -Infinity below rather than with 0.
   private now = 0;
   private gatherNode: ResourceNode | null = null;
   // Click-to-move approach state: the node, shopkeeper or signpost the player

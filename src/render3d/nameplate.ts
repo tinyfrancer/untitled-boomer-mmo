@@ -6,7 +6,7 @@ import { buildText } from './text';
 const DEFAULT_WIDTH = 56;
 const DEFAULT_HEIGHT = 8;
 
-/** How tall the name is, in world units — the 2D label's 10px, near enough. */
+/** How tall the name is drawn, in world units. */
 const LABEL_HEIGHT = 12;
 
 /**
@@ -14,9 +14,9 @@ const LABEL_HEIGHT = 12;
  *
  * It is a billboard — turned to face the camera every frame rather than lying
  * flat in the world — because PR 16 makes the camera rotatable and a bar you
- * can read only from due south is worse than no bar. It also ignores depth, the
- * way the 2D bar sat at a fixed depth over everything: a health bar hidden
- * behind the tree you are fighting beside is a bug, not occlusion.
+ * can read only from due south is worse than no bar. It also ignores depth: a
+ * health bar hidden behind the tree you are fighting beside is a bug, not
+ * occlusion.
  */
 export interface NameplateOptions {
   width?: number;

@@ -13,8 +13,8 @@ import { THEME } from '../ui/theme';
  * this only draws it.
  *
  * Scrolling is the browser's, which also settles the drag-versus-tap question
- * the Phaser version had to answer by hand: a touch drag that starts on a row
- * scrolls the list and the browser suppresses the click that would follow.
+ * for free: a touch drag that starts on a row scrolls the list and the browser
+ * suppresses the click that would follow.
  */
 export class InventorySheet extends Sheet {
   private readonly coin: HTMLElement;

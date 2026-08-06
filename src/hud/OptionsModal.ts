@@ -36,7 +36,8 @@ export class OptionsModal {
 
     box.append(this.resetButton, close);
     this.root.append(box);
-    // A tap on the dimmed surround closes, the way ESC did on the Phaser panel.
+    // A tap on the dimmed surround closes; the target check is what keeps a tap
+    // inside the box from closing it too.
     this.root.addEventListener('click', (event) => {
       if (event.target === this.root) {
         this.close();

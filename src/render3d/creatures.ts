@@ -18,7 +18,8 @@ import type { EnemyDefinition } from '../data/enemies';
  * The footprint of each one comes from `EnemyDefinition.body`, which is the box
  * `CollisionSystem` stops the player at. Sizing the mesh off anything else is
  * how a creature ends up visibly wider than the thing you can actually walk
- * into, and the body is data precisely so it survives the 2D textures.
+ * into — and the body is data precisely so how big a rat looks is never what
+ * decides how big a rat is.
  */
 export function buildCreature(definition: EnemyDefinition): Figure {
   switch (definition.id) {
@@ -63,9 +64,9 @@ function buildRat(definition: EnemyDefinition): Figure {
     group.add(eye);
   });
 
-  // Trailing off the rump and kinked up, the way the sprite draws it — and
-  // still inside the collision box, which is a tile and a quarter long
-  // precisely because the tail has to live somewhere.
+  // Trailing off the rump and kinked up, and still inside the collision box,
+  // which is a tile and a quarter long precisely because the tail has to live
+  // somewhere.
   const tail = new Mesh(new CylinderGeometry(width * 0.05, width * 0.03, length * 0.3, 5), fur());
   tail.rotation.x = Math.PI / 2.4;
   tail.position.set(0, height * 0.5, -length * 0.3);
@@ -97,7 +98,7 @@ function buildCrab(definition: EnemyDefinition): Figure {
     claw.position.set(side * width * 0.38, height * 0.5, length * 0.34);
     group.add(claw);
 
-    // Three splayed strokes a side, as the sprite has them.
+    // Three splayed legs a side.
     [-0.18, 0, 0.18].forEach((along) => {
       const leg = new Mesh(
         new CylinderGeometry(width * 0.02, width * 0.02, width * 0.24, 4),

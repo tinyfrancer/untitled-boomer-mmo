@@ -11,9 +11,8 @@ export const CAMERA_PITCH = (58 * Math.PI) / 180;
 
 /**
  * How many tiles the camera aims to show across the viewport's smaller axis.
- * The same framing intent the 2D camera had at ten, two tiles wider: ground
- * seen at an angle is not the flat map that one showed, and the extra pair
- * buys the headroom the constraint below needs.
+ * Ground seen at an angle shows less usable map than the same count laid out
+ * flat, and the tiles beyond ten buy the headroom the constraint below needs.
  */
 const TARGET_TILES_ACROSS = 12;
 
@@ -23,15 +22,15 @@ const TARGET_TILES_ACROSS = 12;
  *
  * The tab bar is opaque and eats every tap that lands on it, so anything drawn
  * in the bottom sixty pixels cannot be reached — `worldViewportHeight` is where
- * that band is decided, and the 2D view kept the rule by shrinking to it. A
- * perspective camera cannot solve that by shrinking — it draws full-screen and
- * the bar sits over it — so the framing has to keep the interesting ground
- * clear of the bar instead. It is not symmetrical for free either: ground
+ * that band is decided. A viewport that shrank to it would hold the rule
+ * outright; a perspective camera cannot, since it draws full-screen and the bar
+ * sits over it, so the framing has to keep the interesting ground clear of the
+ * bar instead. It is not symmetrical for free either: ground
  * nearer the camera spreads across more pixels than ground further away, so a
  * centred player has noticeably less room below them than above. Aiming a
  * little short buys that room back, and puts the town's south signpost — eight
- * tiles behind a player standing on the spawn point, and once four pixels
- * inside the bar in 2D — comfortably back in reach.
+ * tiles behind a player standing on the spawn point, and once rendered four
+ * pixels inside the bar where it could not be tapped at all — back in reach.
  * `tests/render3d/camera.test.ts` is what holds it.
  */
 const LOOK_SHORT = 80;
@@ -65,8 +64,8 @@ export function cameraDistance(aspect: number): number {
  * Puts the camera behind and above the player, looking just past them.
  *
  * `yaw` is where the camera stands, measured the way sim headings are: zero is
- * due south of the player looking north, which reproduces the 2D view's
- * orientation with north up the screen, and a drag turns it (`orbit.ts`). The
+ * due south of the player looking north, so the world starts with north up the
+ * screen, and a drag turns it (`orbit.ts`). The
  * look point is offset along the same vector the camera stands on, so it swings
  * round with it rather than staying stuck facing south.
  *

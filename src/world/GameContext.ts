@@ -49,10 +49,9 @@ export interface GameContextOptions {
  * keyboard state and whichever ZoneWorld is currently running, and it is the
  * only thing that builds or tears down a world.
  *
- * This is what a scene restart used to do implicitly. Making it explicit is the
- * point: the renderer leaks GPU memory for every geometry, material and texture
- * nobody calls `.dispose()` on, and a zone walk is exactly the loop that finds
- * such a leak. The seam it goes through has to be a named one.
+ * Building and tearing down through one named seam is the point: the renderer
+ * leaks GPU memory for every geometry, material and texture nobody calls
+ * `.dispose()` on, and a zone walk is exactly the loop that finds such a leak.
  */
 export class GameContext {
   readonly character: CharacterController;
@@ -162,9 +161,9 @@ export class GameContext {
     });
   }
 
-  // Was a Phaser timer on the scene, which meant it died with the scene and was
-  // rebuilt on every zone change — a player who crossed a zone line every 29
-  // seconds was never autosaved at all.
+  // The accumulator belongs to the session rather than to the world: when it
+  // died and was rebuilt with the zone, a player who crossed a zone line every
+  // 29 seconds was never autosaved at all.
   private autosave(deltaMs: number): void {
     this.sinceSaveMs += deltaMs;
     if (this.sinceSaveMs < AUTOSAVE_INTERVAL_MS) return;

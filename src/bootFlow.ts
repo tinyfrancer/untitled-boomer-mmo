@@ -22,8 +22,9 @@ export interface GameHost {
 /**
  * What happens between "the host is ready" and "the player is in a zone".
  *
- * It used to be two scenes and a `scene.start`, which is a lot of machinery for
- * an if-statement plus a form.
+ * An if-statement plus a form, and deliberately no more than that: nothing
+ * before the world needs a renderer at all, which is what lets the creation
+ * screen be shown before one exists.
  */
 function beginSession(host: GameHost, character: CharacterState): void {
   startGame({ character, events: host.events });

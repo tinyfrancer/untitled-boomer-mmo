@@ -28,6 +28,6 @@ export const PALETTE = {
   /** The bolt an ability throws, and the glow around it. */
   bolt: 0xff7043,
   boltGlow: 0xffd54f,
-  /** The ring under the current target — the yellow the 2D one is stroked in. */
+  /** The ring under the current target. */
   selection: 0xffee58,
 } as const;

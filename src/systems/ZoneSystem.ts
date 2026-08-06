@@ -48,7 +48,7 @@ export function oppositeEdge(edge: ZoneEdge): ZoneEdge {
 
 // The exit the player is standing on, if any. `margin` is how close to the
 // world edge counts as "on it" — it has to exceed half the player's body,
-// since world-bounds collision stops the sprite's center that far from the
+// since world-bounds collision stops the player's centre that far from the
 // edge.
 export function findExit(
   exits: ZoneExit[],

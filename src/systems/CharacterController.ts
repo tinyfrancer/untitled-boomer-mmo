@@ -73,10 +73,10 @@ export type QuestTurnIn =
     };
 
 /**
- * The one place CharacterState gets mutated during play. Scenes call these and
- * render/emit from the results; the state math itself stays engine-free and
- * testable. Holds the same object the registry and save service see, so a
- * mutation here is what gets persisted.
+ * The one place CharacterState gets mutated during play. The world calls these
+ * and emits from the results; the state math itself stays engine-free and
+ * testable. Holds the same object the save service sees, so a mutation here is
+ * what gets persisted.
  */
 export class CharacterController {
   readonly state: CharacterState;

@@ -33,10 +33,9 @@ const MANUAL_LOOP = import.meta.env.DEV && manualLoopRequested(window.location.s
  * A backgrounded tab stops getting animation frames and comes back with an
  * hour on the clock; handing that to `update()` as one step would resolve an
  * entire AFK session in a single frame, through code written for tens of
- * milliseconds. Phaser's TimeStep clamped this for us and a raw loop has to do
- * it itself. 100ms is 10fps — slower than any frame the game is expected to
- * survive, and it *is* expected to survive them (see the arriveRadius note in
- * CLAUDE.md).
+ * milliseconds, so a raw rAF loop has to clamp it itself. 100ms is 10fps —
+ * slower than any frame the game is expected to survive, and it *is* expected
+ * to survive them (see the arriveRadius note in CLAUDE.md).
  */
 const MAX_FRAME_MS = 100;
 
@@ -124,8 +123,8 @@ class ThreeHost implements GameHost {
    * A press on the world starts a gesture that is not yet either thing.
    *
    * A press on the HUD never gets here — it is an HTML overlay above the
-   * canvas, so the browser hands the event to the element instead — which is
-   * the whole of a hit test the 2D renderer had to do by hand.
+   * canvas, so the browser hands the event to the element instead. That is the
+   * whole of the hit test against the HUD: there isn't one.
    */
   private readonly handlePointerDown = (event: PointerEvent): void => {
     if (!this.context || !this.view || this.pointerId !== null) return;

@@ -51,8 +51,8 @@ const TOPPLE_FRACTION = 0.6;
  *
  * Nothing here decides anything. The simulation owns position, health, gear and
  * death; an actor catches up to it in `sync()` and hands its geometry back in
- * `dispose()` — which in 2D was a stray label and here is memory the card never
- * gets back.
+ * `dispose()` — an actor that forgets that leaks memory the card never gets
+ * back.
  */
 export interface Actor {
   readonly object: Group;
@@ -184,9 +184,8 @@ export class MobActor implements Actor, Pickable {
 
   /**
    * The footprint `CollisionSystem` stops the player at, standing as tall as
-   * the creature does — and nothing at all once the creature is dead. A corpse
-   * fading out of the scene is not a target, which the 2D view got for free
-   * from a sprite that had stopped rendering.
+   * the creature does — and nothing at all once the creature is dead, since a
+   * corpse still toppling and fading is not a target.
    */
   pickBox(): Box3 | null {
     if (!this.mob.isAlive()) return null;

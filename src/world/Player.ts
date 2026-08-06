@@ -149,8 +149,8 @@ export class Player {
     this.strength = stats.strength;
     this.intellect = stats.intellect;
     this.attackPower = stats.attackPower;
-    // Reach rides the weapon now, so putting the wand away has to shorten it
-    // here rather than waiting for the scene to rebuild the sprite.
+    // Reach rides the weapon, so putting the wand away has to shorten it here
+    // rather than waiting for the view to rebuild the figure.
     this.attackRange = stats.attackRange;
   }
 

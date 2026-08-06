@@ -289,7 +289,7 @@ function hudCss(): string {
 
 /* One sheet is open at a time, so each gets the whole column rather than
    sharing it. 'overflow: hidden' here and 'auto' on the body is the entire
-   clipping story — the Phaser build needed a per-renderer mask for this. */
+   clipping story. */
 .hud-sheet {
   position: absolute;
   display: flex;

@@ -33,8 +33,8 @@ export function paperdollSvg(gear: Record<GearSlotId, string | null>): SVGSVGEle
     line(figure.cx, figure.hipY, figure.cx + BOX * 0.13, figure.footY, width, color),
   ];
 
-  // Dark backing pass first, exactly as the texture does it: without it a limb
-  // painted in gear colour disappears into a background of the same colour.
+  // Dark backing pass first: without it a limb painted in gear colour
+  // disappears into a background of the same colour.
   const backing = figure.limbWidth + BOX * 0.03;
   [...torso(backing, OUTLINE_COLOR), ...legs(backing, OUTLINE_COLOR)].forEach(add);
   torso(figure.limbWidth, appearance.torsoColor).forEach(add);

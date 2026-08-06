@@ -121,17 +121,15 @@ interface HudModel {
  * The HUD, as an HTML overlay above whatever is drawing the world.
  *
  * It is renderer-independent by construction: the only thing it talks to is the
- * event bus, so the same tree sits over the 2D canvas today and over the
- * Three.js one later. Nothing here knows what is drawing the world, and nothing
- * drawing the world knows this exists.
+ * event bus. Nothing here knows what is drawing the world, and nothing drawing
+ * the world knows this exists.
  *
- * Three rules the Phaser HUD had to arrange by hand come free from CSS. The
- * overlay is `pointer-events: none` and each piece of furniture opts back in,
- * so a tap on the HUD never reaches the world and a tap on the world never has
- * to be hit-tested against the HUD. `overflow: hidden` clips a scrolling sheet,
- * where Phaser 4 needed a per-renderer mask that silently did nothing under
- * WebGL. And a touch drag on a list scrolls it without the browser also
- * reporting a tap on the row it started on.
+ * Three rules come free from CSS and are worth not undoing. The overlay is
+ * `pointer-events: none` and each piece of furniture opts back in, so a tap on
+ * the HUD never reaches the world and a tap on the world never has to be
+ * hit-tested against the HUD. `overflow: hidden` on a sheet and `auto` on its
+ * body is the whole of clipping and scrolling. And a touch drag on a list
+ * scrolls it without the browser also reporting a tap on the row it started on.
  */
 class Hud {
   private readonly root: HTMLElement;
@@ -290,8 +288,7 @@ class Hud {
    * than from CSS.
    *
    * That arithmetic is unit-tested at viewport sizes nobody sits down and tries
-   * by hand, and `worldViewportHeight` — the rule that keeps the world out from
-   * under the tab bar — is derived from the same numbers. Only the tab bar's own
+   * by hand, which is not something a stylesheet can be. Only the tab bar's own
    * internal split is left to flex, because CSS does that exactly.
    */
   private applyLayout(): void {

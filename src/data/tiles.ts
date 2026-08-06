@@ -8,12 +8,12 @@ export const SAND_TILE = 3;
 export const BLOCKING_TILES = [WATER_TILE];
 
 /**
- * What each tile is made of, as one palette both renderers read.
+ * What each tile is made of, as one palette.
  *
- * The 2D tileset bakes these into a texture with flecks and pebbles over them;
- * the 3D ground mesh puts them on vertices. Same argument as the stick-figure
- * rig behind the paperdoll: two renderers that disagree about the colour of
- * grass are two renderers drawing different games.
+ * It lives here rather than in the renderer that puts it on vertices, for the
+ * same reason the stick-figure rig behind the paperdoll lives in
+ * `AppearanceSystem`: the ground the simulation calls water is a decision the
+ * whole game makes, not one whatever is drawing it gets to make alone.
  */
 export const TILE_COLORS: Record<number, number> = {
   [GRASS_TILE]: 0x2e7d32,

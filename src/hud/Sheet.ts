@@ -6,10 +6,10 @@ import { sheetRect, type HudLayout } from '../ui/layout';
  * scrolling body.
  *
  * The body scrolls with `overflow-y: auto` and the box clips with
- * `overflow: hidden`, which is the whole of what `ui/clipToMask.ts` and two
- * hand-rolled scroll implementations used to do — including the drag-versus-tap
- * disambiguation, which is the browser's job and which it does correctly on a
- * touch screen.
+ * `overflow: hidden`. That is the whole of clipping and scrolling here — no
+ * mask, no hit-area bookkeeping for rows scrolled out of view, and no
+ * drag-versus-tap threshold, which is the browser's job and which it does
+ * correctly on a touch screen.
  */
 export class Sheet {
   readonly root: HTMLElement;

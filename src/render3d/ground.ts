@@ -12,9 +12,8 @@ const VERTICES_PER_TILE = 6;
  *
  * A tilemap of separate quads would be 475 meshes to dispose per zone and 475
  * draw calls per frame, which is the wrong shape for both problems. Colour
- * rides on the vertices instead of a texture, so there is nothing to upload and
- * the palette stays the one in `data/tiles.ts` that the 2D tileset is baked
- * from.
+ * rides on the vertices instead of a texture, so there is nothing to upload
+ * and the palette stays the shared one in `data/tiles.ts`.
  */
 export function buildGroundGeometry(map: number[][]): BufferGeometry {
   const rows = map.length;
@@ -75,8 +74,8 @@ export function buildGround(map: number[][]): Mesh {
 
 /**
  * A per-tile brightness wobble, so a field of grass has a visible grid instead
- * of being one flat slab of green. The 2D tiles get this from flecks drawn into
- * the texture; with no textures here it has to come from the colour itself.
+ * of being one flat slab of green. With no textures anywhere it has to come
+ * from the colour itself.
  *
  * Deterministic on the tile's coordinates rather than random: a zone that
  * looked different every time it was built would make the leak check's "the

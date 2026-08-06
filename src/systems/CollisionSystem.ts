@@ -104,8 +104,7 @@ function substepCount(dx: number, dy: number): number {
  *
  * Resolution is one axis at a time, reverting only the blocked one. That is
  * what makes walking diagonally into the pond slide along the shore rather than
- * stopping dead — arcade gave it away for free, and it is the thing players
- * notice losing.
+ * stopping dead, which is the thing players notice losing.
  */
 export function moveWithCollision(box: Aabb, dx: number, dy: number, world: CollisionWorld): Point {
   const at = (x: number, y: number): Aabb => ({ ...box, x, y });
