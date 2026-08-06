@@ -78,7 +78,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 0   | Land this plan as `docs/cleanup_plan.md` | S    | —          | ☑ 2026-08-05 |
 | 1   | Tooling and CI gates                     | M    | —          | ☑ 2026-08-06 |
 | 2   | Docs truth pass                          | S    | —          | ☑ 2026-08-06 |
-| 3   | Dead code and Phaser residue             | M    | —          | ☐            |
+| 3   | Dead code and Phaser residue             | M    | —          | ☑ 2026-08-06 |
 | 4   | The safety net: targeted tests           | M    | —          | ☐            |
 | 5   | Type the event channel                   | M    | —          | ☐            |
 | 6   | Id unions and index safety               | L    | —          | ☐            |
@@ -161,49 +161,59 @@ No `src/` changes. The cheapest PR here and the one that stops future sessions b
 The upgrade plan kept its live TypeScript 7 row in `docs/upgrade_plan.md` and archived the rest,
 so both a live and an archived copy exist under that name.
 
-## PR 3 — Dead code and Phaser residue · `cleanup/03-dead-code` · M
+## PR 3 — Dead code and Phaser residue · `cleanup/03-dead-code` · M — done, merged
 
 All compiler-verified, so it is safe ahead of the tests.
 
-- [ ] **`textureKey` / `depletedTextureKey`** — declared on `EnemyDefinition`
+- [x] **`textureKey` / `depletedTextureKey`** — declared on `EnemyDefinition`
       (`data/enemies.ts:32`) and `ResourceNodeDefinition` (`data/resourceNodes.ts:8,13`) and
       populated in every row, **never read anywhere**. Phaser atlas keys; creatures and props are
-      primitives now. Delete the fields and all seven values.
-- [ ] **Four dead exports**, each referenced only by its own test: `hud/dom.ts:40` `toggleClass`
+      primitives now. Deleted the fields and all seven values.
+- [x] **Four dead exports**, each referenced only by its own test: `hud/dom.ts:40` `toggleClass`
       (zero call sites anywhere), `ui/theme.ts:83` `fontPx` (Phaser `Text` needed a `'11px'`
       string; the DOM HUD writes `font-size: ${n}px`), `systems/AppearanceSystem.ts:153`
-      `walkAnimationKey` (a sprite-sheet animation key) and `:14` `LEG_PHASES`.
-- [ ] **`place()`'s dead branch** (`hud/dom.ts:30`) — all four callers pass `'position'`
-      explicitly, so the `'both'` default and the width/height branch are unreachable. Drop the
-      parameter. Three callers then re-apply width by hand (`PlayerColumn.ts:49`,
-      `TargetFrame.ts:19`, `QuestTracker.ts:23`) — fold that into the signature rather than
-      leaving it at the call sites.
-- [ ] **`appearanceTextureKey` → `appearanceKey`.** Nothing generates a texture; its one
-      production use is a change-detection hash in `render3d/actors.ts:80,94-95`. Check whether
-      `phase` is still part of the hash — if `src/` never passes a non-default, drop it.
-- [ ] **Un-export 13 module-private symbols**: `COMBAT_SKILL_LEVELS_PER_LEVEL`,
-      `COPPER_PER_SILVER`, `COPPER_PER_GOLD`, `FIELD_OF_VIEW`, `SLOT_ORDER` (keep `SLOT_LABELS` —
+      `walkAnimationKey` (a sprite-sheet animation key) and `:14` `LEG_PHASES`. The `LegPhase`
+      **type** stays — `legOffsets` is keyed by it and `figure.ts` reads it.
+- [x] **`place()`'s dead branch** (`hud/dom.ts:30`) — all four callers passed `'position'`
+      explicitly, so the `'both'` default and the width/height branch were unreachable. The
+      parameter now **names what to size** (`undefined | 'width' | 'box'`) rather than being
+      dropped: three callers were re-applying width or height by hand right after the call, and
+      that is what folded into the signature.
+- [x] **`appearanceTextureKey` → `appearanceKey`.** `phase` went with the name: `src/`'s one
+      production call site (`render3d/actors.ts`) never passed a non-default, and the walk is
+      animated by rotating hinges now rather than by keying a baked frame.
+- [x] **Un-export 13 module-private symbols**: `COMBAT_SKILL_LEVELS_PER_LEVEL`,
+      `COPPER_PER_SILVER`, `COPPER_PER_GOLD`, `FIELD_OF_VIEW`, `SLOT_ORDER` (kept `SLOT_LABELS` —
       `SlotPicker` imports it), `TITLE_LINE_HEIGHT`, `beginSession`, `hitsBlockingTile`,
       `hitsBlocker`, `nearestUnder`, `titleIdFor`, `unlockedAchievements`, `xpToReachSkillLevel`.
-      Leave the ~60 exported types alone; they name exported signatures.
-- [ ] **Rename `CollisionSystem.ts:13`'s `Rect`** (`{left,top,right,bottom}`) to `Bounds`. It
-      shares a name with `ui/layout.ts:3`'s `Rect` (`{x,y,width,height}`) and the fields are
-      incompatible.
-- [ ] **Prune the ~30 Phaser comparisons across 21 files** aggressively — keep only what a reader
-      who never saw Phaser still needs. These are outright false and go regardless:
-      `hud/Sheet.ts:9` cites `ui/clipToMask.ts` (deleted); `data/tiles.ts:13` and
-      `render3d/ground.ts:16` describe the tileset baking textures in the present tense;
-      `hud/paperdoll.ts:36` says "exactly as the texture does it"; `ui/layout.ts:61` cites
-      `UIScene`; `systems/CharacterController.ts:76` says "Scenes call these".
-- [ ] **`worldViewportHeight` is not called by production code** (`ui/layout.ts:131` — only
-      `tests/render3d/camera.test.ts`), and `hud/Hud.ts:293` and `hud/dom.ts:27` both claim it is
-      a live rule. **Keep the function** — it is the specification of the reserved band and the
-      oracle the camera tests assert framing against — but re-document it as that, and fix the two
-      false claims.
+      Left the ~60 exported types alone; they name exported signatures.
+- [x] **Rename `CollisionSystem.ts:13`'s `Rect`** (`{left,top,right,bottom}`) to `Bounds`. It
+      shared a name with `ui/layout.ts:3`'s `Rect` (`{x,y,width,height}`) and the fields are
+      incompatible — the new declaration says so, since nothing else stops the mistake.
+- [x] **Prune the ~30 Phaser comparisons across 21 files** aggressively. The six named as
+      outright false are gone (`hud/Sheet.ts` citing the deleted `ui/clipToMask.ts`;
+      `data/tiles.ts` and `render3d/ground.ts` describing a tileset baking textures in the present
+      tense; `hud/paperdoll.ts`'s "exactly as the texture does it"; `ui/layout.ts` citing
+      `UIScene`; `systems/CharacterController.ts`'s "Scenes call these"), and so is every
+      remaining "the 2D renderer did X" that only asserted continuity of a magic number.
+      **What survives is the rule applied:** a comparison earns its place only where it explains
+      why the present code is shaped against an obvious alternative, and it is rewritten to stand
+      without the engine's name — `render3d/camera.ts`'s framing argument (a viewport that shrank
+      to the reserved band would hold the rule outright; a full-bleed perspective camera cannot),
+      `render3d/occlusion.ts`, `world/GameContext.ts`'s autosave accumulator.
+- [x] **`worldViewportHeight` is not called by production code** (`ui/layout.ts:131` — only
+      `tests/render3d/camera.test.ts`), and `hud/Hud.ts:293` and `hud/dom.ts:27` both claimed it
+      was a live rule. **Kept the function** and re-documented it as the specification of the
+      reserved band and the oracle the camera tests measure framing against; fixed both claims.
 
 Commits: dead data fields / dead exports / renames / comment prune.
 **Verify:** gates + `npm run smoke` (touches actors and HUD).
 **Done when:** `grep -rnw 'textureKey' src` is empty and the four dead exports are gone.
+**Landed:** 77/77 smoke, unchanged. One `Phaser` survives in `src/` and is wanted:
+`world/Player.ts:319`, the note explaining why the integrator clamp is deferred to PR 10 — it
+names the comment in `MovementSystem` it contradicts, and PR 10 deletes both. The four surviving
+`2D` hits are all about the **simulation** being two-dimensional or about an HTML 2D canvas
+context, not about the old renderer.
 
 ## PR 4 — The safety net: targeted tests · `cleanup/04-hud-tests` · M
 
