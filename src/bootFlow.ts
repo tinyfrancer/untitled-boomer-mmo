@@ -25,7 +25,7 @@ export interface GameHost {
  * It used to be two scenes and a `scene.start`, which is a lot of machinery for
  * an if-statement plus a form.
  */
-export function beginSession(host: GameHost, character: CharacterState): void {
+function beginSession(host: GameHost, character: CharacterState): void {
   startGame({ character, events: host.events });
   host.startZone();
 }

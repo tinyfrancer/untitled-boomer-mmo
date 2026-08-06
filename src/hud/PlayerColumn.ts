@@ -46,8 +46,7 @@ export class PlayerColumn {
   }
 
   layout(rect: Rect): void {
-    place(this.root, rect, 'position');
-    this.root.style.width = `${rect.width}px`;
+    place(this.root, rect, 'width');
   }
 
   setName(name: string): void {

@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   BASE_FIGURE_COLOR,
-  LEG_PHASES,
   SKIN_COLOR,
   appearanceTextureKey,
   computeAppearance,
   legOffsets,
-  walkAnimationKey,
+  type LegPhase,
 } from '../../src/systems/AppearanceSystem';
 import { TIER_COLORS } from '../../src/data/tiers';
+
+const PHASES: LegPhase[] = [0, 1, 2];
 
 const EMPTY_GEAR = { helmet: null, chest: null, pants: null, weapon: null };
 
@@ -84,7 +85,7 @@ describe('legOffsets', () => {
   });
 
   it('keeps every phase the same total stride width', () => {
-    const widths = LEG_PHASES.map((phase) => {
+    const widths = PHASES.map((phase) => {
       const { leftX, rightX } = legOffsets(phase);
       return Math.round((rightX - leftX) * 100);
     });
@@ -117,14 +118,7 @@ describe('appearanceTextureKey', () => {
 
   it('gives every leg phase of one look its own key', () => {
     const appearance = computeAppearance(EMPTY_GEAR);
-    const keys = LEG_PHASES.map((phase) => appearanceTextureKey(appearance, phase));
-    expect(new Set(keys).size).toBe(LEG_PHASES.length);
-  });
-
-  it('names the walk after the look, not a phase of it', () => {
-    const naked = computeAppearance(EMPTY_GEAR);
-    const armed = computeAppearance({ ...EMPTY_GEAR, weapon: 'brown-axe' });
-    expect(walkAnimationKey(naked)).not.toBe(walkAnimationKey(armed));
-    expect(walkAnimationKey(naked)).toBe(`${appearanceTextureKey(naked, 0)}:walk`);
+    const keys = PHASES.map((phase) => appearanceTextureKey(appearance, phase));
+    expect(new Set(keys).size).toBe(PHASES.length);
   });
 });

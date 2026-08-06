@@ -23,7 +23,7 @@ export function createInitialSkills(): Skills {
 }
 
 // XP to go from (level - 1) to level, on whichever curve this skill follows.
-export function xpToReachSkillLevel(skillId: SkillId, level: number): number {
+function xpToReachSkillLevel(skillId: SkillId, level: number): number {
   return skillFamily(skillId) === 'combat'
     ? combatSkillXpToReachLevel(level)
     : skillXpToReachLevel(level);

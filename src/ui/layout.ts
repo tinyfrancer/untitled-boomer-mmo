@@ -23,7 +23,7 @@ const MANA_BLOCK_HEIGHT = 34;
 // A worn title gets its own line under the name. "Adventurer, Rat Slayer" on
 // one line overruns the 190px column, and shrinking the name to fit made the
 // thing the player is proudest of the smallest text on screen.
-export const TITLE_LINE_HEIGHT = 16;
+const TITLE_LINE_HEIGHT = 16;
 const TRACKER_LINE_HEIGHT = 18;
 // The ability buttons plus the mana-cost line printed under them.
 const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 16;

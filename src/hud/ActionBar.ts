@@ -46,7 +46,7 @@ export class ActionBar {
   }
 
   layout(rect: Rect): void {
-    place(this.root, rect, 'position');
+    place(this.root, rect);
   }
 
   update(states: AbilityState[]): void {

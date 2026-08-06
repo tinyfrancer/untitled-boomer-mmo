@@ -11,8 +11,6 @@ export const SKIN_COLOR = 0xe0b088;
 // a stride, alternated to make a walk.
 export type LegPhase = 0 | 1 | 2;
 
-export const LEG_PHASES: LegPhase[] = [0, 1, 2];
-
 export interface LegOffsets {
   leftX: number;
   rightX: number;
@@ -147,9 +145,4 @@ export function appearanceTextureKey(appearance: Appearance, phase: LegPhase = 0
     weapon,
     phase,
   ].join(':');
-}
-
-// The animation built from those textures; one per distinct look.
-export function walkAnimationKey(appearance: Appearance): string {
-  return `${appearanceTextureKey(appearance)}:walk`;
 }

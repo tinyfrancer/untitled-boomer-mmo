@@ -1,5 +1,5 @@
-export const COPPER_PER_SILVER = 100;
-export const COPPER_PER_GOLD = 100 * COPPER_PER_SILVER;
+const COPPER_PER_SILVER = 100;
+const COPPER_PER_GOLD = 100 * COPPER_PER_SILVER;
 
 export interface CurrencyParts {
   gold: number;

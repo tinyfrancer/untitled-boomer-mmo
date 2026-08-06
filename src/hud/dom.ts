@@ -27,18 +27,15 @@ export function el<K extends keyof HTMLElementTagNameMap>(
  * and `worldViewportHeight` — the rule that nothing in the world may be drawn
  * under the tab bar — is derived from the very same numbers.
  */
-export function place(node: HTMLElement, rect: Rect, sized: 'both' | 'position' = 'both'): void {
+export function place(node: HTMLElement, rect: Rect, sized?: 'width' | 'box'): void {
   node.style.left = `${rect.x}px`;
   node.style.top = `${rect.y}px`;
-  if (sized === 'both') {
+  if (sized) {
     node.style.width = `${rect.width}px`;
+  }
+  if (sized === 'box') {
     node.style.height = `${rect.height}px`;
   }
-}
-
-/** Adds or removes a class from one boolean, since that is 90% of a redraw here. */
-export function toggleClass(node: HTMLElement, className: string, on: boolean): void {
-  node.classList.toggle(className, on);
 }
 
 /**

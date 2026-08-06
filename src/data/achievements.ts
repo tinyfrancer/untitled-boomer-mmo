@@ -32,7 +32,7 @@ export const TITLE_TIER: SlayerTier = 100;
 
 const ENEMY_IDS = Object.keys(ENEMIES) as EnemyId[];
 
-export function titleIdFor(enemyId: EnemyId): TitleId {
+function titleIdFor(enemyId: EnemyId): TitleId {
   return `${enemyId}-slayer`;
 }
 

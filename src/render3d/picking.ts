@@ -97,7 +97,7 @@ export function pointerRay(
 }
 
 /** The nearest of these the ray crosses, which is the one in front. */
-export function nearestUnder<T extends Pickable>(
+function nearestUnder<T extends Pickable>(
   raycaster: Raycaster,
   candidates: readonly T[],
 ): T | null {

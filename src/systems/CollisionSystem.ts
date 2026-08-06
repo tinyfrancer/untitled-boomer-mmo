@@ -45,7 +45,7 @@ const EDGE_EPSILON = 1e-6;
  * scan is the same four cells for a body that does fit, so exactness here is
  * free.
  */
-export function hitsBlockingTile(world: CollisionWorld, box: Aabb): boolean {
+function hitsBlockingTile(world: CollisionWorld, box: Aabb): boolean {
   // Right and bottom edges are exclusive: a body resting exactly on a tile
   // boundary is touching that tile, not standing in it.
   const firstCol = Math.floor((box.x - box.halfWidth) / TILE_SIZE);
@@ -64,7 +64,7 @@ export function hitsBlockingTile(world: CollisionWorld, box: Aabb): boolean {
   return false;
 }
 
-export function hitsBlocker(world: CollisionWorld, box: Aabb): boolean {
+function hitsBlocker(world: CollisionWorld, box: Aabb): boolean {
   const left = box.x - box.halfWidth;
   const top = box.y - box.halfHeight;
   const right = box.x + box.halfWidth;
