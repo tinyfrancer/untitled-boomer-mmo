@@ -26,3 +26,6 @@ dist-ssr
 
 # Browser smoke-check screenshots
 .smoke
+
+# Coverage reports (`npm run coverage`)
+coverage

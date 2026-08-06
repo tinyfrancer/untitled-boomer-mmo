@@ -22,23 +22,31 @@ not built yet, so don't assume features from that doc exist in code.
 ```bash
 npm run dev        # Vite dev server with hot reload (http://localhost:5173)
 npm run dev -- --host   # expose on LAN, for testing on a phone
-npm run build       # tsc typecheck + production build to dist/
+npm run build       # production build to dist/ — no typecheck, run `typecheck` for that
 npm run preview     # serve the production build locally
 npm run test        # run the full Vitest suite once
-npm run typecheck   # tsc --noEmit
+npm run coverage    # the same suite with the coverage report attached
+npm run typecheck   # tsc --noEmit over both projects: src/tests, and scripts/
 npm run lint        # ESLint
 npm run format       # Prettier --write
+npm run format:check # Prettier --check, which is what CI runs
 npm run smoke       # browser smoke check (needs `npm run dev` running in another shell)
 ```
 
 Run a single test file: `npx vitest run tests/systems/CombatSystem.test.ts`
 Run tests matching a name: `npx vitest run -t "isCooldownReady"`
+Run part of smoke: `node scripts/smoke.mjs --section=bag,sheets` (an unknown name lists them all).
 
 CI runs on every PR (`.github/workflows/ci.yml`): `gates (node 22)` and `gates (node 25)` run
-lint/typecheck/test on both Node versions, and `browser smoke` runs the real Playwright check.
-**The smoke job blocks merges**, so run `npm run smoke` locally before opening a PR rather than
-finding out from CI. Don't commit on a red suite, including failures that pre-date your change;
-fixing a broken test _environment_ is in scope, not a distraction.
+lint/format/typecheck/coverage/build on both Node versions, and `browser smoke` runs the real
+Playwright check. **The smoke job blocks merges**, so run `npm run smoke` locally before opening a
+PR rather than finding out from CI. Don't commit on a red suite, including failures that pre-date
+your change; fixing a broken test _environment_ is in scope, not a distraction.
+
+**Coverage is reported and never gated** — no thresholds, on purpose. It uses istanbul rather than
+the faster v8 provider because v8 can only report a file some test imported and emits every other
+one as 0/0 statements, which the reporters round up to 100%: a directory with no tests at all
+scores perfect, which is exactly the thing worth finding.
 
 ## Workflow
 
@@ -100,6 +108,17 @@ It reaches the game through three dev-only handles, one per channel:
 Nothing else is exposed. The HUD needs no handle — smoke queries and clicks its real elements,
 which is what a user does. All three sit behind an `import.meta.env.DEV` guard, so Vite strips
 them from production builds. They are also how you inspect live state from the devtools console.
+
+Nothing in `src/` declares those three on `window` — `start3d.ts` casts to install them —
+so `scripts/globals.d.ts` does, which is what lets `tsconfig.scripts.json` typecheck the smoke
+script against the real `ZoneWorld` and `DebugView` rather than against `any`. A check that reads a
+field the world stopped having is a compile error now instead of an assertion that fails for the
+wrong reason. It is a `.mjs`, so its types are JSDoc; keep new helpers annotated or `npm run
+typecheck` fails on the implicit `any`.
+
+**Smoke is a list of named sections and `--section=` runs some of them.** They share one page and
+carry state forward, so filtering is for iterating on a section you are changing rather than a way
+to shard the run — `boot` always runs, and a full run is still the verdict.
 
 **`?loop=manual` puts the simulation on a hand crank.** Under that flag the rAF loop in
 `render3d/start3d.ts` stops stepping the game and `window.view.step(deltaMs, frames)` does it

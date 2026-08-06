@@ -76,7 +76,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | #   | PR                                       | Size | Depends on | Status       |
 | --- | ---------------------------------------- | ---- | ---------- | ------------ |
 | 0   | Land this plan as `docs/cleanup_plan.md` | S    | —          | ☑ 2026-08-05 |
-| 1   | Tooling and CI gates                     | M    | —          | ☐            |
+| 1   | Tooling and CI gates                     | M    | —          | ☑ 2026-08-06 |
 | 2   | Docs truth pass                          | S    | —          | ☐            |
 | 3   | Dead code and Phaser residue             | M    | —          | ☐            |
 | 4   | The safety net: targeted tests           | M    | —          | ☐            |
@@ -89,32 +89,46 @@ short session, `M` is a full one, `L` should be the only thing that session does
 
 ---
 
-## PR 1 — Tooling and CI gates · `cleanup/01-tooling` · M
+## PR 1 — Tooling and CI gates · `cleanup/01-tooling` · M — done, merged
 
 No `src/` changes. Lands early so everything after it is measured.
 
-- [ ] **`prettier --check` in CI.** Formatting is the stated source of truth and _nothing anywhere
-      runs a check_ — it is clean by discipline alone. Add a `format:check` script and a CI step,
-      plus a `.prettierignore` (`npm run format` is `prettier --write .` with nothing excluded, so
-      a stale `dist/` would get rewritten).
-- [ ] **`no-only-tests`** in `eslint.config.js`. Zero `.only`s today; nothing stops one landing,
-      and a stray `.only` turns green CI into a lie rather than a failure.
-- [ ] **Coverage.** `@vitest/coverage-v8`, an `npm run coverage` script, reported in CI with **no
-      threshold gate**. This is what would have surfaced the `src/hud/` hole on its own.
-- [ ] **Drop the duplicate `tsc`.** `npm run build` is `tsc && vite build` and CI runs
-      `npm run typecheck` immediately before it (`.github/workflows/ci.yml:38,42`) on both Node
-      versions — four full passes per PR, two redundant.
-- [ ] **Typecheck `scripts/`.** `tsconfig.json`'s `include` is `["src", "tests"]`, so the
-      1,447-line merge-blocking `scripts/smoke.mjs` gets none. Needs `allowJs`+`checkJs` for a
-      `.mjs` file — if that fights `erasableSyntaxOnly`, add `tsconfig.scripts.json` rather than
-      weakening the main one.
-- [ ] **`--section=<name>` for smoke.** 19 labelled sections in one flat `try` scope with no way to
-      run one, on a gate that needs a dev server. Name each section and let the flag filter.
-- [ ] Fix `ci.yml:78` — "the first request cold-compiles all of **Phaser**".
+- [x] **`prettier --check` in CI.** Formatting is the stated source of truth and _nothing anywhere
+      runs a check_ — it is clean by discipline alone. Added a `format:check` script and a CI step.
+      The `.prettierignore` this asked for is nearly redundant: **prettier already honours
+      `.gitignore`**, verified by dropping a badly-formatted file into `dist/` and watching
+      `--check` pass it. So it holds one line, `package-lock.json`, which is tracked and generated.
+- [x] **`no-only-tests`** in `eslint.config.js`. Zero `.only`s today; nothing stops one landing,
+      and a stray `.only` turns green CI into a lie rather than a failure. Scoped to `tests/**`,
+      and proven by adding a `describe.only` and watching it fail.
+- [x] **Coverage.** An `npm run coverage` script, reported in CI with **no threshold gate**.
+      **Istanbul, not the `@vitest/coverage-v8` this named** — v8 can only report a file some test
+      imported and emits every other one as `0/0` statements, which the reporters round up to
+      100%. All 22 `src/hud/` files scored a perfect 100 under it, and the project read 93.4%.
+      Under istanbul they read 0% of a real statement count and the project reads **67.6%**, which
+      is the hole this bullet exists to surface.
+- [x] **Drop the duplicate `tsc`.** `npm run build` is `vite build` now. CI keeps the explicit
+      `npm run typecheck` step before it, so the gate is named rather than a side effect of the
+      build, and there is one pass per job instead of two.
+- [x] **Typecheck `scripts/`.** `tsconfig.scripts.json` with `allowJs`+`checkJs`, fully `strict`
+      like the main one, and `moduleResolution: bundler` so it can reach into `src/`. It found 186
+      errors. The half worth having came from `scripts/globals.d.ts`, which gives `window.world`,
+      `window.view` and `window.events` their real types — nothing in `src/` declares them, since
+      `start3d.ts` installs them through a cast. Real finds: five `.find()` results used without a
+      guard, `character.state.afk` dereferenced where it is nullable, and a check that bolted
+      `before`/`after` onto an object the page had returned. The rest is JSDoc, which is the only
+      place a `.mjs` has to put a type.
+- [x] **`--section=<name>` for smoke.** The flat `try` is 19 `async function`s and a `SECTIONS`
+      table now; `--section=a,b` filters it and an unknown name lists them all and exits 2. `boot`
+      always runs, since it creates the character. The caveat is real and is documented in the
+      file: sections share a page and carry state forward, so `--section=bag` alone fails its clip
+      check — the sheet it measures is 50px taller without the title `achievements` wears.
+- [x] Fix `ci.yml:78` — "the first request cold-compiles all of **Phaser**".
 
 Commits: one per bullet group (CI gates / coverage / tsconfig / smoke sections).
 **Verify:** gates, plus one `npm run smoke` to prove `--section` didn't break the whole run.
 **Done when:** CI shows a format check, a coverage report, and one `tsc` per job.
+**Landed:** 77/77 smoke, unchanged; coverage 67.6% statements.
 
 ## PR 2 — Docs truth pass · `cleanup/02-docs` · S
 

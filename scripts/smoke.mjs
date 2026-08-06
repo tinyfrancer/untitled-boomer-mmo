@@ -28,17 +28,40 @@
  * never a thumb resting on the screen. Two sections leave that viewport on
  * purpose, a landscape resize and a desktop one, and both say why.
  *
- * Usage: npm run dev, then `node scripts/smoke.mjs [--headed]`.
- * Screenshots land in .smoke/.
+ * It is typechecked by `tsconfig.scripts.json` — `scripts/globals.d.ts` gives
+ * the three handles their real types, so a check that reads a field the world
+ * stopped having is a compile error rather than an assertion that quietly fails
+ * for the wrong reason. That is what the JSDoc annotations below are for; a
+ * `.mjs` has nowhere else to put a type.
+ *
+ * The run is a list of named sections — `SECTIONS`, at the bottom — and
+ * `--section=` runs only the ones named. They share one page and carry state
+ * forward, so a section is not independent of the ones before it: `boot` always
+ * runs, and anything else may need a neighbour named alongside it. The
+ * couplings are not obvious either — `bag` measures a sheet whose height
+ * depends on the player column, which `achievements` grows by wearing a title,
+ * so `--section=bag` alone reports 50px more room and fails its clip check.
+ * This is for iterating on a section you are changing; the verdict that counts
+ * is still a full run.
+ *
+ * Usage: npm run dev, then `node scripts/smoke.mjs [--headed] [--section=a,b]`.
+ * An unknown section name prints the list. Screenshots land in .smoke/.
  */
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173';
+/** @param {string} params */
 const query = (params) => `${BASE}${BASE.includes('?') ? '&' : '?'}${params}`;
 const URL = query('loop=manual');
 const OUT = '.smoke';
 const headed = process.argv.includes('--headed');
+/** Sections named on the command line; empty means all of them. */
+const requested = process.argv
+  .filter((arg) => arg.startsWith('--section='))
+  .flatMap((arg) => arg.slice('--section='.length).split(','))
+  .map((name) => name.trim())
+  .filter(Boolean);
 
 const PHONE = { width: 390, height: 844 };
 
@@ -50,7 +73,13 @@ const FRAMES_PER_POLL = 12;
 
 mkdirSync(OUT, { recursive: true });
 
+/** @type {{ name: string; passed: boolean; detail: string }[]} */
 const results = [];
+/**
+ * @param {string} name
+ * @param {boolean} passed
+ * @param {string} [detail]
+ */
 function check(name, passed, detail = '') {
   results.push({ name, passed, detail });
   console.log(`${passed ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
@@ -69,6 +98,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { ...PHONE }, hasTouch: true });
 
+/** @type {string[]} */
 const consoleErrors = [];
 page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
 page.on('pageerror', (e) => consoleErrors.push(String(e)));
@@ -105,6 +135,11 @@ const zoneId = () => page.evaluate(() => window.world?.zone.id ?? null);
  * Steps until `fn` holds. The budget is in game milliseconds, so it means the
  * same thing on a fast laptop and a loaded CI runner — which is the whole point
  * of `?loop=manual`.
+ *
+ * @param {() => Promise<boolean>} fn
+ * @param {string} label
+ * @param {number} [budgetMs]
+ * @param {number} [deltaMs]
  */
 const stepUntil = async (fn, label, budgetMs = 60000, deltaMs = FRAME_MS) => {
   for (let elapsed = 0; elapsed < budgetMs; elapsed += FRAMES_PER_POLL * deltaMs) {
@@ -114,6 +149,11 @@ const stepUntil = async (fn, label, budgetMs = 60000, deltaMs = FRAME_MS) => {
   throw new Error(`timed out waiting for: ${label}`);
 };
 
+/**
+ * @param {string} zone
+ * @param {string} label
+ * @param {number} [budgetMs]
+ */
 const stepUntilZone = (zone, label, budgetMs) =>
   stepUntil(async () => (await zoneId()) === zone, label, budgetMs);
 
@@ -129,7 +169,11 @@ const park = async () => {
   await draw();
 };
 
-/** A real press-and-release on the canvas, given a frame to be processed. */
+/**
+ * A real press-and-release on the canvas, given a frame to be processed.
+ *
+ * @param {{ x: number; y: number }} point
+ */
 const clickAt = async (point) => {
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
@@ -137,7 +181,12 @@ const clickAt = async (point) => {
   await draw();
 };
 
-/** A press, a drag of `dx` pixels in eight moves, and a release. */
+/**
+ * A press, a drag of `dx` pixels in eight moves, and a release.
+ *
+ * @param {{ x: number; y: number }} from
+ * @param {number} dx
+ */
 const drag = async (from, dx) => {
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
@@ -148,9 +197,18 @@ const drag = async (from, dx) => {
   await draw();
 };
 
+/**
+ * @param {'touchStart' | 'touchMove' | 'touchEnd'} type
+ * @param {{ x: number; y: number }[]} points
+ */
 const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
 
-/** The same drag, by finger. */
+/**
+ * The same drag, by finger.
+ *
+ * @param {{ x: number; y: number }} from
+ * @param {number} dx
+ */
 const touchDrag = async (from, dx) => {
   await touch('touchStart', [{ x: from.x, y: from.y }]);
   for (let move = 1; move <= 8; move += 1) {
@@ -163,14 +221,123 @@ const touchDrag = async (from, dx) => {
 const drawnCounts = () => page.evaluate(() => window.view.drawnCounts());
 const gpuMemory = () => page.evaluate(() => window.view.gpuMemory());
 const tabBarTop = () =>
-  page.evaluate(() => Math.round(document.querySelector('.hud-tabs').getBoundingClientRect().top));
+  page.evaluate(() =>
+    Math.round(
+      /** @type {HTMLElement} */ (document.querySelector('.hud-tabs')).getBoundingClientRect().top,
+    ),
+  );
 
+/** @param {string} tab */
 const tapTab = async (tab) => {
   await page.click(`.hud-tabs__tab[data-tab="${tab}"]`);
   await page.waitForTimeout(80);
 };
 
-try {
+const spawned = () =>
+  page.evaluate(() => ({
+    mobs: window.world.mobs.length,
+    nodes: window.world.nodes.length,
+    npcs: window.world.npcs.length,
+    signposts: window.world.signposts.length,
+  }));
+
+/**
+ * Every simulated thing has exactly one thing drawing it. Neither handle can
+ * answer that alone — the leak check compares the view only against itself,
+ * and `window.world` cannot see whether a rat was ever drawn — so this is
+ * where a zone that quietly builds no crabs would show up.
+ *
+ * @param {string} zone
+ */
+const checkZoneDrawn = async (zone) => {
+  await draw();
+  const drawn = await drawnCounts();
+  const spawn = await spawned();
+  check(
+    `every mob, node, npc and signpost in the ${zone} is drawn`,
+    drawn.ground === 1 &&
+      drawn.mobs === spawn.mobs &&
+      drawn.nodes === spawn.nodes &&
+      drawn.npcs === spawn.npcs &&
+      drawn.signposts === spawn.signposts,
+    `drew ${JSON.stringify(drawn)} for ${JSON.stringify(spawn)}`,
+  );
+  check(
+    `and gives each of them in the ${zone} its floating name`,
+    drawn.labels === spawn.mobs + spawn.npcs + spawn.signposts + 1,
+    `${drawn.labels} labels`,
+  );
+};
+
+/**
+ * Walks the camera over the whole zone, so everything in it has been drawn at
+ * least once.
+ *
+ * `renderer.info.memory` counts what has actually been *uploaded* to the
+ * card, which is what makes it an honest measure of a leak — and also means
+ * it counts only what the camera has looked at. Comparing two snapshots taken
+ * from wherever the player happened to be standing would therefore move with
+ * a rat wandering into frame. Sweeping first makes both snapshots the zone's
+ * entire GPU footprint instead.
+ */
+const sweep = async () => {
+  const spans = [0.17, 0.5, 0.83];
+  for (const fx of spans) {
+    for (const fy of spans) {
+      await page.evaluate(
+        ([x, y]) => {
+          const w = window.world;
+          w.teleport(w.worldWidth * x, w.worldHeight * y);
+        },
+        [fx, fy],
+      );
+      await draw();
+    }
+  }
+  await park();
+};
+
+// Which thing in the world a tap is aimed at, as an expression the page
+// evaluates: a function cannot be handed across to the browser, and naming
+// the thing twice — once to stand near, once to click — is what these avoid.
+const RAT = 'window.world.mobs.find((m) => m.isAlive())';
+const SHOPKEEPER = 'window.world.npcs[0]';
+const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
+
+/**
+ * Stands the player a little south of one of those, with nothing selected.
+ *
+ * @param {string} what
+ */
+const standSouthOf = async (what) => {
+  await page.evaluate(`(() => {
+    const at = ${what};
+    window.world.clearTarget();
+    window.world.teleport(at.x, at.y + 150);
+  })()`);
+  await step(2);
+  await draw();
+};
+/**
+ * Where it is drawn — the feet, which is what a player aims at.
+ *
+ * @param {string} what
+ * @returns {Promise<{ x: number; y: number }>}
+ */
+const screenAt = (what) =>
+  page.evaluate(`(() => {
+    const at = ${what};
+    return window.view.worldToScreen(at.x, at.y);
+  })()`);
+
+// Where a fixed spot in the world is drawn, which is how the camera's angle
+// is read without a handle for it: turn the camera and the world swings.
+const northOfPlayer = () =>
+  page.evaluate(() =>
+    window.view.worldToScreen(window.world.player.x, window.world.player.y - 200),
+  );
+
+async function boot() {
   // --- Booting: a fresh character through the real creation screen, which is
   // plain HTML — so this is the form a player fills in, typed and clicked. ---
   await page.goto(URL, { waitUntil: 'domcontentloaded' });
@@ -204,75 +371,15 @@ try {
   });
   check('the game boots a session through the creation screen', true);
 
-  const spawned = () =>
-    page.evaluate(() => ({
-      mobs: window.world.mobs.length,
-      nodes: window.world.nodes.length,
-      npcs: window.world.npcs.length,
-      signposts: window.world.signposts.length,
-    }));
-
-  /**
-   * Every simulated thing has exactly one thing drawing it. Neither handle can
-   * answer that alone — the leak check compares the view only against itself,
-   * and `window.world` cannot see whether a rat was ever drawn — so this is
-   * where a zone that quietly builds no crabs would show up.
-   */
-  const checkZoneDrawn = async (zone) => {
-    await draw();
-    const drawn = await drawnCounts();
-    const spawn = await spawned();
-    check(
-      `every mob, node, npc and signpost in the ${zone} is drawn`,
-      drawn.ground === 1 &&
-        drawn.mobs === spawn.mobs &&
-        drawn.nodes === spawn.nodes &&
-        drawn.npcs === spawn.npcs &&
-        drawn.signposts === spawn.signposts,
-      `drew ${JSON.stringify(drawn)} for ${JSON.stringify(spawn)}`,
-    );
-    check(
-      `and gives each of them in the ${zone} its floating name`,
-      drawn.labels === spawn.mobs + spawn.npcs + spawn.signposts + 1,
-      `${drawn.labels} labels`,
-    );
-  };
-
   const town = await spawned();
   check(
     'the view is built against a zone with something in it',
     town.mobs === 9 && town.nodes === 6 && town.npcs === 1 && town.signposts === 2,
     `${town.mobs} mobs, ${town.nodes} nodes, ${town.npcs} npc, ${town.signposts} signposts`,
   );
+}
 
-  /**
-   * Walks the camera over the whole zone, so everything in it has been drawn at
-   * least once.
-   *
-   * `renderer.info.memory` counts what has actually been *uploaded* to the
-   * card, which is what makes it an honest measure of a leak — and also means
-   * it counts only what the camera has looked at. Comparing two snapshots taken
-   * from wherever the player happened to be standing would therefore move with
-   * a rat wandering into frame. Sweeping first makes both snapshots the zone's
-   * entire GPU footprint instead.
-   */
-  const sweep = async () => {
-    const spans = [0.17, 0.5, 0.83];
-    for (const fx of spans) {
-      for (const fy of spans) {
-        await page.evaluate(
-          ([x, y]) => {
-            const w = window.world;
-            w.teleport(w.worldWidth * x, w.worldHeight * y);
-          },
-          [fx, fy],
-        );
-        await draw();
-      }
-    }
-    await park();
-  };
-
+async function teardown() {
   // --- The view's own teardown, which is the thing here with no other cover at
   // all. A zone change is a view rebuild, so everything the last zone drew has
   // to come down by hand: a geometry nobody disposed is invisible to every
@@ -334,7 +441,9 @@ try {
   });
   await stepUntilZone('town', 'the west exit to return to town');
   check('zone travel round-trips town -> beach -> town -> bandit camp -> town', true);
+}
 
+async function walkCycle() {
   // --- The figure's legs: walking swings them and standing still puts them
   // back on the neutral pose. The walk belongs to whatever is drawing rather
   // than to the simulation, so it is the view that is asked. ---
@@ -359,7 +468,9 @@ try {
     standing.walking === false && standing.pose.endsWith(':0'),
     standing.pose,
   );
+}
 
+async function tabBar() {
   // --- Nothing in the world may be drawn under the tab bar. The bar is opaque
   // and swallows every tap that lands on it, and the signpost is how a zone is
   // left on a phone — the edge-walk band is untappably thin under a thumb. A
@@ -368,6 +479,7 @@ try {
   await park();
   const signpost = await page.evaluate(() => {
     const post = window.world.signposts.find((s) => s.exit.edge === 'south');
+    if (!post) throw new Error('town has no south signpost');
     return window.view.worldToScreen(post.x, post.y);
   });
   check(
@@ -375,7 +487,9 @@ try {
     signpost.y < (await tabBarTop()),
     `signpost at y=${Math.round(signpost.y)}, tab bar at ${await tabBarTop()}`,
   );
+}
 
+async function landscape() {
   // --- A resize, which has to move two things that can be forgotten
   // separately: the drawing buffer and the camera's aspect ratio. A buffer that
   // never resized would still draw, stretched, and every assertion in this file
@@ -395,8 +509,9 @@ try {
   await draw();
   const landscape = await page.evaluate(() => {
     const canvas = document.querySelector('canvas');
-    const box = canvas.getBoundingClientRect();
     const post = window.world.signposts.find((s) => s.exit.edge === 'south');
+    if (!canvas || !post) throw new Error('no canvas, or no south signpost');
+    const box = canvas.getBoundingClientRect();
     return {
       cssW: Math.round(box.width),
       cssH: Math.round(box.height),
@@ -406,7 +521,7 @@ try {
       bufferH: canvas.height,
       dpr: window.devicePixelRatio,
       innerH: window.innerHeight,
-      appH: document.getElementById('app').clientHeight,
+      appH: /** @type {HTMLElement} */ (document.getElementById('app')).clientHeight,
       hudMounted: document.querySelector('.hud') !== null,
       post: { x: post.x, y: post.y },
     };
@@ -439,6 +554,7 @@ try {
   await page.evaluate(() => {
     const w = window.world;
     const post = w.signposts.find((s) => s.exit.edge === 'south');
+    if (!post) throw new Error('town has no south signpost');
     w.clearTarget();
     w.teleport(post.x, post.y - 3 * 64);
   });
@@ -459,7 +575,9 @@ try {
   await page.setViewportSize({ ...PHONE });
   await page.waitForTimeout(300);
   await draw();
+}
 
+async function picking() {
   // --- Picking: a real press and release on the canvas, at the screen point
   // the view says a thing is drawn at.
   //
@@ -469,30 +587,6 @@ try {
   // PointerEvent landing on the canvas, in page coordinates, against a camera
   // the render loop has already moved this frame. ---
 
-  // Which thing in the world a tap is aimed at, as an expression the page
-  // evaluates: a function cannot be handed across to the browser, and naming
-  // the thing twice — once to stand near, once to click — is what these avoid.
-  const RAT = 'window.world.mobs.find((m) => m.isAlive())';
-  const SHOPKEEPER = 'window.world.npcs[0]';
-  const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
-
-  /** Stands the player a little south of one of those, with nothing selected. */
-  const standSouthOf = async (what) => {
-    await page.evaluate(`(() => {
-      const at = ${what};
-      window.world.clearTarget();
-      window.world.teleport(at.x, at.y + 150);
-    })()`);
-    await step(2);
-    await draw();
-  };
-  /** Where it is drawn — the feet, which is what a player aims at. */
-  const screenAt = (what) =>
-    page.evaluate(`(() => {
-      const at = ${what};
-      return window.view.worldToScreen(at.x, at.y);
-    })()`);
-
   await standSouthOf(RAT);
   await clickAt(await screenAt(RAT));
   check(
@@ -500,7 +594,9 @@ try {
     (await page.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
   );
   await page.screenshot({ path: `${OUT}/6-picking.png` });
+}
 
+async function feedback() {
   // --- The feedback layer, which the tap above has just started a fight for.
   //
   // What only a browser can show here is the text itself: a damage number is
@@ -600,7 +696,9 @@ try {
     Math.hypot(walked.x - destination.x, walked.y - destination.y) < 24,
     `player at ${Math.round(walked.x)},${Math.round(walked.y)} for ${destination.x},${destination.y}`,
   );
+}
 
+async function orbit() {
   // --- The drag, which is the same stream of PointerEvents as the tap and has
   // to be told apart from it. The gesture arithmetic and the camera framing are
   // both unit-tested; what only a browser has is a real press-move-release, a
@@ -608,12 +706,6 @@ try {
   // events arriving in the same order. ---
   await park();
 
-  // Where a fixed spot in the world is drawn, which is how the camera's angle
-  // is read without a handle for it: turn the camera and the world swings.
-  const northOfPlayer = () =>
-    page.evaluate(() =>
-      window.view.worldToScreen(window.world.player.x, window.world.player.y - 200),
-    );
   const beforeDrag = await northOfPlayer();
   const stood = await page.evaluate(() => ({
     x: window.world.player.x,
@@ -657,7 +749,9 @@ try {
     Math.hypot(walkedTurned.x - turnedDestination.x, walkedTurned.y - turnedDestination.y) < 24,
     `player at ${Math.round(walkedTurned.x)},${Math.round(walkedTurned.y)} for ${Math.round(turnedDestination.x)},${Math.round(turnedDestination.y)}`,
   );
+}
 
+async function heading() {
   // --- W means up the screen, not north.
   //
   // The camera is still turned from the drag above, which is the only state in
@@ -703,7 +797,9 @@ try {
   // Straightened out again, so what follows is the framing the camera test
   // measures rather than whatever the drag left behind.
   await drag({ x: 195, y: 400 }, -140);
+}
 
+async function keyboard() {
   // --- The rest of the keyboard, which the host binds itself. `bindKeyboard`
   // is shared and unit-tested; what is not shared is the call site, and a host
   // that forgot it would leave a game that plays perfectly with a mouse and
@@ -711,6 +807,7 @@ try {
   await page.evaluate(() => {
     const w = window.world;
     const rat = w.mobs.find((m) => m.level === 1 && m.isAlive());
+    if (!rat) throw new Error('no level 1 rat alive in town');
     w.clearTarget();
     w.teleport(rat.x - 60, rat.y);
     w.player.restoreToFull();
@@ -763,7 +860,9 @@ try {
   // The bar's own padding rather than a button in it, so the tap proves the
   // background swallows it without also toggling a sheet.
   const barBox = await page.evaluate(() => {
-    const rect = document.querySelector('.hud-tabs').getBoundingClientRect();
+    const rect = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-tabs')
+    ).getBoundingClientRect();
     return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.bottom - 3) };
   });
   await page.touchscreen.tap(barBox.x, barBox.y);
@@ -777,7 +876,9 @@ try {
     afterBarTap.x === beforeBarTap.x && afterBarTap.y === beforeBarTap.y,
     `${beforeBarTap.x},${beforeBarTap.y} -> ${afterBarTap.x},${afterBarTap.y}`,
   );
+}
 
+async function touchGestures() {
   // --- The same gestures under a thumb. Every drag above was a mouse, and a
   // mouse cannot break either phone-only rule: it never pans the page, so
   // `touch-action: none` is untested by it, and it is never a thumb resting on
@@ -852,7 +953,9 @@ try {
     `${tabWidth.count} tabs, narrowest ${tabWidth.narrowest.toFixed(1)}x${tabWidth.shortest.toFixed(1)}px at ${tabWidth.viewport}px`,
   );
   await page.screenshot({ path: `${OUT}/10-tabbar-375.png` });
+}
 
+async function sheets() {
   // --- The HUD's own behaviour, on the roomy viewport it has a different rule
   // for: one sheet is open at a time either way, but a desktop opens one at
   // launch where a phone leaves the world clear. Everything below is a real
@@ -872,6 +975,7 @@ try {
       // Computed display, not the class: a hidden sheet that still lays out is
       // an invisible wall over the tab bar, and asking the class would have
       // called that closed.
+      /** @param {string} id */
       const open = (id) => {
         const node = document.querySelector(`.hud-sheet[data-sheet="${id}"]`);
         return node !== null && getComputedStyle(node).display !== 'none';
@@ -882,7 +986,9 @@ try {
         quests: open('quests'),
         feats: open('feats'),
         log: open('log'),
-        selectedTab: document.querySelector('.hud-tabs__tab.is-selected')?.dataset.tab ?? null,
+        selectedTab:
+          /** @type {HTMLElement | null} */ (document.querySelector('.hud-tabs__tab.is-selected'))
+            ?.dataset.tab ?? null,
       };
     });
 
@@ -933,7 +1039,9 @@ try {
     cappedLog.shown === 8 && cappedLog.last === 'filler 199',
     `${cappedLog.shown} lines, last: ${cappedLog.last}`,
   );
+}
 
+async function achievements() {
   // --- Achievements in the HUD. Crediting the chain and earning the title are
   // tested headlessly; what needs a browser is the sheet and the player column
   // redrawing around a worn title. ---
@@ -945,7 +1053,9 @@ try {
   });
   await tapTab('feats');
   const slayer = await page.evaluate(() => {
-    const sheet = document.querySelector('.hud-sheet[data-sheet="feats"]');
+    const sheet = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-sheet[data-sheet="feats"]')
+    );
     const rows = [...sheet.querySelectorAll('.hud-row--group')].map((n) => n.textContent);
     return {
       visible: getComputedStyle(sheet).display !== 'none',
@@ -971,36 +1081,44 @@ try {
   // It gets its own line there, so the column has to grow to hold it.
   const columnHeight = () =>
     page.evaluate(() =>
-      Math.round(document.querySelector('.hud-player').getBoundingClientRect().height),
+      Math.round(
+        /** @type {HTMLElement} */ (document.querySelector('.hud-player')).getBoundingClientRect()
+          .height,
+      ),
     );
   const beforeTitle = await columnHeight();
   await page.click('.hud-titles .hud-button[data-title="rat-slayer"]');
   await page.waitForTimeout(250);
   const wornTitle = await page.evaluate(() => {
-    const line = document.querySelector('.hud-player__title');
+    const line = /** @type {HTMLElement} */ (document.querySelector('.hud-player__title'));
     return {
       model: window.world.character.state.activeTitleId,
       shown: line.textContent === 'Rat Slayer' && getComputedStyle(line).display !== 'none',
     };
   });
-  wornTitle.before = beforeTitle;
-  wornTitle.after = await columnHeight();
+  const afterTitle = await columnHeight();
   check(
     'wearing a title redraws the player column with room for it',
-    wornTitle.model === 'rat-slayer' && wornTitle.shown && wornTitle.after > wornTitle.before,
-    `column ${wornTitle.before} -> ${wornTitle.after}`,
+    wornTitle.model === 'rat-slayer' && wornTitle.shown && afterTitle > beforeTitle,
+    `column ${beforeTitle} -> ${afterTitle}`,
   );
   await page.screenshot({ path: `${OUT}/12-title-worn.png` });
+}
 
+async function bagSheet() {
   // --- The bag: a full one must stay on screen, scroll inside itself, and clip
   // what hangs over. What is worth asserting is the consequence rather than the
   // implementation: a row scrolled out of view is not on screen and cannot be
   // hit. ---
   const bag = () =>
     page.evaluate(() => {
-      const sheet = document.querySelector('.hud-sheet[data-sheet="inventory"]');
-      const body = sheet.querySelector('.hud-sheet__body');
-      const selected = sheet.querySelector('.hud-item.is-selected');
+      const sheet = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="inventory"]')
+      );
+      const body = /** @type {HTMLElement} */ (sheet.querySelector('.hud-sheet__body'));
+      const selected = /** @type {HTMLElement | null} */ (
+        sheet.querySelector('.hud-item.is-selected')
+      );
       return {
         visible: getComputedStyle(sheet).display !== 'none',
         scrollTop: Math.round(body.scrollTop),
@@ -1045,9 +1163,9 @@ try {
   );
 
   const bagCenter = await page.evaluate(() => {
-    const box = document
-      .querySelector('.hud-sheet[data-sheet="inventory"] .hud-sheet__body')
-      .getBoundingClientRect();
+    const box = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-sheet[data-sheet="inventory"] .hud-sheet__body')
+    ).getBoundingClientRect();
     return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
   });
   await page.mouse.move(bagCenter.x, bagCenter.y);
@@ -1064,8 +1182,10 @@ try {
   // body now, so it must be outside the sheet and whatever is at that point
   // must not be it.
   const clipped = await page.evaluate(() => {
-    const sheet = document.querySelector('.hud-sheet[data-sheet="inventory"]');
-    const first = sheet.querySelector('.hud-item');
+    const sheet = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-sheet[data-sheet="inventory"]')
+    );
+    const first = /** @type {HTMLElement} */ (sheet.querySelector('.hud-item'));
     const row = first.getBoundingClientRect();
     const box = sheet.getBoundingClientRect();
     const at = document.elementFromPoint(Math.round(row.x + 4), Math.round(row.y + 4));
@@ -1113,7 +1233,9 @@ try {
     'a selection whose item is gone clears rather than lingering',
     (await bag()).selected === null,
   );
+}
 
+async function characterSheet() {
   // --- The character sheet: the paperdoll is SVG built from the same rig the
   // figure in the world is built from, and an empty slot opens a picker rather
   // than needing the bag. Equipping from it is the round trip that proves the
@@ -1126,8 +1248,10 @@ try {
     if (!node) return null;
     const box = node.getBoundingClientRect();
     return {
-      title: node.querySelector('.hud-picker__title').textContent,
-      items: [...node.querySelectorAll('.hud-picker__row')].map((n) => n.dataset.item),
+      title: /** @type {HTMLElement} */ (node.querySelector('.hud-picker__title')).textContent,
+      items: [...node.querySelectorAll('.hud-picker__row')].map(
+        (n) => /** @type {HTMLElement} */ (n).dataset.item,
+      ),
       onScreen: box.left >= 0 && box.top >= 0 && box.right <= window.innerWidth,
     };
   });
@@ -1140,11 +1264,15 @@ try {
   await page.waitForTimeout(200);
   const equipped = await page.evaluate(() => ({
     world: window.world.character.state.gear.helmet,
-    shown: document.querySelector('.hud-slot[data-slot="helmet"] .hud-slot__item').textContent,
+    shown: /** @type {HTMLElement} */ (
+      document.querySelector('.hud-slot[data-slot="helmet"] .hud-slot__item')
+    ).textContent,
     pickerGone: document.querySelector('.hud-picker') === null,
     // The paperdoll is redrawn from the new gear, so the helmet's colour is on
     // the head circle — the one thing a static picture could not show.
-    headFill: document.querySelector('.hud-paperdoll circle').getAttribute('fill'),
+    headFill: /** @type {SVGElement} */ (
+      document.querySelector('.hud-paperdoll circle')
+    ).getAttribute('fill'),
   }));
   check(
     'picking an item equips it and redraws the sheet',
@@ -1152,7 +1280,9 @@ try {
     `${equipped.shown}, head drawn ${equipped.headFill}`,
   );
   await page.screenshot({ path: `${OUT}/14-character-sheet.png` });
+}
 
+async function reset() {
   // --- Resetting: the mobile route to a fresh character, which used to be
   // bound to F9 and so unreachable on a phone. Two taps, on purpose. It is also
   // the only path that disposes a renderer and builds another one. ---
@@ -1164,8 +1294,9 @@ try {
   await page.click('.hud-modal [data-action="reset-character"]');
   const options = await page.evaluate(() => ({
     armed:
-      document.querySelector('.hud-modal [data-action="reset-character"]').textContent ===
-      'Tap again to confirm',
+      /** @type {HTMLElement} */ (
+        document.querySelector('.hud-modal [data-action="reset-character"]')
+      ).textContent === 'Tap again to confirm',
     saveIntact: localStorage.length > 0,
   }));
   await page.screenshot({ path: `${OUT}/15-options.png` });
@@ -1223,6 +1354,7 @@ try {
   await page.evaluate(() => {
     const w = window.world;
     const rat = w.mobs.find((m) => m.isAlive());
+    if (!rat) throw new Error('nothing alive to cast at');
     w.teleport(rat.x, rat.y + 120);
     w.setTarget(rat);
   });
@@ -1239,7 +1371,9 @@ try {
     `${cast} effect(s) in flight`,
   );
   await page.screenshot({ path: `${OUT}/17-cast.png` });
+}
 
+async function saveResume() {
   // --- The save round trip, through a real reload.
   //
   // Two things only this can show. `bindUnloadPersist` is the host's own call
@@ -1278,7 +1412,9 @@ try {
       resumed.ground === 1,
     `left at ${parked.spot.x},${parked.spot.y} (${parked.fromCentre}px off centre), back at ${resumed.x},${resumed.y}`,
   );
+}
 
+async function offlineCamping() {
   // --- Offline camping: a session parked in the save pays out on the next
   // load, and the report waits in the notification queue until the HUD mounts.
   // Travelling an hour back in the save is the only way to reach that path —
@@ -1291,7 +1427,9 @@ try {
     const w = window.world;
     w.character.state.level = 1;
     w.character.state.xp = 0;
-    w.character.state.afk.startedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const afk = w.character.state.afk;
+    if (!afk) throw new Error('the camp tab left no parked session behind');
+    afk.startedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.world != null, null, { timeout: 60000 });
@@ -1314,7 +1452,9 @@ try {
   check('the parked session is cleared once resolved', away.afk === null);
   await page.screenshot({ path: `${OUT}/18-away-report.png` });
   await page.click('[data-action="dismiss-away-report"]');
+}
 
+async function throttled() {
   // --- The same game on a phone that cannot keep up.
   //
   // Everything above runs at 40ms a frame on a machine that renders one in a
@@ -1335,7 +1475,13 @@ try {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 });
   const errorsBeforeSlow = consoleErrors.length;
 
-  /** Cranks the throttled page at 7fps until `fn`, in game milliseconds. */
+  /**
+   * Cranks the throttled page at 7fps until `fn`, in game milliseconds.
+   *
+   * @param {() => Promise<boolean>} fn
+   * @param {string} label
+   * @param {number} [budgetMs]
+   */
   const stepUntilSlow = (fn, label, budgetMs = 30000) =>
     stepUntil(fn, `${label} at 7fps`, budgetMs, SLOW_FRAME_MS);
 
@@ -1433,10 +1579,57 @@ try {
     consoleErrors.slice(errorsBeforeSlow, errorsBeforeSlow + 3).join(' | '),
   );
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+}
+
+/**
+ * The run, in the order it happens. Each entry is one of the `// ---` banners
+ * above and is what `--section=` names.
+ *
+ * @type {[string, () => Promise<void>][]}
+ */
+const SECTIONS = [
+  ['boot', boot],
+  ['teardown', teardown],
+  ['walk-cycle', walkCycle],
+  ['tab-bar', tabBar],
+  ['landscape', landscape],
+  ['picking', picking],
+  ['feedback', feedback],
+  ['orbit', orbit],
+  ['heading', heading],
+  ['keyboard', keyboard],
+  ['touch', touchGestures],
+  ['sheets', sheets],
+  ['achievements', achievements],
+  ['bag', bagSheet],
+  ['character-sheet', characterSheet],
+  ['reset', reset],
+  ['save-resume', saveResume],
+  ['offline-camping', offlineCamping],
+  ['throttled', throttled],
+];
+
+const known = SECTIONS.map(([name]) => name);
+const unknown = requested.filter((name) => !known.includes(name));
+if (unknown.length > 0) {
+  console.error(`unknown section: ${unknown.join(', ')}`);
+  console.error(`known sections: ${known.join(', ')}`);
+  await browser.close();
+  process.exit(2);
+}
+
+try {
+  for (const [name, run] of SECTIONS) {
+    // `boot` is never skipped: it clears the save and creates the character
+    // every other section is written against.
+    if (requested.length > 0 && name !== 'boot' && !requested.includes(name)) continue;
+    console.log(`\n--- ${name} ---`);
+    await run();
+  }
 
   check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
 } catch (err) {
-  check('smoke run completed', false, String(err.message ?? err));
+  check('smoke run completed', false, String(err instanceof Error ? err.message : err));
   await page.screenshot({ path: `${OUT}/error.png` }).catch(() => {});
 } finally {
   await browser.close();

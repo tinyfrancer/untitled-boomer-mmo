@@ -35,10 +35,20 @@ jobs:
 
       - run: npm run lint
 
+      # Formatting is the repo's stated source of truth and was held by
+      # discipline alone until this step existed.
+      - run: npm run format:check
+
+      # Both projects: `src`/`tests`, and `scripts/` — which is where the
+      # merge-blocking smoke check lives and where nothing looked before.
       - run: npm run typecheck
 
-      - run: npm run test
+      # `npm run test` with the reporter attached. Reported, never gated: the
+      # point is to see which directories nothing covers.
+      - run: npm run coverage
 
+      # `tsc` used to run here too, as the first half of `npm run build`, which
+      # made four full typecheck passes per PR and two of them redundant.
       - run: npm run build
 
   smoke:
@@ -74,8 +84,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start dev server
-        # Started and awaited in one step: the first request cold-compiles all of
-        # Phaser, so being served is not the same as being ready.
+        # Started and awaited in one step: the first request cold-compiles the
+        # whole engine — ~520 kB of Three.js — so being served is not the same
+        # as being ready.
         run: |
           npm run dev &
           for i in $(seq 1 60); do
