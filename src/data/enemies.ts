@@ -29,7 +29,6 @@ export interface EnemyLevelStats {
 export interface EnemyDefinition {
   id: EnemyId;
   name: string;
-  textureKey: string;
   // Decides what the loot table is allowed to hold: only humanoids drop gear
   // and coin. Enforced by a test over LOOT_TABLES rather than by construction,
   // since the tables are hand-written data.
@@ -56,7 +55,6 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
   rat: {
     id: 'rat',
     name: 'Rat',
-    textureKey: 'rat',
     family: 'beast',
     // Wider than a tile: the tail trails behind the body. Wide enough to
     // straddle a one-tile blocking column, which is why CollisionSystem scans
@@ -84,7 +82,6 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
   crab: {
     id: 'crab',
     name: 'Crab',
-    textureKey: 'crab',
     family: 'beast',
     body: { width: TILE_SIZE * 0.85, height: TILE_SIZE * 0.55 },
     aggressive: false,
@@ -110,7 +107,6 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
   bandit: {
     id: 'bandit',
     name: 'Bandit',
-    textureKey: 'bandit',
     family: 'humanoid',
     body: { width: TILE_SIZE, height: TILE_SIZE },
     // The first enemy that opens combat itself: walk too close and it swings.
