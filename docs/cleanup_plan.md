@@ -82,7 +82,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 4   | The safety net: targeted tests           | M    | —          | ☑ 2026-08-06 |
 | 5   | Type the event channel                   | M    | —          | ☑ 2026-08-06 |
 | 6   | Id unions and index safety               | L    | —          | ☑ 2026-08-06 |
-| 7   | Shared primitives and modal lifecycle    | M    | 4          | ☐            |
+| 7   | Shared primitives and modal lifecycle    | M    | 4          | ☑ 2026-08-06 |
 | 8   | Split `hud/Hud.ts`                       | M    | 4, 5, 7    | ☐            |
 | 9   | Split `world/ZoneWorld.ts`               | L    | 4          | ☐            |
 | 10  | The deferred behaviour changes           | M    | —          | ☐            |
@@ -379,41 +379,61 @@ Four things a later session should know:
   `const mob = world.mobs[0]` that half a test hangs off. `tests/nth.ts` answers all of them and
   asserts, so an empty array fails on the line that asked for it.
 
-## PR 7 — Shared primitives and modal lifecycle · `cleanup/07-primitives` · M
+## PR 7 — Shared primitives and modal lifecycle · `cleanup/07-primitives` · M — done, merged
 
 Depends on PR 4. Keep these as separable commits.
 
-- [ ] **One `clamp` / `barFill(value, max)`.** The bar-fill ratio is written six times with
+- [x] **One `clamp` / `barFill(value, max)`.** The bar-fill ratio is written six times with
       **three different answers for the degenerate case**: `PlayerColumn.ts:65,76`,
       `CharacterSheet.ts:142`, `GatherBar.ts:32`, `render3d/nameplate.ts:53` (returns 0 where the
       others return 1), and `ActionBar.ts:56` which sets `height: ${cooldownRemaining * 100}%`
       **with no clamp at all**. There is already a private `clamp` at `world/Player.ts:19` that
       none of them use.
-- [ ] **One `NO_GEAR`** — four copies (`world/Player.ts:12`, `persistence/CharacterState.ts:61`,
+- [x] **One `NO_GEAR`** — four copies (`world/Player.ts:12`, `persistence/CharacterState.ts:61`,
       `hud/CharacterSheet.ts:60`, `hud/paperdoll.ts:168`).
-- [ ] **Move stray geometry into `ui/layout.ts`**, which CLAUDE.md explicitly asks for:
+- [x] **Move stray geometry into `ui/layout.ts`**, which CLAUDE.md explicitly asks for:
       `Toast.ts:19` (`viewportHeight / 2 - 80`), `GatherBar.ts:22` (`+ 60`), `SlotPicker.ts:96-104`
       (a flip-and-clamp with hardcoded 8px gutters), `Sheet.ts:29-38` (inline left/top/width).
-- [ ] **Retire the duplicated hex literals.** `hud/styles.ts` hardcodes `cssColor(0xffee58)` (=
+- [x] **Retire the duplicated hex literals.** `hud/styles.ts` hardcodes `cssColor(0xffee58)` (=
       `THEME.color.equippable`) at :74/:689/:718, `0xffd54f` (= `THEME.color.levelUp`) at :558 and
       `0x555577` (= `THEME.panelStroke`) at :682 — while correctly using
       `cssColor(THEME.panelStroke)` at eight other lines in the same file. `hud/paperdoll.ts:99`
       repeats `0xffd54f` again.
-- [ ] **One modal lifecycle.** `OptionsModal`, `SlotPicker` and `AwayReportModal` each carry an
+- [x] **One modal lifecycle.** `OptionsModal`, `SlotPicker` and `AwayReportModal` each carry an
       identical, independently written `closed` flag + idempotent `close()` + `onClose` callback —
       three copies of the same eight lines — and `ShopModal` has none, which is why `Hud` reaches
       into `shopModal.root` and why `destroy()` leaks it. Extract the shape, give it to all four,
       add `shopModal` to `destroy()`. **PR 4's red test goes green here.**
-- [ ] **One row builder** for the four hand-rolled label/value rows (`FeatsSheet.ts:79`,
+- [x] **One row builder** for the four hand-rolled label/value rows (`FeatsSheet.ts:79`,
       `ShopModal.ts:131`, `CharacterSheet.ts:80`, `InventorySheet.ts:75`), and one class name each
       for empty states (currently `hud-list-empty` / `hud-dim` / `hud-item-actions__none` /
       `hud-quest__line is-done`) and section headers.
-- [ ] **Reconcile the two `WeaponShapeId` switches.** `render3d/figure.ts:140` and
+- [x] **Reconcile the two `WeaponShapeId` switches.** `render3d/figure.ts:140` and
       `hud/paperdoll.ts:72` are independent implementations with hand-matched proportions kept in
       step by eye — the same argument that put the stick-figure rig in `AppearanceSystem`.
 
 **Verify:** gates + `npm run smoke` (HUD geometry at real viewport sizes).
 **Done when:** PR 4's shop-modal assertion passes and `barFill` has one definition.
+**Landed:** 77/77 smoke, unchanged. PR 4's `it.fails` came off and is now four overlays
+asserted together. Four things a later session should know:
+
+- **`barFill` answers _empty_ for a `max` of zero, and the two XP bars say "full at a cap"
+  themselves.** One function cannot mean both, and which one it is is a fact about levels
+  rather than about bars. `ActionBar` gained the clamp it never had — a `cooldownRemaining`
+  above 1 stretched the sweep past its own button.
+- **The weapon rig moved numbers, not drawings.** `weaponRig` in `AppearanceSystem` holds
+  butt/tip/lean/thickness/guard/head as fractions of the figure; each drawer keeps its own
+  primitives, since a blade is flat and a haft is round and an SVG line cannot say so. Two
+  visible changes fell out: the pole leans sideways rather than back over the shoulder (a
+  flat drawing has no depth to lean into, and one number cannot mean both), and the sword,
+  pole and axe are now one length in both rather than two matched by eye. A new case in
+  `tests/hud/paperdoll.test.ts` reads both back off what was _drawn_ and compares them,
+  proven by shortening the paperdoll's rise 10% and watching all four shapes go red.
+- **`PALETTE.coin` is gone** — the wand's gem was its last reader, and the gem is
+  `WEAPON_GEM_COLOR` beside the rig now, since both drawers need it.
+- **The row builder returns its parts** (`{root, label, value}`) rather than an element:
+  four of the six callers colour or flag one of them right after building it, which is what
+  a builder returning only the root would have sent straight back to hand-rolling.
 
 ## PR 8 — Split `hud/Hud.ts` · `cleanup/08-hud-split` · M
 
