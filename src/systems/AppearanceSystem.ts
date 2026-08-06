@@ -129,10 +129,10 @@ export const NPC_APPEARANCES = {
 /** The bandana over the bandit's face, which is not part of the rig. */
 export const BANDIT_MASK_COLOR = 0xc62828;
 
-// The key is a pure function of everything the figure draws, which is what makes
-// it safe to cache one generated texture per distinct look. The leg phase is part
-// of that, so one appearance bakes one texture per frame of its walk.
-export function appearanceTextureKey(appearance: Appearance, phase: LegPhase = 0): string {
+// A pure function of everything the figure draws, so two looks share a key
+// exactly when they draw the same. That is what lets a view detect a gear
+// change by comparison rather than by being told about one.
+export function appearanceKey(appearance: Appearance): string {
   const hex = (value: number) => value.toString(16).padStart(6, '0');
   const weapon = appearance.weapon
     ? `${appearance.weapon.shape}-${hex(appearance.weapon.color)}`
@@ -143,6 +143,5 @@ export function appearanceTextureKey(appearance: Appearance, phase: LegPhase = 0
     hex(appearance.torsoColor),
     hex(appearance.legColor),
     weapon,
-    phase,
   ].join(':');
 }

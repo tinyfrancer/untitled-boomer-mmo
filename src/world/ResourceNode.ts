@@ -1,4 +1,4 @@
-import type { Rect } from '../systems/CollisionSystem';
+import type { Bounds } from '../systems/CollisionSystem';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 
 // How much of a solid node's body is trunk. Only the trunk blocks movement —
@@ -38,7 +38,7 @@ export class ResourceNode {
    * a blocker centred on the origin would sit ~30px too high and put anything
    * standing at the tree's feet inside it.
    */
-  blockerRect(): Rect {
+  blockerRect(): Bounds {
     const { width, height } = this.definition.body;
     const trunkWidth = width * TRUNK_FRACTION;
     const bottom = this.y + height / 2;

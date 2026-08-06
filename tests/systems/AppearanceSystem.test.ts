@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BASE_FIGURE_COLOR,
   SKIN_COLOR,
-  appearanceTextureKey,
+  appearanceKey,
   computeAppearance,
   legOffsets,
   type LegPhase,
@@ -93,32 +93,20 @@ describe('legOffsets', () => {
   });
 });
 
-describe('appearanceTextureKey', () => {
+describe('appearanceKey', () => {
   it('is stable for the same gear', () => {
     const gear = { ...EMPTY_GEAR, helmet: 'brown-helmet', weapon: 'brown-axe' };
-    expect(appearanceTextureKey(computeAppearance(gear))).toBe(
-      appearanceTextureKey(computeAppearance(gear)),
-    );
+    expect(appearanceKey(computeAppearance(gear))).toBe(appearanceKey(computeAppearance(gear)));
   });
 
   it('differs when any visible piece differs', () => {
-    const naked = appearanceTextureKey(computeAppearance(EMPTY_GEAR));
-    const helmeted = appearanceTextureKey(
-      computeAppearance({ ...EMPTY_GEAR, helmet: 'brown-helmet' }),
-    );
-    const armed = appearanceTextureKey(computeAppearance({ ...EMPTY_GEAR, weapon: 'brown-axe' }));
+    const naked = appearanceKey(computeAppearance(EMPTY_GEAR));
+    const helmeted = appearanceKey(computeAppearance({ ...EMPTY_GEAR, helmet: 'brown-helmet' }));
+    const armed = appearanceKey(computeAppearance({ ...EMPTY_GEAR, weapon: 'brown-axe' }));
     expect(new Set([naked, helmeted, armed]).size).toBe(3);
   });
 
   it('pads color components so keys stay uniform', () => {
-    expect(appearanceTextureKey(computeAppearance(EMPTY_GEAR))).toBe(
-      'player:e0b088:111111:111111:none:0',
-    );
-  });
-
-  it('gives every leg phase of one look its own key', () => {
-    const appearance = computeAppearance(EMPTY_GEAR);
-    const keys = PHASES.map((phase) => appearanceTextureKey(appearance, phase));
-    expect(new Set(keys).size).toBe(PHASES.length);
+    expect(appearanceKey(computeAppearance(EMPTY_GEAR))).toBe('player:e0b088:111111:111111:none');
   });
 });

@@ -1,10 +1,6 @@
 import { Box3, Group, Vector3, type Camera } from 'three';
 import { TILE_SIZE } from '../config/constants';
-import {
-  NPC_APPEARANCES,
-  appearanceTextureKey,
-  computeAppearance,
-} from '../systems/AppearanceSystem';
+import { NPC_APPEARANCES, appearanceKey, computeAppearance } from '../systems/AppearanceSystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import { THEME } from '../ui/theme';
 import { DEATH_FADE_MS, type Mob } from '../world/Mob';
@@ -77,7 +73,7 @@ export class PlayerActor implements Actor {
     this.object.add(this.facing);
 
     const appearance = computeAppearance(player.currentGear());
-    this.appearanceKey = appearanceTextureKey(appearance);
+    this.appearanceKey = appearanceKey(appearance);
     this.figure = buildFigure(appearance);
     this.facing.add(this.figure.object);
 
@@ -91,8 +87,8 @@ export class PlayerActor implements Actor {
     // a setter: the simulation has no idea anything is drawing it, and a pure
     // function of the gear is cheaper to compare than it is to notify.
     const appearance = computeAppearance(this.player.currentGear());
-    if (appearanceTextureKey(appearance) !== this.appearanceKey) {
-      this.appearanceKey = appearanceTextureKey(appearance);
+    if (appearanceKey(appearance) !== this.appearanceKey) {
+      this.appearanceKey = appearanceKey(appearance);
       disposeTree(this.figure.object);
       this.figure = buildFigure(appearance);
       this.facing.add(this.figure.object);

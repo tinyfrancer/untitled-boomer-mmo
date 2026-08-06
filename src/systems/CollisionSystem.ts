@@ -9,8 +9,12 @@ export interface Aabb {
   halfHeight: number;
 }
 
-/** A static blocker, in world pixels. */
-export interface Rect {
+/**
+ * A static blocker, in world pixels. Named apart from `ui/layout.ts`'s `Rect`
+ * on purpose: that one is `{x, y, width, height}` and the two are not
+ * interchangeable, which one shared name made easy to miss.
+ */
+export interface Bounds {
   left: number;
   top: number;
   right: number;
@@ -24,7 +28,7 @@ export interface CollisionWorld {
   worldWidth: number;
   worldHeight: number;
   /** Solid things standing in the world — today only tree trunks. */
-  blockers: readonly Rect[];
+  blockers: readonly Bounds[];
 }
 
 /**
