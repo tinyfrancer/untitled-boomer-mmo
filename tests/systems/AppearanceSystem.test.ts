@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { staleItemId } from '../staleIds';
 import {
   BASE_FIGURE_COLOR,
   SKIN_COLOR,
@@ -8,10 +9,11 @@ import {
   type LegPhase,
 } from '../../src/systems/AppearanceSystem';
 import { TIER_COLORS } from '../../src/data/tiers';
+import type { Gear } from '../../src/systems/InventorySystem';
 
 const PHASES: LegPhase[] = [0, 1, 2];
 
-const EMPTY_GEAR = { helmet: null, chest: null, pants: null, weapon: null };
+const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null };
 
 describe('computeAppearance', () => {
   it('paints the bare limbs black, the bare head in skin, and holds no weapon', () => {
@@ -55,7 +57,7 @@ describe('computeAppearance', () => {
 
   it('falls back to the base figure for unknown and non-equipment item ids', () => {
     const appearance = computeAppearance({
-      helmet: 'not-a-real-item',
+      helmet: staleItemId('not-a-real-item'),
       chest: 'rat-meat',
       pants: null,
       weapon: 'rat-bones',
@@ -95,7 +97,7 @@ describe('legOffsets', () => {
 
 describe('appearanceKey', () => {
   it('is stable for the same gear', () => {
-    const gear = { ...EMPTY_GEAR, helmet: 'brown-helmet', weapon: 'brown-axe' };
+    const gear: Gear = { ...EMPTY_GEAR, helmet: 'brown-helmet', weapon: 'brown-axe' };
     expect(appearanceKey(computeAppearance(gear))).toBe(appearanceKey(computeAppearance(gear)));
   });
 

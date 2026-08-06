@@ -7,9 +7,10 @@ import { stepToward, type Point } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import { PLAYER_HALF_EXTENT } from '../config/constants';
 import type { InputState } from '../systems/InputState';
-import type { ClassId, GearSlotId } from '../types/ids';
+import type { ClassId, ItemId } from '../types/ids';
+import type { Gear } from '../systems/InventorySystem';
 
-const NO_GEAR: Record<GearSlotId, string | null> = {
+const NO_GEAR: Gear = {
   helmet: null,
   chest: null,
   pants: null,
@@ -46,7 +47,7 @@ export class Player {
   attackCooldownMs: number;
   private readonly keyboard: InputState;
   private moveTarget: Point | null = null;
-  private gear: Record<GearSlotId, string | null>;
+  private gear: Gear;
   // Regen accrues in fractions of a point per frame, so current HP is tracked
   // as a float here and only rounded when something reads it.
   private hpFloat: number;
@@ -64,7 +65,7 @@ export class Player {
     y: number,
     classId: ClassId,
     input: InputState,
-    gear: Record<GearSlotId, string | null> = NO_GEAR,
+    gear: Gear = NO_GEAR,
     name = 'Adventurer',
     level = 1,
   ) {
@@ -118,11 +119,11 @@ export class Player {
   }
 
   /** What the figure is wearing, for whatever is drawing it. */
-  currentGear(): Record<GearSlotId, string | null> {
+  currentGear(): Gear {
     return this.gear;
   }
 
-  setGear(gear: Record<GearSlotId, string | null>): void {
+  setGear(gear: Gear): void {
     this.gear = gear;
     this.applyStats();
   }
@@ -206,7 +207,7 @@ export class Player {
   }
 
   /** Returns false if the item isn't food. */
-  eat(itemId: string): boolean {
+  eat(itemId: ItemId): boolean {
     const buff = startFoodBuff(itemId);
     if (!buff) {
       return false;

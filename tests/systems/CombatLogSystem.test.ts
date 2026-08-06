@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import {
   COMBAT_LOG_LIMIT,
   appendLogEntry,
@@ -42,7 +43,7 @@ describe('appendLogEntry', () => {
       [] as ReturnType<typeof line>[],
     );
     expect(log).toHaveLength(COMBAT_LOG_LIMIT);
-    expect(log[log.length - 1].text).toBe(`${COMBAT_LOG_LIMIT + 9}`);
+    expect(nth(log, log.length - 1).text).toBe(`${COMBAT_LOG_LIMIT + 9}`);
   });
 });
 

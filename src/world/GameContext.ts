@@ -1,10 +1,10 @@
-import { ZONES, type ZoneEdge } from '../data/zones';
+import { ZONES } from '../data/zones';
 import { CharacterController } from '../systems/CharacterController';
 import { InputState } from '../systems/InputState';
 import { saveService, type CharacterState } from '../persistence';
 import type { OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import type { AchievementUnlock } from '../ui/uiEvents';
-import type { ZoneId } from '../types/ids';
+import type { ZoneEdge, ZoneId } from '../types/ids';
 import { ZoneWorld } from './ZoneWorld';
 import type { EventBus, WorldEvent } from './worldEvents';
 

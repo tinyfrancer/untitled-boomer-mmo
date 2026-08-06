@@ -1,9 +1,46 @@
 import { TILE_SIZE } from '../config/constants';
-import type { ZoneDefinition, ZoneEdge, ZoneExit } from '../data/zones';
+import type { ZoneDefinition, ZoneExit } from '../data/zones';
+import type { ZoneEdge } from '../types/ids';
+import type { Point } from './MovementSystem';
 
-export interface ArrivalPoint {
-  x: number;
-  y: number;
+/**
+ * What an edge is, geometrically. Every question below — where its signpost
+ * stands, whether the player is on it, where they arrive from it — is the same
+ * two facts asked four ways, so they are stated once here rather than as four
+ * `switch (edge)` statements that a fifth edge would have to be added to in
+ * four places. Three of those four used `default:` in place of `case 'east'`,
+ * so a fifth edge would silently have been treated as east.
+ */
+interface EdgeGeometry {
+  opposite: ZoneEdge;
+  // Which axis crosses the edge. The other one runs along it.
+  across: 'x' | 'y';
+  // Whether the edge is at that axis's far end rather than at zero.
+  far: boolean;
+}
+
+const EDGE_TABLE: Record<ZoneEdge, EdgeGeometry> = {
+  north: { opposite: 'south', across: 'y', far: false },
+  south: { opposite: 'north', across: 'y', far: true },
+  west: { opposite: 'east', across: 'x', far: false },
+  east: { opposite: 'west', across: 'x', far: true },
+};
+
+/** How far along the crossing axis a point `inset` inside this edge sits. */
+function acrossAt(edge: ZoneEdge, inset: number, worldWidth: number, worldHeight: number): number {
+  const { across, far } = EDGE_TABLE[edge];
+  const size = across === 'x' ? worldWidth : worldHeight;
+  return far ? size - inset : inset;
+}
+
+/** A point from its distance across the edge and its distance along it. */
+function edgePoint(edge: ZoneEdge, across: number, along: number): Point {
+  return EDGE_TABLE[edge].across === 'x' ? { x: across, y: along } : { x: along, y: across };
+}
+
+/** The length of the edge itself, which is the axis the fraction runs along. */
+function alongSize(edge: ZoneEdge, worldWidth: number, worldHeight: number): number {
+  return EDGE_TABLE[edge].across === 'x' ? worldHeight : worldWidth;
 }
 
 // Signpost placement: near its edge's midpoint but nudged sideways, so a
@@ -16,34 +53,16 @@ export const SIGNPOST_SIDE_OFFSET = TILE_SIZE;
 export const SIGNPOST_INTERACT_RADIUS = 90;
 
 /** Where an exit's signpost stands in its zone. */
-export function signpostPoint(
-  edge: ZoneEdge,
-  worldWidth: number,
-  worldHeight: number,
-): ArrivalPoint {
-  switch (edge) {
-    case 'north':
-      return { x: worldWidth / 2 + SIGNPOST_SIDE_OFFSET, y: SIGNPOST_INSET };
-    case 'south':
-      return { x: worldWidth / 2 + SIGNPOST_SIDE_OFFSET, y: worldHeight - SIGNPOST_INSET };
-    case 'west':
-      return { x: SIGNPOST_INSET, y: worldHeight / 2 + SIGNPOST_SIDE_OFFSET };
-    default:
-      return { x: worldWidth - SIGNPOST_INSET, y: worldHeight / 2 + SIGNPOST_SIDE_OFFSET };
-  }
+export function signpostPoint(edge: ZoneEdge, worldWidth: number, worldHeight: number): Point {
+  return edgePoint(
+    edge,
+    acrossAt(edge, SIGNPOST_INSET, worldWidth, worldHeight),
+    alongSize(edge, worldWidth, worldHeight) / 2 + SIGNPOST_SIDE_OFFSET,
+  );
 }
 
 export function oppositeEdge(edge: ZoneEdge): ZoneEdge {
-  switch (edge) {
-    case 'north':
-      return 'south';
-    case 'south':
-      return 'north';
-    case 'east':
-      return 'west';
-    default:
-      return 'east';
-  }
+  return EDGE_TABLE[edge].opposite;
 }
 
 // The exit the player is standing on, if any. `margin` is how close to the
@@ -59,19 +78,11 @@ export function findExit(
   margin: number,
 ): ZoneExit | null {
   for (const exit of exits) {
-    switch (exit.edge) {
-      case 'north':
-        if (y <= margin) return exit;
-        break;
-      case 'south':
-        if (y >= worldHeight - margin) return exit;
-        break;
-      case 'west':
-        if (x <= margin) return exit;
-        break;
-      case 'east':
-        if (x >= worldWidth - margin) return exit;
-        break;
+    const { across, far } = EDGE_TABLE[exit.edge];
+    const position = across === 'x' ? x : y;
+    const threshold = acrossAt(exit.edge, margin, worldWidth, worldHeight);
+    if (far ? position >= threshold : position <= threshold) {
+      return exit;
     }
   }
   return null;
@@ -87,7 +98,8 @@ export function edgeFraction(
   worldWidth: number,
   worldHeight: number,
 ): number {
-  const fraction = edge === 'north' || edge === 'south' ? x / worldWidth : y / worldHeight;
+  const along = EDGE_TABLE[edge].across === 'x' ? y : x;
+  const fraction = along / alongSize(edge, worldWidth, worldHeight);
   return Math.min(Math.max(fraction, 0), 1);
 }
 
@@ -106,11 +118,11 @@ export function zoneWorldSize(zone: ZoneDefinition): { width: number; height: nu
  * them straight into the next zone before they could move.
  */
 export function resumePoint(
-  saved: ArrivalPoint,
+  saved: Point,
   worldWidth: number,
   worldHeight: number,
   inset: number,
-): ArrivalPoint {
+): Point {
   const clamp = (value: number, max: number): number =>
     Math.min(Math.max(value, inset), Math.max(inset, max - inset));
   return { x: clamp(saved.x, worldWidth), y: clamp(saved.y, worldHeight) };
@@ -125,15 +137,10 @@ export function arrivalPoint(
   worldWidth: number,
   worldHeight: number,
   inset: number,
-): ArrivalPoint {
-  switch (edge) {
-    case 'north':
-      return { x: fraction * worldWidth, y: inset };
-    case 'south':
-      return { x: fraction * worldWidth, y: worldHeight - inset };
-    case 'west':
-      return { x: inset, y: fraction * worldHeight };
-    default:
-      return { x: worldWidth - inset, y: fraction * worldHeight };
-  }
+): Point {
+  return edgePoint(
+    edge,
+    acrossAt(edge, inset, worldWidth, worldHeight),
+    fraction * alongSize(edge, worldWidth, worldHeight),
+  );
 }

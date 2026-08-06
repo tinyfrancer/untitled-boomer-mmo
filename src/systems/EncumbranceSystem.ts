@@ -1,5 +1,6 @@
 import { itemWeight } from '../data/items';
-import type { Inventory } from './InventorySystem';
+import { inventoryEntries, type Inventory } from './InventorySystem';
+import type { ItemId } from '../types/ids';
 
 // The floor every character gets before strength is counted at all, so the
 // frailest wizard still leaves town with a working kit.
@@ -18,7 +19,7 @@ export type EncumbranceLevel = 'ok' | 'heavy' | 'full';
  * left the inventory (see equipItem), and coin is not an item.
  */
 export function inventoryWeight(inventory: Inventory): number {
-  return Object.entries(inventory).reduce(
+  return inventoryEntries(inventory).reduce(
     (total, [itemId, quantity]) => total + itemWeight(itemId) * Math.max(0, quantity),
     0,
   );
@@ -35,7 +36,7 @@ export function carryCapacity(strength: number): number {
  */
 export function canCarry(
   inventory: Inventory,
-  itemId: string,
+  itemId: ItemId,
   quantity: number,
   capacity: number,
 ): boolean {

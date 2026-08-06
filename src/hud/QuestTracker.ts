@@ -6,6 +6,7 @@ import {
   type QuestLog,
 } from '../systems/QuestSystem';
 import { MAX_TRACKED_QUESTS, type Rect } from '../ui/layout';
+import type { Inventory } from '../systems/InventorySystem';
 
 /**
  * One line per quest in progress, pinned above the ability bar. No background
@@ -23,7 +24,7 @@ export class QuestTracker {
     place(this.root, rect, 'width');
   }
 
-  update(log: QuestLog, inventory: Record<string, number>): void {
+  update(log: QuestLog, inventory: Inventory): void {
     this.root.replaceChildren();
     for (const definition of activeQuests(log).slice(0, MAX_TRACKED_QUESTS)) {
       const { met } = questProgress(definition, inventory);

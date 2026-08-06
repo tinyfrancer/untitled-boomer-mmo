@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 
 // Phaser is gone. This used to guard the eight directories that were allowed to
 // stay engine-free while `scenes/` and `entities/` drew the game; with the 2D
@@ -18,7 +19,7 @@ const MODULE_SPECIFIER = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*['"]([^'"]+)['"]
 
 function importsPhaser(source: string): boolean {
   return [...source.matchAll(MODULE_SPECIFIER)].some(
-    ([, specifier]) => specifier === 'phaser' || specifier.startsWith('phaser/'),
+    ([, specifier]) => specifier === 'phaser' || specifier?.startsWith('phaser/') === true,
   );
 }
 
@@ -44,7 +45,7 @@ describe('the engine seam', () => {
   // dependency nothing imports just sits in the lockfile costing install time
   // forever, which is the quieter half of the same deletion.
   it('does not depend on Phaser', () => {
-    const manifest = JSON.parse(Object.values(MANIFEST)[0]) as {
+    const manifest = JSON.parse(nth(Object.values(MANIFEST), 0)) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };

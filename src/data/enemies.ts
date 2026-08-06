@@ -1,5 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
-import type { EnemyFamilyId, EnemyId } from '../types/ids';
+import type { EnemyFamilyId, EnemyId, LootTableId } from '../types/ids';
 
 /**
  * The collision box, in world pixels. Named here rather than measured off
@@ -47,7 +47,7 @@ export interface EnemyDefinition {
   // How far from its spawn point it will chase before giving up and resetting.
   leashRadius: number;
   chaseSpeed: number;
-  lootTableId?: string;
+  lootTableId?: LootTableId;
   wander: WanderConfig;
 }
 

@@ -1,6 +1,7 @@
 import { CLASSES } from '../data/classes';
 import { getEquipmentBonuses, weaponAttackRange } from '../data/items';
-import type { ClassId, GearSlotId } from '../types/ids';
+import type { ClassId } from '../types/ids';
+import { gearItems, type Gear } from './InventorySystem';
 
 // Intellect buys this much mana a point. Only classes that cast get a pool at
 // all, so a warrior's intellect stays worth nothing to them.
@@ -17,8 +18,8 @@ export interface EffectiveStats {
   speed: number;
 }
 
-function sumGearBonuses(gear: Record<GearSlotId, string | null>) {
-  return Object.values(gear).reduce(
+function sumGearBonuses(gear: Gear) {
+  return gearItems(gear).reduce(
     (total, itemId) => {
       const bonuses = getEquipmentBonuses(itemId);
       total.health += bonuses.health;
@@ -31,11 +32,7 @@ function sumGearBonuses(gear: Record<GearSlotId, string | null>) {
   );
 }
 
-export function computeEffectiveStats(
-  classId: ClassId,
-  gear: Record<GearSlotId, string | null>,
-  level = 1,
-): EffectiveStats {
+export function computeEffectiveStats(classId: ClassId, gear: Gear, level = 1): EffectiveStats {
   const classDef = CLASSES[classId];
   const bonuses = sumGearBonuses(gear);
   const growthSteps = Math.max(0, level - 1);

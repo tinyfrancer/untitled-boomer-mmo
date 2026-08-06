@@ -1,5 +1,5 @@
 import { WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../config/constants';
-import { GRASS_TILE, PATH_TILE, WATER_TILE } from './tiles';
+import { GRASS_TILE, PATH_TILE, WATER_TILE, paintRect } from './tiles';
 
 // South-east, clear of both the crossroads and every rat spawn in spawns.ts, so
 // fishing is a trip out of town rather than on top of it. Kept south of its
@@ -16,18 +16,13 @@ function buildTownMap(): number[][] {
   const midRow = Math.floor(WORLD_HEIGHT_TILES / 2);
   const midCol = Math.floor(WORLD_WIDTH_TILES / 2);
 
-  for (let col = 0; col < WORLD_WIDTH_TILES; col++) {
-    map[midRow][col] = PATH_TILE;
-  }
-  for (let row = 0; row < WORLD_HEIGHT_TILES; row++) {
-    map[row][midCol] = PATH_TILE;
-  }
-
-  for (let row = POND.top; row <= POND.bottom; row++) {
-    for (let col = POND.left; col <= POND.right; col++) {
-      map[row][col] = WATER_TILE;
-    }
-  }
+  paintRect(map, { left: 0, right: WORLD_WIDTH_TILES - 1, top: midRow, bottom: midRow }, PATH_TILE);
+  paintRect(
+    map,
+    { left: midCol, right: midCol, top: 0, bottom: WORLD_HEIGHT_TILES - 1 },
+    PATH_TILE,
+  );
+  paintRect(map, POND, WATER_TILE);
 
   return map;
 }

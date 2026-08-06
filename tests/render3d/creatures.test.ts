@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { Box3, Mesh, type MeshLambertMaterial } from 'three';
 import { ENEMIES } from '../../src/data/enemies';
 import { buildCreature } from '../../src/render3d/creatures';
@@ -36,8 +37,8 @@ describe('buildCreature', () => {
     const drawn = footprint(id);
     const box = [body.width, body.height].sort((a, b) => a - b);
     const mesh = [drawn.x, drawn.z].sort((a, b) => a - b);
-    expect(mesh[0]).toBeLessThanOrEqual(box[0] + 0.001);
-    expect(mesh[1]).toBeLessThanOrEqual(box[1] + 0.001);
+    expect(nth(mesh, 0)).toBeLessThanOrEqual(nth(box, 0) + 0.001);
+    expect(nth(mesh, 1)).toBeLessThanOrEqual(nth(box, 1) + 0.001);
   });
 
   // Forward is +z, which `facingYaw` turns onto the heading. A rat built across

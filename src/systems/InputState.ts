@@ -85,6 +85,7 @@ export class InputState {
     let y = 0;
     this.held.forEach((code) => {
       const direction = MOVE_KEYS[code];
+      if (!direction) return;
       x += direction.x;
       y += direction.y;
     });

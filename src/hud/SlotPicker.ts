@@ -1,4 +1,5 @@
 import { el } from './dom';
+import type { ItemId } from '../types/ids';
 import { SLOT_LABELS } from './CharacterSheet';
 import { describeItemBonuses, describeItemName } from '../data/items';
 import type { GearSlotId } from '../types/ids';
@@ -16,10 +17,10 @@ export class SlotPicker {
 
   constructor(
     slot: GearSlotId,
-    itemIds: string[],
+    itemIds: ItemId[],
     anchor: DOMRect,
     bounds: { width: number; height: number },
-    onPick: (itemId: string) => void,
+    onPick: (itemId: ItemId) => void,
     onClosed: () => void,
   ) {
     this.onClosed = onClosed;

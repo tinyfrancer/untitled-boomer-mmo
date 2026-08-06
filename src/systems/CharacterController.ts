@@ -41,6 +41,7 @@ import type {
   CombatSkillId,
   EnemyId,
   GearSlotId,
+  ItemId,
   QuestId,
   SkillId,
   TitleId,
@@ -67,7 +68,7 @@ export type QuestTurnIn =
   | {
       ok: true;
       questId: QuestId;
-      rewardItemId: string;
+      rewardItemId: ItemId;
       copper: number;
       xp: CombatXpGain;
     };
@@ -85,15 +86,15 @@ export class CharacterController {
     this.state = state;
   }
 
-  itemCount(itemId: string): number {
+  itemCount(itemId: ItemId): number {
     return this.state.inventory[itemId] ?? 0;
   }
 
-  addItem(itemId: string, quantity = 1): void {
+  addItem(itemId: ItemId, quantity = 1): void {
     this.state.inventory = addItemToInventory(this.state.inventory, itemId, quantity);
   }
 
-  removeItem(itemId: string, quantity = 1): void {
+  removeItem(itemId: ItemId, quantity = 1): void {
     this.state.inventory = removeItemFromInventory(this.state.inventory, itemId, quantity);
   }
 
@@ -107,7 +108,7 @@ export class CharacterController {
     return inventoryWeight(this.state.inventory);
   }
 
-  canCarryItem(itemId: string, quantity = 1): boolean {
+  canCarryItem(itemId: ItemId, quantity = 1): boolean {
     return canCarry(this.state.inventory, itemId, quantity, this.carryCapacity());
   }
 
@@ -116,7 +117,7 @@ export class CharacterController {
    * acquisition paths — gathering, loot, buying — go through this so a full
    * pack is one rule rather than three.
    */
-  tryAddItem(itemId: string, quantity = 1): boolean {
+  tryAddItem(itemId: ItemId, quantity = 1): boolean {
     if (!this.canCarryItem(itemId, quantity)) {
       return false;
     }
@@ -138,7 +139,7 @@ export class CharacterController {
   }
 
   /** Refuses, changing nothing, if this class can't wear the item. */
-  equip(itemId: string): EquipCheck {
+  equip(itemId: ItemId): EquipCheck {
     const check = canEquip(itemId, this.state.classId);
     if (!check.ok) {
       return check;

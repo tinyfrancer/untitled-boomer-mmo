@@ -22,7 +22,7 @@ import { SKILLS } from '../data/skills';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { equippableFrom } from '../systems/EquipSystem';
-import { itemsForSlot } from '../systems/InventorySystem';
+import { itemsForSlot, type Gear, type Inventory } from '../systems/InventorySystem';
 import { actionsForItem, type ItemActionId } from '../systems/ItemActionsSystem';
 import { xpToNextLevel } from '../systems/LevelingSystem';
 import { activeQuests, type QuestLog } from '../systems/QuestSystem';
@@ -77,7 +77,7 @@ import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { AbilityId, GearSlotId, TitleId } from '../types/ids';
+import type { AbilityId, GearSlotId, ItemId, TitleId } from '../types/ids';
 
 export interface HudOptions {
   parent: HTMLElement;
@@ -100,8 +100,8 @@ interface HudModel {
   hp: number;
   mana: number;
   maxMana: number;
-  gear: Record<GearSlotId, string | null>;
-  inventory: Record<string, number>;
+  gear: Gear;
+  inventory: Inventory;
   currency: number;
   skills: Skills;
   combatLog: CombatLogEntry[];
@@ -422,15 +422,15 @@ class Hud {
       // Held until the report is dismissed so the two don't talk over each
       // other; a chain finished overnight is news worth its own line. Only the
       // last one is announced; the sheet is where the full list lives.
-      if (unlocked) {
-        const last = unlocked.unlocks[unlocked.unlocks.length - 1];
+      const last = unlocked?.unlocks.at(-1);
+      if (last) {
         this.toast.show(`Achievement: ${last.name}`, THEME.color.skillUp);
       }
     });
     this.root.append(this.awayReport.root);
   }
 
-  private dispatchItemAction(actionId: ItemActionId, itemId: string): void {
+  private dispatchItemAction(actionId: ItemActionId, itemId: ItemId): void {
     switch (actionId) {
       case 'equip':
         this.events.emit(EQUIP_ITEM_REQUESTED_EVENT, itemId);

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { TILE_SIZE } from '../../src/config/constants';
 import { MobActor, NodeActor, NpcActor, SignpostActor } from '../../src/render3d/actors';
 import {
@@ -104,7 +105,7 @@ describe('pickTap', () => {
    */
   it('picks the mob under the pixel it is drawn at with the camera turned', () => {
     const { world } = harness();
-    const mob = world.mobs[0];
+    const mob = nth(world.mobs, 0);
     mob.setPosition(700, 700);
     const actor = new MobActor(mob, 1);
     const camera = cameraOn({ x: 800, y: 800 }, 2.1);
@@ -125,7 +126,7 @@ describe('pickTap', () => {
 
   it('selects the mob drawn at the point that was tapped', () => {
     const { world } = harness();
-    const mob = world.mobs[0];
+    const mob = nth(world.mobs, 0);
     mob.setPosition(700, 700);
     const actors = world.mobs.map((each) => new MobActor(each, 1));
     const camera = cameraOn({ x: mob.x, y: mob.y + 150 });
@@ -143,7 +144,7 @@ describe('pickTap', () => {
    */
   it('opens the shop from a tap on the shopkeeper, gap between the legs and all', () => {
     const { world } = harness();
-    const npc = world.npcs[0];
+    const npc = nth(world.npcs, 0);
     const camera = cameraOn({ x: npc.x, y: npc.y + 150 });
 
     const tapped = tapAt(camera, { npcs: [new NpcActor(npc)] }, { x: npc.x, y: npc.y });
@@ -153,7 +154,7 @@ describe('pickTap', () => {
 
   it('leaves a zone from a tap on its signpost', () => {
     const { world } = harness();
-    const signpost = world.signposts[0];
+    const signpost = nth(world.signposts, 0);
     const camera = cameraOn({ x: signpost.x, y: signpost.y + 150 });
 
     const tapped = tapAt(
@@ -167,7 +168,7 @@ describe('pickTap', () => {
 
   it('gathers from a tap on the node drawn there', () => {
     const { world } = harness();
-    const node = world.nodes[0];
+    const node = nth(world.nodes, 0);
     const camera = cameraOn({ x: node.x, y: node.y + 200 });
 
     const tapped = tapAt(camera, { nodes: [new NodeActor(node)] }, { x: node.x, y: node.y });
@@ -182,7 +183,7 @@ describe('pickTap', () => {
    */
   it('gives a creature smaller than a thumb a thumb to be tapped with', () => {
     const { world } = harness({ zoneId: 'beach' });
-    const crab = world.mobs[0];
+    const crab = nth(world.mobs, 0);
     crab.setPosition(700, 700);
     expect(crab.definition.body.height).toBeLessThan(MIN_PICK_SPAN);
 
@@ -200,7 +201,7 @@ describe('pickTap', () => {
   // the actor refusing to offer a box at all.
   it('does not target a corpse, and hands the tap to the ground instead', () => {
     const { world } = harness();
-    const mob = world.mobs[0];
+    const mob = nth(world.mobs, 0);
     mob.setPosition(700, 700);
     const actors = world.mobs.map((each) => new MobActor(each, 1));
     const camera = cameraOn({ x: mob.x, y: mob.y + 150 });
@@ -230,10 +231,10 @@ describe('pickTap', () => {
 
     const camera = cameraOn({ x: spot.x, y: spot.y + 150 });
     const scene: PickScene = {
-      nodes: [{ ...standing, node: world.nodes[0] }],
-      signposts: [{ ...standing, signpost: world.signposts[0] }],
-      npcs: [{ ...standing, npc: world.npcs[0] }],
-      mobs: [{ ...standing, mob: world.mobs[0] }],
+      nodes: [{ ...standing, node: nth(world.nodes) }],
+      signposts: [{ ...standing, signpost: nth(world.signposts) }],
+      npcs: [{ ...standing, npc: nth(world.npcs) }],
+      mobs: [{ ...standing, mob: nth(world.mobs) }],
     };
 
     expect(tapAt(camera, scene, spot)?.kind).toBe('node');
@@ -246,7 +247,8 @@ describe('pickTap', () => {
   // there is whichever of them the ray meets first.
   it('picks the nearer of two mobs the ray crosses', () => {
     const { world } = harness();
-    const [behind, inFront] = world.mobs;
+    const behind = nth(world.mobs, 0);
+    const inFront = nth(world.mobs, 1);
     behind.setPosition(700, 700);
     // Between the aim point and the camera, which stands to the south.
     inFront.setPosition(700, 700 + TILE_SIZE / 3);

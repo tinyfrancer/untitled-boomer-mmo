@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { staleItemId } from '../staleIds';
 import {
   canCarry,
   carryCapacity,
@@ -22,7 +23,7 @@ describe('inventoryWeight', () => {
   });
 
   it('charges the default for an item id it has never heard of', () => {
-    expect(inventoryWeight({ 'nonexistent-item': 2 })).toBe(2 * DEFAULT_ITEM_WEIGHT);
+    expect(inventoryWeight({ [staleItemId('nonexistent-item')]: 2 })).toBe(2 * DEFAULT_ITEM_WEIGHT);
   });
 
   it('ignores a negative count rather than crediting capacity back', () => {

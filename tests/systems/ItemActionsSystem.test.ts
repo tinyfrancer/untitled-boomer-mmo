@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { actionsForItem } from '../../src/systems/ItemActionsSystem';
+import type { ItemId } from '../../src/types/ids';
+import { staleItemId } from '../staleIds';
 
 const away = { nearFire: false, shopOpen: false, classId: 'warrior' } as const;
 const byFire = { nearFire: true, shopOpen: false, classId: 'warrior' } as const;
 const atShop = { nearFire: false, shopOpen: true, classId: 'warrior' } as const;
 
-function ids(itemId: string, context: Parameters<typeof actionsForItem>[1]): string[] {
+function ids(itemId: ItemId, context: Parameters<typeof actionsForItem>[1]): string[] {
   return actionsForItem(itemId, context).map((action) => action.id);
 }
 
@@ -36,7 +38,7 @@ describe('actionsForItem', () => {
   });
 
   it('unknown items offer nothing', () => {
-    expect(ids('no-such-item', atShop)).toEqual([]);
+    expect(ids(staleItemId('no-such-item'), atShop)).toEqual([]);
   });
 
   it('offers no Equip button for armor the class cannot wear', () => {

@@ -81,7 +81,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 3   | Dead code and Phaser residue             | M    | —          | ☑ 2026-08-06 |
 | 4   | The safety net: targeted tests           | M    | —          | ☑ 2026-08-06 |
 | 5   | Type the event channel                   | M    | —          | ☑ 2026-08-06 |
-| 6   | Id unions and index safety               | L    | —          | ☐            |
+| 6   | Id unions and index safety               | L    | —          | ☑ 2026-08-06 |
 | 7   | Shared primitives and modal lifecycle    | M    | 4          | ☐            |
 | 8   | Split `hud/Hud.ts`                       | M    | 4, 5, 7    | ☐            |
 | 9   | Split `world/ZoneWorld.ts`               | L    | 4          | ☐            |
@@ -317,34 +317,67 @@ PR 8 — a stub bus in a test now has to declare `on`/`off` generically
 `(event: string, fn: (...args: never[]) => void)` those stubs used is not assignable to it, and
 the error it produces names an intersection of all 38 payload tuples reduced to `never`.
 
-## PR 6 — Id unions and index safety · `cleanup/06-item-ids` · L
+## PR 6 — Id unions and index safety · `cleanup/06-item-ids` · L — done, merged
 
 Internally ordered so the unions land **before** the compiler flag — with `Record<ItemId, …>` most
 lookups become total and the flag's fallout shrinks to the genuinely dynamic ones. Split across
 two sessions if needed: the unions are commit 1-3, the flag is commit 4.
 
-- [ ] Add **`ItemId`**, **`LootTableId`**, **`RecipeId`** to `types/ids.ts` and key their tables on
+- [x] Add **`ItemId`**, **`LootTableId`**, **`RecipeId`** to `types/ids.ts` and key their tables on
       them. `itemId: string` currently runs through ~26 files: `EquipSystem`, `ItemActionsSystem`,
       `data/recipes`, `data/quests`, `data/resourceNodes`, every `CharacterController` method and
-      the four HUD panels. `Mob.lootTableId?: string` likewise.
-- [ ] **Use the aliases that already exist.** `Record<GearSlotId, string | null>` is spelled out 14
+      the four HUD panels. `Mob.lootTableId?: string` likewise. **`RecipeId` is spelled as a subset
+      of `ItemId`** (`Extract<ItemId, …>`), since a recipe is keyed by what goes in the pan — which
+      is what lets `recipeForInput` narrow an arbitrary item to a recipe through a type guard
+      rather than a cast.
+- [x] **Use the aliases that already exist.** `Record<GearSlotId, string | null>` is spelled out 14
       times despite `export type Gear` at `systems/InventorySystem.ts:5`; `Record<string, number>`
-      7 times despite `Inventory`.
-- [ ] Move **`ZoneEdge`** from `data/zones.ts` into `types/ids.ts` with the other unions, and
+      7 times despite `Inventory`. `Inventory` became `Partial<Record<ItemId, number>>` rather than
+      a total record: a bag is sparse, and `Partial` is what makes every existing `?? 0` honest and
+      `{}` a legal empty bag.
+- [x] Move **`ZoneEdge`** from `data/zones.ts` into `types/ids.ts` with the other unions, and
       replace `ZoneSystem`'s `ArrivalPoint` with the existing `Point` from `MovementSystem`.
-- [ ] **Make the id switches exhaustive.** `systems/ZoneSystem.ts` has four `switch (edge)`
+- [x] **Make the id switches exhaustive.** `systems/ZoneSystem.ts` has four `switch (edge)`
       statements (`:24`, `:37`, `:62`, `:129`) and three use `default:` in place of `case 'east'`,
       which defeats exhaustiveness checking — a fifth edge would silently be treated as east.
-      Collapse all four onto one `EDGE_TABLE` keyed by `ZoneEdge`.
-- [ ] **Turn on `noUncheckedIndexedAccess`** and fix the fallout. Own commit.
-- [ ] **`hud/CharacterSheet.ts:58-59`** asserts `{} as Record<GearSlotId, SlotRow>` complete before
+      Collapse all four onto one `EDGE_TABLE` keyed by `ZoneEdge`. All four now read two facts off
+      it — which axis crosses the edge, and which end of that axis it sits at — and `findExit`
+      gained a case covering all four edges, since its shape changed most.
+- [x] **Turn on `noUncheckedIndexedAccess`** and fix the fallout. Own commit. **In both projects**,
+      including `tsconfig.scripts.json`, which cost six fixes in the merge-blocking smoke script.
+- [x] **`hud/CharacterSheet.ts:58-59`** asserts `{} as Record<GearSlotId, SlotRow>` complete before
       populating it. Build it from the ordered lists so a missing `SkillId` is a compile error
-      rather than an `undefined` crash in `update()` far from the cause.
+      rather than an `undefined` crash in `update()` far from the cause. The **lists** are what
+      needed checking — `const ORDER: SkillId[] = […]` checks each element and says nothing about
+      what is absent — so `types/exhaustive.ts` holds an `exhaustive<T>()` that rejects a list one
+      member short, and `mapKeys` builds a complete record from one.
 
 **Verify:** gates + `npm run smoke`. `tests/systems/progression.test.ts` must pass untouched — it
 walks the whole two-quest arc and asserts it ends on level 3, so if an id change moved a number,
 that is where it shows.
 **Done when:** no `Record<string, …>` remains in `src/data/` and the flag is on.
+**Landed:** 77/77 smoke, unchanged; `progression.test.ts` untouched and passing. Proven both ways
+on purpose — misspelling `cooked-crab` in a recipe made `tsc` name it and suggest the right id, and
+deleting `'fishing'` from `SKILL_ORDER` made it reject the list itself.
+
+Four things a later session should know:
+
+- **`Record<string, …>` survives in four places and all four are wanted.** `InputState`'s two key
+  tables are keyed by `KeyboardEvent.code`, `paperdoll.ts`'s `svgEl` takes arbitrary SVG
+  attributes, and `persistence/migrations.ts` is deliberately shapeless — it is what runs _before_
+  a state has a known shape. `TILE_COLORS` stays `Record<number, …>` because maps are `number[][]`;
+  `tileColor()` is the guarded read.
+- **Unknown ids are still real, for items only.** A bag saved before an item was retired hands the
+  runtime an id no `ITEMS` row answers to, and nothing rewrites inventory ids during a migration,
+  so those defensive reads stay and `tests/staleIds.ts` is the single place that spells one.
+  `rollLootTable`'s equivalent guard is _gone_: a `LootTableId` is read off an `ENEMIES` row and
+  never persisted, so nothing could reach it.
+- **`Object.entries`/`Object.values` are lossy** over a `Record` keyed by a union — they must be,
+  since a value can carry keys its type never named. `inventoryEntries` and `gearItems` say that
+  once each rather than at ~10 call sites.
+- **The flag hit the tests hardest** — 143 errors, nearly all downstream of a
+  `const mob = world.mobs[0]` that half a test hangs off. `tests/nth.ts` answers all of them and
+  asserts, so an empty array fails on the line that asked for it.
 
 ## PR 7 — Shared primitives and modal lifecycle · `cleanup/07-primitives` · M
 

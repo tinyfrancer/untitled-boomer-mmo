@@ -5,16 +5,18 @@ import { formatCurrency } from '../systems/CurrencySystem';
 import { questsForNpc, type QuestLog, type QuestOffer } from '../systems/QuestSystem';
 import { THEME } from '../ui/theme';
 import type { QuestId } from '../types/ids';
+import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
+import type { ItemId } from '../types/ids';
 
 export interface ShopState {
-  inventory: Record<string, number>;
+  inventory: Inventory;
   currency: number;
   quests: QuestLog;
 }
 
 export interface ShopHandlers {
-  onBuy: (itemId: string) => void;
-  onSell: (itemId: string) => void;
+  onBuy: (itemId: ItemId) => void;
+  onSell: (itemId: ItemId) => void;
   onAcceptQuest: (questId: QuestId) => void;
   onTurnInQuest: (questId: QuestId) => void;
   onClose: () => void;
@@ -78,7 +80,7 @@ export class ShopModal {
       );
     }
 
-    const sellable = Object.entries(state.inventory).filter(
+    const sellable = inventoryEntries(state.inventory).filter(
       ([itemId, quantity]) => quantity > 0 && itemValue(itemId) !== null,
     );
     this.body.append(header('Sell from your bag'));

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import {
   SIGNPOST_INSET,
   SIGNPOST_INTERACT_RADIUS,
@@ -35,6 +36,19 @@ describe('findExit', () => {
   it('finds an exit inside the margin of its edge', () => {
     expect(findExit(exits, 800, WORLD_H - MARGIN, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('south');
     expect(findExit(exits, WORLD_W - 10, 600, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('east');
+  });
+
+  it('finds an exit on either end of either axis', () => {
+    const all: ZoneExit[] = [
+      { edge: 'north', to: 'town' },
+      { edge: 'south', to: 'beach' },
+      { edge: 'west', to: 'town' },
+      { edge: 'east', to: 'bandit-camp' },
+    ];
+    expect(findExit(all, 800, 0, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('north');
+    expect(findExit(all, 800, WORLD_H, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('south');
+    expect(findExit(all, 0, 600, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('west');
+    expect(findExit(all, WORLD_W, 600, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('east');
   });
 
   it('ignores edges with no exit', () => {
@@ -97,7 +111,7 @@ describe('zoneWorldSize', () => {
   it('measures a zone in pixels, not tiles', () => {
     const town = ZONES.town;
     expect(zoneWorldSize(town)).toEqual({
-      width: town.map[0].length * TILE_SIZE,
+      width: nth(town.map, 0).length * TILE_SIZE,
       height: town.map.length * TILE_SIZE,
     });
   });
@@ -165,7 +179,7 @@ describe('ZONES data integrity', () => {
   it('every map is a non-empty rectangular grid', () => {
     zones.forEach((zone) => {
       expect(zone.map.length).toBeGreaterThan(0);
-      const width = zone.map[0].length;
+      const width = nth(zone.map, 0).length;
       expect(width).toBeGreaterThan(0);
       zone.map.forEach((row) => expect(row.length).toBe(width));
     });
@@ -203,10 +217,11 @@ describe('signpostPoint', () => {
   it('places every zone exit signpost on walkable ground', () => {
     Object.values(ZONES).forEach((zone) => {
       zone.exits.forEach((exit) => {
-        const worldW = zone.map[0].length * TILE_SIZE;
+        const worldW = nth(zone.map, 0).length * TILE_SIZE;
         const worldH = zone.map.length * TILE_SIZE;
         const point = signpostPoint(exit.edge, worldW, worldH);
-        const tile = zone.map[Math.floor(point.y / TILE_SIZE)][Math.floor(point.x / TILE_SIZE)];
+        const row = nth(zone.map, Math.floor(point.y / TILE_SIZE));
+        const tile = nth(row, Math.floor(point.x / TILE_SIZE));
         expect(BLOCKING_TILES).not.toContain(tile);
       });
     });

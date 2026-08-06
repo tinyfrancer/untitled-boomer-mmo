@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { harness } from './harness';
 import { SHOP_OPENED_EVENT } from '../../src/ui/uiEvents';
 
@@ -13,7 +14,7 @@ beforeEach(() => {
 
 function atTheShop(): ReturnType<typeof harness> {
   const kit = harness();
-  const npc = kit.world.npcs[0];
+  const npc = nth(kit.world.npcs, 0);
   kit.world.teleport(npc.x, npc.y + 50);
   kit.world.approachShop(npc);
   return kit;
@@ -29,7 +30,7 @@ describe('the shop', () => {
 
   it('closes itself when the player walks away', () => {
     const { world } = atTheShop();
-    const npc = world.npcs[0];
+    const npc = nth(world.npcs, 0);
 
     world.teleport(npc.x + 400, npc.y);
     world.updateShopRange();

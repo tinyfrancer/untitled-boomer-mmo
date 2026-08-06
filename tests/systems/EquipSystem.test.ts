@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { ItemId } from '../../src/types/ids';
+import { staleItemId } from '../staleIds';
 import { canEquip, equippableFrom, stripIllegalGear } from '../../src/systems/EquipSystem';
+import type { Gear } from '../../src/systems/InventorySystem';
 
-const EMPTY_GEAR = { helmet: null, chest: null, pants: null, weapon: null };
+const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null };
 
 describe('canEquip', () => {
   it('lets a warrior wear leather and a wizard wear cloth', () => {
@@ -27,13 +30,13 @@ describe('canEquip', () => {
 
   it('refuses anything that is not equipment at all', () => {
     expect(canEquip('rat-bones', 'warrior').ok).toBe(false);
-    expect(canEquip('no-such-item', 'warrior').ok).toBe(false);
+    expect(canEquip(staleItemId('no-such-item'), 'warrior').ok).toBe(false);
   });
 });
 
 describe('equippableFrom', () => {
   it('keeps only what the class may wear, in order', () => {
-    const candidates = ['brown-chestplate', 'brown-robe'];
+    const candidates: ItemId[] = ['brown-chestplate', 'brown-robe'];
     expect(equippableFrom(candidates, 'wizard')).toEqual(['brown-robe']);
     expect(equippableFrom(candidates, 'warrior')).toEqual(candidates);
   });
@@ -62,7 +65,7 @@ describe('stripIllegalGear', () => {
   });
 
   it('leaves a legal loadout untouched', () => {
-    const gear = { ...EMPTY_GEAR, chest: 'brown-chestplate' };
+    const gear: Gear = { ...EMPTY_GEAR, chest: 'brown-chestplate' };
     const inventory = { logs: 3 };
     const result = stripIllegalGear(gear, inventory, 'warrior');
     expect(result.gear).toEqual(gear);

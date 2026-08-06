@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import { nth } from '../nth';
 import { rollLootTable } from '../../src/systems/LootSystem';
 import { LOOT_TABLES } from '../../src/data/lootTables';
+import type { ItemId, LootTableId } from '../../src/types/ids';
 
 /**
  * An rng that makes exactly these entries hit, whatever else the table holds.
@@ -9,7 +11,7 @@ import { LOOT_TABLES } from '../../src/data/lootTables';
  * literal it replaced was positionally coupled to the exact order and length of
  * the bandit table, so adding a row to it failed this file opaquely.
  */
-function rngHitting(tableId: string, hits: string[]): () => number {
+function rngHitting(tableId: LootTableId, hits: ItemId[]): () => number {
   const table = LOOT_TABLES[tableId];
   const answers = table.entries.map((entry) =>
     hits.includes(entry.itemId) ? entry.chance / 2 : 1,
@@ -18,7 +20,7 @@ function rngHitting(tableId: string, hits: string[]): () => number {
     answers.push(1);
   }
   let call = 0;
-  return () => answers[call++];
+  return () => nth(answers, call++);
 }
 
 describe('rollLootTable', () => {
@@ -40,10 +42,6 @@ describe('rollLootTable', () => {
     expect(result.copper).toBe(0);
   });
 
-  it('returns an empty result for an unknown loot table id', () => {
-    expect(rollLootTable('does-not-exist')).toEqual({ drops: [], copper: 0 });
-  });
-
   it('drops no copper from tables without a currency entry', () => {
     // rats are beasts — even an all-hits roll yields items only
     const result = rollLootTable('rat', () => 0);
@@ -51,23 +49,17 @@ describe('rollLootTable', () => {
   });
 
   it('rolls currency within the min/max range when the table carries it', () => {
-    LOOT_TABLES['test-humanoid'] = {
-      id: 'test-humanoid',
-      entries: [],
-      currency: { min: 5, max: 15, chance: 0.8 },
-    };
-    try {
-      // chance roll 0.5 hits, amount roll 0.999 lands on max
-      const rolls = [0.5, 0.999];
-      let call = 0;
-      const result = rollLootTable('test-humanoid', () => rolls[call++]);
-      expect(result.copper).toBe(15);
+    const { entries, currency } = LOOT_TABLES.bandit;
+    // Every item roll misses, so what is left is the two currency rolls: the
+    // chance, then the amount. 0.999 lands on max.
+    const rolls = [...entries.map(() => 1), 0.5, 0.999];
+    let call = 0;
 
-      const missed = rollLootTable('test-humanoid', () => 0.9);
-      expect(missed.copper).toBe(0);
-    } finally {
-      delete LOOT_TABLES['test-humanoid'];
-    }
+    const result = rollLootTable('bandit', () => nth(rolls, call++));
+    expect(result.copper).toBe(currency?.max);
+
+    // A roll above the currency chance carries nothing, however it fell.
+    expect(rollLootTable('bandit', () => 0.95).copper).toBe(0);
   });
 
   it('rolls with Math.random when it is handed no rng', () => {

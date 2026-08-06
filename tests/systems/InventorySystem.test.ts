@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { staleItemId } from '../staleIds';
 import {
   addItemToInventory,
   equipItem,
   itemsForSlot,
   removeItemFromInventory,
   unequipItem,
+  type Gear,
 } from '../../src/systems/InventorySystem';
 
-const EMPTY_GEAR = { helmet: null, chest: null, pants: null, weapon: null };
+const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null };
 
 describe('addItemToInventory', () => {
   it('adds a new item at the given quantity', () => {
@@ -48,7 +50,7 @@ describe('equipItem', () => {
   });
 
   it('returns the previously equipped item to inventory when swapping', () => {
-    const gear = { ...EMPTY_GEAR, weapon: 'rusty-sword' };
+    const gear: Gear = { ...EMPTY_GEAR, weapon: 'rusty-sword' };
     const result = equipItem(gear, { 'apprentice-wand': 1 }, 'apprentice-wand');
     expect(result.gear.weapon).toBe('apprentice-wand');
     expect(result.inventory).toEqual({ 'rusty-sword': 1 });
@@ -70,7 +72,7 @@ describe('equipItem', () => {
 
 describe('unequipItem', () => {
   it('moves the equipped item back into inventory and clears the slot', () => {
-    const gear = { ...EMPTY_GEAR, chest: 'brown-chestplate' };
+    const gear: Gear = { ...EMPTY_GEAR, chest: 'brown-chestplate' };
     const result = unequipItem(gear, {}, 'chest');
     expect(result.gear.chest).toBeNull();
     expect(result.inventory).toEqual({ 'brown-chestplate': 1 });
@@ -109,6 +111,6 @@ describe('itemsForSlot', () => {
   });
 
   it('ignores unknown item ids', () => {
-    expect(itemsForSlot({ 'not-an-item': 1 }, 'weapon')).toEqual([]);
+    expect(itemsForSlot({ [staleItemId('not-an-item')]: 1 }, 'weapon')).toEqual([]);
   });
 });

@@ -1,5 +1,6 @@
 import { ITEMS } from '../data/items';
-import type { GearSlotId, WeaponShapeId } from '../types/ids';
+import type { ItemId, WeaponShapeId } from '../types/ids';
+import type { Gear } from './InventorySystem';
 
 export const BASE_FIGURE_COLOR = 0x111111;
 // The bare head is drawn in skin rather than the limb black: a near-black head
@@ -75,7 +76,7 @@ export interface Appearance {
   weapon: WeaponAppearance | null;
 }
 
-function equipmentColor(itemId: string | null): number | null {
+function equipmentColor(itemId: ItemId | null): number | null {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment') {
     return null;
@@ -83,7 +84,7 @@ function equipmentColor(itemId: string | null): number | null {
   return item.color;
 }
 
-function weaponAppearance(itemId: string | null): WeaponAppearance | null {
+function weaponAppearance(itemId: ItemId | null): WeaponAppearance | null {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment' || !item.weaponShape) {
     return null;
@@ -91,7 +92,7 @@ function weaponAppearance(itemId: string | null): WeaponAppearance | null {
   return { shape: item.weaponShape, color: item.color };
 }
 
-export function computeAppearance(gear: Record<GearSlotId, string | null>): Appearance {
+export function computeAppearance(gear: Gear): Appearance {
   return {
     headColor: equipmentColor(gear.helmet) ?? SKIN_COLOR,
     torsoColor: equipmentColor(gear.chest) ?? BASE_FIGURE_COLOR,

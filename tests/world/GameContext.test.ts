@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import {
   GameContext,
   bindUnloadPersist,
@@ -121,7 +122,7 @@ describe('loading a zone', () => {
 
     // Standing on a bandit with one hit point left: it engages, swings, and the
     // death is the world asking to be sent home rather than a flag set here.
-    const bandit = game.currentWorld.mobs[0];
+    const bandit = nth(game.currentWorld.mobs, 0);
     game.currentWorld.player.setPosition(bandit.x, bandit.y);
     game.currentWorld.player.setHp(1);
     for (let i = 0; i < 50 && game.currentWorld.zone.id !== 'town'; i += 1) {

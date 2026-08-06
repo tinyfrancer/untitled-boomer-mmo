@@ -1,6 +1,7 @@
 import { computeAppearance, stickFigure } from '../systems/AppearanceSystem';
 import { cssColor } from '../ui/theme';
-import type { GearSlotId, WeaponShapeId } from '../types/ids';
+import type { Gear } from '../systems/InventorySystem';
+import type { ItemId, WeaponShapeId } from '../types/ids';
 
 const OUTLINE_COLOR = 0x000000;
 const BOX = 100;
@@ -13,7 +14,7 @@ const BOX = 100;
  * where a shoulder is without the HUD ever reaching into the renderer for a
  * canvas.
  */
-export function paperdollSvg(gear: Record<GearSlotId, string | null>): SVGSVGElement {
+export function paperdollSvg(gear: Gear): SVGSVGElement {
   const appearance = computeAppearance(gear);
   const figure = stickFigure(BOX);
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -164,6 +165,6 @@ function svgEl(tag: string, attributes: Record<string, string | number>): SVGEle
  * screen. Classes look alike apart from what they start holding, so that is the
  * whole of the difference the preview has to show.
  */
-export function weaponPreviewSvg(weaponItemId: string): SVGSVGElement {
+export function weaponPreviewSvg(weaponItemId: ItemId): SVGSVGElement {
   return paperdollSvg({ helmet: null, chest: null, pants: null, weapon: weaponItemId });
 }

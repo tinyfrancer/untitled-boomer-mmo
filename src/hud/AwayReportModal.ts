@@ -1,6 +1,7 @@
 import { el } from './dom';
 import { describeItemName } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
+import { inventoryEntries } from '../systems/InventorySystem';
 import { formatAwayDuration, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 
 /**
@@ -23,7 +24,7 @@ export class AwayReportModal {
     if (report.copper > 0) {
       lines.push(formatCurrency(report.copper));
     }
-    for (const [itemId, quantity] of Object.entries(report.drops)) {
+    for (const [itemId, quantity] of inventoryEntries(report.drops)) {
       lines.push(`${describeItemName(itemId)} x${quantity}`);
     }
     if (report.packFilled) {

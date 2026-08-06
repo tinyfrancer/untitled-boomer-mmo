@@ -1,7 +1,8 @@
 import { LOOT_TABLES } from '../data/lootTables';
+import type { ItemId, LootTableId } from '../types/ids';
 
 export interface LootDrop {
-  itemId: string;
+  itemId: ItemId;
   quantity: number;
 }
 
@@ -10,12 +11,8 @@ export interface LootResult {
   copper: number;
 }
 
-export function rollLootTable(tableId: string, rng: () => number = Math.random): LootResult {
+export function rollLootTable(tableId: LootTableId, rng: () => number = Math.random): LootResult {
   const table = LOOT_TABLES[tableId];
-  if (!table) {
-    return { drops: [], copper: 0 };
-  }
-
   const drops: LootDrop[] = [];
   for (const entry of table.entries) {
     if (rng() < entry.chance) {

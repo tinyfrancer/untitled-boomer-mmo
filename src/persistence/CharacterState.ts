@@ -2,7 +2,8 @@ import { CLASSES } from '../data/classes';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { QuestLog } from '../systems/QuestSystem';
-import type { ClassId, GearSlotId, TitleId, ZoneId } from '../types/ids';
+import type { ClassId, TitleId, ZoneId } from '../types/ids';
+import type { Gear, Inventory } from '../systems/InventorySystem';
 
 export const CHARACTER_STATE_VERSION = 11;
 
@@ -16,8 +17,8 @@ export interface CharacterState {
   classId: ClassId;
   level: number;
   xp: number;
-  gear: Record<GearSlotId, string | null>;
-  inventory: Record<string, number>;
+  gear: Gear;
+  inventory: Inventory;
   // Total copper; rendered as gold/silver/copper by CurrencySystem.
   currency: number;
   skills: Skills;

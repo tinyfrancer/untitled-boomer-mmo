@@ -1,4 +1,4 @@
-import type { NpcId, ZoneId } from '../types/ids';
+import type { NpcId, ZoneEdge, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
@@ -17,8 +17,6 @@ export interface NpcSpawnPoint {
   dy: number;
   npcId: NpcId;
 }
-
-export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 
 // Walking onto the matching edge of the map leaves for the target zone; the
 // player arrives on the opposite edge of that zone (see systems/ZoneSystem.ts).

@@ -1,6 +1,6 @@
 import { TILE_SIZE } from '../config/constants';
 import type { BodySize } from './enemies';
-import type { ResourceNodeId, SkillId } from '../types/ids';
+import type { ItemId, ResourceNodeId, SkillId } from '../types/ids';
 
 export interface ResourceNodeDefinition {
   id: ResourceNodeId;
@@ -10,7 +10,7 @@ export interface ResourceNodeDefinition {
   body: BodySize;
   skill: SkillId;
   requiredLevel: number;
-  yieldItemId: string;
+  yieldItemId: ItemId;
   xpReward: number;
   // Time for one gather at skill level 1; falls as the skill grows.
   baseGatherMs: number;

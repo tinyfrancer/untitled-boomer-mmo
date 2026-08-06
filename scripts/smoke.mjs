@@ -111,7 +111,7 @@ const cdp = await page.context().newCDPSession(page);
 
 /** Advances the simulation by hand. Returns once those frames have been run. */
 const step = (frames = 1, deltaMs = FRAME_MS) =>
-  page.evaluate(([f, d]) => window.view.step(d, f), [frames, deltaMs]);
+  page.evaluate(({ f, d }) => window.view.step(d, f), { f: frames, d: deltaMs });
 
 /**
  * Lets the browser draw.
@@ -285,11 +285,11 @@ const sweep = async () => {
   for (const fx of spans) {
     for (const fy of spans) {
       await page.evaluate(
-        ([x, y]) => {
+        ({ x, y }) => {
           const w = window.world;
           w.teleport(w.worldWidth * x, w.worldHeight * y);
         },
-        [fx, fy],
+        { x: fx, y: fy },
       );
       await draw();
     }
@@ -838,6 +838,7 @@ async function keyboard() {
           Math.hypot(b.x - w.player.x, b.y - w.player.y) -
           Math.hypot(a.x - w.player.x, a.y - w.player.y),
       )[0];
+    if (!furthest) return null;
     w.setTarget(furthest);
     return w.target?.name ?? null;
   });
@@ -1385,7 +1386,9 @@ async function saveResume() {
   // mobs. ---
   const parked = await page.evaluate(() => {
     const w = window.world;
-    const spot = { x: Math.round(w.mobs[0].spawnX), y: Math.round(w.mobs[0].spawnY) };
+    const anchor = w.mobs[0];
+    if (!anchor) throw new Error('the zone has no mob to park on');
+    const spot = { x: Math.round(anchor.spawnX), y: Math.round(anchor.spawnY) };
     w.clearTarget();
     w.teleport(spot.x, spot.y);
     return {

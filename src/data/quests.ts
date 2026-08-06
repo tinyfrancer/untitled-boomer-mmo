@@ -1,7 +1,7 @@
-import type { ClassId, NpcId, QuestId } from '../types/ids';
+import type { ClassId, ItemId, NpcId, QuestId } from '../types/ids';
 
 export interface QuestObjective {
-  itemId: string;
+  itemId: ItemId;
   quantity: number;
 }
 
@@ -10,7 +10,7 @@ export interface QuestReward {
   xp: number;
   // Keyed by class, because the two classes can't wear the same armour type —
   // a single item id here would hand half the game a reward it can't equip.
-  gear: Record<ClassId, string>;
+  gear: Record<ClassId, ItemId>;
 }
 
 export interface QuestDefinition {

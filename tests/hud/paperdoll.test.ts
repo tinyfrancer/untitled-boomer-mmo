@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { Box3, BufferGeometry, CylinderGeometry, Group, Mesh, SphereGeometry } from 'three';
 import { paperdollSvg, weaponPreviewSvg } from '../../src/hud/paperdoll';
 import { FIGURE_HEIGHT, buildFigure } from '../../src/render3d/figure';
@@ -10,9 +11,10 @@ import {
 } from '../../src/systems/AppearanceSystem';
 import { ITEMS } from '../../src/data/items';
 import { cssColor } from '../../src/ui/theme';
-import type { GearSlotId, WeaponShapeId } from '../../src/types/ids';
+import type { Gear } from '../../src/systems/InventorySystem';
+import type { ItemId, WeaponShapeId } from '../../src/types/ids';
 
-const BARE: Record<GearSlotId, string | null> = {
+const BARE: Gear = {
   helmet: null,
   chest: null,
   pants: null,
@@ -112,9 +114,9 @@ function figureLandmarks(figure: ReturnType<typeof buildFigure>) {
     headRadius: sphere.parameters.radius,
     shoulderY: arms.position.y,
     handSpan: cylinder.parameters.height,
-    hipY: hinges[0].position.y,
+    hipY: nth(hinges, 0).position.y,
     footY: new Box3().setFromObject(figure.object).min.y,
-    hipSpread: Math.abs(hinges[0].position.x),
+    hipSpread: Math.abs(nth(hinges, 0).position.x),
   };
 }
 
@@ -173,7 +175,7 @@ describe('the paperdoll and the figure in the world are the same rig', () => {
     const figure = buildFigure(computeAppearance({ ...BARE, weapon: 'rusty-sword' }));
     const groups = figure.object.children.filter((child): child is Group => child instanceof Group);
     // Two hip hinges, then whatever is being held.
-    const weapon = groups[groups.length - 1];
+    const weapon = nth(groups, groups.length - 1);
 
     expect((blade.x1 - drawn.cx) / box).toBeCloseTo(weapon.position.x / FIGURE_HEIGHT, 6);
     expect(drawnAbove(drawn.shoulderY)).toBeCloseTo(builtAbove(weapon.position.y), 6);
@@ -199,7 +201,7 @@ describe('paperdollSvg', () => {
   });
 
   it('wears the colour of every piece it is handed', () => {
-    const gear: Record<GearSlotId, string | null> = {
+    const gear: Gear = {
       helmet: 'brown-helmet',
       chest: 'brown-chestplate',
       pants: 'brown-legs',
@@ -208,8 +210,9 @@ describe('paperdollSvg', () => {
     const svg = paperdollSvg(gear);
     const painted = [...strokes(svg), ...fills(svg)];
     for (const itemId of Object.values(gear)) {
-      const item = ITEMS[itemId as string];
-      if (item?.kind !== 'equipment') throw new Error(`${itemId} is not gear`);
+      if (itemId === null) throw new Error('every slot is filled here');
+      const item = ITEMS[itemId];
+      if (item.kind !== 'equipment') throw new Error(`${itemId} is not gear`);
       expect(painted).toContain(cssColor(item.color));
     }
     // Nothing left bare: the skin only shows through where a slot is empty.
@@ -218,7 +221,7 @@ describe('paperdollSvg', () => {
 
   it('gives every weapon shape something to draw', () => {
     const bare = paperdollSvg(BARE).childElementCount;
-    const shapes: Array<[WeaponShapeId, string]> = [
+    const shapes: Array<[WeaponShapeId, ItemId]> = [
       ['sword', 'rusty-sword'],
       ['wand', 'apprentice-wand'],
       ['pole', 'fishing-pole'],

@@ -1,6 +1,6 @@
 import { BufferAttribute, BufferGeometry, Color, Mesh, MeshLambertMaterial } from 'three';
 import { TILE_SIZE } from '../config/constants';
-import { TILE_COLORS, WATER_TILE } from '../data/tiles';
+import { GRASS_TILE, WATER_TILE, tileColor } from '../data/tiles';
 
 /** How far below the land a water tile sits, so a pond reads as a hole in it. */
 export const WATER_DEPTH = 14;
@@ -17,7 +17,7 @@ const VERTICES_PER_TILE = 6;
  */
 export function buildGroundGeometry(map: number[][]): BufferGeometry {
   const rows = map.length;
-  const cols = rows > 0 ? map[0].length : 0;
+  const cols = map[0]?.length ?? 0;
   const count = rows * cols * VERTICES_PER_TILE;
   const positions = new Float32Array(count * 3);
   const normals = new Float32Array(count * 3);
@@ -27,8 +27,9 @@ export function buildGroundGeometry(map: number[][]): BufferGeometry {
   let offset = 0;
 
   for (let row = 0; row < rows; row += 1) {
+    const line = map[row] ?? [];
     for (let col = 0; col < cols; col += 1) {
-      const tile = map[row][col];
+      const tile = line[col] ?? GRASS_TILE;
       const height = tile === WATER_TILE ? -WATER_DEPTH : 0;
       // Sim x is east and sim y is south, so a map column is x and a map row
       // is z (see coords.ts). The quad spans the whole tile, corner to corner.
@@ -37,7 +38,7 @@ export function buildGroundGeometry(map: number[][]): BufferGeometry {
       const north = row * TILE_SIZE;
       const south = north + TILE_SIZE;
 
-      color.setHex(TILE_COLORS[tile] ?? TILE_COLORS[0]).multiplyScalar(tileShade(col, row));
+      color.setHex(tileColor(tile)).multiplyScalar(tileShade(col, row));
 
       const corners: Array<[number, number]> = [
         [west, north],
