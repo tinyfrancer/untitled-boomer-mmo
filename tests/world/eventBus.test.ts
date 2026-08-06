@@ -20,39 +20,19 @@ describe('createEventBus', () => {
     expect(() => bus.emit('level-up', 2)).not.toThrow();
   });
 
-  it('calls a listener with the context it subscribed with', () => {
+  // A listener is identified by its function alone, so the same function
+  // subscribed twice is two subscriptions and takes two `off`s to drop — which
+  // is what the subscribe-and-unsubscribe pairs in the world and the HUD are.
+  it('drops one subscription per off, when the same function subscribed twice', () => {
     const bus = createEventBus();
-    const holder = {
-      seen: 0,
-      handle(this: { seen: number }, value: number): void {
-        this.seen = value;
-      },
-    };
-    bus.on('level-up', holder.handle, holder);
+    const handle = vi.fn();
+    bus.on('target-cleared', handle);
+    bus.on('target-cleared', handle);
 
-    bus.emit('level-up', 3);
-
-    expect(holder.seen).toBe(3);
-  });
-
-  // The shape every subscription in a scene uses. Matching on the function
-  // alone would unsubscribe one object's handler when another object dropped
-  // its own — which is a HUD that silently stops updating.
-  it('tells two subscriptions of the same function apart by their context', () => {
-    const bus = createEventBus();
-    const seen: string[] = [];
-    function handle(this: { name: string }): void {
-      seen.push(this.name);
-    }
-    const a = { name: 'a' };
-    const b = { name: 'b' };
-    bus.on('target-cleared', handle, a);
-    bus.on('target-cleared', handle, b);
-
-    bus.off('target-cleared', handle, a);
+    bus.off('target-cleared', handle);
     bus.emit('target-cleared');
 
-    expect(seen).toEqual(['b']);
+    expect(handle).toHaveBeenCalledTimes(1);
   });
 
   it('stops calling a listener that has been removed', () => {

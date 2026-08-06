@@ -60,14 +60,6 @@ export type WorldEvent =
  */
 export interface EventBus {
   emit<K extends UiEventName>(event: K, ...args: UiEventMap[K]): unknown;
-  on<K extends UiEventName>(
-    event: K,
-    fn: (...args: UiEventMap[K]) => void,
-    context?: unknown,
-  ): unknown;
-  off<K extends UiEventName>(
-    event: K,
-    fn: (...args: UiEventMap[K]) => void,
-    context?: unknown,
-  ): unknown;
+  on<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void): unknown;
+  off<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void): unknown;
 }
