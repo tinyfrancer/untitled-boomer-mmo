@@ -38,6 +38,65 @@ export function place(node: HTMLElement, rect: Rect, sized?: 'width' | 'box'): v
   }
 }
 
+export interface Row {
+  root: HTMLElement;
+  label: HTMLElement;
+  value: HTMLElement;
+}
+
+export interface RowOptions {
+  className: string;
+  label: string;
+  labelClass?: string;
+  value?: string;
+  valueClass?: string;
+  /** A row that does something is a button, because a tappable row has to be. */
+  onClick?: () => void;
+}
+
+/**
+ * A label and a value, which is the shape of every list row in this HUD — the
+ * bag, the shop's stock, the slayer chains, a gear slot, the equip picker and
+ * the skill lists each built their own.
+ *
+ * The classes stay the caller's: they are what decides whether the value sits
+ * beside the label or under it, and the parts come back so a caller can colour
+ * or flag them afterwards.
+ */
+export function row(options: RowOptions): Row {
+  const {
+    className,
+    label: labelText,
+    labelClass,
+    value: valueText,
+    valueClass,
+    onClick,
+  } = options;
+  let root: HTMLElement;
+  if (onClick) {
+    const button = el('button', className);
+    button.type = 'button';
+    button.addEventListener('click', onClick);
+    root = button;
+  } else {
+    root = el('div', className);
+  }
+  const label = el('div', labelClass, labelText);
+  const value = el('div', valueClass, valueText ?? '');
+  root.append(label, value);
+  return { root, label, value };
+}
+
+/** What a panel says instead of a list when it has nothing to list. */
+export function emptyLine(text: string): HTMLElement {
+  return el('div', 'hud-empty', text);
+}
+
+/** The heading over a group of rows. */
+export function sectionHeader(text: string): HTMLElement {
+  return el('div', 'hud-section', text);
+}
+
 /** A 0-1 ratio as the CSS length a bar's fill is drawn at. */
 export function fillPercent(ratio: number): string {
   return `${clamp(ratio, 0, 1) * 100}%`;

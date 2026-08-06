@@ -1,5 +1,5 @@
 import { Sheet } from './Sheet';
-import { el, fillPercent } from './dom';
+import { el, fillPercent, row, sectionHeader } from './dom';
 import { barFill } from '../systems/math';
 import { paperdollSvg } from './paperdoll';
 import { describeItemBonuses, describeItemName } from '../data/items';
@@ -78,14 +78,16 @@ export class CharacterSheet extends Sheet {
       const button = el('button', 'hud-slot');
       button.type = 'button';
       button.dataset.slot = slot;
-      const head = el('div', 'hud-slot__head');
-      const bonuses = el('span', 'hud-slot__bonuses');
-      head.append(el('span', undefined, SLOT_LABELS[slot]), bonuses);
+      const head = row({
+        className: 'hud-slot__head',
+        label: SLOT_LABELS[slot],
+        valueClass: 'hud-slot__bonuses',
+      });
       const item = el('div', 'hud-slot__item');
-      button.append(head, item);
+      button.append(head.root, item);
       button.addEventListener('click', () => onSlotClicked(slot, this.gear[slot] === null));
       this.body.append(button);
-      return { button, item, bonuses };
+      return { button, item, bonuses: head.value };
     });
 
     // Two blocks, one record: the spread is what makes the pair cover SkillId,
@@ -100,18 +102,16 @@ export class CharacterSheet extends Sheet {
     title: string,
     skillIds: readonly K[],
   ): Record<K, SkillRow> {
-    this.body.append(el('div', 'hud-section', title));
+    this.body.append(sectionHeader(title));
     return mapKeys(skillIds, (skillId) => {
-      const row = el('div', 'hud-skill');
-      const line = el('div', 'hud-skill__line');
-      const value = el('span');
-      line.append(el('span', undefined, SKILLS[skillId].name), value);
+      const block = el('div', 'hud-skill');
+      const line = row({ className: 'hud-skill__line', label: SKILLS[skillId].name });
       const bar = el('div', 'hud-bar hud-skill__bar');
       const fill = el('div', 'hud-bar__fill');
       bar.append(fill);
-      row.append(line, bar);
-      this.body.append(row);
-      return { value, fill };
+      block.append(line.root, bar);
+      this.body.append(block);
+      return { value: line.value, fill };
     });
   }
 

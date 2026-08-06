@@ -43,8 +43,10 @@ function hudCss(): string {
 .hud-muted {
   color: ${THEME.color.muted};
 }
-.hud-dim {
+.hud-empty {
+  font-size: ${THEME.font.sm}px;
   color: ${THEME.color.dim};
+  padding: 4px 0 4px ${THEME.padding}px;
 }
 
 .hud-button {
@@ -371,9 +373,10 @@ function hudCss(): string {
   color: ${THEME.color.equippable};
 }
 .hud-section {
-  margin-top: ${THEME.padding}px;
   font-size: ${THEME.font.sm}px;
   font-weight: bold;
+  color: ${THEME.color.muted};
+  margin: ${THEME.padding}px 0 4px;
 }
 .hud-skill {
   margin-top: 4px;
@@ -442,11 +445,6 @@ function hudCss(): string {
   flex-wrap: wrap;
   gap: 6px;
   padding: 4px 0 6px 6px;
-}
-.hud-item-actions__none {
-  font-size: ${THEME.font.xs}px;
-  color: ${THEME.color.dim};
-  padding: 6px 0 6px 6px;
 }
 .hud-item-actions .hud-button {
   min-height: 30px;
@@ -619,17 +617,6 @@ function hudCss(): string {
 .hud-list-row__sub {
   font-size: ${THEME.font.xs}px;
   color: ${THEME.color.muted};
-}
-.hud-list-header {
-  font-size: ${THEME.font.sm}px;
-  font-weight: bold;
-  color: ${THEME.color.muted};
-  margin: ${THEME.padding}px 0 4px;
-}
-.hud-list-empty {
-  font-size: ${THEME.font.sm}px;
-  color: ${THEME.color.dim};
-  padding: 4px 0;
 }
 
 /* --- Character creation -------------------------------------------------- */

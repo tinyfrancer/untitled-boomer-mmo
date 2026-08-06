@@ -1,5 +1,5 @@
 import { Sheet } from './Sheet';
-import { el } from './dom';
+import { el, emptyLine } from './dom';
 import { QUESTS, QUEST_ORDER } from '../data/quests';
 import { describeItemName } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -27,8 +27,8 @@ export class QuestSheet extends Sheet {
     const taken = QUEST_ORDER.map((id) => QUESTS[id]).filter((quest) => log[quest.id]);
     if (taken.length === 0) {
       this.body.append(
-        el('div', 'hud-quest__line is-done', 'Nobody has asked you for anything yet.'),
-        el('div', 'hud-quest__line is-done', 'Try the shopkeeper in town.'),
+        emptyLine('Nobody has asked you for anything yet.'),
+        emptyLine('Try the shopkeeper in town.'),
       );
       return;
     }

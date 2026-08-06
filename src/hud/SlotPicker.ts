@@ -1,5 +1,5 @@
 import { Overlay } from './Overlay';
-import { el } from './dom';
+import { el, emptyLine, row } from './dom';
 import { pickerPosition } from '../ui/layout';
 import type { ItemId } from '../types/ids';
 import { SLOT_LABELS } from './CharacterSheet';
@@ -26,21 +26,21 @@ export class SlotPicker extends Overlay {
     this.root.append(el('div', 'hud-picker__title', `Equip ${SLOT_LABELS[slot]}`));
 
     if (itemIds.length === 0) {
-      this.root.append(el('div', 'hud-dim', '(nothing for this slot)'));
+      this.root.append(emptyLine('(nothing for this slot)'));
     }
     for (const itemId of itemIds) {
-      const row = el('button', 'hud-picker__row');
-      row.type = 'button';
-      row.dataset.item = itemId;
-      row.append(
-        el('div', undefined, describeItemName(itemId)),
-        el('div', 'hud-list-row__sub', describeItemBonuses(itemId)),
-      );
-      row.addEventListener('click', () => {
-        onPick(itemId);
-        this.close();
+      const entry = row({
+        className: 'hud-picker__row',
+        label: describeItemName(itemId),
+        value: describeItemBonuses(itemId),
+        valueClass: 'hud-list-row__sub',
+        onClick: () => {
+          onPick(itemId);
+          this.close();
+        },
       });
-      this.root.append(row);
+      entry.root.dataset.item = itemId;
+      this.root.append(entry.root);
     }
 
     // Positioned before it is measured, then clamped once the browser has laid

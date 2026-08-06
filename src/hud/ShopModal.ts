@@ -1,5 +1,5 @@
 import { Overlay } from './Overlay';
-import { el } from './dom';
+import { el, emptyLine, row, sectionHeader } from './dom';
 import { describeItemName, itemValue } from '../data/items';
 import { SHOP_STOCK } from '../data/shop';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -64,11 +64,11 @@ export class ShopModal extends Overlay {
       (offer) => offer.state !== 'done',
     );
     if (offers.length > 0) {
-      this.body.append(header('Work going'));
+      this.body.append(sectionHeader('Work going'));
       offers.forEach((offer) => this.body.append(this.questRow(offer)));
     }
 
-    this.body.append(header('For sale'));
+    this.body.append(sectionHeader('For sale'));
     for (const entry of SHOP_STOCK) {
       this.body.append(
         listRow(
@@ -84,9 +84,9 @@ export class ShopModal extends Overlay {
     const sellable = inventoryEntries(state.inventory).filter(
       ([itemId, quantity]) => quantity > 0 && itemValue(itemId) !== null,
     );
-    this.body.append(header('Sell from your bag'));
+    this.body.append(sectionHeader('Sell from your bag'));
     if (sellable.length === 0) {
-      this.body.append(el('div', 'hud-list-empty', '(nothing worth selling)'));
+      this.body.append(emptyLine('(nothing worth selling)'));
     }
     for (const [itemId, quantity] of sellable) {
       this.body.append(
@@ -124,28 +124,25 @@ export class ShopModal extends Overlay {
   }
 }
 
-function header(label: string): HTMLElement {
-  return el('div', 'hud-list-header', label);
-}
-
 function listRow(
   label: string,
   value: string,
   labelColor: string,
   valueColor: string,
   onClick: () => void,
-  questId?: string,
+  questId?: QuestId,
 ): HTMLElement {
-  const row = el('button', 'hud-list-row');
-  row.type = 'button';
+  const entry = row({
+    className: 'hud-list-row',
+    label,
+    value,
+    valueClass: 'hud-list-row__value',
+    onClick,
+  });
   if (questId) {
-    row.dataset.quest = questId;
+    entry.root.dataset.quest = questId;
   }
-  const name = el('span', undefined, label);
-  name.style.color = labelColor;
-  const amount = el('span', 'hud-list-row__value', value);
-  amount.style.color = valueColor;
-  row.append(name, amount);
-  row.addEventListener('click', onClick);
-  return row;
+  entry.label.style.color = labelColor;
+  entry.value.style.color = valueColor;
+  return entry.root;
 }

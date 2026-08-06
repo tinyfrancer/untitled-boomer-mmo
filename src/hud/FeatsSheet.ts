@@ -1,5 +1,5 @@
 import { Sheet } from './Sheet';
-import { el } from './dom';
+import { el, emptyLine, row } from './dom';
 import { ENEMIES } from '../data/enemies';
 import {
   allAchievements,
@@ -39,7 +39,7 @@ export class FeatsSheet extends Sheet {
     this.picker.replaceChildren();
     const earned = earnedTitles(kills);
     if (earned.length === 0) {
-      this.picker.append(el('div', 'hud-dim', 'Slay 100 of a creature to earn its title.'));
+      this.picker.append(emptyLine('Slay 100 of a creature to earn its title.'));
       return;
     }
     const choices: (TitleId | null)[] = [null, ...earned];
@@ -58,26 +58,24 @@ export class FeatsSheet extends Sheet {
     for (const enemyId of Object.keys(ENEMIES) as EnemyId[]) {
       const slain = killCount(kills, enemyId);
       const group = el('div', 'hud-feat-group');
-      group.append(row('hud-row hud-row--group', ENEMIES[enemyId].name, `${slain} slain`));
+      group.append(featRow('hud-row hud-row--group', ENEMIES[enemyId].name, `${slain} slain`).root);
 
       for (const definition of allAchievements()) {
         if (definition.enemyId !== enemyId) continue;
         const done = slain >= definition.threshold;
-        const line = row(
+        const line = featRow(
           'hud-row hud-row--tier',
           done ? `✓ ${definition.name}` : definition.name,
           done ? 'earned' : `${slain}/${definition.threshold}`,
         );
-        line.classList.toggle('is-earned', done);
-        group.append(line);
+        line.root.classList.toggle('is-earned', done);
+        group.append(line.root);
       }
       this.body.append(group);
     }
   }
 }
 
-function row(className: string, label: string, value: string): HTMLElement {
-  const node = el('div', className);
-  node.append(el('span', undefined, label), el('span', 'hud-muted', value));
-  return node;
+function featRow(className: string, label: string, value: string) {
+  return row({ className, label, value, valueClass: 'hud-muted' });
 }

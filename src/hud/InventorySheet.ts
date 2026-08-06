@@ -1,7 +1,7 @@
 import { Sheet } from './Sheet';
 import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
 import type { ItemId } from '../types/ids';
-import { el } from './dom';
+import { el, emptyLine, row } from './dom';
 import { consumableFor, describeItemBonuses, describeItemName, isEquippable } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { encumbranceLevel } from '../systems/EncumbranceSystem';
@@ -74,22 +74,25 @@ export class InventorySheet extends Sheet {
       if (quantity <= 0) continue;
       const selected = itemId === this.selectedItemId;
 
-      const row = el('button', 'hud-item');
-      row.type = 'button';
-      row.dataset.item = itemId;
-      row.classList.toggle('is-selected', selected);
-      const name = el('div', 'hud-item__name', `${describeItemName(itemId)} x${quantity}`);
-      name.classList.toggle('is-equippable', isEquippable(itemId));
-      name.classList.toggle(
+      const entry = row({
+        className: 'hud-item',
+        label: `${describeItemName(itemId)} x${quantity}`,
+        labelClass: 'hud-item__name',
+        value: describeItemBonuses(itemId),
+        valueClass: 'hud-item__bonuses',
+        onClick: () => {
+          this.selectedItemId = selected ? null : itemId;
+          this.render();
+        },
+      });
+      entry.root.dataset.item = itemId;
+      entry.root.classList.toggle('is-selected', selected);
+      entry.label.classList.toggle('is-equippable', isEquippable(itemId));
+      entry.label.classList.toggle(
         'is-consumable',
         !isEquippable(itemId) && consumableFor(itemId) !== null,
       );
-      row.append(name, el('div', 'hud-item__bonuses', describeItemBonuses(itemId)));
-      row.addEventListener('click', () => {
-        this.selectedItemId = selected ? null : itemId;
-        this.render();
-      });
-      this.body.append(row);
+      this.body.append(entry.root);
 
       if (selected) {
         this.body.append(this.actionRow(itemId));
@@ -100,16 +103,16 @@ export class InventorySheet extends Sheet {
   private actionRow(itemId: ItemId): HTMLElement {
     const actions = this.actionsFor(itemId);
     if (actions.length === 0) {
-      return el('div', 'hud-item-actions__none', '(nothing to do with this)');
+      return emptyLine('(nothing to do with this)');
     }
-    const row = el('div', 'hud-item-actions');
+    const buttons = el('div', 'hud-item-actions');
     for (const action of actions) {
       const button = el('button', 'hud-button', action.label);
       button.type = 'button';
       button.dataset.itemAction = action.id;
       button.addEventListener('click', () => this.onAction(action.id, itemId));
-      row.append(button);
+      buttons.append(button);
     }
-    return row;
+    return buttons;
   }
 }
