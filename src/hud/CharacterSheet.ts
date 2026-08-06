@@ -6,6 +6,7 @@ import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
 import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
 import { THEME } from '../ui/theme';
 import type { PrimaryStat } from '../data/classes';
+import type { Gear } from '../systems/InventorySystem';
 import type { GearSlotId, SkillId } from '../types/ids';
 
 const SLOT_ORDER: GearSlotId[] = ['weapon', 'helmet', 'chest', 'pants'];
@@ -28,7 +29,7 @@ export interface DisplayedStats {
 }
 
 export interface CharacterSheetState {
-  gear: Record<GearSlotId, string | null>;
+  gear: Gear;
   stats: DisplayedStats;
   skills: Skills;
   // Combat skill caps ride the character's level, so the sheet needs it to know
@@ -57,7 +58,7 @@ export class CharacterSheet extends Sheet {
   private readonly statLines: HTMLElement[];
   private readonly slots = {} as Record<GearSlotId, SlotRow>;
   private readonly skills = {} as Record<SkillId, SkillRow>;
-  private gear: Record<GearSlotId, string | null> = {
+  private gear: Gear = {
     helmet: null,
     chest: null,
     pants: null,

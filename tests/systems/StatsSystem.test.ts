@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { MELEE_ATTACK_RANGE, UNARMED_ATTACK_RANGE } from '../../src/data/items';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
-import type { GearSlotId } from '../../src/types/ids';
+import type { Gear } from '../../src/systems/InventorySystem';
+import { staleItemId } from '../staleIds';
 
-const NO_GEAR: Record<GearSlotId, string | null> = {
+const NO_GEAR: Gear = {
   helmet: null,
   chest: null,
   pants: null,
@@ -101,7 +102,10 @@ describe('computeEffectiveStats', () => {
   });
 
   it('treats an unknown item id in a gear slot as contributing no bonus', () => {
-    const stats = computeEffectiveStats('warrior', { ...NO_GEAR, chest: 'nonexistent-item' });
+    const stats = computeEffectiveStats('warrior', {
+      ...NO_GEAR,
+      chest: staleItemId('nonexistent-item'),
+    });
     expect(stats.maxHp).toBe(40);
     expect(stats.strength).toBe(6);
   });
@@ -134,7 +138,8 @@ describe('attack range', () => {
 
   it('falls back to unarmed for an unknown weapon id', () => {
     expect(
-      computeEffectiveStats('wizard', { ...NO_GEAR, weapon: 'nonexistent-item' }).attackRange,
+      computeEffectiveStats('wizard', { ...NO_GEAR, weapon: staleItemId('nonexistent-item') })
+        .attackRange,
     ).toBe(UNARMED_ATTACK_RANGE);
   });
 });

@@ -1,7 +1,8 @@
 import { consumableFor } from '../data/items';
+import type { ItemId } from '../types/ids';
 
 export interface FoodBuff {
-  itemId: string;
+  itemId: ItemId;
   healPerMs: number;
   remainingMs: number;
 }
@@ -11,7 +12,7 @@ export interface FoodTick {
   buff: FoodBuff | null;
 }
 
-export function startFoodBuff(itemId: string): FoodBuff | null {
+export function startFoodBuff(itemId: ItemId): FoodBuff | null {
   const food = consumableFor(itemId);
   if (!food || food.healDurationMs <= 0) {
     return null;

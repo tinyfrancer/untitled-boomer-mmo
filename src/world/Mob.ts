@@ -1,6 +1,7 @@
 import { distance, stepToward } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import { scaleEnemyStats } from '../systems/EnemySystem';
+import type { LootTableId } from '../types/ids';
 import type { EnemyDefinition } from '../data/enemies';
 
 type AiState = 'wander' | 'chase' | 'returning';
@@ -27,7 +28,7 @@ export class Mob {
   readonly attackPower: number;
   readonly attackRange: number;
   readonly attackCooldownMs: number;
-  readonly lootTableId?: string;
+  readonly lootTableId?: LootTableId;
   readonly name: string;
   x: number;
   y: number;

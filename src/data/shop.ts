@@ -1,7 +1,9 @@
+import type { ItemId } from '../types/ids';
+
 // What the town shop sells. Buy prices sit above the items' sell values on
 // purpose — the vendor spread is what makes earning coin matter.
 export interface ShopStockEntry {
-  itemId: string;
+  itemId: ItemId;
   price: number;
 }
 
@@ -13,7 +15,7 @@ export const SHOP_STOCK: ShopStockEntry[] = [
   { itemId: 'fishing-pole', price: 60 },
 ];
 
-export function shopPriceFor(itemId: string): number | null {
+export function shopPriceFor(itemId: ItemId): number | null {
   return SHOP_STOCK.find((entry) => entry.itemId === itemId)?.price ?? null;
 }
 

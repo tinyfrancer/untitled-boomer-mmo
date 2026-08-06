@@ -1,4 +1,4 @@
-import type { ClassId } from '../types/ids';
+import type { ClassId, ItemId } from '../types/ids';
 
 export type PrimaryStat = 'strength' | 'intellect';
 
@@ -25,7 +25,7 @@ export interface ClassDefinition {
   description: string;
   color: number;
   baseStats: ClassStats;
-  startingWeaponId: string;
+  startingWeaponId: ItemId;
 }
 
 export const CLASSES: Record<ClassId, ClassDefinition> = {

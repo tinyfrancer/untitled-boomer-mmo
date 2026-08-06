@@ -1,4 +1,6 @@
 import { Sheet } from './Sheet';
+import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
+import type { ItemId } from '../types/ids';
 import { el } from './dom';
 import { consumableFor, describeItemBonuses, describeItemName, isEquippable } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -19,14 +21,14 @@ import { THEME } from '../ui/theme';
 export class InventorySheet extends Sheet {
   private readonly coin: HTMLElement;
   private readonly weight: HTMLElement;
-  private readonly actionsFor: (itemId: string) => ItemAction[];
-  private readonly onAction: (actionId: ItemActionId, itemId: string) => void;
-  private inventory: Record<string, number> = {};
-  private selectedItemId: string | null = null;
+  private readonly actionsFor: (itemId: ItemId) => ItemAction[];
+  private readonly onAction: (actionId: ItemActionId, itemId: ItemId) => void;
+  private inventory: Inventory = {};
+  private selectedItemId: ItemId | null = null;
 
   constructor(
-    actionsFor: (itemId: string) => ItemAction[],
-    onAction: (actionId: ItemActionId, itemId: string) => void,
+    actionsFor: (itemId: ItemId) => ItemAction[],
+    onAction: (actionId: ItemActionId, itemId: ItemId) => void,
   ) {
     super('Inventory (I)', THEME.panelWidth.inventory);
     this.actionsFor = actionsFor;
@@ -53,7 +55,7 @@ export class InventorySheet extends Sheet {
     this.weight.classList.toggle('is-full', level === 'full');
   }
 
-  update(inventory: Record<string, number>): void {
+  update(inventory: Inventory): void {
     this.inventory = inventory;
     if (this.selectedItemId && (inventory[this.selectedItemId] ?? 0) <= 0) {
       this.selectedItemId = null;
@@ -68,7 +70,7 @@ export class InventorySheet extends Sheet {
 
   private render(): void {
     this.body.replaceChildren();
-    for (const [itemId, quantity] of Object.entries(this.inventory)) {
+    for (const [itemId, quantity] of inventoryEntries(this.inventory)) {
       if (quantity <= 0) continue;
       const selected = itemId === this.selectedItemId;
 
@@ -95,7 +97,7 @@ export class InventorySheet extends Sheet {
     }
   }
 
-  private actionRow(itemId: string): HTMLElement {
+  private actionRow(itemId: ItemId): HTMLElement {
     const actions = this.actionsFor(itemId);
     if (actions.length === 0) {
       return el('div', 'hud-item-actions__none', '(nothing to do with this)');

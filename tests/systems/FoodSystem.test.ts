@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { staleItemId } from '../staleIds';
 import { consumableFor } from '../../src/data/items';
 import { foodTick, startFoodBuff } from '../../src/systems/FoodSystem';
 
@@ -15,7 +16,7 @@ describe('startFoodBuff', () => {
   it('refuses anything that is not food', () => {
     expect(startFoodBuff('rusty-sword')).toBeNull();
     expect(startFoodBuff('raw-fish')).toBeNull();
-    expect(startFoodBuff('nonsense')).toBeNull();
+    expect(startFoodBuff(staleItemId('nonsense'))).toBeNull();
   });
 });
 

@@ -1,7 +1,8 @@
 import { ITEMS, consumableFor, itemValue } from '../data/items';
-import { COOKING_RECIPES, FIRE_INPUT_ITEM_ID } from '../data/recipes';
+import { FIRE_INPUT_ITEM_ID } from '../data/recipes';
 import { canEquip } from './EquipSystem';
-import type { ClassId } from '../types/ids';
+import { isRecipeInput } from './CookingSystem';
+import type { ClassId, ItemId } from '../types/ids';
 
 export type ItemActionId = 'equip' | 'eat' | 'light-fire' | 'cook' | 'sell';
 
@@ -23,7 +24,7 @@ export interface ItemActionContext {
  * inventory panel's per-item buttons: an item with no actions is inert
  * (materials away from any fire or shop).
  */
-export function actionsForItem(itemId: string, context: ItemActionContext): ItemAction[] {
+export function actionsForItem(itemId: ItemId, context: ItemActionContext): ItemAction[] {
   if (!ITEMS[itemId]) {
     return [];
   }
@@ -39,7 +40,7 @@ export function actionsForItem(itemId: string, context: ItemActionContext): Item
   if (itemId === FIRE_INPUT_ITEM_ID && !context.nearFire) {
     actions.push({ id: 'light-fire', label: 'Light Fire' });
   }
-  if (COOKING_RECIPES[itemId] && context.nearFire) {
+  if (isRecipeInput(itemId) && context.nearFire) {
     actions.push({ id: 'cook', label: 'Cook' });
   }
   if (context.shopOpen && itemValue(itemId) !== null) {

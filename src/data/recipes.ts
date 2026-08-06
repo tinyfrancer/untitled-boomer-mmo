@@ -1,16 +1,18 @@
+import type { ItemId, RecipeId } from '../types/ids';
+
 export interface CookingRecipe {
-  inputItemId: string;
-  outputItemId: string;
+  inputItemId: RecipeId;
+  outputItemId: ItemId;
   // What you get when it burns. Worthless on purpose: a failed cook costs the
   // fish, which is what makes levelling cooking worth anything.
-  burntItemId: string;
+  burntItemId: ItemId;
   requiredLevel: number;
   xpReward: number;
   cookMs: number;
 }
 
 // Keyed by input, since cooking always starts from "what raw thing do I have?"
-export const COOKING_RECIPES: Record<string, CookingRecipe> = {
+export const COOKING_RECIPES: Record<RecipeId, CookingRecipe> = {
   'raw-fish': {
     inputItemId: 'raw-fish',
     outputItemId: 'cooked-fish',
@@ -31,7 +33,7 @@ export const COOKING_RECIPES: Record<string, CookingRecipe> = {
   },
 };
 
-export const FIRE_INPUT_ITEM_ID = 'logs';
+export const FIRE_INPUT_ITEM_ID: ItemId = 'logs';
 export const FIRE_BURN_MS = 90000;
 // How close the player has to stand to a lit fire to cook on it.
 export const FIRE_COOK_RADIUS = 96;

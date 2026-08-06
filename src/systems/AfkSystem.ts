@@ -1,5 +1,6 @@
 import { consumableFor } from '../data/items';
-import type { Inventory } from './InventorySystem';
+import { inventoryEntries, type Inventory } from './InventorySystem';
+import type { ItemId } from '../types/ids';
 
 // AFK play has to stay behind active play, and two things hold it there: the
 // mode never presses an ability, and what it does earn is halved.
@@ -102,9 +103,9 @@ export function shouldAfkEat(hp: number, maxHp: number, inCombat: boolean): bool
  * that still heals. Nothing is in a hurry between respawns, and it leaves the
  * good food for when the player is actually at the keyboard.
  */
-export function chooseAfkFood(inventory: Inventory): string | null {
-  let best: { itemId: string; healAmount: number } | null = null;
-  for (const [itemId, quantity] of Object.entries(inventory)) {
+export function chooseAfkFood(inventory: Inventory): ItemId | null {
+  let best: { itemId: ItemId; healAmount: number } | null = null;
+  for (const [itemId, quantity] of inventoryEntries(inventory)) {
     const food = quantity > 0 ? consumableFor(itemId) : null;
     if (food && (best === null || food.healAmount < best.healAmount)) {
       best = { itemId, healAmount: food.healAmount };

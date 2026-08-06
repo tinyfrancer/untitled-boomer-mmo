@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ItemId } from '../../src/types/ids';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import {
   advanceGather,
@@ -13,7 +14,7 @@ import type { Gear } from '../../src/systems/InventorySystem';
 const TREE = RESOURCE_NODES.tree;
 const POND = RESOURCE_NODES['fishing-spot'];
 
-const gearWith = (weapon: string | null): Gear => ({
+const gearWith = (weapon: ItemId | null): Gear => ({
   helmet: null,
   chest: null,
   pants: null,

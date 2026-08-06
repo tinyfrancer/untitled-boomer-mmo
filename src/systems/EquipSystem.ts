@@ -1,6 +1,6 @@
 import { ARMOR_TYPE_CLASSES, ARMOR_TYPE_LABELS, armorTypeOf, isEquippable } from '../data/items';
 import { CLASSES } from '../data/classes';
-import type { ClassId, GearSlotId } from '../types/ids';
+import type { ClassId, GearSlotId, ItemId } from '../types/ids';
 import type { Gear, Inventory } from './InventorySystem';
 import { addItemToInventory } from './InventorySystem';
 
@@ -12,7 +12,7 @@ export type EquipCheck = { ok: true } | { ok: false; reason: string };
  * picker, and the save migration that has to undo gear a character was already
  * wearing when the rules arrived.
  */
-export function canEquip(itemId: string, classId: ClassId): EquipCheck {
+export function canEquip(itemId: ItemId, classId: ClassId): EquipCheck {
   if (!isEquippable(itemId)) {
     return { ok: false, reason: "You can't equip that." };
   }
@@ -28,7 +28,7 @@ export function canEquip(itemId: string, classId: ClassId): EquipCheck {
 }
 
 /** The subset of a slot's candidates this class is actually allowed to wear. */
-export function equippableFrom(itemIds: string[], classId: ClassId): string[] {
+export function equippableFrom(itemIds: ItemId[], classId: ClassId): ItemId[] {
   return itemIds.filter((itemId) => canEquip(itemId, classId).ok);
 }
 

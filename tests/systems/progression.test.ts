@@ -13,7 +13,7 @@ import { addXp, type LevelState } from '../../src/systems/LevelingSystem';
 import { addSkillXp, createInitialSkills, skillLevel } from '../../src/systems/SkillSystem';
 import { burnChance } from '../../src/systems/CookingSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
-import type { EnemyId } from '../../src/types/ids';
+import type { EnemyId, ItemId, LootTableId } from '../../src/types/ids';
 
 // The pacing contract for the starter arc, simulated rather than played: a
 // character who does the two quests and gears up should arrive at level 3 and
@@ -24,7 +24,7 @@ import type { EnemyId } from '../../src/types/ids';
 // are averages, not rolls, so the test is deterministic and a change to any
 // tuning constant moves it.
 
-const chanceOf = (tableId: string, itemId: string): number =>
+const chanceOf = (tableId: LootTableId, itemId: ItemId): number =>
   LOOT_TABLES[tableId].entries.find((entry) => entry.itemId === itemId)?.chance ?? 0;
 
 /** Average XP for a kill in a zone, weighted by how many spawns sit at each level. */

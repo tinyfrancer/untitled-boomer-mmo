@@ -17,6 +17,7 @@ import { Campfire } from '../../src/world/Campfire';
 import { harness } from '../world/harness';
 import { lastPainted, stubCanvas } from './canvasStub';
 import type { Object3D, Texture } from 'three';
+import type { Gear } from '../../src/systems/InventorySystem';
 
 function opacityOf(root: Object3D): number {
   let found = 1;
@@ -78,7 +79,7 @@ describe('PlayerActor', () => {
   it('puts on gear the moment the simulation is wearing it', () => {
     const { world } = harness();
     const actor = new PlayerActor(world.player);
-    const gear = { helmet: null, chest: 'brown-chestplate', pants: null, weapon: null };
+    const gear: Gear = { helmet: null, chest: 'brown-chestplate', pants: null, weapon: null };
 
     world.player.setGear(gear);
     actor.sync(0);

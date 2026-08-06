@@ -10,9 +10,10 @@ import {
 } from '../../src/systems/AppearanceSystem';
 import { ITEMS } from '../../src/data/items';
 import { cssColor } from '../../src/ui/theme';
-import type { GearSlotId, WeaponShapeId } from '../../src/types/ids';
+import type { Gear } from '../../src/systems/InventorySystem';
+import type { ItemId, WeaponShapeId } from '../../src/types/ids';
 
-const BARE: Record<GearSlotId, string | null> = {
+const BARE: Gear = {
   helmet: null,
   chest: null,
   pants: null,
@@ -199,7 +200,7 @@ describe('paperdollSvg', () => {
   });
 
   it('wears the colour of every piece it is handed', () => {
-    const gear: Record<GearSlotId, string | null> = {
+    const gear: Gear = {
       helmet: 'brown-helmet',
       chest: 'brown-chestplate',
       pants: 'brown-legs',
@@ -208,8 +209,9 @@ describe('paperdollSvg', () => {
     const svg = paperdollSvg(gear);
     const painted = [...strokes(svg), ...fills(svg)];
     for (const itemId of Object.values(gear)) {
-      const item = ITEMS[itemId as string];
-      if (item?.kind !== 'equipment') throw new Error(`${itemId} is not gear`);
+      if (itemId === null) throw new Error('every slot is filled here');
+      const item = ITEMS[itemId];
+      if (item.kind !== 'equipment') throw new Error(`${itemId} is not gear`);
       expect(painted).toContain(cssColor(item.color));
     }
     // Nothing left bare: the skin only shows through where a slot is empty.
@@ -218,7 +220,7 @@ describe('paperdollSvg', () => {
 
   it('gives every weapon shape something to draw', () => {
     const bare = paperdollSvg(BARE).childElementCount;
-    const shapes: Array<[WeaponShapeId, string]> = [
+    const shapes: Array<[WeaponShapeId, ItemId]> = [
       ['sword', 'rusty-sword'],
       ['wand', 'apprentice-wand'],
       ['pole', 'fishing-pole'],

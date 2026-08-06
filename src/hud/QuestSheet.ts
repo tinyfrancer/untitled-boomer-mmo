@@ -6,6 +6,7 @@ import { formatCurrency } from '../systems/CurrencySystem';
 import { questProgress, questState, type QuestLog } from '../systems/QuestSystem';
 import { THEME } from '../ui/theme';
 import type { ClassId } from '../types/ids';
+import type { Inventory } from '../systems/InventorySystem';
 
 /**
  * The quest log: what has been taken on, how far along it is, and what it pays.
@@ -20,7 +21,7 @@ export class QuestSheet extends Sheet {
     this.classId = classId;
   }
 
-  update(log: QuestLog, inventory: Record<string, number>): void {
+  update(log: QuestLog, inventory: Inventory): void {
     this.body.replaceChildren();
 
     const taken = QUEST_ORDER.map((id) => QUESTS[id]).filter((quest) => log[quest.id]);

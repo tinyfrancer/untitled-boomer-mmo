@@ -1,5 +1,5 @@
 import { isEquippable } from '../data/items';
-import type { CombatSkillId } from '../types/ids';
+import type { CombatSkillId, ItemId } from '../types/ids';
 
 export interface Attacker {
   attackPower: number;
@@ -39,7 +39,7 @@ export function resolveAttack(attacker: Attacker, rng: () => number = Math.rando
 
 // Which weapon skill an equipped item trains. Anything in the weapon slot is
 // one-handed today; empty hands train fists.
-export function weaponSkillFor(weaponItemId: string | null): CombatSkillId {
+export function weaponSkillFor(weaponItemId: ItemId | null): CombatSkillId {
   return weaponItemId && isEquippable(weaponItemId) ? 'one-handed' : 'unarmed';
 }
 

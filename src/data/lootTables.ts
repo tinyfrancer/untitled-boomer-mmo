@@ -1,5 +1,7 @@
+import type { ItemId, LootTableId } from '../types/ids';
+
 export interface LootTableEntry {
-  itemId: string;
+  itemId: ItemId;
   chance: number;
 }
 
@@ -10,13 +12,13 @@ export interface CurrencyDrop {
 }
 
 export interface LootTable {
-  id: string;
+  id: LootTableId;
   entries: LootTableEntry[];
   // Copper carried by the creature — humanoids only; animals drop parts.
   currency?: CurrencyDrop;
 }
 
-export const LOOT_TABLES: Record<string, LootTable> = {
+export const LOOT_TABLES: Record<LootTableId, LootTable> = {
   rat: {
     id: 'rat',
     entries: [

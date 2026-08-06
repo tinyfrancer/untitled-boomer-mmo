@@ -2,6 +2,7 @@ import type {
   ArmorTypeId,
   ClassId,
   GearSlotId,
+  ItemId,
   SkillId,
   TierId,
   WeaponShapeId,
@@ -25,7 +26,7 @@ export const ARMOR_TYPE_LABELS: Record<ArmorTypeId, string> = {
 
 // What every item carries, whatever kind it is.
 interface BaseItemDefinition {
-  id: string;
+  id: ItemId;
   name: string;
   // Vendor sell price in copper; absent means the item can't be sold.
   value?: number;
@@ -70,7 +71,7 @@ interface ConsumableItemDefinition extends BaseItemDefinition {
 export type ItemDefinition =
   EquipmentItemDefinition | MaterialItemDefinition | ConsumableItemDefinition;
 
-export const ITEMS: Record<string, ItemDefinition> = {
+export const ITEMS: Record<ItemId, ItemDefinition> = {
   'rusty-sword': {
     id: 'rusty-sword',
     name: 'Rusty Sword',
@@ -278,7 +279,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
 // a new material row costs a point of capacity without having to remember to.
 export const DEFAULT_ITEM_WEIGHT = 1;
 
-export function itemWeight(itemId: string | null): number {
+export function itemWeight(itemId: ItemId | null): number {
   const item = itemId ? ITEMS[itemId] : undefined;
   return item?.weight ?? DEFAULT_ITEM_WEIGHT;
 }
@@ -288,7 +289,7 @@ export function itemWeight(itemId: string | null): number {
 export const MELEE_ATTACK_RANGE = 80;
 export const UNARMED_ATTACK_RANGE = 64;
 
-export function weaponAttackRange(itemId: string | null): number {
+export function weaponAttackRange(itemId: ItemId | null): number {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment') {
     return UNARMED_ATTACK_RANGE;
@@ -303,7 +304,7 @@ export interface EquipmentBonuses {
   attackPower: number;
 }
 
-export function getEquipmentBonuses(itemId: string | null): EquipmentBonuses {
+export function getEquipmentBonuses(itemId: ItemId | null): EquipmentBonuses {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment') {
     return { health: 0, strength: 0, intellect: 0, attackPower: 0 };
@@ -316,7 +317,7 @@ export function getEquipmentBonuses(itemId: string | null): EquipmentBonuses {
   };
 }
 
-export function describeItemBonuses(itemId: string | null): string {
+export function describeItemBonuses(itemId: ItemId | null): string {
   const food = consumableFor(itemId);
   if (food) {
     return `Restores ${food.healAmount} HP over ${Math.round(food.healDurationMs / 1000)}s`;
@@ -339,7 +340,7 @@ export function describeItemBonuses(itemId: string | null): string {
 }
 
 // The armor type this item is, if it is armor at all.
-export function armorTypeOf(itemId: string | null): ArmorTypeId | null {
+export function armorTypeOf(itemId: ItemId | null): ArmorTypeId | null {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment') {
     return null;
@@ -347,12 +348,12 @@ export function armorTypeOf(itemId: string | null): ArmorTypeId | null {
   return item.armorType ?? null;
 }
 
-export function isEquippable(itemId: string): boolean {
+export function isEquippable(itemId: ItemId): boolean {
   return ITEMS[itemId]?.kind === 'equipment';
 }
 
 // The skill this item is a gathering tool for, if any.
-export function toolSkill(itemId: string | null): SkillId | null {
+export function toolSkill(itemId: ItemId | null): SkillId | null {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment') {
     return null;
@@ -368,7 +369,7 @@ export function toolItemFor(skill: SkillId): ItemDefinition | null {
 }
 
 export function consumableFor(
-  itemId: string | null,
+  itemId: ItemId | null,
 ): { healAmount: number; healDurationMs: number } | null {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'consumable') {
@@ -378,12 +379,12 @@ export function consumableFor(
 }
 
 // Vendor sell price in copper, or null if the item can't be sold.
-export function itemValue(itemId: string | null): number | null {
+export function itemValue(itemId: ItemId | null): number | null {
   const item = itemId ? ITEMS[itemId] : undefined;
   return item?.value ?? null;
 }
 
-export function describeItemName(itemId: string | null): string {
+export function describeItemName(itemId: ItemId | null): string {
   if (!itemId) {
     return '(empty)';
   }

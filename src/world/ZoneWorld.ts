@@ -126,11 +126,14 @@ import type {
   AbilityId,
   EnemyId,
   GearSlotId,
+  ItemId,
+  LootTableId,
   NpcId,
   QuestId,
   SkillId,
   TitleId,
 } from '../types/ids';
+import { inventoryEntries } from '../systems/InventorySystem';
 
 // Far enough inside the new zone that the player doesn't stand on the return
 // exit and bounce straight back.
@@ -398,7 +401,7 @@ export class ZoneWorld {
       return null;
     }
 
-    for (const [itemId, quantity] of Object.entries(report.drops)) {
+    for (const [itemId, quantity] of inventoryEntries(report.drops)) {
       this.character.addItem(itemId, quantity);
     }
     this.character.addCurrency(report.copper);
@@ -703,7 +706,7 @@ export class ZoneWorld {
     this.shopNpc = null;
   }
 
-  handleBuyRequested(itemId: string): void {
+  handleBuyRequested(itemId: ItemId): void {
     if (!this.shopNpc) return;
     const price = shopPriceFor(itemId);
     if (price === null) return;
@@ -722,7 +725,7 @@ export class ZoneWorld {
     this.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
   }
 
-  handleSellRequested(itemId: string): void {
+  handleSellRequested(itemId: ItemId): void {
     if (!this.shopNpc) return;
     const value = itemValue(itemId);
     if (value === null || this.character.itemCount(itemId) <= 0) return;
@@ -977,7 +980,7 @@ export class ZoneWorld {
 
   // With an item selected in the bag the HUD names what to cook; without one
   // (dev console, older callers) fall back to the first cookable thing.
-  handleCookRequested(itemId?: string): void {
+  handleCookRequested(itemId?: ItemId): void {
     const recipe =
       (itemId ? recipeForInput(itemId) : null) ?? findCookableItem(this.character.state.inventory);
     if (!recipe) {
@@ -1007,7 +1010,7 @@ export class ZoneWorld {
     }
   }
 
-  handleEatRequested(itemId: string): void {
+  handleEatRequested(itemId: ItemId): void {
     if (this.character.itemCount(itemId) <= 0 || !consumableFor(itemId)) {
       return;
     }
@@ -1305,7 +1308,7 @@ export class ZoneWorld {
     }
   }
 
-  private grantLoot(lootTableId?: string): void {
+  private grantLoot(lootTableId?: LootTableId): void {
     if (!lootTableId) return;
     const { drops, copper } = rollLootTable(lootTableId);
 
@@ -1482,7 +1485,7 @@ export class ZoneWorld {
   // Gear and persistence
   // ---------------------------------------------------------------------------
 
-  handleEquipRequested(itemId: string): void {
+  handleEquipRequested(itemId: ItemId): void {
     const check = this.character.equip(itemId);
     if (!check.ok) {
       this.events.emit(NOTICE_EVENT, check.reason);
