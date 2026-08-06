@@ -1,6 +1,7 @@
 import type { ZoneEdge } from '../data/zones';
 import type { Point } from '../systems/MovementSystem';
 import type { AbilityId, ResourceNodeId, ZoneId } from '../types/ids';
+import type { UiEventMap, UiEventName } from '../ui/uiEvents';
 import type { Mob } from './Mob';
 
 /**
@@ -51,9 +52,14 @@ export type WorldEvent =
  * The HUD channel, as much of an emitter as ZoneWorld needs. `createEventBus`
  * satisfies it, and so does a bare stub in a test — which is the point:
  * nothing here knows what is on the other end.
+ *
+ * What it carries is `UiEventMap`, so both ends of every event are checked
+ * against one declaration: an emit with the wrong payload, or a listener typed
+ * for a payload the emitter does not send, is a compile error. The map is the
+ * whole of the typing — the methods stay as thin as they were.
  */
 export interface EventBus {
-  emit(event: string, ...args: unknown[]): unknown;
-  on(event: string, fn: (...args: never[]) => void, context?: unknown): unknown;
-  off(event: string, fn: (...args: never[]) => void, context?: unknown): unknown;
+  emit<K extends UiEventName>(event: K, ...args: UiEventMap[K]): unknown;
+  on<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void): unknown;
+  off<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void): unknown;
 }

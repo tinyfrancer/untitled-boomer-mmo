@@ -80,7 +80,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 2   | Docs truth pass                          | S    | —          | ☑ 2026-08-06 |
 | 3   | Dead code and Phaser residue             | M    | —          | ☑ 2026-08-06 |
 | 4   | The safety net: targeted tests           | M    | —          | ☑ 2026-08-06 |
-| 5   | Type the event channel                   | M    | —          | ☐            |
+| 5   | Type the event channel                   | M    | —          | ☑ 2026-08-06 |
 | 6   | Id unions and index safety               | L    | —          | ☐            |
 | 7   | Shared primitives and modal lifecycle    | M    | 4          | ☐            |
 | 8   | Split `hud/Hud.ts`                       | M    | 4, 5, 7    | ☐            |
@@ -268,33 +268,54 @@ by: it lays nothing out, so `Hud.test.ts` installs `clientWidth`/`clientHeight` 
 `Element.prototype` to state which side of the breakpoint it is testing, and the creation screen
 is a module singleton like the HUD and the session, so a test that boots one has to unmount it.
 
-## PR 5 — Type the event channel · `cleanup/05-typed-events` · M
+## PR 5 — Type the event channel · `cleanup/05-typed-events` · M — done, merged
 
 The keystone: highest safety gained per line touched, and it shrinks both 40-line import blocks.
 
-- [ ] Add a **`UiEventMap`** to `src/ui/uiEvents.ts` mapping each event name to its payload tuple,
+- [x] Add a **`UiEventMap`** to `src/ui/uiEvents.ts` mapping each event name to its payload tuple,
       and make `EventBus` generic over it: `emit<K extends keyof M>(event: K, ...args: M[K])`, same
       for `on`/`off`. `createEventBus` and the test stub both satisfy it unchanged.
-- [ ] **Drop the `context` parameter** from `on`/`off` (`world/worldEvents.ts:57-58`). Its own
+      **Not generic over a map parameter** — the methods are generic over the event name and the
+      map is named directly, since nothing in the tree supplies a second map and a `M` that is
+      always `UiEventMap` costs every implementation a round of casts. The map is keyed by the
+      constants themselves (`[TARGET_SELECTED_EVENT]: [target: TargetInfo]`), so the table cannot
+      drift from the names. It also found a duplicate: `SkillProgressInfo` was a structural copy
+      of `CharacterController`'s `SkillXpGain`, which is what is actually emitted, and is gone.
+- [x] **Drop the `context` parameter** from `on`/`off` (`world/worldEvents.ts:57-58`). Its own
       comment says it exists because the bus "was written against the semantics of the game
       engine's global emitter" — and **zero call sites pass one**. Deleting it also simplifies
-      `off`'s identity check in `world/eventBus.ts:43-46`.
-- [ ] **Fold positional payloads into objects** where CLAUDE.md's own rule already applies:
+      `off`'s identity check in `world/eventBus.ts:43-46`. `emit` calls its handlers now rather
+      than `apply`ing them against an undefined `this`. The two tests that covered context are
+      replaced by the rule that outlives it: the same function subscribed twice is two
+      subscriptions and takes two `off`s to drop.
+- [x] **Fold positional payloads into objects** where CLAUDE.md's own rule already applies:
       `XP_GAINED_EVENT` is a 3-arg emit (`ZoneWorld.ts:1279` / `Hud.ts:547`) and there is already a
-      `CombatXpGain` interface for it; `PLAYER_MANA_CHANGED_EVENT` is two positional args.
-- [ ] **Rename `GATHER_REFUSED_EVENT` → `NOTICE_EVENT`.** It is the de-facto generic notice
+      `CombatXpGain` interface for it; `PLAYER_MANA_CHANGED_EVENT` is two positional args, now a
+      `ManaPool`.
+- [x] **Rename `GATHER_REFUSED_EVENT` → `NOTICE_EVENT`.** It is the de-facto generic notice
       channel: 14 emit sites in `ZoneWorld`, only 3 about gathering — the rest are "You can't
       afford that", a quest turn-in failure, "You have no logs to burn", "You burn it", "You are
       already at full health", an ability check and an equip failure. `Hud.ts:645` renders them
-      all identically as a muted toast.
-- [ ] **Extract the subscription bookkeeping.** `ZoneWorld.ts:234` and `Hud.ts:97` hand-roll the
+      all identically as a muted toast. The wire value moved with the constant
+      (`'gather-refused'` → `'notice'`) and it now sits beside `COMBAT_LOG_EVENT`.
+- [x] **Extract the subscription bookkeeping.** `ZoneWorld.ts:234` and `Hud.ts:97` hand-roll the
       same `Array<[string, handler]>` + loop-and-`off` pattern, which exists purely because the bus
-      is untyped. One small typed helper, used by both.
+      is untyped. One small typed helper, used by both. `createSubscriptions` keeps the `off` call
+      itself rather than the `[event, handler]` pair, which is what makes the two halves
+      inseparable; `listen` and `clear` are plain functions so `const { listen } = ...` is safe.
 
 Commits: the map and the generic bus / drop `context` / payload objects / the rename / the helper.
 **Verify:** gates + `npm run smoke` (every HUD panel is downstream of this).
 **Done when:** `emit` with a wrong payload is a compile error. Prove it locally by breaking one on
 purpose before reverting.
+**Landed:** 77/77 smoke, unchanged. Proven by breaking two emits on purpose — a string where
+`player-hp-changed`'s number goes, and `kills-changed` with no payload — and watching `tsc` name
+both. The typing found nothing already broken, which was the expected result: it is a guard
+against the next change, not a bug hunt. One thing a future session should know before PR 6 or
+PR 8 — a stub bus in a test now has to declare `on`/`off` generically
+(`on<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void)`); the non-generic
+`(event: string, fn: (...args: never[]) => void)` those stubs used is not assignable to it, and
+the error it produces names an intersection of all 38 payload tuples reduced to `never`.
 
 ## PR 6 — Id unions and index safety · `cleanup/06-item-ids` · L
 

@@ -1,4 +1,9 @@
-import type { AbilityId, AchievementId, SkillId, TitleId } from '../types/ids';
+import type { AbilityId, AchievementId, GearSlotId, QuestId, TitleId } from '../types/ids';
+import type { KillCounts } from '../systems/AchievementSystem';
+import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
+import type { CombatLogEntry } from '../systems/CombatLogSystem';
+import type { Gear, Inventory } from '../systems/InventorySystem';
+import type { QuestLog } from '../systems/QuestSystem';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -14,7 +19,6 @@ export const SKILL_XP_GAINED_EVENT = 'skill-xp-gained';
 export const GATHER_STARTED_EVENT = 'gather-started';
 export const GATHER_PROGRESS_EVENT = 'gather-progress';
 export const GATHER_ENDED_EVENT = 'gather-ended';
-export const GATHER_REFUSED_EVENT = 'gather-refused';
 export const EAT_ITEM_REQUESTED_EVENT = 'eat-item-requested';
 export const COOK_REQUESTED_EVENT = 'cook-requested';
 export const LIGHT_FIRE_REQUESTED_EVENT = 'light-fire-requested';
@@ -40,6 +44,10 @@ export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
 // One line of combat commentary. Emitted alongside the floating text it mirrors,
 // so the two can never drift out of step.
 export const COMBAT_LOG_EVENT = 'combat-log';
+// One toast: why something the player asked for did not happen ("Your pack is
+// full", "You can't afford that"), or a small thing that did ("You burn it").
+// It was named for gathering, which is three of its fourteen callers.
+export const NOTICE_EVENT = 'notice';
 // Asked for by the options menu; the host owns the session, so it does the work.
 export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
 // AFK camping. The HUD asks for the toggle; ZoneWorld owns whether it is on,
@@ -86,13 +94,13 @@ export interface AbilityState {
   usable: boolean;
 }
 
-// Payload for SKILL_XP_GAINED_EVENT.
-export interface SkillProgressInfo {
-  skillId: SkillId;
-  level: number;
-  xp: number;
-  xpToNext: number;
-  leveledUp: boolean;
+// Payload for PLAYER_MANA_CHANGED_EVENT. The pool and its size are never
+// useful apart — whether there is a pool at all is a layout input, and the bar
+// needs both to have a width — so they travel as one value rather than as two
+// positional numbers a caller could swap.
+export interface ManaPool {
+  mana: number;
+  maxMana: number;
 }
 
 // Payload for ACHIEVEMENT_UNLOCKED_EVENT. Carries the title separately from the
@@ -106,3 +114,57 @@ export interface AchievementUnlock {
   // character had none.
   titleWorn: boolean;
 }
+
+/**
+ * What each event on the HUD channel carries, as the argument list `emit` is
+ * called with. `EventBus` is typed against this, so a payload that does not
+ * match the listener expecting it is a compile error rather than an `undefined`
+ * read one module away from the mistake.
+ *
+ * Both directions live in one table on purpose: the channel is symmetric — the
+ * world announces state and the HUD asks for things — and a request whose
+ * payload drifted from its handler fails in exactly the same silent way.
+ */
+export interface UiEventMap {
+  [TARGET_SELECTED_EVENT]: [target: TargetInfo];
+  [TARGET_CLEARED_EVENT]: [];
+  [XP_GAINED_EVENT]: [gain: CombatXpGain];
+  [LEVEL_UP_EVENT]: [level: number];
+  [PLAYER_HP_CHANGED_EVENT]: [hp: number];
+  [PLAYER_DIED_EVENT]: [];
+  [GEAR_CHANGED_EVENT]: [gear: Gear];
+  [INVENTORY_CHANGED_EVENT]: [inventory: Inventory];
+  [EQUIP_ITEM_REQUESTED_EVENT]: [itemId: string];
+  [UNEQUIP_SLOT_REQUESTED_EVENT]: [slot: GearSlotId];
+  [SKILL_XP_GAINED_EVENT]: [gain: SkillXpGain];
+  [GATHER_STARTED_EVENT]: [label: string];
+  [GATHER_PROGRESS_EVENT]: [progress: number];
+  [GATHER_ENDED_EVENT]: [];
+  [EAT_ITEM_REQUESTED_EVENT]: [itemId: string];
+  [COOK_REQUESTED_EVENT]: [itemId: string];
+  [LIGHT_FIRE_REQUESTED_EVENT]: [];
+  [ACTIONS_CHANGED_EVENT]: [actions: AvailableActions];
+  [SHOP_OPENED_EVENT]: [];
+  [SHOP_CLOSED_EVENT]: [];
+  [BUY_ITEM_REQUESTED_EVENT]: [itemId: string];
+  [SELL_ITEM_REQUESTED_EVENT]: [itemId: string];
+  [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
+  [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
+  [TURN_IN_QUEST_REQUESTED_EVENT]: [questId: QuestId];
+  [QUEST_LOG_CHANGED_EVENT]: [quests: QuestLog];
+  [ABILITY_REQUESTED_EVENT]: [abilityId: AbilityId];
+  [ABILITY_STATE_CHANGED_EVENT]: [states: AbilityState[]];
+  [PLAYER_MANA_CHANGED_EVENT]: [pool: ManaPool];
+  [COMBAT_LOG_EVENT]: [entry: CombatLogEntry];
+  [NOTICE_EVENT]: [message: string];
+  [RESET_CHARACTER_REQUESTED_EVENT]: [];
+  [AFK_TOGGLE_REQUESTED_EVENT]: [];
+  [AFK_STATE_CHANGED_EVENT]: [active: boolean];
+  [KILLS_CHANGED_EVENT]: [kills: KillCounts];
+  [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
+  [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
+  [TITLE_CHANGED_EVENT]: [titleId: TitleId | null];
+}
+
+/** Every event name on the channel, which is what `EventBus` keys on. */
+export type UiEventName = keyof UiEventMap;

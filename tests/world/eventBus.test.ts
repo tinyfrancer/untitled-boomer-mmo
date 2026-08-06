@@ -9,10 +9,11 @@ describe('createEventBus', () => {
     bus.on('xp-gained', first);
     bus.on('xp-gained', second);
 
-    bus.emit('xp-gained', 12, { source: 'kill' });
+    const gain = { level: 2, xp: 30, xpToNext: 100, leveledUp: true };
+    bus.emit('xp-gained', gain);
 
-    expect(first).toHaveBeenCalledWith(12, { source: 'kill' });
-    expect(second).toHaveBeenCalledWith(12, { source: 'kill' });
+    expect(first).toHaveBeenCalledWith(gain);
+    expect(second).toHaveBeenCalledWith(gain);
   });
 
   it('ignores events nobody is listening for', () => {
@@ -20,39 +21,19 @@ describe('createEventBus', () => {
     expect(() => bus.emit('level-up', 2)).not.toThrow();
   });
 
-  it('calls a listener with the context it subscribed with', () => {
+  // A listener is identified by its function alone, so the same function
+  // subscribed twice is two subscriptions and takes two `off`s to drop — which
+  // is what the subscribe-and-unsubscribe pairs in the world and the HUD are.
+  it('drops one subscription per off, when the same function subscribed twice', () => {
     const bus = createEventBus();
-    const holder = {
-      seen: 0,
-      handle(this: { seen: number }, value: number): void {
-        this.seen = value;
-      },
-    };
-    bus.on('level-up', holder.handle, holder);
+    const handle = vi.fn();
+    bus.on('target-cleared', handle);
+    bus.on('target-cleared', handle);
 
-    bus.emit('level-up', 3);
+    bus.off('target-cleared', handle);
+    bus.emit('target-cleared');
 
-    expect(holder.seen).toBe(3);
-  });
-
-  // The shape every subscription in a scene uses. Matching on the function
-  // alone would unsubscribe one object's handler when another object dropped
-  // its own — which is a HUD that silently stops updating.
-  it('tells two subscriptions of the same function apart by their context', () => {
-    const bus = createEventBus();
-    const seen: string[] = [];
-    function handle(this: { name: string }): void {
-      seen.push(this.name);
-    }
-    const a = { name: 'a' };
-    const b = { name: 'b' };
-    bus.on('target-selected', handle, a);
-    bus.on('target-selected', handle, b);
-
-    bus.off('target-selected', handle, a);
-    bus.emit('target-selected');
-
-    expect(seen).toEqual(['b']);
+    expect(handle).toHaveBeenCalledTimes(1);
   });
 
   it('stops calling a listener that has been removed', () => {
@@ -61,7 +42,7 @@ describe('createEventBus', () => {
     bus.on('inventory-changed', listener);
     bus.off('inventory-changed', listener);
 
-    bus.emit('inventory-changed');
+    bus.emit('inventory-changed', {});
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -83,9 +64,9 @@ describe('createEventBus', () => {
   it('does not deliver an event to a listener added while it is being delivered', () => {
     const bus = createEventBus();
     const late = vi.fn();
-    bus.on('gear-changed', () => bus.on('gear-changed', late));
+    bus.on('gather-ended', () => bus.on('gather-ended', late));
 
-    bus.emit('gear-changed');
+    bus.emit('gather-ended');
 
     expect(late).not.toHaveBeenCalled();
   });
