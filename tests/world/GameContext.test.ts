@@ -9,7 +9,12 @@ import {
 } from '../../src/world/GameContext';
 import type { EventBus } from '../../src/world/worldEvents';
 import { createNewCharacter, saveService, type CharacterState } from '../../src/persistence';
-import { AFK_STATE_CHANGED_EVENT, AFK_TOGGLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
+import {
+  AFK_STATE_CHANGED_EVENT,
+  AFK_TOGGLE_REQUESTED_EVENT,
+  type UiEventMap,
+  type UiEventName,
+} from '../../src/ui/uiEvents';
 import { zoneWorldSize } from '../../src/systems/ZoneSystem';
 
 /**
@@ -30,12 +35,12 @@ function countingBus(): EventBus & { handlerCount(): number; emitted: string[] }
       // mutate the list being walked.
       [...(handlers.get(event) ?? [])].forEach((fn) => fn(...args));
     },
-    on(event: string, fn: (...args: never[]) => void) {
+    on<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void) {
       const list = handlers.get(event) ?? [];
       list.push(fn as (...args: unknown[]) => void);
       handlers.set(event, list);
     },
-    off(event: string, fn: (...args: never[]) => void) {
+    off<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void) {
       const list = handlers.get(event) ?? [];
       const at = list.indexOf(fn as (...args: unknown[]) => void);
       if (at >= 0) list.splice(at, 1);

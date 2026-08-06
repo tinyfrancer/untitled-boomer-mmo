@@ -71,11 +71,9 @@ import {
   TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
-  type AbilityState,
-  type AchievementUnlock,
   type AvailableActions,
-  type SkillProgressInfo,
-  type TargetInfo,
+  type UiEventMap,
+  type UiEventName,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
@@ -94,7 +92,8 @@ export interface HudOptions {
   notifications?: PendingNotification[];
 }
 
-type Subscription = [event: string, handler: (...args: never[]) => void];
+/** What drops one subscription, so the pair it was made from stays typed. */
+type Unsubscribe = () => void;
 
 // Everything the HUD renders, in one object. Kept whole rather than scattered
 // across the pieces that draw it, so a layout change or a reopened sheet can
@@ -134,7 +133,7 @@ interface HudModel {
 class Hud {
   private readonly root: HTMLElement;
   private readonly events: EventBus;
-  private readonly subscriptions: Subscription[] = [];
+  private readonly subscriptions: Unsubscribe[] = [];
   private readonly classId: CharacterState['classId'];
 
   private readonly targetFrame = new TargetFrame();
@@ -266,8 +265,8 @@ class Hud {
   }
 
   destroy(): void {
-    for (const [event, handler] of this.subscriptions) {
-      this.events.off(event, handler);
+    for (const unsubscribe of this.subscriptions) {
+      unsubscribe();
     }
     this.subscriptions.length = 0;
     this.resizeObserver?.disconnect();
@@ -532,28 +531,28 @@ class Hud {
   // Listening
   // ---------------------------------------------------------------------------
 
-  private listen(event: string, handler: (...args: never[]) => void): void {
+  private listen<K extends UiEventName>(event: K, handler: (...args: UiEventMap[K]) => void): void {
     this.events.on(event, handler);
-    this.subscriptions.push([event, handler]);
+    this.subscriptions.push(() => this.events.off(event, handler));
   }
 
   private subscribe(): void {
-    this.listen(TARGET_SELECTED_EVENT, (target: TargetInfo) => this.targetFrame.show(target));
+    this.listen(TARGET_SELECTED_EVENT, (target) => this.targetFrame.show(target));
     this.listen(TARGET_CLEARED_EVENT, () => this.targetFrame.hide());
 
-    this.listen(XP_GAINED_EVENT, (level: number, xp: number, xpToNext: number) => {
+    this.listen(XP_GAINED_EVENT, (level, xp, xpToNext) => {
       this.model.level = level;
       this.model.xp = xp;
       this.playerColumn.setXp(level, xp, xpToNext);
     });
-    this.listen(LEVEL_UP_EVENT, (level: number) => {
+    this.listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
       this.refreshCharacterSheet();
       // A level buys strength, which buys capacity.
       this.refreshEncumbrance();
       this.toast.show(`Level Up! Level ${level}`, THEME.color.levelUp);
     });
-    this.listen(PLAYER_HP_CHANGED_EVENT, (hp: number) => {
+    this.listen(PLAYER_HP_CHANGED_EVENT, (hp) => {
       this.model.hp = hp;
       this.refreshCharacterSheet();
     });
@@ -561,7 +560,7 @@ class Hud {
       this.toast.show('You have died.', THEME.color.playerDamage),
     );
 
-    this.listen(SKILL_XP_GAINED_EVENT, (progress: SkillProgressInfo) => {
+    this.listen(SKILL_XP_GAINED_EVENT, (progress) => {
       this.model.skills = {
         ...this.model.skills,
         [progress.skillId]: { level: progress.level, xp: progress.xp },
@@ -574,15 +573,15 @@ class Hud {
         );
       }
     });
-    this.listen(ACHIEVEMENT_UNLOCKED_EVENT, (unlock: AchievementUnlock) =>
+    this.listen(ACHIEVEMENT_UNLOCKED_EVENT, (unlock) =>
       this.toast.show(`Achievement: ${unlock.name}`, THEME.color.skillUp),
     );
-    this.listen(KILLS_CHANGED_EVENT, (kills: KillCounts) => {
+    this.listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;
       this.featsSheet.update(kills, this.model.activeTitleId);
     });
 
-    this.listen(PLAYER_MANA_CHANGED_EVENT, (mana: number, maxMana: number) => {
+    this.listen(PLAYER_MANA_CHANGED_EVENT, (mana, maxMana) => {
       const gainedPool = maxMana > 0 !== this.model.maxMana > 0;
       this.model.mana = mana;
       this.model.maxMana = maxMana;
@@ -593,17 +592,15 @@ class Hud {
         this.applyLayout();
       }
     });
-    this.listen(ABILITY_STATE_CHANGED_EVENT, (states: AbilityState[]) =>
-      this.actionBar.update(states),
-    );
+    this.listen(ABILITY_STATE_CHANGED_EVENT, (states) => this.actionBar.update(states));
 
-    this.listen(GEAR_CHANGED_EVENT, (gear: Record<GearSlotId, string | null>) => {
+    this.listen(GEAR_CHANGED_EVENT, (gear) => {
       this.model.gear = gear;
       this.slotPicker?.close();
       this.refreshCharacterSheet();
       this.refreshEncumbrance();
     });
-    this.listen(INVENTORY_CHANGED_EVENT, (inventory: Record<string, number>) => {
+    this.listen(INVENTORY_CHANGED_EVENT, (inventory) => {
       this.model.inventory = inventory;
       this.inventorySheet.update(inventory);
       this.refreshEncumbrance();
@@ -612,12 +609,12 @@ class Hud {
       this.tracker.update(this.model.quests, inventory);
       this.questSheet.update(this.model.quests, inventory);
     });
-    this.listen(CURRENCY_CHANGED_EVENT, (totalCopper: number) => {
+    this.listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
       this.model.currency = totalCopper;
       this.inventorySheet.setCurrency(totalCopper);
       this.shopModal?.update(this.shopState());
     });
-    this.listen(ACTIONS_CHANGED_EVENT, (actions: AvailableActions) => {
+    this.listen(ACTIONS_CHANGED_EVENT, (actions) => {
       this.model.actions = actions;
       // Fire proximity changes which buttons a selected item shows.
       this.inventorySheet.refreshActions();
@@ -636,24 +633,22 @@ class Hud {
       this.inventorySheet.refreshActions();
     });
 
-    this.listen(GATHER_STARTED_EVENT, (label: string) => this.gatherBar.show(label));
-    this.listen(GATHER_PROGRESS_EVENT, (progress: number) => this.gatherBar.setProgress(progress));
+    this.listen(GATHER_STARTED_EVENT, (label) => this.gatherBar.show(label));
+    this.listen(GATHER_PROGRESS_EVENT, (progress) => this.gatherBar.setProgress(progress));
     this.listen(GATHER_ENDED_EVENT, () => this.gatherBar.hide());
-    this.listen(GATHER_REFUSED_EVENT, (reason: string) =>
-      this.toast.show(reason, THEME.color.muted),
-    );
+    this.listen(GATHER_REFUSED_EVENT, (reason) => this.toast.show(reason, THEME.color.muted));
 
-    this.listen(AFK_STATE_CHANGED_EVENT, (active: boolean) => {
+    this.listen(AFK_STATE_CHANGED_EVENT, (active) => {
       this.tabBar.setCamping(active);
       this.toast.show(active ? 'Camping (Z)' : 'Camp ended', THEME.color.skillUp);
     });
 
-    this.listen(COMBAT_LOG_EVENT, (entry: CombatLogEntry) => {
+    this.listen(COMBAT_LOG_EVENT, (entry) => {
       this.model.combatLog = appendLogEntry(this.model.combatLog, entry);
       this.combatLogSheet.update(this.model.combatLog);
     });
 
-    this.listen(QUEST_LOG_CHANGED_EVENT, (quests: QuestLog) => {
+    this.listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
       this.model.quests = quests;
       this.tracker.update(quests, this.model.inventory);
       this.questSheet.update(quests, this.model.inventory);
@@ -662,7 +657,7 @@ class Hud {
       // stacked above it.
       this.applyLayout();
     });
-    this.listen(TITLE_CHANGED_EVENT, (titleId: TitleId | null) => {
+    this.listen(TITLE_CHANGED_EVENT, (titleId) => {
       this.model.activeTitleId = titleId;
       this.playerColumn.setTitle(titleId);
       this.featsSheet.update(this.model.kills, titleId);

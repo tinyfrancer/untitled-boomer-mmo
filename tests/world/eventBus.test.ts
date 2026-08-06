@@ -9,10 +9,10 @@ describe('createEventBus', () => {
     bus.on('xp-gained', first);
     bus.on('xp-gained', second);
 
-    bus.emit('xp-gained', 12, { source: 'kill' });
+    bus.emit('xp-gained', 2, 30, 100);
 
-    expect(first).toHaveBeenCalledWith(12, { source: 'kill' });
-    expect(second).toHaveBeenCalledWith(12, { source: 'kill' });
+    expect(first).toHaveBeenCalledWith(2, 30, 100);
+    expect(second).toHaveBeenCalledWith(2, 30, 100);
   });
 
   it('ignores events nobody is listening for', () => {
@@ -46,11 +46,11 @@ describe('createEventBus', () => {
     }
     const a = { name: 'a' };
     const b = { name: 'b' };
-    bus.on('target-selected', handle, a);
-    bus.on('target-selected', handle, b);
+    bus.on('target-cleared', handle, a);
+    bus.on('target-cleared', handle, b);
 
-    bus.off('target-selected', handle, a);
-    bus.emit('target-selected');
+    bus.off('target-cleared', handle, a);
+    bus.emit('target-cleared');
 
     expect(seen).toEqual(['b']);
   });
@@ -61,7 +61,7 @@ describe('createEventBus', () => {
     bus.on('inventory-changed', listener);
     bus.off('inventory-changed', listener);
 
-    bus.emit('inventory-changed');
+    bus.emit('inventory-changed', {});
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -83,9 +83,9 @@ describe('createEventBus', () => {
   it('does not deliver an event to a listener added while it is being delivered', () => {
     const bus = createEventBus();
     const late = vi.fn();
-    bus.on('gear-changed', () => bus.on('gear-changed', late));
+    bus.on('gather-ended', () => bus.on('gather-ended', late));
 
-    bus.emit('gear-changed');
+    bus.emit('gather-ended');
 
     expect(late).not.toHaveBeenCalled();
   });

@@ -1,6 +1,8 @@
+import type { UiEventMap, UiEventName } from '../ui/uiEvents';
 import type { EventBus } from './worldEvents';
 
-type Listener = { fn: (...args: never[]) => void; context?: unknown };
+type Handler = (...args: never[]) => void;
+type Listener = { fn: Handler; context?: unknown };
 
 /**
  * The HUD channel, with no engine underneath it.
@@ -17,7 +19,7 @@ export function createEventBus(): EventBus {
   const listeners = new Map<string, Listener[]>();
 
   return {
-    emit(event, ...args) {
+    emit(event: string, ...args: unknown[]) {
       // A copy, so a handler that unsubscribes itself — or emits — cannot
       // reshape the list being walked.
       const current = listeners.get(event)?.slice();
@@ -27,21 +29,21 @@ export function createEventBus(): EventBus {
       return current !== undefined && current.length > 0;
     },
 
-    on(event, fn, context) {
+    on<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void, context?: unknown) {
       const existing = listeners.get(event);
       if (existing) {
-        existing.push({ fn, context });
+        existing.push({ fn: fn as Handler, context });
       } else {
-        listeners.set(event, [{ fn, context }]);
+        listeners.set(event, [{ fn: fn as Handler, context }]);
       }
       return this;
     },
 
-    off(event, fn, context) {
+    off<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void, context?: unknown) {
       const existing = listeners.get(event);
       if (!existing) return this;
       const index = existing.findIndex(
-        (listener) => listener.fn === fn && listener.context === context,
+        (listener) => listener.fn === (fn as Handler) && listener.context === context,
       );
       if (index >= 0) {
         existing.splice(index, 1);

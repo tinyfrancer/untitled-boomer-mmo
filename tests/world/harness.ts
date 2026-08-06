@@ -5,6 +5,7 @@ import { InputState } from '../../src/systems/InputState';
 import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { ZONES } from '../../src/data/zones';
 import type { ClassId, ZoneId } from '../../src/types/ids';
+import type { UiEventMap, UiEventName } from '../../src/ui/uiEvents';
 import type { EventBus, WorldEvent } from '../../src/world/worldEvents';
 
 /**
@@ -22,22 +23,24 @@ export interface Emitted {
   args: unknown[];
 }
 
+type Handler = (...args: unknown[]) => void;
+
 /** An EventBus that records what went out and still delivers it. */
 export function recordingBus(emitted: Emitted[]): EventBus {
-  const handlers = new Map<string, Array<(...args: unknown[]) => void>>();
+  const handlers = new Map<string, Handler[]>();
   return {
     emit(event: string, ...args: unknown[]) {
       emitted.push({ event, args });
       [...(handlers.get(event) ?? [])].forEach((fn) => fn(...args));
     },
-    on(event: string, fn: (...args: never[]) => void) {
+    on<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void) {
       const list = handlers.get(event) ?? [];
-      list.push(fn as (...args: unknown[]) => void);
+      list.push(fn as Handler);
       handlers.set(event, list);
     },
-    off(event: string, fn: (...args: never[]) => void) {
+    off<K extends UiEventName>(event: K, fn: (...args: UiEventMap[K]) => void) {
       const list = handlers.get(event) ?? [];
-      const at = list.indexOf(fn as (...args: unknown[]) => void);
+      const at = list.indexOf(fn as Handler);
       if (at >= 0) list.splice(at, 1);
     },
   };

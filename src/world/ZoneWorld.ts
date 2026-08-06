@@ -43,6 +43,8 @@ import {
   XP_GAINED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
   type AchievementUnlock,
+  type UiEventMap,
+  type UiEventName,
 } from '../ui/uiEvents';
 import { titleName } from '../systems/AchievementSystem';
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
@@ -231,7 +233,7 @@ export class ZoneWorld {
 
   private readonly events: EventBus;
   private readonly input: InputState;
-  private readonly subscriptions: Array<[string, (...args: never[]) => void]> = [];
+  private readonly subscriptions: Array<() => void> = [];
   private pending: WorldEvent[] = [];
   // The world's own clock, and it starts at zero — which is why "never swung"
   // is marked with -Infinity below rather than with 0.
@@ -352,9 +354,12 @@ export class ZoneWorld {
   // ---------------------------------------------------------------------------
 
   private subscribe(): void {
-    const listen = (event: string, handler: (...args: never[]) => void): void => {
-      this.subscriptions.push([event, handler]);
+    const listen = <K extends UiEventName>(
+      event: K,
+      handler: (...args: UiEventMap[K]) => void,
+    ): void => {
       this.events.on(event, handler);
+      this.subscriptions.push(() => this.events.off(event, handler));
     };
     listen(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested.bind(this));
     listen(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested.bind(this));
@@ -373,7 +378,7 @@ export class ZoneWorld {
 
   /** Drops every subscription. The host calls this before building the next world. */
   destroy(): void {
-    this.subscriptions.forEach(([event, handler]) => this.events.off(event, handler));
+    this.subscriptions.forEach((unsubscribe) => unsubscribe());
     this.subscriptions.length = 0;
   }
 
