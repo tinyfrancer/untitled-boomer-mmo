@@ -1,17 +1,32 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { rollLootTable } from '../../src/systems/LootSystem';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 
+/**
+ * An rng that makes exactly these entries hit, whatever else the table holds.
+ *
+ * Built from the table rather than written out as a list of numbers: the
+ * literal it replaced was positionally coupled to the exact order and length of
+ * the bandit table, so adding a row to it failed this file opaquely.
+ */
+function rngHitting(tableId: string, hits: string[]): () => number {
+  const table = LOOT_TABLES[tableId];
+  const answers = table.entries.map((entry) =>
+    hits.includes(entry.itemId) ? entry.chance / 2 : 1,
+  );
+  if (table.currency) {
+    answers.push(1);
+  }
+  let call = 0;
+  return () => answers[call++];
+}
+
 describe('rollLootTable', () => {
   it('rolls every entry independently and includes only the ones whose roll beats their chance', () => {
-    // one roll per bandit table entry, in order: cooked fish (0.15) hit,
-    // chestplate (0.06) miss, helmet (0.06) hit, then a miss for every
-    // remaining piece, and finally the currency chance roll
-    const rolls = [0.1, 0.9, 0.01, 0.9, 0.9, 0.9, 0.9, 0.9];
-    let call = 0;
-    const rng = () => rolls[call++];
-
-    const { drops } = rollLootTable('bandit', rng);
+    const { drops } = rollLootTable(
+      'bandit',
+      rngHitting('bandit', ['cooked-fish', 'brown-helmet']),
+    );
 
     expect(drops).toEqual([
       { itemId: 'cooked-fish', quantity: 1 },
@@ -55,8 +70,18 @@ describe('rollLootTable', () => {
     }
   });
 
-  it('uses Math.random by default', () => {
-    const result = rollLootTable('rat');
-    expect(Array.isArray(result.drops)).toBe(true);
+  it('rolls with Math.random when it is handed no rng', () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      // The rat table has no currency entry, so it is one roll per item and
+      // a zero hits every one of them.
+      expect(rollLootTable('rat').drops).toEqual([
+        { itemId: 'rat-bones', quantity: 1 },
+        { itemId: 'rat-meat', quantity: 1 },
+      ]);
+      expect(random).toHaveBeenCalledTimes(LOOT_TABLES['rat'].entries.length);
+    } finally {
+      random.mockRestore();
+    }
   });
 });
