@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness, nodeNamed } from './harness';
-import type { EventBus } from '../../src/world/worldEvents';
 import { ZONES } from '../../src/data/zones';
 import { PLAYER_DIED_EVENT } from '../../src/ui/uiEvents';
 
@@ -166,14 +165,14 @@ describe('ZoneWorld', () => {
   });
 
   it('drops every subscription on destroy', () => {
-    const { world, emitted } = harness();
+    const { world, emitted, bus } = harness();
     world.destroy();
 
     // The bus is shared with the HUD and survives a zone change; a world that
     // stayed subscribed would keep buying things after it was torn down.
     world.character.addCurrency(1000);
     emitted.length = 0;
-    (world as unknown as { events: EventBus }).events.emit('buy-item-requested', 'felling-axe');
+    bus.emit('buy-item-requested', 'felling-axe');
     expect(emitted.filter((e) => e.event !== 'buy-item-requested')).toEqual([]);
   });
 });

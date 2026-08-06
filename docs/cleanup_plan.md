@@ -79,7 +79,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 1   | Tooling and CI gates                     | M    | —          | ☑ 2026-08-06 |
 | 2   | Docs truth pass                          | S    | —          | ☑ 2026-08-06 |
 | 3   | Dead code and Phaser residue             | M    | —          | ☑ 2026-08-06 |
-| 4   | The safety net: targeted tests           | M    | —          | ☐            |
+| 4   | The safety net: targeted tests           | M    | —          | ☑ 2026-08-06 |
 | 5   | Type the event channel                   | M    | —          | ☐            |
 | 6   | Id unions and index safety               | L    | —          | ☐            |
 | 7   | Shared primitives and modal lifecycle    | M    | 4          | ☐            |
@@ -215,40 +215,58 @@ names the comment in `MovementSystem` it contradicts, and PR 10 deletes both. Th
 `2D` hits are all about the **simulation** being two-dimensional or about an HTML 2D canvas
 context, not about the old renderer.
 
-## PR 4 — The safety net: targeted tests · `cleanup/04-hud-tests` · M
+## PR 4 — The safety net: targeted tests · `cleanup/04-hud-tests` · M — done, merged
 
 Lands before anything that moves code. jsdom is already the vitest environment and
 `tests/world/harness.ts` already has `recordingBus`, so this needs no new infrastructure.
 
 New `tests/hud/`:
 
-- [ ] **`paperdoll.test.ts`** — the highest-value gap. CLAUDE.md claims the SVG paperdoll and
+- [x] **`paperdoll.test.ts`** — the highest-value gap. CLAUDE.md claims the SVG paperdoll and
       `render3d/figure.ts` are built from the same `AppearanceSystem.stickFigure` rig so "a
       shoulder is in the same place in either". The rig is tested and the 3D consumer is tested;
-      **the agreement itself is asserted nowhere.**
-- [ ] **`Hud.test.ts`** — the one-sheet-open invariant (`Hud` holds a single `openSheet`, asserted
+      **the agreement itself is asserted nowhere.** Both sets of landmarks are now read back off
+      what was _drawn_ — the SVG's strokes, the meshes' geometries — rather than off the rig, so a
+      consumer that stopped using it fails instead of agreeing with itself. Proven by hardcoding
+      the paperdoll's shoulder line and watching two cases go red.
+- [x] **`Hud.test.ts`** — the one-sheet-open invariant (`Hud` holds a single `openSheet`, asserted
       today only in smoke), the derived encumbrance/shop refreshes, and that `destroy()` closes
       every overlay. **It does not**: `Hud.destroy()` (`hud/Hud.ts:270-282`) closes options,
       slotPicker and awayReport and silently omits `shopModal` — because `ShopModal` is the one
       modal with no `close()`, so `Hud` reaches in with `this.shopModal?.root.remove()` instead.
       Write the assertion, **watch it go red, and leave it red-documented** — PR 7 fixes it. (If
       leaving a failing test is unacceptable, `it.fails()` it with a pointer to PR 7.)
-- [ ] **`bootFlow.test.ts`** — 54 lines, zero tests, and the module CLAUDE.md singles out as the
-      seam proof. A pure function over a two-method interface that decides resume-vs-create.
+      **The DOM assertion came out green**, and PR 7 should know why: all four overlays are
+      appended to the HUD's own root, so `this.root.remove()` takes the shop with it whether or not
+      `destroy()` names it. The omission is real but invisible from the DOM, so what is asserted
+      instead is the missing lifecycle itself — `'close' in shop`, `it.fails`, which flips to a
+      failure the moment PR 7 adds one.
+- [x] **`bootFlow.test.ts`** — 54 lines, zero tests, and the module CLAUDE.md singles out as the
+      seam proof. A pure function over a two-method interface that decides resume-vs-create. Drives
+      the real creation screen (type a name, pick a class, press Begin) against a `GameHost` that
+      is a bus and a `vi.fn()`, which is the whole of what a renderer owes the boot.
 
 Three fixes to existing tests:
 
-- [ ] `tests/systems/LootSystem.test.ts:57` — `'uses Math.random by default'` is nondeterministic
+- [x] `tests/systems/LootSystem.test.ts:57` — `'uses Math.random by default'` is nondeterministic
       _and_ vacuous: `expect(Array.isArray(result.drops)).toBe(true)` passes for any
-      implementation that ignores the rng entirely. Delete it or make it real.
-- [ ] `tests/systems/LootSystem.test.ts:10` — `const rolls = [0.1, 0.9, 0.01, …]` is positionally
+      implementation that ignores the rng entirely. Now spies on `Math.random`, pins it to 0 and
+      asserts the drops and the call count.
+- [x] `tests/systems/LootSystem.test.ts:10` — `const rolls = [0.1, 0.9, 0.01, …]` is positionally
       coupled to the exact order and length of the bandit loot table. Adding a row fails it
-      opaquely.
-- [ ] `tests/world/ZoneWorld.test.ts:176` casts through `unknown` to reach a private field. The
+      opaquely. Replaced by an `rngHitting(tableId, itemIds)` built _from_ the table.
+- [x] `tests/world/ZoneWorld.test.ts:176` casts through `unknown` to reach a private field. The
       harness already exposes `bus`, and `tests/world/shop.test.ts` uses it that way.
 
 **Verify:** gates. Coverage (if PR 1 landed) should show `src/hud/` non-zero for the first time.
 **Done when:** `tests/hud/` exists and `bootFlow.ts` has a test.
+**Landed:** 45 new cases in `tests/hud/`, one of them an `it.fails` held for PR 7. `src/hud/` went
+from **0% to 80.1%** statements and the project from 67.6% to **87.3%**; `bootFlow.ts`,
+`paperdoll.ts`, `dom.ts` and `styles.ts` are at 100% on every metric, which is why the text
+reporter stops listing them. Two things jsdom forces and a future session should not be surprised
+by: it lays nothing out, so `Hud.test.ts` installs `clientWidth`/`clientHeight` on
+`Element.prototype` to state which side of the breakpoint it is testing, and the creation screen
+is a module singleton like the HUD and the session, so a test that boots one has to unmount it.
 
 ## PR 5 — Type the event channel · `cleanup/05-typed-events` · M
 
