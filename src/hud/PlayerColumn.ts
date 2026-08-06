@@ -1,4 +1,5 @@
-import { el, place } from './dom';
+import { el, fillPercent, place } from './dom';
+import { barFill } from '../systems/math';
 import { titleName } from '../systems/AchievementSystem';
 import { formatXpProgress } from '../systems/LevelingSystem';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
@@ -61,8 +62,9 @@ export class PlayerColumn {
   setXp(level: number, xp: number, xpToNext: number): void {
     this.levelLine.textContent =
       level >= MAX_CHARACTER_LEVEL ? `Level ${level} (Max)` : `Level ${level}`;
-    const ratio = xpToNext > 0 ? Math.min(Math.max(xp / xpToNext, 0), 1) : 1;
-    this.xpFill.style.width = `${ratio * 100}%`;
+    // At the level cap there is no next level to fill toward, and a full bar is
+    // what that reads as.
+    this.xpFill.style.width = fillPercent(xpToNext > 0 ? barFill(xp, xpToNext) : 1);
     this.xpText.textContent = formatXpProgress(xp, xpToNext);
   }
 
@@ -72,7 +74,7 @@ export class PlayerColumn {
     if (maxMana <= 0) {
       return;
     }
-    this.manaFill.style.width = `${Math.min(Math.max(mana / maxMana, 0), 1) * 100}%`;
+    this.manaFill.style.width = fillPercent(barFill(mana, maxMana));
     this.manaText.textContent = `${mana} / ${maxMana} mana`;
   }
 }

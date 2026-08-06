@@ -1,4 +1,4 @@
-import { el, place } from './dom';
+import { el, fillPercent, place } from './dom';
 import { abilitiesFor } from '../systems/AbilitySystem';
 import type { Rect } from '../ui/layout';
 import type { AbilityState } from '../ui/uiEvents';
@@ -53,7 +53,7 @@ export class ActionBar {
     for (const state of states) {
       const entry = this.buttons.get(state.abilityId);
       if (!entry) continue;
-      entry.sweep.style.height = `${state.cooldownRemaining * 100}%`;
+      entry.sweep.style.height = fillPercent(state.cooldownRemaining);
       // Dim the whole button when it can't be pressed, whatever the reason.
       entry.button.disabled = !state.usable;
     }

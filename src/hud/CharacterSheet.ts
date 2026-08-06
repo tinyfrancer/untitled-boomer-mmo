@@ -1,5 +1,6 @@
 import { Sheet } from './Sheet';
-import { el } from './dom';
+import { el, fillPercent } from './dom';
+import { barFill } from '../systems/math';
 import { paperdollSvg } from './paperdoll';
 import { describeItemBonuses, describeItemName } from '../data/items';
 import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
@@ -148,8 +149,8 @@ export class CharacterSheet extends Sheet {
       const xpToNext = skillXpToNextLevel(skillId, skill.level, state.level);
       row.value.textContent =
         xpToNext > 0 ? `${skill.xp}/${xpToNext} · Lv ${skill.level}` : `Lv ${skill.level} (Max)`;
-      const ratio = xpToNext > 0 ? Math.min(Math.max(skill.xp / xpToNext, 0), 1) : 1;
-      row.fill.style.width = `${ratio * 100}%`;
+      // A capped skill has no next level to fill toward, and reads as full.
+      row.fill.style.width = fillPercent(xpToNext > 0 ? barFill(skill.xp, xpToNext) : 1);
     }
   }
 

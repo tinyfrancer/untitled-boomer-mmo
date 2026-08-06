@@ -1,3 +1,4 @@
+import { clamp } from '../systems/math';
 import type { Rect } from '../ui/layout';
 
 /**
@@ -35,6 +36,11 @@ export function place(node: HTMLElement, rect: Rect, sized?: 'width' | 'box'): v
   if (sized === 'box') {
     node.style.height = `${rect.height}px`;
   }
+}
+
+/** A 0-1 ratio as the CSS length a bar's fill is drawn at. */
+export function fillPercent(ratio: number): string {
+  return `${clamp(ratio, 0, 1) * 100}%`;
 }
 
 /**

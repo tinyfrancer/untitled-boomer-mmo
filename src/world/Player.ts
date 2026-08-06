@@ -3,6 +3,7 @@ import { OUT_OF_COMBAT_DELAY_MS, manaRegenTick, regenTick } from '../systems/Reg
 import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/AbilitySystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
+import { clamp } from '../systems/math';
 import { stepToward, type Point } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import { PLAYER_HALF_EXTENT } from '../config/constants';
@@ -16,10 +17,6 @@ const NO_GEAR: Gear = {
   pants: null,
   weapon: null,
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
 
 /**
  * The player, as simulation only: position, velocity, stats, pools and buffs.

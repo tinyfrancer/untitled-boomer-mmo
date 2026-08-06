@@ -1,6 +1,7 @@
 import { TILE_SIZE } from '../config/constants';
 import type { ZoneDefinition, ZoneExit } from '../data/zones';
 import type { ZoneEdge } from '../types/ids';
+import { clamp } from './math';
 import type { Point } from './MovementSystem';
 
 /**
@@ -99,8 +100,7 @@ export function edgeFraction(
   worldHeight: number,
 ): number {
   const along = EDGE_TABLE[edge].across === 'x' ? y : x;
-  const fraction = along / alongSize(edge, worldWidth, worldHeight);
-  return Math.min(Math.max(fraction, 0), 1);
+  return clamp(along / alongSize(edge, worldWidth, worldHeight), 0, 1);
 }
 
 /** A zone's map measured in pixels rather than tiles. */
@@ -123,9 +123,9 @@ export function resumePoint(
   worldHeight: number,
   inset: number,
 ): Point {
-  const clamp = (value: number, max: number): number =>
-    Math.min(Math.max(value, inset), Math.max(inset, max - inset));
-  return { x: clamp(saved.x, worldWidth), y: clamp(saved.y, worldHeight) };
+  const inside = (value: number, max: number): number =>
+    clamp(value, inset, Math.max(inset, max - inset));
+  return { x: inside(saved.x, worldWidth), y: inside(saved.y, worldHeight) };
 }
 
 // Spawn position for a player entering on `edge` of a zone. `inset` pushes

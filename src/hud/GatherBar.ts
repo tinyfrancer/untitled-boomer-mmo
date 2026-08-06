@@ -1,4 +1,4 @@
-import { el } from './dom';
+import { el, fillPercent } from './dom';
 
 /**
  * The channel bar shown while gathering. Screen-space rather than pinned over
@@ -29,7 +29,7 @@ export class GatherBar {
   }
 
   setProgress(progress: number): void {
-    this.fill.style.width = `${Math.min(Math.max(progress, 0), 1) * 100}%`;
+    this.fill.style.width = fillPercent(progress);
   }
 
   hide(): void {

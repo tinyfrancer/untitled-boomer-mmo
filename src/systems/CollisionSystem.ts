@@ -1,4 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
+import { clamp } from './math';
 import type { Point } from './MovementSystem';
 
 /** A body, as a centre and half extents. Everything here collides as one. */
@@ -83,11 +84,11 @@ export function isBlocked(world: CollisionWorld, box: Aabb): boolean {
 }
 
 export function clampToWorld(box: Aabb, world: CollisionWorld): Point {
-  const clamp = (value: number, half: number, size: number): number =>
-    Math.min(Math.max(value, half), Math.max(half, size - half));
+  const inside = (value: number, half: number, size: number): number =>
+    clamp(value, half, Math.max(half, size - half));
   return {
-    x: clamp(box.x, box.halfWidth, world.worldWidth),
-    y: clamp(box.y, box.halfHeight, world.worldHeight),
+    x: inside(box.x, box.halfWidth, world.worldWidth),
+    y: inside(box.y, box.halfHeight, world.worldHeight),
   };
 }
 
