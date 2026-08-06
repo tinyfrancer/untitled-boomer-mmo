@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { TILE_SIZE } from '../../src/config/constants';
 import { TOWN_MAP } from '../../src/data/townMap';
 import { signpostPoint } from '../../src/systems/ZoneSystem';
@@ -15,7 +16,7 @@ import { simToWorld } from '../../src/render3d/coords';
 import { OrbitGesture } from '../../src/render3d/orbit';
 
 const WORLD = {
-  width: TOWN_MAP[0].length * TILE_SIZE,
+  width: nth(TOWN_MAP, 0).length * TILE_SIZE,
   height: TOWN_MAP.length * TILE_SIZE,
 };
 const SPAWN = { x: WORLD.width / 2, y: WORLD.height / 2 };

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { harness } from './harness';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -21,7 +22,7 @@ beforeEach(() => {
 
 function atTheShop(): ReturnType<typeof harness> {
   const kit = harness();
-  const npc = kit.world.npcs[0];
+  const npc = nth(kit.world.npcs, 0);
   kit.world.teleport(npc.x, npc.y + 50);
   kit.world.approachShop(npc);
   return kit;

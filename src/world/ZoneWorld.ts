@@ -839,6 +839,7 @@ export class ZoneWorld {
     }
 
     const mob = this.mobs[action.index];
+    if (!mob) return;
     if (this.target !== mob) {
       this.setTarget(mob);
     }

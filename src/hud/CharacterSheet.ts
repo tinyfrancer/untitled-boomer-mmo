@@ -123,7 +123,7 @@ export class CharacterSheet extends Sheet {
       `ATK ${attackPower} (${attackStat === 'strength' ? 'STR' : 'INT'})`,
     ];
     this.statLines.forEach((line, index) => {
-      line.textContent = lines[index];
+      line.textContent = lines[index] ?? '';
     });
 
     for (const slot of SLOT_ORDER) {

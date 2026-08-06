@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { harness } from './harness';
 import { AFK_STATE_CHANGED_EVENT, AFK_TOGGLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
 import { AFK_ANCHOR_RADIUS } from '../../src/systems/AfkSystem';
@@ -80,7 +81,7 @@ describe('camping', () => {
     // answer to being hurt is to stop pulling and rest, which a town rat is
     // happy to allow and a bandit is not.
     const { world, state, bus, until } = harness({ zoneId: 'bandit-camp' });
-    const bandit = world.mobs[0];
+    const bandit = nth(world.mobs, 0);
     world.teleport(bandit.x, bandit.y);
     bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
     world.player.takeDamage(world.player.hp - 1);
@@ -93,7 +94,7 @@ describe('camping', () => {
 describe('the keyboard', () => {
   it('clears the selected target on Escape, drained as an action', () => {
     const { world, input, tick } = harness();
-    world.setTarget(world.mobs[0]);
+    world.setTarget(nth(world.mobs));
 
     input.press('Escape');
     tick(1);

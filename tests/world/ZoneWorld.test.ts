@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { harness, nodeNamed } from './harness';
 import { ZONES } from '../../src/data/zones';
 import { PLAYER_DIED_EVENT } from '../../src/ui/uiEvents';
@@ -78,7 +79,7 @@ describe('ZoneWorld', () => {
 
   it('respawns the player in place when they die at home', () => {
     const { world, emitted, tickUntil } = harness();
-    const rat = world.mobs[0];
+    const rat = nth(world.mobs, 0);
 
     world.teleport(rat.x - 40, rat.y);
     world.player.takeDamage(world.player.hp - 1);
@@ -96,7 +97,7 @@ describe('ZoneWorld', () => {
 
   it('sends a corpse home to town rather than respawning it in a hostile zone', () => {
     const { world, tickUntil } = harness({ zoneId: 'bandit-camp' });
-    const bandit = world.mobs[0];
+    const bandit = nth(world.mobs, 0);
 
     world.teleport(bandit.x - 40, bandit.y);
     world.player.takeDamage(world.player.hp - 1);
@@ -161,7 +162,7 @@ describe('ZoneWorld', () => {
     const ticks = tick(2, 100).filter((event) => event.kind === 'gather-tick');
     expect(ticks).not.toHaveLength(0);
     expect(ticks[0]).toMatchObject({ nodeId: 'tree', at: { x: tree.x, y: tree.y } });
-    expect(ticks[0].progress).toBeGreaterThan(0);
+    expect(nth(ticks, 0).progress).toBeGreaterThan(0);
   });
 
   it('drops every subscription on destroy', () => {

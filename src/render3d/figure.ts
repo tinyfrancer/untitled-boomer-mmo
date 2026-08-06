@@ -64,7 +64,7 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
 
   const group = new Group();
 
-  const hinges = [-1, 1].map((side) => {
+  const buildHinge = (side: number): Group => {
     // A hinge at the hip, so a step swings the leg rather than sliding it.
     const hinge = new Group();
     hinge.position.set(side * spread, hipY, 0);
@@ -76,7 +76,9 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
     hinge.add(leg);
     group.add(hinge);
     return hinge;
-  });
+  };
+  const leftHinge = buildHinge(-1);
+  const rightHinge = buildHinge(1);
 
   const torso = new Mesh(
     new CapsuleGeometry(limb * 0.9, shoulderY - hipY),
@@ -115,8 +117,8 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
     stride(walking, elapsedMs) {
       walkingNow = walking;
       const swing = walking ? Math.sin((elapsedMs / STRIDE_PERIOD_MS) * Math.PI * 2) : 0;
-      hinges[0].rotation.x = swing * maxSwing;
-      hinges[1].rotation.x = -swing * maxSwing;
+      leftHinge.rotation.x = swing * maxSwing;
+      rightHinge.rotation.x = -swing * maxSwing;
       // Reported as the rig's three leg phases — a stance and the two halves of
       // a stride — since that is the vocabulary `legOffsets` is keyed by, and
       // it is what smoke asks a figure about rather than reading a rotation.

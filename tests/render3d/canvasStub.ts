@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
 
 export interface Painted {
   text: string;
@@ -34,5 +34,7 @@ export function stubCanvas(): Painted[] {
 
 /** The last thing any of it was asked to paint. */
 export function lastPainted(painted: Painted[]): Painted {
-  return painted[painted.length - 1];
+  const last = painted.at(-1);
+  expect(last, 'nothing was painted').toBeDefined();
+  return last as Painted;
 }

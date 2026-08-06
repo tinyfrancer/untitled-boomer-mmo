@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { nth } from '../nth';
 import { rollLootTable } from '../../src/systems/LootSystem';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import type { ItemId, LootTableId } from '../../src/types/ids';
@@ -19,7 +20,7 @@ function rngHitting(tableId: LootTableId, hits: ItemId[]): () => number {
     answers.push(1);
   }
   let call = 0;
-  return () => answers[call++];
+  return () => nth(answers, call++);
 }
 
 describe('rollLootTable', () => {
@@ -54,7 +55,7 @@ describe('rollLootTable', () => {
     const rolls = [...entries.map(() => 1), 0.5, 0.999];
     let call = 0;
 
-    const result = rollLootTable('bandit', () => rolls[call++]);
+    const result = rollLootTable('bandit', () => nth(rolls, call++));
     expect(result.copper).toBe(currency?.max);
 
     // A roll above the currency chance carries nothing, however it fell.

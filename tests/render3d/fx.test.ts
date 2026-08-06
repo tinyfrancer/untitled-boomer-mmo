@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nth } from '../nth';
 import { Sprite, type Material, type Mesh, type Object3D } from 'three';
 import { FxLayer } from '../../src/render3d/fx';
 import { FLOAT_TONE_COLORS } from '../../src/ui/theme';
@@ -27,7 +28,7 @@ describe('FxLayer', () => {
     fx.update(0);
     fx.float(AT, '-7', 'damage');
 
-    const sprite = fx.object.children[0];
+    const sprite = nth(fx.object.children, 0);
     expect(fx.count()).toBe(1);
     expect(sprite.position.x).toBe(AT.x);
     expect(sprite.position.z).toBe(AT.y);
@@ -55,7 +56,7 @@ describe('FxLayer', () => {
     const fx = new FxLayer();
     fx.update(1000);
     fx.bolt({ x: 0, y: 0 }, { x: 180, y: 0 });
-    const bolt = fx.object.children[0];
+    const bolt = nth(fx.object.children, 0);
 
     fx.update(1090);
     expect(bolt.position.x).toBeCloseTo(90, 3);
@@ -133,7 +134,8 @@ describe('what a WorldEvent is drawn as', () => {
 
     expect(texts(painted)).toEqual(['(4 absorbed)', '-2']);
     expect(fx.count()).toBe(2);
-    const [soak, wound] = fx.object.children;
+    const soak = nth(fx.object.children, 0);
+    const wound = nth(fx.object.children, 1);
     expect(soak.position.y).toBeGreaterThan(wound.position.y);
   });
 
@@ -163,7 +165,7 @@ describe('what a WorldEvent is drawn as', () => {
     fx.update(0);
     fx.draw({ kind: 'bolt-cast', abilityId: 'fireball', from: { x: 0, y: 0 }, to: AT });
 
-    const bolt = fx.object.children[0];
+    const bolt = nth(fx.object.children, 0);
     expect(bolt.position.x).toBe(0);
     fx.update(180 / 2);
     expect(bolt.position.x).toBeCloseTo(AT.x / 2, 3);

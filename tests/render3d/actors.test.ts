@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { Group, Mesh, Sprite, type Material, type MeshLambertMaterial } from 'three';
 import { DEATH_FADE_MS } from '../../src/world/Mob';
 import {
@@ -71,7 +72,7 @@ describe('PlayerActor', () => {
     actor.sync(0);
 
     expect(actor.object.position).toEqual(simToWorld(300, 500));
-    expect(actor.object.children[0].rotation.y).toBeCloseTo(facingYaw(0, -1), 6);
+    expect(nth(actor.object.children, 0).rotation.y).toBeCloseTo(facingYaw(0, -1), 6);
   });
 
   // The simulation has no idea anything is drawing it, so the look is rebuilt
@@ -123,7 +124,7 @@ describe('MobActor', () => {
 
   it('fades a corpse against the simulation clock and then stops drawing it', () => {
     const { world } = harness();
-    const mob = world.mobs[0];
+    const mob = nth(world.mobs, 0);
     const actor = new MobActor(mob, 1);
 
     mob.takeDamage(mob.maxHp);
@@ -132,7 +133,7 @@ describe('MobActor', () => {
 
     mob.deadForMs = DEATH_FADE_MS / 2;
     actor.sync(0);
-    expect(opacityOf(actor.object.children[0])).toBeCloseTo(0.5, 3);
+    expect(opacityOf(nth(actor.object.children, 0))).toBeCloseTo(0.5, 3);
 
     mob.deadForMs = DEATH_FADE_MS;
     actor.sync(0);
@@ -143,9 +144,9 @@ describe('MobActor', () => {
   // rather than a creature dissolving mid-air still standing up.
   it('topples a corpse over before it has finished fading', () => {
     const { world, until } = harness();
-    const mob = world.mobs[0];
+    const mob = nth(world.mobs, 0);
     const actor = new MobActor(mob, 1);
-    const facing = actor.object.children[0];
+    const facing = nth(actor.object.children, 0);
 
     mob.takeDamage(mob.maxHp);
     actor.sync(0);
@@ -160,7 +161,7 @@ describe('MobActor', () => {
     until(() => mob.isAlive(), 'the rat to respawn');
     actor.sync(0);
     expect(facing.rotation.x).toBe(0);
-    expect(opacityOf(actor.object.children[0])).toBe(1);
+    expect(opacityOf(nth(actor.object.children, 0))).toBe(1);
   });
 
   // The name colour is relative to the player's level, so it is not fixed: it
@@ -168,7 +169,7 @@ describe('MobActor', () => {
   it('recolours its name when the player levels past it', () => {
     const painted = stubCanvas();
     const { world } = harness();
-    const mob = world.mobs[0];
+    const mob = nth(world.mobs, 0);
     const actor = new MobActor(mob, 1);
 
     const sprites: string[] = [];
@@ -187,7 +188,7 @@ describe('MobActor', () => {
 
   it('hands everything it built back', () => {
     const { world } = harness();
-    const actor = new MobActor(world.mobs[0], 1);
+    const actor = new MobActor(nth(world.mobs), 1);
     const allFreed = trackDisposal(actor.object);
     actor.dispose();
     expect(allFreed()).toBe(true);
@@ -212,15 +213,15 @@ describe('the rest of the zone', () => {
   it('names the shopkeeper and every signpost', () => {
     const painted = stubCanvas();
     const { world } = harness();
-    const npc = new NpcActor(world.npcs[0]);
+    const npc = new NpcActor(nth(world.npcs));
     expect(npc.object.userData.kind).toBe('npc');
     expect(lastPainted(painted)).toEqual({ text: 'Shopkeeper', color: THEME.color.levelUp });
 
-    const signpost = new SignpostActor(world.signposts[0]);
+    const signpost = new SignpostActor(nth(world.signposts));
     expect(signpost.object.userData.kind).toBe('signpost');
-    expect(lastPainted(painted).text).toBe(world.signposts[0].label);
+    expect(lastPainted(painted).text).toBe(nth(world.signposts, 0).label);
     expect(signpost.object.position).toEqual(
-      simToWorld(world.signposts[0].x, world.signposts[0].y),
+      simToWorld(nth(world.signposts, 0).x, nth(world.signposts, 0).y),
     );
   });
 

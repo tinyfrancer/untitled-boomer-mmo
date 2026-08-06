@@ -422,8 +422,8 @@ class Hud {
       // Held until the report is dismissed so the two don't talk over each
       // other; a chain finished overnight is news worth its own line. Only the
       // last one is announced; the sheet is where the full list lives.
-      if (unlocked) {
-        const last = unlocked.unlocks[unlocked.unlocks.length - 1];
+      const last = unlocked?.unlocks.at(-1);
+      if (last) {
         this.toast.show(`Achievement: ${last.name}`, THEME.color.skillUp);
       }
     });

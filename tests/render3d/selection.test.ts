@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { SelectionRing } from '../../src/render3d/selection';
 import { harness } from '../world/harness';
 
@@ -18,7 +19,7 @@ describe('SelectionRing', () => {
   // is usually running at you.
   it('keeps up with a target that is moving', () => {
     const { world, tick } = harness();
-    const mob = world.mobs[0];
+    const mob = nth(world.mobs, 0);
     const ring = new SelectionRing();
 
     ring.follow(mob);

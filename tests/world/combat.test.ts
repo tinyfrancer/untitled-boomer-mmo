@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import type { ItemId } from '../../src/types/ids';
 import { harness } from './harness';
 import { SET_TITLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
@@ -86,7 +87,7 @@ describe('leashing', () => {
 
   it('is how a bandit that opened combat itself gives up too', () => {
     const { world, until } = harness({ zoneId: 'bandit-camp' });
-    const bandit = world.mobs[0];
+    const bandit = nth(world.mobs, 0);
 
     // Inside the 180px aggro radius, outside the 72px attack range: nothing is
     // provoking it but standing there.

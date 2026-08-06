@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
 import { Box3, Mesh, type MeshLambertMaterial } from 'three';
 import { FIGURE_HEIGHT, buildFigure } from '../../src/render3d/figure';
 import { computeAppearance, stickFigure } from '../../src/systems/AppearanceSystem';
@@ -84,7 +85,8 @@ describe('the walk', () => {
   it('swings the legs in opposition, not together', () => {
     const figure = buildFigure(BARE);
     figure.stride(true, 125);
-    const [left, right] = figure.object.children;
+    const left = nth(figure.object.children, 0);
+    const right = nth(figure.object.children, 1);
     expect(left.rotation.x).toBeCloseTo(-right.rotation.x, 6);
     expect(Math.abs(left.rotation.x)).toBeGreaterThan(0);
   });
