@@ -37,6 +37,19 @@ describe('findExit', () => {
     expect(findExit(exits, WORLD_W - 10, 600, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('east');
   });
 
+  it('finds an exit on either end of either axis', () => {
+    const all: ZoneExit[] = [
+      { edge: 'north', to: 'town' },
+      { edge: 'south', to: 'beach' },
+      { edge: 'west', to: 'town' },
+      { edge: 'east', to: 'bandit-camp' },
+    ];
+    expect(findExit(all, 800, 0, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('north');
+    expect(findExit(all, 800, WORLD_H, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('south');
+    expect(findExit(all, 0, 600, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('west');
+    expect(findExit(all, WORLD_W, 600, WORLD_W, WORLD_H, MARGIN)?.edge).toBe('east');
+  });
+
   it('ignores edges with no exit', () => {
     // north and west have no exits in the table above
     expect(findExit(exits, 800, 0, WORLD_W, WORLD_H, MARGIN)).toBeNull();

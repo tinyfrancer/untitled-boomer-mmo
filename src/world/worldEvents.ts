@@ -1,6 +1,5 @@
-import type { ZoneEdge } from '../data/zones';
 import type { Point } from '../systems/MovementSystem';
-import type { AbilityId, ResourceNodeId, ZoneId } from '../types/ids';
+import type { AbilityId, ResourceNodeId, ZoneEdge, ZoneId } from '../types/ids';
 import type { UiEventMap, UiEventName } from '../ui/uiEvents';
 import type { Mob } from './Mob';
 

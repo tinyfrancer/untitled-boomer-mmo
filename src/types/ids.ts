@@ -58,6 +58,10 @@ export type ResourceNodeId = 'tree' | 'fishing-spot' | 'ocean-fishing-spot';
 
 export type ZoneId = 'town' | 'beach' | 'bandit-camp';
 
+// Which side of a map an exit sits on. See EDGE_TABLE in systems/ZoneSystem.ts
+// for the geometry each one implies.
+export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
+
 export type NpcId = 'shopkeeper';
 
 export type QuestId = 'rat-bones' | 'crab-feast';

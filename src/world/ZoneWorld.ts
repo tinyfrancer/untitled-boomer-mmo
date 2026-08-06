@@ -1,6 +1,6 @@
 import { EXIT_MARGIN, TILE_SIZE } from '../config/constants';
 import { BLOCKING_TILES } from '../data/tiles';
-import { ZONES, type ZoneDefinition, type ZoneEdge, type ZoneExit } from '../data/zones';
+import { ZONES, type ZoneDefinition, type ZoneExit } from '../data/zones';
 import { ENEMIES } from '../data/enemies';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import {
@@ -132,6 +132,7 @@ import type {
   QuestId,
   SkillId,
   TitleId,
+  ZoneEdge,
 } from '../types/ids';
 import { inventoryEntries } from '../systems/InventorySystem';
 
