@@ -1,4 +1,9 @@
-import { computeAppearance, stickFigure } from '../systems/AppearanceSystem';
+import {
+  WEAPON_GEM_COLOR,
+  computeAppearance,
+  stickFigure,
+  weaponRig,
+} from '../systems/AppearanceSystem';
 import { cssColor } from '../ui/theme';
 import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import type { ItemId, WeaponShapeId } from '../types/ids';
@@ -57,78 +62,71 @@ export function paperdollSvg(gear: Gear): SVGSVGElement {
   return svg;
 }
 
+/**
+ * The weapon, from the proportions in `weaponRig` rather than from numbers of
+ * this drawing's own. Everything points up out of the grip — a sword drawn
+ * point-down read as being held upside down.
+ */
 function weapon(
   shape: WeaponShapeId,
   color: number,
   figure: ReturnType<typeof stickFigure>,
 ): SVGElement[] {
-  const width = BOX * 0.035;
+  const rig = weaponRig(shape, BOX);
+  const gripX = figure.rightHandX;
+  const gripY = figure.shoulderY;
+  // The shaft's own axis: `tip` long, leaning far enough over that its end
+  // stands `lean` off the vertical. SVG y grows downward, so the rise up from
+  // the grip is a subtraction.
+  const rise = Math.sqrt(rig.tip * rig.tip - rig.lean * rig.lean);
+  const tipX = gripX + rig.lean;
+  const tipY = gripY - rise;
+  const buttX = gripX - (rig.lean / rig.tip) * rig.butt;
+  const buttY = gripY + (rise / rig.tip) * rig.butt;
+
   // Same two-pass trick as the limbs: dark backing, then the item's own colour.
   const passes: Array<[number, number]> = [
-    [width + BOX * 0.03, OUTLINE_COLOR],
-    [width, color],
+    [rig.thickness + BOX * 0.03, OUTLINE_COLOR],
+    [rig.thickness, color],
   ];
   const out: SVGElement[] = [];
 
-  switch (shape) {
-    case 'sword': {
-      // Blade up: the hand grips the hilt with the guard just above it.
-      const tipY = BOX * 0.05;
-      const gripBottomY = figure.shoulderY + BOX * 0.08;
-      const guardY = figure.shoulderY - BOX * 0.04;
-      for (const [w, c] of passes) {
-        out.push(line(figure.rightHandX, gripBottomY, figure.rightHandX, tipY, w, c));
-        out.push(
-          line(
-            figure.rightHandX - BOX * 0.05,
-            guardY,
-            figure.rightHandX + BOX * 0.05,
-            guardY,
-            w,
-            c,
-          ),
-        );
-      }
-      break;
+  for (const [w, c] of passes) {
+    out.push(line(buttX, buttY, tipX, tipY, w, c));
+    if (rig.guard) {
+      const guardY = gripY - rig.guard.above;
+      out.push(line(gripX - rig.guard.reach, guardY, gripX + rig.guard.reach, guardY, w, c));
     }
-    case 'wand': {
-      const tipX = figure.rightHandX + BOX * 0.06;
-      const tipY = figure.shoulderY - BOX * 0.22;
-      for (const [w, c] of passes) {
-        out.push(line(figure.rightHandX, figure.shoulderY, tipX, tipY, w, c));
-      }
-      out.push(svgEl('circle', { cx: tipX, cy: tipY, r: BOX * 0.045, fill: cssColor(0xffd54f) }));
-      break;
+    if (rig.head?.kind === 'blade') {
+      const { reach, drop } = rig.head;
+      out.push(
+        svgEl('polygon', {
+          points: [
+            `${tipX},${tipY}`,
+            `${tipX + reach},${tipY + drop / 2}`,
+            `${tipX},${tipY + drop}`,
+          ].join(' '),
+          fill: cssColor(c),
+          stroke: cssColor(c),
+          'stroke-width': w,
+        }),
+      );
     }
-    case 'pole': {
-      const tipX = figure.rightHandX + BOX * 0.2;
-      const tipY = figure.shoulderY - BOX * 0.28;
-      for (const [w, c] of passes) {
-        out.push(line(figure.rightHandX - BOX * 0.06, figure.hipY, tipX, tipY, w, c));
-      }
-      out.push(line(tipX, tipY, tipX + BOX * 0.02, tipY + BOX * 0.16, BOX * 0.012, 0xeceff1));
-      break;
-    }
-    case 'axe': {
-      const haftTopY = BOX * 0.06;
-      const haftBottomY = figure.hipY + BOX * 0.05;
-      for (const [w, c] of passes) {
-        out.push(line(figure.rightHandX, haftTopY, figure.rightHandX, haftBottomY, w, c));
-        out.push(
-          svgEl('polygon', {
-            points: [
-              `${figure.rightHandX},${haftTopY}`,
-              `${figure.rightHandX + BOX * 0.11},${haftTopY + BOX * 0.05}`,
-              `${figure.rightHandX},${haftTopY + BOX * 0.14}`,
-            ].join(' '),
-            fill: cssColor(c),
-            stroke: cssColor(c),
-            'stroke-width': w,
-          }),
-        );
-      }
-      break;
-    }
+  }
+  if (rig.head?.kind === 'gem') {
+    out.push(
+      svgEl('circle', {
+        cx: tipX,
+        cy: tipY,
+        r: rig.head.radius,
+        fill: cssColor(WEAPON_GEM_COLOR),
+      }),
+    );
+  }
+  // The line hanging off a fishing pole, which no mesh in the world draws and
+  // which is what says "pole" rather than "staff" at this size.
+  if (shape === 'pole') {
+    out.push(line(tipX, tipY, tipX + BOX * 0.02, tipY + BOX * 0.16, BOX * 0.012, 0xeceff1));
   }
   return out;
 }

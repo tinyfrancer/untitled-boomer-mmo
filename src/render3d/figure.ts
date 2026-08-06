@@ -8,8 +8,13 @@ import {
   SphereGeometry,
 } from 'three';
 import { TILE_SIZE } from '../config/constants';
-import { legOffsets, stickFigure, type Appearance } from '../systems/AppearanceSystem';
-import { PALETTE } from './palette';
+import {
+  WEAPON_GEM_COLOR,
+  legOffsets,
+  stickFigure,
+  weaponRig,
+  type Appearance,
+} from '../systems/AppearanceSystem';
 import type { WeaponShapeId } from '../types/ids';
 
 /** As tall as the box the rig is measured in: one tile. */
@@ -131,65 +136,55 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
 }
 
 /**
- * What hangs from the right hand. Each shape is built pointing up out of the
- * grip, the way the paperdoll draws them — a sword point-down read as being
- * held upside down.
+ * What hangs from the right hand, at the proportions in `weaponRig` — the same
+ * ones the paperdoll strokes, so the sheet and the world hold the same sword
+ * rather than two matched by eye. Each shape is built pointing up out of the
+ * grip: a sword point-down read as being held upside down.
+ *
+ * What stays this renderer's own is what the shapes are made of. A blade is
+ * flat and a haft is round, which a line drawing has no way to say.
  */
 function buildWeapon(shape: WeaponShapeId, color: number, size: number): Group {
   const group = new Group();
   const material = new MeshLambertMaterial({ color });
-  const thickness = size * 0.045;
+  const rig = weaponRig(shape, size);
 
-  switch (shape) {
-    case 'sword': {
-      const blade = new Mesh(new BoxGeometry(thickness, size * 0.42, thickness * 0.4), material);
-      blade.position.y = size * 0.16;
-      const guard = new Mesh(
-        new BoxGeometry(size * 0.11, thickness * 0.5, thickness * 0.5),
-        material,
-      );
-      guard.position.y = size * 0.03;
-      group.add(blade, guard);
-      break;
-    }
-    case 'wand': {
-      const rod = new Mesh(
-        new CylinderGeometry(thickness * 0.3, thickness * 0.3, size * 0.24, 6),
-        material,
-      );
-      rod.position.y = size * 0.12;
-      rod.rotation.z = -Math.PI / 12;
-      const tip = new Mesh(
-        new SphereGeometry(size * 0.045, 8, 6),
-        new MeshLambertMaterial({ color: PALETTE.coin }),
-      );
-      tip.position.set(size * 0.035, size * 0.24, 0);
-      group.add(rod, tip);
-      break;
-    }
-    case 'pole': {
-      // Angled back over the shoulder, so it reads as a rod rather than a spear.
-      const rod = new Mesh(
-        new CylinderGeometry(thickness * 0.3, thickness * 0.3, size * 0.62, 6),
-        material,
-      );
-      rod.rotation.x = Math.PI / 5;
-      rod.position.y = size * 0.14;
-      group.add(rod);
-      break;
-    }
-    case 'axe': {
-      const haft = new Mesh(
-        new CylinderGeometry(thickness * 0.35, thickness * 0.35, size * 0.44, 6),
-        material,
-      );
-      haft.position.y = size * 0.14;
-      // The head bites outward from the top of the haft, well clear of the grip.
-      const head = new Mesh(new BoxGeometry(size * 0.12, size * 0.14, thickness * 0.5), material);
-      head.position.set(size * 0.06, size * 0.3, 0);
-      group.add(haft, head);
-      break;
-    }
+  const length = rig.butt + rig.tip;
+  const shaft =
+    shape === 'sword'
+      ? new Mesh(new BoxGeometry(rig.thickness, length, rig.thickness * 0.4), material)
+      : new Mesh(new CylinderGeometry(rig.thickness / 2, rig.thickness / 2, length, 6), material);
+  // Centred so that `butt` of it falls behind the grip and `tip` in front.
+  shaft.position.y = (rig.tip - rig.butt) / 2;
+  group.add(shaft);
+
+  if (rig.guard) {
+    const guard = new Mesh(
+      new BoxGeometry(rig.guard.reach * 2, rig.thickness * 0.5, rig.thickness * 0.5),
+      material,
+    );
+    guard.position.y = rig.guard.above;
+    group.add(guard);
   }
+
+  if (rig.head?.kind === 'gem') {
+    const gem = new Mesh(
+      new SphereGeometry(rig.head.radius, 8, 6),
+      new MeshLambertMaterial({ color: WEAPON_GEM_COLOR }),
+    );
+    gem.position.y = rig.tip;
+    group.add(gem);
+  }
+  if (rig.head?.kind === 'blade') {
+    // The head bites outward from the end of the haft, well clear of the grip.
+    const { reach, drop } = rig.head;
+    const bite = new Mesh(new BoxGeometry(reach, drop, rig.thickness * 0.5), material);
+    bite.position.set(reach / 2, rig.tip - drop / 2, 0);
+    group.add(bite);
+  }
+
+  // Tipped over until its end stands `lean` off the grip's vertical, which is
+  // the same tilt the paperdoll draws it at.
+  group.rotation.z = -Math.asin(rig.lean / rig.tip);
   return group;
 }

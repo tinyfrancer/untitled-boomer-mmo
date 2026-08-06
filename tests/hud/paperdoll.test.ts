@@ -181,6 +181,37 @@ describe('the paperdoll and the figure in the world are the same rig', () => {
     expect(drawnAbove(drawn.shoulderY)).toBeCloseTo(builtAbove(weapon.position.y), 6);
   });
 
+  /**
+   * The weapons were the half of the rig that was not shared: two `switch
+   * (shape)` statements with proportions matched by eye, which is how the world
+   * ended up holding a sword half again as long as the sheet's. Both are read
+   * off what was drawn, so a drawer that stops using `weaponRig` fails here.
+   */
+  it.each<[WeaponShapeId, ItemId]>([
+    ['sword', 'rusty-sword'],
+    ['wand', 'apprentice-wand'],
+    ['pole', 'fishing-pole'],
+    ['axe', 'felling-axe'],
+  ])('draws a %s the same length in both', (_shape, itemId) => {
+    const armed = paperdollSvg({ ...BARE, weapon: itemId });
+    // The weapon is drawn last, so whatever the bare figure did not draw is it.
+    const added = segments(armed).slice(segments(svg).length);
+    const longest = Math.max(...added.map((l) => Math.hypot(l.x2 - l.x1, l.y2 - l.y1)));
+
+    const figure = buildFigure(computeAppearance({ ...BARE, weapon: itemId }));
+    const groups = figure.object.children.filter((child): child is Group => child instanceof Group);
+    const held = nth(groups, groups.length - 1);
+    const shaft = Math.max(
+      ...held.children.map((child) =>
+        child instanceof Mesh && 'height' in child.geometry.parameters
+          ? Number(child.geometry.parameters.height)
+          : 0,
+      ),
+    );
+
+    expect(longest / box).toBeCloseTo(shaft / FIGURE_HEIGHT, 6);
+  });
+
   it('splays the legs the same way', () => {
     const legs = segments(svg).filter((line) => line.x1 !== line.x2 && line.y1 !== line.y2);
     const outermost = Math.max(...legs.map((line) => Math.abs(line.x2 - drawn.cx)));
