@@ -3,7 +3,7 @@ import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { QuestLog } from '../systems/QuestSystem';
 import type { ClassId, TitleId, ZoneId } from '../types/ids';
-import type { Gear, Inventory } from '../systems/InventorySystem';
+import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
 export const CHARACTER_STATE_VERSION = 11;
 
@@ -58,12 +58,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     classId,
     level: 1,
     xp: 0,
-    gear: {
-      helmet: null,
-      chest: null,
-      pants: null,
-      weapon: CLASSES[classId].startingWeaponId,
-    },
+    gear: { ...NO_GEAR, weapon: CLASSES[classId].startingWeaponId },
     // Gathering tools come from the shop now, not the starting bag.
     inventory: {},
     currency: STARTING_COPPER,

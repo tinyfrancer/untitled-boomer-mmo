@@ -7,6 +7,18 @@ export type Inventory = Partial<Record<ItemId, number>>;
 export type Gear = Record<GearSlotId, ItemId | null>;
 
 /**
+ * Wearing nothing. Spread rather than copied — four places wrote the four
+ * `null`s out, so a fifth slot would have been four separate compile errors
+ * away from anyone noticing.
+ */
+export const NO_GEAR: Gear = {
+  helmet: null,
+  chest: null,
+  pants: null,
+  weapon: null,
+};
+
+/**
  * Object.entries loses the key type of a Record over a union — it has to, since
  * a value can carry keys its type never named. A bag's keys are its own, so this
  * is the one place that says so, rather than every caller casting.

@@ -1,6 +1,6 @@
 import { computeAppearance, stickFigure } from '../systems/AppearanceSystem';
 import { cssColor } from '../ui/theme';
-import type { Gear } from '../systems/InventorySystem';
+import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import type { ItemId, WeaponShapeId } from '../types/ids';
 
 const OUTLINE_COLOR = 0x000000;
@@ -166,5 +166,5 @@ function svgEl(tag: string, attributes: Record<string, string | number>): SVGEle
  * whole of the difference the preview has to show.
  */
 export function weaponPreviewSvg(weaponItemId: ItemId): SVGSVGElement {
-  return paperdollSvg({ helmet: null, chest: null, pants: null, weapon: weaponItemId });
+  return paperdollSvg({ ...NO_GEAR, weapon: weaponItemId });
 }

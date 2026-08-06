@@ -9,14 +9,7 @@ import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/Co
 import { PLAYER_HALF_EXTENT } from '../config/constants';
 import type { InputState } from '../systems/InputState';
 import type { ClassId, ItemId } from '../types/ids';
-import type { Gear } from '../systems/InventorySystem';
-
-const NO_GEAR: Gear = {
-  helmet: null,
-  chest: null,
-  pants: null,
-  weapon: null,
-};
+import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 
 /**
  * The player, as simulation only: position, velocity, stats, pools and buffs.

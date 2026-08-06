@@ -7,7 +7,7 @@ import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
 import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
 import { THEME } from '../ui/theme';
 import type { PrimaryStat } from '../data/classes';
-import type { Gear } from '../systems/InventorySystem';
+import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import { exhaustive, mapKeys } from '../types/exhaustive';
 import type { GearSlotId, SkillId } from '../types/ids';
 
@@ -60,12 +60,7 @@ export class CharacterSheet extends Sheet {
   private readonly statLines: HTMLElement[];
   private readonly slots: Record<GearSlotId, SlotRow>;
   private readonly skills: Record<SkillId, SkillRow>;
-  private gear: Gear = {
-    helmet: null,
-    chest: null,
-    pants: null,
-    weapon: null,
-  };
+  private gear: Gear = NO_GEAR;
 
   constructor(onSlotClicked: (slot: GearSlotId, isEmpty: boolean) => void) {
     super('Character', THEME.panelWidth.character);
