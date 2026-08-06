@@ -43,8 +43,6 @@ import {
   XP_GAINED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
   type AchievementUnlock,
-  type UiEventMap,
-  type UiEventName,
 } from '../ui/uiEvents';
 import { titleName } from '../systems/AchievementSystem';
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
@@ -122,6 +120,7 @@ import { Player } from './Player';
 import { Mob } from './Mob';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
+import { createSubscriptions, type Subscriptions } from './eventBus';
 import type { EventBus, WorldEvent } from './worldEvents';
 import type {
   AbilityId,
@@ -233,7 +232,7 @@ export class ZoneWorld {
 
   private readonly events: EventBus;
   private readonly input: InputState;
-  private readonly subscriptions: Array<() => void> = [];
+  private readonly subscriptions: Subscriptions;
   private pending: WorldEvent[] = [];
   // The world's own clock, and it starts at zero — which is why "never swung"
   // is marked with -Infinity below rather than with 0.
@@ -261,6 +260,7 @@ export class ZoneWorld {
     this.character = character;
     this.events = events;
     this.input = input;
+    this.subscriptions = createSubscriptions(events);
 
     const size = zoneWorldSize(zone);
     this.worldWidth = size.width;
@@ -354,13 +354,7 @@ export class ZoneWorld {
   // ---------------------------------------------------------------------------
 
   private subscribe(): void {
-    const listen = <K extends UiEventName>(
-      event: K,
-      handler: (...args: UiEventMap[K]) => void,
-    ): void => {
-      this.events.on(event, handler);
-      this.subscriptions.push(() => this.events.off(event, handler));
-    };
+    const { listen } = this.subscriptions;
     listen(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested.bind(this));
     listen(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested.bind(this));
     listen(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested.bind(this));
@@ -378,8 +372,7 @@ export class ZoneWorld {
 
   /** Drops every subscription. The host calls this before building the next world. */
   destroy(): void {
-    this.subscriptions.forEach((unsubscribe) => unsubscribe());
-    this.subscriptions.length = 0;
+    this.subscriptions.clear();
   }
 
   /**

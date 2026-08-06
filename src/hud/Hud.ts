@@ -72,11 +72,10 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
   type AvailableActions,
-  type UiEventMap,
-  type UiEventName,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
+import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
 import type { AbilityId, GearSlotId, TitleId } from '../types/ids';
 
@@ -91,9 +90,6 @@ export interface HudOptions {
    */
   notifications?: PendingNotification[];
 }
-
-/** What drops one subscription, so the pair it was made from stays typed. */
-type Unsubscribe = () => void;
 
 // Everything the HUD renders, in one object. Kept whole rather than scattered
 // across the pieces that draw it, so a layout change or a reopened sheet can
@@ -133,7 +129,7 @@ interface HudModel {
 class Hud {
   private readonly root: HTMLElement;
   private readonly events: EventBus;
-  private readonly subscriptions: Unsubscribe[] = [];
+  private readonly subscriptions: Subscriptions;
   private readonly classId: CharacterState['classId'];
 
   private readonly targetFrame = new TargetFrame();
@@ -164,6 +160,7 @@ class Hud {
   constructor(options: HudOptions) {
     const { parent, events, character, notifications = [] } = options;
     this.events = events;
+    this.subscriptions = createSubscriptions(events);
     this.classId = character.classId;
 
     const stats = computeEffectiveStats(character.classId, character.gear, character.level);
@@ -265,10 +262,7 @@ class Hud {
   }
 
   destroy(): void {
-    for (const unsubscribe of this.subscriptions) {
-      unsubscribe();
-    }
-    this.subscriptions.length = 0;
+    this.subscriptions.clear();
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     window.removeEventListener('keydown', this.handleKeyDown);
@@ -531,36 +525,30 @@ class Hud {
   // Listening
   // ---------------------------------------------------------------------------
 
-  private listen<K extends UiEventName>(event: K, handler: (...args: UiEventMap[K]) => void): void {
-    this.events.on(event, handler);
-    this.subscriptions.push(() => this.events.off(event, handler));
-  }
-
   private subscribe(): void {
-    this.listen(TARGET_SELECTED_EVENT, (target) => this.targetFrame.show(target));
-    this.listen(TARGET_CLEARED_EVENT, () => this.targetFrame.hide());
+    const { listen } = this.subscriptions;
+    listen(TARGET_SELECTED_EVENT, (target) => this.targetFrame.show(target));
+    listen(TARGET_CLEARED_EVENT, () => this.targetFrame.hide());
 
-    this.listen(XP_GAINED_EVENT, (gain) => {
+    listen(XP_GAINED_EVENT, (gain) => {
       this.model.level = gain.level;
       this.model.xp = gain.xp;
       this.playerColumn.setXp(gain.level, gain.xp, gain.xpToNext);
     });
-    this.listen(LEVEL_UP_EVENT, (level) => {
+    listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
       this.refreshCharacterSheet();
       // A level buys strength, which buys capacity.
       this.refreshEncumbrance();
       this.toast.show(`Level Up! Level ${level}`, THEME.color.levelUp);
     });
-    this.listen(PLAYER_HP_CHANGED_EVENT, (hp) => {
+    listen(PLAYER_HP_CHANGED_EVENT, (hp) => {
       this.model.hp = hp;
       this.refreshCharacterSheet();
     });
-    this.listen(PLAYER_DIED_EVENT, () =>
-      this.toast.show('You have died.', THEME.color.playerDamage),
-    );
+    listen(PLAYER_DIED_EVENT, () => this.toast.show('You have died.', THEME.color.playerDamage));
 
-    this.listen(SKILL_XP_GAINED_EVENT, (progress) => {
+    listen(SKILL_XP_GAINED_EVENT, (progress) => {
       this.model.skills = {
         ...this.model.skills,
         [progress.skillId]: { level: progress.level, xp: progress.xp },
@@ -573,15 +561,15 @@ class Hud {
         );
       }
     });
-    this.listen(ACHIEVEMENT_UNLOCKED_EVENT, (unlock) =>
+    listen(ACHIEVEMENT_UNLOCKED_EVENT, (unlock) =>
       this.toast.show(`Achievement: ${unlock.name}`, THEME.color.skillUp),
     );
-    this.listen(KILLS_CHANGED_EVENT, (kills) => {
+    listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;
       this.featsSheet.update(kills, this.model.activeTitleId);
     });
 
-    this.listen(PLAYER_MANA_CHANGED_EVENT, ({ mana, maxMana }) => {
+    listen(PLAYER_MANA_CHANGED_EVENT, ({ mana, maxMana }) => {
       const gainedPool = maxMana > 0 !== this.model.maxMana > 0;
       this.model.mana = mana;
       this.model.maxMana = maxMana;
@@ -592,15 +580,15 @@ class Hud {
         this.applyLayout();
       }
     });
-    this.listen(ABILITY_STATE_CHANGED_EVENT, (states) => this.actionBar.update(states));
+    listen(ABILITY_STATE_CHANGED_EVENT, (states) => this.actionBar.update(states));
 
-    this.listen(GEAR_CHANGED_EVENT, (gear) => {
+    listen(GEAR_CHANGED_EVENT, (gear) => {
       this.model.gear = gear;
       this.slotPicker?.close();
       this.refreshCharacterSheet();
       this.refreshEncumbrance();
     });
-    this.listen(INVENTORY_CHANGED_EVENT, (inventory) => {
+    listen(INVENTORY_CHANGED_EVENT, (inventory) => {
       this.model.inventory = inventory;
       this.inventorySheet.update(inventory);
       this.refreshEncumbrance();
@@ -609,46 +597,46 @@ class Hud {
       this.tracker.update(this.model.quests, inventory);
       this.questSheet.update(this.model.quests, inventory);
     });
-    this.listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
+    listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
       this.model.currency = totalCopper;
       this.inventorySheet.setCurrency(totalCopper);
       this.shopModal?.update(this.shopState());
     });
-    this.listen(ACTIONS_CHANGED_EVENT, (actions) => {
+    listen(ACTIONS_CHANGED_EVENT, (actions) => {
       this.model.actions = actions;
       // Fire proximity changes which buttons a selected item shows.
       this.inventorySheet.refreshActions();
     });
 
-    this.listen(SHOP_OPENED_EVENT, () => {
+    listen(SHOP_OPENED_EVENT, () => {
       this.model.shopOpen = true;
       this.openShop();
       // Selling becomes possible, so a selected item may gain a Sell button.
       this.inventorySheet.refreshActions();
     });
-    this.listen(SHOP_CLOSED_EVENT, () => {
+    listen(SHOP_CLOSED_EVENT, () => {
       this.model.shopOpen = false;
       this.shopModal?.root.remove();
       this.shopModal = null;
       this.inventorySheet.refreshActions();
     });
 
-    this.listen(GATHER_STARTED_EVENT, (label) => this.gatherBar.show(label));
-    this.listen(GATHER_PROGRESS_EVENT, (progress) => this.gatherBar.setProgress(progress));
-    this.listen(GATHER_ENDED_EVENT, () => this.gatherBar.hide());
-    this.listen(NOTICE_EVENT, (message) => this.toast.show(message, THEME.color.muted));
+    listen(GATHER_STARTED_EVENT, (label) => this.gatherBar.show(label));
+    listen(GATHER_PROGRESS_EVENT, (progress) => this.gatherBar.setProgress(progress));
+    listen(GATHER_ENDED_EVENT, () => this.gatherBar.hide());
+    listen(NOTICE_EVENT, (message) => this.toast.show(message, THEME.color.muted));
 
-    this.listen(AFK_STATE_CHANGED_EVENT, (active) => {
+    listen(AFK_STATE_CHANGED_EVENT, (active) => {
       this.tabBar.setCamping(active);
       this.toast.show(active ? 'Camping (Z)' : 'Camp ended', THEME.color.skillUp);
     });
 
-    this.listen(COMBAT_LOG_EVENT, (entry) => {
+    listen(COMBAT_LOG_EVENT, (entry) => {
       this.model.combatLog = appendLogEntry(this.model.combatLog, entry);
       this.combatLogSheet.update(this.model.combatLog);
     });
 
-    this.listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
+    listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
       this.model.quests = quests;
       this.tracker.update(quests, this.model.inventory);
       this.questSheet.update(quests, this.model.inventory);
@@ -657,7 +645,7 @@ class Hud {
       // stacked above it.
       this.applyLayout();
     });
-    this.listen(TITLE_CHANGED_EVENT, (titleId) => {
+    listen(TITLE_CHANGED_EVENT, (titleId) => {
       this.model.activeTitleId = titleId;
       this.playerColumn.setTitle(titleId);
       this.featsSheet.update(this.model.kills, titleId);
