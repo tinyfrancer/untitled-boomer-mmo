@@ -42,7 +42,7 @@ is no half-finished state to carry between sessions — if a session ends, it en
 
 **Step 0, before any code: land this document as `docs/cleanup_plan.md`** on its own branch and
 PR. That is where the status table lives, and it is how a future session (or a fresh context)
-knows what is already done without re-deriving any of it. `docs/3d_port_plan.md` and
+knows what is already done without re-deriving any of it. `docs/archive/3d_port_plan.md` and
 `docs/upgrade_plan.md` already use exactly this convention — status line at the top, updated as
 each PR merges.
 
@@ -434,7 +434,7 @@ need it.
 Named so they don't get picked up by accident: `hud/styles.ts`'s size (one stylesheet is the right
 shape), the `scale` threading through `ui/layout.ts` (~12 sites kept as a deliberate hook for a
 future text-size setting — `fontPx` goes in PR 3 because it is dead, the hook stays), the
-TypeScript 7 upgrade (still blocked upstream), and `docs/3d_port_plan.md`'s contents, which stay
+TypeScript 7 upgrade (still blocked upstream), and `docs/archive/3d_port_plan.md`'s contents, which stay
 verbatim as the record of why the renderer looks like this.
 
 Housekeeping, not a PR: `.smoke/` holds 62 gitignored PNGs where the script writes 20, including

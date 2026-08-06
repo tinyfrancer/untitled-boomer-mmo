@@ -164,7 +164,7 @@ await client.send('Emulation.setCPUThrottlingRate', { rate: 8 });
 ## Architecture
 
 **Stack**: TypeScript bundled with Vite, rendered in 3D with Three.js (`src/render3d/`). It was
-Phaser 4 in 2D until PR 20 of `docs/3d_port_plan.md` deleted that renderer; the port is done and
+Phaser 4 in 2D until PR 20 of `docs/archive/3d_port_plan.md` deleted that renderer; the port is done and
 `main` has one engine. No backend — everything is a static site. Character data lives in the
 browser's `localStorage`.
 

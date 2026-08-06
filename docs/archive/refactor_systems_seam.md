@@ -1,7 +1,16 @@
 # Refactor plan: tighten the systems seam
 
+> **Archived — this is history, not a map of the code.** Everything below landed, and then the
+> renderer it was written against was deleted. `ZoneScene` no longer exists: the simulation is
+> `src/world/ZoneWorld.ts` and the view is `src/render3d/`, so every line number and every
+> `ZoneScene.ts:NNN` citation here points at a file that is gone. The `ARCHITECTURE` file it
+> refers to never existed under that name either — `CLAUDE.md` is where the seam is documented.
+> What survived is the seam itself and the four things this plan put in it:
+> `systems/InteractionSystem.ts`, `resolveKill`, `distance`/`withinRadius` in `MovementSystem`,
+> and `tests/architecture/phaserFreeSeam.test.ts`.
+
 **Status:** done. Written 2026-07-24 for a later session; picked up as phase 0 of
-`docs/3d_port_plan.md`, which depends on it. Item 2 landed in `d80df26`; item 4 landed with
+`3d_port_plan.md`, which depends on it. Item 2 landed in `d80df26`; item 4 landed with
 `tests/architecture/phaserFreeSeam.test.ts`; items 1 and 3 landed together with
 `systems/InteractionSystem.ts` and the `distance`/`withinRadius` helpers, since most of item 3
 fell out of item 1 as predicted. The frame-rate question item 1 left open was answered yes:
