@@ -1,4 +1,5 @@
 import { el } from './dom';
+import { pickerPosition } from '../ui/layout';
 import type { ItemId } from '../types/ids';
 import { SLOT_LABELS } from './CharacterSheet';
 import { describeItemBonuses, describeItemName } from '../data/items';
@@ -67,14 +68,9 @@ export class SlotPicker {
   }
 
   private clampInto(anchor: DOMRect, bounds: { width: number; height: number }): void {
-    const box = this.root.getBoundingClientRect();
-    // To the left of the sheet it belongs to, so it never covers the row that
-    // opened it; flipped to the right when there is no room that side.
-    const preferredLeft = anchor.left - box.width - 8;
-    const left =
-      preferredLeft >= 0 ? preferredLeft : Math.min(anchor.right + 8, bounds.width - box.width);
-    this.root.style.left = `${Math.max(0, left)}px`;
-    this.root.style.top = `${Math.max(0, Math.min(anchor.top, bounds.height - box.height))}px`;
+    const { x, y } = pickerPosition(anchor, this.root.getBoundingClientRect(), bounds);
+    this.root.style.left = `${x}px`;
+    this.root.style.top = `${y}px`;
   }
 
   /** Idempotent: closing an already-closed picker does nothing and calls nothing. */

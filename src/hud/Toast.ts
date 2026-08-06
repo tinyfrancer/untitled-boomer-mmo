@@ -1,4 +1,5 @@
 import { el } from './dom';
+import { toastTop } from '../ui/layout';
 
 const HOLD_MS = 500;
 const FADE_MS = 1500;
@@ -16,7 +17,7 @@ export class Toast {
   }
 
   layout(viewportHeight: number): void {
-    this.root.style.top = `${Math.round(viewportHeight / 2 - 80)}px`;
+    this.root.style.top = `${toastTop(viewportHeight)}px`;
   }
 
   show(message: string, color: string): void {

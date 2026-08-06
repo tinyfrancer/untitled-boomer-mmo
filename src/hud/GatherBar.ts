@@ -1,4 +1,5 @@
 import { el, fillPercent } from './dom';
+import { gatherBarTop } from '../ui/layout';
 
 /**
  * The channel bar shown while gathering. Screen-space rather than pinned over
@@ -19,7 +20,7 @@ export class GatherBar {
   }
 
   layout(viewportHeight: number): void {
-    this.root.style.top = `${Math.round(viewportHeight / 2 + 60)}px`;
+    this.root.style.top = `${gatherBarTop(viewportHeight)}px`;
   }
 
   show(label: string): void {
