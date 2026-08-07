@@ -1,13 +1,12 @@
 import { el } from './dom';
-import { TABS, type TabId } from '../ui/tabs';
+import { TABS, isMenuTab, type TabId } from '../ui/tabs';
 
 /**
- * The bottom bar, in CSS rather than seven hand-placed rectangles.
+ * The bottom bar, in CSS rather than five hand-placed rectangles.
  *
  * Two things come free here: the bar is opaque and above the canvas, so a tap
  * on it never reaches the world at all, and `flex: 1` splits the width evenly —
- * which is exactly 44.4px per tab on a 375px phone against a 44px touch
- * minimum, and leaves no room for an eighth.
+ * which is 66.2px per tab on a 375px phone against a 44px touch minimum.
  */
 export class TabBar {
   readonly root: HTMLElement;
@@ -25,12 +24,19 @@ export class TabBar {
     }
   }
 
-  /** Lights the open sheet's tab, or nothing when the playfield is clear. */
+  /**
+   * Lights the open sheet's tab, or nothing when the playfield is clear.
+   *
+   * A sheet reached through the menu lights `Menu`, since that is the only seat
+   * on the bar it has: without it, opening the combat log leaves the whole bar
+   * dark and nothing on screen answers where the panel came from.
+   */
   setSelected(tab: TabId | null): void {
+    const lit = tab !== null && isMenuTab(tab) ? 'menu' : tab;
     this.buttons.forEach((button, id) => {
       // Camp is lit by whether it is running, not by what sheet is open.
       if (id !== 'camp') {
-        button.classList.toggle('is-selected', id === tab);
+        button.classList.toggle('is-selected', id === lit);
       }
     });
   }

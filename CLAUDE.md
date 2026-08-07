@@ -295,13 +295,21 @@ what you are wearing when the world became meshes. Both read that rig, so a shou
 place in either; `NPC_APPEARANCES` beside it is the same argument for the two figures nobody is
 wearing gear for, the shopkeeper and the bandit.
 
-**The tab bar is full.** It splits its width evenly across seven tabs (`ui/tabs.ts`), which on a
-375px phone is 44.4px each against a `THEME.touchMin` of 44 — four tenths of a pixel of headroom,
-and under the minimum below ~372px. An eighth tab does not fit; fold new surfaces into an existing
-sheet, or change how the bar lays out. Labels have to stay short for the same reason ("Quests" is
-the longest that fits). `tests/ui/tabs.test.ts` holds the arithmetic and `npm run smoke` measures
-the rendered `getBoundingClientRect()` at 375px, so this fails the build rather than shipping an
-untappable button.
+**The bar holds five; everything else folds behind Menu.** It splits its width evenly (`ui/tabs.ts`),
+so every seat costs every other seat: seven tabs gave each one 44.4px on a 375px phone against a
+`THEME.touchMin` of 44 — four tenths of a pixel of headroom, and under the minimum below ~372px.
+Five give each one 66.2px. `TABS` is what sits on the bar (Char, Bag, Quests, Camp, Menu) and
+`MENU_TABS` is what the Menu overlay opens; `ALL_TABS` is both, and the keyboard binds against that
+so a shortcut opens what it names instead of walking through a menu built for thumbs.
+
+**A new surface goes in `MENU_TABS`, not on the bar.** The bar is for what a player opens constantly;
+Camp is out there only because it is the one tab that shows state, staying lit while a camp runs.
+Menu labels may be whole words — the "labels have to stay short" rule stops at the bar's edge.
+A sheet reached through the menu lights the _Menu_ tab (`isMenuTab` in `ui/tabs.ts`), because that is
+the only seat it has and a dark bar over an open panel answers nothing.
+`tests/ui/tabs.test.ts` holds the arithmetic for both the bar and the menu grid, and `npm run smoke`
+measures the rendered `getBoundingClientRect()` of each at 375px, so this fails the build rather
+than shipping an untappable button.
 
 **Nothing in the world may be drawn under the tab bar.** The bar is opaque and above the canvas, so
 it swallows every tap that lands on it: the south signpost in town once rendered four pixels inside
