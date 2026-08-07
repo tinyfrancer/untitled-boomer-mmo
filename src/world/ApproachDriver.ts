@@ -1,12 +1,8 @@
-import { isInRange } from '../systems/CombatSystem';
+import { approachRange, isInRange } from '../systems/CombatSystem';
 import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
 import { arriveRadius, distance, type Point } from '../systems/MovementSystem';
 import type { Targeting } from './targeting';
 import type { WorldContext } from './WorldContext';
-
-// Stop a little inside attack range, mirroring how mobs close in, so the player
-// doesn't hover exactly on the boundary of their own reach.
-const PURSUIT_RANGE_FRACTION = 0.8;
 
 // What the world still owns once InteractionSystem has the rule: the thing to
 // do when the walk arrives.
@@ -105,7 +101,7 @@ export class ApproachDriver {
       this.pursuing = false;
       return;
     }
-    if (isInRange(distance(player, target), player.attackRange * PURSUIT_RANGE_FRACTION)) {
+    if (isInRange(distance(player, target), approachRange(player.attackRange))) {
       this.pursuing = false;
       player.stopMoving();
     } else {

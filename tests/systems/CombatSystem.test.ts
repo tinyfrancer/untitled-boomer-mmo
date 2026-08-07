@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  approachRange,
   avoidanceChance,
   isCooldownReady,
   isInRange,
@@ -114,6 +115,22 @@ describe('isInRange', () => {
 
   it('is false when distance exceeds range', () => {
     expect(isInRange(21, 20)).toBe(false);
+  });
+});
+
+describe('approachRange', () => {
+  it('stops short of the boundary, so the swing that follows is still in range', () => {
+    expect(approachRange(100)).toBeLessThan(100);
+    expect(isInRange(approachRange(100), 100)).toBe(true);
+  });
+
+  it('scales with reach, which is what lets both directions of a chase share it', () => {
+    // A mob's reach is its own; the player's rides the equipped weapon.
+    expect(approachRange(72) / 72).toBeCloseTo(approachRange(64) / 64);
+  });
+
+  it('leaves enough margin to be worth having', () => {
+    expect(100 - approachRange(100)).toBeGreaterThanOrEqual(20);
   });
 });
 
