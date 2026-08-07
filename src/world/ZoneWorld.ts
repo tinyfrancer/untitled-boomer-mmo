@@ -24,7 +24,6 @@ import {
   PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
-  QUEST_LOG_CHANGED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
@@ -71,8 +70,6 @@ import {
   logLevelUp,
   logLoot,
   logNotice,
-  logQuestAccepted,
-  logQuestCompleted,
   logSpellFailed,
   logTitleEarned,
   logXpGain,
@@ -85,7 +82,6 @@ import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
 import { consumableFor, describeItemName, itemValue } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { SHOP_CLOSE_RADIUS, SHOP_INTERACT_RADIUS, shopPriceFor } from '../data/shop';
-import { QUESTS } from '../data/quests';
 import { formatCurrency } from '../systems/CurrencySystem';
 import {
   advanceGather,
@@ -115,6 +111,7 @@ import { Mob } from './Mob';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
+import { QuestDesk } from './QuestDesk';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { EventBus, WorldEvent } from './worldEvents';
@@ -125,8 +122,6 @@ import type {
   ItemId,
   LootTableId,
   NpcId,
-  QuestId,
-  TitleId,
   ZoneEdge,
 } from '../types/ids';
 import { inventoryEntries } from '../systems/InventorySystem';
@@ -231,6 +226,7 @@ export class ZoneWorld {
 
   /** The clock, the channels and the character — everything shared. */
   private readonly ctx: WorldContext;
+  private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
   private gatherNode: ResourceNode | null = null;
@@ -353,6 +349,11 @@ export class ZoneWorld {
         .map((node) => node.blockerRect()),
     };
 
+    this.quests = new QuestDesk(this.ctx, {
+      isShopOpen: () => this.shopNpc !== null,
+      publishXpGain: (gain) => this.publishXpGain(gain),
+    });
+
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt (a zone
     // walk, or the death that sent us here) — resync it unconditionally.
@@ -396,9 +397,9 @@ export class ZoneWorld {
     listen(SHOP_CLOSED_EVENT, this.handleShopClosedByUi.bind(this));
     listen(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested.bind(this));
     listen(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk.bind(this));
-    listen(ACCEPT_QUEST_REQUESTED_EVENT, this.handleAcceptQuestRequested.bind(this));
-    listen(TURN_IN_QUEST_REQUESTED_EVENT, this.handleTurnInQuestRequested.bind(this));
-    listen(SET_TITLE_REQUESTED_EVENT, this.handleSetTitleRequested.bind(this));
+    listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
+    listen(TURN_IN_QUEST_REQUESTED_EVENT, (questId) => this.quests.turnIn(questId));
+    listen(SET_TITLE_REQUESTED_EVENT, (titleId) => this.quests.wearTitle(titleId));
   }
 
   /** Drops every subscription. The host calls this before building the next world. */
@@ -749,43 +750,6 @@ export class ZoneWorld {
     this.character.addCurrency(value);
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Quests and titles
-  // ---------------------------------------------------------------------------
-
-  private handleAcceptQuestRequested(questId: QuestId): void {
-    if (!this.shopNpc) return;
-    if (!this.character.acceptQuest(questId)) return;
-    this.ctx.log(logQuestAccepted(QUESTS[questId].name));
-    this.announceQuests();
-    this.persistCharacter();
-  }
-
-  private handleTurnInQuestRequested(questId: QuestId): void {
-    if (!this.shopNpc) return;
-    const result = this.character.turnInQuest(questId);
-    if (!result.ok) {
-      this.ctx.notice(result.reason);
-      return;
-    }
-    this.ctx.log(logQuestCompleted(QUESTS[questId].name));
-    this.ctx.publishInventory();
-    this.ctx.publishCurrency();
-    this.announceQuests();
-    this.publishXpGain(result.xp);
-    this.persistCharacter();
-  }
-
-  private announceQuests(): void {
-    this.ctx.events.emit(QUEST_LOG_CHANGED_EVENT, this.character.state.quests);
-  }
-
-  private handleSetTitleRequested(titleId: TitleId | null): void {
-    if (!this.character.setActiveTitle(titleId)) return;
-    this.ctx.events.emit(TITLE_CHANGED_EVENT, this.character.state.activeTitleId);
-    this.persistCharacter();
   }
 
   // ---------------------------------------------------------------------------
