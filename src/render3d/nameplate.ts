@@ -7,19 +7,37 @@ import { barFill } from '../systems/math';
 const DEFAULT_WIDTH = 56;
 const DEFAULT_HEIGHT = 8;
 
-/** How tall the name is drawn, in world units. */
+/** How tall the name is drawn, in world units, and where it sits alone. */
 const LABEL_HEIGHT = 12;
+const LABEL_Y = LABEL_HEIGHT;
 
 /**
- * The glyph above the name, and where its middle sits: half of each of the two
- * lines above the name's own middle, so the pair stack without touching.
+ * The worn title, smaller than the name the way the player column's is.
+ *
+ * It takes roughly the line the name sits on and pushes the name up above it,
+ * so what moves when a title is put on is the *name* and never the health bar
+ * — the bar is the one thing here read at a glance mid-fight, and a bar that
+ * jumped when a title was earned would be worse than no title.
+ *
+ * Stacking two sprites by half of each of their heights leaves them touching,
+ * which at the distance a nameplate is actually read runs the two lines into
+ * one block; `LINE_GAP` is what holds them apart, and it is the same gap that
+ * keeps the title clear of the bar below it.
+ */
+const TITLE_HEIGHT = 9;
+const LINE_GAP = 2;
+const TITLE_Y = LABEL_Y + LINE_GAP;
+const TITLED_LABEL_Y = TITLE_Y + (LABEL_HEIGHT + TITLE_HEIGHT) / 2 + LINE_GAP;
+
+/**
+ * The glyph above the name, whose middle sits half of each of the two lines
+ * above the name's own — wherever the name has ended up.
  *
  * Twice the name's height rather than a little over it. A single "!" is a thin
  * stroke where a word is a block of them, so a marker sized to match the name
  * beneath it reads as punctuation on the end of it instead of as its own thing.
  */
 const MARKER_HEIGHT = 24;
-const MARKER_Y = LABEL_HEIGHT + (LABEL_HEIGHT + MARKER_HEIGHT) / 2;
 
 /**
  * Anything drawn over a creature's head: the health bar and the floating name.
@@ -47,6 +65,8 @@ export class Nameplate {
   private marker: Sprite | null = null;
   private markerGlyph: string | null = null;
   private markerColor = '';
+  private title: Sprite | null = null;
+  private titleText: string | null = null;
 
   constructor(y: number, options: NameplateOptions = {}) {
     const { width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, healthBar = true } = options;
@@ -78,18 +98,8 @@ export class Nameplate {
     if (text === this.labelText && color === this.labelColor) return;
     this.labelText = text;
     this.labelColor = color;
-    if (this.label) {
-      disposeTree(this.label);
-      this.label = null;
-    }
-    const sprite = buildLabel(text, color);
-    if (sprite) {
-      sprite.position.y = LABEL_HEIGHT;
-      sprite.renderOrder = 11;
-      sprite.userData.kind = 'label';
-      this.label = sprite;
-      this.object.add(sprite);
-    }
+    this.label = this.rehang(this.label, text, color, LABEL_HEIGHT, 'label');
+    this.relayout();
   }
 
   /**
@@ -105,19 +115,22 @@ export class Nameplate {
     if (glyph === this.markerGlyph && color === this.markerColor) return;
     this.markerGlyph = glyph;
     this.markerColor = color;
-    if (this.marker) {
-      disposeTree(this.marker);
-      this.marker = null;
-    }
-    if (!glyph) return;
-    const sprite = buildText(glyph, color, MARKER_HEIGHT);
-    if (sprite) {
-      sprite.position.y = MARKER_Y;
-      sprite.renderOrder = 11;
-      sprite.userData.kind = 'marker';
-      this.marker = sprite;
-      this.object.add(sprite);
-    }
+    this.marker = this.rehang(this.marker, glyph, color, MARKER_HEIGHT, 'marker');
+    this.relayout();
+  }
+
+  /**
+   * The worn title under the name, or `null` for none. Tagged `title` for the
+   * same reason the marker is tagged `marker`.
+   *
+   * Putting one on moves the name rather than the bar, so this is the one setter
+   * that has to lay the plate out again — which is why all three of them do.
+   */
+  setTitle(text: string | null, color: string): void {
+    if (text === this.titleText) return;
+    this.titleText = text;
+    this.title = this.rehang(this.title, text, color, TITLE_HEIGHT, 'title');
+    this.relayout();
   }
 
   setVisible(visible: boolean): void {
@@ -132,6 +145,42 @@ export class Nameplate {
   dispose(): void {
     disposeTree(this.object);
   }
+
+  /**
+   * Swaps one of the three lines for a freshly baked one, handing the old one's
+   * texture back. `null` text leaves nothing behind, which is how a marker or a
+   * title is taken off.
+   */
+  private rehang(
+    current: Sprite | null,
+    text: string | null,
+    color: string,
+    height: number,
+    kind: string,
+  ): Sprite | null {
+    if (current) disposeTree(current);
+    if (!text) return null;
+    const sprite = buildText(text, color, height);
+    if (!sprite) return null;
+    sprite.renderOrder = 11;
+    sprite.userData.kind = kind;
+    this.object.add(sprite);
+    return sprite;
+  }
+
+  /**
+   * Stacks whatever lines exist. Only the name and the marker move — the title
+   * takes the name's own line and the bar never budges, so the thing read at a
+   * glance mid-fight stays where the eye already is.
+   */
+  private relayout(): void {
+    const labelY = this.title ? TITLED_LABEL_Y : LABEL_Y;
+    if (this.title) this.title.position.y = TITLE_Y;
+    if (this.label) this.label.position.y = labelY;
+    if (this.marker) {
+      this.marker.position.y = labelY + (LABEL_HEIGHT + MARKER_HEIGHT) / 2 + LINE_GAP;
+    }
+  }
 }
 
 function bar(width: number, height: number, color: number, opacity: number): Mesh {
@@ -144,11 +193,8 @@ function bar(width: number, height: number, color: number, opacity: number): Mes
 }
 
 /**
- * The name over a creature's head — `buildText` at the label's size, and the
- * only text in the 3D client that is counted as a `label` by `drawnCounts`.
- * A damage number is the same machinery and deliberately not counted: one is
- * furniture the view owes every creature, the other is a moment passing.
+ * The name over a creature's head is the only text in the 3D client counted as
+ * a `label` by `drawnCounts`. A damage number is the same machinery and
+ * deliberately not counted, and so are the title and the quest marker: a label
+ * is furniture the view owes every creature, and the rest are not.
  */
-function buildLabel(text: string, color: string): Sprite | null {
-  return buildText(text, color, LABEL_HEIGHT);
-}

@@ -1243,6 +1243,27 @@ async function achievements() {
     wornTitle.model === 'rat-slayer' && wornTitle.shown && afterTitle > beforeTitle,
     `column ${beforeTitle} -> ${afterTitle}`,
   );
+
+  // The same title over the player in the world, which is the other half of
+  // wearing one. It rides on the nameplate and is counted apart from the labels
+  // — the one-per-creature total above must not move for it — and it is polled
+  // off the character rather than pushed, so it has to be *drawn* to be seen.
+  await draw();
+  const withTitle = await drawnCounts();
+  await page.evaluate(() => {
+    window.world.character.state.activeTitleId = null;
+  });
+  await draw();
+  const withoutTitle = await drawnCounts();
+  await page.evaluate(() => {
+    window.world.character.state.activeTitleId = 'rat-slayer';
+  });
+  await draw();
+  check(
+    'the worn title follows the player into the world without adding a label',
+    withTitle.titles === 1 && withoutTitle.titles === 0 && withTitle.labels === withoutTitle.labels,
+    `${withTitle.titles} -> ${withoutTitle.titles} titles, labels steady at ${withTitle.labels}`,
+  );
   await page.screenshot({ path: `${OUT}/12-title-worn.png` });
 }
 

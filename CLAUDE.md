@@ -523,6 +523,14 @@ for the same reason the stick-figure rig behind the paperdoll does: the ground t
 water is a decision the whole game makes. Creature colour is not — `render3d/palette.ts` is the
 renderer's own, and nothing outside it asks what colour a rat is.
 
+**A nameplate stacks up to four things and only the health bar may not move** (`render3d/nameplate.ts`):
+the quest marker, the name, the worn title, and the bar at the group's origin. Putting a title on
+pushes the _name_ up rather than sliding the bar down, because the bar is the one thing there read at
+a glance mid-fight. The name is the only line counted as a `label` by `drawnCounts` — `marker` and
+`title` have their own kinds precisely so smoke's one-label-per-drawn-creature assertion stays true
+by construction. All three are polled off `character.state` once a frame rather than pushed by an
+event, since what moves them (an item in the bag, a title worn) publishes nothing.
+
 **`render3d/actors.ts` is one actor per simulated thing**, catching up to it in `sync()` once a
 frame — and an actor that forgets `dispose()` leaks GPU memory, so every one of them ends in
 `disposeTree` (`render3d/dispose.ts`, which frees geometry, material _and_ any texture hanging off

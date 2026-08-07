@@ -2,6 +2,7 @@ import { Box3, Group, Vector3, type Camera } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import { NPC_APPEARANCES, appearanceKey, computeAppearance } from '../systems/AppearanceSystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
+import { titleName } from '../systems/AchievementSystem';
 import { npcMarker } from '../systems/QuestSystem';
 import { QUEST_MARKER_STYLE, THEME } from '../ui/theme';
 import { DEATH_FADE_MS, type Mob } from '../world/Mob';
@@ -15,6 +16,7 @@ import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildNode, buildSignpost } from './props';
 import type { CharacterState } from '../persistence/CharacterState';
+import type { TitleId } from '../types/ids';
 import type { Campfire } from '../world/Campfire';
 import type { Player } from '../world/Player';
 import type { ResourceNode } from '../world/ResourceNode';
@@ -84,7 +86,16 @@ export class PlayerActor implements Actor {
     this.object.add(this.plate.object);
   }
 
-  sync(elapsedMs: number): void {
+  /**
+   * The title comes down from the view rather than off the player, because
+   * `world/Player` knows its name and deliberately nothing else about who is
+   * wearing it — it is the character that has a title, not the body walking
+   * around. Polled like the gear below for the same reason: the simulation has
+   * no idea anything is drawing it.
+   */
+  sync(elapsedMs: number, titleId: TitleId | null): void {
+    this.plate.setTitle(titleId && titleName(titleId), THEME.color.levelUp);
+
     // The look is rebuilt when the gear changes rather than when something calls
     // a setter: the simulation has no idea anything is drawing it, and a pure
     // function of the gear is cheaper to compare than it is to notify.

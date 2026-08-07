@@ -22,6 +22,7 @@ const EMPTY_COUNTS: DrawnCounts = {
   npcs: 0,
   labels: 0,
   markers: 0,
+  titles: 0,
   fx: 0,
 };
 

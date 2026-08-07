@@ -220,7 +220,7 @@ export class ZoneView3D {
       this.mobActors.forEach((actor) => actor.refreshLabel(level));
     }
 
-    this.player?.sync(elapsedMs);
+    this.player?.sync(elapsedMs, world.character.state.activeTitleId);
     this.mobActors.forEach((actor) => actor.sync(elapsedMs));
     this.nodeActors.forEach((actor) => actor.sync());
     this.npcActors.forEach((actor) => actor.sync(world.character.state));
@@ -333,6 +333,7 @@ export class ZoneView3D {
       npcs: byKind.get('npc') ?? 0,
       labels: byKind.get('label') ?? 0,
       markers: byKind.get('marker') ?? 0,
+      titles: byKind.get('title') ?? 0,
       fx: this.fx.count(),
     };
   }
