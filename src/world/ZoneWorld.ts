@@ -28,7 +28,6 @@ import {
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
-  SHOP_OPENED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TITLE_CHANGED_EVENT,
@@ -79,9 +78,9 @@ import { conColor } from '../systems/EnemySystem';
 import { rollLootTable } from '../systems/LootSystem';
 import { canCook, findCookableItem, recipeForInput, rollCook } from '../systems/CookingSystem';
 import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
-import { consumableFor, describeItemName, itemValue } from '../data/items';
+import { consumableFor, describeItemName } from '../data/items';
 import { SKILLS } from '../data/skills';
-import { SHOP_CLOSE_RADIUS, SHOP_INTERACT_RADIUS, shopPriceFor } from '../data/shop';
+import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import { formatCurrency } from '../systems/CurrencySystem';
 import {
   advanceGather,
@@ -112,6 +111,7 @@ import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
 import { QuestDesk } from './QuestDesk';
+import { ShopSession } from './ShopSession';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { EventBus, WorldEvent } from './worldEvents';
@@ -216,8 +216,6 @@ export class ZoneWorld {
   campfire: Campfire | null = null;
   gatherState: GatherState | null = null;
   target: Mob | null = null;
-  /** The shopkeeper the open shop belongs to; null when the shop is closed. */
-  shopNpc: WorldNpc | null = null;
   afkActive = false;
   /** Set once the player has walked out; the world stops stepping after it. */
   changingZone = false;
@@ -226,6 +224,7 @@ export class ZoneWorld {
 
   /** The clock, the channels and the character — everything shared. */
   private readonly ctx: WorldContext;
+  private readonly shop: ShopSession;
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -349,8 +348,9 @@ export class ZoneWorld {
         .map((node) => node.blockerRect()),
     };
 
+    this.shop = new ShopSession(this.ctx);
     this.quests = new QuestDesk(this.ctx, {
-      isShopOpen: () => this.shopNpc !== null,
+      isShopOpen: () => this.shop.isOpen(),
       publishXpGain: (gain) => this.publishXpGain(gain),
     });
 
@@ -392,9 +392,9 @@ export class ZoneWorld {
     listen(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested.bind(this));
     listen(COOK_REQUESTED_EVENT, this.handleCookRequested.bind(this));
     listen(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested.bind(this));
-    listen(BUY_ITEM_REQUESTED_EVENT, this.handleBuyRequested.bind(this));
-    listen(SELL_ITEM_REQUESTED_EVENT, this.handleSellRequested.bind(this));
-    listen(SHOP_CLOSED_EVENT, this.handleShopClosedByUi.bind(this));
+    listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => this.shop.buy(itemId));
+    listen(SELL_ITEM_REQUESTED_EVENT, (itemId) => this.shop.sell(itemId));
+    listen(SHOP_CLOSED_EVENT, () => this.shop.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested.bind(this));
     listen(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk.bind(this));
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
@@ -581,11 +581,11 @@ export class ZoneWorld {
 
   approachShop(npc: WorldNpc): void {
     if (withinRadius(this.player, npc, SHOP_INTERACT_RADIUS)) {
-      this.openShop(npc);
+      this.shop.open(npc);
       return;
     }
     this.beginApproach({ kind: 'shop', radius: SHOP_INTERACT_RADIUS }, npc, () =>
-      this.openShop(npc),
+      this.shop.open(npc),
     );
   }
 
@@ -698,58 +698,25 @@ export class ZoneWorld {
   // Shop and vendoring
   // ---------------------------------------------------------------------------
 
-  // Walking off mid-trade closes the window, like any vendor would.
-  updateShopRange(): void {
-    if (!this.shopNpc) return;
-    if (!withinRadius(this.player, this.shopNpc, SHOP_CLOSE_RADIUS)) {
-      this.closeShop();
-    }
+  /** The shopkeeper the open shop belongs to; null when the shop is closed. */
+  get shopNpc(): WorldNpc | null {
+    return this.shop.npc;
   }
 
-  private openShop(npc: WorldNpc): void {
-    this.player.stopMoving();
-    this.shopNpc = npc;
-    this.ctx.events.emit(SHOP_OPENED_EVENT);
+  updateShopRange(): void {
+    this.shop.updateRange();
   }
 
   closeShop(): void {
-    if (!this.shopNpc) return;
-    this.shopNpc = null;
-    this.ctx.events.emit(SHOP_CLOSED_EVENT);
-  }
-
-  // The UI's close button already tore the panel down; just drop the state.
-  private handleShopClosedByUi(): void {
-    this.shopNpc = null;
+    this.shop.close();
   }
 
   handleBuyRequested(itemId: ItemId): void {
-    if (!this.shopNpc) return;
-    const price = shopPriceFor(itemId);
-    if (price === null) return;
-    // Checked before the coin leaves the purse, so a full pack never sells the
-    // player something they can't take home.
-    if (!this.character.canCarryItem(itemId, 1)) {
-      this.ctx.notice('Your pack is too full to carry that.');
-      return;
-    }
-    if (!this.character.spendCurrency(price)) {
-      this.ctx.notice("You can't afford that.");
-      return;
-    }
-    this.character.addItem(itemId, 1);
-    this.ctx.publishInventory();
-    this.ctx.publishCurrency();
+    this.shop.buy(itemId);
   }
 
   handleSellRequested(itemId: ItemId): void {
-    if (!this.shopNpc) return;
-    const value = itemValue(itemId);
-    if (value === null || this.character.itemCount(itemId) <= 0) return;
-    this.character.removeItem(itemId, 1);
-    this.character.addCurrency(value);
-    this.ctx.publishInventory();
-    this.ctx.publishCurrency();
+    this.shop.sell(itemId);
   }
 
   // ---------------------------------------------------------------------------
