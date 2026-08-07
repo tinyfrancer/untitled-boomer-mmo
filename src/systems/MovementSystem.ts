@@ -47,10 +47,12 @@ export function arriveRadius(speed: number, deltaMs: number): number {
 /**
  * Velocity toward a target point at the given speed, or arrival.
  *
- * Deliberately never returns a velocity above `speed`, even to land exactly on
- * the point: the caller integrates this over the physics world's own timestep
- * rather than over `deltaMs`, so a faster-than-walking final step turns that
- * small mismatch into a visible overshoot past the destination.
+ * The last step is clamped to the distance remaining, so the caller lands on
+ * the point rather than stepping over it — which is exact only because the
+ * caller integrates this over the same `deltaMs` it passed in. The rule used to
+ * be the opposite one, and it inverted when the integrator came in-house: a
+ * physics engine ran on its own timestep, so a step sized against `deltaMs`
+ * overshot by whatever the two clocks disagreed about.
  */
 export function stepToward(
   x: number,
@@ -65,5 +67,8 @@ export function stepToward(
   if (distance <= arriveRadius(speed, deltaMs)) {
     return { vx: 0, vy: 0, arrived: true };
   }
-  return { vx: (dx / distance) * speed, vy: (dy / distance) * speed, arrived: false };
+  // Infinite for a frame of no length, which is what leaves `speed` the answer.
+  const speedToLand = (distance * 1000) / Math.max(0, deltaMs);
+  const stepSpeed = Math.min(speed, speedToLand);
+  return { vx: (dx / distance) * stepSpeed, vy: (dy / distance) * stepSpeed, arrived: false };
 }
