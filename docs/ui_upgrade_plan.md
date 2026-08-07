@@ -6,13 +6,13 @@ dependency order: the navigation goes first because the map needs a home before 
 Each PR stands alone — it ships green, with no dead buttons and no half-wired surface. That is why
 `map` joins `MENU_TABS` in PR 5 alongside its sheet rather than in PR 1 with the rest of the menu.
 
-| #   | PR                               | State       |
-| --- | -------------------------------- | ----------- |
-| 1   | Navigation: five tabs and a Menu | in review   |
-| 2   | Quest marker over the shopkeeper | not started |
-| 3   | The worn title over the player   | not started |
-| 4   | The bag as an icon grid          | not started |
-| 5   | The zone map                     | not started |
+| #   | PR                               | State                        |
+| --- | -------------------------------- | ---------------------------- |
+| 1   | Navigation: five tabs and a Menu | merged 2026-08-07, `2d612b1` |
+| 2   | Quest marker over the shopkeeper | in review                    |
+| 3   | The worn title over the player   | not started                  |
+| 4   | The bag as an icon grid          | not started                  |
+| 5   | The zone map                     | not started                  |
 
 ## 1 — Navigation
 
@@ -35,6 +35,14 @@ Measured at 375px: 65.4px per bar tab, 127px per menu button, both against a 44p
 marker gets an assertion of its own. `NpcActor` learns the state from `ZoneView3D.sync()` polling
 `world.character.state`, mirroring the level-recolour precedent — the marker changes when the _bag_
 changes, and no event fires for that.
+
+Landed as planned. Two things the screenshots decided rather than the design: the glyph is drawn at
+**twice** the name's height, because a single "!" sized to match reads as punctuation on the end of
+the name rather than as its own thing; and the in-progress grey is `THEME.color.muted` and not
+`dim`, which is a colour for text on a panel's black backing and close to invisible on open grass.
+
+`drawnCounts()` gains `markers`, which is what lets smoke prove the poll is a poll: it writes the
+quest log straight onto the character — no event, no HUD request — and checks the glyph noticed.
 
 ## 3 — Title over the player
 

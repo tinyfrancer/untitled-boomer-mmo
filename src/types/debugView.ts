@@ -50,6 +50,13 @@ export interface DrawnCounts {
   npcs: number;
   labels: number;
   /**
+   * Quest markers over an NPC's head. Counted apart from `labels` because the
+   * label total is one-per-creature and a check leans on that; this one moves
+   * with the quest log, and is how a browser can see a glyph that jsdom cannot
+   * bake at all.
+   */
+  markers: number;
+  /**
    * Feedback in flight: damage numbers rising, a bolt between two points.
    * Transient by nature, so a check reads it right after the hit that caused
    * it — but it is also the one thing here a renderer cannot bake in jsdom (a

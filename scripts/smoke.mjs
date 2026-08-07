@@ -283,6 +283,15 @@ const checkZoneDrawn = async (zone) => {
     drawn.labels === spawn.mobs + spawn.npcs + spawn.signposts + 1,
     `${drawn.labels} labels`,
   );
+  // A quest marker is counted apart from the labels precisely so the total
+  // above stays one-per-drawn-thing. Every zone check runs before anything is
+  // taken on at the shopkeeper, so every quest giver is still calling — which
+  // makes one marker per NPC the answer, and none at all where there is no NPC.
+  check(
+    `and marks the ${zone}'s quest givers without adding to that count`,
+    drawn.markers === spawn.npcs,
+    `${drawn.markers} markers for ${spawn.npcs} npcs`,
+  );
 };
 
 /**
@@ -678,6 +687,28 @@ async function feedback() {
     questHeard.tracker.join(' | '),
   );
   await page.screenshot({ path: `${OUT}/8-shop.png` });
+
+  // The marker over that shopkeeper is *polled* off the character rather than
+  // pushed by an event, because what moves it is a quest finishing or an item
+  // landing in the bag and neither publishes anything. So this writes the log
+  // straight onto the character — no event, no HUD request — and asks whether
+  // the glyph noticed. Nothing else in the run can tell a poll from a listener.
+  const taken = await page.evaluate(() => ({ ...window.world.character.state.quests }));
+  await page.evaluate(() => {
+    window.world.character.state.quests = { 'rat-bones': 'done', 'crab-feast': 'done' };
+  });
+  await draw();
+  const cleared = (await drawnCounts()).markers;
+  await page.evaluate((quests) => {
+    window.world.character.state.quests = quests;
+  }, taken);
+  await draw();
+  const restored = (await drawnCounts()).markers;
+  check(
+    'the quest marker follows the character with no event to tell it to',
+    cleared === 0 && restored === 1,
+    `${cleared} markers with every quest done, ${restored} with one to take`,
+  );
 
   // Closing from the panel's own X, which asks the world rather than telling it.
   await page.click('.hud-modal [data-action="close-shop"]');

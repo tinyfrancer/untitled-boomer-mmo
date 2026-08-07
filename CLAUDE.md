@@ -424,7 +424,12 @@ only, so that table plus the two class-keyed quest rewards is the whole of anyon
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
 only `active | done` per quest; how far along a "bring me N of X" objective is gets counted off the
 inventory on read. Items reach the bag from loot, gathering, cooking, buying and offline camping,
-and counting on read means none of those paths can forget to bump a counter. `turnInQuest` on
+and counting on read means none of those paths can forget to bump a counter. The marker over a quest
+giver's head (`npcMarker`) is derived the same way, which is **why the view polls it**: what moves
+that glyph is an item landing in the bag, and nothing publishes that. `NpcActor.sync()` reads it off
+`character.state` each frame like `MobActor` reads the con colours, and the sprite is tagged
+`userData.kind = 'marker'` rather than `'label'` — smoke asserts one label per drawn creature in
+every zone, so a second label over a head would break that everywhere. `turnInQuest` on
 `CharacterController` refuses as a whole rather than half-applying — taking the objective and
 finding no room for the reward is the one outcome that can't be undone.
 

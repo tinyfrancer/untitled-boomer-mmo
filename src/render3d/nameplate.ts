@@ -11,6 +11,17 @@ const DEFAULT_HEIGHT = 8;
 const LABEL_HEIGHT = 12;
 
 /**
+ * The glyph above the name, and where its middle sits: half of each of the two
+ * lines above the name's own middle, so the pair stack without touching.
+ *
+ * Twice the name's height rather than a little over it. A single "!" is a thin
+ * stroke where a word is a block of them, so a marker sized to match the name
+ * beneath it reads as punctuation on the end of it instead of as its own thing.
+ */
+const MARKER_HEIGHT = 24;
+const MARKER_Y = LABEL_HEIGHT + (LABEL_HEIGHT + MARKER_HEIGHT) / 2;
+
+/**
  * Anything drawn over a creature's head: the health bar and the floating name.
  *
  * It is a billboard — turned to face the camera every frame rather than lying
@@ -33,6 +44,9 @@ export class Nameplate {
   private label: Sprite | null = null;
   private labelText = '';
   private labelColor = '';
+  private marker: Sprite | null = null;
+  private markerGlyph: string | null = null;
+  private markerColor = '';
 
   constructor(y: number, options: NameplateOptions = {}) {
     const { width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, healthBar = true } = options;
@@ -74,6 +88,34 @@ export class Nameplate {
       sprite.renderOrder = 11;
       sprite.userData.kind = 'label';
       this.label = sprite;
+      this.object.add(sprite);
+    }
+  }
+
+  /**
+   * The glyph over the name, or `null` for none. Same rebuild-on-change rule as
+   * the label, and for the same reason: this is polled once a frame.
+   *
+   * It is tagged `marker` rather than `label` because `drawnCounts` counts one
+   * label per drawn creature and `scripts/smoke.mjs` asserts that total in every
+   * zone — a second sprite calling itself a label would break the invariant
+   * everywhere. Its own kind keeps that true and gives the marker its own count.
+   */
+  setMarker(glyph: string | null, color: string): void {
+    if (glyph === this.markerGlyph && color === this.markerColor) return;
+    this.markerGlyph = glyph;
+    this.markerColor = color;
+    if (this.marker) {
+      disposeTree(this.marker);
+      this.marker = null;
+    }
+    if (!glyph) return;
+    const sprite = buildText(glyph, color, MARKER_HEIGHT);
+    if (sprite) {
+      sprite.position.y = MARKER_Y;
+      sprite.renderOrder = 11;
+      sprite.userData.kind = 'marker';
+      this.marker = sprite;
       this.object.add(sprite);
     }
   }

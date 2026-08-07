@@ -29,6 +29,15 @@ function opacityOf(root: Object3D): number {
   return found;
 }
 
+/** The unit form of what `drawnCounts` asks the scene graph. */
+function countKind(root: Object3D, kind: string): number {
+  let found = 0;
+  root.traverse((object) => {
+    if (object.userData.kind === kind) found += 1;
+  });
+  return found;
+}
+
 /** Anything with a `dispose` event to fire: a geometry, a material, a texture. */
 interface Disposable {
   addEventListener(type: 'dispose', listener: () => void): void;
@@ -223,6 +232,45 @@ describe('the rest of the zone', () => {
     expect(signpost.object.position).toEqual(
       simToWorld(nth(world.signposts, 0).x, nth(world.signposts, 0).y),
     );
+  });
+
+  // The glyph is polled off the character rather than pushed by an event,
+  // because what moves it is an item landing in the bag and nothing publishes
+  // that — so this is the test that the poll is wired to the right state.
+  it('hangs a quest marker over the shopkeeper and follows the bag', () => {
+    const painted = stubCanvas();
+    const { world, character } = harness();
+    const actor = new NpcActor(nth(world.npcs));
+    const glyph = (): { text: string; color: string } | undefined =>
+      countKind(actor.object, 'marker') === 1 ? lastPainted(painted) : undefined;
+
+    actor.sync(character.state);
+    expect(glyph()).toEqual({ text: '!', color: THEME.color.levelUp });
+
+    character.acceptQuest('rat-bones');
+    character.acceptQuest('crab-feast');
+    actor.sync(character.state);
+    expect(glyph()).toEqual({ text: '?', color: THEME.color.muted });
+
+    character.addItem('rat-bones', 10);
+    actor.sync(character.state);
+    expect(glyph()).toEqual({ text: '?', color: THEME.color.levelUp });
+  });
+
+  // A second sprite over a head would otherwise be counted as one more label,
+  // and `scripts/smoke.mjs` asserts one label per drawn thing in every zone.
+  it('counts the marker apart from the name, and takes it down with the quests', () => {
+    stubCanvas();
+    const { world, character } = harness();
+    const actor = new NpcActor(nth(world.npcs));
+    actor.sync(character.state);
+    expect(countKind(actor.object, 'label')).toBe(1);
+    expect(countKind(actor.object, 'marker')).toBe(1);
+
+    character.state.quests = { 'rat-bones': 'done', 'crab-feast': 'done' };
+    actor.sync(character.state);
+    expect(countKind(actor.object, 'label')).toBe(1);
+    expect(countKind(actor.object, 'marker')).toBe(0);
   });
 
   it('flickers a campfire and takes it away with the sim', () => {

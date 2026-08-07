@@ -1,3 +1,4 @@
+import type { QuestMarker } from '../systems/QuestSystem';
 import type { FloatTone } from '../world/worldEvents';
 
 // Every size below is authored in CSS pixels, which is what the HUD lays out
@@ -74,6 +75,27 @@ export const FLOAT_TONE_COLORS: Record<FloatTone, string> = {
   reward: THEME.color.levelUp,
   skill: THEME.color.skillUp,
   dim: THEME.color.dim,
+};
+
+/**
+ * The glyph and colour for each state a quest giver can be in.
+ *
+ * Same bargain as `FLOAT_TONE_COLORS` above: `QuestSystem.npcMarker` decides
+ * *what* an NPC has to say and this decides what that looks like, so the rule
+ * stays a pure function of the log and the bag with nothing drawn in it. Gold
+ * for the two states worth walking over and grey for the one that is just
+ * bookkeeping — the shape carries the rest, "!" being a quest that is not yet
+ * yours and "?" one that already is.
+ *
+ * The grey is `muted` and not `dim`, which is what a line of unimportant HUD
+ * text uses: this is a single thin stroke standing on open grass rather than
+ * on a panel's black backing, and #888 there is closer to invisible than to
+ * understated.
+ */
+export const QUEST_MARKER_STYLE: Record<QuestMarker, { glyph: string; color: string }> = {
+  available: { glyph: '!', color: THEME.color.levelUp },
+  ready: { glyph: '?', color: THEME.color.levelUp },
+  active: { glyph: '?', color: THEME.color.muted },
 };
 
 export function px(value: number, scale: number): number {

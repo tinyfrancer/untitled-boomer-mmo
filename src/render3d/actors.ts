@@ -2,7 +2,8 @@ import { Box3, Group, Vector3, type Camera } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import { NPC_APPEARANCES, appearanceKey, computeAppearance } from '../systems/AppearanceSystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
-import { THEME } from '../ui/theme';
+import { npcMarker } from '../systems/QuestSystem';
+import { QUEST_MARKER_STYLE, THEME } from '../ui/theme';
 import { DEATH_FADE_MS, type Mob } from '../world/Mob';
 import { buildCreature } from './creatures';
 import { facingYaw, simToWorld } from './coords';
@@ -13,6 +14,7 @@ import { OCCLUDED_OPACITY, type Occluder } from './occlusion';
 import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildNode, buildSignpost } from './props';
+import type { CharacterState } from '../persistence/CharacterState';
 import type { Campfire } from '../world/Campfire';
 import type { Player } from '../world/Player';
 import type { ResourceNode } from '../world/ResourceNode';
@@ -300,6 +302,21 @@ export class NpcActor implements Actor, Pickable {
     this.plate = new Nameplate(figure.height + PLATE_CLEARANCE, { healthBar: false });
     this.plate.setLabel('Shopkeeper', THEME.color.levelUp);
     this.object.add(this.plate.object);
+  }
+
+  /**
+   * Catches the quest marker up to the character.
+   *
+   * Read off the state each frame rather than driven by an event, the same
+   * bargain the con colours make: a quest's progress is *derived* from the bag
+   * (`QuestSystem`), so the thing that changes this glyph is a rat bone landing
+   * in the pack — and nothing publishes that. `setMarker` only rebuilds when the
+   * answer actually moves, so the frame cost is the two-quest walk and nothing.
+   */
+  sync(state: CharacterState): void {
+    const marker = npcMarker(this.npc.npcId, state.quests, state.inventory);
+    const style = marker ? QUEST_MARKER_STYLE[marker] : null;
+    this.plate.setMarker(style?.glyph ?? null, style?.color ?? '');
   }
 
   faceCamera(camera: Camera): void {

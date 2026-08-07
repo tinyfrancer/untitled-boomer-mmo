@@ -7,6 +7,7 @@ import {
   canTurnIn,
   completeQuest,
   formatQuestProgress,
+  npcMarker,
   questProgress,
   questState,
   questsForNpc,
@@ -91,6 +92,54 @@ describe('questsForNpc', () => {
       { 'cooked-crab': 20 },
     );
     expect(offers.map((offer) => offer.state)).toEqual(['done', 'ready']);
+  });
+});
+
+describe('npcMarker', () => {
+  it('calls a quest giver out to a character who has taken nothing on', () => {
+    expect(npcMarker('shopkeeper', {}, {})).toBe('available');
+  });
+
+  it('goes quiet once every quest is handed in', () => {
+    expect(npcMarker('shopkeeper', { 'rat-bones': 'done', 'crab-feast': 'done' }, {})).toBe(null);
+  });
+
+  it('marks a quest in progress apart from one ready to hand in', () => {
+    const log: QuestLog = { 'rat-bones': 'active', 'crab-feast': 'done' };
+    expect(npcMarker('shopkeeper', log, { 'rat-bones': 3 })).toBe('active');
+    expect(npcMarker('shopkeeper', log, { 'rat-bones': 10 })).toBe('ready');
+  });
+
+  // The marker names the most actionable thing rather than the first quest in
+  // order: a player standing in front of the shopkeeper with a completed quest
+  // and an untaken one should be told about the one they do not have yet.
+  it('lets an untaken quest outrank one waiting to be handed in', () => {
+    // Either way round the untaken one wins, so this is a rank and not the
+    // first answer `QUEST_ORDER` happens to reach.
+    expect(npcMarker('shopkeeper', { 'rat-bones': 'active' }, { 'rat-bones': 10 })).toBe(
+      'available',
+    );
+    expect(npcMarker('shopkeeper', { 'crab-feast': 'active' }, { 'cooked-crab': 20 })).toBe(
+      'available',
+    );
+  });
+
+  it('and a hand-in outrank one still being worked', () => {
+    expect(
+      npcMarker(
+        'shopkeeper',
+        { 'rat-bones': 'active', 'crab-feast': 'active' },
+        { 'cooked-crab': 20 },
+      ),
+    ).toBe('ready');
+  });
+
+  // Derived from the bag like every other quest reading, so it walks backwards
+  // too: selling the bones takes the hand-in marker away again.
+  it('follows the bag back down', () => {
+    const log: QuestLog = { 'rat-bones': 'active', 'crab-feast': 'done' };
+    expect(npcMarker('shopkeeper', log, { 'rat-bones': 10 })).toBe('ready');
+    expect(npcMarker('shopkeeper', log, { 'rat-bones': 9 })).toBe('active');
   });
 });
 

@@ -21,6 +21,7 @@ const EMPTY_COUNTS: DrawnCounts = {
   signposts: 0,
   npcs: 0,
   labels: 0,
+  markers: 0,
   fx: 0,
 };
 
