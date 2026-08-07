@@ -1,5 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row } from './dom';
+import { itemIconSvg } from './itemIcon';
 import { pickerPosition } from '../ui/layout';
 import type { ItemId } from '../types/ids';
 import { SLOT_LABELS } from './CharacterSheet';
@@ -34,6 +35,7 @@ export class SlotPicker extends Overlay {
         label: describeItemName(itemId),
         value: describeItemBonuses(itemId),
         valueClass: 'hud-list-row__sub',
+        icon: itemIconSvg(itemId),
         onClick: () => {
           onPick(itemId);
           this.close();

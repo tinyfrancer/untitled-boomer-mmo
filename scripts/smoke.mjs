@@ -686,6 +686,27 @@ async function feedback() {
     questHeard.world['rat-bones'] === 'active' && questHeard.tracker.length === 1,
     questHeard.tracker.join(' | '),
   );
+  // The shop's stock and its sell list get the bag's icons; its quest rows
+  // deliberately do not, since a quest is not an item.
+  const shopIcons = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.hud-modal .hud-list-row')];
+    return {
+      items: rows.filter((r) => /** @type {HTMLElement} */ (r).dataset.item).length,
+      withIcon: rows.filter((r) => r.querySelector('.hud-icon')).length,
+      quests: rows.filter((r) => /** @type {HTMLElement} */ (r).dataset.quest).length,
+      questIcons: rows.filter(
+        (r) => /** @type {HTMLElement} */ (r).dataset.quest && r.querySelector('.hud-icon'),
+      ).length,
+    };
+  });
+  check(
+    'the shop draws an icon on every item row and none on a quest row',
+    shopIcons.items > 0 &&
+      shopIcons.withIcon === shopIcons.items &&
+      shopIcons.quests > 0 &&
+      shopIcons.questIcons === 0,
+    `${shopIcons.withIcon}/${shopIcons.items} item rows, ${shopIcons.questIcons}/${shopIcons.quests} quest rows`,
+  );
   await page.screenshot({ path: `${OUT}/8-shop.png` });
 
   // The marker over that shopkeeper is *polled* off the character rather than
@@ -1291,26 +1312,37 @@ async function bagSheet() {
         actions: [...sheet.querySelectorAll('[data-item-action]')].map((n) => n.textContent),
       };
     });
-  await page.evaluate(() => {
+  // One of everything in the game. A grid holds several to a row where the old
+  // list gave each item the full width, so the fixture has to be the widest a
+  // bag can get for the scroll and the clip below to be exercised at all — and
+  // it makes the icon check further down cover every shape there is.
+  const ONE_OF_EACH = {
+    'rusty-sword': 1,
+    'apprentice-wand': 1,
+    'rat-bones': 12,
+    'rat-meat': 7,
+    'brown-chestplate': 1,
+    'brown-helmet': 1,
+    'brown-legs': 1,
+    'brown-robe': 1,
+    'brown-cloth-hat': 1,
+    'brown-cloth-pants': 1,
+    'brown-axe': 1,
+    'felling-axe': 1,
+    'fishing-pole': 1,
+    logs: 5,
+    'raw-fish': 3,
+    'cooked-fish': 2,
+    'burnt-fish': 1,
+    'crab-meat': 4,
+    'cooked-crab': 2,
+    'burnt-crab': 1,
+  };
+  await page.evaluate((inventory) => {
     const w = window.world;
-    w.character.state.inventory = {
-      'rat-bones': 12,
-      'rat-meat': 7,
-      logs: 5,
-      'raw-fish': 3,
-      'brown-helmet': 1,
-      'crab-meat': 4,
-      'cooked-fish': 2,
-      'burnt-fish': 1,
-      'brown-chestplate': 1,
-      'brown-legs': 1,
-      'brown-axe': 1,
-      'felling-axe': 1,
-      'fishing-pole': 1,
-      'cooked-crab': 2,
-    };
+    w.character.state.inventory = inventory;
     window.events.emit('inventory-changed', w.character.state.inventory);
-  });
+  }, ONE_OF_EACH);
   await tapTab('inventory');
   const bagFull = await bag();
   check(
@@ -1320,8 +1352,8 @@ async function bagSheet() {
   );
   check(
     'an overflowing bag becomes scrollable',
-    bagFull.maxScroll > 0 && bagFull.rows === 14,
-    `${bagFull.rows} rows, ${bagFull.maxScroll}px of overflow`,
+    bagFull.maxScroll > 0 && bagFull.rows === Object.keys(ONE_OF_EACH).length,
+    `${bagFull.rows} cells, ${bagFull.maxScroll}px of overflow`,
   );
 
   const bagCenter = await page.evaluate(() => {
@@ -1358,6 +1390,39 @@ async function bagSheet() {
     clipped.above && !clipped.hits,
     `off the top: ${clipped.above}, still hittable: ${clipped.hits}`,
   );
+
+  // Every cell carries a drawn icon. The shapes are unit-tested; what needs a
+  // browser is that the SVG survives being built, hung and laid out — an icon
+  // that collapsed to nothing would leave a grid of empty boxes and no error.
+  const icons = await page.evaluate(() => {
+    const cells = [...document.querySelectorAll('.hud-sheet[data-sheet="inventory"] .hud-item')];
+    return cells.map((cell) => {
+      const svg = cell.querySelector('.hud-icon');
+      const box = svg?.getBoundingClientRect();
+      return {
+        item: /** @type {HTMLElement} */ (cell).dataset.item,
+        shape: svg ? /** @type {HTMLElement} */ (svg).dataset.shape : null,
+        drawn: !!box && box.width > 0 && box.height > 0,
+        parts: svg?.childElementCount ?? 0,
+      };
+    });
+  });
+  check(
+    'every item in the bag is drawn as an icon with a size and something in it',
+    icons.length > 0 && icons.every((icon) => icon.shape && icon.drawn && icon.parts > 0),
+    `${icons.length} cells, e.g. ${icons[0]?.item}: ${icons[0]?.shape} (${icons[0]?.parts} parts)`,
+  );
+
+  // The grid packs several to a row where the list gave each one the full width,
+  // which is the whole point of the change and is a question about the rendered
+  // box rather than about the markup. How many fit is the browser's answer to
+  // whatever width the sheet was given, so this asks only for more than a list.
+  const columns = await page.evaluate(() => {
+    const cells = [...document.querySelectorAll('.hud-sheet[data-sheet="inventory"] .hud-item')];
+    const top = cells[0]?.getBoundingClientRect().top ?? 0;
+    return cells.filter((cell) => Math.abs(cell.getBoundingClientRect().top - top) < 2).length;
+  });
+  check('the bag lays its cells out several to a row', columns >= 2, `${columns} columns`);
 
   // A tap selects and unfolds the row's actions. Whether a scroll drag also
   // counts as a tap is the browser's business — a touch drag scrolls the list
@@ -1414,6 +1479,9 @@ async function characterSheet() {
       items: [...node.querySelectorAll('.hud-picker__row')].map(
         (n) => /** @type {HTMLElement} */ (n).dataset.item,
       ),
+      // The same icon the bag draws, reached through the shared row helper —
+      // which is the point of putting it there rather than in the bag alone.
+      icons: [...node.querySelectorAll('.hud-picker__row .hud-icon')].length,
       onScreen: box.left >= 0 && box.top >= 0 && box.right <= window.innerWidth,
     };
   });
@@ -1421,6 +1489,11 @@ async function characterSheet() {
     'an empty gear slot opens a picker of what fits it, kept on screen',
     picker !== null && picker.items.includes('brown-helmet') && picker.onScreen,
     picker ? `${picker.title}: ${picker.items.join(', ')}` : 'no picker',
+  );
+  check(
+    'and gives every row in it the same icon the bag draws',
+    picker !== null && picker.icons === picker.items.length && picker.icons > 0,
+    `${picker?.icons} icons for ${picker?.items.length} rows`,
   );
   await page.click('.hud-picker__row[data-item="brown-helmet"]');
   await page.waitForTimeout(200);
