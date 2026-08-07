@@ -502,37 +502,35 @@ export class ZoneWorld {
     // Touching the world is taking the controls back.
     this.setAfk(false);
 
-    if (target.kind === 'node') {
-      this.clearTarget();
-      this.pursuingTarget = false;
-      this.approachAndGather(target.node);
+    if (target.kind === 'mob') {
+      this.stopGathering();
+      this.pendingApproach = null;
+      this.setTarget(target.mob);
+      // Auto-approach: walking into range is implied by choosing a target.
+      this.pursuingTarget = true;
       return;
     }
 
-    // Any other tap ends a gather: picking a fight or walking off is a choice
-    // to stop chopping.
-    this.stopGathering();
-    this.pendingApproach = null;
+    // Every other tap gives up whatever was selected — and, unless it is a tap
+    // on the node currently being worked, gives up the gather too: walking off
+    // is a choice to stop chopping.
+    if (target.kind !== 'node') {
+      this.stopGathering();
+      this.pendingApproach = null;
+    }
+    this.clearTarget();
 
     switch (target.kind) {
+      case 'node':
+        this.approachAndGather(target.node);
+        return;
       case 'signpost':
-        this.clearTarget();
-        this.pursuingTarget = false;
         this.approachSignpost(target.signpost);
         return;
       case 'npc':
-        this.clearTarget();
-        this.pursuingTarget = false;
         this.approachShop(target.npc);
         return;
-      case 'mob':
-        this.setTarget(target.mob);
-        // Auto-approach: walking into range is implied by choosing a target.
-        this.pursuingTarget = true;
-        return;
-      default:
-        this.clearTarget();
-        this.pursuingTarget = false;
+      case 'ground':
         this.player.moveTo(target.point.x, target.point.y);
     }
   }
@@ -812,7 +810,6 @@ export class ZoneWorld {
     // anchor is what keeps an unattended character where they were left.
     if (this.target && !withinRadius(this.afkAnchor, this.target, AFK_ANCHOR_RADIUS)) {
       this.clearTarget();
-      this.pursuingTarget = false;
     }
 
     const action = decideAfkAction(
@@ -828,7 +825,6 @@ export class ZoneWorld {
 
     if (action.kind === 'recover') {
       this.clearTarget();
-      this.pursuingTarget = false;
       this.player.stopMoving();
       this.afkEat();
       return;
@@ -1049,6 +1045,10 @@ export class ZoneWorld {
   }
 
   clearTarget(): void {
+    // Pursuit belongs to the target rather than beside it: there is nothing to
+    // close on once there is nothing selected, and the two moved together at
+    // every call site anyway.
+    this.pursuingTarget = false;
     if (!this.target) return;
     this.target = null;
     this.events.emit(TARGET_CLEARED_EVENT);
@@ -1167,7 +1167,6 @@ export class ZoneWorld {
     this.clearTarget();
     this.closeShop();
     this.pendingApproach = null;
-    this.pursuingTarget = false;
     this.player.stopMoving();
     this.log(logNotice('You have died.'));
     this.events.emit(PLAYER_DIED_EVENT);
