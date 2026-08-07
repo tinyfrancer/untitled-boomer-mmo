@@ -288,6 +288,14 @@ element sets for itself.
 names and payloads) are shared, tested, engine-free definitions; everything that builds an element
 lives in `hud/`.
 
+**An item's icon is derived from what the item already is** (`ui/itemIcons.ts`, drawn by
+`hud/itemIcon.ts`). Equipment needs no icon data: a weapon names its `weaponShape`, armour fills a
+`slot`, and both name the `color` the paperdoll paints them — so a new equipment row gets a thumbnail
+by construction. Only materials and consumables carry an `icon`, and the shapes are deliberately
+coarser than the item list, since at thumbnail size a raw fish and a cooked one are one outline in
+two colours. The bag, the equip picker and the shop all draw it through the one `row({icon})` helper
+in `hud/dom.ts` rather than formatting an item three ways.
+
 **The paperdoll is SVG built from the same rig the figure in the world is built from**
 (`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by `render3d/figure.ts`).
 The HUD does not reach into the renderer for a canvas, which is what let the sheet keep showing

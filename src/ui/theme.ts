@@ -20,11 +20,21 @@ export const THEME = {
   touchMin: 44,
   panelWidth: {
     character: 240,
-    inventory: 210,
+    // Wider than the other panels since the bag became a grid: at 210 the
+    // desktop sheet fit a single column, which is a list with extra steps.
+    inventory: 260,
     target: 160,
     combatLog: 300,
   },
   paperdollSize: 102,
+  /**
+   * The bag's cells. `min` is the narrowest a cell may be before the grid drops
+   * a column, and is well over `touchMin` because a cell holds an icon and a
+   * name rather than only being tapped. At the sheet's width on a 375px phone
+   * it gives three columns, which is what makes the whole item list overflow
+   * the body and keeps the scroll and the clip worth checking.
+   */
+  bagCell: { min: 96, icon: 40 },
   xpBar: { width: 190, height: 12 },
   panelBg: 0x000000,
   panelAlpha: 0.65,

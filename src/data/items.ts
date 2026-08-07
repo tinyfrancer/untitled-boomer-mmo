@@ -2,6 +2,7 @@ import type {
   ArmorTypeId,
   ClassId,
   GearSlotId,
+  ItemIconShape,
   ItemId,
   SkillId,
   TierId,
@@ -58,18 +59,47 @@ interface EquipmentItemDefinition extends BaseItemDefinition {
   toolFor?: SkillId;
 }
 
+/**
+ * What the bag draws this as. Equipment needs none — it already says which slot
+ * it fills, which shape of weapon it is and what colour to paint it, and that
+ * is the whole of an icon. Everything else has to name one.
+ */
+export interface ItemIcon {
+  shape: ItemIconShape;
+  color: number;
+}
+
 interface MaterialItemDefinition extends BaseItemDefinition {
   kind: 'material';
+  icon: ItemIcon;
 }
 
 interface ConsumableItemDefinition extends BaseItemDefinition {
   kind: 'consumable';
   healAmount: number;
   healDurationMs: number;
+  icon: ItemIcon;
 }
 
 export type ItemDefinition =
   EquipmentItemDefinition | MaterialItemDefinition | ConsumableItemDefinition;
+
+// The bag's palette. What cooking did to something is read off colour rather
+// than shape — a raw fish, a cooked one and a burnt one are the same outline at
+// the size a thumbnail is drawn — so these steps have to stay tellable apart.
+const ICON_COLOR = {
+  bone: 0xe8e4d8,
+  rawMeat: 0xbf4a4a,
+  rawCrab: 0xef9a9a,
+  rawFish: 0x90a4ae,
+  cookedFish: 0xc9944a,
+  cookedCrab: 0xe0703c,
+  // Charcoal rather than near-black: burnt food should look worthless, but the
+  // cells it sits in are almost black themselves and #424242 read as an empty
+  // slot rather than as a dark item.
+  burnt: 0x6d6257,
+  wood: 0x8d6e63,
+} as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
   'rusty-sword': {
@@ -102,12 +132,14 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Rat Bones',
     value: 2,
     kind: 'material',
+    icon: { shape: 'bone', color: ICON_COLOR.bone },
   },
   'rat-meat': {
     id: 'rat-meat',
     name: 'Rat Meat',
     value: 3,
     kind: 'material',
+    icon: { shape: 'meat', color: ICON_COLOR.rawMeat },
   },
   // The leather set carries strength and the cloth set intellect, never both:
   // armor that fed every stat was why nobody could tell which one mattered.
@@ -231,12 +263,14 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 3,
     weight: 2,
     kind: 'material',
+    icon: { shape: 'log', color: ICON_COLOR.wood },
   },
   'raw-fish': {
     id: 'raw-fish',
     name: 'Raw Fish',
     value: 4,
     kind: 'material',
+    icon: { shape: 'fish', color: ICON_COLOR.rawFish },
   },
   'cooked-fish': {
     id: 'cooked-fish',
@@ -245,18 +279,21 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'consumable',
     healAmount: 15,
     healDurationMs: 10000,
+    icon: { shape: 'fish', color: ICON_COLOR.cookedFish },
   },
   'burnt-fish': {
     id: 'burnt-fish',
     name: 'Burnt Fish',
     value: 1,
     kind: 'material',
+    icon: { shape: 'fish', color: ICON_COLOR.burnt },
   },
   'crab-meat': {
     id: 'crab-meat',
     name: 'Crab Meat',
     value: 5,
     kind: 'material',
+    icon: { shape: 'meat', color: ICON_COLOR.rawCrab },
   },
   // Heals more than cooked fish: beach-tier food for beach-tier fights.
   'cooked-crab': {
@@ -266,12 +303,14 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'consumable',
     healAmount: 25,
     healDurationMs: 10000,
+    icon: { shape: 'meat', color: ICON_COLOR.cookedCrab },
   },
   'burnt-crab': {
     id: 'burnt-crab',
     name: 'Burnt Crab',
     value: 1,
     kind: 'material',
+    icon: { shape: 'meat', color: ICON_COLOR.burnt },
   },
 };
 

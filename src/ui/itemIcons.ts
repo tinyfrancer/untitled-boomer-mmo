@@ -1,0 +1,31 @@
+import { ITEMS, type ItemIcon } from '../data/items';
+import type { ItemId } from '../types/ids';
+
+/**
+ * What shape and colour an item is drawn as, for any item at all.
+ *
+ * Equipment answers this out of what it already carries — a weapon names its
+ * `weaponShape` and armour fills a `slot`, and both name the `color` the
+ * paperdoll paints them — so eleven of the nineteen items need no icon data of
+ * their own and a new one gets a thumbnail by construction. Everything else
+ * names an `icon` on its row.
+ *
+ * This is the vocabulary and `hud/itemIcon.ts` is the DOM that draws it, which
+ * is the same split `ui/` and `hud/` are everywhere else: what an item looks
+ * like is a decision worth testing without a document to hang it in.
+ */
+export function itemIcon(itemId: ItemId): ItemIcon {
+  const item = ITEMS[itemId];
+  if (item.kind !== 'equipment') {
+    return item.icon;
+  }
+  if (item.slot === 'weapon') {
+    // `weaponShape` is optional on the type because armour has none, so this
+    // needs a fallback it will never reach: a test asserts every weapon row
+    // names its shape, which is the thing that actually holds it.
+    return { shape: item.weaponShape ?? 'sword', color: item.color };
+  }
+  // Armour is drawn as the slot it fills — the only three left once weapons are
+  // out, which is what makes this exhaustive rather than a default.
+  return { shape: item.slot, color: item.color };
+}

@@ -10,8 +10,8 @@ Each PR stands alone — it ships green, with no dead buttons and no half-wired 
 | --- | -------------------------------- | ---------------------------- |
 | 1   | Navigation: five tabs and a Menu | merged 2026-08-07, `2d612b1` |
 | 2   | Quest marker over the shopkeeper | merged 2026-08-07, `413b960` |
-| 3   | The worn title over the player   | in review                    |
-| 4   | The bag as an icon grid          | not started                  |
+| 3   | The worn title over the player   | merged 2026-08-07, `0a24c56` |
+| 4   | The bag as an icon grid          | in review                    |
 | 5   | The zone map                     | not started                  |
 
 ## 1 — Navigation
@@ -68,6 +68,28 @@ builds the SVG, following the `ui/` vs `hud/` split. Equipment already carries `
 `weaponShape` and `color`; the nine materials and consumables need an `icon` field. Static
 definition data, so no save migration. The same icon then goes into `SlotPicker` and `ShopModal`,
 which is the consolidation payoff — three panels currently format an item row three ways.
+
+Landed with one shape per kind rather than per item: a raw fish, a cooked one and a burnt one are
+one outline in three colours, because at the size a thumbnail is drawn the colour is the only thing
+telling them apart. The four weapon shapes are `WeaponShapeId` itself, so a new weapon gets a
+thumbnail by construction — as does new armour, which is drawn as the slot it fills.
+
+Two things the grid forced that a list did not:
+
+- **The actions moved out of the scrolling body.** In a list they could unfold under the row they
+  belonged to; in a grid that reflows every cell after it, and scrolling would carry the buttons
+  away from the thing they act on. They are a strip pinned under the grid now, and it carries the
+  item's name and bonuses — which no longer fit in a cell the size of a thumb.
+- **`panelWidth.inventory` went 210 → 260.** At 210 the desktop sheet fit a single column, which is
+  a list with extra steps.
+
+The grid is `auto-fill` rather than a column count in `ui/layout.ts`. How many cells fit a width the
+sheet was already given is the one part of this the browser answers exactly for free, which is the
+same bargain the clipping and the drag-versus-tap threshold already make.
+
+Smoke's bag fixture is now **one of every item in the game**. A grid holds several to a row, so the
+old fourteen no longer overflowed the body and the scroll and clip checks were passing without
+testing anything; twenty does overflow, and it draws every shape there is in a real browser.
 
 ## 5 — Zone map
 

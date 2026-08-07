@@ -52,6 +52,17 @@ export type LootTableId = 'rat' | 'crab' | 'bandit';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
 
+/**
+ * What an item is drawn as in the bag, at the size of a thumbnail.
+ *
+ * Deliberately coarser than the item list: a raw fish, a cooked one and a burnt
+ * one are one shape in three colours, because at 40px what tells them apart is
+ * the colour and nothing else. The four weapon shapes are shared with
+ * `WeaponShapeId` by name so a new weapon gets an icon by construction.
+ */
+export type ItemIconShape =
+  WeaponShapeId | 'helmet' | 'chest' | 'pants' | 'bone' | 'meat' | 'fish' | 'log';
+
 export type GatherSkillId = 'fishing' | 'woodcutting' | 'cooking';
 
 // Skills that level by fighting rather than by gathering. Their cap rides the

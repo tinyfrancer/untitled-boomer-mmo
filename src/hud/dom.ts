@@ -50,6 +50,12 @@ export interface RowOptions {
   labelClass?: string;
   value?: string;
   valueClass?: string;
+  /**
+   * A thumbnail down the left. Taken as a built element rather than an item id
+   * so this stays the HUD's generic row and knows nothing about items — the
+   * two panels that pass one get it from `itemIcon.ts`.
+   */
+  icon?: SVGElement;
   /** A row that does something is a button, because a tappable row has to be. */
   onClick?: () => void;
 }
@@ -70,6 +76,7 @@ export function row(options: RowOptions): Row {
     labelClass,
     value: valueText,
     valueClass,
+    icon,
     onClick,
   } = options;
   let root: HTMLElement;
@@ -83,7 +90,18 @@ export function row(options: RowOptions): Row {
   }
   const label = el('div', labelClass, labelText);
   const value = el('div', valueClass, valueText ?? '');
-  root.append(label, value);
+  if (icon) {
+    // The text goes in a box of its own so the icon sits beside the *pair* of
+    // lines rather than becoming a third thing in the row's own flex flow —
+    // which is what decides whether a value sits beside its label or under it,
+    // and that is the caller's class to keep deciding.
+    const text = el('div', 'hud-row__text');
+    text.append(label, value);
+    root.classList.add('has-icon');
+    root.append(icon, text);
+  } else {
+    root.append(label, value);
+  }
   return { root, label, value };
 }
 

@@ -1,5 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader } from './dom';
+import { itemIconSvg } from './itemIcon';
 import { describeItemName, itemValue } from '../data/items';
 import { SHOP_STOCK } from '../data/shop';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -71,13 +72,14 @@ export class ShopModal extends Overlay {
     this.body.append(sectionHeader('For sale'));
     for (const entry of SHOP_STOCK) {
       this.body.append(
-        listRow(
-          describeItemName(entry.itemId),
-          formatCurrency(entry.price),
-          state.currency >= entry.price ? THEME.color.equippable : THEME.color.dim,
-          THEME.color.levelUp,
-          () => this.handlers.onBuy(entry.itemId),
-        ),
+        listRow({
+          label: describeItemName(entry.itemId),
+          value: formatCurrency(entry.price),
+          labelColor: state.currency >= entry.price ? THEME.color.equippable : THEME.color.dim,
+          valueColor: THEME.color.levelUp,
+          onClick: () => this.handlers.onBuy(entry.itemId),
+          itemId: entry.itemId,
+        }),
       );
     }
 
@@ -90,13 +92,14 @@ export class ShopModal extends Overlay {
     }
     for (const [itemId, quantity] of sellable) {
       this.body.append(
-        listRow(
-          `${describeItemName(itemId)} x${quantity}`,
-          formatCurrency(itemValue(itemId) ?? 0),
-          THEME.color.text,
-          THEME.color.levelUp,
-          () => this.handlers.onSell(itemId),
-        ),
+        listRow({
+          label: `${describeItemName(itemId)} x${quantity}`,
+          value: formatCurrency(itemValue(itemId) ?? 0),
+          labelColor: THEME.color.text,
+          valueColor: THEME.color.levelUp,
+          onClick: () => this.handlers.onSell(itemId),
+          itemId,
+        }),
       );
     }
   }
@@ -107,40 +110,50 @@ export class ShopModal extends Overlay {
     const { definition, state, progress } = offer;
     const ready = state === 'ready';
     const actionable = ready || state === 'available';
-    return listRow(
-      definition.name,
-      state === 'available' ? 'Accept' : ready ? 'Hand in' : `${progress.have}/${progress.need}`,
-      actionable ? THEME.color.levelUp : THEME.color.muted,
-      actionable ? THEME.color.levelUp : THEME.color.dim,
-      () => {
+    return listRow({
+      label: definition.name,
+      value:
+        state === 'available' ? 'Accept' : ready ? 'Hand in' : `${progress.have}/${progress.need}`,
+      labelColor: actionable ? THEME.color.levelUp : THEME.color.muted,
+      valueColor: actionable ? THEME.color.levelUp : THEME.color.dim,
+      onClick: () => {
         if (state === 'available') {
           this.handlers.onAcceptQuest(definition.id);
         } else if (ready) {
           this.handlers.onTurnInQuest(definition.id);
         }
       },
-      definition.id,
-    );
+      questId: definition.id,
+    });
   }
 }
 
-function listRow(
-  label: string,
-  value: string,
-  labelColor: string,
-  valueColor: string,
-  onClick: () => void,
-  questId?: QuestId,
-): HTMLElement {
+interface ListRowOptions {
+  label: string;
+  value: string;
+  labelColor: string;
+  valueColor: string;
+  onClick: () => void;
+  /** A row about an item, which is what earns it a thumbnail. Quests get none. */
+  itemId?: ItemId;
+  questId?: QuestId;
+}
+
+function listRow(options: ListRowOptions): HTMLElement {
+  const { label, value, labelColor, valueColor, onClick, itemId, questId } = options;
   const entry = row({
     className: 'hud-list-row',
     label,
     value,
     valueClass: 'hud-list-row__value',
+    icon: itemId ? itemIconSvg(itemId) : undefined,
     onClick,
   });
   if (questId) {
     entry.root.dataset.quest = questId;
+  }
+  if (itemId) {
+    entry.root.dataset.item = itemId;
   }
   entry.label.style.color = labelColor;
   entry.value.style.color = valueColor;

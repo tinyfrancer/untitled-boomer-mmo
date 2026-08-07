@@ -418,24 +418,70 @@ function hudCss(): string {
 .hud-weight.is-full {
   color: ${THEME.color.playerDamage};
 }
+/* auto-fill rather than a column count computed anywhere: the sheet is handed
+   its width by ui/layout.ts and how many ${THEME.bagCell.min}px cells fit inside it
+   is the one thing the browser answers exactly for free. */
+.hud-bag {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(${THEME.bagCell.min}px, 1fr));
+  gap: 6px;
+}
 .hud-item {
-  display: block;
-  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   min-height: ${THEME.touchMin}px;
-  padding: 6px;
+  padding: 6px 4px;
   border: 0;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.05);
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 .hud-item.is-selected {
   background: rgba(255, 255, 255, 0.14);
+  outline: 1px solid ${THEME.color.equippable};
+}
+.hud-icon {
+  display: block;
+  width: ${THEME.bagCell.icon}px;
+  height: ${THEME.bagCell.icon}px;
+}
+/* Bottom-right of the cell, over the icon — where every bag has put it. */
+.hud-item__count {
+  position: absolute;
+  right: 3px;
+  bottom: ${THEME.font.xs + 6}px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.75);
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.text};
 }
 .hud-item__name {
-  font-size: ${THEME.font.sm}px;
+  font-size: ${THEME.font.xs}px;
+  line-height: ${THEME.font.xs + 2}px;
   color: ${THEME.color.muted};
+  /* One line, cut rather than wrapped: a two-line name would make its cell
+     taller than every other cell in the row. */
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Pinned under the scrolling grid rather than inside it — see InventorySheet. */
+.hud-item-detail {
+  flex: none;
+  padding: 6px ${THEME.padding}px ${THEME.padding}px;
+  border-top: 1px solid ${cssRgba(THEME.panelStroke, 0.6)};
+}
+.hud-item-detail__name {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.text};
 }
 .hud-item__name.is-equippable {
   color: ${THEME.color.equippable};
@@ -634,6 +680,28 @@ function hudCss(): string {
   text-align: left;
   cursor: pointer;
   pointer-events: auto;
+}
+/* A row with a thumbnail down the left: the icon keeps its size, the pair of
+   text lines takes the rest, and the value stays pinned right where it was. */
+.has-icon > .hud-icon {
+  flex: none;
+  width: ${THEME.font.xl}px;
+  height: ${THEME.font.xl}px;
+}
+.hud-row__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.hud-list-row.has-icon .hud-row__text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+}
+.hud-picker__row.has-icon {
+  display: flex;
+  align-items: center;
+  gap: ${THEME.padding}px;
 }
 .hud-list-row__value {
   color: ${THEME.color.levelUp};
