@@ -89,10 +89,13 @@ export class ZoneView3D {
     this.canvas.style.display = 'block';
     this.canvas.style.width = '100%';
     this.canvas.style.height = '100%';
-    // Without this the browser claims a drag for itself — a pull-to-refresh, a
-    // pinch-zoom, an overscroll bounce — and the pointermove stream stops
-    // arriving halfway through an orbit.
-    this.canvas.style.touchAction = 'none';
+    // `pinch-zoom` and not `none`: a one-finger drag and a double tap are ours,
+    // so the pointermove stream an orbit depends on keeps arriving rather than
+    // being claimed halfway through by a pan the browser decided to take. A
+    // two-finger pinch is deliberately left to the browser, because the canvas
+    // is full-bleed under a `pointer-events: none` overlay — whatever it
+    // refuses, the page has no other surface to be unzoomed through.
+    this.canvas.style.touchAction = 'pinch-zoom';
     parent.appendChild(this.canvas);
 
     this.scene.background = new Color(BACKGROUND);
