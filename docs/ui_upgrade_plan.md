@@ -9,8 +9,8 @@ Each PR stands alone — it ships green, with no dead buttons and no half-wired 
 | #   | PR                               | State                        |
 | --- | -------------------------------- | ---------------------------- |
 | 1   | Navigation: five tabs and a Menu | merged 2026-08-07, `2d612b1` |
-| 2   | Quest marker over the shopkeeper | in review                    |
-| 3   | The worn title over the player   | not started                  |
+| 2   | Quest marker over the shopkeeper | merged 2026-08-07, `413b960` |
+| 3   | The worn title over the player   | in review                    |
 | 4   | The bag as an icon grid          | not started                  |
 | 5   | The zone map                     | not started                  |
 
@@ -48,7 +48,18 @@ quest log straight onto the character — no event, no HUD request — and check
 
 `Nameplate` gains a second sprite line tagged `userData.kind = 'title'`, same argument as above.
 `world/Player` keeps knowing only its name; `ZoneView3D.sync()` polls `activeTitleId` beside the
-level it already polls.
+level it already polls and hands it to `PlayerActor.sync()`.
+
+The layout question the plan did not answer: the name sat directly over the health bar with no room
+between them, so a third line has to displace something. It displaces the **name** — the title takes
+roughly the name's old line and the name rises above it — because the bar is the one thing on a
+nameplate read at a glance mid-fight, and a bar that jumped when a title was earned would be worse
+than no title. That made `MARKER_Y` a computed offset rather than the constant PR 2 left, which is
+why this PR had to follow that one rather than sit beside it. `Nameplate` now lays all three lines
+out in one `relayout()`, and the three near-identical bake-and-hang blocks collapsed into a `rehang`.
+
+`LINE_GAP` exists because stacking two sprites by half of each of their heights leaves them
+touching, which at the distance a nameplate is read runs the two lines into one block.
 
 ## 4 — Bag icon grid
 

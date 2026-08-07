@@ -57,6 +57,12 @@ export interface DrawnCounts {
    */
   markers: number;
   /**
+   * The worn title under the player's name — one or none, and never over
+   * anything else. Counted apart from `labels` for the same reason `markers`
+   * is: only the name is furniture the view owes every creature.
+   */
+  titles: number;
+  /**
    * Feedback in flight: damage numbers rising, a bolt between two points.
    * Transient by nature, so a check reads it right after the hit that caused
    * it — but it is also the one thing here a renderer cannot bake in jsdom (a

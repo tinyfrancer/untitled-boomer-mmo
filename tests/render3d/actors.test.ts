@@ -14,6 +14,7 @@ import { facingYaw, simToWorld } from '../../src/render3d/coords';
 import { THEME } from '../../src/ui/theme';
 import { conColor, enemyDisplayName } from '../../src/systems/EnemySystem';
 import { computeAppearance } from '../../src/systems/AppearanceSystem';
+import { titleName } from '../../src/systems/AchievementSystem';
 import { Campfire } from '../../src/world/Campfire';
 import { harness } from '../world/harness';
 import { lastPainted, stubCanvas } from './canvasStub';
@@ -78,7 +79,7 @@ describe('PlayerActor', () => {
     const actor = new PlayerActor(world.player);
     world.player.setPosition(300, 500);
     world.player.setVelocity(0, -120);
-    actor.sync(0);
+    actor.sync(0, null);
 
     expect(actor.object.position).toEqual(simToWorld(300, 500));
     expect(nth(actor.object.children, 0).rotation.y).toBeCloseTo(facingYaw(0, -1), 6);
@@ -92,7 +93,7 @@ describe('PlayerActor', () => {
     const gear: Gear = { helmet: null, chest: 'brown-chestplate', pants: null, weapon: null };
 
     world.player.setGear(gear);
-    actor.sync(0);
+    actor.sync(0, null);
 
     const colors: number[] = [];
     actor.object.traverse((object) => {
@@ -107,17 +108,81 @@ describe('PlayerActor', () => {
     const { world } = harness();
     const actor = new PlayerActor(world.player);
 
-    actor.sync(0);
+    actor.sync(0, null);
     expect(actor.figureState()).toEqual({ walking: false, pose: 'stand:0' });
 
     world.player.setVelocity(80, 0);
-    actor.sync(125);
+    actor.sync(125, null);
     expect(actor.figureState()).toEqual({ walking: true, pose: 'walk:1' });
+  });
+
+  // The title is the character's and the name is the body's, so it comes down
+  // from the view rather than off `world/Player` — this is what checks the view
+  // is handing it the worn one and takes it off again when it is unworn.
+  it('wears the worn title as a second line under the name', () => {
+    const painted = stubCanvas();
+    const { world } = harness();
+    const actor = new PlayerActor(world.player);
+
+    actor.sync(0, null);
+    expect(countKind(actor.object, 'title')).toBe(0);
+
+    actor.sync(0, 'rat-slayer');
+    expect(countKind(actor.object, 'title')).toBe(1);
+    expect(lastPainted(painted)).toEqual({
+      text: titleName('rat-slayer'),
+      color: THEME.color.levelUp,
+    });
+
+    actor.sync(0, null);
+    expect(countKind(actor.object, 'title')).toBe(0);
+  });
+
+  // A title slots in under the name and pushes the name up. What must *not*
+  // move is the health bar: it is the one thing here read at a glance mid-fight,
+  // and one that jumped when a title was earned would be worse than no title.
+  it('moves the name up for it rather than the health bar', () => {
+    stubCanvas();
+    const { world } = harness();
+    const actor = new PlayerActor(world.player);
+    const spriteY = (kind: string): number | undefined => {
+      let y;
+      actor.object.traverse((object) => {
+        if (object.userData.kind === kind) y = object.position.y;
+      });
+      return y;
+    };
+    // The bar is the plate's untagged geometry, sitting on the group's origin.
+    const barYs = (): number[] => {
+      const ys: number[] = [];
+      actor.object.traverse((object) => {
+        if (object instanceof Mesh && object.renderOrder === 10) ys.push(object.position.y);
+      });
+      return ys;
+    };
+
+    actor.sync(0, null);
+    const bare = spriteY('label')!;
+    const bars = barYs();
+    expect(bars.length).toBeGreaterThan(0);
+
+    actor.sync(0, 'rat-slayer');
+    const titled = spriteY('label')!;
+    expect(titled).toBeGreaterThan(bare);
+    // Under the name and still clear of the bar it sits above.
+    expect(spriteY('title')!).toBeLessThan(titled);
+    expect(spriteY('title')!).toBeGreaterThan(0);
+    expect(barYs()).toEqual(bars);
+
+    actor.sync(0, null);
+    expect(spriteY('label')).toBe(bare);
+    expect(barYs()).toEqual(bars);
   });
 
   it('hands everything it built back', () => {
     const { world } = harness();
     const actor = new PlayerActor(world.player);
+    actor.sync(0, 'rat-slayer');
     const parent = new Group();
     parent.add(actor.object);
     const allFreed = trackDisposal(actor.object);
