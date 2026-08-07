@@ -1,4 +1,4 @@
-import { TABS, type TabId } from '../ui/tabs';
+import { ALL_TABS, type TabId } from '../ui/tabs';
 
 export interface HudKeyHandlers {
   /**
@@ -31,8 +31,10 @@ export function bindHudKeys(handlers: HudKeyHandlers): () => void {
       return;
     }
 
+    // Against every surface rather than only the bar's: a shortcut should open
+    // what it names, not walk the player through a menu built for thumbs.
     const key = event.key.toLowerCase();
-    const tab = TABS.find((definition) => definition.key === key);
+    const tab = ALL_TABS.find((definition) => definition.key === key);
     if (tab) {
       handlers.onTab(tab.id);
       return;

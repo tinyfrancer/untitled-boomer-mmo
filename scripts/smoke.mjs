@@ -228,9 +228,24 @@ const tabBarTop = () =>
     ),
   );
 
-/** @param {string} tab */
+/** What the bottom bar itself holds; everything else is behind the Menu tab. */
+const BAR_TABS = ['character', 'inventory', 'quests', 'camp', 'menu'];
+
+/**
+ * Opens a surface the way a thumb reaches it — off the bar when it is there,
+ * and through the menu when it is not. Callers ask for a surface rather than
+ * for a route, which is why moving one behind the menu costs them nothing.
+ *
+ * @param {string} tab
+ */
 const tapTab = async (tab) => {
-  await page.click(`.hud-tabs__tab[data-tab="${tab}"]`);
+  if (!BAR_TABS.includes(tab)) {
+    await page.click('.hud-tabs__tab[data-tab="menu"]');
+    await page.waitForTimeout(80);
+    await page.click(`[data-menu-tab="${tab}"]`);
+  } else {
+    await page.click(`.hud-tabs__tab[data-tab="${tab}"]`);
+  }
   await page.waitForTimeout(80);
 };
 
@@ -987,9 +1002,10 @@ async function touchGestures() {
   await stepUntilZone('beach', 'the tapped signpost to walk the player to the beach');
   check('a real click on a signpost walks over and changes zone', true);
 
-  // The tab bar is the HUD's only permanent furniture, and a seventh tab is
-  // what makes its per-button width tight. 375px is the narrowest phone worth
-  // supporting; below ~372 the buttons drop under the 44px touch minimum.
+  // The tab bar is the HUD's only permanent furniture, and its width is split
+  // evenly, so every seat costs every other seat. Seven of them left four
+  // tenths of a pixel of headroom at 375px; five leave twenty-two, which is
+  // what folding the cold surfaces behind Menu bought.
   await page.setViewportSize({ width: 375, height: 812 });
   await page.waitForTimeout(400);
   const tabWidth = await page.evaluate(() => {
@@ -1006,13 +1022,36 @@ async function touchGestures() {
     };
   });
   check(
-    'seven tabs still clear the 44px touch minimum on a 375px phone',
+    'five tabs clear the 44px touch minimum on a 375px phone with room to spare',
     tabWidth.viewport === 375 &&
-      tabWidth.count === 7 &&
+      tabWidth.count === 5 &&
       tabWidth.narrowest >= 44 &&
       tabWidth.shortest >= 44,
     `${tabWidth.count} tabs, narrowest ${tabWidth.narrowest.toFixed(1)}x${tabWidth.shortest.toFixed(1)}px at ${tabWidth.viewport}px`,
   );
+
+  // The menu is the reason the bar is short, so its own buttons have to clear
+  // the same minimum — a surface moved somewhere untappable is not moved.
+  await page.click('.hud-tabs__tab[data-tab="menu"]');
+  await page.waitForTimeout(120);
+  const menuBoxes = await page.evaluate(() => {
+    const boxes = [...document.querySelectorAll('[data-menu-tab]')].map((item) =>
+      item.getBoundingClientRect(),
+    );
+    return {
+      count: boxes.length,
+      narrowest: Math.min(...boxes.map((box) => box.width)),
+      shortest: Math.min(...boxes.map((box) => box.height)),
+    };
+  });
+  check(
+    'and the menu behind it gives its own buttons a full touch target',
+    menuBoxes.count === 3 && menuBoxes.narrowest >= 44 && menuBoxes.shortest >= 44,
+    `${menuBoxes.count} items, narrowest ${menuBoxes.narrowest.toFixed(1)}x${menuBoxes.shortest.toFixed(1)}px`,
+  );
+  await page.screenshot({ path: `${OUT}/10-menu-375.png` });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(80);
   await page.screenshot({ path: `${OUT}/10-tabbar-375.png` });
 }
 
@@ -1066,11 +1105,21 @@ async function sheets() {
     'a tab opens its sheet and closes the one already open',
     tabbedOpen.log === true && tabbedOpen.character === false,
   );
+  // The log lives behind the menu, and the menu is the only seat it has on the
+  // bar — so that is what lights. Without it the bar goes dark while a panel is
+  // open and nothing on screen says where the panel came from.
   check(
-    'the open sheet lights its tab in the bar',
-    tabbedOpen.selectedTab === 'log' && tabbedClosed.selectedTab === null,
+    'a sheet opened from the menu lights the Menu tab rather than nothing',
+    tabbedOpen.selectedTab === 'menu' && tabbedClosed.selectedTab === null,
   );
   check('tapping the open tab again closes it', tabbedClosed.log === false);
+
+  // The menu has to get out of the way of what it opened, or the first thing a
+  // player sees of a sheet is the menu still sitting on top of it.
+  const menuDismissed = await page.evaluate(
+    () => document.querySelectorAll('.hud-modal--bottom').length,
+  );
+  check('and the menu closes behind the sheet it opened', menuDismissed === 0);
 
   const exclusive = [];
   for (const tab of ['character', 'inventory', 'quests', 'log']) {

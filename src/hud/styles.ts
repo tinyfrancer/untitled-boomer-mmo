@@ -285,8 +285,9 @@ function hudCss(): string {
   border-top: 1px solid ${cssColor(THEME.panelStroke)};
 }
 .hud-tabs__tab {
-  /* Even shares of the width, which is what makes seven tabs exactly clear the
-     44px touch minimum on a 375px phone and an eighth impossible. */
+  /* Even shares of the width, so every seat costs every other seat. Five of
+     them clear the 44px touch minimum on a 375px phone with room to spare;
+     seven cleared it by four tenths of a pixel. */
   flex: 1 1 0;
   min-width: 0;
   font-size: ${THEME.font.sm}px;
@@ -545,6 +546,13 @@ function hudCss(): string {
   align-items: flex-start;
   padding-top: 60px;
 }
+/* The menu opens against the bar that opened it. The offset is the tab bar's
+   own height — touchMin plus its padding either side — so the box rests on top
+   of the bar rather than over it. */
+.hud-modal--bottom {
+  align-items: flex-end;
+  padding-bottom: ${THEME.touchMin + THEME.padding * 3}px;
+}
 .hud-modal__box {
   width: 280px;
   max-width: calc(100% - ${THEME.margin * 2}px);
@@ -556,6 +564,17 @@ function hudCss(): string {
   flex-direction: column;
   gap: ${THEME.padding}px;
   overflow: hidden;
+}
+/* Two columns rather than the bar's five-way split, which is what buys these
+   labels room to be whole words. An even fraction each keeps both columns the
+   same width however long the longest label gets. */
+.hud-menu__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${THEME.padding}px;
+}
+.hud-menu__item {
+  min-height: ${THEME.touchMin}px;
 }
 .hud-modal__box--shop {
   width: 300px;

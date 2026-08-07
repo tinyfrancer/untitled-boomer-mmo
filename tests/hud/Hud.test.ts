@@ -80,6 +80,14 @@ function tab(id: string): HTMLButtonElement {
   return button;
 }
 
+/** Opens a surface the way a thumb reaches it: the Menu tab, then the button. */
+function menuItem(id: string): void {
+  tab('menu').click();
+  const button = parent.querySelector<HTMLButtonElement>(`[data-menu-tab="${id}"]`);
+  if (!button) throw new Error(`no ${id} menu item`);
+  button.click();
+}
+
 function press(key: string, target: EventTarget = window): void {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 }
@@ -131,10 +139,26 @@ describe('one sheet is open at a time', () => {
   beforeEach(() => mount());
 
   it('opens exactly one sheet per tab and swaps rather than stacks', () => {
-    for (const id of ['character', 'inventory', 'quests', 'feats', 'log']) {
+    for (const id of ['character', 'inventory', 'quests']) {
       tab(id).click();
       expect(openSheets()).toEqual([id]);
     }
+    for (const id of ['feats', 'log']) {
+      menuItem(id);
+      expect(openSheets()).toEqual([id]);
+    }
+  });
+
+  it('lights Menu for a sheet that lives behind it, so the bar is not left dark', () => {
+    menuItem('log');
+    const lit = [...parent.querySelectorAll<HTMLElement>('.hud-tabs__tab.is-selected')];
+    expect(lit.map((button) => button.dataset.tab)).toEqual(['menu']);
+  });
+
+  it('closes the menu behind the sheet it opened', () => {
+    menuItem('feats');
+    expect(modals()).toHaveLength(0);
+    expect(openSheets()).toEqual(['feats']);
   });
 
   it('closes the open sheet when its own tab is tapped again', () => {
@@ -155,7 +179,7 @@ describe('one sheet is open at a time', () => {
     expect(emitted.map((e) => e.event)).toContain(AFK_TOGGLE_REQUESTED_EVENT);
     expect(openSheets()).toEqual(['inventory']);
 
-    tab('options').click();
+    menuItem('options');
     expect(openSheets()).toEqual(['inventory']);
     expect(modals()).toHaveLength(1);
   });
@@ -179,7 +203,20 @@ describe('the keyboard', () => {
   });
 
   it('closes an open modal on Escape before it reaches the tabs', () => {
-    tab('options').click();
+    menuItem('options');
+    expect(modals()).toHaveLength(1);
+    press('Escape');
+    expect(modals()).toHaveLength(0);
+  });
+
+  it('opens a menu-held sheet by its own key, without going through the menu', () => {
+    press('l');
+    expect(openSheets()).toEqual(['log']);
+    expect(modals()).toHaveLength(0);
+  });
+
+  it('closes the menu itself on Escape', () => {
+    tab('menu').click();
     expect(modals()).toHaveLength(1);
     press('Escape');
     expect(modals()).toHaveLength(0);
@@ -392,7 +429,7 @@ describe('destroy', () => {
     mount({ inventory: { 'brown-helmet': 1 } });
     tab('character').click();
     parent.querySelector<HTMLButtonElement>('.hud-slot[data-slot="helmet"]')?.click();
-    tab('options').click();
+    menuItem('options');
     events.emit(SHOP_OPENED_EVENT);
     expect(parent.querySelector('.hud-picker')).not.toBeNull();
     expect(modals()).toHaveLength(2);

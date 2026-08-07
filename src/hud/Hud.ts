@@ -365,8 +365,16 @@ class Hud {
   /**
    * The tab bar's whole behaviour: sheets toggle and are mutually exclusive,
    * actions just fire.
+   *
+   * The menu routes what it picked back through here rather than dispatching it
+   * itself, so a surface behaves the same whether it was reached from the bar,
+   * from the menu or from the keyboard.
    */
   private selectTab(tab: TabId): void {
+    if (tab === 'menu') {
+      this.overlays.openMenu((selected) => this.selectTab(selected));
+      return;
+    }
     if (tab === 'camp') {
       this.events.emit(AFK_TOGGLE_REQUESTED_EVENT);
       return;
