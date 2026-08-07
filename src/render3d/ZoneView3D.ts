@@ -223,6 +223,7 @@ export class ZoneView3D {
     this.player?.sync(elapsedMs);
     this.mobActors.forEach((actor) => actor.sync(elapsedMs));
     this.nodeActors.forEach((actor) => actor.sync());
+    this.npcActors.forEach((actor) => actor.sync(world.character.state));
     this.syncCampfire(world);
     this.campfireActor?.sync(elapsedMs);
     // Every frame, not on a target-changed event: a chased mob is moving, and
@@ -331,6 +332,7 @@ export class ZoneView3D {
       signposts: byKind.get('signpost') ?? 0,
       npcs: byKind.get('npc') ?? 0,
       labels: byKind.get('label') ?? 0,
+      markers: byKind.get('marker') ?? 0,
       fx: this.fx.count(),
     };
   }

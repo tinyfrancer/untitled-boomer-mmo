@@ -58,6 +58,31 @@ export function questsForNpc(npcId: NpcId, log: QuestLog, inventory: Inventory):
     }));
 }
 
+/** What is worth drawing over a quest giver's head. `done` never is. */
+export type QuestMarker = Exclude<QuestOfferState, 'done'>;
+
+/**
+ * The one marker an NPC wears, out of everything they currently have to say.
+ *
+ * The most actionable thing wins rather than the first one in `QUEST_ORDER`: a
+ * quest waiting to be taken outranks one waiting to be handed in, and both
+ * outrank one still being worked. A player who can see only one glyph should be
+ * told the thing that gets them furthest for walking over.
+ */
+export function npcMarker(npcId: NpcId, log: QuestLog, inventory: Inventory): QuestMarker | null {
+  let ready = false;
+  let active = false;
+  for (const id of QUEST_ORDER) {
+    const definition = QUESTS[id];
+    if (definition.giverNpcId !== npcId) continue;
+    const state = questState(definition, log, inventory);
+    if (state === 'available') return 'available';
+    if (state === 'ready') ready = true;
+    if (state === 'active') active = true;
+  }
+  return ready ? 'ready' : active ? 'active' : null;
+}
+
 export function activeQuests(log: QuestLog): QuestDefinition[] {
   return QUEST_ORDER.map((id) => QUESTS[id]).filter(
     (definition) => log[definition.id] === 'active',
