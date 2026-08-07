@@ -7,14 +7,12 @@ import {
   ABILITY_REQUESTED_EVENT,
   ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
-  ACHIEVEMENT_UNLOCKED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   GEAR_CHANGED_EVENT,
-  KILLS_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
   PLAYER_DIED_EVENT,
@@ -26,37 +24,18 @@ import {
   SHOP_CLOSED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
-  TITLE_CHANGED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
   type AchievementUnlock,
 } from '../ui/uiEvents';
-import { titleName } from '../systems/AchievementSystem';
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { afkXpReward } from '../systems/AfkSystem';
-import {
-  logAbsorbed,
-  logAchievement,
-  logCoin,
-  logDamageDealt,
-  logDamageTaken,
-  logDefense,
-  logKill,
-  logLevelUp,
-  logLoot,
-  logNotice,
-  logTitleEarned,
-  logXpGain,
-} from '../systems/CombatLogSystem';
-import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
+import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
+import { isInRange } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
-import { rollLootTable } from '../systems/LootSystem';
-import { describeItemName } from '../data/items';
-import { SKILLS } from '../data/skills';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
-import { formatCurrency } from '../systems/CurrencySystem';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
 import { arriveRadius, distance, withinRadius, type Point } from '../systems/MovementSystem';
@@ -80,6 +59,7 @@ import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
 import { AbilityCaster } from './AbilityCaster';
+import { CombatDirector } from './CombatDirector';
 import { GatherSession } from './GatherSession';
 import { AfkCamp } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
@@ -88,24 +68,12 @@ import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
 import type { EventBus, WorldEvent } from './worldEvents';
-import type {
-  AbilityId,
-  EnemyId,
-  GearSlotId,
-  ItemId,
-  LootTableId,
-  NpcId,
-  ZoneEdge,
-} from '../types/ids';
+import type { AbilityId, EnemyId, GearSlotId, ItemId, NpcId, ZoneEdge } from '../types/ids';
 import { inventoryEntries } from '../systems/InventorySystem';
 
 // Far enough inside the new zone that the player doesn't stand on the return
 // exit and bounce straight back.
 const ARRIVAL_INSET = TILE_SIZE * 1.5;
-// Combat skills are earned a rep at a time — one landed swing, one hit turned
-// aside — rather than in the lumps a gather or a kill pays out.
-const WEAPON_SKILL_XP_PER_HIT = 1;
-const DEFENSE_SKILL_XP_PER_SAVE = 1;
 // A walk up to a node has to finish a little inside the radius that lets a tap
 // gather from where the player already stands: the gather channel cancels the
 // moment the player is further out than that radius, so ending the approach
@@ -192,6 +160,7 @@ export class ZoneWorld implements Targeting {
   private readonly shop: ShopSession;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
+  private readonly combat: CombatDirector;
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -201,7 +170,6 @@ export class ZoneWorld implements Targeting {
   // attack range and never abandons — so it stays its own flag.
   private pendingApproach: PendingApproach | null = null;
   private pursuingTarget = false;
-  private lastAttackAt = -Infinity;
   // The four HUD publishers that only speak when what they publish moves; see
   // installPublishers for what each one counts as a change.
   private readonly publishPlayerHp: () => void;
@@ -312,10 +280,17 @@ export class ZoneWorld implements Targeting {
 
     this.gathering = new GatherSession(this.ctx);
     this.shop = new ShopSession(this.ctx);
+    this.combat = new CombatDirector(this.ctx, {
+      mobs: this.mobs,
+      targeting: this,
+      awardXp: (reward) => this.awardXp(reward),
+      interruptGather: () => this.gathering.interrupt(),
+      onPlayerDeath: () => this.handlePlayerDeath(),
+    });
     this.abilities = new AbilityCaster(this.ctx, {
       targeting: this,
       stopGathering: () => this.gathering.stop(),
-      resolveKill: (mob) => this.resolveKill(mob),
+      resolveKill: (mob) => this.combat.resolveKill(mob),
       publishAbilityState: () => this.publishAbilityState(),
     });
     this.afk = new AfkCamp(this.ctx, {
@@ -443,8 +418,7 @@ export class ZoneWorld implements Targeting {
     this.nodes.forEach((node) => node.update(deltaMs));
     this.dropDeadTarget();
     this.gathering.update(deltaMs);
-    this.updateCombat();
-    this.updateEnemyAttacks();
+    this.combat.update();
     this.publishPlayerHp();
     this.publishPlayerMana();
     this.publishAbilityState();
@@ -779,101 +753,6 @@ export class ZoneWorld implements Targeting {
     }
   }
 
-  private updateCombat(): void {
-    if (!this.target || !this.target.isAlive()) {
-      return;
-    }
-
-    if (!isInRange(distance(this.player, this.target), this.player.attackRange)) {
-      return;
-    }
-    if (
-      !isCooldownReady(this.ctx.now - this.lastAttackAt, this.player.effectiveAttackCooldownMs())
-    ) {
-      return;
-    }
-
-    this.lastAttackAt = this.ctx.now;
-    const weaponSkill = this.character.activeWeaponSkill();
-    const { damage } = resolveAttack({
-      attackPower: this.player.attackPower,
-      weaponSkillLevel: this.character.skillLevelOf(weaponSkill),
-    });
-    this.ctx.push({
-      kind: 'hit',
-      on: 'mob',
-      via: 'weapon',
-      at: { x: this.target.x, y: this.target.y },
-      damage,
-      absorbed: 0,
-    });
-    this.ctx.log(logDamageDealt(this.target.name, damage));
-    this.player.markInCombat();
-    this.target.takeDamage(damage);
-    // Anything the player hits fights back, whether or not it opens combat itself.
-    this.target.engage();
-    this.publishTarget();
-    // Skill comes from swinging, not from killing: a landed hit is the rep.
-    this.ctx.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
-    if (!this.target.isAlive()) {
-      this.resolveKill(this.target);
-    }
-  }
-
-  private updateEnemyAttacks(): void {
-    if (!this.player.isAlive()) return;
-
-    for (const mob of this.mobs) {
-      if (!mob.isEngaged()) continue;
-
-      if (!isInRange(distance(mob, this.player), mob.attackRange)) continue;
-      if (!isCooldownReady(this.ctx.now - mob.lastAttackAt, mob.attackCooldownMs)) continue;
-
-      mob.lastAttackAt = this.ctx.now;
-
-      // A turned-aside hit trains the skill that turned it aside and stops
-      // there — no damage, and nothing to interrupt a gather.
-      const defense = rollDefense({
-        blockLevel: this.character.skillLevelOf('block'),
-        parryLevel: this.character.skillLevelOf('parry'),
-        hasWeapon: this.character.state.gear.weapon !== null,
-      });
-      if (defense.avoided && defense.skillId) {
-        this.ctx.push({
-          kind: 'defend',
-          at: this.ctx.playerPoint(),
-          skillName: SKILLS[defense.skillId].name,
-        });
-        this.ctx.log(logDefense(SKILLS[defense.skillId].name, mob.name));
-        this.ctx.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
-        continue;
-      }
-
-      const { damage } = resolveAttack({ attackPower: mob.attackPower });
-      const absorbed = this.player.takeDamage(damage);
-      this.ctx.push({
-        kind: 'hit',
-        on: 'player',
-        via: 'weapon',
-        at: this.ctx.playerPoint(),
-        damage,
-        absorbed,
-      });
-      if (absorbed > 0) {
-        this.ctx.log(logAbsorbed(absorbed));
-      }
-      if (damage > absorbed) {
-        this.ctx.log(logDamageTaken(mob.name, damage - absorbed));
-      }
-      this.gathering.interrupt();
-
-      if (!this.player.isAlive()) {
-        this.handlePlayerDeath();
-        return;
-      }
-    }
-  }
-
   private handlePlayerDeath(): void {
     // Dying is where an unattended session ends: it took the camp with it, and
     // resuming would just feed the same mob until the player came back.
@@ -906,56 +785,14 @@ export class ZoneWorld implements Targeting {
     this.ctx.push({ kind: 'death', on: 'player', respawnZone: null });
   }
 
-  /**
-   * Everything a corpse is worth, for a mob that has already died this frame.
-   * Both the swing path and the ability path end here so a new reward can only
-   * ever be added once — the two used to carry their own copy of this, which is
-   * how a reward gets wired into melee and silently missed on spellcasting.
-   * Safe to read the mob after death: its reward fields are readonly and set in
-   * the constructor, so dying does not clear them.
-   */
+  /** Everything a corpse is worth. Both kill paths end here. */
   resolveKill(mob: Mob): void {
-    this.ctx.push({ kind: 'death', on: 'mob', mob });
-    this.ctx.log(logKill(mob.name));
-    this.awardXp(mob.xpReward);
-    this.grantLoot(mob.lootTableId);
-    this.announceUnlocks(this.creditKill(mob.definition.id));
+    this.combat.resolveKill(mob);
   }
 
-  /**
-   * Credits kills to the slayer chains and reports what they completed. Does
-   * not announce anything itself: a live kill can emit, but an offline camp
-   * settles up before the HUD is listening, so the caller decides how the news
-   * travels.
-   */
+  /** Credits kills to the slayer chains and reports what they completed. */
   creditKill(enemyId: EnemyId, count = 1): AchievementUnlock[] {
-    const worn = this.character.state.activeTitleId;
-    const crossed = this.character.recordKill(enemyId, count);
-    this.ctx.events.emit(KILLS_CHANGED_EVENT, this.character.state.kills);
-    if (crossed.length > 0) {
-      this.persistCharacter();
-    }
-    return crossed.map((definition) => ({
-      achievementId: definition.id,
-      name: definition.name,
-      titleId: definition.titleId,
-      titleWorn:
-        definition.titleId !== undefined &&
-        worn === null &&
-        this.character.state.activeTitleId === definition.titleId,
-    }));
-  }
-
-  private announceUnlocks(unlocks: AchievementUnlock[]): void {
-    for (const unlock of unlocks) {
-      this.ctx.log(logAchievement(unlock.name));
-      this.ctx.float(unlock.name, 'skill', 60);
-      this.ctx.events.emit(ACHIEVEMENT_UNLOCKED_EVENT, unlock);
-      if (unlock.titleWorn && unlock.titleId) {
-        this.ctx.log(logTitleEarned(titleName(unlock.titleId)));
-        this.ctx.events.emit(TITLE_CHANGED_EVENT, unlock.titleId);
-      }
-    }
+    return this.combat.creditKill(enemyId, count);
   }
 
   // ---------------------------------------------------------------------------
@@ -984,33 +821,6 @@ export class ZoneWorld implements Targeting {
       this.publishTarget();
       this.ctx.events.emit(LEVEL_UP_EVENT, gain.level);
       this.persistCharacter();
-    }
-  }
-
-  private grantLoot(lootTableId?: LootTableId): void {
-    if (!lootTableId) return;
-    const { drops, copper } = rollLootTable(lootTableId);
-
-    let took = false;
-    drops.forEach((drop) => {
-      const name = describeItemName(drop.itemId);
-      // A full pack leaves the drop on the corpse rather than silently eating
-      // it: the log line is the only way the player would ever know.
-      if (!this.character.tryAddItem(drop.itemId, drop.quantity)) {
-        this.ctx.log(logNotice(`Your pack is too full to carry ${name}.`));
-        return;
-      }
-      this.ctx.log(logLoot(name, drop.quantity));
-      took = true;
-    });
-    if (took) {
-      this.ctx.publishInventory();
-    }
-    if (copper > 0) {
-      this.character.addCurrency(copper);
-      this.ctx.log(logCoin(copper));
-      this.ctx.float(`+${formatCurrency(copper)}`, 'reward', 40);
-      this.ctx.publishCurrency();
     }
   }
 
