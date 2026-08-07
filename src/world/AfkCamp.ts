@@ -5,9 +5,11 @@ import {
   shouldAfkEat,
 } from '../systems/AfkSystem';
 import { logNotice } from '../systems/CombatLogSystem';
+import { inventoryEntries } from '../systems/InventorySystem';
+import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { distance, withinRadius, type Point } from '../systems/MovementSystem';
-import type { ItemId } from '../types/ids';
-import { AFK_STATE_CHANGED_EVENT } from '../ui/uiEvents';
+import type { EnemyId, ItemId } from '../types/ids';
+import { AFK_STATE_CHANGED_EVENT, type AchievementUnlock } from '../ui/uiEvents';
 import type { Mob } from './Mob';
 import type { Targeting } from './targeting';
 import type { WorldContext } from './WorldContext';
@@ -20,6 +22,16 @@ export interface AfkCampDeps {
   stopGathering(): void;
   closeShop(): void;
   eat(itemId: ItemId): void;
+  /** The choke point the camp's own XP penalty is applied at. */
+  awardXp(reward: number): void;
+  /** A kill either happened or it didn't, so an offline count is credited in full. */
+  creditKill(enemyId: EnemyId, count: number): AchievementUnlock[];
+}
+
+/** The offline camp's payout, for a host that has somewhere to put it. */
+export interface ParkedAfkResult {
+  report: OfflineAfkReport;
+  unlocks: AchievementUnlock[];
 }
 
 /**
@@ -69,6 +81,42 @@ export class AfkCamp {
       : null;
     this.ctx.persistCharacter();
     this.ctx.events.emit(AFK_STATE_CHANGED_EVENT, this.active);
+  }
+
+  /**
+   * Pays out a camp that was left running when the tab closed, and hands the
+   * report back rather than announcing it: the only load that can find a parked
+   * session is the first boot into a world, and the HUD is not listening yet at
+   * that point. Runs once and clears the session either way — a session that
+   * paid nothing must not be able to pay again on the next load.
+   */
+  resolveParked(): ParkedAfkResult | null {
+    const { character } = this.ctx;
+    const session = character.state.afk;
+    if (!session) return null;
+    character.state.afk = null;
+
+    const report = resolveOfflineAfk(session, {
+      now: Date.now(),
+      characterLevel: character.state.level,
+      inventory: character.state.inventory,
+      capacity: character.carryCapacity(),
+    });
+    if (report.kills <= 0) {
+      this.ctx.persistCharacter();
+      return null;
+    }
+
+    for (const [itemId, quantity] of inventoryEntries(report.drops)) {
+      character.addItem(itemId, quantity);
+    }
+    character.addCurrency(report.copper);
+    this.deps.awardXp(report.xp);
+    const unlocks = report.enemyId ? this.deps.creditKill(report.enemyId, report.kills) : [];
+    this.ctx.publishInventory();
+    this.ctx.publishCurrency();
+    this.ctx.persistCharacter();
+    return { report, unlocks };
   }
 
   update(): void {

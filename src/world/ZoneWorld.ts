@@ -1,8 +1,5 @@
 import { EXIT_MARGIN, TILE_SIZE } from '../config/constants';
-import { BLOCKING_TILES } from '../data/tiles';
 import { ZONES, type ZoneDefinition, type ZoneExit } from '../data/zones';
-import { ENEMIES } from '../data/enemies';
-import { RESOURCE_NODES } from '../data/resourceNodes';
 import {
   ABILITY_REQUESTED_EVENT,
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -30,7 +27,6 @@ import {
   ABILITY_STATE_CHANGED_EVENT,
   type AchievementUnlock,
 } from '../ui/uiEvents';
-import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { afkXpReward } from '../systems/AfkSystem';
 import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
 import { conColor } from '../systems/EnemySystem';
@@ -47,12 +43,12 @@ import {
   findExit,
   oppositeEdge,
   resumePoint,
-  signpostPoint,
   zoneWorldSize,
 } from '../systems/ZoneSystem';
 import { saveService } from '../persistence';
 import { Player } from './Player';
 import { Mob } from './Mob';
+import { populateZone, type WorldNpc, type WorldSignpost } from './zoneEntities';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
@@ -60,15 +56,14 @@ import { AbilityCaster } from './AbilityCaster';
 import { ApproachDriver } from './ApproachDriver';
 import { CombatDirector } from './CombatDirector';
 import { GatherSession } from './GatherSession';
-import { AfkCamp } from './AfkCamp';
+import { AfkCamp, type ParkedAfkResult } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
 import { ShopSession } from './ShopSession';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
 import type { EventBus, WorldEvent } from './worldEvents';
-import type { AbilityId, EnemyId, GearSlotId, ItemId, NpcId, ZoneEdge } from '../types/ids';
-import { inventoryEntries } from '../systems/InventorySystem';
+import type { AbilityId, EnemyId, GearSlotId, ItemId, ZoneEdge } from '../types/ids';
 
 // Far enough inside the new zone that the player doesn't stand on the return
 // exit and bounce straight back.
@@ -79,20 +74,13 @@ const ARRIVAL_INSET = TILE_SIZE * 1.5;
 // exactly on it makes the first tick a coin toss.
 const GATHER_APPROACH_FRACTION = 0.9;
 
-/** A stationary, non-combat NPC. All of them are shopkeepers today. */
-export interface WorldNpc {
-  x: number;
-  y: number;
-  npcId: NpcId;
-}
+// Re-exported so a view can ask what it is looking at without knowing which
+// module built it.
+export type { WorldNpc, WorldSignpost };
 
-/** A tappable exit marker — the mobile counterpart to walking into the edge. */
-export interface WorldSignpost {
-  x: number;
-  y: number;
-  exit: ZoneExit;
-  label: string;
-}
+// The offline payout's shape, re-exported for the host that has somewhere to
+// put it.
+export type { ParkedAfkResult };
 
 /** What the player just tapped, once the view has worked out what it was. */
 export type WorldTap =
@@ -112,12 +100,6 @@ export interface ZoneWorldOptions {
   /** HP carried across a zone walk; absent on death, where full is the point. */
   hp?: number;
   rng?: () => number;
-}
-
-/** The offline camp's payout, for a host that has somewhere to put it. */
-export interface ParkedAfkResult {
-  report: OfflineAfkReport;
-  unlocks: AchievementUnlock[];
 }
 
 /**
@@ -157,8 +139,8 @@ export class ZoneWorld implements Targeting {
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  // The four HUD publishers that only speak when what they publish moves; see
-  // installPublishers for what each one counts as a change.
+  // The four HUD publishers that only speak when what they publish moves; the
+  // constructor says what each one counts as a change.
   private readonly publishPlayerHp: () => void;
   private readonly publishPlayerMana: () => void;
   private readonly publishAbilityState: () => void;
@@ -174,7 +156,13 @@ export class ZoneWorld implements Targeting {
     const size = zoneWorldSize(zone);
     this.worldWidth = size.width;
     this.worldHeight = size.height;
-    this.spawnPoint = { x: this.worldWidth / 2, y: this.worldHeight / 2 };
+    const entities = populateZone(zone, size, rng ?? Math.random);
+    this.spawnPoint = entities.spawnPoint;
+    this.mobs = entities.mobs;
+    this.nodes = entities.nodes;
+    this.npcs = entities.npcs;
+    this.signposts = entities.signposts;
+    this.collisionWorld = entities.collisionWorld;
 
     const start = this.startPoint(entry);
     this.player = new Player(
@@ -225,46 +213,6 @@ export class ZoneWorld implements Targeting {
       'false',
     );
 
-    this.mobs = zone.mobSpawns.map(
-      ({ dx, dy, enemyId, level }) =>
-        new Mob(
-          this.spawnPoint.x + dx,
-          this.spawnPoint.y + dy,
-          ENEMIES[enemyId],
-          level,
-          rng ?? Math.random,
-        ),
-    );
-
-    this.nodes = zone.nodeSpawns.map(
-      ({ dx, dy, nodeId }) =>
-        new ResourceNode(this.spawnPoint.x + dx, this.spawnPoint.y + dy, RESOURCE_NODES[nodeId]),
-    );
-
-    this.npcs = zone.npcSpawns.map(({ dx, dy, npcId }) => ({
-      x: this.spawnPoint.x + dx,
-      y: this.spawnPoint.y + dy,
-      npcId,
-    }));
-
-    // One tappable signpost per exit — the mobile way out of a zone.
-    this.signposts = zone.exits.map((exit) => {
-      const point = signpostPoint(exit.edge, this.worldWidth, this.worldHeight);
-      return { x: point.x, y: point.y, exit, label: ZONES[exit.to].name };
-    });
-
-    // Nothing walks into the pond. One description of the world, which the
-    // player and every mob integrate themselves against.
-    this.collisionWorld = {
-      grid: zone.map,
-      blockingTiles: new Set(BLOCKING_TILES),
-      worldWidth: this.worldWidth,
-      worldHeight: this.worldHeight,
-      blockers: this.nodes
-        .filter((node) => node.definition.solid)
-        .map((node) => node.blockerRect()),
-    };
-
     this.approach = new ApproachDriver(this.ctx, {
       targeting: this,
       // A hand on the keyboard is a hand on the controls, camp included.
@@ -291,6 +239,8 @@ export class ZoneWorld implements Targeting {
       stopGathering: () => this.gathering.stop(),
       closeShop: () => this.shop.close(),
       eat: (itemId) => this.gathering.eat(itemId),
+      awardXp: (reward) => this.awardXp(reward),
+      creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),
     });
     this.quests = new QuestDesk(this.ctx, {
       isShopOpen: () => this.shop.isOpen(),
@@ -350,39 +300,9 @@ export class ZoneWorld implements Targeting {
     this.subscriptions.clear();
   }
 
-  /**
-   * Pays out a camp that was left running when the tab closed, and hands the
-   * report back rather than announcing it: the only load that can find a parked
-   * session is the first boot into a world, and the HUD is not listening yet at
-   * that point. Runs once and clears the session either way — a session that
-   * paid nothing must not be able to pay again on the next load.
-   */
+  /** Pays out a camp left running when the tab closed. See `AfkCamp`. */
   resolveParkedAfk(): ParkedAfkResult | null {
-    const session = this.character.state.afk;
-    if (!session) return null;
-    this.character.state.afk = null;
-
-    const report = resolveOfflineAfk(session, {
-      now: Date.now(),
-      characterLevel: this.character.state.level,
-      inventory: this.character.state.inventory,
-      capacity: this.character.carryCapacity(),
-    });
-    if (report.kills <= 0) {
-      this.persistCharacter();
-      return null;
-    }
-
-    for (const [itemId, quantity] of inventoryEntries(report.drops)) {
-      this.character.addItem(itemId, quantity);
-    }
-    this.character.addCurrency(report.copper);
-    this.awardXp(report.xp);
-    const unlocks = report.enemyId ? this.creditKill(report.enemyId, report.kills) : [];
-    this.ctx.publishInventory();
-    this.ctx.publishCurrency();
-    this.persistCharacter();
-    return { report, unlocks };
+    return this.afk.resolveParked();
   }
 
   // ---------------------------------------------------------------------------

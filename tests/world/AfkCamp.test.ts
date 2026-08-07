@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
 import { AFK_ANCHOR_RADIUS, AFK_ENGAGE_RADIUS } from '../../src/systems/AfkSystem';
 import { OUT_OF_COMBAT_DELAY_MS } from '../../src/systems/RegenSystem';
-import type { ItemId } from '../../src/types/ids';
+import type { EnemyId, ItemId } from '../../src/types/ids';
 import { AFK_STATE_CHANGED_EVENT } from '../../src/ui/uiEvents';
 import { AfkCamp } from '../../src/world/AfkCamp';
 import { Mob } from '../../src/world/Mob';
@@ -29,6 +29,8 @@ function camped(mobs: Mob[] = []) {
   let target: Mob | null = null;
   const pursued: Mob[] = [];
   const eaten: ItemId[] = [];
+  const awarded: number[] = [];
+  const credited: Array<{ enemyId: EnemyId; count: number }> = [];
   const targeting: Targeting = {
     get target() {
       return target;
@@ -51,6 +53,11 @@ function camped(mobs: Mob[] = []) {
     stopGathering: vi.fn(),
     closeShop: vi.fn(),
     eat: (itemId: ItemId) => eaten.push(itemId),
+    awardXp: (reward: number) => awarded.push(reward),
+    creditKill: (enemyId: EnemyId, count: number) => {
+      credited.push({ enemyId, count });
+      return [];
+    },
   };
   return {
     ...kit,
@@ -58,6 +65,8 @@ function camped(mobs: Mob[] = []) {
     targeting,
     pursued,
     eaten,
+    awarded,
+    credited,
     selected: () => target,
     camp: new AfkCamp(kit.ctx, deps),
   };
@@ -159,5 +168,37 @@ describe('holding the camp', () => {
 
     expect(selected()).toBeNull();
     expect(eaten).toEqual(['cooked-fish']);
+  });
+});
+
+describe('a camp that was left running when the tab closed', () => {
+  it('pays nothing, and reports nothing, when there was no session', () => {
+    const { camp, awarded } = camped();
+
+    expect(camp.resolveParked()).toBeNull();
+    expect(awarded).toHaveLength(0);
+  });
+
+  it('credits the offline kills in full, and clears the session either way', () => {
+    const { camp, state, awarded, credited } = camped();
+    // Long enough that the camp is worth reporting on; what it earns per hour
+    // is OfflineAfkSystem's business and is tested there.
+    state.afk = { startedAt: new Date(Date.now() - 3600_000).toISOString(), zoneId: 'town' };
+
+    const result = camp.resolveParked();
+
+    expect(result?.report.kills).toBeGreaterThan(0);
+    expect(awarded).toEqual([result?.report.xp]);
+    expect(credited).toEqual([{ enemyId: result?.report.enemyId, count: result?.report.kills }]);
+    expect(state.afk).toBeNull();
+  });
+
+  it('cannot pay twice, however many times a load asks', () => {
+    const { camp, state } = camped();
+    state.afk = { startedAt: new Date(Date.now() - 3600_000).toISOString(), zoneId: 'town' };
+
+    camp.resolveParked();
+
+    expect(camp.resolveParked()).toBeNull();
   });
 });
