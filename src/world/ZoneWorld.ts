@@ -13,9 +13,6 @@ import {
   COOK_REQUESTED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
-  GATHER_ENDED_EVENT,
-  GATHER_PROGRESS_EVENT,
-  GATHER_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   LEVEL_UP_EVENT,
@@ -56,19 +53,11 @@ import {
 import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
 import { rollLootTable } from '../systems/LootSystem';
-import { canCook, findCookableItem, recipeForInput, rollCook } from '../systems/CookingSystem';
-import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
-import { consumableFor, describeItemName } from '../data/items';
+import { describeItemName } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import { formatCurrency } from '../systems/CurrencySystem';
-import {
-  advanceGather,
-  beginGather,
-  canGather,
-  rollGatherQuantity,
-  type GatherState,
-} from '../systems/GatherSystem';
+import type { GatherState } from '../systems/GatherSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
 import { arriveRadius, distance, withinRadius, type Point } from '../systems/MovementSystem';
 import type { InputState } from '../systems/InputState';
@@ -91,6 +80,7 @@ import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
 import { AbilityCaster } from './AbilityCaster';
+import { GatherSession } from './GatherSession';
 import { AfkCamp } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
 import { ShopSession } from './ShopSession';
@@ -193,20 +183,18 @@ export class ZoneWorld implements Targeting {
   readonly npcs: WorldNpc[];
   readonly signposts: WorldSignpost[];
   readonly collisionWorld: CollisionWorld;
-  campfire: Campfire | null = null;
-  gatherState: GatherState | null = null;
   target: Mob | null = null;
   /** Set once the player has walked out; the world stops stepping after it. */
   changingZone = false;
   /** The clock, the channels and the character — everything shared. */
   private readonly ctx: WorldContext;
+  private readonly gathering: GatherSession;
   private readonly shop: ShopSession;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  private gatherNode: ResourceNode | null = null;
   // Click-to-move approach state: the node, shopkeeper or signpost the player
   // tapped and is walking toward, and whether they are closing on the current
   // combat target. Chasing a target is a different rule — it stops inside
@@ -276,7 +264,7 @@ export class ZoneWorld implements Targeting {
       '',
     );
     this.publishActions = publishOnChange(
-      () => ({ nearFire: this.isNearFire() }),
+      () => ({ nearFire: this.gathering.isNearFire() }),
       (actions) => String(actions.nearFire),
       (actions) => this.ctx.events.emit(ACTIONS_CHANGED_EVENT, actions),
       'false',
@@ -322,19 +310,20 @@ export class ZoneWorld implements Targeting {
         .map((node) => node.blockerRect()),
     };
 
+    this.gathering = new GatherSession(this.ctx);
     this.shop = new ShopSession(this.ctx);
     this.abilities = new AbilityCaster(this.ctx, {
       targeting: this,
-      stopGathering: () => this.stopGathering(),
+      stopGathering: () => this.gathering.stop(),
       resolveKill: (mob) => this.resolveKill(mob),
       publishAbilityState: () => this.publishAbilityState(),
     });
     this.afk = new AfkCamp(this.ctx, {
       mobs: this.mobs,
       targeting: this,
-      stopGathering: () => this.stopGathering(),
+      stopGathering: () => this.gathering.stop(),
       closeShop: () => this.shop.close(),
-      eat: (itemId) => this.handleEatRequested(itemId),
+      eat: (itemId) => this.gathering.eat(itemId),
     });
     this.quests = new QuestDesk(this.ctx, {
       isShopOpen: () => this.shop.isOpen(),
@@ -376,9 +365,9 @@ export class ZoneWorld implements Targeting {
     const { listen } = this.subscriptions;
     listen(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested.bind(this));
     listen(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested.bind(this));
-    listen(EAT_ITEM_REQUESTED_EVENT, this.handleEatRequested.bind(this));
-    listen(COOK_REQUESTED_EVENT, this.handleCookRequested.bind(this));
-    listen(LIGHT_FIRE_REQUESTED_EVENT, this.handleLightFireRequested.bind(this));
+    listen(EAT_ITEM_REQUESTED_EVENT, (itemId) => this.gathering.eat(itemId));
+    listen(COOK_REQUESTED_EVENT, (itemId) => this.gathering.cook(itemId));
+    listen(LIGHT_FIRE_REQUESTED_EVENT, () => this.gathering.lightFire());
     listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => this.shop.buy(itemId));
     listen(SELL_ITEM_REQUESTED_EVENT, (itemId) => this.shop.sell(itemId));
     listen(SHOP_CLOSED_EVENT, () => this.shop.closedByUi());
@@ -452,11 +441,8 @@ export class ZoneWorld implements Targeting {
       }
     });
     this.nodes.forEach((node) => node.update(deltaMs));
-    if (this.campfire?.update(deltaMs)) {
-      this.campfire = null;
-    }
     this.dropDeadTarget();
-    this.updateGathering(deltaMs);
+    this.gathering.update(deltaMs);
     this.updateCombat();
     this.updateEnemyAttacks();
     this.publishPlayerHp();
@@ -715,155 +701,34 @@ export class ZoneWorld implements Targeting {
   // Gathering, fire and cooking
   // ---------------------------------------------------------------------------
 
+  /** The fire currently burning in this zone, for whatever is drawing it. */
+  get campfire(): Campfire | null {
+    return this.gathering.campfire;
+  }
+
+  /** The gather channel in flight, or null. */
+  get gatherState(): GatherState | null {
+    return this.gathering.state;
+  }
+
   startGathering(node: ResourceNode): void {
-    if (!node.isAvailable()) {
-      this.ctx.notice(`The ${node.definition.name} is spent.`);
-      return;
-    }
-
-    const check = canGather(
-      node.definition,
-      this.character.state.skills,
-      this.character.state.gear,
-    );
-    if (!check.ok) {
-      this.ctx.notice(check.reason);
-      return;
-    }
-
-    this.gatherNode = node;
-    this.gatherState = beginGather(
-      node.definition,
-      this.character.skillLevelOf(node.definition.skill),
-    );
-    this.ctx.events.emit(GATHER_STARTED_EVENT, node.definition.name);
+    this.gathering.start(node);
   }
 
   stopGathering(): void {
-    if (!this.gatherState) return;
-    this.gatherState = null;
-    this.gatherNode = null;
-    this.ctx.events.emit(GATHER_ENDED_EVENT);
-  }
-
-  private updateGathering(deltaMs: number): void {
-    if (!this.gatherState || !this.gatherNode) return;
-
-    const node = this.gatherNode;
-    const outcome = advanceGather(this.gatherState, deltaMs, distance(this.player, node));
-
-    if (outcome.status === 'gathering') {
-      this.gatherState = outcome.state;
-      this.ctx.events.emit(GATHER_PROGRESS_EVENT, outcome.progress);
-      this.ctx.push({
-        kind: 'gather-tick',
-        at: { x: node.x, y: node.y },
-        nodeId: node.definition.id,
-        progress: outcome.progress,
-      });
-      return;
-    }
-
-    if (outcome.status === 'cancelled') {
-      this.stopGathering();
-      return;
-    }
-
-    this.completeGather(node);
-  }
-
-  private completeGather(node: ResourceNode): void {
-    const { definition } = node;
-
-    const quantity = rollGatherQuantity(this.character.skillLevelOf(definition.skill));
-    // A haul with nowhere to go is not a gather: the node keeps its charge, the
-    // skill earns nothing, and the channel stops rather than spinning forever.
-    // This is what ends an unattended gathering session.
-    if (!this.character.tryAddItem(definition.yieldItemId, quantity)) {
-      this.ctx.notice('Your pack is full.');
-      this.stopGathering();
-      return;
-    }
-    this.ctx.publishInventory();
-    this.ctx.awardSkillXp(definition.skill, definition.xpReward);
-
-    const emptied = node.consumeCharge();
-    if (emptied) {
-      this.stopGathering();
-      return;
-    }
-
-    // Auto-repeat: re-arm the channel so gathering runs unattended until
-    // something interrupts it.
-    this.gatherState = beginGather(definition, this.character.skillLevelOf(definition.skill));
-    this.ctx.events.emit(GATHER_PROGRESS_EVENT, 0);
-  }
-
-  private isNearFire(): boolean {
-    if (!this.campfire?.isLit()) return false;
-    return withinRadius(this.player, this.campfire, FIRE_COOK_RADIUS);
+    this.gathering.stop();
   }
 
   handleLightFireRequested(): void {
-    if (this.character.itemCount(FIRE_INPUT_ITEM_ID) <= 0) {
-      this.ctx.notice('You have no logs to burn.');
-      return;
-    }
-
-    // One fire at a time: lighting a new one replaces the old, rather than
-    // letting the player carpet the town in campfires.
-    this.campfire?.extinguish();
-    this.character.removeItem(FIRE_INPUT_ITEM_ID, 1);
-    this.campfire = new Campfire(this.player.x, this.player.y + 32);
-    this.ctx.publishInventory();
+    this.gathering.lightFire();
   }
 
-  // With an item selected in the bag the HUD names what to cook; without one
-  // (dev console, older callers) fall back to the first cookable thing.
   handleCookRequested(itemId?: ItemId): void {
-    const recipe =
-      (itemId ? recipeForInput(itemId) : null) ?? findCookableItem(this.character.state.inventory);
-    if (!recipe) {
-      this.ctx.notice('You have nothing to cook.');
-      return;
-    }
-
-    const check = canCook(
-      recipe,
-      this.character.state.skills,
-      this.character.state.inventory,
-      this.isNearFire(),
-    );
-    if (!check.ok) {
-      this.ctx.notice(check.reason);
-      return;
-    }
-
-    const result = rollCook(recipe, this.character.skillLevelOf('cooking'));
-    this.character.removeItem(recipe.inputItemId, 1);
-    this.character.addItem(result.itemId, 1);
-    this.ctx.publishInventory();
-    if (result.burnt) {
-      this.ctx.notice('You burn it.');
-    } else {
-      this.ctx.awardSkillXp('cooking', result.xp);
-    }
+    this.gathering.cook(itemId);
   }
 
   handleEatRequested(itemId: ItemId): void {
-    if (this.character.itemCount(itemId) <= 0 || !consumableFor(itemId)) {
-      return;
-    }
-    if (this.player.hp >= this.player.maxHp) {
-      this.ctx.notice('You are already at full health.');
-      return;
-    }
-    if (!this.player.eat(itemId)) {
-      return;
-    }
-
-    this.character.removeItem(itemId, 1);
-    this.ctx.publishInventory();
+    this.gathering.eat(itemId);
   }
 
   // ---------------------------------------------------------------------------
@@ -1000,12 +865,7 @@ export class ZoneWorld implements Targeting {
       if (damage > absorbed) {
         this.ctx.log(logDamageTaken(mob.name, damage - absorbed));
       }
-      // Taking a hit breaks the channel, so gathering is never a way to ignore a
-      // mob already chewing on you.
-      if (this.gatherState) {
-        this.ctx.notice('You are interrupted!');
-        this.stopGathering();
-      }
+      this.gathering.interrupt();
 
       if (!this.player.isAlive()) {
         this.handlePlayerDeath();
