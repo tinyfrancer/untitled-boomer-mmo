@@ -6,9 +6,9 @@ import {
   MeshLambertMaterial,
   SphereGeometry,
 } from 'three';
-import { BANDIT_MASK_COLOR, NPC_APPEARANCES, stickFigure } from '../systems/AppearanceSystem';
+import { stickFigure } from '../systems/AppearanceSystem';
 import { FIGURE_HEIGHT, buildFigure, type Figure } from './figure';
-import { PALETTE } from './palette';
+import { CREATURE_LOOKS, PALETTE, type BeastLook, type PersonLook } from './palette';
 import type { EnemyDefinition } from '../data/enemies';
 
 /**
@@ -20,15 +20,18 @@ import type { EnemyDefinition } from '../data/enemies';
  * how a creature ends up visibly wider than the thing you can actually walk
  * into — and the body is data precisely so how big a rat looks is never what
  * decides how big a rat is.
+ *
+ * Which body it is comes from the data too, as `shape` — a switch over the id
+ * would have made every new `ENEMIES` row a change to this file.
  */
 export function buildCreature(definition: EnemyDefinition): Figure {
-  switch (definition.id) {
-    case 'rat':
-      return buildRat(definition);
-    case 'crab':
-      return buildCrab(definition);
-    case 'bandit':
-      return buildBandit();
+  switch (definition.shape) {
+    case 'quadruped':
+      return buildQuadruped(definition, CREATURE_LOOKS.quadruped);
+    case 'crustacean':
+      return buildCrustacean(definition, CREATURE_LOOKS.crustacean);
+    case 'humanoid':
+      return buildHumanoid(CREATURE_LOOKS.humanoid);
   }
 }
 
@@ -37,11 +40,12 @@ export function buildCreature(definition: EnemyDefinition): Figure {
  * forward axis (+z, which `facingYaw` turns onto the heading) and the short one
  * is across.
  */
-function buildRat(definition: EnemyDefinition): Figure {
+function buildQuadruped(definition: EnemyDefinition, look: BeastLook): Figure {
   const length = definition.body.width;
   const width = definition.body.height;
   const height = width * 0.72;
-  const fur = (): MeshLambertMaterial => new MeshLambertMaterial({ color: PALETTE.ratFur });
+  const fur = (): MeshLambertMaterial => new MeshLambertMaterial({ color: look.body });
+  const trim = (): MeshLambertMaterial => new MeshLambertMaterial({ color: look.limb });
 
   const group = new Group();
   const body = new Mesh(new BoxGeometry(width, height, length * 0.6), fur());
@@ -53,7 +57,7 @@ function buildRat(definition: EnemyDefinition): Figure {
   group.add(head);
 
   [-1, 1].forEach((side) => {
-    const ear = new Mesh(new BoxGeometry(width * 0.18, height * 0.3, width * 0.1), fur());
+    const ear = new Mesh(new BoxGeometry(width * 0.18, height * 0.3, width * 0.1), trim());
     ear.position.set(side * width * 0.2, height * 0.95, length * 0.34);
     group.add(ear);
     const eye = new Mesh(
@@ -67,7 +71,7 @@ function buildRat(definition: EnemyDefinition): Figure {
   // Trailing off the rump and kinked up, and still inside the collision box,
   // which is a tile and a quarter long precisely because the tail has to live
   // somewhere.
-  const tail = new Mesh(new CylinderGeometry(width * 0.05, width * 0.03, length * 0.3, 5), fur());
+  const tail = new Mesh(new CylinderGeometry(width * 0.05, width * 0.03, length * 0.3, 5), trim());
   tail.rotation.x = Math.PI / 2.4;
   tail.position.set(0, height * 0.5, -length * 0.3);
   group.add(tail);
@@ -76,7 +80,7 @@ function buildRat(definition: EnemyDefinition): Figure {
 }
 
 /** Wider than it is long, claws forward, riding low on splayed legs. */
-function buildCrab(definition: EnemyDefinition): Figure {
+function buildCrustacean(definition: EnemyDefinition, look: BeastLook): Figure {
   const width = definition.body.width;
   const length = definition.body.height;
   const height = length * 0.55;
@@ -84,7 +88,7 @@ function buildCrab(definition: EnemyDefinition): Figure {
   const group = new Group();
   const shell = new Mesh(
     new SphereGeometry(1, 12, 8),
-    new MeshLambertMaterial({ color: PALETTE.crabShell }),
+    new MeshLambertMaterial({ color: look.body }),
   );
   shell.scale.set(width * 0.35, height * 0.6, length * 0.4);
   shell.position.y = height * 0.62;
@@ -93,7 +97,7 @@ function buildCrab(definition: EnemyDefinition): Figure {
   [-1, 1].forEach((side) => {
     const claw = new Mesh(
       new SphereGeometry(width * 0.11, 8, 6),
-      new MeshLambertMaterial({ color: PALETTE.crabLimb }),
+      new MeshLambertMaterial({ color: look.limb }),
     );
     claw.position.set(side * width * 0.38, height * 0.5, length * 0.34);
     group.add(claw);
@@ -102,7 +106,7 @@ function buildCrab(definition: EnemyDefinition): Figure {
     [-0.18, 0, 0.18].forEach((along) => {
       const leg = new Mesh(
         new CylinderGeometry(width * 0.02, width * 0.02, width * 0.24, 4),
-        new MeshLambertMaterial({ color: PALETTE.crabLimb }),
+        new MeshLambertMaterial({ color: look.limb }),
       );
       leg.rotation.z = Math.PI / 2.6;
       leg.position.set(side * width * 0.28, height * 0.3, along * length);
@@ -122,12 +126,12 @@ function buildCrab(definition: EnemyDefinition): Figure {
 }
 
 /** A person, in outlaw colours, with the bandana the rig has no room for. */
-function buildBandit(): Figure {
-  const figure = buildFigure(NPC_APPEARANCES.bandit);
+function buildHumanoid(look: PersonLook): Figure {
+  const figure = buildFigure(look.appearance);
   const rig = stickFigure(FIGURE_HEIGHT);
   const mask = new Mesh(
     new BoxGeometry(rig.headRadius * 1.7, rig.headRadius * 0.75, rig.headRadius * 1.7),
-    new MeshLambertMaterial({ color: BANDIT_MASK_COLOR }),
+    new MeshLambertMaterial({ color: look.mask }),
   );
   mask.position.y = rig.footY - rig.headCenterY - rig.headRadius * 0.35;
   figure.object.add(mask);

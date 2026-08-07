@@ -83,6 +83,23 @@ export function isInRange(distance: number, range: number): boolean {
   return distance <= range;
 }
 
+// How far inside its own reach a chaser stops. Stopping exactly on the boundary
+// leaves the other one able to walk back out of range between two swings, so
+// the margin is what buys the fight.
+const APPROACH_RANGE_FRACTION = 0.7;
+
+/**
+ * Where something with this much reach stops when closing on what it means to
+ * hit. One rule in both directions: the player walking up to a mob and a mob
+ * walking up to the player are the same question asked of different reaches,
+ * and the two were separately-invented 0.8 and 0.7 with the same comment over
+ * each. The tighter one is what survives — a mob re-aims at a target that is
+ * still moving, so it is the one with less margin to give away.
+ */
+export function approachRange(attackRange: number): number {
+  return attackRange * APPROACH_RANGE_FRACTION;
+}
+
 export function isCooldownReady(elapsedMs: number, cooldownMs: number): boolean {
   return elapsedMs >= cooldownMs;
 }

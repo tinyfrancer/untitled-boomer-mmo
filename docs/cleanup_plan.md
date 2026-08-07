@@ -1,8 +1,10 @@
 # Cleanup plan: consolidation before new features
 
-**Status:** in progress. Written 2026-08-05 against `ebc3ed3`, the merge that finished the 3D
-port. Worked one PR per session — see "How to work this plan" and the status table below, which
-is the record of what has landed.
+**Status:** complete as of 2026-08-07, all eleven rows landed. Written 2026-08-05 against
+`ebc3ed3`, the merge that finished the 3D port. Worked one PR per session — see "How to work this
+plan" and the status table below, which is the record of what has landed. The per-PR "Landed"
+notes are the reason the code looks the way it does; keep this readable as history rather than as
+a work queue.
 
 ## Context
 
@@ -85,7 +87,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 7   | Shared primitives and modal lifecycle    | M    | 4          | ☑ 2026-08-06 |
 | 8   | Split `hud/Hud.ts`                       | M    | 4, 5, 7    | ☑ 2026-08-06 |
 | 9   | Split `world/ZoneWorld.ts`               | L    | 4          | ☑ 2026-08-07 |
-| 10  | The deferred behaviour changes           | M    | —          | ☐            |
+| 10  | The deferred behaviour changes           | M    | —          | ☑ 2026-08-07 |
 
 ---
 
@@ -562,23 +564,23 @@ session should know:
   that needs mobs to wander or a channel to advance; reach for this for a rule that turns over at
   an exact value.
 
-## PR 10 — The deferred behaviour changes · `cleanup/10-deferred` · M
+## PR 10 — The deferred behaviour changes · `cleanup/10-deferred` · M — done, merged
 
 Last, and **each one alone in its own commit** — these are the only changes in the stack where a
 smoke failure means the game changed rather than the code moved.
 
-- [ ] **The integrator clamp.** `world/Player.ts:317-321` says it outright: velocity is integrated
+- [x] **The integrator clamp.** `world/Player.ts:317-321` says it outright: velocity is integrated
       over the frame delta with no clamp to the distance remaining, and "owning the integrator
       makes that clamp correct — the note it contradicts in `MovementSystem` was about Phaser's
       timestep — but changing the integrator and the movement math in one step makes a smoke
       failure un-bisectable." Do it, and update `stepToward`'s now-false comment about velocities
       above normal speed. Cover the arithmetic in `tests/systems/MovementSystem.test.ts` first.
-- [ ] **The two approach multipliers.** "Stop a little inside attack range" is one rule with two
+- [x] **The two approach multipliers.** "Stop a little inside attack range" is one rule with two
       numbers: `ZoneWorld.ts:625` uses `attackRange * 0.8` for the player closing on a mob and
       `Mob.ts:215` uses `* 0.7` for a mob closing on the player, with comments that say the same
       thing. One named constant, or a data field if the asymmetry is deliberate — decide, then
       encode the decision.
-- [ ] **Data-drive `buildCreature`.** `render3d/creatures.ts:24` is a `switch (definition.id)` over
+- [x] **Data-drive `buildCreature`.** `render3d/creatures.ts:24` is a `switch (definition.id)` over
       `EnemyId`. It is exhaustive, so the compiler does catch a new enemy — but a new `ENEMIES` row
       cannot ship without new view code, against CLAUDE.md's "a new enemy type should be an
       `ENEMIES` row plus a loot table". A `shape: 'quadruped' | 'crustacean' | 'humanoid'` field
@@ -588,6 +590,26 @@ smoke failure means the game changed rather than the code moved.
 at `rate: 8` cranked at 140ms. For the integrator clamp, ask for the frame rather than throttling
 a machine into producing it: `view.step(140, 50)` is fifty frames at ~7fps, deterministically.
 **Done when:** all three land green, or the ones that don't are reverted and written up.
+**Landed:** all three, one commit each, 77/77 smoke after every one of them. Three things a later
+session should know:
+
+- **The clamp is invisible above ~24fps, by construction.** It can only bind between
+  `arriveRadius` and one frame's travel, and that band is empty until a step passes
+  `ARRIVE_RADIUS / ARRIVE_STEP_FRACTION` ≈ 13px — a 320-speed walk reaches that at 41ms a frame,
+  and a rat's 150-speed chase not until 88ms. So the change it makes is entirely a slow-frame one:
+  the last step lands on the destination instead of passing it by up to 40% of a step and turning
+  round. The `walk()` loop in `tests/systems/MovementSystem.test.ts` covers 5-60fps, and the two
+  new assertions were watched red first.
+- **The approach fraction is 0.7, in `CombatSystem.approachRange()`.** The asymmetry was not
+  deliberate — two independently written numbers under the same sentence — so this keeps the
+  tighter one: a mob re-aims every frame at a target that is still moving, which is the direction
+  with less margin to give away, and the player walking 6px closer to a rat is not a difficulty
+  change anyone can feel.
+- **Creature colour is now keyed by `shape`, not by enemy.** `CREATURE_LOOKS` in
+  `render3d/palette.ts` has three entries and the per-id override table that would sit over it does
+  not exist yet, because with one enemy per shape it would be the same table twice. The second
+  quadruped that isn't brown is what buys it. `PALETTE` lost `ratFur`/`crabShell`/`crabLimb` and
+  kept `eye`, which every creature shares.
 
 ---
 

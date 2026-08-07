@@ -1,3 +1,4 @@
+import { approachRange } from '../systems/CombatSystem';
 import { distance, stepToward } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import { scaleEnemyStats } from '../systems/EnemySystem';
@@ -210,10 +211,8 @@ export class Mob {
       return;
     }
 
-    // Stop a little inside attack range rather than at it, so a mob that is
-    // already swinging doesn't jitter in and out of range with the player.
     const player = { x: playerX, y: playerY };
-    if (distance(this, player) <= this.attackRange * 0.7) {
+    if (distance(this, player) <= approachRange(this.attackRange)) {
       this.setVelocity(0, 0);
     } else {
       this.stepTo(player, this.definition.chaseSpeed, deltaMs);

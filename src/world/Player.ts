@@ -305,11 +305,6 @@ export class Player {
 
     this.vx = vx;
     this.vy = vy;
-    // Deliberately integrating the raw velocity over this frame's delta, with
-    // no clamp to the distance left. Owning the integrator makes that clamp
-    // correct — the note it contradicts in MovementSystem was about Phaser's
-    // timestep — but changing the integrator and the movement math in one step
-    // makes a smoke failure un-bisectable. It is a separate change.
     const moved = moveWithCollision(
       this.bounds(),
       (vx * deltaMs) / 1000,

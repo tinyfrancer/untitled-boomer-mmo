@@ -39,6 +39,12 @@ export type EnemyId = 'rat' | 'crab' | 'bandit';
 // pockets and wear gear, beasts drop the parts they are made of.
 export type EnemyFamilyId = 'beast' | 'humanoid';
 
+// Which body a renderer draws an enemy with, which is a different question from
+// what it is — a rat and a crab share a family and not a shape. Naming it in
+// the data is what lets a new ENEMIES row reuse a body rather than wait for
+// view code written for its id.
+export type CreatureShapeId = 'quadruped' | 'crustacean' | 'humanoid';
+
 // One per creature that drops anything. Its own union rather than EnemyId: what
 // a table is called is a fact about the table, and two creatures sharing one is
 // a decision LOOT_TABLES should be free to make.

@@ -92,15 +92,40 @@ describe('stepToward on a slow frame', () => {
     }
   });
 
-  it('never exceeds walking speed, even on the step that lands', () => {
-    // The caller integrates this over the physics timestep rather than over
-    // deltaMs, so a faster-than-walking final step overshoots the point.
+  it('never exceeds walking speed', () => {
     for (const fps of [60, 30, 15, 10, 7, 5]) {
       for (let distance = 10; distance <= 400; distance += 3) {
         const step = stepToward(0, 0, { x: distance, y: 0 }, 320, 1000 / fps);
         expect(Math.hypot(step.vx, step.vy)).toBeLessThanOrEqual(320);
       }
     }
+  });
+
+  it('never carries the caller past the point it was aimed at', () => {
+    for (const fps of [60, 30, 15, 10, 7, 5]) {
+      const deltaMs = 1000 / fps;
+      for (let distance = 10; distance <= 400; distance += 3) {
+        const step = stepToward(0, 0, { x: distance, y: 0 }, 320, deltaMs);
+        const travel = (Math.hypot(step.vx, step.vy) * deltaMs) / 1000;
+        expect(travel, `${distance}px at ${fps}fps`).toBeLessThanOrEqual(distance + 0.001);
+      }
+    }
+  });
+
+  // The clamp is what a slow frame needs and a fast one never reaches: at 7fps
+  // a step is 46px and the last one is mostly overshoot, at 60fps it is 5px and
+  // arriveRadius has already answered.
+  it('lands exactly on a point the frame would otherwise step over', () => {
+    const deltaMs = 1000 / 7;
+    const step = stepToward(0, 0, { x: 40, y: 0 }, 320, deltaMs);
+    expect(step.arrived).toBe(false);
+    expect((step.vx * deltaMs) / 1000).toBeCloseTo(40);
+  });
+
+  it('leaves a full step alone when the target is further out than one', () => {
+    const deltaMs = 1000 / 7;
+    const step = stepToward(0, 0, { x: 400, y: 0 }, 320, deltaMs);
+    expect(step.vx).toBeCloseTo(320);
   });
 
   it('stops inside the band for its frame rate', () => {

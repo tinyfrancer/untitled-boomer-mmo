@@ -1,5 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
-import type { EnemyFamilyId, EnemyId, LootTableId } from '../types/ids';
+import type { CreatureShapeId, EnemyFamilyId, EnemyId, LootTableId } from '../types/ids';
 
 /**
  * The collision box, in world pixels. Named here rather than measured off
@@ -33,6 +33,10 @@ export interface EnemyDefinition {
   // and coin. Enforced by a test over LOOT_TABLES rather than by construction,
   // since the tables are hand-written data.
   family: EnemyFamilyId;
+  // Which body the renderer draws it with. Separate from `family`, which is
+  // what it *is*: both say 'humanoid' for the bandit, and the rat and the crab
+  // are one family and two shapes.
+  shape: CreatureShapeId;
   body: BodySize;
   // Whether the enemy opens combat on its own; rats only ever retaliate.
   aggressive: boolean;
@@ -56,6 +60,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'rat',
     name: 'Rat',
     family: 'beast',
+    shape: 'quadruped',
     // Wider than a tile: the tail trails behind the body. Wide enough to
     // straddle a one-tile blocking column, which is why CollisionSystem scans
     // a cell range rather than testing four corners.
@@ -83,6 +88,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'crab',
     name: 'Crab',
     family: 'beast',
+    shape: 'crustacean',
     body: { width: TILE_SIZE * 0.85, height: TILE_SIZE * 0.55 },
     aggressive: false,
     // Tanky and slow-swinging, which is what makes the beach the zone you fight
@@ -108,6 +114,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     id: 'bandit',
     name: 'Bandit',
     family: 'humanoid',
+    shape: 'humanoid',
     body: { width: TILE_SIZE, height: TILE_SIZE },
     // The first enemy that opens combat itself: walk too close and it swings.
     aggressive: true,

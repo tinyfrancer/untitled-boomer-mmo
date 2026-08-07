@@ -401,6 +401,10 @@ the id unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`, `QuestId`, `Achieve
 `TitleId`) that key into them. Prefer
 adding a row to one of these tables over hardcoding values in a scene/entity — a new enemy type
 should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numbers baked in.
+**The renderer is on the far side of that too**: an `EnemyDefinition` names a
+`shape` (`quadruped | crustacean | humanoid`) and `render3d/creatures.ts` switches on _that_, so a
+new row picks a body it is drawn with rather than waiting for a builder written for its id. Colour
+stays the renderer's, keyed by the same shape in `render3d/palette.ts`.
 
 **Only humanoids drop gear and coin.** `EnemyDefinition.family` is `beast | humanoid`, and it is
 what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by
@@ -439,12 +443,12 @@ a full pack is what ends an unattended gathering session. Currency is weightless
 game at single-digit fps, where one frame carries the player ~46px. Anything comparing a distance
 against a fixed threshold has to scale that threshold with the frame's travel — see
 `arriveRadius` in `systems/MovementSystem.ts`, which exists because a fixed 8px arrival band left
-the player orbiting a tap destination forever below 30fps. The comment on `stepToward` saying a
-velocity above normal speed can never be returned is now true only for mobs: it existed because
-the old physics engine integrated velocity over its own timestep rather than the frame `delta`, and
-nothing goes through it any more. The constraint inverts once you own the integrator — clamping the
-last step to the distance remaining becomes the correct thing — but that is a change to make on its
-own, so a smoke failure has one suspect.
+the player orbiting a tap destination forever below 30fps. `stepToward` also **clamps its last step
+to the distance remaining**, so a walk lands on its destination instead of stepping over it and
+turning round; that is exact only because everything integrating it does so over the same delta it
+was handed. The rule was the opposite one while a physics engine owned the integration on its own
+timestep, and it inverted when the integrator came in-house — which is why both halves of the fix
+are frame-rate arithmetic and both are unit-tested at 5fps.
 
 The other half of a slow frame is tunnelling: 46px of travel can step clean over a wall.
 `moveWithCollision` cuts the frame into substeps of at most half a tile (capped at 8), which at

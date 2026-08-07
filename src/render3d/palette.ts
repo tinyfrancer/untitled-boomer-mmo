@@ -1,3 +1,6 @@
+import { BANDIT_MASK_COLOR, NPC_APPEARANCES, type Appearance } from '../systems/AppearanceSystem';
+import type { CreatureShapeId } from '../types/ids';
+
 /**
  * The colours the placeholder primitives are made of.
  *
@@ -9,9 +12,7 @@
  * `docs/initial_design.txt` — so these hexes are the art.
  */
 export const PALETTE = {
-  ratFur: 0x6d4c41,
-  crabShell: 0xd84315,
-  crabLimb: 0xbf360c,
+  /** Shared by every creature that has one, which is every creature drawn. */
   eye: 0x14140f,
   wood: 0x5d4037,
   woodLight: 0x8d6e63,
@@ -30,3 +31,33 @@ export const PALETTE = {
   /** The ring under the current target. */
   selection: 0xffee58,
 } as const;
+
+/** A creature made of itself: fur or shell, and whatever comes off it. */
+export interface BeastLook {
+  body: number;
+  /** Ears and a tail, or claws and legs. */
+  limb: number;
+}
+
+/** A creature made like a person, which is the rig plus what it hides behind. */
+export interface PersonLook {
+  appearance: Appearance;
+  /** The bandana over the face, which the rig has no room for. */
+  mask: number;
+}
+
+/**
+ * What each creature shape is made of. Keyed by the shape rather than by the
+ * enemy, which is what lets a new `ENEMIES` row name a body and be drawn
+ * without a line of view code written for it — colour of its own is a change to
+ * make when a second quadruped that isn't brown actually exists.
+ *
+ * The one humanoid enemy is an outlaw, and it reads its look off the shared
+ * `NPC_APPEARANCES` rather than out of this file, so the bandit is the same
+ * person here as in the paperdoll.
+ */
+export const CREATURE_LOOKS = {
+  quadruped: { body: 0x6d4c41, limb: 0x6d4c41 },
+  crustacean: { body: 0xd84315, limb: 0xbf360c },
+  humanoid: { appearance: NPC_APPEARANCES.bandit, mask: BANDIT_MASK_COLOR },
+} satisfies Record<CreatureShapeId, BeastLook | PersonLook>;
