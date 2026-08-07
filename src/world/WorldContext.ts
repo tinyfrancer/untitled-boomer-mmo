@@ -1,0 +1,113 @@
+import { SKILLS } from '../data/skills';
+import { saveService } from '../persistence';
+import { logSkillLevelUp, type CombatLogEntry } from '../systems/CombatLogSystem';
+import type { CharacterController } from '../systems/CharacterController';
+import type { Point } from '../systems/MovementSystem';
+import type { SkillId, ZoneId } from '../types/ids';
+import {
+  COMBAT_LOG_EVENT,
+  CURRENCY_CHANGED_EVENT,
+  INVENTORY_CHANGED_EVENT,
+  NOTICE_EVENT,
+  SKILL_XP_GAINED_EVENT,
+} from '../ui/uiEvents';
+import type { Player } from './Player';
+import type { EventBus, FloatTone, WorldEvent } from './worldEvents';
+
+/**
+ * The zone, as one of its collaborators sees it: the clock, the character, the
+ * two channels out of the simulation, and the handful of publishers more than
+ * one of them needs. `GameContext` is the session's scope; this is the scope
+ * inside a single zone, and `ZoneWorld` owns exactly one.
+ *
+ * It is deliberately the *shared* part and no more. Anything only one
+ * collaborator needs — the mobs, the target, the campfire — is a constructor
+ * argument of that collaborator rather than a member here, which is what keeps
+ * this from growing back into the class it was split out of.
+ */
+export class WorldContext {
+  /** Milliseconds since this zone opened. Starts at zero, which is why "never
+   * happened" is marked with -Infinity rather than with 0. */
+  now = 0;
+
+  readonly character: CharacterController;
+  readonly events: EventBus;
+  readonly player: Player;
+
+  /** Which zone this is, for the save and for anything parked in it. */
+  readonly zoneId: ZoneId;
+
+  private pending: WorldEvent[] = [];
+
+  constructor(character: CharacterController, events: EventBus, player: Player, zoneId: ZoneId) {
+    this.character = character;
+    this.events = events;
+    this.player = player;
+    this.zoneId = zoneId;
+  }
+
+  /** The view channel: a moment that happened this frame. */
+  push(event: WorldEvent): void {
+    this.pending.push(event);
+  }
+
+  /** Hands the frame's moments to whoever is drawing, and starts the next one. */
+  drain(): WorldEvent[] {
+    const events = this.pending;
+    this.pending = [];
+    return events;
+  }
+
+  playerPoint(): Point {
+    return { x: this.player.x, y: this.player.y };
+  }
+
+  /** Text that rises off the player. `rise` is how far above their feet it starts. */
+  float(text: string, tone: FloatTone, rise = 0): void {
+    this.push({
+      kind: 'float',
+      at: { x: this.player.x, y: this.player.y - rise },
+      text,
+      tone,
+    });
+  }
+
+  log(entry: CombatLogEntry): void {
+    this.events.emit(COMBAT_LOG_EVENT, entry);
+  }
+
+  /** The muted toast: a refusal, or something that happened without being asked for. */
+  notice(text: string): void {
+    this.events.emit(NOTICE_EVENT, text);
+  }
+
+  publishInventory(): void {
+    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+  }
+
+  publishCurrency(): void {
+    this.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+  }
+
+  /**
+   * Combat skills tick up a point at a time on every swing, which would bury the
+   * screen in floating text — those pass `silent` and are seen only on the sheet
+   * and at the level-up toast.
+   */
+  awardSkillXp(skill: SkillId, amount: number, options?: { silent: boolean }): void {
+    const gain = this.character.awardSkillXp(skill, amount);
+    if (!options?.silent) {
+      this.float(`+${amount} ${SKILLS[skill].name} XP`, 'skill', 20);
+    }
+    this.events.emit(SKILL_XP_GAINED_EVENT, gain);
+    if (gain.leveledUp) {
+      this.log(logSkillLevelUp(SKILLS[skill].name, gain.level));
+      this.persistCharacter();
+    }
+  }
+
+  persistCharacter(): void {
+    this.character.recordLocation(this.zoneId, this.player);
+    saveService.save(this.character.state);
+  }
+}
