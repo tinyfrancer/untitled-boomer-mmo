@@ -77,7 +77,11 @@ describe('what a cast is refused for', () => {
   });
 
   it('a cooldown that has not run out, counted off the world’s clock', () => {
-    const kit = bar(ratAt(10, 0));
+    const rat = ratAt(10, 0);
+    // Too fat to die to the casts below: a corpse would refuse the next one
+    // for having no target, which is a different rule.
+    rat.hp = 1000;
+    const kit = bar(rat);
     kit.caster.cast('fireball');
     kit.player.restoreToFull();
 
