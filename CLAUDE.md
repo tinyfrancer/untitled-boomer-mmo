@@ -401,6 +401,10 @@ the id unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`, `QuestId`, `Achieve
 `TitleId`) that key into them. Prefer
 adding a row to one of these tables over hardcoding values in a scene/entity — a new enemy type
 should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numbers baked in.
+**The renderer is on the far side of that too**: an `EnemyDefinition` names a
+`shape` (`quadruped | crustacean | humanoid`) and `render3d/creatures.ts` switches on _that_, so a
+new row picks a body it is drawn with rather than waiting for a builder written for its id. Colour
+stays the renderer's, keyed by the same shape in `render3d/palette.ts`.
 
 **Only humanoids drop gear and coin.** `EnemyDefinition.family` is `beast | humanoid`, and it is
 what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by

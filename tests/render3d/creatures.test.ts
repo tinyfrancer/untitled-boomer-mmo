@@ -50,6 +50,18 @@ describe('buildCreature', () => {
     expect(crab.x).toBeGreaterThan(crab.z);
   });
 
+  // The shape is data, so an ENEMIES row that names one is drawn with it —
+  // which is what stops a new enemy needing a builder written for its id.
+  it('draws the body the definition names, not the one its id used to pick', () => {
+    const scuttling = new Box3().setFromObject(
+      buildCreature({ ...ENEMIES.rat, shape: 'crustacean' }).object,
+    );
+    expect(scuttling.max.x - scuttling.min.x).toBeGreaterThan(scuttling.max.z - scuttling.min.z);
+
+    const drawn = footprint('rat');
+    expect(drawn.z).toBeGreaterThan(drawn.x);
+  });
+
   it('dresses a bandit in the outlaw colours both renderers read', () => {
     const found: number[] = [];
     buildCreature(ENEMIES.bandit).object.traverse((object) => {
