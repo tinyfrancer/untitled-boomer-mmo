@@ -182,8 +182,7 @@ port: it now reads every file under `src/` and fails on an `import` of `phaser`,
 the dependency reappears in `package.json`.
 
 **The simulation is `src/world/`; `src/render3d/` only draws it.** `ZoneWorld` owns the player, the
-mobs, the nodes and every rule that moves them — combat both ways, gathering, the shop, abilities,
-the AFK camp, what a corpse is worth — and steps it all from `update(deltaMs)`. `world/Player.ts`,
+mobs and the nodes, and steps everything that moves them from `update(deltaMs)`. `world/Player.ts`,
 `world/Mob.ts`, `world/ResourceNode.ts` and `world/Campfire.ts` are the simulated things; the
 actor classes in `render3d/actors.ts` hold a reference to one and catch up to it in `sync()` once a
 frame. New gameplay goes in the world, not the view. Two consequences worth knowing before you
@@ -198,6 +197,21 @@ add to it:
   measurements off anything drawn, for the same reason `PLAYER_HALF_EXTENT` is: how big a rat looks
   is the renderer's decision and how big a rat _is_ is not. `render3d/creatures.ts` sizes the mesh
   _from_ the data, which is the direction that keeps the two agreeing.
+
+**The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
+(both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
+the pan, the food), `AbilityCaster`, `AfkCamp`, `ShopSession`, `QuestDesk`, and `ApproachDriver`
+(the two click-to-move walks). Each owns its own state, is constructed by `ZoneWorld` and reaches
+the rest of the zone through two things and no others: the `WorldContext` they all share — the
+clock, the character, the player, both channels out of the simulation, and the handful of
+publishers more than one of them needs — and a small `Deps` interface of named hooks declared in
+its own file. A new rule belongs in the collaborator that owns the state it reads; a new
+collaborator gets a `Deps` of its own rather than a reference to the world. What is left in
+`ZoneWorld` is what none of them can own: the entities, the order the tick runs in, what is
+selected (`world/targeting.ts`, which is the read-only view of it three of them get), the
+publishers that speak only on change (`publishOnChange`), and the three things that stop
+everything at once — a zone change, a death, a teardown. Its `handle*` methods are a thin
+delegating surface kept for the view and `scripts/smoke.mjs`.
 
 **The boot flow is an if-statement, not a scene graph.** `src/bootFlow.ts` resumes the save, or
 mounts the plain-HTML creation screen (`hud/CharacterCreate.ts`) and starts the session with what

@@ -84,7 +84,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 6   | Id unions and index safety               | L    | —          | ☑ 2026-08-06 |
 | 7   | Shared primitives and modal lifecycle    | M    | 4          | ☑ 2026-08-06 |
 | 8   | Split `hud/Hud.ts`                       | M    | 4, 5, 7    | ☑ 2026-08-06 |
-| 9   | Split `world/ZoneWorld.ts`               | L    | 4          | ☐            |
+| 9   | Split `world/ZoneWorld.ts`               | L    | 4          | ☑ 2026-08-07 |
 | 10  | The deferred behaviour changes           | M    | —          | ☐            |
 
 ---
@@ -479,7 +479,7 @@ and `keys.ts` at 100% on every metric. Three things a later session should know:
   vendoring flows in smoke, which press them for other reasons. Five cases now walk a bag through
   the panel's own buttons and assert the pairing, proven by pointing Eat at the cook request.
 
-## PR 9 — Split `world/ZoneWorld.ts` · `cleanup/09-zoneworld-split` · L
+## PR 9 — Split `world/ZoneWorld.ts` · `cleanup/09-zoneworld-split` · L — done, merged
 
 Depends on PR 4. **This should be the only thing its session does.** The section banners already
 name the seams; each candidate owns private state (`shopNpc`, `afkAnchor`/`afkRecovering`,
@@ -504,14 +504,19 @@ the rest carries to the next session — update the table row to say which lande
 
 Two things to fix while splitting rather than to carry across:
 
-- [ ] **The five hand-rolled change-detecting publishers.** `publishPlayerHp`, `publishPlayerMana`,
+- [x] **The five hand-rolled change-detecting publishers.** `publishPlayerHp`, `publishPlayerMana`,
       `publishAbilityState`, `publishActions`, `publishTarget` (`:957`, `:1037`, `:1193`, `:1452`,
       `:1474`) are five copies of "diff against the last value, emit on change" — four using `!==`
       and one using a string signature (`:1466-1470`). One mechanism, held by `ZoneWorld`.
-- [ ] **`pursuingTarget` belongs to the target.** `this.clearTarget(); this.pursuingTarget = false;`
+      **Four, not five**: `publishTarget` does not diff and must not start, since it is what a
+      swing, a cast and a level-up call to re-send a mob's vitals. `publishOnChange` takes the
+      signature as the argument it always was, plus a seed for what the world opens already
+      having said.
+- [x] **`pursuingTarget` belongs to the target.** `this.clearTarget(); this.pursuingTarget = false;`
       appears six times (`:504`, `:517`, `:522`, `:532`, `:812`, `:828`). Fold it into
       `clearTarget()`. `ZoneWorld.tap()` (`:499-536`) then collapses, since three of its four
-      branches are that identical triple followed by an `approachX()`.
+      branches are that identical triple followed by an `approachX()`. Done first, on its own,
+      so the collapse is readable against a file nothing else had moved yet.
 
 Each collaborator gets a test file in `tests/world/`. The existing per-feature suites (`combat`,
 `abilities`, `afk`, `shop`, `cooking`, `gathering`, `quests`) already drive these paths through the
@@ -520,6 +525,42 @@ harness and **must keep passing untouched** — that is the regression proof.
 **Verify:** gates + `npm run smoke`, especially the GPU-teardown section: three zone round trips
 must return `renderer.info.memory` to where it started.
 **Done when:** `ZoneWorld.ts` is under ~500 lines and no existing `tests/world/` file changed.
+**Landed:** 77/77 smoke, unchanged; every existing `tests/world/` suite passes untouched, and so
+does `progression.test.ts`. `ZoneWorld.ts` is **720 lines, not the ~500 this asked for**, and 58
+new cases across seven collaborator suites say why the split is real anyway. Five things a later
+session should know:
+
+- **The collaborators share a `WorldContext`, and that is the whole of what they can reach.** It
+  holds the clock, the character, the player, both channels out of the simulation, and the
+  publishers more than one of them needs (`notice`, `float`, `publishInventory`,
+  `publishCurrency`, `awardSkillXp`, `persistCharacter`). Everything else each one needs is a
+  named hook on a `Deps` interface declared in its own file — which is what the new tests hand
+  it, and why they can assert things like "with the shop shut, nothing happens at all" without a
+  zone existing.
+- **Two collaborators are not in the sketch above and both earned their place.**
+  `ApproachDriver` is the click-to-move state the plan never listed (`pendingApproach`,
+  `pursuingTarget`, and 42 lines of `updateApproach`), and the two walks in it turn out to be
+  different rules: a node, a shopkeeper and a signpost stand still, so the destination is captured
+  once and something happens on arrival; a mob does not, so a pursuit re-aims every frame and
+  carries no action. `zoneEntities.ts` is the pure read of a zone definition into the things that
+  live in it, which took ~50 lines out of the constructor and owns `WorldNpc`/`WorldSignpost` now
+  (both still re-exported from `ZoneWorld`).
+- **The 220 lines over the estimate are the composition root and the delegating surface, and both
+  are load-bearing.** ~95 lines are one-line `handle*` methods and getters (`shopNpc`,
+  `campfire`, `gatherState`, `afkActive`, `lastAbilityAt`) that keep `world.*` exactly what the
+  view, `scripts/smoke.mjs` and seven existing suites already call — deleting them is a change to
+  the regression proof, which is the one thing this PR could not touch. The rest is the
+  constructor that wires seven collaborators, the tick's order, targeting, and the three routines
+  that stop everything at once (`leaveZone`, `handlePlayerDeath`, `destroy`) — none of which
+  belongs to any single collaborator by construction.
+- **`Targeting` (`world/targeting.ts`) is what three of them see of the selection.** Selection
+  itself stays with `ZoneWorld`, because the walk that closes on a target is the same
+  click-to-move machinery a tap on the ground uses. `ZoneWorld implements Targeting`, so the
+  interface is checked rather than described.
+- **`tests/world/context.ts` is the new fixture** — one collaborator with no zone around it, as
+  against `harness.ts`'s whole simulation driven in game time. Reach for the harness for anything
+  that needs mobs to wander or a channel to advance; reach for this for a rule that turns over at
+  an exact value.
 
 ## PR 10 — The deferred behaviour changes · `cleanup/10-deferred` · M
 

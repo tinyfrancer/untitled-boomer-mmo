@@ -103,10 +103,18 @@ export interface ZoneWorldOptions {
 }
 
 /**
- * One zone, simulated. Owns the player, the mobs, the nodes and every rule that
- * moves them: combat both ways, gathering, the shop, abilities, the AFK camp
- * and what a corpse is worth. Nothing here draws, and nothing here knows what
- * is drawing — the frame's `WorldEvent[]` is everything a view has to be told.
+ * One zone, simulated: the player, the mobs, the nodes, and the tick that moves
+ * them all. Nothing here draws, and nothing here knows what is drawing — the
+ * frame's `WorldEvent[]` is everything a view has to be told.
+ *
+ * The rules themselves live in the collaborators it composes — the fight, the
+ * gather channel, the shop counter, the action bar, the camp, the quest desk
+ * and the two click-to-move walks — each of which owns its own state and
+ * reaches the rest of the zone through the `WorldContext` they share and a
+ * handful of named hooks. What is left here is what none of them can own: the
+ * entities, the order the tick runs in, the publishers that speak only on
+ * change, what is selected, and the three things that stop everything at once —
+ * a zone change, a death, a teardown.
  *
  * It deliberately does **not** load zones. Walking onto an exit emits
  * `zone-exit` and stops the world; building the next one is the `GameContext`'s
@@ -280,8 +288,8 @@ export class ZoneWorld implements Targeting {
 
   private subscribe(): void {
     const { listen } = this.subscriptions;
-    listen(EQUIP_ITEM_REQUESTED_EVENT, this.handleEquipRequested.bind(this));
-    listen(UNEQUIP_SLOT_REQUESTED_EVENT, this.handleUnequipRequested.bind(this));
+    listen(EQUIP_ITEM_REQUESTED_EVENT, (itemId) => this.handleEquipRequested(itemId));
+    listen(UNEQUIP_SLOT_REQUESTED_EVENT, (slot) => this.handleUnequipRequested(slot));
     listen(EAT_ITEM_REQUESTED_EVENT, (itemId) => this.gathering.eat(itemId));
     listen(COOK_REQUESTED_EVENT, (itemId) => this.gathering.cook(itemId));
     listen(LIGHT_FIRE_REQUESTED_EVENT, () => this.gathering.lightFire());
