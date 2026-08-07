@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <!-- No `user-scalable=no`. iOS Safari has ignored it since iOS 10, so it never
+         stopped the page being zoomed; Chrome Android honours it, so all it did
+         there was refuse the pinch that would undo one. Zoom is instead kept from
+         happening by touch-action: `manipulation` on the HUD roots and
+         `pinch-zoom` on the canvas, which is what leaves a deliberate pinch
+         working everywhere and therefore always reversible. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Untitled Boomer MMO</title>
     <style>
       html,
@@ -12,6 +18,10 @@
         padding: 0;
         background: #111;
         overflow: hidden;
+        /* The canvas's `touch-action: none` used to suppress pull-to-refresh and
+           the overscroll bounce as a side effect. It allows pinch now, so say
+           what was actually meant rather than relying on that again. */
+        overscroll-behavior: none;
         width: 100%;
         height: 100%;
       }

@@ -22,6 +22,12 @@ function hudCss(): string {
   /* The overlay itself must never eat a tap meant for the world; every piece
      of furniture that should swallow one opts back in. */
   pointer-events: none;
+  /* Kills double-tap-to-zoom for every piece of furniture below, since a touch
+     point takes the intersection of this and its ancestors: tapping a tab or an
+     ability button twice quickly is ordinary play, not a request to zoom. It
+     still permits panning and pinching, so sheet bodies scroll and the page can
+     be scaled back. */
+  touch-action: manipulation;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: ${THEME.color.text};
   -webkit-user-select: none;
@@ -635,6 +641,10 @@ function hudCss(): string {
   background: #1a1a2e;
   color: ${THEME.color.text};
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Its own copy of the .hud rule: this screen is mounted before any canvas
+     exists and sits outside the HUD overlay, and a page zoomed by double-tapping
+     one of its big cards outlives it. */
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 .create * {

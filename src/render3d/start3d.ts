@@ -55,8 +55,9 @@ class ThreeHost implements GameHost {
   private view: ZoneView3D | null = null;
   private readonly gesture = new OrbitGesture();
   // Only the first pointer down drives the camera. A second finger arriving is
-  // a pinch the browser is not going to get (see `touch-action`), and letting
-  // it join in would make the yaw jump between two thumbs.
+  // a pinch, which is the browser's (see `touch-action` on the canvas) — it
+  // takes the gesture away as a pointercancel, and letting the finger join in
+  // first would make the yaw jump between two thumbs on its way out.
   private pointerId: number | null = null;
   private frameHandle: number | null = null;
   private lastFrameAt = 0;

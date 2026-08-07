@@ -23,9 +23,10 @@
  * are deterministic; a loaded CI runner makes the script slower, not flakier.
  *
  * It runs on a portrait phone, which is what the game is laid out for, in a
- * touch-capable context: the drag/tap disambiguation and `touch-action: none`
- * are phone rules and a mouse can break neither — it never pans the page and is
- * never a thumb resting on the screen. Two sections leave that viewport on
+ * touch-capable context: the drag/tap disambiguation and the `touch-action`
+ * policy that decides what the browser may take are phone rules, and a mouse can
+ * break neither — it never pans or pinches the page and is never a thumb resting
+ * on the screen. Two sections leave that viewport on
  * purpose, a landscape resize and a desktop one, and both say why.
  *
  * It is typechecked by `tsconfig.scripts.json` — `scripts/globals.d.ts` gives
@@ -851,8 +852,8 @@ async function keyboard() {
   );
 
   // A tap that lands on the opaque bar must never also be a move order. The
-  // canvas has its own `pointerdown` listener and `touch-action: none`, so it is
-  // worth asking whether the HTML overlay still gets there first.
+  // canvas has its own `pointerdown` listener underneath, so it is worth asking
+  // whether the HTML overlay still gets there first.
   await park();
   const beforeBarTap = await page.evaluate(() => ({
     x: Math.round(window.world.player.x),
@@ -881,9 +882,9 @@ async function keyboard() {
 
 async function touchGestures() {
   // --- The same gestures under a thumb. Every drag above was a mouse, and a
-  // mouse cannot break either phone-only rule: it never pans the page, so
-  // `touch-action: none` is untested by it, and it is never a thumb resting on
-  // the screen. Chromium synthesises the pointer events these listeners are
+  // mouse cannot break either phone-only rule: it never pans the page, so the
+  // canvas's `touch-action` is untested by it, and it is never a thumb resting
+  // on the screen. Chromium synthesises the pointer events these listeners are
   // written against, so this is the real path a phone takes. ---
   const beforeTouch = await northOfPlayer();
   const stoodTouch = await page.evaluate(() => ({
@@ -919,6 +920,65 @@ async function touchGestures() {
     (await page.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
   );
   await touchDrag({ x: 195, y: 400 }, -140);
+
+  // --- Page zoom, which is not a gesture the game handles but one it must not
+  // trap the player inside. A phone that double-taps its way to a zoomed page
+  // and cannot pinch back out is stuck there until the tab is closed.
+  //
+  // The obvious check — pinch with `Input.synthesizePinchGesture` and read
+  // `window.visualViewport.scale` — is deliberately absent: headless Chromium
+  // does not report page zoom through it at all, verified against a plain
+  // zoomable page with no `touch-action` anywhere, so the assertion would pass
+  // just as happily against a canvas that refuses the pinch. What is left is
+  // the policy that decides whether the gesture can ever be delivered, and the
+  // behaviour that policy must not have broken. A real phone is the verdict on
+  // the pinch itself. ---
+  const zoomPolicy = await page.evaluate(() => {
+    const of = (/** @type {string} */ selector) => {
+      const node = document.querySelector(selector);
+      return node === null ? null : getComputedStyle(node).touchAction;
+    };
+    return {
+      canvas: of('canvas'),
+      hud: of('.hud'),
+      scalable: document
+        .querySelector('meta[name="viewport"]')
+        ?.getAttribute('content')
+        ?.includes('user-scalable=no'),
+    };
+  });
+  check(
+    'a two-finger pinch over the world is left to the browser, so the page can always be unzoomed',
+    zoomPolicy.canvas === 'pinch-zoom' && zoomPolicy.scalable === false,
+    `canvas touch-action: ${zoomPolicy.canvas}, user-scalable=no present: ${zoomPolicy.scalable}`,
+  );
+  check(
+    'and the HUD takes double-tap zoom away from every button under it',
+    zoomPolicy.hud === 'manipulation',
+    `.hud touch-action: ${zoomPolicy.hud}`,
+  );
+
+  // Which must leave a tab reading as two ordinary presses rather than as one
+  // gesture the browser took for itself: open, then closed again. A click and
+  // not `touchscreen.tap`, because a tab listens for `click` and Chromium only
+  // synthesises one from a touch under mobile emulation, which this context
+  // does not turn on — the tap path itself is covered by the two touch checks
+  // above and by the tab bar's own section.
+  const sheetOpen = () =>
+    page.evaluate(() => {
+      const sheet = document.querySelector('.hud-sheet[data-sheet="inventory"]');
+      return sheet !== null && getComputedStyle(sheet).display !== 'none';
+    });
+  const tab = '.hud-tabs__tab[data-tab="inventory"]';
+  await page.click(tab);
+  const openedOnFirstPress = await sheetOpen();
+  await page.click(tab);
+  const closedOnSecondPress = !(await sheetOpen());
+  check(
+    'two quick presses on a tab are still two presses, not one swallowed gesture',
+    openedOnFirstPress && closedOnSecondPress,
+    `opened: ${openedOnFirstPress}, closed again: ${closedOnSecondPress}`,
+  );
 
   // And the one that matters most on a phone: the signpost is how a zone is
   // left, since the edge-walk band is untappably thin under a thumb.
