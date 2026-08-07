@@ -12,19 +12,15 @@ import {
   AFK_TOGGLE_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
-  CURRENCY_CHANGED_EVENT,
-  COMBAT_LOG_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   GATHER_ENDED_EVENT,
   GATHER_PROGRESS_EVENT,
   GATHER_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
-  INVENTORY_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
-  NOTICE_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
@@ -34,7 +30,6 @@ import {
   SET_TITLE_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   SHOP_OPENED_EVENT,
-  SKILL_XP_GAINED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TITLE_CHANGED_EVENT,
@@ -77,11 +72,9 @@ import {
   logNotice,
   logQuestAccepted,
   logQuestCompleted,
-  logSkillLevelUp,
   logSpellFailed,
   logTitleEarned,
   logXpGain,
-  type CombatLogEntry,
 } from '../systems/CombatLogSystem';
 import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
@@ -121,6 +114,7 @@ import { Mob } from './Mob';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
+import { WorldContext } from './WorldContext';
 import type { EventBus, WorldEvent } from './worldEvents';
 import type {
   AbilityId,
@@ -130,7 +124,6 @@ import type {
   LootTableId,
   NpcId,
   QuestId,
-  SkillId,
   TitleId,
   ZoneEdge,
 } from '../types/ids';
@@ -234,13 +227,10 @@ export class ZoneWorld {
   /** When each ability was last cast, for the cooldown check and the bar's sweep. */
   readonly lastAbilityAt = new Map<AbilityId, number>();
 
-  private readonly events: EventBus;
+  /** The clock, the channels and the character — everything shared. */
+  private readonly ctx: WorldContext;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  private pending: WorldEvent[] = [];
-  // The world's own clock, and it starts at zero — which is why "never swung"
-  // is marked with -Infinity below rather than with 0.
-  private now = 0;
   private gatherNode: ResourceNode | null = null;
   // Click-to-move approach state: the node, shopkeeper or signpost the player
   // tapped and is walking toward, and whether they are closing on the current
@@ -262,7 +252,6 @@ export class ZoneWorld {
     const { zone, character, events, input, entry, hp, rng } = options;
     this.zone = zone;
     this.character = character;
-    this.events = events;
     this.input = input;
     this.subscriptions = createSubscriptions(events);
 
@@ -284,6 +273,7 @@ export class ZoneWorld {
     if (hp !== undefined) {
       this.player.setHp(hp);
     }
+    this.ctx = new WorldContext(character, events, this.player, zone.id);
     this.lastReportedHp = this.player.hp;
 
     this.mobs = zone.mobSpawns.map(
@@ -329,7 +319,7 @@ export class ZoneWorld {
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt (a zone
     // walk, or the death that sent us here) — resync it unconditionally.
-    this.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
+    this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   // Where the player stands when this world opens: the arrival point if they
@@ -408,8 +398,8 @@ export class ZoneWorld {
     this.character.addCurrency(report.copper);
     this.awardXp(report.xp);
     const unlocks = report.enemyId ? this.creditKill(report.enemyId, report.kills) : [];
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+    this.ctx.publishInventory();
+    this.ctx.publishCurrency();
     this.persistCharacter();
     return { report, unlocks };
   }
@@ -420,8 +410,8 @@ export class ZoneWorld {
 
   /** Steps the world one frame and hands back everything a view has to draw. */
   update(deltaMs: number): WorldEvent[] {
-    if (this.changingZone) return this.drain();
-    this.now += deltaMs;
+    if (this.changingZone) return this.ctx.drain();
+    this.ctx.now += deltaMs;
 
     this.applyInputActions();
     this.updateAfk();
@@ -429,11 +419,11 @@ export class ZoneWorld {
     this.player.update(deltaMs, this.collisionWorld);
     const healed = this.player.takeHealPulse();
     if (healed > 0) {
-      this.pending.push({ kind: 'heal', at: this.playerPoint(), amount: healed });
+      this.ctx.push({ kind: 'heal', at: this.ctx.playerPoint(), amount: healed });
     }
     this.mobs.forEach((mob) => {
       if (mob.update(this.player.x, this.player.y, deltaMs, this.collisionWorld)) {
-        this.pending.push({ kind: 'spawn', mob });
+        this.ctx.push({ kind: 'spawn', mob });
       }
     });
     this.nodes.forEach((node) => node.update(deltaMs));
@@ -450,17 +440,7 @@ export class ZoneWorld {
     this.publishActions();
     this.updateShopRange();
     this.checkZoneExit();
-    return this.drain();
-  }
-
-  private drain(): WorldEvent[] {
-    const events = this.pending;
-    this.pending = [];
-    return events;
-  }
-
-  private playerPoint(): Point {
-    return { x: this.player.x, y: this.player.y };
+    return this.ctx.drain();
   }
 
   // One-shot keys, taken once a frame rather than fired from a listener, so the
@@ -474,7 +454,7 @@ export class ZoneWorld {
         // The host owns everything a reset touches — the save, the HUD scene,
         // the character creator — and already listens for this from the
         // options panel, so the key press takes the same road.
-        this.events.emit(RESET_CHARACTER_REQUESTED_EVENT);
+        this.ctx.events.emit(RESET_CHARACTER_REQUESTED_EVENT);
       }
     });
   }
@@ -673,7 +653,7 @@ export class ZoneWorld {
       arrivalPoint(entryEdge, fraction, destination.width, destination.height, ARRIVAL_INSET),
     );
     saveService.save(this.character.state);
-    this.pending.push({ kind: 'zone-exit', to: exit.to, edge: entryEdge, fraction });
+    this.ctx.push({ kind: 'zone-exit', to: exit.to, edge: entryEdge, fraction });
   }
 
   // ---------------------------------------------------------------------------
@@ -691,13 +671,13 @@ export class ZoneWorld {
   private openShop(npc: WorldNpc): void {
     this.player.stopMoving();
     this.shopNpc = npc;
-    this.events.emit(SHOP_OPENED_EVENT);
+    this.ctx.events.emit(SHOP_OPENED_EVENT);
   }
 
   closeShop(): void {
     if (!this.shopNpc) return;
     this.shopNpc = null;
-    this.events.emit(SHOP_CLOSED_EVENT);
+    this.ctx.events.emit(SHOP_CLOSED_EVENT);
   }
 
   // The UI's close button already tore the panel down; just drop the state.
@@ -712,16 +692,16 @@ export class ZoneWorld {
     // Checked before the coin leaves the purse, so a full pack never sells the
     // player something they can't take home.
     if (!this.character.canCarryItem(itemId, 1)) {
-      this.events.emit(NOTICE_EVENT, 'Your pack is too full to carry that.');
+      this.ctx.notice('Your pack is too full to carry that.');
       return;
     }
     if (!this.character.spendCurrency(price)) {
-      this.events.emit(NOTICE_EVENT, "You can't afford that.");
+      this.ctx.notice("You can't afford that.");
       return;
     }
     this.character.addItem(itemId, 1);
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+    this.ctx.publishInventory();
+    this.ctx.publishCurrency();
   }
 
   handleSellRequested(itemId: ItemId): void {
@@ -730,8 +710,8 @@ export class ZoneWorld {
     if (value === null || this.character.itemCount(itemId) <= 0) return;
     this.character.removeItem(itemId, 1);
     this.character.addCurrency(value);
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+    this.ctx.publishInventory();
+    this.ctx.publishCurrency();
   }
 
   // ---------------------------------------------------------------------------
@@ -741,7 +721,7 @@ export class ZoneWorld {
   private handleAcceptQuestRequested(questId: QuestId): void {
     if (!this.shopNpc) return;
     if (!this.character.acceptQuest(questId)) return;
-    this.log(logQuestAccepted(QUESTS[questId].name));
+    this.ctx.log(logQuestAccepted(QUESTS[questId].name));
     this.announceQuests();
     this.persistCharacter();
   }
@@ -750,24 +730,24 @@ export class ZoneWorld {
     if (!this.shopNpc) return;
     const result = this.character.turnInQuest(questId);
     if (!result.ok) {
-      this.events.emit(NOTICE_EVENT, result.reason);
+      this.ctx.notice(result.reason);
       return;
     }
-    this.log(logQuestCompleted(QUESTS[questId].name));
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+    this.ctx.log(logQuestCompleted(QUESTS[questId].name));
+    this.ctx.publishInventory();
+    this.ctx.publishCurrency();
     this.announceQuests();
     this.publishXpGain(result.xp);
     this.persistCharacter();
   }
 
   private announceQuests(): void {
-    this.events.emit(QUEST_LOG_CHANGED_EVENT, this.character.state.quests);
+    this.ctx.events.emit(QUEST_LOG_CHANGED_EVENT, this.character.state.quests);
   }
 
   private handleSetTitleRequested(titleId: TitleId | null): void {
     if (!this.character.setActiveTitle(titleId)) return;
-    this.events.emit(TITLE_CHANGED_EVENT, this.character.state.activeTitleId);
+    this.ctx.events.emit(TITLE_CHANGED_EVENT, this.character.state.activeTitleId);
     this.persistCharacter();
   }
 
@@ -789,10 +769,10 @@ export class ZoneWorld {
     if (active) {
       this.stopGathering();
       this.closeShop();
-      this.afkAnchor = this.playerPoint();
-      this.log(logNotice('You settle in to camp.'));
+      this.afkAnchor = this.ctx.playerPoint();
+      this.ctx.log(logNotice('You settle in to camp.'));
     } else {
-      this.log(logNotice('You snap out of it.'));
+      this.ctx.log(logNotice('You snap out of it.'));
     }
     // Written to the save, not just held here: it is the only record that
     // survives the tab closing, and the only thing offline progress is paid on.
@@ -800,7 +780,7 @@ export class ZoneWorld {
       ? { startedAt: new Date().toISOString(), zoneId: this.zone.id }
       : null;
     this.persistCharacter();
-    this.events.emit(AFK_STATE_CHANGED_EVENT, this.afkActive);
+    this.ctx.events.emit(AFK_STATE_CHANGED_EVENT, this.afkActive);
   }
 
   private updateAfk(): void {
@@ -863,7 +843,7 @@ export class ZoneWorld {
 
   startGathering(node: ResourceNode): void {
     if (!node.isAvailable()) {
-      this.events.emit(NOTICE_EVENT, `The ${node.definition.name} is spent.`);
+      this.ctx.notice(`The ${node.definition.name} is spent.`);
       return;
     }
 
@@ -873,7 +853,7 @@ export class ZoneWorld {
       this.character.state.gear,
     );
     if (!check.ok) {
-      this.events.emit(NOTICE_EVENT, check.reason);
+      this.ctx.notice(check.reason);
       return;
     }
 
@@ -882,14 +862,14 @@ export class ZoneWorld {
       node.definition,
       this.character.skillLevelOf(node.definition.skill),
     );
-    this.events.emit(GATHER_STARTED_EVENT, node.definition.name);
+    this.ctx.events.emit(GATHER_STARTED_EVENT, node.definition.name);
   }
 
   stopGathering(): void {
     if (!this.gatherState) return;
     this.gatherState = null;
     this.gatherNode = null;
-    this.events.emit(GATHER_ENDED_EVENT);
+    this.ctx.events.emit(GATHER_ENDED_EVENT);
   }
 
   private updateGathering(deltaMs: number): void {
@@ -900,8 +880,8 @@ export class ZoneWorld {
 
     if (outcome.status === 'gathering') {
       this.gatherState = outcome.state;
-      this.events.emit(GATHER_PROGRESS_EVENT, outcome.progress);
-      this.pending.push({
+      this.ctx.events.emit(GATHER_PROGRESS_EVENT, outcome.progress);
+      this.ctx.push({
         kind: 'gather-tick',
         at: { x: node.x, y: node.y },
         nodeId: node.definition.id,
@@ -926,12 +906,12 @@ export class ZoneWorld {
     // skill earns nothing, and the channel stops rather than spinning forever.
     // This is what ends an unattended gathering session.
     if (!this.character.tryAddItem(definition.yieldItemId, quantity)) {
-      this.events.emit(NOTICE_EVENT, 'Your pack is full.');
+      this.ctx.notice('Your pack is full.');
       this.stopGathering();
       return;
     }
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.awardSkillXp(definition.skill, definition.xpReward);
+    this.ctx.publishInventory();
+    this.ctx.awardSkillXp(definition.skill, definition.xpReward);
 
     const emptied = node.consumeCharge();
     if (emptied) {
@@ -942,7 +922,7 @@ export class ZoneWorld {
     // Auto-repeat: re-arm the channel so gathering runs unattended until
     // something interrupts it.
     this.gatherState = beginGather(definition, this.character.skillLevelOf(definition.skill));
-    this.events.emit(GATHER_PROGRESS_EVENT, 0);
+    this.ctx.events.emit(GATHER_PROGRESS_EVENT, 0);
   }
 
   private isNearFire(): boolean {
@@ -959,12 +939,12 @@ export class ZoneWorld {
       return;
     }
     this.lastActions = next;
-    this.events.emit(ACTIONS_CHANGED_EVENT, next);
+    this.ctx.events.emit(ACTIONS_CHANGED_EVENT, next);
   }
 
   handleLightFireRequested(): void {
     if (this.character.itemCount(FIRE_INPUT_ITEM_ID) <= 0) {
-      this.events.emit(NOTICE_EVENT, 'You have no logs to burn.');
+      this.ctx.notice('You have no logs to burn.');
       return;
     }
 
@@ -973,7 +953,7 @@ export class ZoneWorld {
     this.campfire?.extinguish();
     this.character.removeItem(FIRE_INPUT_ITEM_ID, 1);
     this.campfire = new Campfire(this.player.x, this.player.y + 32);
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.ctx.publishInventory();
   }
 
   // With an item selected in the bag the HUD names what to cook; without one
@@ -982,7 +962,7 @@ export class ZoneWorld {
     const recipe =
       (itemId ? recipeForInput(itemId) : null) ?? findCookableItem(this.character.state.inventory);
     if (!recipe) {
-      this.events.emit(NOTICE_EVENT, 'You have nothing to cook.');
+      this.ctx.notice('You have nothing to cook.');
       return;
     }
 
@@ -993,18 +973,18 @@ export class ZoneWorld {
       this.isNearFire(),
     );
     if (!check.ok) {
-      this.events.emit(NOTICE_EVENT, check.reason);
+      this.ctx.notice(check.reason);
       return;
     }
 
     const result = rollCook(recipe, this.character.skillLevelOf('cooking'));
     this.character.removeItem(recipe.inputItemId, 1);
     this.character.addItem(result.itemId, 1);
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.ctx.publishInventory();
     if (result.burnt) {
-      this.events.emit(NOTICE_EVENT, 'You burn it.');
+      this.ctx.notice('You burn it.');
     } else {
-      this.awardSkillXp('cooking', result.xp);
+      this.ctx.awardSkillXp('cooking', result.xp);
     }
   }
 
@@ -1013,7 +993,7 @@ export class ZoneWorld {
       return;
     }
     if (this.player.hp >= this.player.maxHp) {
-      this.events.emit(NOTICE_EVENT, 'You are already at full health.');
+      this.ctx.notice('You are already at full health.');
       return;
     }
     if (!this.player.eat(itemId)) {
@@ -1021,7 +1001,7 @@ export class ZoneWorld {
     }
 
     this.character.removeItem(itemId, 1);
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.ctx.publishInventory();
   }
 
   // ---------------------------------------------------------------------------
@@ -1035,7 +1015,7 @@ export class ZoneWorld {
 
   private publishTarget(): void {
     if (!this.target) return;
-    this.events.emit(TARGET_SELECTED_EVENT, {
+    this.ctx.events.emit(TARGET_SELECTED_EVENT, {
       name: this.target.name,
       level: this.target.level,
       hp: this.target.hp,
@@ -1051,7 +1031,7 @@ export class ZoneWorld {
     this.pursuingTarget = false;
     if (!this.target) return;
     this.target = null;
-    this.events.emit(TARGET_CLEARED_EVENT);
+    this.ctx.events.emit(TARGET_CLEARED_EVENT);
   }
 
   private dropDeadTarget(): void {
@@ -1068,17 +1048,19 @@ export class ZoneWorld {
     if (!isInRange(distance(this.player, this.target), this.player.attackRange)) {
       return;
     }
-    if (!isCooldownReady(this.now - this.lastAttackAt, this.player.effectiveAttackCooldownMs())) {
+    if (
+      !isCooldownReady(this.ctx.now - this.lastAttackAt, this.player.effectiveAttackCooldownMs())
+    ) {
       return;
     }
 
-    this.lastAttackAt = this.now;
+    this.lastAttackAt = this.ctx.now;
     const weaponSkill = this.character.activeWeaponSkill();
     const { damage } = resolveAttack({
       attackPower: this.player.attackPower,
       weaponSkillLevel: this.character.skillLevelOf(weaponSkill),
     });
-    this.pending.push({
+    this.ctx.push({
       kind: 'hit',
       on: 'mob',
       via: 'weapon',
@@ -1086,14 +1068,14 @@ export class ZoneWorld {
       damage,
       absorbed: 0,
     });
-    this.log(logDamageDealt(this.target.name, damage));
+    this.ctx.log(logDamageDealt(this.target.name, damage));
     this.player.markInCombat();
     this.target.takeDamage(damage);
     // Anything the player hits fights back, whether or not it opens combat itself.
     this.target.engage();
     this.publishTarget();
     // Skill comes from swinging, not from killing: a landed hit is the rep.
-    this.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
+    this.ctx.awardSkillXp(weaponSkill, WEAPON_SKILL_XP_PER_HIT, { silent: true });
     if (!this.target.isAlive()) {
       this.resolveKill(this.target);
     }
@@ -1106,9 +1088,9 @@ export class ZoneWorld {
       if (!mob.isEngaged()) continue;
 
       if (!isInRange(distance(mob, this.player), mob.attackRange)) continue;
-      if (!isCooldownReady(this.now - mob.lastAttackAt, mob.attackCooldownMs)) continue;
+      if (!isCooldownReady(this.ctx.now - mob.lastAttackAt, mob.attackCooldownMs)) continue;
 
-      mob.lastAttackAt = this.now;
+      mob.lastAttackAt = this.ctx.now;
 
       // A turned-aside hit trains the skill that turned it aside and stops
       // there — no damage, and nothing to interrupt a gather.
@@ -1118,36 +1100,36 @@ export class ZoneWorld {
         hasWeapon: this.character.state.gear.weapon !== null,
       });
       if (defense.avoided && defense.skillId) {
-        this.pending.push({
+        this.ctx.push({
           kind: 'defend',
-          at: this.playerPoint(),
+          at: this.ctx.playerPoint(),
           skillName: SKILLS[defense.skillId].name,
         });
-        this.log(logDefense(SKILLS[defense.skillId].name, mob.name));
-        this.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
+        this.ctx.log(logDefense(SKILLS[defense.skillId].name, mob.name));
+        this.ctx.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
         continue;
       }
 
       const { damage } = resolveAttack({ attackPower: mob.attackPower });
       const absorbed = this.player.takeDamage(damage);
-      this.pending.push({
+      this.ctx.push({
         kind: 'hit',
         on: 'player',
         via: 'weapon',
-        at: this.playerPoint(),
+        at: this.ctx.playerPoint(),
         damage,
         absorbed,
       });
       if (absorbed > 0) {
-        this.log(logAbsorbed(absorbed));
+        this.ctx.log(logAbsorbed(absorbed));
       }
       if (damage > absorbed) {
-        this.log(logDamageTaken(mob.name, damage - absorbed));
+        this.ctx.log(logDamageTaken(mob.name, damage - absorbed));
       }
       // Taking a hit breaks the channel, so gathering is never a way to ignore a
       // mob already chewing on you.
       if (this.gatherState) {
-        this.events.emit(NOTICE_EVENT, 'You are interrupted!');
+        this.ctx.notice('You are interrupted!');
         this.stopGathering();
       }
 
@@ -1168,8 +1150,8 @@ export class ZoneWorld {
     this.closeShop();
     this.pendingApproach = null;
     this.player.stopMoving();
-    this.log(logNotice('You have died.'));
-    this.events.emit(PLAYER_DIED_EVENT);
+    this.ctx.log(logNotice('You have died.'));
+    this.ctx.events.emit(PLAYER_DIED_EVENT);
 
     // Dying away from home sends you back to town — respawning in the middle
     // of a hostile zone would just feed the same bandit again.
@@ -1179,7 +1161,7 @@ export class ZoneWorld {
       // the host's next world puts them anyway.
       this.character.recordLocation('town', null);
       saveService.save(this.character.state);
-      this.pending.push({ kind: 'death', on: 'player', respawnZone: 'town' });
+      this.ctx.push({ kind: 'death', on: 'player', respawnZone: 'town' });
       return;
     }
 
@@ -1187,7 +1169,7 @@ export class ZoneWorld {
     this.player.setVelocity(0, 0);
     this.player.restoreToFull();
     this.persistCharacter();
-    this.pending.push({ kind: 'death', on: 'player', respawnZone: null });
+    this.ctx.push({ kind: 'death', on: 'player', respawnZone: null });
   }
 
   // Regen and enemy hits both move HP outside of any single event, so the HUD is
@@ -1195,7 +1177,7 @@ export class ZoneWorld {
   private publishPlayerHp(): void {
     if (this.player.hp === this.lastReportedHp) return;
     this.lastReportedHp = this.player.hp;
-    this.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
+    this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   /**
@@ -1207,8 +1189,8 @@ export class ZoneWorld {
    * the constructor, so dying does not clear them.
    */
   resolveKill(mob: Mob): void {
-    this.pending.push({ kind: 'death', on: 'mob', mob });
-    this.log(logKill(mob.name));
+    this.ctx.push({ kind: 'death', on: 'mob', mob });
+    this.ctx.log(logKill(mob.name));
     this.awardXp(mob.xpReward);
     this.grantLoot(mob.lootTableId);
     this.announceUnlocks(this.creditKill(mob.definition.id));
@@ -1223,7 +1205,7 @@ export class ZoneWorld {
   creditKill(enemyId: EnemyId, count = 1): AchievementUnlock[] {
     const worn = this.character.state.activeTitleId;
     const crossed = this.character.recordKill(enemyId, count);
-    this.events.emit(KILLS_CHANGED_EVENT, this.character.state.kills);
+    this.ctx.events.emit(KILLS_CHANGED_EVENT, this.character.state.kills);
     if (crossed.length > 0) {
       this.persistCharacter();
     }
@@ -1240,17 +1222,12 @@ export class ZoneWorld {
 
   private announceUnlocks(unlocks: AchievementUnlock[]): void {
     for (const unlock of unlocks) {
-      this.log(logAchievement(unlock.name));
-      this.pending.push({
-        kind: 'float',
-        at: { x: this.player.x, y: this.player.y - 60 },
-        text: unlock.name,
-        tone: 'skill',
-      });
-      this.events.emit(ACHIEVEMENT_UNLOCKED_EVENT, unlock);
+      this.ctx.log(logAchievement(unlock.name));
+      this.ctx.float(unlock.name, 'skill', 60);
+      this.ctx.events.emit(ACHIEVEMENT_UNLOCKED_EVENT, unlock);
       if (unlock.titleWorn && unlock.titleId) {
-        this.log(logTitleEarned(titleName(unlock.titleId)));
-        this.events.emit(TITLE_CHANGED_EVENT, unlock.titleId);
+        this.ctx.log(logTitleEarned(titleName(unlock.titleId)));
+        this.ctx.events.emit(TITLE_CHANGED_EVENT, unlock.titleId);
       }
     }
   }
@@ -1266,45 +1243,20 @@ export class ZoneWorld {
     // comes in through publishXpGain instead.
     const amount = afkXpReward(reward, this.afkActive);
     const gain = this.character.awardXp(amount);
-    this.pending.push({
-      kind: 'float',
-      at: { x: this.player.x, y: this.player.y - 20 },
-      text: `+${amount} XP`,
-      tone: 'reward',
-    });
-    this.log(logXpGain(amount));
+    this.ctx.float(`+${amount} XP`, 'reward', 20);
+    this.ctx.log(logXpGain(amount));
     this.publishXpGain(gain);
   }
 
   // Everything a level costs the rest of the world, for XP however it arrived.
   private publishXpGain(gain: CombatXpGain): void {
-    this.events.emit(XP_GAINED_EVENT, gain);
+    this.ctx.events.emit(XP_GAINED_EVENT, gain);
 
     if (gain.leveledUp) {
-      this.log(logLevelUp(gain.level));
+      this.ctx.log(logLevelUp(gain.level));
       this.player.setLevel(gain.level);
       this.publishTarget();
-      this.events.emit(LEVEL_UP_EVENT, gain.level);
-      this.persistCharacter();
-    }
-  }
-
-  // Combat skills tick up a point at a time on every swing, which would bury
-  // the screen in floating text — those pass `silent` and are seen only on the
-  // sheet and at the level-up toast.
-  private awardSkillXp(skill: SkillId, amount: number, options?: { silent: boolean }): void {
-    const gain = this.character.awardSkillXp(skill, amount);
-    if (!options?.silent) {
-      this.pending.push({
-        kind: 'float',
-        at: { x: this.player.x, y: this.player.y - 20 },
-        text: `+${amount} ${SKILLS[skill].name} XP`,
-        tone: 'skill',
-      });
-    }
-    this.events.emit(SKILL_XP_GAINED_EVENT, gain);
-    if (gain.leveledUp) {
-      this.log(logSkillLevelUp(SKILLS[skill].name, gain.level));
+      this.ctx.events.emit(LEVEL_UP_EVENT, gain.level);
       this.persistCharacter();
     }
   }
@@ -1319,25 +1271,20 @@ export class ZoneWorld {
       // A full pack leaves the drop on the corpse rather than silently eating
       // it: the log line is the only way the player would ever know.
       if (!this.character.tryAddItem(drop.itemId, drop.quantity)) {
-        this.log(logNotice(`Your pack is too full to carry ${name}.`));
+        this.ctx.log(logNotice(`Your pack is too full to carry ${name}.`));
         return;
       }
-      this.log(logLoot(name, drop.quantity));
+      this.ctx.log(logLoot(name, drop.quantity));
       took = true;
     });
     if (took) {
-      this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+      this.ctx.publishInventory();
     }
     if (copper > 0) {
       this.character.addCurrency(copper);
-      this.log(logCoin(copper));
-      this.pending.push({
-        kind: 'float',
-        at: { x: this.player.x, y: this.player.y - 40 },
-        text: `+${formatCurrency(copper)}`,
-        tone: 'reward',
-      });
-      this.events.emit(CURRENCY_CHANGED_EVENT, this.character.state.currency);
+      this.ctx.log(logCoin(copper));
+      this.ctx.float(`+${formatCurrency(copper)}`, 'reward', 40);
+      this.ctx.publishCurrency();
     }
   }
 
@@ -1354,17 +1301,17 @@ export class ZoneWorld {
 
     const check = canUseAbility(ability, {
       mana: this.player.mana,
-      elapsedMs: this.now - (this.lastAbilityAt.get(abilityId) ?? -Infinity),
+      elapsedMs: this.ctx.now - (this.lastAbilityAt.get(abilityId) ?? -Infinity),
       hasTarget: this.target !== null && this.target.isAlive(),
       targetDistance: this.target ? distance(this.player, this.target) : Infinity,
     });
     if (!check.ok) {
-      this.events.emit(NOTICE_EVENT, check.reason);
+      this.ctx.notice(check.reason);
       return;
     }
 
     if (!this.player.spendMana(ability.manaCost)) return;
-    this.lastAbilityAt.set(abilityId, this.now);
+    this.lastAbilityAt.set(abilityId, this.ctx.now);
     this.stopGathering();
     this.player.markInCombat();
     this.publishAbilityState();
@@ -1372,22 +1319,17 @@ export class ZoneWorld {
     // A spell that fizzles still costs the mana and the cooldown; that is what
     // makes Destruction worth levelling.
     const skillLevel = ability.skill ? this.character.skillLevelOf(ability.skill) : 0;
-    this.log(logAbilityUsed(ability.name));
+    this.ctx.log(logAbilityUsed(ability.name));
     if (ability.skill && rollSpellFailure(ability, skillLevel)) {
-      this.pending.push({
-        kind: 'float',
-        at: this.playerPoint(),
-        text: 'Fizzle!',
-        tone: 'dim',
-      });
-      this.log(logSpellFailed(ability.name));
-      this.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
+      this.ctx.float('Fizzle!', 'dim');
+      this.ctx.log(logSpellFailed(ability.name));
+      this.ctx.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
       return;
     }
 
     this.applyAbilityEffect(ability, skillLevel);
     if (ability.skill) {
-      this.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
+      this.ctx.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
     }
   }
 
@@ -1401,14 +1343,14 @@ export class ZoneWorld {
         // ranged nuke that produced only a number over the mob read as nothing
         // happening. A melee ability has no flight to draw.
         if (ability.range > 0) {
-          this.pending.push({
+          this.ctx.push({
             kind: 'bolt-cast',
             abilityId: ability.id,
-            from: this.playerPoint(),
+            from: this.ctx.playerPoint(),
             to: { x: target.x, y: target.y },
           });
         }
-        this.pending.push({
+        this.ctx.push({
           kind: 'hit',
           on: 'mob',
           via: 'ability',
@@ -1416,7 +1358,7 @@ export class ZoneWorld {
           damage,
           absorbed: 0,
         });
-        this.log(logDamageDealt(target.name, damage));
+        this.ctx.log(logDamageDealt(target.name, damage));
         target.takeDamage(damage);
         target.engage();
         this.publishTarget();
@@ -1428,23 +1370,13 @@ export class ZoneWorld {
       case 'absorb': {
         const shield = startManaShield(ability);
         if (shield) this.player.applyManaShield(shield);
-        this.pending.push({
-          kind: 'float',
-          at: this.playerPoint(),
-          text: ability.name,
-          tone: 'skill',
-        });
+        this.ctx.float(ability.name, 'skill');
         return;
       }
       case 'haste': {
         const haste = startHaste(ability);
         if (haste) this.player.applyHaste(haste);
-        this.pending.push({
-          kind: 'float',
-          at: this.playerPoint(),
-          text: ability.name,
-          tone: 'reward',
-        });
+        this.ctx.float(ability.name, 'reward');
         return;
       }
     }
@@ -1453,7 +1385,7 @@ export class ZoneWorld {
   // The bar redraws off this; emitted only when a button's rendered state moves.
   private publishAbilityState(): void {
     const states = abilitiesFor(this.character.state.classId).map((ability) => {
-      const elapsedMs = this.now - (this.lastAbilityAt.get(ability.id) ?? -Infinity);
+      const elapsedMs = this.ctx.now - (this.lastAbilityAt.get(ability.id) ?? -Infinity);
       const cooldownRemaining = Math.min(
         1,
         Math.max(0, (ability.cooldownMs - elapsedMs) / ability.cooldownMs),
@@ -1470,13 +1402,13 @@ export class ZoneWorld {
       .join('|');
     if (signature === this.lastAbilitySignature) return;
     this.lastAbilitySignature = signature;
-    this.events.emit(ABILITY_STATE_CHANGED_EVENT, states);
+    this.ctx.events.emit(ABILITY_STATE_CHANGED_EVENT, states);
   }
 
   private publishPlayerMana(): void {
     if (this.player.mana === this.lastReportedMana) return;
     this.lastReportedMana = this.player.mana;
-    this.events.emit(PLAYER_MANA_CHANGED_EVENT, {
+    this.ctx.events.emit(PLAYER_MANA_CHANGED_EVENT, {
       mana: this.player.mana,
       maxMana: this.player.maxMana,
     });
@@ -1489,7 +1421,7 @@ export class ZoneWorld {
   handleEquipRequested(itemId: ItemId): void {
     const check = this.character.equip(itemId);
     if (!check.ok) {
-      this.events.emit(NOTICE_EVENT, check.reason);
+      this.ctx.notice(check.reason);
       return;
     }
     this.applyGearChange();
@@ -1503,17 +1435,12 @@ export class ZoneWorld {
   // Gear moves max HP, so the HUD needs the new current HP alongside the gear.
   private applyGearChange(): void {
     this.player.setGear(this.character.state.gear);
-    this.events.emit(GEAR_CHANGED_EVENT, this.character.state.gear);
-    this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
-    this.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
+    this.ctx.events.emit(GEAR_CHANGED_EVENT, this.character.state.gear);
+    this.ctx.publishInventory();
+    this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   persistCharacter(): void {
-    this.character.recordLocation(this.zone.id, this.player);
-    saveService.save(this.character.state);
-  }
-
-  private log(entry: CombatLogEntry): void {
-    this.events.emit(COMBAT_LOG_EVENT, entry);
+    this.ctx.persistCharacter();
   }
 }
