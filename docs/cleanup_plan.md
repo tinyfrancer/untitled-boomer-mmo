@@ -83,7 +83,7 @@ short session, `M` is a full one, `L` should be the only thing that session does
 | 5   | Type the event channel                   | M    | —          | ☑ 2026-08-06 |
 | 6   | Id unions and index safety               | L    | —          | ☑ 2026-08-06 |
 | 7   | Shared primitives and modal lifecycle    | M    | 4          | ☑ 2026-08-06 |
-| 8   | Split `hud/Hud.ts`                       | M    | 4, 5, 7    | ☐            |
+| 8   | Split `hud/Hud.ts`                       | M    | 4, 5, 7    | ☑ 2026-08-06 |
 | 9   | Split `world/ZoneWorld.ts`               | L    | 4          | ☐            |
 | 10  | The deferred behaviour changes           | M    | —          | ☐            |
 
@@ -435,24 +435,49 @@ asserted together. Four things a later session should know:
   four of the six callers colour or flag one of them right after building it, which is what
   a builder returning only the root would have sent straight back to hand-rolling.
 
-## PR 8 — Split `hud/Hud.ts` · `cleanup/08-hud-split` · M
+## PR 8 — Split `hud/Hud.ts` · `cleanup/08-hud-split` · M — done, merged
 
 Depends on PR 4, 5 and 7.
 
-- [ ] Extract the **overlay factory** (`openOptions`, `openSlotPicker`, `openShop`,
+- [x] Extract the **overlay factory** (`openOptions`, `openSlotPicker`, `openShop`,
       `showAwayReport`, `hud/Hud.ts:371-441`) now that all four modals share one lifecycle.
-- [ ] Turn **`dispatchItemAction`** (`:443-461`) — a five-case switch mapping `ItemActionId` to an
+      `hud/OverlayHost.ts` owns all four, and what it owns is _which one is up_ — the only
+      question about them that crosses more than one. It reads the shop's state through a getter
+      rather than holding a copy: the bag, the purse and the quest log are the HUD's model, and
+      the shop is a view of them that happens to be open sometimes.
+- [x] Turn **`dispatchItemAction`** (`:443-461`) — a five-case switch mapping `ItemActionId` to an
       event constant — into the two-column table it is. `ItemActionsSystem.ts:6` already defines
       the union, and the bus is typed as of PR 5.
-- [ ] The model plus its subscription table **stays** in `Hud.ts`. It is a flat, readable table and
+- [x] The model plus its subscription table **stays** in `Hud.ts`. It is a flat, readable table and
       splitting it buys nothing; it shrinks on its own from the typed bus and the smaller import
       block.
-- [ ] `hud/styles.ts` (751 lines, ~90 selectors) — **leave it.** One injected stylesheet is the
+- [x] `hud/styles.ts` (751 lines, ~90 selectors) — **leave it.** One injected stylesheet is the
       right shape.
+- [x] **Not in the checklist, and worth its own commit:** `hud/keys.ts`. Most of what the keydown
+      handler does is decide which keys are _not_ the HUD's — a letter typed into the name box, a
+      browser shortcut, the repeats of a held key, an Escape no overlay wanted — and none of that
+      was assertable except through whatever a key happened to open.
 
 **Verify:** gates + `npm run smoke`, including the desktop HUD section and the 375px tab-bar
 measurement.
 **Done when:** `Hud.ts` is under ~500 lines with no behaviour change.
+**Landed:** 77/77 smoke, unchanged. `src/hud/` coverage 80.1% → 83.4%, the project 87.3% → 88.0%,
+and `keys.ts` at 100% on every metric. Three things a later session should know:
+
+- **`Hud.ts` is 582 lines, not the ~500 this asked for, and the gap was in the estimate rather
+  than in the work.** The overlay block this named is 71 lines and its fields and `destroy()`
+  calls another 12; the keyboard was 39 more, taken on top of the checklist. That is the whole of
+  what is separable. The two things that would close the remaining 80 are the subscription table
+  and the model — the two this row says to keep, and for a good reason: the table is one flat line
+  per event and the alternative is a second class holding the same twelve references. The rest of
+  the file is 85 lines of import, a 130-line constructor that is the wiring itself, and the layout
+  arithmetic, which reaches every piece of furniture and so seams nowhere.
+- **Escape answers rather than acts.** `closeDismissable()` returns whether an overlay took the
+  key, which is what lets the binding fall through to the tabs when nothing was open. The shop is
+  deliberately not one of the three it closes: the world owns whether the shop is open.
+- **The five item-action buttons had no test at all** — they were covered only by the cooking and
+  vendoring flows in smoke, which press them for other reasons. Five cases now walk a bag through
+  the panel's own buttons and assert the pairing, proven by pointing Eat at the cook request.
 
 ## PR 9 — Split `world/ZoneWorld.ts` · `cleanup/09-zoneworld-split` · L
 
