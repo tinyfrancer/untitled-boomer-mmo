@@ -1,0 +1,39 @@
+Feature 11 — UI upgrade: navigation, quest marker, world titles, item icons, map
+
+The original prompt, kept as a record of what was asked for. Superseded by the code
+wherever the two disagree.
+
+----------------------------------------------------------------------------------
+
+We should add a marker to let users know there are quests available on the shopkeeper.
+Items should appear in the inventory as icons, perhaps an inventory re-design?  Titles
+should appear with character name above character.  I am also thinking a map would be
+nice, this might involve re-designing our UI as we are running out of space for
+individual buttons.
+
+----------------------------------------------------------------------------------
+
+Decisions taken in the interview that shaped it:
+
+- Navigation: the bar keeps Char, Bag, Quests and Camp and gains a Menu tab; Feats, Log,
+  Map and Options move behind Menu. Five seats rather than seven, so a new surface never
+  has to argue with the touch-target arithmetic again. Camp stays on the bar because it
+  is the one tab that shows state.
+- Quest marker: three states over the shopkeeper — gold "!" when a quest can be taken,
+  gold "?" when one can be handed in, gray "?" while one is in progress, nothing when
+  they are all done. "Available" outranks "ready" so the marker names the most
+  actionable thing.
+- Titles in the world: a second line under the player's name, smaller and gold, above
+  the health bar — the same two-line stack the player column already uses. Not the
+  one-line "Adventurer, Rat Slayer" form.
+- Item icons: drawn from SVG primitives, per item category, tinted. Not emoji (renders
+  differently per platform) and not image files (the project has no art assets by
+  design).
+- Map: a zone map opened from the Menu, drawing terrain from the tile grid, the exits
+  with their destinations, the shopkeeper and the resource nodes, plus a live dot for
+  the player. No mobs — they wander, and feeding them to the HUD means a per-frame
+  channel the architecture deliberately avoids. No tap-to-travel.
+
+Delivered as five stacked PRs, one feature each, in dependency order — the navigation
+first, because the map needs a home before it can be built. See docs/ui_upgrade_plan.md
+for the running status.
