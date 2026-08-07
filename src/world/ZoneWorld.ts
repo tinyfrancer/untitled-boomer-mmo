@@ -34,24 +34,12 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
-  type AbilityState,
   type AchievementUnlock,
 } from '../ui/uiEvents';
 import { titleName } from '../systems/AchievementSystem';
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { afkXpReward } from '../systems/AfkSystem';
 import {
-  abilitiesFor,
-  abilityById,
-  canUseAbility,
-  resolveAbilityDamage,
-  rollSpellFailure,
-  startHaste,
-  startManaShield,
-} from '../systems/AbilitySystem';
-import type { AbilityDefinition } from '../data/abilities';
-import {
-  logAbilityUsed,
   logAbsorbed,
   logAchievement,
   logCoin,
@@ -62,7 +50,6 @@ import {
   logLevelUp,
   logLoot,
   logNotice,
-  logSpellFailed,
   logTitleEarned,
   logXpGain,
 } from '../systems/CombatLogSystem';
@@ -103,6 +90,7 @@ import { Mob } from './Mob';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
+import { AbilityCaster } from './AbilityCaster';
 import { AfkCamp } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
 import { ShopSession } from './ShopSession';
@@ -128,9 +116,6 @@ const ARRIVAL_INSET = TILE_SIZE * 1.5;
 // aside — rather than in the lumps a gather or a kill pays out.
 const WEAPON_SKILL_XP_PER_HIT = 1;
 const DEFENSE_SKILL_XP_PER_SAVE = 1;
-// A cast is worth more than a swing: abilities sit behind long cooldowns, so
-// paying a swing's rate would make Destruction unlevellable.
-const ABILITY_SKILL_XP_PER_CAST = 3;
 // A walk up to a node has to finish a little inside the radius that lets a tap
 // gather from where the player already stands: the gather channel cancels the
 // moment the player is further out than that radius, so ending the approach
@@ -213,13 +198,11 @@ export class ZoneWorld implements Targeting {
   target: Mob | null = null;
   /** Set once the player has walked out; the world stops stepping after it. */
   changingZone = false;
-  /** When each ability was last cast, for the cooldown check and the bar's sweep. */
-  readonly lastAbilityAt = new Map<AbilityId, number>();
-
   /** The clock, the channels and the character — everything shared. */
   private readonly ctx: WorldContext;
   private readonly shop: ShopSession;
   private readonly afk: AfkCamp;
+  private readonly abilities: AbilityCaster;
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -282,7 +265,7 @@ export class ZoneWorld implements Targeting {
       (pool) => this.ctx.events.emit(PLAYER_MANA_CHANGED_EVENT, pool),
     );
     this.publishAbilityState = publishOnChange(
-      () => this.abilityStates(),
+      () => this.abilities.states(),
       (states) =>
         states
           .map(
@@ -340,6 +323,12 @@ export class ZoneWorld implements Targeting {
     };
 
     this.shop = new ShopSession(this.ctx);
+    this.abilities = new AbilityCaster(this.ctx, {
+      targeting: this,
+      stopGathering: () => this.stopGathering(),
+      resolveKill: (mob) => this.resolveKill(mob),
+      publishAbilityState: () => this.publishAbilityState(),
+    });
     this.afk = new AfkCamp(this.ctx, {
       mobs: this.mobs,
       targeting: this,
@@ -393,7 +382,7 @@ export class ZoneWorld implements Targeting {
     listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => this.shop.buy(itemId));
     listen(SELL_ITEM_REQUESTED_EVENT, (itemId) => this.shop.sell(itemId));
     listen(SHOP_CLOSED_EVENT, () => this.shop.closedByUi());
-    listen(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested.bind(this));
+    listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
     listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
     listen(TURN_IN_QUEST_REQUESTED_EVENT, (questId) => this.quests.turnIn(questId));
@@ -1169,110 +1158,13 @@ export class ZoneWorld implements Targeting {
   // Abilities
   // ---------------------------------------------------------------------------
 
-  // The world owns the decision because it is the only thing that knows about
-  // targets and range; the HUD just asks.
+  /** When each ability was last cast, for the cooldown check and the bar's sweep. */
+  get lastAbilityAt(): Map<AbilityId, number> {
+    return this.abilities.lastCastAt;
+  }
+
   handleAbilityRequested(abilityId: AbilityId): void {
-    if (!this.player.isAlive()) return;
-    const ability = abilityById(abilityId);
-    if (ability.classId !== this.character.state.classId) return;
-
-    const check = canUseAbility(ability, {
-      mana: this.player.mana,
-      elapsedMs: this.ctx.now - (this.lastAbilityAt.get(abilityId) ?? -Infinity),
-      hasTarget: this.target !== null && this.target.isAlive(),
-      targetDistance: this.target ? distance(this.player, this.target) : Infinity,
-    });
-    if (!check.ok) {
-      this.ctx.notice(check.reason);
-      return;
-    }
-
-    if (!this.player.spendMana(ability.manaCost)) return;
-    this.lastAbilityAt.set(abilityId, this.ctx.now);
-    this.stopGathering();
-    this.player.markInCombat();
-    this.publishAbilityState();
-
-    // A spell that fizzles still costs the mana and the cooldown; that is what
-    // makes Destruction worth levelling.
-    const skillLevel = ability.skill ? this.character.skillLevelOf(ability.skill) : 0;
-    this.ctx.log(logAbilityUsed(ability.name));
-    if (ability.skill && rollSpellFailure(ability, skillLevel)) {
-      this.ctx.float('Fizzle!', 'dim');
-      this.ctx.log(logSpellFailed(ability.name));
-      this.ctx.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
-      return;
-    }
-
-    this.applyAbilityEffect(ability, skillLevel);
-    if (ability.skill) {
-      this.ctx.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
-    }
-  }
-
-  private applyAbilityEffect(ability: AbilityDefinition, skillLevel: number): void {
-    switch (ability.effect.kind) {
-      case 'damage': {
-        if (!this.target?.isAlive()) return;
-        const damage = resolveAbilityDamage(ability, this.player.attackPower, skillLevel);
-        const target = this.target;
-        // A bolt thrown from the caster to the target. Purely cosmetic, but a
-        // ranged nuke that produced only a number over the mob read as nothing
-        // happening. A melee ability has no flight to draw.
-        if (ability.range > 0) {
-          this.ctx.push({
-            kind: 'bolt-cast',
-            abilityId: ability.id,
-            from: this.ctx.playerPoint(),
-            to: { x: target.x, y: target.y },
-          });
-        }
-        this.ctx.push({
-          kind: 'hit',
-          on: 'mob',
-          via: 'ability',
-          at: { x: target.x, y: target.y },
-          damage,
-          absorbed: 0,
-        });
-        this.ctx.log(logDamageDealt(target.name, damage));
-        target.takeDamage(damage);
-        target.engage();
-        this.publishTarget();
-        if (!target.isAlive()) {
-          this.resolveKill(target);
-        }
-        return;
-      }
-      case 'absorb': {
-        const shield = startManaShield(ability);
-        if (shield) this.player.applyManaShield(shield);
-        this.ctx.float(ability.name, 'skill');
-        return;
-      }
-      case 'haste': {
-        const haste = startHaste(ability);
-        if (haste) this.player.applyHaste(haste);
-        this.ctx.float(ability.name, 'reward');
-        return;
-      }
-    }
-  }
-
-  /** What the action bar draws, for the class the player chose. */
-  private abilityStates(): AbilityState[] {
-    return abilitiesFor(this.character.state.classId).map((ability) => {
-      const elapsedMs = this.ctx.now - (this.lastAbilityAt.get(ability.id) ?? -Infinity);
-      const cooldownRemaining = Math.min(
-        1,
-        Math.max(0, (ability.cooldownMs - elapsedMs) / ability.cooldownMs),
-      );
-      return {
-        abilityId: ability.id,
-        cooldownRemaining,
-        usable: cooldownRemaining === 0 && this.player.mana >= ability.manaCost,
-      };
-    });
+    this.abilities.cast(abilityId);
   }
 
   // ---------------------------------------------------------------------------
