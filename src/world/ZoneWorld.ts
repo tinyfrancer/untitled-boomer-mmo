@@ -33,15 +33,13 @@ import {
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { afkXpReward } from '../systems/AfkSystem';
 import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
-import { isInRange } from '../systems/CombatSystem';
 import { conColor } from '../systems/EnemySystem';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
-import { arriveRadius, distance, withinRadius, type Point } from '../systems/MovementSystem';
+import { withinRadius, type Point } from '../systems/MovementSystem';
 import type { InputState } from '../systems/InputState';
 import type { CollisionWorld } from '../systems/CollisionSystem';
-import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
 import {
   SIGNPOST_INTERACT_RADIUS,
   arrivalPoint,
@@ -59,6 +57,7 @@ import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
 import { AbilityCaster } from './AbilityCaster';
+import { ApproachDriver } from './ApproachDriver';
 import { CombatDirector } from './CombatDirector';
 import { GatherSession } from './GatherSession';
 import { AfkCamp } from './AfkCamp';
@@ -102,13 +101,6 @@ export type WorldTap =
   | { kind: 'npc'; npc: WorldNpc }
   | { kind: 'mob'; mob: Mob }
   | { kind: 'ground'; point: Point };
-
-// What the world still owns once InteractionSystem has the rule: the thing to
-// do when the walk arrives.
-interface PendingApproach {
-  interaction: PendingInteraction;
-  act: () => void;
-}
 
 export interface ZoneWorldOptions {
   zone: ZoneDefinition;
@@ -161,15 +153,10 @@ export class ZoneWorld implements Targeting {
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly combat: CombatDirector;
+  private readonly approach: ApproachDriver;
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  // Click-to-move approach state: the node, shopkeeper or signpost the player
-  // tapped and is walking toward, and whether they are closing on the current
-  // combat target. Chasing a target is a different rule — it stops inside
-  // attack range and never abandons — so it stays its own flag.
-  private pendingApproach: PendingApproach | null = null;
-  private pursuingTarget = false;
   // The four HUD publishers that only speak when what they publish moves; see
   // installPublishers for what each one counts as a change.
   private readonly publishPlayerHp: () => void;
@@ -278,6 +265,11 @@ export class ZoneWorld implements Targeting {
         .map((node) => node.blockerRect()),
     };
 
+    this.approach = new ApproachDriver(this.ctx, {
+      targeting: this,
+      // A hand on the keyboard is a hand on the controls, camp included.
+      onKeyboardMove: () => this.afk.set(false),
+    });
     this.gathering = new GatherSession(this.ctx);
     this.shop = new ShopSession(this.ctx);
     this.combat = new CombatDirector(this.ctx, {
@@ -404,7 +396,7 @@ export class ZoneWorld implements Targeting {
 
     this.applyInputActions();
     this.afk.update();
-    this.updateApproach(deltaMs);
+    this.approach.update(deltaMs);
     this.player.update(deltaMs, this.collisionWorld);
     const healed = this.player.takeHealPulse();
     if (healed > 0) {
@@ -458,8 +450,7 @@ export class ZoneWorld implements Targeting {
     this.player.setPosition(x, y);
     this.player.setVelocity(0, 0);
     this.player.stopMoving();
-    this.pendingApproach = null;
-    this.pursuingTarget = false;
+    this.approach.cancel();
   }
 
   /** What the view calls when the player touches the world. */
@@ -469,10 +460,10 @@ export class ZoneWorld implements Targeting {
 
     if (target.kind === 'mob') {
       this.stopGathering();
-      this.pendingApproach = null;
+      this.approach.cancel();
       this.setTarget(target.mob);
       // Auto-approach: walking into range is implied by choosing a target.
-      this.pursuingTarget = true;
+      this.approach.pursue();
       return;
     }
 
@@ -481,7 +472,7 @@ export class ZoneWorld implements Targeting {
     // is a choice to stop chopping.
     if (target.kind !== 'node') {
       this.stopGathering();
-      this.pendingApproach = null;
+      this.approach.cancel();
     }
     this.clearTarget();
 
@@ -507,7 +498,7 @@ export class ZoneWorld implements Targeting {
       this.startGathering(node);
       return;
     }
-    this.beginApproach(
+    this.approach.walkTo(
       { kind: 'gather', radius: node.definition.interactRadius * GATHER_APPROACH_FRACTION },
       node,
       () => this.startGathering(node),
@@ -521,7 +512,7 @@ export class ZoneWorld implements Targeting {
       this.leaveZone(signpost.exit);
       return;
     }
-    this.beginApproach({ kind: 'signpost', radius: SIGNPOST_INTERACT_RADIUS }, signpost, () =>
+    this.approach.walkTo({ kind: 'signpost', radius: SIGNPOST_INTERACT_RADIUS }, signpost, () =>
       this.leaveZone(signpost.exit),
     );
   }
@@ -531,69 +522,9 @@ export class ZoneWorld implements Targeting {
       this.shop.open(npc);
       return;
     }
-    this.beginApproach({ kind: 'shop', radius: SHOP_INTERACT_RADIUS }, npc, () =>
+    this.approach.walkTo({ kind: 'shop', radius: SHOP_INTERACT_RADIUS }, npc, () =>
       this.shop.open(npc),
     );
-  }
-
-  // Nodes, shopkeepers and signposts all stand still, so the destination is
-  // captured once here rather than re-read every frame.
-  private beginApproach(
-    interaction: Pick<PendingInteraction, 'kind' | 'radius'>,
-    at: Point,
-    act: () => void,
-  ): void {
-    this.pendingApproach = {
-      interaction: { ...interaction, point: { x: at.x, y: at.y } },
-      act,
-    };
-    this.player.moveTo(at.x, at.y);
-  }
-
-  // Drives the click-to-move approaches: closing on a combat target, walking
-  // up to a node before gathering, or up to a shopkeeper before trading. WASD
-  // input cancels all of them.
-  private updateApproach(deltaMs: number): void {
-    if (this.player.isKeyboardMoving()) {
-      this.afk.set(false);
-      this.pursuingTarget = false;
-      this.pendingApproach = null;
-      return;
-    }
-
-    if (this.pendingApproach) {
-      const { interaction, act } = this.pendingApproach;
-      const result = resolveApproach(
-        interaction,
-        this.player,
-        this.player.hasMoveTarget(),
-        arriveRadius(this.player.speed, deltaMs),
-      );
-      if (result.kind === 'walking') {
-        return;
-      }
-      this.pendingApproach = null;
-      if (result.kind === 'act') {
-        this.player.stopMoving();
-        act();
-      }
-      return;
-    }
-
-    if (this.pursuingTarget) {
-      if (!this.target || !this.target.isAlive()) {
-        this.pursuingTarget = false;
-        return;
-      }
-      // Stop a little inside attack range, mirroring how mobs close in, so the
-      // player doesn't hover exactly on the boundary of their own reach.
-      if (isInRange(distance(this.player, this.target), this.player.attackRange * 0.8)) {
-        this.pursuingTarget = false;
-        this.player.stopMoving();
-      } else {
-        this.player.moveTo(this.target.x, this.target.y);
-      }
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -719,11 +650,11 @@ export class ZoneWorld implements Targeting {
     if (this.target !== mob) {
       this.setTarget(mob);
     }
-    this.pursuingTarget = true;
+    this.approach.pursue();
   }
 
   stopPursuit(): void {
-    this.pursuingTarget = false;
+    this.approach.stopPursuit();
   }
 
   publishTarget(): void {
@@ -741,7 +672,7 @@ export class ZoneWorld implements Targeting {
     // Pursuit belongs to the target rather than beside it: there is nothing to
     // close on once there is nothing selected, and the two moved together at
     // every call site anyway.
-    this.pursuingTarget = false;
+    this.approach.stopPursuit();
     if (!this.target) return;
     this.target = null;
     this.ctx.events.emit(TARGET_CLEARED_EVENT);
@@ -761,7 +692,7 @@ export class ZoneWorld implements Targeting {
     this.stopGathering();
     this.clearTarget();
     this.closeShop();
-    this.pendingApproach = null;
+    this.approach.cancel();
     this.player.stopMoving();
     this.ctx.log(logNotice('You have died.'));
     this.ctx.events.emit(PLAYER_DIED_EVENT);

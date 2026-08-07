@@ -21,6 +21,8 @@ export interface TestContext {
   state: CharacterState;
   character: CharacterController;
   player: Player;
+  /** The keyboard the player reads, for the rules only a hand on it triggers. */
+  input: InputState;
   bus: EventBus;
   emitted: Emitted[];
   /** Everything emitted under this event name, in order. */
@@ -41,15 +43,8 @@ export function testContext(options: TestContextOptions = {}): TestContext {
   const emitted: Emitted[] = [];
   const bus = recordingBus(emitted);
   const character = new CharacterController(state);
-  const player = new Player(
-    0,
-    0,
-    state.classId,
-    new InputState(),
-    state.gear,
-    state.name,
-    state.level,
-  );
+  const input = new InputState();
+  const player = new Player(0, 0, state.classId, input, state.gear, state.name, state.level);
   const ctx = new WorldContext(character, bus, player, options.zoneId ?? 'town');
 
   return {
@@ -57,6 +52,7 @@ export function testContext(options: TestContextOptions = {}): TestContext {
     state,
     character,
     player,
+    input,
     bus,
     emitted,
     emissions(event) {
