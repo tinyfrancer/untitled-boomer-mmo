@@ -34,8 +34,10 @@ export class WorldContext {
   readonly events: EventBus;
   readonly player: Player;
 
+  /** Which zone this is, for the save and for anything parked in it. */
+  readonly zoneId: ZoneId;
+
   private pending: WorldEvent[] = [];
-  private readonly zoneId: ZoneId;
 
   constructor(character: CharacterController, events: EventBus, player: Player, zoneId: ZoneId) {
     this.character = character;

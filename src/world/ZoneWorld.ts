@@ -8,7 +8,6 @@ import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
   ACHIEVEMENT_UNLOCKED_EVENT,
-  AFK_STATE_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
@@ -40,13 +39,7 @@ import {
 } from '../ui/uiEvents';
 import { titleName } from '../systems/AchievementSystem';
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
-import {
-  AFK_ANCHOR_RADIUS,
-  afkXpReward,
-  chooseAfkFood,
-  decideAfkAction,
-  shouldAfkEat,
-} from '../systems/AfkSystem';
+import { afkXpReward } from '../systems/AfkSystem';
 import {
   abilitiesFor,
   abilityById,
@@ -110,10 +103,12 @@ import { Mob } from './Mob';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
+import { AfkCamp } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
 import { ShopSession } from './ShopSession';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
+import type { Targeting } from './targeting';
 import type { EventBus, WorldEvent } from './worldEvents';
 import type {
   AbilityId,
@@ -201,7 +196,7 @@ export interface ParkedAfkResult {
  * job, because tearing this one down is too — a pile of `.dispose()` calls the
  * simulation has no business knowing about.
  */
-export class ZoneWorld {
+export class ZoneWorld implements Targeting {
   readonly zone: ZoneDefinition;
   readonly character: CharacterController;
   readonly worldWidth: number;
@@ -216,7 +211,6 @@ export class ZoneWorld {
   campfire: Campfire | null = null;
   gatherState: GatherState | null = null;
   target: Mob | null = null;
-  afkActive = false;
   /** Set once the player has walked out; the world stops stepping after it. */
   changingZone = false;
   /** When each ability was last cast, for the cooldown check and the bar's sweep. */
@@ -225,6 +219,7 @@ export class ZoneWorld {
   /** The clock, the channels and the character — everything shared. */
   private readonly ctx: WorldContext;
   private readonly shop: ShopSession;
+  private readonly afk: AfkCamp;
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -242,10 +237,6 @@ export class ZoneWorld {
   private readonly publishPlayerMana: () => void;
   private readonly publishAbilityState: () => void;
   private readonly publishActions: () => void;
-  // AFK camping: the spot the character settled at (fights are leashed to it)
-  // and whether they are currently standing down to heal.
-  private afkAnchor: Point = { x: 0, y: 0 };
-  private afkRecovering = false;
 
   constructor(options: ZoneWorldOptions) {
     const { zone, character, events, input, entry, hp, rng } = options;
@@ -349,6 +340,13 @@ export class ZoneWorld {
     };
 
     this.shop = new ShopSession(this.ctx);
+    this.afk = new AfkCamp(this.ctx, {
+      mobs: this.mobs,
+      targeting: this,
+      stopGathering: () => this.stopGathering(),
+      closeShop: () => this.shop.close(),
+      eat: (itemId) => this.handleEatRequested(itemId),
+    });
     this.quests = new QuestDesk(this.ctx, {
       isShopOpen: () => this.shop.isOpen(),
       publishXpGain: (gain) => this.publishXpGain(gain),
@@ -396,7 +394,7 @@ export class ZoneWorld {
     listen(SELL_ITEM_REQUESTED_EVENT, (itemId) => this.shop.sell(itemId));
     listen(SHOP_CLOSED_EVENT, () => this.shop.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, this.handleAbilityRequested.bind(this));
-    listen(AFK_TOGGLE_REQUESTED_EVENT, this.toggleAfk.bind(this));
+    listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
     listen(TURN_IN_QUEST_REQUESTED_EVENT, (questId) => this.quests.turnIn(questId));
     listen(SET_TITLE_REQUESTED_EVENT, (titleId) => this.quests.wearTitle(titleId));
@@ -452,7 +450,7 @@ export class ZoneWorld {
     this.ctx.now += deltaMs;
 
     this.applyInputActions();
-    this.updateAfk();
+    this.afk.update();
     this.updateApproach(deltaMs);
     this.player.update(deltaMs, this.collisionWorld);
     const healed = this.player.takeHealPulse();
@@ -518,7 +516,7 @@ export class ZoneWorld {
   /** What the view calls when the player touches the world. */
   tap(target: WorldTap): void {
     // Touching the world is taking the controls back.
-    this.setAfk(false);
+    this.afk.set(false);
 
     if (target.kind === 'mob') {
       this.stopGathering();
@@ -608,7 +606,7 @@ export class ZoneWorld {
   // input cancels all of them.
   private updateApproach(deltaMs: number): void {
     if (this.player.isKeyboardMoving()) {
-      this.setAfk(false);
+      this.afk.set(false);
       this.pursuingTarget = false;
       this.pendingApproach = null;
       return;
@@ -678,7 +676,7 @@ export class ZoneWorld {
       this.worldHeight,
     );
     // The camp is a spot in the zone being left, so it can't survive the walk.
-    this.setAfk(false);
+    this.afk.set(false);
     this.stopGathering();
     this.clearTarget();
     this.closeShop();
@@ -703,6 +701,11 @@ export class ZoneWorld {
     return this.shop.npc;
   }
 
+  /** Whether the character has been left camping. */
+  get afkActive(): boolean {
+    return this.afk.active;
+  }
+
   updateShopRange(): void {
     this.shop.updateRange();
   }
@@ -717,92 +720,6 @@ export class ZoneWorld {
 
   handleSellRequested(itemId: ItemId): void {
     this.shop.sell(itemId);
-  }
-
-  // ---------------------------------------------------------------------------
-  // AFK camping
-  // ---------------------------------------------------------------------------
-
-  // Deliberately a worse player than the person it stands in for: it picks
-  // targets and eats, but never casts, and everything it earns is halved on the
-  // way in (see awardXp).
-  toggleAfk(): void {
-    this.setAfk(!this.afkActive);
-  }
-
-  setAfk(active: boolean): void {
-    if (this.afkActive === active) return;
-    this.afkActive = active;
-    this.afkRecovering = false;
-    if (active) {
-      this.stopGathering();
-      this.closeShop();
-      this.afkAnchor = this.ctx.playerPoint();
-      this.ctx.log(logNotice('You settle in to camp.'));
-    } else {
-      this.ctx.log(logNotice('You snap out of it.'));
-    }
-    // Written to the save, not just held here: it is the only record that
-    // survives the tab closing, and the only thing offline progress is paid on.
-    this.character.state.afk = active
-      ? { startedAt: new Date().toISOString(), zoneId: this.zone.id }
-      : null;
-    this.persistCharacter();
-    this.ctx.events.emit(AFK_STATE_CHANGED_EVENT, this.afkActive);
-  }
-
-  private updateAfk(): void {
-    if (!this.afkActive || !this.player.isAlive()) return;
-
-    // A fight that wandered off the camp is dropped rather than followed: the
-    // anchor is what keeps an unattended character where they were left.
-    if (this.target && !withinRadius(this.afkAnchor, this.target, AFK_ANCHOR_RADIUS)) {
-      this.clearTarget();
-    }
-
-    const action = decideAfkAction(
-      this.mobs.map((mob, index) => ({
-        index,
-        distance: distance(this.afkAnchor, mob),
-        alive: mob.isAlive(),
-        engaged: mob.isEngaged(),
-      })),
-      { hp: this.player.hp, maxHp: this.player.maxHp, recovering: this.afkRecovering },
-    );
-    this.afkRecovering = action.kind === 'recover';
-
-    if (action.kind === 'recover') {
-      this.clearTarget();
-      this.player.stopMoving();
-      this.afkEat();
-      return;
-    }
-    if (action.kind === 'idle') {
-      this.pursuingTarget = false;
-      return;
-    }
-
-    const mob = this.mobs[action.index];
-    if (!mob) return;
-    if (this.target !== mob) {
-      this.setTarget(mob);
-    }
-    // The existing approach code walks into range and updateCombat swings, so
-    // AFK combat is the same combat, just without a hand on the mouse.
-    this.pursuingTarget = true;
-  }
-
-  private afkEat(): void {
-    if (
-      this.player.isEating() ||
-      !shouldAfkEat(this.player.hp, this.player.maxHp, this.player.isInCombat())
-    ) {
-      return;
-    }
-    const food = chooseAfkFood(this.character.state.inventory);
-    if (food) {
-      this.handleEatRequested(food);
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -969,7 +886,19 @@ export class ZoneWorld {
     this.publishTarget();
   }
 
-  private publishTarget(): void {
+  /** Select and close in. Re-selecting what is already selected says nothing. */
+  pursueTarget(mob: Mob): void {
+    if (this.target !== mob) {
+      this.setTarget(mob);
+    }
+    this.pursuingTarget = true;
+  }
+
+  stopPursuit(): void {
+    this.pursuingTarget = false;
+  }
+
+  publishTarget(): void {
     if (!this.target) return;
     this.ctx.events.emit(TARGET_SELECTED_EVENT, {
       name: this.target.name,
@@ -1099,7 +1028,7 @@ export class ZoneWorld {
   private handlePlayerDeath(): void {
     // Dying is where an unattended session ends: it took the camp with it, and
     // resuming would just feed the same mob until the player came back.
-    this.setAfk(false);
+    this.afk.set(false);
     this.mobs.forEach((mob) => mob.disengage());
     this.stopGathering();
     this.clearTarget();
@@ -1189,7 +1118,7 @@ export class ZoneWorld {
     // it is the one place the AFK penalty has to be applied. A quest reward is
     // not one of them — handing a quest in is something the player did — so it
     // comes in through publishXpGain instead.
-    const amount = afkXpReward(reward, this.afkActive);
+    const amount = afkXpReward(reward, this.afk.active);
     const gain = this.character.awardXp(amount);
     this.ctx.float(`+${amount} XP`, 'reward', 20);
     this.ctx.log(logXpGain(amount));
