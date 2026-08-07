@@ -37,6 +37,7 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
+  type AbilityState,
   type AchievementUnlock,
 } from '../ui/uiEvents';
 import { titleName } from '../systems/AchievementSystem';
@@ -115,6 +116,7 @@ import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
 import { WorldContext } from './WorldContext';
+import { publishOnChange } from './publishOnChange';
 import type { EventBus, WorldEvent } from './worldEvents';
 import type {
   AbilityId,
@@ -239,10 +241,12 @@ export class ZoneWorld {
   private pendingApproach: PendingApproach | null = null;
   private pursuingTarget = false;
   private lastAttackAt = -Infinity;
-  private lastAbilitySignature = '';
-  private lastReportedHp = 0;
-  private lastReportedMana = -1;
-  private lastActions = { nearFire: false };
+  // The four HUD publishers that only speak when what they publish moves; see
+  // installPublishers for what each one counts as a change.
+  private readonly publishPlayerHp: () => void;
+  private readonly publishPlayerMana: () => void;
+  private readonly publishAbilityState: () => void;
+  private readonly publishActions: () => void;
   // AFK camping: the spot the character settled at (fights are leashed to it)
   // and whether they are currently standing down to heal.
   private afkAnchor: Point = { x: 0, y: 0 };
@@ -274,7 +278,40 @@ export class ZoneWorld {
       this.player.setHp(hp);
     }
     this.ctx = new WorldContext(character, events, this.player, zone.id);
-    this.lastReportedHp = this.player.hp;
+
+    // What each publisher counts as a change. HP and mana are their own
+    // signature; the action bar compares only what it draws, and the item
+    // buttons only whether a fire is in reach. The two seeds are what the world
+    // opens already having said: the constructor sends HP unconditionally
+    // below, and there is no fire lit in the first frame of any zone.
+    this.publishPlayerHp = publishOnChange(
+      () => this.player.hp,
+      String,
+      (hp) => this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, hp),
+      String(this.player.hp),
+    );
+    this.publishPlayerMana = publishOnChange(
+      () => ({ mana: this.player.mana, maxMana: this.player.maxMana }),
+      (pool) => String(pool.mana),
+      (pool) => this.ctx.events.emit(PLAYER_MANA_CHANGED_EVENT, pool),
+    );
+    this.publishAbilityState = publishOnChange(
+      () => this.abilityStates(),
+      (states) =>
+        states
+          .map(
+            (state) => `${state.abilityId}:${state.cooldownRemaining.toFixed(2)}:${state.usable}`,
+          )
+          .join('|'),
+      (states) => this.ctx.events.emit(ABILITY_STATE_CHANGED_EVENT, states),
+      '',
+    );
+    this.publishActions = publishOnChange(
+      () => ({ nearFire: this.isNearFire() }),
+      (actions) => String(actions.nearFire),
+      (actions) => this.ctx.events.emit(ACTIONS_CHANGED_EVENT, actions),
+      'false',
+    );
 
     this.mobs = zone.mobSpawns.map(
       ({ dx, dy, enemyId, level }) =>
@@ -930,18 +967,6 @@ export class ZoneWorld {
     return withinRadius(this.player, this.campfire, FIRE_COOK_RADIUS);
   }
 
-  // The HUD's item actions are driven off what is actually possible right now,
-  // so they show only buttons that would succeed. Emitted on change rather
-  // than every frame, the same way player HP is.
-  private publishActions(): void {
-    const next = { nearFire: this.isNearFire() };
-    if (next.nearFire === this.lastActions.nearFire) {
-      return;
-    }
-    this.lastActions = next;
-    this.ctx.events.emit(ACTIONS_CHANGED_EVENT, next);
-  }
-
   handleLightFireRequested(): void {
     if (this.character.itemCount(FIRE_INPUT_ITEM_ID) <= 0) {
       this.ctx.notice('You have no logs to burn.');
@@ -1172,14 +1197,6 @@ export class ZoneWorld {
     this.ctx.push({ kind: 'death', on: 'player', respawnZone: null });
   }
 
-  // Regen and enemy hits both move HP outside of any single event, so the HUD is
-  // driven off the rounded value changing rather than off each damage source.
-  private publishPlayerHp(): void {
-    if (this.player.hp === this.lastReportedHp) return;
-    this.lastReportedHp = this.player.hp;
-    this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
-  }
-
   /**
    * Everything a corpse is worth, for a mob that has already died this frame.
    * Both the swing path and the ability path end here so a new reward can only
@@ -1382,9 +1399,9 @@ export class ZoneWorld {
     }
   }
 
-  // The bar redraws off this; emitted only when a button's rendered state moves.
-  private publishAbilityState(): void {
-    const states = abilitiesFor(this.character.state.classId).map((ability) => {
+  /** What the action bar draws, for the class the player chose. */
+  private abilityStates(): AbilityState[] {
+    return abilitiesFor(this.character.state.classId).map((ability) => {
       const elapsedMs = this.ctx.now - (this.lastAbilityAt.get(ability.id) ?? -Infinity);
       const cooldownRemaining = Math.min(
         1,
@@ -1395,22 +1412,6 @@ export class ZoneWorld {
         cooldownRemaining,
         usable: cooldownRemaining === 0 && this.player.mana >= ability.manaCost,
       };
-    });
-
-    const signature = states
-      .map((s) => `${s.abilityId}:${s.cooldownRemaining.toFixed(2)}:${s.usable}`)
-      .join('|');
-    if (signature === this.lastAbilitySignature) return;
-    this.lastAbilitySignature = signature;
-    this.ctx.events.emit(ABILITY_STATE_CHANGED_EVENT, states);
-  }
-
-  private publishPlayerMana(): void {
-    if (this.player.mana === this.lastReportedMana) return;
-    this.lastReportedMana = this.player.mana;
-    this.ctx.events.emit(PLAYER_MANA_CHANGED_EVENT, {
-      mana: this.player.mana,
-      maxMana: this.player.maxMana,
     });
   }
 
