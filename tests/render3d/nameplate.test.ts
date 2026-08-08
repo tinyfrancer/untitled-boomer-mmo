@@ -42,6 +42,48 @@ describe('the health bar', () => {
   });
 });
 
+/**
+ * A plate takes its whole stack in when it is asked to squish, rather than
+ * shrinking the bar and keeping a mob's gaps around it. Every line is a
+ * fraction of the bar or the name it hangs off, so one number does it.
+ */
+describe('squishing a plate', () => {
+  const spriteY = (plate: Nameplate, kind: string): number => {
+    const sprite = plate.object.children.find((child) => child.userData.kind === kind);
+    if (!sprite) throw new Error(`no ${kind} on the plate`);
+    return sprite.position.y;
+  };
+
+  const built = (options: object): Nameplate => {
+    const plate = new Nameplate(20, options);
+    plate.setLabel('Adventurer', '#ffffff');
+    plate.setTitle('Rat Slayer', '#ffd54f');
+    return plate;
+  };
+
+  it('pulls every line closer to the bar rather than only shrinking one', () => {
+    const roomy = built({ width: WIDTH, height: HEIGHT, manaBar: true });
+    const squished = built({ width: 54, height: 7, labelHeight: 10, manaBar: true });
+
+    expect(spriteY(squished, 'label')).toBeLessThan(spriteY(roomy, 'label'));
+    expect(spriteY(squished, 'title')).toBeLessThan(spriteY(roomy, 'title'));
+    expect(manaGroup(squished).position.y).toBeGreaterThan(manaGroup(roomy).position.y);
+  });
+
+  // The bar is still the thing at the origin that everything else is measured
+  // from, and the title still goes under the name rather than through it.
+  it('keeps the order of the stack it took in', () => {
+    const barHeight = 7;
+    const squished = built({ width: 54, height: barHeight, labelHeight: 10, manaBar: true });
+
+    expect(spriteY(squished, 'label')).toBeGreaterThan(spriteY(squished, 'title'));
+    // Clear of the top of the bar, which stays at the origin, and the pool
+    // still below it.
+    expect(spriteY(squished, 'title')).toBeGreaterThan(barHeight / 2);
+    expect(manaGroup(squished).position.y).toBeLessThan(-barHeight / 2);
+  });
+});
+
 describe('the mana bar', () => {
   it('hangs under the health bar, which does not move for it', () => {
     const bare = new Nameplate(20, { width: WIDTH, height: HEIGHT });

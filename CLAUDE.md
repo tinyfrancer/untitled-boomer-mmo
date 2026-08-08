@@ -561,6 +561,13 @@ warrior. The name is the only line counted as a `label` by `drawnCounts` — `ma
 by construction. All three are polled off `character.state` once a frame rather than pushed by an
 event, since what moves them (an item in the bag, a title worn) publishes nothing.
 
+**Every line on a plate is a fraction of the one it hangs off**, so `labelHeight` is the single
+number that squishes a whole plate and the gaps close with it — a plate that shrank its bar and kept
+a mob's spacing around it would not have got any smaller. The player's is squished and floats higher
+than everyone else's (`PLAYER_PLATE` / `PLAYER_PLATE_CLEARANCE` in `actors.ts`): theirs is the only
+one stacking a pool under the bar and a title over the name, and it is drawn on the figure the camera
+keeps centred, where a low camera angle pushes anything at head height into the head.
+
 **`render3d/actors.ts` is one actor per simulated thing**, catching up to it in `sync()` once a
 frame — and an actor that forgets `dispose()` leaks GPU memory, so every one of them ends in
 `disposeTree` (`render3d/dispose.ts`, which frees geometry, material _and_ any texture hanging off
