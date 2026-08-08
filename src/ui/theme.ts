@@ -1,5 +1,6 @@
 import type { QuestMarker } from '../systems/QuestSystem';
 import type { FloatTone } from '../world/worldEvents';
+import type { EffectId } from '../types/ids';
 
 // Every size below is authored in CSS pixels, which is what the HUD lays out
 // in. The px() helper still takes a scale factor — every caller passes 1
@@ -35,7 +36,12 @@ export const THEME = {
    * the body and keeps the scroll and the clip worth checking.
    */
   bagCell: { min: 96, icon: 40 },
-  xpBar: { width: 190, height: 12 },
+  // 14 rather than 12 because the numbers moved *inside* the bars: a line of
+  // 11px text needs the room, and the bars are the whole of what the player
+  // column says now.
+  xpBar: { width: 190, height: 14 },
+  /** One buff icon: the square itself, and the two lines of caption under it. */
+  effectIcon: { size: 30, caption: 14 },
   panelBg: 0x000000,
   panelAlpha: 0.65,
   // Sheets are near-opaque where small overlays are not: a full-width sheet
@@ -68,6 +74,10 @@ export const THEME = {
   xpFill: 0x42a5f5,
   // Deeper than the XP bar's blue, so the two stacked bars stay tellable apart.
   manaFill: 0x3949ab,
+  // The same green the health bar over the player's head is drawn in
+  // (`render3d/palette.ts`): the bar in the corner and the bar in the world are
+  // one reading of one number, and two greens would suggest otherwise.
+  hpFill: 0x66bb6a,
 } as const;
 
 /**
@@ -106,6 +116,22 @@ export const QUEST_MARKER_STYLE: Record<QuestMarker, { glyph: string; color: str
   available: { glyph: '!', color: THEME.color.levelUp },
   ready: { glyph: '?', color: THEME.color.levelUp },
   active: { glyph: '?', color: THEME.color.muted },
+};
+
+/**
+ * The glyph and colour each buff icon is drawn as.
+ *
+ * The same split `QUEST_MARKER_STYLE` above makes: `data/effects.ts` says what
+ * an effect *is* and this says what it looks like, so the rule stays a pure
+ * function of the player's timers with nothing drawn in it. There are no art
+ * assets — see the "no art skills" constraint in `docs/initial_design.txt` — so
+ * a glyph in the effect's colour is the icon, and the three are deliberately
+ * three different shapes rather than three shades of one.
+ */
+export const EFFECT_STYLE: Record<EffectId, { glyph: string; color: string }> = {
+  'mana-shield': { glyph: '◈', color: THEME.color.skillUp },
+  haste: { glyph: '»', color: THEME.color.equippable },
+  'well-fed': { glyph: '♥', color: THEME.color.heal },
 };
 
 export function px(value: number, scale: number): number {

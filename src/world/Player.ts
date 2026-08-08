@@ -2,6 +2,7 @@ import { computeEffectiveStats } from '../systems/StatsSystem';
 import { OUT_OF_COMBAT_DELAY_MS, manaRegenTick, regenTick } from '../systems/RegenSystem';
 import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/AbilitySystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
+import { collectEffects, type ActiveEffect } from '../systems/EffectSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { clamp } from '../systems/math';
 import { stepToward, type Point } from '../systems/MovementSystem';
@@ -180,6 +181,21 @@ export class Player {
 
   isHasted(): boolean {
     return this.haste !== null;
+  }
+
+  /**
+   * Every timed mark the player is carrying, for whatever is showing them.
+   *
+   * The three buffs stay private and the list is built off them rather than
+   * held beside them, so a buff that expires cannot be left in a second copy
+   * nobody remembered to clear.
+   */
+  activeEffects(): ActiveEffect[] {
+    return collectEffects({
+      'mana-shield': this.manaShield,
+      haste: this.haste,
+      'well-fed': this.foodBuff,
+    });
   }
 
   // What the cooldown check should actually use — Battle Fury shortens it while

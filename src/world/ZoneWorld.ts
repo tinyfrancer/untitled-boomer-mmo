@@ -13,6 +13,7 @@ import {
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
   PLAYER_DIED_EVENT,
+  PLAYER_EFFECTS_CHANGED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
@@ -30,6 +31,7 @@ import {
 import { afkXpReward } from '../systems/AfkSystem';
 import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
 import { conColor } from '../systems/EnemySystem';
+import { effectElapsed } from '../systems/EffectSystem';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
@@ -147,10 +149,11 @@ export class ZoneWorld implements Targeting {
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  // The four HUD publishers that only speak when what they publish moves; the
+  // The five HUD publishers that only speak when what they publish moves; the
   // constructor says what each one counts as a change.
   private readonly publishPlayerHp: () => void;
   private readonly publishPlayerMana: () => void;
+  private readonly publishPlayerEffects: () => void;
   private readonly publishAbilityState: () => void;
   private readonly publishActions: () => void;
 
@@ -202,6 +205,16 @@ export class ZoneWorld implements Targeting {
       () => ({ mana: this.player.mana, maxMana: this.player.maxMana }),
       (pool) => String(pool.mana),
       (pool) => this.ctx.events.emit(PLAYER_MANA_CHANGED_EVENT, pool),
+    );
+    // Compared on how far through each buff is rather than on its raw clock, so
+    // an icon redraws about as often as its sweep visibly moves. It carries no
+    // seed on purpose: a world that opens with nothing up still has to say so,
+    // since the HUD outlives the world and may be holding the last one's buffs.
+    this.publishPlayerEffects = publishOnChange(
+      () => this.player.activeEffects(),
+      (effects) =>
+        effects.map((effect) => `${effect.effectId}:${effectElapsed(effect).toFixed(2)}`).join('|'),
+      (effects) => this.ctx.events.emit(PLAYER_EFFECTS_CHANGED_EVENT, effects),
     );
     this.publishAbilityState = publishOnChange(
       () => this.abilities.states(),
@@ -341,6 +354,7 @@ export class ZoneWorld implements Targeting {
     this.combat.update();
     this.publishPlayerHp();
     this.publishPlayerMana();
+    this.publishPlayerEffects();
     this.publishAbilityState();
     this.publishActions();
     this.updateShopRange();

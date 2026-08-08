@@ -85,6 +85,11 @@ export type QuestId = 'rat-bones' | 'crab-feast';
 
 export type AbilityId = 'fireball' | 'mana-shield' | 'power-slash' | 'battle-fury';
 
+// What the player is carrying right now, as opposed to what applied it: eating
+// is not an ability and two abilities could one day leave the same mark, so
+// this is its own union rather than a slice of AbilityId.
+export type EffectId = 'mana-shield' | 'haste' | 'well-fed';
+
 // How many of a creature a slayer achievement asks for. Built into the ids
 // below rather than listed separately, so the compiler knows the full grid and
 // a new enemy cannot quietly ship without its chain.

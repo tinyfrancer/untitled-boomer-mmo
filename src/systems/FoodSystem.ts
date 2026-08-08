@@ -5,6 +5,8 @@ export interface FoodBuff {
   itemId: ItemId;
   healPerMs: number;
   remainingMs: number;
+  // What it started with, which is what a countdown icon draws against.
+  durationMs: number;
 }
 
 export interface FoodTick {
@@ -21,6 +23,7 @@ export function startFoodBuff(itemId: ItemId): FoodBuff | null {
     itemId,
     healPerMs: food.healAmount / food.healDurationMs,
     remainingMs: food.healDurationMs,
+    durationMs: food.healDurationMs,
   };
 }
 

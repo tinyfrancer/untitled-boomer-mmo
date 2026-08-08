@@ -1,5 +1,6 @@
 import type { AbilityId, ItemId, AchievementId, GearSlotId, QuestId, TitleId } from '../types/ids';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
@@ -41,6 +42,11 @@ export const QUEST_LOG_CHANGED_EVENT = 'quest-log-changed';
 export const ABILITY_REQUESTED_EVENT = 'ability-requested';
 export const ABILITY_STATE_CHANGED_EVENT = 'ability-state-changed';
 export const PLAYER_MANA_CHANGED_EVENT = 'player-mana-changed';
+// Every timed mark the player is carrying, whole, each time any of them moves.
+// A list rather than one-on/one-off pairs: the row is drawn from it, and a HUD
+// mounted mid-fight (or rebuilt after a zone change) has to be able to catch up
+// from the latest one alone.
+export const PLAYER_EFFECTS_CHANGED_EVENT = 'player-effects-changed';
 // One line of combat commentary. Emitted alongside the floating text it mirrors,
 // so the two can never drift out of step.
 export const COMBAT_LOG_EVENT = 'combat-log';
@@ -155,6 +161,7 @@ export interface UiEventMap {
   [ABILITY_REQUESTED_EVENT]: [abilityId: AbilityId];
   [ABILITY_STATE_CHANGED_EVENT]: [states: AbilityState[]];
   [PLAYER_MANA_CHANGED_EVENT]: [pool: ManaPool];
+  [PLAYER_EFFECTS_CHANGED_EVENT]: [effects: ActiveEffect[]];
   [COMBAT_LOG_EVENT]: [entry: CombatLogEntry];
   [NOTICE_EVENT]: [message: string];
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
