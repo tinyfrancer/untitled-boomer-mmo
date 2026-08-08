@@ -20,9 +20,14 @@ import {
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
+  PLAYER_EFFECTS_CHANGED_EVENT,
+  PLAYER_HP_CHANGED_EVENT,
+  PLAYER_MANA_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   SHOP_OPENED_EVENT,
+  TARGET_CLEARED_EVENT,
+  TARGET_SELECTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
@@ -280,6 +285,155 @@ describe('the redraws that are derived rather than sent', () => {
       weapon: 'rusty-sword',
     });
     expect(slot?.textContent).toContain('Brown Chestplate');
+  });
+});
+
+/**
+ * The top-left corner, which is read at a glance mid-fight or not at all.
+ *
+ * Every number a bar carries is printed inside it and the level shares the
+ * name's line, so what is asserted here is mostly *where* a value is rather
+ * than that it exists: a health bar with its numbers on a line of their own
+ * would pass a `textContent` check and lose the point of the change.
+ */
+describe('the player column', () => {
+  const column = (selector: string): HTMLElement | null =>
+    parent.querySelector<HTMLElement>(`.hud-player ${selector}`);
+  const widthOf = (selector: string): string => column(selector)?.style.width ?? '';
+
+  it('puts the level on the name line rather than under it', () => {
+    mount();
+    const head = column('.hud-player__head');
+    expect(head?.querySelector('.hud-player__name')?.textContent).toBe('Tester');
+    expect(head?.querySelector('.hud-player__level')?.textContent).toBe('Level 1');
+  });
+
+  it('prints the XP progress inside the bar instead of on a line of its own', () => {
+    mount();
+    const label = column('.hud-player__xp .hud-bar__label');
+    expect(label?.textContent).toContain('/');
+    expect(column('.hud-player__xp-text')).toBeNull();
+  });
+
+  it('shows health with the rest of the character details, and drains it', () => {
+    const character = mount();
+    const { maxHp } = computeEffectiveStats(character.classId, character.gear, character.level);
+    expect(column('.hud-player__hp .hud-bar__label')?.textContent).toBe(`${maxHp} / ${maxHp} hp`);
+    expect(widthOf('.hud-player__hp .hud-bar__fill')).toBe('100%');
+
+    events.emit(PLAYER_HP_CHANGED_EVENT, Math.floor(maxHp / 2));
+    expect(column('.hud-player__hp .hud-bar__label')?.textContent).toContain(
+      `${Math.floor(maxHp / 2)} / ${maxHp}`,
+    );
+    expect(widthOf('.hud-player__hp .hud-bar__fill')).not.toBe('100%');
+  });
+
+  it('hangs mana under the health bar, and only for a class with a pool', () => {
+    mount();
+    const bars = [...parent.querySelectorAll('.hud-player .hud-bar')].map(
+      (bar) => [...bar.classList].find((name) => name.startsWith('hud-player__')) ?? '',
+    );
+    expect(bars).toEqual(['hud-player__hp', 'hud-player__mana', 'hud-player__xp']);
+
+    // A warrior is sent a pool of zero, and no bar at all is what that means.
+    expect(column('.hud-player__mana')?.classList.contains('hud-hidden')).toBe(true);
+    events.emit(PLAYER_MANA_CHANGED_EVENT, { mana: 12, maxMana: 30 });
+    expect(column('.hud-player__mana')?.classList.contains('hud-hidden')).toBe(false);
+    expect(column('.hud-player__mana .hud-bar__label')?.textContent).toBe('12 / 30 mana');
+  });
+});
+
+describe('the buff row', () => {
+  const icons = (): string[] =>
+    [...parent.querySelectorAll<HTMLElement>('.hud-effect')].map(
+      (icon) => icon.dataset.effect ?? '',
+    );
+  const row = (): HTMLElement | null => parent.querySelector('.hud-effects');
+
+  beforeEach(() => mount());
+
+  it('draws nothing at all until something is up', () => {
+    expect(row()?.classList.contains('hud-hidden')).toBe(true);
+    expect(icons()).toEqual([]);
+  });
+
+  it('draws one icon per effect and takes them off again', () => {
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'mana-shield', remainingMs: 15000, durationMs: 20000 },
+      { effectId: 'haste', remainingMs: 4000, durationMs: 8000 },
+    ]);
+    expect(icons()).toEqual(['mana-shield', 'haste']);
+    expect(row()?.classList.contains('hud-hidden')).toBe(false);
+
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, []);
+    expect(icons()).toEqual([]);
+    expect(row()?.classList.contains('hud-hidden')).toBe(true);
+  });
+
+  it('counts each one down and sweeps its square as it is spent', () => {
+    const sweep = (): string =>
+      parent.querySelector<HTMLElement>('.hud-effect__sweep')?.style.height ?? '';
+    const time = (): string =>
+      parent.querySelector<HTMLElement>('.hud-effect__time')?.textContent ?? '';
+
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'haste', remainingMs: 8000, durationMs: 8000 },
+    ]);
+    expect(sweep()).toBe('0%');
+    expect(time()).toBe('8s');
+
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'haste', remainingMs: 2000, durationMs: 8000 },
+    ]);
+    expect(sweep()).toBe('75%');
+    expect(time()).toBe('2s');
+  });
+
+  /**
+   * The world republishes several times a second while anything is ticking. A
+   * row rebuilt at that rate would throw away whatever a desktop player was
+   * hovering, so only a change in *which* effects are up may rebuild it.
+   */
+  it('updates in place while the same effects are up', () => {
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'haste', remainingMs: 8000, durationMs: 8000 },
+    ]);
+    const first = parent.querySelector('.hud-effect');
+
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'haste', remainingMs: 7000, durationMs: 8000 },
+    ]);
+    expect(parent.querySelector('.hud-effect')).toBe(first);
+
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'haste', remainingMs: 7000, durationMs: 8000 },
+      { effectId: 'well-fed', remainingMs: 9000, durationMs: 10000 },
+    ]);
+    expect(parent.querySelector('.hud-effect')).not.toBe(first);
+  });
+});
+
+describe('the target frame', () => {
+  const hp = (): HTMLElement | null => parent.querySelector('.hud-target__hp .hud-bar__fill');
+
+  it('draws the target’s health as a bar with the numbers inside it', () => {
+    mount();
+    events.emit(TARGET_SELECTED_EVENT, {
+      name: 'Rat',
+      level: 2,
+      hp: 3,
+      maxHp: 12,
+      conColor: '#ffffff',
+    });
+
+    const frame = parent.querySelector<HTMLElement>('.hud-target');
+    expect(frame?.classList.contains('hud-hidden')).toBe(false);
+    expect(frame?.querySelector('.hud-target__name')?.textContent).toBe('Rat (Lv 2)');
+    expect(frame?.querySelector('.hud-target__hp .hud-bar__label')?.textContent).toBe('3 / 12 hp');
+    expect(hp()?.style.width).toBe('25%');
+
+    events.emit(TARGET_CLEARED_EVENT);
+    expect(frame?.classList.contains('hud-hidden')).toBe(true);
   });
 });
 

@@ -82,11 +82,14 @@ function hudCss(): string {
   border: 2px solid ${THEME.color.equippable};
 }
 
-/* A bar with a fill, which the player column and the skill lists are made of. */
+/* A bar with a fill, which the player column and the skill lists are made of.
+   The backing is nearly opaque because these hang over the world with no panel
+   behind them: at half alpha the empty end of a bar over grass read as grass,
+   which is the one thing a bar exists to answer. */
 .hud-bar {
   position: relative;
   height: ${THEME.xpBar.height}px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.78);
   overflow: hidden;
 }
 .hud-bar__fill {
@@ -98,12 +101,23 @@ function hudCss(): string {
 .hud-bar__fill--mana {
   background: ${cssColor(THEME.manaFill)};
 }
+.hud-bar__fill--hp {
+  background: ${cssColor(THEME.hpFill)};
+}
+.hud-bar__fill--target {
+  background: ${THEME.color.targetHp};
+}
+/* The numbers ride inside the bar rather than under it, so the shadow is what
+   keeps them legible over both the fill and the empty half of it. */
 .hud-bar__label {
   position: absolute;
-  inset: 0 0 0 4px;
+  inset: 0 0 0 5px;
   display: flex;
   align-items: center;
   font-size: ${THEME.font.xs}px;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 /* --- Player column ------------------------------------------------------- */
@@ -113,9 +127,29 @@ function hudCss(): string {
   display: flex;
   flex-direction: column;
 }
+/* Name left, level right, one line. The level is pinned to the far end rather
+   than following the name, so it is in the same place whoever is playing. */
+.hud-player__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: ${THEME.padding}px;
+  line-height: 18px;
+}
 .hud-player__name {
   font-size: ${THEME.font.md}px;
   font-weight: bold;
+  /* One line, cut rather than wrapped: a long name must not push the level
+     onto a row of its own, which is the whole point of sharing this one. */
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hud-player__level {
+  flex: none;
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
 }
 /* On its own line rather than appended to the name: the two together overrun
    the column, and the title is not the part to shrink. */
@@ -124,20 +158,72 @@ function hudCss(): string {
   color: ${THEME.color.levelUp};
   line-height: ${THEME.font.sm + 3}px;
 }
-.hud-player__level {
-  font-size: ${THEME.font.md}px;
-  margin-top: 2px;
-}
-.hud-player__xp {
+.hud-player__hp {
   margin-top: 6px;
 }
-.hud-player__xp-text {
-  font-size: ${THEME.font.xs}px;
-  color: ${THEME.color.muted};
-  margin-top: 3px;
-}
-.hud-player__mana {
+.hud-player__mana,
+.hud-player__xp {
   margin-top: 5px;
+}
+
+/* --- Buffs and debuffs --------------------------------------------------- */
+
+.hud-effects {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.hud-effect {
+  width: ${THEME.effectIcon.size + 12}px;
+  text-align: center;
+}
+.hud-effect__icon {
+  position: relative;
+  width: ${THEME.effectIcon.size}px;
+  height: ${THEME.effectIcon.size}px;
+  margin: 0 auto;
+  border: 1px solid currentColor;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+/* The one thing that tells a mark being done *to* you from one you asked for,
+   since nothing else about the square can carry it at 30px. */
+.hud-effect__icon.is-debuff {
+  border-color: ${THEME.color.playerDamage};
+}
+.hud-effect__glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: ${THEME.font.lg}px;
+  line-height: 1;
+}
+/* Grows from the bottom as the buff is spent, so a square that is nearly full
+   is one about to drop off. The mirror of the ability sweep, which fills while
+   a cooldown *has* time left on it. */
+.hud-effect__sweep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+.hud-effect__name,
+.hud-effect__time {
+  font-size: ${THEME.font.xs}px;
+  line-height: ${THEME.effectIcon.caption}px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hud-effect__name {
+  color: ${THEME.color.muted};
+}
+.hud-effect__time {
+  color: ${THEME.color.dim};
 }
 
 /* --- Target frame -------------------------------------------------------- */
@@ -150,10 +236,10 @@ function hudCss(): string {
 .hud-target__name {
   font-size: ${THEME.font.md}px;
   font-weight: bold;
-}
-.hud-target__hp {
-  font-size: ${THEME.font.sm}px;
-  color: ${THEME.color.targetHp};
+  line-height: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* --- Quest tracker ------------------------------------------------------- */
