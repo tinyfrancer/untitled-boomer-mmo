@@ -1108,11 +1108,11 @@ async function touchGestures() {
 }
 
 async function playerColumn() {
-  // --- The top-left corner, which is read at a glance mid-fight or not at all.
-  // jsdom lays nothing out, so *which line* a value sits on is a question only
-  // a browser answers: a level that wrapped under the name, or an XP count that
-  // fell out of the bar it is printed inside, would pass every unit test in
-  // tests/hud and be exactly the thing this change was made to stop. ---
+  // --- The two top corners, which are read at a glance mid-fight or not at
+  // all. jsdom lays nothing out, so *which line* a value sits on is a question
+  // only a browser answers: a level that wrapped under the name, or an XP count
+  // that fell out of the bar it is printed inside, would pass every unit test
+  // in tests/hud and be exactly the thing this change was made to stop. ---
   await park();
 
   /**
@@ -1170,6 +1170,38 @@ async function playerColumn() {
       column.bottom < (await tabBarTop()),
     `hp at ${hp?.y}, xp at ${xp?.y}, column ends ${column?.bottom}, bar at ${await tabBarTop()}`,
   );
+
+  // --- The two corners share the top row rather than stacking, which is what
+  // buys the column the top of the screen. Nothing checks that in vitest at a
+  // real width: `ui/layout.ts` holds them apart with arithmetic, and whether
+  // the elements it places actually clear each other is the browser's answer.
+  // The frame only exists while something is selected, so pick a rat first. ---
+  check(
+    'the player column starts at the very top of the screen',
+    column !== null && column.y < 20,
+    `column top at ${column?.y}`,
+  );
+
+  // Stood next to first: this section runs after a zone change, so whatever is
+  // alive may be nowhere near the spawn point and a click aimed at it would
+  // land on open ground.
+  await standSouthOf(RAT);
+  await clickAt(await screenAt(RAT));
+  await step(2);
+  const frame = await box('.hud-target');
+  check(
+    'the enemy details sit in the opposite corner, clear of the character details',
+    frame !== null &&
+      column !== null &&
+      frame.x >= column.right &&
+      frame.right <= viewportWidth &&
+      Math.abs(frame.y - column.y) < 2,
+    `column ends x=${Math.round(column?.right ?? 0)}, frame runs ${Math.round(
+      frame?.x ?? 0,
+    )}-${Math.round(frame?.right ?? 0)} of ${viewportWidth}`,
+  );
+  await page.screenshot({ path: `${OUT}/13-top-corners.png` });
+  await park();
 
   // --- Buffs, driven the way a player raises one: a real press on the real
   // ability button. Battle Fury is the warrior's, costs nothing and cannot

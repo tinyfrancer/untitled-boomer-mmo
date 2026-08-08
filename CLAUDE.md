@@ -272,6 +272,14 @@ Max HP is not on the wire — `player-hp-changed` carries the current value alon
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
 
+**The two top corners share the row rather than stacking**: who you are top-left, what you are
+fighting top-right. The column starts at the margin, not a target frame and a margin down the
+screen. The frame takes the width _left beside_ the column rather than `THEME.panelWidth.target`
+flat — at 375px a full-width one and the 190px column meet in the middle, and the narrower the phone
+the deeper they overlap. A desktop sheet opens in the right-hand column, which is the frame's own
+corner now, so `sheetRect` starts it below `topRowBottom` rather than below the player column alone;
+the column being the taller of the two today is a coincidence between two tuned heights, not a rule.
+
 **What buffs are up is derived, not tracked** (`systems/EffectSystem.ts`). `world/Player` keeps its
 mana shield, its haste and its meal private and `activeEffects()` builds the list off them each time
 it is asked, so an expired buff cannot survive in a second copy nobody cleared; `data/effects.ts`
