@@ -8,6 +8,7 @@ import {
   playerColumnBottom,
   sheetRect,
   toastTop,
+  topRowBottom,
   type HudLayout,
 } from '../../src/ui/layout';
 import { THEME } from '../../src/ui/theme';
@@ -108,11 +109,38 @@ describe('hudLayout', () => {
     );
   });
 
-  it('keeps the player column clear of the target frame', () => {
+  // The two corners share the top row now rather than stacking, which is what
+  // buys the player column the top of the screen.
+  it('puts the player column top-left and the target frame top-right', () => {
     const layout = layoutFor(PHONE_PORTRAIT);
-    expect(layout.playerColumn.y).toBeGreaterThanOrEqual(
-      layout.targetFrame.y + layout.targetFrame.height,
+    expect(layout.playerColumn.x).toBe(layout.margin);
+    expect(layout.playerColumn.y).toBe(layout.margin);
+    expect(layout.targetFrame.y).toBe(layout.margin);
+    expect(layout.targetFrame.x + layout.targetFrame.width).toBe(
+      PHONE_PORTRAIT.width - layout.margin,
     );
+  });
+
+  /**
+   * The regression the width clamp exists for: at 375px a full-width target
+   * frame and a 190px player column meet in the middle, and the narrower the
+   * phone the deeper they overlap. The frame takes what is left instead.
+   */
+  it.each([
+    ['phone portrait', PHONE_PORTRAIT],
+    ['phone landscape', PHONE_LANDSCAPE],
+    ['small phone', SMALL_PHONE],
+    ['desktop', DESKTOP],
+  ] as const)('never lets the two top corners overlap on %s', (_, viewport) => {
+    const layout = layoutFor(viewport, { hasMana: true, hasTitle: true, hasEffects: true });
+    expect(layout.targetFrame.x).toBeGreaterThanOrEqual(
+      layout.playerColumn.x + layout.playerColumn.width + layout.padding,
+    );
+    expect(layout.targetFrame.width).toBeGreaterThan(0);
+  });
+
+  it('gives the target frame its full width when there is room for it', () => {
+    expect(layoutFor(DESKTOP).targetFrame.width).toBe(THEME.panelWidth.target);
   });
 });
 
@@ -177,6 +205,25 @@ describe('sheetRect', () => {
     expect(sheet.y).toBeGreaterThanOrEqual(playerColumnBottom(layout));
     expect(sheet.y + sheet.height).toBeLessThanOrEqual(layout.tabBar.y);
     expect(sheet.height).toBeGreaterThan(THEME.touchMin * 2);
+  });
+
+  /**
+   * A desktop sheet opens in the right-hand column, which is the target frame's
+   * own corner now — so clearing the player column is no longer enough on its
+   * own. The column happens to be the taller of the two today; that is a
+   * coincidence between two independently tuned heights, not a rule, which is
+   * why the sheet is measured against whichever is lower on the screen.
+   */
+  it('opens a desktop sheet below both top corners, not just the column', () => {
+    const layout = layoutFor(DESKTOP);
+    const sheet = sheetRect(layout, DESKTOP.width, THEME.panelWidth.character);
+    const frameBottom = layout.targetFrame.y + layout.targetFrame.height;
+
+    expect(topRowBottom(layout)).toBe(Math.max(playerColumnBottom(layout), frameBottom));
+    expect(sheet.y).toBeGreaterThanOrEqual(frameBottom);
+    // And it really does open under that corner, or there would be nothing to
+    // clear: the sheet's right edge is the frame's right edge.
+    expect(sheet.x).toBeLessThan(layout.targetFrame.x + layout.targetFrame.width);
   });
 
   it('shrinks the sheet when the tracker takes room', () => {

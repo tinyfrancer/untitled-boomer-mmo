@@ -7,39 +7,27 @@ import { barFill } from '../systems/math';
 const DEFAULT_WIDTH = 56;
 const DEFAULT_HEIGHT = 8;
 
-/** How tall the name is drawn, in world units, and where it sits alone. */
-const LABEL_HEIGHT = 12;
-const LABEL_Y = LABEL_HEIGHT;
+/** How tall the name is drawn, in world units, when nothing says otherwise. */
+const DEFAULT_LABEL_HEIGHT = 12;
 
 /**
- * The worn title, smaller than the name the way the player column's is.
- *
- * It takes roughly the line the name sits on and pushes the name up above it,
- * so what moves when a title is put on is the *name* and never the health bar
- * — the bar is the one thing here read at a glance mid-fight, and a bar that
- * jumped when a title was earned would be worse than no title.
- *
  * Stacking two sprites by half of each of their heights leaves them touching,
  * which at the distance a nameplate is actually read runs the two lines into
- * one block; `LINE_GAP` is what holds them apart, and it is the same gap that
- * keeps the title clear of the bar below it.
+ * one block. This is what holds them apart, and it is the same gap that keeps
+ * the title clear of the bar below it and the pool clear of the bar above.
  */
-const TITLE_HEIGHT = 9;
 const LINE_GAP = 2;
-const TITLE_Y = LABEL_Y + LINE_GAP;
-const TITLED_LABEL_Y = TITLE_Y + (LABEL_HEIGHT + TITLE_HEIGHT) / 2 + LINE_GAP;
 
 /**
- * The player's pool, hung under the health bar.
+ * The worn title, smaller than the name the way the player column's is, and the
+ * pool hung under the health bar, thinner than it for the same reason.
  *
- * Below rather than above, and thinner: it is the second thing read there, and
- * everything already stacked *over* the plate — the name, the title, the marker
- * — would have to move for a bar inserted between them and the health bar. It
- * is also the only line here that can be absent on a plate that has one, since
- * a warrior has no pool at all.
+ * Both are fractions of the line they hang off rather than fixed sizes, so a
+ * plate asked to squish takes its whole stack in with it: at the default sizes
+ * these are exactly the 9 and the 4 they were written as.
  */
-const MANA_HEIGHT = 4;
-const MANA_GAP = 2;
+const TITLE_FRACTION = 0.75;
+const MANA_FRACTION = 0.5;
 
 /**
  * The glyph above the name, whose middle sits half of each of the two lines
@@ -49,7 +37,7 @@ const MANA_GAP = 2;
  * stroke where a word is a block of them, so a marker sized to match the name
  * beneath it reads as punctuation on the end of it instead of as its own thing.
  */
-const MARKER_HEIGHT = 24;
+const MARKER_FRACTION = 2;
 
 /**
  * Anything drawn over a creature's head: the health bar and the floating name.
@@ -63,6 +51,11 @@ const MARKER_HEIGHT = 24;
 export interface NameplateOptions {
   width?: number;
   height?: number;
+  /**
+   * How tall the name is drawn. The rest of the stack is a fraction of it, so
+   * this is the one number that squishes a whole plate.
+   */
+  labelHeight?: number;
   /** A shopkeeper and a signpost carry a name and nothing to lose. */
   healthBar?: boolean;
   /** Only the player has a pool, and only some classes have one at all. */
@@ -75,6 +68,15 @@ export class Nameplate {
   private readonly mana: Group | null = null;
   private readonly manaFill: Mesh | null = null;
   private readonly width: number;
+  private readonly labelHeight: number;
+  private readonly titleHeight: number;
+  private readonly markerHeight: number;
+  // Where the name sits with nothing under it, and where the two lines go when
+  // a title pushes it up. Derived from the sizes above rather than written
+  // down, so a squished plate closes its own gaps instead of keeping a mob's.
+  private readonly labelY: number;
+  private readonly titleY: number;
+  private readonly titledLabelY: number;
   private label: Sprite | null = null;
   private labelText = '';
   private labelColor = '';
@@ -88,10 +90,19 @@ export class Nameplate {
     const {
       width = DEFAULT_WIDTH,
       height = DEFAULT_HEIGHT,
+      labelHeight = DEFAULT_LABEL_HEIGHT,
       healthBar = true,
       manaBar = false,
     } = options;
     this.width = width;
+    this.labelHeight = labelHeight;
+    this.titleHeight = labelHeight * TITLE_FRACTION;
+    this.markerHeight = labelHeight * MARKER_FRACTION;
+    // Clear of the bar it floats over rather than a fixed distance up: a
+    // shorter bar is what makes a squished plate sit closer to its own name.
+    this.labelY = height / 2 + LINE_GAP + labelHeight / 2;
+    this.titleY = this.labelY + LINE_GAP;
+    this.titledLabelY = this.titleY + (labelHeight + this.titleHeight) / 2 + LINE_GAP;
     this.object.position.y = y;
 
     if (healthBar) {
@@ -104,11 +115,12 @@ export class Nameplate {
     }
 
     if (manaBar) {
+      const manaHeight = height * MANA_FRACTION;
       this.mana = new Group();
-      this.mana.position.y = -(height + MANA_HEIGHT) / 2 - MANA_GAP;
-      const background = bar(width, MANA_HEIGHT, PALETTE.barBackground, 0.55);
+      this.mana.position.y = -(height + manaHeight) / 2 - LINE_GAP;
+      const background = bar(width, manaHeight, PALETTE.barBackground, 0.55);
       this.manaFill = bar(1, 1, PALETTE.barMana, 1);
-      this.manaFill.scale.set(width, MANA_HEIGHT, 1);
+      this.manaFill.scale.set(width, manaHeight, 1);
       this.manaFill.position.z = 0.05;
       this.mana.add(background, this.manaFill);
       this.object.add(this.mana);
@@ -141,7 +153,7 @@ export class Nameplate {
     if (text === this.labelText && color === this.labelColor) return;
     this.labelText = text;
     this.labelColor = color;
-    this.label = this.rehang(this.label, text, color, LABEL_HEIGHT, 'label');
+    this.label = this.rehang(this.label, text, color, this.labelHeight, 'label');
     this.relayout();
   }
 
@@ -158,7 +170,7 @@ export class Nameplate {
     if (glyph === this.markerGlyph && color === this.markerColor) return;
     this.markerGlyph = glyph;
     this.markerColor = color;
-    this.marker = this.rehang(this.marker, glyph, color, MARKER_HEIGHT, 'marker');
+    this.marker = this.rehang(this.marker, glyph, color, this.markerHeight, 'marker');
     this.relayout();
   }
 
@@ -172,7 +184,7 @@ export class Nameplate {
   setTitle(text: string | null, color: string): void {
     if (text === this.titleText) return;
     this.titleText = text;
-    this.title = this.rehang(this.title, text, color, TITLE_HEIGHT, 'title');
+    this.title = this.rehang(this.title, text, color, this.titleHeight, 'title');
     this.relayout();
   }
 
@@ -217,11 +229,11 @@ export class Nameplate {
    * glance mid-fight stays where the eye already is.
    */
   private relayout(): void {
-    const labelY = this.title ? TITLED_LABEL_Y : LABEL_Y;
-    if (this.title) this.title.position.y = TITLE_Y;
+    const labelY = this.title ? this.titledLabelY : this.labelY;
+    if (this.title) this.title.position.y = this.titleY;
     if (this.label) this.label.position.y = labelY;
     if (this.marker) {
-      this.marker.position.y = labelY + (LABEL_HEIGHT + MARKER_HEIGHT) / 2 + LINE_GAP;
+      this.marker.position.y = labelY + (this.labelHeight + this.markerHeight) / 2 + LINE_GAP;
     }
   }
 }

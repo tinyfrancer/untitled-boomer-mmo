@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
-import { Group, Mesh, Sprite, type Material, type MeshLambertMaterial } from 'three';
+import { Box3, Group, Mesh, Sprite, type Material, type MeshLambertMaterial } from 'three';
 import { DEATH_FADE_MS } from '../../src/world/Mob';
 import {
   CampfireActor,
@@ -102,6 +102,22 @@ describe('PlayerActor', () => {
       }
     });
     expect(colors).toContain(computeAppearance(gear).torsoColor);
+  });
+
+  /**
+   * The plate floats clear of the head rather than resting on it. The camera
+   * looks down at a pitch, which pushes anything drawn at head height *into*
+   * the head — and the player's is the one plate with a pool under the bar, so
+   * it is the one with something to lose at the bottom of the stack.
+   */
+  it('floats its plate well clear of the top of the figure', () => {
+    stubCanvas();
+    const actor = new PlayerActor(harness().world.player);
+    actor.sync(0, null);
+
+    const figure = new Box3().setFromObject(nth(actor.object.children, 0));
+    const plate = nth(actor.object.children, 1);
+    expect(plate.position.y).toBeGreaterThan(figure.max.y + 8);
   });
 
   // The pool the HUD's column shows, shown a second time where the player is

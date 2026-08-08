@@ -25,6 +25,18 @@ import type { WorldNpc, WorldSignpost } from '../world/ZoneWorld';
 /** How far over a figure's head its nameplate floats. */
 const PLATE_CLEARANCE = 12;
 
+/**
+ * The player's own, which is higher and tighter than everyone else's.
+ *
+ * Their plate is the one that stacks a pool under the bar and a title over the
+ * name, so it is both the tallest block in the world and the one drawn on top
+ * of the figure the camera keeps centred — where the head is what a low camera
+ * angle pushes it into. Lifting it clears the figure outright, and squishing it
+ * keeps the whole stack from taking back the room that bought.
+ */
+const PLAYER_PLATE_CLEARANCE = 22;
+const PLAYER_PLATE = { width: 54, height: 7, labelHeight: 10 };
+
 /** Just clear of the signpost's board, which stands a tile tall. */
 const SIGNPOST_LABEL_HEIGHT = 76;
 
@@ -83,9 +95,8 @@ export class PlayerActor implements Actor {
 
     // The one plate in the world with a pool under its health, since the player
     // is the one thing whose mana anybody spends.
-    this.plate = new Nameplate(this.figure.height + PLATE_CLEARANCE, {
-      width: 64,
-      height: 10,
+    this.plate = new Nameplate(this.figure.height + PLAYER_PLATE_CLEARANCE, {
+      ...PLAYER_PLATE,
       manaBar: true,
     });
     this.plate.setLabel(player.name, THEME.color.text);

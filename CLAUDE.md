@@ -272,6 +272,14 @@ Max HP is not on the wire — `player-hp-changed` carries the current value alon
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
 
+**The two top corners share the row rather than stacking**: who you are top-left, what you are
+fighting top-right. The column starts at the margin, not a target frame and a margin down the
+screen. The frame takes the width _left beside_ the column rather than `THEME.panelWidth.target`
+flat — at 375px a full-width one and the 190px column meet in the middle, and the narrower the phone
+the deeper they overlap. A desktop sheet opens in the right-hand column, which is the frame's own
+corner now, so `sheetRect` starts it below `topRowBottom` rather than below the player column alone;
+the column being the taller of the two today is a coincidence between two tuned heights, not a rule.
+
 **What buffs are up is derived, not tracked** (`systems/EffectSystem.ts`). `world/Player` keeps its
 mana shield, its haste and its meal private and `activeEffects()` builds the list off them each time
 it is asked, so an expired buff cannot survive in a second copy nobody cleared; `data/effects.ts`
@@ -560,6 +568,13 @@ warrior. The name is the only line counted as a `label` by `drawnCounts` — `ma
 `title` have their own kinds precisely so smoke's one-label-per-drawn-creature assertion stays true
 by construction. All three are polled off `character.state` once a frame rather than pushed by an
 event, since what moves them (an item in the bag, a title worn) publishes nothing.
+
+**Every line on a plate is a fraction of the one it hangs off**, so `labelHeight` is the single
+number that squishes a whole plate and the gaps close with it — a plate that shrank its bar and kept
+a mob's spacing around it would not have got any smaller. The player's is squished and floats higher
+than everyone else's (`PLAYER_PLATE` / `PLAYER_PLATE_CLEARANCE` in `actors.ts`): theirs is the only
+one stacking a pool under the bar and a title over the name, and it is drawn on the figure the camera
+keeps centred, where a low camera angle pushes anything at head height into the head.
 
 **`render3d/actors.ts` is one actor per simulated thing**, catching up to it in `sync()` once a
 frame — and an actor that forgets `dispose()` leaks GPU memory, so every one of them ends in

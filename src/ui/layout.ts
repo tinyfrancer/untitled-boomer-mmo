@@ -124,10 +124,23 @@ export function hudLayout(
     height: trackerHeight,
   };
 
+  // Who you are top-left, what you are fighting top-right. They share the top
+  // row rather than stacking, which is what buys the player column the whole of
+  // the corner: it used to start a target frame and a margin down the screen,
+  // and everything in it was that much further from the eye.
+  //
+  // The frame takes what is left beside the column rather than a fixed width,
+  // because at 375px a full-width one and the column meet in the middle — and
+  // the narrower the phone, the worse that gets.
+  const columnWidth = px(THEME.xpBar.width, scale);
+  const targetWidth = Math.min(
+    px(THEME.panelWidth.target, scale),
+    width - margin * 2 - columnWidth - padding,
+  );
   const targetFrame: Rect = {
-    x: margin,
+    x: width - margin - targetWidth,
     y: margin,
-    width: px(THEME.panelWidth.target, scale),
+    width: targetWidth,
     height: px(TARGET_FRAME_HEIGHT, scale),
   };
 
@@ -138,8 +151,8 @@ export function hudLayout(
     targetFrame,
     playerColumn: {
       x: margin,
-      y: targetFrame.y + targetFrame.height + margin,
-      width: px(THEME.xpBar.width, scale),
+      y: margin,
+      width: columnWidth,
       height: px(
         PLAYER_COLUMN_HEIGHT +
           (hasMana ? MANA_BLOCK_HEIGHT : 0) +
@@ -177,6 +190,18 @@ export function playerColumnBottom(layout: HudLayout): number {
   return layout.playerColumn.y + layout.playerColumn.height;
 }
 
+/**
+ * The bottom of the whole top row, which is what a sheet on a roomy screen has
+ * to start below.
+ *
+ * The two corners are different heights and either may be the taller: the
+ * player column grows with a title, a pool and a buff row, and the sheet opens
+ * in the *right*-hand column, which is the target frame's own corner now.
+ */
+export function topRowBottom(layout: HudLayout): number {
+  return Math.max(playerColumnBottom(layout), layout.targetFrame.y + layout.targetFrame.height);
+}
+
 /** The row a picker was opened from, in the same coordinates it is placed in. */
 export interface AnchorBox {
   left: number;
@@ -211,9 +236,11 @@ export function pickerPosition(
  * Where an open panel goes. Only one is open at a time — that is what the tab
  * bar means — so a sheet gets the whole column rather than sharing it.
  *
- * On a phone it is full width and covers the player column: while a sheet is
+ * On a phone it is full width and covers both top corners: while a sheet is
  * open, the sheet is what the player is looking at. On a roomy screen it keeps
- * the old right-hand column, since there the playfield is not the scarce thing.
+ * the old right-hand column, since there the playfield is not the scarce thing
+ * — which is why it starts below the whole top row rather than below the player
+ * column alone, the target frame now being in the corner it opens under.
  *
  * The height returned is what the panel has to fit inside; a panel wanting more
  * scrolls rather than running off the screen. It is never negative.
@@ -221,7 +248,7 @@ export function pickerPosition(
 export function sheetRect(layout: HudLayout, viewportWidth: number, preferredWidth: number): Rect {
   const floor =
     (layout.tracker.height > 0 ? layout.tracker.y : layout.actionBar.y) - layout.padding;
-  const top = layout.narrow ? layout.margin : playerColumnBottom(layout) + layout.padding;
+  const top = layout.narrow ? layout.margin : topRowBottom(layout) + layout.padding;
   const x = layout.narrow ? layout.margin : viewportWidth - preferredWidth - layout.margin;
   const width = layout.narrow ? viewportWidth - layout.margin * 2 : preferredWidth;
 
