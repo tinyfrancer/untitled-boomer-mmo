@@ -1,6 +1,6 @@
-import { consumableFor } from '../data/items';
-import { inventoryEntries, type Inventory } from './InventorySystem';
-import type { ItemId } from '../types/ids';
+import { consumableFor, toolSkill } from '../data/items';
+import { inventoryEntries, type Gear, type Inventory } from './InventorySystem';
+import type { ItemId, SkillId } from '../types/ids';
 
 // AFK play has to stay behind active play, and two things hold it there: the
 // mode never presses an ability, and what it does earn is halved.
@@ -52,8 +52,73 @@ export type AfkAction =
   // Healthy, with nothing in reach worth walking to.
   | { kind: 'idle' };
 
-function nearest(candidates: AfkCandidate[]): AfkCandidate {
+function nearest<T extends { distance: number }>(candidates: T[]): T {
   return candidates.reduce((best, c) => (c.distance < best.distance ? c : best));
+}
+
+/**
+ * What an unattended character would be working, which is simply what is in
+ * their hands.
+ *
+ * A gathering tool *is* the weapon slot, so this needs nothing stored and
+ * nothing chosen twice: a fishing pole says fish, an axe says chop, and a sword
+ * or an empty hand says fight. It is the same question `canGather` already asks
+ * before letting anyone swing at a tree, and it means a player who wants to
+ * camp a skill does what they would do anyway — equip the tool and settle in.
+ */
+export function afkGatherSkill(gear: Gear): SkillId | null {
+  return toolSkill(gear.weapon);
+}
+
+export interface AfkNodeCandidate {
+  index: number;
+  distance: number;
+  /** Whether it has charges left, as opposed to chopped out and regrowing. */
+  available: boolean;
+  skill: SkillId;
+  /** Whether the character could work it at all: tool in hand, skill high enough. */
+  workable: boolean;
+}
+
+export type AfkGatherAction =
+  // Work the node at this index.
+  | { kind: 'gather'; index: number }
+  // Nodes this tool could work exist here, but none is ready right now: chopped
+  // out and not yet regrown, or too far from where the character settled.
+  | { kind: 'wait' }
+  // Nothing in this zone this tool will ever work, so the camp is not a
+  // gathering one however it is equipped.
+  | { kind: 'none' };
+
+/**
+ * Which node an unattended character should walk to next.
+ *
+ * The nearest ready one inside the anchor radius, which is what makes a
+ * woodcutting camp work a stand of trees rather than one: a tree runs out after
+ * four swings and takes fifteen seconds to regrow, so a camp that could only
+ * see the tree it started on would spend most of its time waiting beside it.
+ *
+ * `none` and `wait` are deliberately different answers. Waiting is what a camp
+ * does between respawns; `none` means the tool has no work here at all, and the
+ * caller falls back to fighting rather than standing still forever.
+ */
+export function chooseAfkNode(
+  candidates: AfkNodeCandidate[],
+  skill: SkillId,
+  radius = AFK_ENGAGE_RADIUS,
+): AfkGatherAction {
+  const matching = candidates.filter(
+    (candidate) => candidate.skill === skill && candidate.workable,
+  );
+  if (matching.length === 0) {
+    return { kind: 'none' };
+  }
+
+  const ready = matching.filter((candidate) => candidate.available && candidate.distance <= radius);
+  if (ready.length === 0) {
+    return { kind: 'wait' };
+  }
+  return { kind: 'gather', index: nearest(ready).index };
 }
 
 /**

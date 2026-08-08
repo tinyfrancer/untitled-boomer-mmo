@@ -9,17 +9,23 @@ export interface SkillDefinition {
   id: SkillId;
   name: string;
   family: SkillFamily;
+  /**
+   * What doing it is called, for the one sentence that has to read as English
+   * rather than as a stat: "You settle in to chop wood." A name alone gives
+   * "You settle in to Woodcutting", which no line of dialogue has ever said.
+   */
+  verb: string;
 }
 
 export const SKILLS: Record<SkillId, SkillDefinition> = {
-  woodcutting: { id: 'woodcutting', name: 'Woodcutting', family: 'gathering' },
-  fishing: { id: 'fishing', name: 'Fishing', family: 'gathering' },
-  cooking: { id: 'cooking', name: 'Cooking', family: 'gathering' },
-  'one-handed': { id: 'one-handed', name: '1 Handed', family: 'combat' },
-  unarmed: { id: 'unarmed', name: 'Fist', family: 'combat' },
-  block: { id: 'block', name: 'Block', family: 'combat' },
-  parry: { id: 'parry', name: 'Parry', family: 'combat' },
-  destruction: { id: 'destruction', name: 'Destruction', family: 'combat' },
+  woodcutting: { id: 'woodcutting', name: 'Woodcutting', family: 'gathering', verb: 'chop wood' },
+  fishing: { id: 'fishing', name: 'Fishing', family: 'gathering', verb: 'fish' },
+  cooking: { id: 'cooking', name: 'Cooking', family: 'gathering', verb: 'cook' },
+  'one-handed': { id: 'one-handed', name: '1 Handed', family: 'combat', verb: 'fight' },
+  unarmed: { id: 'unarmed', name: 'Fist', family: 'combat', verb: 'fight' },
+  block: { id: 'block', name: 'Block', family: 'combat', verb: 'fight' },
+  parry: { id: 'parry', name: 'Parry', family: 'combat', verb: 'fight' },
+  destruction: { id: 'destruction', name: 'Destruction', family: 'combat', verb: 'fight' },
 };
 
 // Gather-then-cook order, so the character sheet reads in the order the loop is

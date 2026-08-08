@@ -3,6 +3,7 @@ import { nth } from '../nth';
 import { harness } from './harness';
 import { AFK_STATE_CHANGED_EVENT, AFK_TOGGLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
 import { AFK_ANCHOR_RADIUS } from '../../src/systems/AfkSystem';
+import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 
 /**
  * The camp: a deliberately worse player than the person it stands in for. What
@@ -88,6 +89,76 @@ describe('camping', () => {
 
     until(() => !world.afkActive, 'the camp to end with the player');
     expect(state.afk).toBeNull();
+  });
+});
+
+/**
+ * The camp with a tool in its hands, driven in a real town: it walks to a tree,
+ * chops it, moves to the next one when that is spent, and trains the skill —
+ * all with nothing touching the controls. What decides any of it is the weapon
+ * slot, so the whole setup here is "equip an axe".
+ */
+describe('camping a gathering skill', () => {
+  /** An axe in hand, parked in the grove in the town's south-west. */
+  function woodcutting(): ReturnType<typeof harness> {
+    const kit = harness();
+    const tree = kit.world.nodes.find((node) => node.definition.skill === 'woodcutting');
+    if (!tree) throw new Error('town has no tree');
+    kit.character.addItem('felling-axe', 1);
+    kit.character.equip('felling-axe');
+    kit.world.teleport(tree.x, tree.y + 60);
+    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    return kit;
+  }
+
+  it('chops with no input at all, and pockets the logs', () => {
+    const { world, character, until } = woodcutting();
+
+    until(() => character.itemCount('logs') > 0, 'the camp to chop its first logs');
+    expect(world.afkActive).toBe(true);
+  });
+
+  it('trains the skill it is working', () => {
+    const { character, until } = woodcutting();
+    const before = character.skillLevelOf('woodcutting');
+
+    until(
+      () =>
+        character.state.skills.woodcutting.xp > 0 || character.skillLevelOf('woodcutting') > before,
+      'woodcutting xp to come in',
+    );
+  });
+
+  // The whole point of a camp over tapping one tree: a tree is four swings and
+  // then fifteen seconds of nothing, so it works the stand rather than waiting.
+  it('keeps going past what a single tree holds', () => {
+    const { character, until } = woodcutting();
+    const oneTree = RESOURCE_NODES.tree.charges ?? 0;
+
+    until(
+      () => character.itemCount('logs') > oneTree,
+      'the camp to out-chop a single tree',
+      120000,
+    );
+  });
+
+  it('parks the session so a closed tab still pays the skill', () => {
+    const { state } = woodcutting();
+    expect(state.afk).toMatchObject({ zoneId: 'town' });
+  });
+
+  // Fishing is the same rule with a different tool, and the town pond needs no
+  // level at all — so this is the whole of what "AFK fishing" required.
+  it('fishes instead when that is what is in hand', () => {
+    const kit = harness();
+    const spot = kit.world.nodes.find((node) => node.definition.skill === 'fishing');
+    if (!spot) throw new Error('town has no fishing spot');
+    kit.character.addItem('fishing-pole', 1);
+    kit.character.equip('fishing-pole');
+    kit.world.teleport(spot.x, spot.y + 60);
+    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+
+    kit.until(() => kit.character.itemCount('raw-fish') > 0, 'the camp to land a fish');
   });
 });
 

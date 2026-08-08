@@ -1,27 +1,37 @@
 import {
   AFK_ANCHOR_RADIUS,
+  afkGatherSkill,
   chooseAfkFood,
+  chooseAfkNode,
   decideAfkAction,
   shouldAfkEat,
 } from '../systems/AfkSystem';
+import { SKILLS } from '../data/skills';
 import { logNotice } from '../systems/CombatLogSystem';
+import { canGather } from '../systems/GatherSystem';
 import { inventoryEntries } from '../systems/InventorySystem';
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { distance, withinRadius, type Point } from '../systems/MovementSystem';
-import type { EnemyId, ItemId } from '../types/ids';
+import type { EnemyId, ItemId, SkillId } from '../types/ids';
 import { AFK_STATE_CHANGED_EVENT, type AchievementUnlock } from '../ui/uiEvents';
 import type { Mob } from './Mob';
+import type { ResourceNode } from './ResourceNode';
 import type { Targeting } from './targeting';
 import type { WorldContext } from './WorldContext';
 
 /** What the camp needs from the rest of the zone, and the whole of it. */
 export interface AfkCampDeps {
   mobs: Mob[];
+  nodes: ResourceNode[];
   targeting: Targeting;
   /** Settling in gives up both of the things a hand on the mouse was doing. */
   stopGathering(): void;
   closeShop(): void;
   eat(itemId: ItemId): void;
+  /** Walk over and start the channel — the same approach a tap on a node uses. */
+  gatherAt(node: ResourceNode): void;
+  /** Whether a channel is already running, which is the loop's "leave it alone". */
+  isGathering(): boolean;
   /** The choke point the camp's own XP penalty is applied at. */
   awardXp(reward: number): void;
   /** A kill either happened or it didn't, so an offline count is credited in full. */
@@ -35,23 +45,41 @@ export interface ParkedAfkResult {
 }
 
 /**
- * The unattended player: it picks fights, stays where it was left, and eats when
- * it is hurt.
+ * The unattended player: it works whatever is in its hands, stays where it was
+ * left, and eats when it is hurt.
  *
- * Deliberately a worse player than the person it stands in for. It never uses an
- * ability — the action bar is an advantage only a hand on the keyboard gets —
- * and everything it earns is halved on the way in, which is the world's job
- * rather than this one's (see `ZoneWorld.awardXp`).
+ * **What it does is decided by the tool, not by a mode.** A fishing pole or an
+ * axe in the weapon slot makes this a gathering camp; a sword, a wand or an
+ * empty hand makes it the fighting one. Nothing is stored and nothing is chosen
+ * twice — it is the same question `canGather` asks before letting anyone swing
+ * at a tree, so a player who wants to camp a skill does what they would do
+ * anyway.
+ *
+ * As a fighter it is deliberately a worse player than the person it stands in
+ * for. It never uses an ability — the action bar is an advantage only a hand on
+ * the keyboard gets — and everything it earns is halved on the way in, which is
+ * the world's job rather than this one's (see `ZoneWorld.awardXp`).
+ *
+ * As a gatherer it is not, and deliberately: an attended player gathers by
+ * tapping a node and watching it auto-repeat, which is the same standing still
+ * this does. There is no skill being simulated away to charge for, and a camp
+ * that paid half would be strictly worse than the tap it replaces. What it adds
+ * is walking to the next tree when one is chopped out, fighting back when
+ * something starts chewing, and paying out for time offline — where the
+ * offline rate and the one-level cap do apply, exactly as they do to a fight.
  */
 export class AfkCamp {
   active = false;
 
   private readonly ctx: WorldContext;
   private readonly deps: AfkCampDeps;
-  // The spot the character settled at — fights are leashed to it — and whether
-  // they are currently standing down to heal rather than pulling.
+  // The spot the character settled at — fights and nodes are both leashed to it
+  // — and whether they are currently standing down to heal rather than pulling.
   private anchor: Point = { x: 0, y: 0 };
   private recovering = false;
+  // Whether the pack was full last time a haul was due. Latched so the refusal
+  // is said once rather than every frame for as long as the camp runs.
+  private packFull = false;
 
   constructor(ctx: WorldContext, deps: AfkCampDeps) {
     this.ctx = ctx;
@@ -66,11 +94,21 @@ export class AfkCamp {
     if (this.active === active) return;
     this.active = active;
     this.recovering = false;
+    this.packFull = false;
     if (active) {
-      this.deps.stopGathering();
       this.deps.closeShop();
       this.anchor = this.ctx.playerPoint();
-      this.ctx.log(logNotice('You settle in to camp.'));
+      const skill = this.gatherSkill();
+      // A gather already in flight is left running — settling in beside the
+      // tree you were chopping should not stop you chopping it.
+      if (skill === null) {
+        this.deps.stopGathering();
+      }
+      this.ctx.log(
+        logNotice(
+          skill === null ? 'You settle in to camp.' : `You settle in to ${SKILLS[skill].verb}.`,
+        ),
+      );
     } else {
       this.ctx.log(logNotice('You snap out of it.'));
     }
@@ -101,8 +139,10 @@ export class AfkCamp {
       characterLevel: character.state.level,
       inventory: character.state.inventory,
       capacity: character.carryCapacity(),
+      gear: character.state.gear,
+      skills: character.state.skills,
     });
-    if (report.kills <= 0) {
+    if (report.kills <= 0 && report.gathers <= 0) {
       this.ctx.persistCharacter();
       return null;
     }
@@ -111,7 +151,17 @@ export class AfkCamp {
       character.addItem(itemId, quantity);
     }
     character.addCurrency(report.copper);
-    this.deps.awardXp(report.xp);
+    // A gathering session earns no character XP at all, and awarding zero would
+    // still float a "+0 XP" over the boot it was resolved on.
+    if (report.xp > 0) {
+      this.deps.awardXp(report.xp);
+    }
+    if (report.skill && report.skillXp > 0) {
+      // Silent: this is resolved on the boot that finds the parked session, so
+      // there is no one at the keyboard for a number to float past. The away
+      // report is where the player is told, and it says the total.
+      this.ctx.awardSkillXp(report.skill, report.skillXp, { silent: true });
+    }
     const unlocks = report.enemyId ? this.deps.creditKill(report.enemyId, report.kills) : [];
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
@@ -121,6 +171,79 @@ export class AfkCamp {
 
   update(): void {
     if (!this.active || !this.ctx.player.isAlive()) return;
+
+    // Anything already chasing is answered before anything else, whichever kind
+    // of camp this is: being hit breaks a gather channel, so a woodcutter that
+    // ignored the thing chewing on it would stand there re-arming a channel it
+    // could never finish until it died.
+    const skill = this.gatherSkill();
+    if (skill !== null && !this.hunted() && this.work(skill)) {
+      return;
+    }
+    this.fight();
+  }
+
+  /** Which skill this camp is working, or null for the fighting one. */
+  private gatherSkill(): SkillId | null {
+    return afkGatherSkill(this.ctx.character.state.gear);
+  }
+
+  private hunted(): boolean {
+    return this.deps.mobs.some((mob) => mob.isAlive() && mob.isEngaged());
+  }
+
+  /**
+   * One frame of a gathering camp. Returns false when this tool has no work in
+   * this zone at all, which is the caller's cue to fall back to fighting — a
+   * fishing pole in the bandit camp is a camp with nothing to fish, not a camp
+   * that should stand still until the tab closes.
+   */
+  private work(skill: SkillId): boolean {
+    const { character } = this.ctx;
+    const action = chooseAfkNode(
+      this.deps.nodes.map((node, index) => ({
+        index,
+        distance: distance(this.anchor, node),
+        available: node.isAvailable(),
+        skill: node.definition.skill,
+        workable: canGather(node.definition, character.state.skills, character.state.gear).ok,
+      })),
+      skill,
+    );
+    if (action.kind === 'none') {
+      return false;
+    }
+
+    this.deps.targeting.clearTarget();
+    // The channel re-arms itself and the walk finishes on its own; re-issuing
+    // either every frame would restart it and it would never complete.
+    if (this.deps.isGathering() || this.ctx.player.hasMoveTarget()) {
+      return true;
+    }
+    if (action.kind === 'wait') {
+      this.ctx.player.stopMoving();
+      return true;
+    }
+
+    const node = this.deps.nodes[action.index];
+    if (!node) return true;
+    // A haul with nowhere to go is not a gather. Without this the camp would
+    // walk to a tree, fail to pocket the logs, stop, and walk to it again for
+    // as long as the tab stayed open.
+    if (!character.canCarryItem(node.definition.yieldItemId)) {
+      if (!this.packFull) {
+        this.packFull = true;
+        this.ctx.notice('Your pack is full.');
+      }
+      this.ctx.player.stopMoving();
+      return true;
+    }
+    this.packFull = false;
+    this.deps.gatherAt(node);
+    return true;
+  }
+
+  private fight(): void {
     const { targeting } = this.deps;
 
     // A fight that wandered off the camp is dropped rather than followed: the

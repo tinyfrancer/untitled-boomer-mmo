@@ -256,10 +256,13 @@ export class ZoneWorld implements Targeting {
     });
     this.afk = new AfkCamp(this.ctx, {
       mobs: this.mobs,
+      nodes: this.nodes,
       targeting: this,
       stopGathering: () => this.gathering.stop(),
       closeShop: () => this.shop.close(),
       eat: (itemId) => this.gathering.eat(itemId),
+      gatherAt: (node) => this.approachAndGather(node),
+      isGathering: () => this.gathering.state !== null,
       awardXp: (reward) => this.awardXp(reward),
       creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),
     });

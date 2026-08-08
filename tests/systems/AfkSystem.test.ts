@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   AFK_ENGAGE_RADIUS,
   AFK_XP_MULTIPLIER,
+  afkGatherSkill,
   afkXpReward,
   chooseAfkFood,
+  chooseAfkNode,
   decideAfkAction,
   shouldAfkEat,
   type AfkCandidate,
+  type AfkNodeCandidate,
 } from '../../src/systems/AfkSystem';
+import type { Gear } from '../../src/systems/InventorySystem';
 
 function mob(overrides: Partial<AfkCandidate> & { index: number }): AfkCandidate {
   return { distance: 100, alive: true, engaged: false, ...overrides };
@@ -150,5 +154,90 @@ describe('chooseAfkFood', () => {
 
   it('ignores a stack that has run out', () => {
     expect(chooseAfkFood({ 'cooked-fish': 0, 'cooked-crab': 1 })).toBe('cooked-crab');
+  });
+});
+
+/**
+ * What an unattended character works is read off what is in their hands rather
+ * than out of a mode they picked: a gathering tool *is* the weapon slot, so
+ * this is the same question `canGather` asks before letting anyone swing at a
+ * tree, and a player who wants to camp a skill does what they would do anyway.
+ */
+describe('afkGatherSkill', () => {
+  const holding = (weapon: Gear['weapon']): Gear => ({
+    helmet: null,
+    chest: null,
+    pants: null,
+    weapon,
+  });
+
+  it('reads the skill straight off the tool in hand', () => {
+    expect(afkGatherSkill(holding('felling-axe'))).toBe('woodcutting');
+    expect(afkGatherSkill(holding('fishing-pole'))).toBe('fishing');
+  });
+
+  it('makes a weapon or an empty hand the fighting camp', () => {
+    expect(afkGatherSkill(holding('rusty-sword'))).toBeNull();
+    expect(afkGatherSkill(holding('apprentice-wand'))).toBeNull();
+    expect(afkGatherSkill(holding(null))).toBeNull();
+    // An axe you fight with is not an axe you fell trees with.
+    expect(afkGatherSkill(holding('brown-axe'))).toBeNull();
+  });
+});
+
+describe('chooseAfkNode', () => {
+  const node = (overrides: Partial<AfkNodeCandidate> & { index: number }): AfkNodeCandidate => ({
+    distance: 10,
+    available: true,
+    skill: 'woodcutting',
+    workable: true,
+    ...overrides,
+  });
+
+  it('walks to the nearest ready node of the skill in hand', () => {
+    const action = chooseAfkNode(
+      [node({ index: 0, distance: 200 }), node({ index: 1, distance: 40 })],
+      'woodcutting',
+    );
+    expect(action).toEqual({ kind: 'gather', index: 1 });
+  });
+
+  it('ignores nodes for another skill entirely', () => {
+    // The fishing spot is nearer, and a woodcutter walks past it.
+    const action = chooseAfkNode(
+      [node({ index: 0, skill: 'fishing', distance: 10 }), node({ index: 1, distance: 200 })],
+      'woodcutting',
+    );
+    expect(action).toEqual({ kind: 'gather', index: 1 });
+  });
+
+  /**
+   * The two empty answers are deliberately different. A tree chopped out
+   * regrows in fifteen seconds, so waiting beside it is right; a zone with no
+   * trees at all is a camp that should be fighting instead, and standing still
+   * until the tab closes is the one outcome nobody wants.
+   */
+  it('waits when the nodes are there but none is ready', () => {
+    expect(chooseAfkNode([node({ index: 0, available: false })], 'woodcutting')).toEqual({
+      kind: 'wait',
+    });
+    expect(chooseAfkNode([node({ index: 0, distance: 10_000 })], 'woodcutting')).toEqual({
+      kind: 'wait',
+    });
+  });
+
+  it('gives up the skill entirely when the zone has no work for it', () => {
+    expect(chooseAfkNode([], 'woodcutting')).toEqual({ kind: 'none' });
+    expect(chooseAfkNode([node({ index: 0, skill: 'fishing' })], 'woodcutting')).toEqual({
+      kind: 'none',
+    });
+  });
+
+  // A node the skill is too low for is not work this character can wait for
+  // either — the ocean is `none` to a level 1 fisher, not `wait`.
+  it('treats a node it could never work as no work at all', () => {
+    expect(chooseAfkNode([node({ index: 0, workable: false })], 'woodcutting')).toEqual({
+      kind: 'none',
+    });
   });
 });
