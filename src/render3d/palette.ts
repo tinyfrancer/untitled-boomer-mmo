@@ -25,6 +25,8 @@ export const PALETTE = {
   emberCore: 0xfff59d,
   barBackground: 0x000000,
   barFill: 0x66bb6a,
+  /** The player's pool, under their health bar. Matches `THEME.manaFill`. */
+  barMana: 0x3949ab,
   /** The bolt an ability throws, and the glow around it. */
   bolt: 0xff7043,
   boltGlow: 0xffd54f,

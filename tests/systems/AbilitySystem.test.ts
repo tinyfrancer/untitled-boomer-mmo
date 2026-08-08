@@ -97,6 +97,7 @@ describe('buffs', () => {
     expect(startManaShield(ABILITIES['mana-shield'])).toEqual({
       remaining: 25,
       remainingMs: 20000,
+      durationMs: 20000,
     });
     expect(startManaShield(ABILITIES.fireball)).toBeNull();
     expect(startHaste(ABILITIES['battle-fury'])?.cooldownMultiplier).toBe(0.6);
@@ -115,10 +116,17 @@ describe('buffs', () => {
     tickBuff(haste, 1000);
     expect(haste?.remainingMs).toBe(8000);
   });
+
+  // What a countdown icon is drawn against: the clock runs down and the length
+  // it started at does not, or the sweep would never move.
+  it('keeps the duration it started with as the clock runs down', () => {
+    const haste = startHaste(ABILITIES['battle-fury']);
+    expect(tickBuff(haste, 1000)).toMatchObject({ remainingMs: 7000, durationMs: 8000 });
+  });
 });
 
 describe('absorbDamage', () => {
-  const shield = { remaining: 25, remainingMs: 20000 };
+  const shield = { remaining: 25, remainingMs: 20000, durationMs: 20000 };
 
   it('soaks a hit smaller than the pool and keeps the rest', () => {
     const result = absorbDamage(shield, 10);

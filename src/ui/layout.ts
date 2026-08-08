@@ -17,15 +17,21 @@ export interface Rect {
 const NARROW_WIDTH = 720;
 const SHORT_HEIGHT = 560;
 
-const TARGET_FRAME_HEIGHT = 52;
-// Name, level, XP bar and the XP detail line; the mana bar adds a second bar
-// and its own label underneath.
-const PLAYER_COLUMN_HEIGHT = 82;
-const MANA_BLOCK_HEIGHT = 34;
+// The name-and-level line and the health bar under it, inside the panel's own
+// padding and border.
+const TARGET_FRAME_HEIGHT = 56;
+// The name-and-level line, the health bar and the XP bar. Every number a bar
+// carries is printed inside it, so none of the three costs a line of its own.
+const PLAYER_COLUMN_HEIGHT = 60;
+const MANA_BLOCK_HEIGHT = 19;
 // A worn title gets its own line under the name. "Adventurer, Rat Slayer" on
 // one line overruns the 190px column, and shrinking the name to fit made the
 // thing the player is proudest of the smallest text on screen.
 const TITLE_LINE_HEIGHT = 16;
+// The buff icons: one square plus the two caption lines under it, and the gap
+// above the row. Presence is what costs the height — a second buff sits beside
+// the first rather than under it.
+const EFFECT_ROW_HEIGHT = THEME.effectIcon.size + THEME.effectIcon.caption * 2 + 6;
 const TRACKER_LINE_HEIGHT = 18;
 // The ability buttons plus the mana-cost line printed under them.
 const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 16;
@@ -65,6 +71,9 @@ export interface HudLayoutOptions {
   hasMana?: boolean;
   // Whether a title is worn, which costs the player column an extra line.
   hasTitle?: boolean;
+  // Whether any buff or debuff is up. How many there are does not matter: they
+  // sit in a row, so the first one costs the height and the rest are free.
+  hasEffects?: boolean;
   trackedQuests?: number;
 }
 
@@ -85,7 +94,13 @@ export function hudLayout(
   height: number,
   options: HudLayoutOptions = {},
 ): HudLayout {
-  const { scale = 1, hasMana = false, hasTitle = false, trackedQuests = 0 } = options;
+  const {
+    scale = 1,
+    hasMana = false,
+    hasTitle = false,
+    hasEffects = false,
+    trackedQuests = 0,
+  } = options;
   const margin = px(THEME.margin, scale);
   const padding = px(THEME.padding, scale);
 
@@ -128,7 +143,8 @@ export function hudLayout(
       height: px(
         PLAYER_COLUMN_HEIGHT +
           (hasMana ? MANA_BLOCK_HEIGHT : 0) +
-          (hasTitle ? TITLE_LINE_HEIGHT : 0),
+          (hasTitle ? TITLE_LINE_HEIGHT : 0) +
+          (hasEffects ? EFFECT_ROW_HEIGHT : 0),
         scale,
       ),
     },

@@ -90,12 +90,22 @@ describe('hudLayout', () => {
     expect(titled).toBeGreaterThan(untitled);
   });
 
-  it('stacks a title and a mana bar rather than overlapping them', () => {
-    const both = layoutFor(PHONE_PORTRAIT, { hasMana: true, hasTitle: true }).playerColumn.height;
-    const manaOnly = layoutFor(PHONE_PORTRAIT, { hasMana: true }).playerColumn.height;
-    const titleOnly = layoutFor(PHONE_PORTRAIT, { hasTitle: true }).playerColumn.height;
+  // The buff icons sit side by side, so the first one costs the column a row
+  // and the rest are free — presence is the whole of the question.
+  it('makes room for the buff row only while something is up', () => {
+    const bare = layoutFor(PHONE_PORTRAIT).playerColumn.height;
+    const buffed = layoutFor(PHONE_PORTRAIT, { hasEffects: true }).playerColumn.height;
+    expect(buffed).toBeGreaterThan(bare);
+  });
+
+  it('stacks a title, a mana bar and the buff row rather than overlapping them', () => {
     const plain = layoutFor(PHONE_PORTRAIT).playerColumn.height;
-    expect(both - plain).toBe(manaOnly - plain + (titleOnly - plain));
+    const costOf = (options: object): number =>
+      layoutFor(PHONE_PORTRAIT, options).playerColumn.height - plain;
+
+    expect(costOf({ hasMana: true, hasTitle: true, hasEffects: true })).toBe(
+      costOf({ hasMana: true }) + costOf({ hasTitle: true }) + costOf({ hasEffects: true }),
+    );
   });
 
   it('keeps the player column clear of the target frame', () => {
@@ -155,6 +165,18 @@ describe('sheetRect', () => {
     expect(sheetRect(phone, PHONE_PORTRAIT.width, THEME.panelWidth.character).y).toBeLessThan(
       playerColumnBottom(phone),
     );
+  });
+
+  // The tallest the column ever gets: a titled caster with buffs up. On a roomy
+  // screen the sheet starts below it, so this is the case where the two would
+  // collide if the reserved height stopped keeping up with what is drawn.
+  it('still leaves a usable sheet under the tallest the player column gets', () => {
+    const layout = layoutFor(DESKTOP, { hasMana: true, hasTitle: true, hasEffects: true });
+    const sheet = sheetRect(layout, DESKTOP.width, THEME.panelWidth.character);
+
+    expect(sheet.y).toBeGreaterThanOrEqual(playerColumnBottom(layout));
+    expect(sheet.y + sheet.height).toBeLessThanOrEqual(layout.tabBar.y);
+    expect(sheet.height).toBeGreaterThan(THEME.touchMin * 2);
   });
 
   it('shrinks the sheet when the tracker takes room', () => {

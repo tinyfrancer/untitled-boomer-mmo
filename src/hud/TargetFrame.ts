@@ -1,4 +1,5 @@
-import { el, place } from './dom';
+import { el, fillPercent, place } from './dom';
+import { barFill } from '../systems/math';
 import type { Rect } from '../ui/layout';
 import type { TargetInfo } from '../ui/uiEvents';
 
@@ -6,13 +7,22 @@ import type { TargetInfo } from '../ui/uiEvents';
 export class TargetFrame {
   readonly root: HTMLElement;
   private readonly nameLine: HTMLElement;
-  private readonly hpLine: HTMLElement;
+  private readonly hpFill: HTMLElement;
+  private readonly hpText: HTMLElement;
 
   constructor() {
     this.root = el('div', 'hud-panel hud-target hud-hidden');
     this.nameLine = el('div', 'hud-target__name');
-    this.hpLine = el('div', 'hud-target__hp');
-    this.root.append(this.nameLine, this.hpLine);
+
+    // A bar rather than a line of text, for the same reason the plate over the
+    // creature's own head is one: how much of a fight is left is a proportion,
+    // and reading it off two numbers is arithmetic done mid-swing.
+    const hpBar = el('div', 'hud-bar hud-target__hp');
+    this.hpFill = el('div', 'hud-bar__fill hud-bar__fill--target');
+    this.hpText = el('div', 'hud-bar__label');
+    hpBar.append(this.hpFill, this.hpText);
+
+    this.root.append(this.nameLine, hpBar);
   }
 
   layout(rect: Rect): void {
@@ -22,7 +32,8 @@ export class TargetFrame {
   show(target: TargetInfo): void {
     this.nameLine.textContent = `${target.name} (Lv ${target.level})`;
     this.nameLine.style.color = target.conColor;
-    this.hpLine.textContent = `HP: ${target.hp} / ${target.maxHp}`;
+    this.hpFill.style.width = fillPercent(barFill(target.hp, target.maxHp));
+    this.hpText.textContent = `${target.hp} / ${target.maxHp} hp`;
     this.root.classList.remove('hud-hidden');
   }
 

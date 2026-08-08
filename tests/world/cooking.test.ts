@@ -118,6 +118,24 @@ describe('eating', () => {
     expect(world.player.hp).toBeGreaterThan(wounded);
   });
 
+  // The third thing the buff row can show, and the only one that is not an
+  // ability — which is why the icons are keyed on what the player is carrying
+  // rather than on what cast it.
+  it('shows as a buff for as long as it lasts', () => {
+    const kit = harness();
+    kit.character.addItem('cooked-fish', 1);
+    kit.world.player.takeDamage(Math.floor(kit.world.player.maxHp / 2));
+
+    kit.world.handleEatRequested('cooked-fish');
+    kit.tick(1);
+    expect(kit.emissions('player-effects-changed').at(-1)?.[0]).toEqual([
+      { effectId: 'well-fed', remainingMs: expect.any(Number), durationMs: expect.any(Number) },
+    ]);
+
+    kit.until(() => !kit.world.player.isEating(), 'the meal to finish', 30000);
+    expect(kit.emissions('player-effects-changed').at(-1)?.[0]).toEqual([]);
+  });
+
   it('is cancelled by a hit, since food is out-of-combat only', () => {
     const { world, character } = harness();
     character.addItem('cooked-fish', 1);

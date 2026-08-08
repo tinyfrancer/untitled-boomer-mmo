@@ -1107,6 +1107,127 @@ async function touchGestures() {
   await page.screenshot({ path: `${OUT}/10-tabbar-375.png` });
 }
 
+async function playerColumn() {
+  // --- The top-left corner, which is read at a glance mid-fight or not at all.
+  // jsdom lays nothing out, so *which line* a value sits on is a question only
+  // a browser answers: a level that wrapped under the name, or an XP count that
+  // fell out of the bar it is printed inside, would pass every unit test in
+  // tests/hud and be exactly the thing this change was made to stop. ---
+  await park();
+
+  /**
+   * @param {string} selector
+   * @returns {Promise<{ x: number; y: number; width: number; height: number; right: number;
+   *   bottom: number } | null>}
+   */
+  const box = (selector) =>
+    page.evaluate((sel) => {
+      const node = document.querySelector(sel);
+      if (!node) return null;
+      const { x, y, width, height, right, bottom } = node.getBoundingClientRect();
+      return { x, y, width, height, right, bottom };
+    }, selector);
+
+  const name = await box('.hud-player__name');
+  const level = await box('.hud-player__level');
+  check(
+    'the level shares the name’s line rather than taking one of its own',
+    name !== null &&
+      level !== null &&
+      Math.abs(name.y - level.y) < name.height &&
+      level.x >= name.right - 1,
+    `name ${JSON.stringify(name)} level ${JSON.stringify(level)}`,
+  );
+
+  // A bar's numbers are inside it now, which is the whole of what "merge the
+  // XP text with the bar" bought: three bars and three captions was six rows of
+  // eye travel for three facts.
+  const insideItsBar = async (/** @type {string} */ bar) => {
+    const outer = await box(bar);
+    const label = await box(`${bar} .hud-bar__label`);
+    return (
+      outer !== null &&
+      label !== null &&
+      label.width > 0 &&
+      label.y >= outer.y - 1 &&
+      label.bottom <= outer.bottom + 1
+    );
+  };
+  check('the XP progress is printed inside the XP bar', await insideItsBar('.hud-player__xp'));
+  check('and the health readout inside the health bar', await insideItsBar('.hud-player__hp'));
+
+  const hp = await box('.hud-player__hp');
+  const xp = await box('.hud-player__xp');
+  const column = await box('.hud-player');
+  const viewportWidth = await page.evaluate(() => window.innerWidth);
+  check(
+    'health is stacked above XP and the whole column stays clear of the tab bar',
+    hp !== null &&
+      xp !== null &&
+      column !== null &&
+      hp.y < xp.y &&
+      column.right <= viewportWidth &&
+      column.bottom < (await tabBarTop()),
+    `hp at ${hp?.y}, xp at ${xp?.y}, column ends ${column?.bottom}, bar at ${await tabBarTop()}`,
+  );
+
+  // --- Buffs, driven the way a player raises one: a real press on the real
+  // ability button. Battle Fury is the warrior's, costs nothing and cannot
+  // fizzle, so what lands here lands every time. ---
+  const bare = column?.height ?? 0;
+  await page.click('.hud-ability__key[data-ability="battle-fury"]');
+  await step(2);
+  const buffed = await page.evaluate(() => {
+    const icon = document.querySelector('.hud-effect[data-effect="haste"]');
+    const sweep = /** @type {HTMLElement | null} */ (
+      document.querySelector('.hud-effect[data-effect="haste"] .hud-effect__sweep')
+    );
+    return {
+      shown: icon !== null,
+      time: document.querySelector('.hud-effect__time')?.textContent ?? '',
+      sweep: sweep?.getBoundingClientRect().height ?? 0,
+      height: document.querySelector('.hud-player')?.getBoundingClientRect().height ?? 0,
+    };
+  });
+  check(
+    'using an ability puts its buff in the column, and the column grows for it',
+    buffed.shown && buffed.height > bare,
+    `column ${Math.round(bare)} -> ${Math.round(buffed.height)}, reads "${buffed.time}"`,
+  );
+  await page.screenshot({ path: `${OUT}/13-buff-row.png` });
+
+  // The sweep is drawn from a 0-1 share of the buff's own clock, so it has to
+  // have crept down the square by the time half of it is gone — and the icon
+  // has to be gone itself once the whole of it is.
+  await step(30, 140);
+  const midway = await page.evaluate(
+    () =>
+      /** @type {HTMLElement | null} */ (
+        document.querySelector('.hud-effect__sweep')
+      )?.getBoundingClientRect().height ?? 0,
+  );
+  check(
+    'and its sweep fills as the buff is spent',
+    midway > buffed.sweep,
+    `${Math.round(buffed.sweep)}px -> ${Math.round(midway)}px`,
+  );
+
+  await stepUntil(
+    async () => !(await page.evaluate(() => window.world.player.isHasted())),
+    'Battle Fury to expire',
+    20000,
+  );
+  const expired = await page.evaluate(() => ({
+    icons: document.querySelectorAll('.hud-effect').length,
+    height: document.querySelector('.hud-player')?.getBoundingClientRect().height ?? 0,
+  }));
+  check(
+    'and the row is taken back off the column when it runs out',
+    expired.icons === 0 && Math.round(expired.height) === Math.round(bare),
+    `${expired.icons} icons, column back to ${Math.round(expired.height)} from ${Math.round(bare)}`,
+  );
+}
+
 async function sheets() {
   // --- The HUD's own behaviour, on the roomy viewport it has a different rule
   // for: one sheet is open at a time either way, but a desktop opens one at
@@ -1836,6 +1957,7 @@ const SECTIONS = [
   ['heading', heading],
   ['keyboard', keyboard],
   ['touch', touchGestures],
+  ['player-column', playerColumn],
   ['sheets', sheets],
   ['achievements', achievements],
   ['bag', bagSheet],

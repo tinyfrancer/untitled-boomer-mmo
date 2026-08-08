@@ -88,6 +88,43 @@ describe('what an ability is refused for', () => {
   });
 });
 
+/**
+ * The buff row's whole supply. The world publishes the list rather than one-on
+ * and one-off pairs, so the newest one always describes the present — which is
+ * what lets a HUD that outlives the world catch up from it alone.
+ */
+describe('what the HUD is told is up', () => {
+  const latest = (kit: ReturnType<typeof harness>): unknown =>
+    kit.emissions('player-effects-changed').at(-1)?.[0];
+
+  it('announces an empty list on the first frame of a world', () => {
+    const kit = harness();
+    kit.tick(1);
+
+    // No seed on the publisher on purpose: a zone walk builds a new player with
+    // none of the old one's buffs, and a HUD still showing them would be lying.
+    expect(latest(kit)).toEqual([]);
+  });
+
+  it('names a raised shield, with the clock and the length it started at', () => {
+    const kit = wizard();
+    raiseShield(kit);
+    kit.tick(1);
+
+    expect(latest(kit)).toEqual([
+      { effectId: 'mana-shield', remainingMs: expect.any(Number), durationMs: 20000 },
+    ]);
+  });
+
+  it('empties the list again once the buff has run out', () => {
+    const kit = wizard();
+    raiseShield(kit);
+    kit.until(() => !kit.world.player.hasManaShield(), 'the shield to expire', 30000);
+
+    expect(latest(kit)).toEqual([]);
+  });
+});
+
 describe('killing with an ability', () => {
   it('credits the same counter a swing does', () => {
     const { world, state } = wizard();

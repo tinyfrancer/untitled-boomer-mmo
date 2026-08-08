@@ -52,6 +52,7 @@ import {
   LIGHT_FIRE_REQUESTED_EVENT,
   NOTICE_EVENT,
   PLAYER_DIED_EVENT,
+  PLAYER_EFFECTS_CHANGED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
@@ -259,6 +260,7 @@ class Hud {
     this.playerColumn.setTitle(this.model.activeTitleId);
     this.playerColumn.setXp(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
     this.playerColumn.setMana(this.model.mana, this.model.maxMana);
+    this.refreshHealth();
     this.tracker.update(this.model.quests, this.model.inventory);
     this.refreshCharacterSheet();
     this.inventorySheet.update(this.model.inventory);
@@ -321,6 +323,7 @@ class Hud {
     const layout = hudLayout(width, height, {
       hasMana: this.model.maxMana > 0,
       hasTitle: this.model.activeTitleId !== null,
+      hasEffects: this.playerColumn.hasEffects(),
       trackedQuests: activeQuests(this.model.quests).length,
     });
 
@@ -410,6 +413,16 @@ class Hud {
   // Redraws that need more than the event's own payload
   // ---------------------------------------------------------------------------
 
+  /**
+   * The health bar in the corner. Max HP is not on the wire — the world sends
+   * only the current value — so it is recomputed here from the gear and level
+   * the model already holds, the same way the character sheet's copy is.
+   */
+  private refreshHealth(): void {
+    const { maxHp } = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
+    this.playerColumn.setHp(Math.min(this.model.hp, maxHp), maxHp);
+  }
+
   private refreshCharacterSheet(): void {
     const stats = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
     this.characterSheet.update({
@@ -454,6 +467,8 @@ class Hud {
     listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
       this.refreshCharacterSheet();
+      // A level raises the ceiling the bar is drawn against.
+      this.refreshHealth();
       // A level buys strength, which buys capacity.
       this.refreshEncumbrance();
       this.toast.show(`Level Up! Level ${level}`, THEME.color.levelUp);
@@ -461,6 +476,7 @@ class Hud {
     listen(PLAYER_HP_CHANGED_EVENT, (hp) => {
       this.model.hp = hp;
       this.refreshCharacterSheet();
+      this.refreshHealth();
     });
     listen(PLAYER_DIED_EVENT, () => this.toast.show('You have died.', THEME.color.playerDamage));
 
@@ -496,12 +512,24 @@ class Hud {
         this.applyLayout();
       }
     });
+    listen(PLAYER_EFFECTS_CHANGED_EVENT, (effects) => {
+      const hadRow = this.playerColumn.hasEffects();
+      this.playerColumn.setEffects(effects);
+      // Whether the row exists at all is what decides how tall the column is,
+      // and so where a sheet starts on a roomy screen. How many icons are in it
+      // is not: they sit side by side.
+      if (this.playerColumn.hasEffects() !== hadRow) {
+        this.applyLayout();
+      }
+    });
     listen(ABILITY_STATE_CHANGED_EVENT, (states) => this.actionBar.update(states));
 
     listen(GEAR_CHANGED_EVENT, (gear) => {
       this.model.gear = gear;
       this.overlays.closeSlotPicker();
       this.refreshCharacterSheet();
+      // Armour raises max HP, so the bar's ceiling moves with a swap.
+      this.refreshHealth();
       this.refreshEncumbrance();
     });
     listen(INVENTORY_CHANGED_EVENT, (inventory) => {

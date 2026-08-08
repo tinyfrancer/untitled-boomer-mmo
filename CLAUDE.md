@@ -263,6 +263,25 @@ holds a single `openSheet`, not a visible flag per panel — while Camp and the 
 that open nothing. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close.
 
+**The player column is bars, and a bar's numbers go inside it** (`hud/PlayerColumn.ts`): name and
+level on one line, then health, mana and XP stacked, then the buff row. Three bars with three
+captions under them is six rows of eye travel for three facts, and the top-left corner is read at a
+glance mid-fight or not at all — so `.hud-bar__label` sits over the fill rather than beside it, which
+is also why the backing is nearly opaque (over grass, a half-transparent empty end reads as grass).
+Max HP is not on the wire — `player-hp-changed` carries the current value alone — so the ceiling is
+recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
+level both have to refresh it.
+
+**What buffs are up is derived, not tracked** (`systems/EffectSystem.ts`). `world/Player` keeps its
+mana shield, its haste and its meal private and `activeEffects()` builds the list off them each time
+it is asked, so an expired buff cannot survive in a second copy nobody cleared; `data/effects.ts`
+says what each one is and `EFFECT_STYLE` in `ui/theme.ts` says what it looks like, the same split
+`QUEST_MARKER_STYLE` makes. `ZoneWorld` publishes the whole list on `player-effects-changed`
+whenever any icon's sweep would visibly move, and deliberately **without a seed** — a zone walk
+builds a new player carrying none of the old one's buffs, and a HUD that outlives the world has to be
+told that. A `debuff` kind exists in the table with nothing using it yet, so the first one is a row
+there rather than a second row of icons somewhere else.
+
 Three rules the old Phaser HUD arranged by hand come free from CSS, and are worth not undoing:
 
 - The overlay is `pointer-events: none` and each piece of furniture opts back in, so a tap on the
@@ -531,10 +550,13 @@ for the same reason the stick-figure rig behind the paperdoll does: the ground t
 water is a decision the whole game makes. Creature colour is not — `render3d/palette.ts` is the
 renderer's own, and nothing outside it asks what colour a rat is.
 
-**A nameplate stacks up to four things and only the health bar may not move** (`render3d/nameplate.ts`):
-the quest marker, the name, the worn title, and the bar at the group's origin. Putting a title on
-pushes the _name_ up rather than sliding the bar down, because the bar is the one thing there read at
-a glance mid-fight. The name is the only line counted as a `label` by `drawnCounts` — `marker` and
+**A nameplate stacks up to five things and only the health bar may not move** (`render3d/nameplate.ts`):
+the quest marker, the name, the worn title, the bar at the group's origin, and the player's mana
+under it. Putting a title on pushes the _name_ up rather than sliding the bar down, because the bar
+is the one thing there read at a glance mid-fight; the mana bar hangs _below_ the origin for the same
+reason, since anything inserted above it would move everything else. Only the player has one, and it
+disappears outright for a class with no pool — an empty bar reads as a caster who is out, not as a
+warrior. The name is the only line counted as a `label` by `drawnCounts` — `marker` and
 `title` have their own kinds precisely so smoke's one-label-per-drawn-creature assertion stays true
 by construction. All three are polled off `character.state` once a frame rather than pushed by an
 event, since what moves them (an item in the bag, a title worn) publishes nothing.

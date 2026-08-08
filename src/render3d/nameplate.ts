@@ -30,6 +30,18 @@ const TITLE_Y = LABEL_Y + LINE_GAP;
 const TITLED_LABEL_Y = TITLE_Y + (LABEL_HEIGHT + TITLE_HEIGHT) / 2 + LINE_GAP;
 
 /**
+ * The player's pool, hung under the health bar.
+ *
+ * Below rather than above, and thinner: it is the second thing read there, and
+ * everything already stacked *over* the plate — the name, the title, the marker
+ * — would have to move for a bar inserted between them and the health bar. It
+ * is also the only line here that can be absent on a plate that has one, since
+ * a warrior has no pool at all.
+ */
+const MANA_HEIGHT = 4;
+const MANA_GAP = 2;
+
+/**
  * The glyph above the name, whose middle sits half of each of the two lines
  * above the name's own — wherever the name has ended up.
  *
@@ -53,11 +65,15 @@ export interface NameplateOptions {
   height?: number;
   /** A shopkeeper and a signpost carry a name and nothing to lose. */
   healthBar?: boolean;
+  /** Only the player has a pool, and only some classes have one at all. */
+  manaBar?: boolean;
 }
 
 export class Nameplate {
   readonly object = new Group();
   private readonly fill: Mesh | null = null;
+  private readonly mana: Group | null = null;
+  private readonly manaFill: Mesh | null = null;
   private readonly width: number;
   private label: Sprite | null = null;
   private labelText = '';
@@ -69,7 +85,12 @@ export class Nameplate {
   private titleText: string | null = null;
 
   constructor(y: number, options: NameplateOptions = {}) {
-    const { width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, healthBar = true } = options;
+    const {
+      width = DEFAULT_WIDTH,
+      height = DEFAULT_HEIGHT,
+      healthBar = true,
+      manaBar = false,
+    } = options;
     this.width = width;
     this.object.position.y = y;
 
@@ -81,16 +102,38 @@ export class Nameplate {
       this.fill.position.z = 0.05;
       this.object.add(background, this.fill);
     }
+
+    if (manaBar) {
+      this.mana = new Group();
+      this.mana.position.y = -(height + MANA_HEIGHT) / 2 - MANA_GAP;
+      const background = bar(width, MANA_HEIGHT, PALETTE.barBackground, 0.55);
+      this.manaFill = bar(1, 1, PALETTE.barMana, 1);
+      this.manaFill.scale.set(width, MANA_HEIGHT, 1);
+      this.manaFill.position.z = 0.05;
+      this.mana.add(background, this.manaFill);
+      this.object.add(this.mana);
+    }
   }
 
   setHealth(hp: number, maxHp: number): void {
-    if (!this.fill) return;
-    const ratio = barFill(hp, maxHp);
-    this.fill.scale.x = this.width * ratio;
-    // Scaling a centred plane eats both ends; the missing health has to come
-    // off the right only, so the bar drains the way every health bar drains.
-    this.fill.position.x = -(this.width * (1 - ratio)) / 2;
-    this.fill.visible = ratio > 0;
+    this.drain(this.fill, hp, maxHp);
+  }
+
+  /** A class with no pool hides the bar outright, as the HUD's column does. */
+  setMana(mana: number, maxMana: number): void {
+    if (!this.mana) return;
+    this.mana.visible = maxMana > 0;
+    this.drain(this.manaFill, mana, maxMana);
+  }
+
+  private drain(fill: Mesh | null, value: number, max: number): void {
+    if (!fill) return;
+    const ratio = barFill(value, max);
+    fill.scale.x = this.width * ratio;
+    // Scaling a centred plane eats both ends; what is missing has to come off
+    // the right only, so the bar drains the way every health bar drains.
+    fill.position.x = -(this.width * (1 - ratio)) / 2;
+    fill.visible = ratio > 0;
   }
 
   /** Rebuilds the name only when it actually changed: each one bakes a texture. */

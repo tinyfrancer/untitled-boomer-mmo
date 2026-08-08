@@ -90,9 +90,12 @@ export function resolveAbilityDamage(
 }
 
 // A buff with a clock on it. Both of the ones that exist today are timed, so
-// they share the expiry tick rather than each reimplementing it.
+// they share the expiry tick rather than each reimplementing it. `durationMs`
+// is what it started with and never moves: a countdown icon can draw how far
+// through a buff is only against what it began as.
 interface TimedBuff {
   remainingMs: number;
+  durationMs: number;
 }
 
 export interface ManaShield extends TimedBuff {
@@ -105,7 +108,11 @@ export interface Haste extends TimedBuff {
 
 export function startManaShield(ability: AbilityDefinition): ManaShield | null {
   return ability.effect.kind === 'absorb'
-    ? { remaining: ability.effect.amount, remainingMs: ability.effect.durationMs }
+    ? {
+        remaining: ability.effect.amount,
+        remainingMs: ability.effect.durationMs,
+        durationMs: ability.effect.durationMs,
+      }
     : null;
 }
 
@@ -114,6 +121,7 @@ export function startHaste(ability: AbilityDefinition): Haste | null {
     ? {
         cooldownMultiplier: ability.effect.cooldownMultiplier,
         remainingMs: ability.effect.durationMs,
+        durationMs: ability.effect.durationMs,
       }
     : null;
 }
