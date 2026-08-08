@@ -521,6 +521,28 @@ Kills are the exception to the penalty: an offline session credits its full coun
 chains, since a kill either happened or it didn't. It grinds a single spawn, which is what makes
 one `enemyId` on the report enough to credit them all.
 
+**What a camp does is read off the tool, not out of a mode** (`afkGatherSkill`). A gathering tool
+_is_ the weapon slot, so a fishing pole or a felling axe makes the Camp tab a gathering camp and a
+sword, a wand or an empty hand makes it the fighting one — the same question `canGather` already
+asks, which is why this needed nothing stored, no migration and no second button. It re-derives
+every frame, so a gear swap changes what the camp is doing. A gathering camp works the nearest
+ready node of that skill inside the anchor radius and moves to the next when one is chopped out
+(`chooseAfkNode`, whose `wait` and `none` are deliberately different answers: waiting is what a
+camp does between respawns, `none` means the tool has no work in this zone and the caller falls
+back to fighting). Anything already chasing is answered first whichever camp it is — being hit
+breaks the channel, so a woodcutter that ignored it would re-arm a gather it could never finish
+until it died — and a haul the pack has no room for stops the loop rather than spinning on a node
+it cannot take anything from.
+
+**Gathering is the one thing the camp is _not_ penalised for while the tab is open**, and that is
+deliberate rather than an oversight: an attended player gathers by tapping a node and watching it
+auto-repeat, which is the same standing still, so there is no advantage being simulated away to
+charge for — and a camp that paid half would be strictly worse than the tap it replaces. Offline is
+where the penalty lives, and it is the same stack a fight gets plus a cap of **one skill level per
+session**, which is what makes it safe for `resolveOfflineGather` to model neither a tree's four
+charges, nor its fifteen-second regrow, nor the walk to the next one. A node's `requiredLevel` is
+honoured offline too — parking overnight is not a way past a gate.
+
 **Levels scale both sides.** Enemies carry a `level` and derive HP/damage/XP from
 `base + perLevel` via `scaleEnemyStats()`; characters grow through `perLevel` on their class and
 `computeEffectiveStats(classId, gear, level)`. Keep those in step — making enemies tougher

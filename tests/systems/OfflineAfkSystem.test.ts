@@ -8,7 +8,11 @@ import {
 import { AFK_XP_MULTIPLIER, afkXpReward } from '../../src/systems/AfkSystem';
 import { carryCapacity } from '../../src/systems/EncumbranceSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
+import { gatherDurationMs } from '../../src/systems/GatherSystem';
+import { createInitialSkills, skillXpToNextLevel } from '../../src/systems/SkillSystem';
+import type { Gear } from '../../src/systems/InventorySystem';
 import { ENEMIES } from '../../src/data/enemies';
+import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { xpToReachLevel } from '../../src/data/xpTable';
 import type { AfkSession } from '../../src/persistence/CharacterState';
 
@@ -19,12 +23,19 @@ function sessionStartedAgo(ms: number, zoneId: AfkSession['zoneId'] = 'town'): A
   return { startedAt: new Date(NOW - ms).toISOString(), zoneId };
 }
 
+// A fighter by default: what is in the weapon slot is what decides whether a
+// parked session fought or gathered, so a sword is what makes these the
+// combat cases.
+const SWORD_IN_HAND: Gear = { helmet: null, chest: null, pants: null, weapon: 'rusty-sword' };
+
 function context(overrides: Partial<Parameters<typeof resolveOfflineAfk>[1]> = {}) {
   return {
     now: NOW,
     characterLevel: 1,
     inventory: {},
     capacity: carryCapacity(6),
+    gear: SWORD_IN_HAND,
+    skills: createInitialSkills(),
     // Everything drops, so loot is deterministic rather than flaky.
     rng: () => 0,
     ...overrides,
@@ -182,5 +193,110 @@ describe('formatAwayDuration', () => {
 
   it('reads as no time at all for nothing', () => {
     expect(formatAwayDuration(0)).toBe('0m');
+  });
+});
+
+/**
+ * A parked session that was gathering rather than fighting. Which branch it
+ * takes is read off the gear, the same question the awake camp asks every
+ * frame, so nothing new had to be written into the save for this.
+ */
+describe('a parked gathering camp', () => {
+  const AXE: Gear = { helmet: null, chest: null, pants: null, weapon: 'felling-axe' };
+  const POLE: Gear = { helmet: null, chest: null, pants: null, weapon: 'fishing-pole' };
+  const TREE = RESOURCE_NODES.tree;
+
+  const gathering = (gear: Gear, overrides = {}) => context({ gear, ...overrides });
+
+  it('pays the skill rather than the character, and hauls what it cut', () => {
+    const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), gathering(AXE));
+
+    expect(report.skill).toBe('woodcutting');
+    expect(report.gathers).toBeGreaterThan(0);
+    expect(report.skillXp).toBeGreaterThan(0);
+    expect(report.drops.logs).toBe(report.gathers);
+    // A session is one or the other, never both.
+    expect(report.kills).toBe(0);
+    expect(report.xp).toBe(0);
+    expect(report.copper).toBe(0);
+  });
+
+  it('pays nothing for a session shorter than one gather', () => {
+    const report = resolveOfflineAfk(sessionStartedAgo(100), gathering(AXE));
+    expect(report.gathers).toBe(0);
+    expect(report.skillXp).toBe(0);
+  });
+
+  /**
+   * The ceiling that actually matters, and the gathering half of the one level
+   * a fighting session is held to. Nothing here models a tree's four charges,
+   * the fifteen seconds it takes to regrow or the walk to the next one — the
+   * cap is what makes leaving that out safe.
+   */
+  it('never earns more than a single skill level, however long the tab was shut', () => {
+    const night = resolveOfflineAfk(sessionStartedAgo(OFFLINE_CAP_MS), gathering(AXE));
+    const week = resolveOfflineAfk(sessionStartedAgo(OFFLINE_CAP_MS * 20), gathering(AXE));
+
+    expect(week.skillXp).toBe(night.skillXp);
+    expect(skillXpToNextLevel('woodcutting', 1)).toBeGreaterThan(night.skillXp);
+  });
+
+  it('is paid at the offline rate on top of the camp’s own penalty', () => {
+    const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), gathering(AXE));
+    const awake = report.gathers * TREE.xpReward;
+
+    expect(report.skillXp).toBeLessThan(awake);
+    expect(report.skillXp).toBe(Math.floor(awake * AFK_XP_MULTIPLIER * 0.5));
+  });
+
+  it('stops hauling when the pack has no room left, and says so', () => {
+    const report = resolveOfflineAfk(
+      sessionStartedAgo(OFFLINE_CAP_MS),
+      gathering(AXE, { capacity: 12 }),
+    );
+
+    expect(report.packFilled).toBe(true);
+    expect(report.gathers).toBeGreaterThan(0);
+    // The XP follows the haul: a gather that had nowhere to put its logs did
+    // not happen at all.
+    expect(report.skillXp).toBe(
+      Math.floor(report.gathers * TREE.xpReward * AFK_XP_MULTIPLIER * 0.5),
+    );
+  });
+
+  it('pays nothing for a tool the parked zone has no work for', () => {
+    // The bandit camp has neither trees nor water.
+    const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS, 'bandit-camp'), gathering(AXE));
+    expect(report).toMatchObject({ gathers: 0, skillXp: 0, kills: 0, skill: null });
+  });
+
+  /**
+   * The beach has nothing but ocean spots, and those are gated behind fishing
+   * 5 — so the level requirement has to hold with the tab shut exactly as it
+   * does at the keyboard. Parking overnight is not a way past a gate.
+   */
+  it('honours the level a node requires, even offline', () => {
+    const parked = sessionStartedAgo(HOUR_MS, 'beach');
+    const novice = resolveOfflineAfk(parked, gathering(POLE));
+    const veteran = resolveOfflineAfk(
+      parked,
+      gathering(POLE, { skills: { ...createInitialSkills(), fishing: { level: 5, xp: 0 } } }),
+    );
+
+    expect(novice).toMatchObject({ gathers: 0, skillXp: 0, skill: null });
+    expect(veteran.skill).toBe('fishing');
+    expect(veteran.drops['raw-fish']).toBe(veteran.gathers);
+  });
+
+  it('pays a town fisher for the pond, which needs no level at all', () => {
+    const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), gathering(POLE));
+    expect(report.skill).toBe('fishing');
+    expect(report.drops['raw-fish']).toBeGreaterThan(0);
+  });
+
+  it('takes a gather as long as the skill says it does', () => {
+    const oneGather = gatherDurationMs(TREE, 1);
+    const report = resolveOfflineAfk(sessionStartedAgo(oneGather * 3 + 10), gathering(AXE));
+    expect(report.gathers).toBe(3);
   });
 });

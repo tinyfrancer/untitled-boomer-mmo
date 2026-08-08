@@ -1,6 +1,7 @@
 import { Overlay } from './Overlay';
 import { el } from './dom';
 import { describeItemName } from '../data/items';
+import { SKILLS } from '../data/skills';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { inventoryEntries } from '../systems/InventorySystem';
 import { formatAwayDuration, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
@@ -14,10 +15,14 @@ import { formatAwayDuration, type OfflineAfkReport } from '../systems/OfflineAfk
 export class AwayReportModal extends Overlay {
   constructor(report: OfflineAfkReport, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through', onClosed);
-    const lines: string[] = [
-      `Away for ${formatAwayDuration(report.elapsedMs)}`,
-      `${report.kills} kills, ${report.xp} XP`,
-    ];
+    const lines: string[] = [`Away for ${formatAwayDuration(report.elapsedMs)}`];
+    // A session is one or the other, never both — which is what the tool in the
+    // character's hands decided when they settled in.
+    if (report.skill) {
+      lines.push(`${report.gathers} gathered, ${report.skillXp} ${SKILLS[report.skill].name} XP`);
+    } else {
+      lines.push(`${report.kills} kills, ${report.xp} XP`);
+    }
     if (report.copper > 0) {
       lines.push(formatCurrency(report.copper));
     }

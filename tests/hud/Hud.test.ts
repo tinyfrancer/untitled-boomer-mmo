@@ -60,6 +60,9 @@ const REPORT: OfflineAfkReport = {
   copper: 40,
   drops: { 'rat-bones': 3 },
   packFilled: false,
+  gathers: 0,
+  skill: null,
+  skillXp: 0,
 };
 
 let parent: HTMLElement;

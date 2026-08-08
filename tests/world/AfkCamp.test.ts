@@ -3,9 +3,11 @@ import { ENEMIES } from '../../src/data/enemies';
 import { AFK_ANCHOR_RADIUS, AFK_ENGAGE_RADIUS } from '../../src/systems/AfkSystem';
 import { OUT_OF_COMBAT_DELAY_MS } from '../../src/systems/RegenSystem';
 import type { EnemyId, ItemId } from '../../src/types/ids';
-import { AFK_STATE_CHANGED_EVENT } from '../../src/ui/uiEvents';
+import { AFK_STATE_CHANGED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
 import { AfkCamp } from '../../src/world/AfkCamp';
 import { Mob } from '../../src/world/Mob';
+import { ResourceNode } from '../../src/world/ResourceNode';
+import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import type { Targeting } from '../../src/world/targeting';
 import { testContext } from './context';
 
@@ -24,10 +26,12 @@ function ratAt(x: number, y: number): Mob {
   return new Mob(x, y, ENEMIES.rat, 1, () => 0.5);
 }
 
-function camped(mobs: Mob[] = []) {
+function camped(mobs: Mob[] = [], nodes: ResourceNode[] = []) {
   const kit = testContext();
   let target: Mob | null = null;
+  let gathering = false;
   const pursued: Mob[] = [];
+  const worked: ResourceNode[] = [];
   const eaten: ItemId[] = [];
   const awarded: number[] = [];
   const credited: Array<{ enemyId: EnemyId; count: number }> = [];
@@ -49,10 +53,18 @@ function camped(mobs: Mob[] = []) {
   };
   const deps = {
     mobs,
+    nodes,
     targeting,
     stopGathering: vi.fn(),
     closeShop: vi.fn(),
     eat: (itemId: ItemId) => eaten.push(itemId),
+    // The world walks over and starts the channel; here that is just the record
+    // of which node was chosen, plus the flag the loop reads back.
+    gatherAt: (node: ResourceNode) => {
+      worked.push(node);
+      gathering = true;
+    },
+    isGathering: () => gathering,
     awardXp: (reward: number) => awarded.push(reward),
     creditKill: (enemyId: EnemyId, count: number) => {
       credited.push({ enemyId, count });
@@ -64,10 +76,15 @@ function camped(mobs: Mob[] = []) {
     deps,
     targeting,
     pursued,
+    worked,
     eaten,
     awarded,
     credited,
     selected: () => target,
+    /** Ends the channel the way a spent node or a full pack does. */
+    stopGathering: () => {
+      gathering = false;
+    },
     camp: new AfkCamp(kit.ctx, deps),
   };
 }
@@ -200,5 +217,134 @@ describe('a camp that was left running when the tab closed', () => {
     camp.resolveParked();
 
     expect(camp.resolveParked()).toBeNull();
+  });
+});
+
+/**
+ * The camp with a tool in its hands rather than a weapon.
+ *
+ * What it works is read off the weapon slot every frame — a gathering tool *is*
+ * that slot — so there is no mode to set and nothing new in the save. These
+ * cover the turns in that rule; `afk.test.ts` drives a real town to prove it
+ * actually chops.
+ */
+describe('a gathering camp', () => {
+  const treeAt = (x: number, y: number): ResourceNode =>
+    new ResourceNode(x, y, RESOURCE_NODES.tree);
+
+  function chopping(nodes: ResourceNode[], mobs: Mob[] = []) {
+    const kit = camped(mobs, nodes);
+    kit.character.addItem('felling-axe', 1);
+    kit.character.equip('felling-axe');
+    return kit;
+  }
+
+  it('works the nearest tree rather than picking a fight', () => {
+    const near = treeAt(40, 0);
+    const kit = chopping([treeAt(200, 0), near]);
+
+    kit.camp.toggle();
+    kit.camp.update();
+
+    expect(kit.worked).toEqual([near]);
+    expect(kit.selected()).toBeNull();
+  });
+
+  it('says which skill it settled in to, rather than just "camp"', () => {
+    const kit = chopping([treeAt(40, 0)]);
+    kit.camp.toggle();
+
+    expect(kit.emitted.some((entry) => JSON.stringify(entry.args).includes('chop wood'))).toBe(
+      true,
+    );
+  });
+
+  // Settling in beside the tree you were already chopping must not stop you
+  // chopping it — which is why only the fighting camp gives the channel up.
+  it('leaves a channel already running alone', () => {
+    const kit = chopping([treeAt(40, 0)]);
+    kit.camp.toggle();
+    expect(kit.deps.stopGathering).not.toHaveBeenCalled();
+  });
+
+  it('leaves the channel to finish rather than restarting it every frame', () => {
+    const kit = chopping([treeAt(40, 0)]);
+    kit.camp.toggle();
+    kit.camp.update();
+    kit.camp.update();
+    kit.camp.update();
+
+    expect(kit.worked).toHaveLength(1);
+  });
+
+  // The whole point of a camp over a tap: a tree is four swings and then
+  // fifteen seconds of nothing, so it moves to the next one in the stand.
+  it('moves to the next tree when the one it was on is chopped out', () => {
+    const first = treeAt(40, 0);
+    const second = treeAt(120, 0);
+    const kit = chopping([first, second]);
+    kit.camp.toggle();
+    kit.camp.update();
+
+    kit.stopGathering();
+    while (!first.consumeCharge()) {
+      /* chop it out */
+    }
+    kit.camp.update();
+
+    expect(kit.worked).toEqual([first, second]);
+  });
+
+  it('waits beside a stand that is entirely chopped out', () => {
+    const tree = treeAt(40, 0);
+    const kit = chopping([tree]);
+    kit.camp.toggle();
+    while (!tree.consumeCharge()) {
+      /* chop it out */
+    }
+    kit.camp.update();
+
+    expect(kit.worked).toEqual([]);
+    expect(kit.selected()).toBeNull();
+  });
+
+  /**
+   * Being hit breaks the channel, so a woodcutter that ignored the thing
+   * chewing on it would stand there re-arming a gather it could never finish
+   * until it died.
+   */
+  it('drops the axe work to answer anything already chasing it', () => {
+    const rat = ratAt(60, 0);
+    const kit = chopping([treeAt(40, 0)], [rat]);
+    kit.camp.toggle();
+    rat.engage();
+    kit.camp.update();
+
+    expect(kit.selected()).toBe(rat);
+    expect(kit.worked).toEqual([]);
+  });
+
+  // A fishing pole in a zone with no water is a camp with nothing to fish,
+  // not one that should stand still until the tab closes.
+  it('falls back to fighting where the tool has no work at all', () => {
+    const rat = ratAt(60, 0);
+    const kit = chopping([], [rat]);
+    kit.camp.toggle();
+    kit.camp.update();
+
+    expect(kit.selected()).toBe(rat);
+  });
+
+  // Without this the camp walks to a tree, fails to pocket the logs, stops,
+  // and walks to it again for as long as the tab stays open.
+  it('stops working a node it has no room for, and says so once', () => {
+    const kit = chopping([treeAt(40, 0)]);
+    kit.character.addItem('logs', kit.character.carryCapacity());
+    kit.camp.toggle();
+    kit.camp.update();
+    kit.camp.update();
+
+    expect(kit.worked).toEqual([]);
+    expect(kit.emissions(NOTICE_EVENT)).toEqual([['Your pack is full.']]);
   });
 });

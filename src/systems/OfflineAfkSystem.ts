@@ -1,13 +1,16 @@
 import { ENEMIES } from '../data/enemies';
+import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
 import { xpToReachLevel } from '../data/xpTable';
 import type { AfkSession } from '../persistence/CharacterState';
-import { AFK_XP_MULTIPLIER } from './AfkSystem';
+import { AFK_XP_MULTIPLIER, afkGatherSkill } from './AfkSystem';
 import { canCarry } from './EncumbranceSystem';
 import { scaleEnemyStats } from './EnemySystem';
-import { addItemToInventory, type Inventory } from './InventorySystem';
+import { gatherDurationMs } from './GatherSystem';
+import { addItemToInventory, type Gear, type Inventory } from './InventorySystem';
 import { rollLootTable } from './LootSystem';
-import type { EnemyId } from '../types/ids';
+import { skillLevel, skillXpToNextLevel, type Skills } from './SkillSystem';
+import type { EnemyId, SkillId } from '../types/ids';
 
 // Nothing accrues past this. A tab closed over a long weekend hands back a
 // night's play, not a finished character.
@@ -30,6 +33,11 @@ export interface OfflineAfkContext {
   characterLevel: number;
   inventory: Inventory;
   capacity: number;
+  // What was in the character's hands when the tab closed, which is the whole
+  // of what decides whether the session fought or gathered — the same question
+  // the awake camp asks every frame.
+  gear: Gear;
+  skills: Skills;
   rng?: () => number;
 }
 
@@ -45,6 +53,13 @@ export interface OfflineAfkReport {
   drops: Inventory;
   // Whether the pack ran out of room and later drops were left behind.
   packFilled: boolean;
+  // What a gathering camp brought back instead. A session is one or the other,
+  // never both, so a fought session leaves these at zero and a worked one
+  // leaves the kills and the coin there. The haul itself rides in `drops`,
+  // which is already what the away report lists.
+  gathers: number;
+  skill: SkillId | null;
+  skillXp: number;
 }
 
 const NOTHING: OfflineAfkReport = {
@@ -55,6 +70,9 @@ const NOTHING: OfflineAfkReport = {
   copper: 0,
   drops: {},
   packFilled: false,
+  gathers: 0,
+  skill: null,
+  skillXp: 0,
 };
 
 /**
@@ -88,17 +106,39 @@ function campQuarry(zoneId: keyof typeof ZONES, characterLevel: number) {
   });
 }
 
+// The node an unattended gatherer would have been working: the richest one in
+// that zone their skill actually opens. A fisher who has earned the ocean is
+// paid for the ocean; one who has not is paid for the pond.
+function campNode(zoneId: keyof typeof ZONES, skill: SkillId, level: number) {
+  const spawns = ZONES[zoneId]?.nodeSpawns ?? [];
+  const workable = spawns
+    .map((spawn) => RESOURCE_NODES[spawn.nodeId])
+    .filter((node) => node.skill === skill && node.requiredLevel <= level);
+  if (workable.length === 0) {
+    return null;
+  }
+  return workable.reduce((best, node) => (node.xpReward > best.xpReward ? node : best));
+}
+
 /**
  * What a camp left running while the tab was closed earned. Pure, with `now`
  * and the rng injected, because the only interesting cases (a clock that moved
  * backwards, a week away, a pack that fills up) are ones a live run can't
  * reach.
+ *
+ * Which of the two branches it takes is read off the gear, exactly as the awake
+ * camp reads it: a tool in the weapon slot means the session was gathering.
  */
 export function resolveOfflineAfk(
   session: AfkSession,
   context: OfflineAfkContext,
 ): OfflineAfkReport {
   const elapsedMs = elapsedOfflineMs(session.startedAt, context.now);
+  const skill = afkGatherSkill(context.gear);
+  if (skill !== null) {
+    return resolveOfflineGather(session, context, elapsedMs, skill);
+  }
+
   const elapsedKills = Math.floor(elapsedMs / OFFLINE_KILL_INTERVAL_MS);
   if (elapsedKills <= 0) {
     return { ...NOTHING, elapsedMs };
@@ -152,6 +192,7 @@ export function resolveOfflineAfk(
   }
 
   return {
+    ...NOTHING,
     elapsedMs,
     kills,
     enemyId: quarry.enemyId,
@@ -159,6 +200,74 @@ export function resolveOfflineAfk(
     copper: Math.floor(copper * OFFLINE_RATE_MULTIPLIER),
     drops,
     packFilled,
+  };
+}
+
+/**
+ * The same shape for a session that was chopping or fishing rather than
+ * fighting: a rate per gather, the offline penalty on top of the AFK one, and a
+ * cap that is what actually holds it.
+ *
+ * The cap is one *skill* level, which is the gathering analogue of the one
+ * character level a fighting session is held to — and it is what makes the rate
+ * safe to keep simple. Nothing here models a tree's four charges, the fifteen
+ * seconds it takes to regrow or the walk to the next one, all of which make the
+ * awake camp slower than this arithmetic; the level ceiling is what stops that
+ * mattering however long the tab was shut and whatever zone gets added next.
+ *
+ * A skill already at its cap earns no XP but still fills the pack, which is
+ * then the only thing bounding it.
+ */
+function resolveOfflineGather(
+  session: AfkSession,
+  context: OfflineAfkContext,
+  elapsedMs: number,
+  skill: SkillId,
+): OfflineAfkReport {
+  const level = skillLevel(context.skills, skill);
+  const node = campNode(session.zoneId, skill, level);
+  if (!node) {
+    return { ...NOTHING, elapsedMs };
+  }
+
+  const elapsedGathers = Math.floor(elapsedMs / gatherDurationMs(node, level));
+  if (elapsedGathers <= 0) {
+    return { ...NOTHING, elapsedMs };
+  }
+
+  const perGatherXp = node.xpReward * AFK_XP_MULTIPLIER * OFFLINE_RATE_MULTIPLIER;
+  const xpToNext = skillXpToNextLevel(skill, level, context.characterLevel);
+  const affordable = xpToNext > 0 ? Math.floor(xpToNext / perGatherXp) : Number.POSITIVE_INFINITY;
+
+  let gathers = 0;
+  let packFilled = false;
+  let drops: Inventory = {};
+  // Tracked against the pack as it fills, so a bag that ran out of room partway
+  // through stops taking the haul at exactly that point.
+  let carried = context.inventory;
+
+  for (let gather = 0; gather < Math.min(elapsedGathers, affordable); gather += 1) {
+    // One per gather: the bonus-yield roll is a perk for an attended player,
+    // the way the action bar is.
+    if (!canCarry(carried, node.yieldItemId, 1, context.capacity)) {
+      packFilled = true;
+      break;
+    }
+    carried = addItemToInventory(carried, node.yieldItemId, 1);
+    drops = addItemToInventory(drops, node.yieldItemId, 1);
+    gathers += 1;
+  }
+
+  return {
+    ...NOTHING,
+    elapsedMs,
+    drops,
+    packFilled,
+    gathers,
+    skill,
+    // Floored rather than rounded, so a session can never come out ahead of the
+    // same gathers made awake.
+    skillXp: Math.floor(perGatherXp * gathers),
   };
 }
 
