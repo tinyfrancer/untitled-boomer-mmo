@@ -104,6 +104,28 @@ describe('PlayerActor', () => {
     expect(colors).toContain(computeAppearance(gear).torsoColor);
   });
 
+  // The pool the HUD's column shows, shown a second time where the player is
+  // actually looking. It is polled off the simulation like the health above it,
+  // since nothing in `world/` knows anything is drawing it.
+  it('hangs the pool under its own health bar, and only for a class with one', () => {
+    stubCanvas();
+    const poolBar = (actor: PlayerActor): Group | undefined => {
+      let found: Group | undefined;
+      actor.object.traverse((object) => {
+        if (object instanceof Group && object.position.y < 0) found = object;
+      });
+      return found;
+    };
+
+    const wizard = new PlayerActor(harness({ classId: 'wizard' }).world.player);
+    wizard.sync(0, null);
+    expect(poolBar(wizard)?.visible).toBe(true);
+
+    const warrior = new PlayerActor(harness().world.player);
+    warrior.sync(0, null);
+    expect(poolBar(warrior)?.visible).toBe(false);
+  });
+
   it('reports its walk to the debug view rather than the simulation', () => {
     const { world } = harness();
     const actor = new PlayerActor(world.player);

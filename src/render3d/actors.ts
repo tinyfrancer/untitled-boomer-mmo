@@ -81,7 +81,13 @@ export class PlayerActor implements Actor {
     this.figure = buildFigure(appearance);
     this.facing.add(this.figure.object);
 
-    this.plate = new Nameplate(this.figure.height + PLATE_CLEARANCE, { width: 64, height: 10 });
+    // The one plate in the world with a pool under its health, since the player
+    // is the one thing whose mana anybody spends.
+    this.plate = new Nameplate(this.figure.height + PLATE_CLEARANCE, {
+      width: 64,
+      height: 10,
+      manaBar: true,
+    });
     this.plate.setLabel(player.name, THEME.color.text);
     this.object.add(this.plate.object);
   }
@@ -112,6 +118,7 @@ export class PlayerActor implements Actor {
     this.figure.stride(this.player.isMoving(), elapsedMs);
     this.plate.setLabel(this.player.name, THEME.color.text);
     this.plate.setHealth(this.player.hp, this.player.maxHp);
+    this.plate.setMana(this.player.mana, this.player.maxMana);
   }
 
   faceCamera(camera: Camera): void {
