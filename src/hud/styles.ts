@@ -771,6 +771,12 @@ function hudCss(): string {
 .hud-modal__danger {
   color: ${THEME.color.playerDamage};
 }
+/* Indented under the "Could not carry" heading, and dimmer than what was
+   actually brought back — a list of what you do not have. */
+.hud-modal__missed {
+  color: ${THEME.color.dim};
+  padding-left: ${THEME.padding}px;
+}
 .hud-modal__line {
   font-size: ${THEME.font.sm}px;
   color: ${THEME.color.muted};

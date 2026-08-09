@@ -144,26 +144,31 @@ describe('resolveOfflineAfk', () => {
     // Two kills' worth: short enough that everything dropping still fits.
     const report = resolveOfflineAfk(sessionStartedAgo(130000), context());
     expect(Object.keys(report.drops).length).toBeGreaterThan(0);
-    expect(report.packFilled).toBe(false);
+    expect(report.missed).toEqual({});
   });
 
   // Which is the point of the limit: a long enough camp fills the pack and the
-  // rest of the night's drops are left where they fell.
-  it('fills the pack over a long session and leaves the rest behind', () => {
+  // rest of the night's drops are left where they fell — named rather than
+  // merely counted, since a report that says "your pack filled up" does not
+  // tell you what it cost.
+  it('names what a long session could not carry', () => {
     const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), context());
-    expect(report.packFilled).toBe(true);
+    expect(Object.keys(report.missed).length).toBeGreaterThan(0);
+    expect(Object.values(report.missed).every((quantity) => quantity > 0)).toBe(true);
   });
 
-  it('takes no drops at all into a pack that was already full', () => {
+  it('takes no drops at all into a pack that was already full, and lists them all', () => {
     const capacity = carryCapacity(6);
     const report = resolveOfflineAfk(
       sessionStartedAgo(HOUR_MS),
       context({ inventory: { 'rat-bones': capacity }, capacity }),
     );
-    expect(report.packFilled).toBe(true);
     expect(report.drops).toEqual({});
-    // Levelling is weightless, so it carries on regardless.
+    expect(Object.keys(report.missed).length).toBeGreaterThan(0);
+    // A full pack never stops the session: levelling is weightless and the
+    // fights happened either way.
     expect(report.xp).toBeGreaterThan(0);
+    expect(report.kills).toBeGreaterThan(0);
   });
 
   // Coin has no weight either, so it keeps coming in past a full pack. Only
@@ -249,16 +254,36 @@ describe('a parked gathering camp', () => {
     expect(report.skillXp).toBe(Math.floor(awake * AFK_XP_MULTIPLIER * 0.5));
   });
 
-  it('stops hauling when the pack has no room left, and says so', () => {
+  /**
+   * A full pack does not stop an unattended session, it only stops it keeping
+   * anything: the swing happened, and the skill is what the swing teaches. What
+   * it cost is named rather than lost silently.
+   */
+  it('keeps working past a full pack, training the skill and naming the losses', () => {
+    const roomy = resolveOfflineAfk(sessionStartedAgo(OFFLINE_CAP_MS), gathering(AXE));
+    const full = resolveOfflineAfk(
+      sessionStartedAgo(OFFLINE_CAP_MS),
+      gathering(AXE, { inventory: { logs: 200 }, capacity: 12 }),
+    );
+
+    expect(full.gathers).toBe(roomy.gathers);
+    expect(full.skillXp).toBe(roomy.skillXp);
+    expect(full.drops).toEqual({});
+    expect(full.missed).toEqual({ logs: full.gathers });
+  });
+
+  it('splits a haul at the point the pack actually ran out', () => {
     const report = resolveOfflineAfk(
       sessionStartedAgo(OFFLINE_CAP_MS),
       gathering(AXE, { capacity: 12 }),
     );
 
-    expect(report.packFilled).toBe(true);
-    expect(report.gathers).toBeGreaterThan(0);
-    // The XP follows the haul: a gather that had nowhere to put its logs did
-    // not happen at all.
+    const kept = report.drops.logs ?? 0;
+    const lost = report.missed.logs ?? 0;
+    expect(kept).toBeGreaterThan(0);
+    expect(lost).toBeGreaterThan(0);
+    // Every gather is accounted for on one side or the other, and none twice.
+    expect(kept + lost).toBe(report.gathers);
     expect(report.skillXp).toBe(
       Math.floor(report.gathers * TREE.xpReward * AFK_XP_MULTIPLIER * 0.5),
     );
@@ -285,7 +310,10 @@ describe('a parked gathering camp', () => {
 
     expect(novice).toMatchObject({ gathers: 0, skillXp: 0, skill: null });
     expect(veteran.skill).toBe('fishing');
-    expect(veteran.drops['raw-fish']).toBe(veteran.gathers);
+    // Every fish is on one side of the ledger or the other.
+    expect((veteran.drops['raw-fish'] ?? 0) + (veteran.missed['raw-fish'] ?? 0)).toBe(
+      veteran.gathers,
+    );
   });
 
   it('pays a town fisher for the pond, which needs no level at all', () => {

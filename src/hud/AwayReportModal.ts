@@ -29,14 +29,28 @@ export class AwayReportModal extends Overlay {
     for (const [itemId, quantity] of inventoryEntries(report.drops)) {
       lines.push(`${describeItemName(itemId)} x${quantity}`);
     }
-    if (report.packFilled) {
-      lines.push('Your pack filled up.');
-    }
 
     const box = el('div', 'hud-modal__box');
     box.append(el('div', 'hud-modal__title', 'While you were away'));
     const body = el('div', 'hud-modal__body');
     body.append(...lines.map((line) => el('div', 'hud-modal__line', line)));
+
+    // What the pack had no room for, itemised under its own heading. A full
+    // pack never stopped the session — it kept fighting or working and kept
+    // earning — so this is the only place the cost of it is ever stated.
+    const missed = inventoryEntries(report.missed);
+    if (missed.length > 0) {
+      body.append(el('div', 'hud-modal__line hud-modal__danger', 'Could not carry:'));
+      body.append(
+        ...missed.map(([itemId, quantity]) =>
+          el(
+            'div',
+            'hud-modal__line hud-modal__missed',
+            `${describeItemName(itemId)} x${quantity}`,
+          ),
+        ),
+      );
+    }
 
     const dismiss = el('button', 'hud-button', 'Welcome back');
     dismiss.type = 'button';

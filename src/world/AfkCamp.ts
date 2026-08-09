@@ -5,6 +5,7 @@ import {
   chooseAfkNode,
   decideAfkAction,
   shouldAfkEat,
+  type AfkNodeCandidate,
 } from '../systems/AfkSystem';
 import { SKILLS } from '../data/skills';
 import { logNotice } from '../systems/CombatLogSystem';
@@ -109,6 +110,13 @@ export class AfkCamp {
           skill === null ? 'You settle in to camp.' : `You settle in to ${SKILLS[skill].verb}.`,
         ),
       );
+      // Settling in with a full pack is allowed — the XP is worth having on its
+      // own — but it is not what anyone means to do, so it is said up front
+      // rather than discovered on the away report in the morning.
+      this.packFull = !this.canKeepWhatItFinds();
+      if (this.packFull) {
+        this.ctx.log(logNotice('Your pack is full — nothing you find will be kept.'));
+      }
     } else {
       this.ctx.log(logNotice('You snap out of it.'));
     }
@@ -198,18 +206,20 @@ export class AfkCamp {
    * fishing pole in the bandit camp is a camp with nothing to fish, not a camp
    * that should stand still until the tab closes.
    */
+  private nodeCandidates(): AfkNodeCandidate[] {
+    const { character } = this.ctx;
+    return this.deps.nodes.map((node, index) => ({
+      index,
+      distance: distance(this.anchor, node),
+      available: node.isAvailable(),
+      skill: node.definition.skill,
+      workable: canGather(node.definition, character.state.skills, character.state.gear).ok,
+    }));
+  }
+
   private work(skill: SkillId): boolean {
     const { character } = this.ctx;
-    const action = chooseAfkNode(
-      this.deps.nodes.map((node, index) => ({
-        index,
-        distance: distance(this.anchor, node),
-        available: node.isAvailable(),
-        skill: node.definition.skill,
-        workable: canGather(node.definition, character.state.skills, character.state.gear).ok,
-      })),
-      skill,
-    );
+    const action = chooseAfkNode(this.nodeCandidates(), skill);
     if (action.kind === 'none') {
       return false;
     }
@@ -227,20 +237,45 @@ export class AfkCamp {
 
     const node = this.deps.nodes[action.index];
     if (!node) return true;
-    // A haul with nowhere to go is not a gather. Without this the camp would
-    // walk to a tree, fail to pocket the logs, stop, and walk to it again for
-    // as long as the tab stayed open.
-    if (!character.canCarryItem(node.definition.yieldItemId)) {
-      if (!this.packFull) {
-        this.packFull = true;
-        this.ctx.notice('Your pack is full.');
-      }
-      this.ctx.player.stopMoving();
-      return true;
-    }
-    this.packFull = false;
+    // A full pack does not stop the camp, it only stops it keeping anything.
+    // Said once rather than every frame for as long as the camp runs, and
+    // re-armed if the player makes room and fills it again.
+    this.warnIfFull(!character.canCarryItem(node.definition.yieldItemId));
     this.deps.gatherAt(node);
     return true;
+  }
+
+  /**
+   * The one line an unattended player gets about a full pack while they are
+   * still watching. What it actually cost them is itemised on the away report,
+   * which is the only place a whole session's losses can be added up.
+   */
+  private warnIfFull(full: boolean): void {
+    if (full && !this.packFull) {
+      this.ctx.notice('Your pack is full — nothing you find will be kept.');
+    }
+    this.packFull = full;
+  }
+
+  /**
+   * Whether anything this camp collects would actually fit, which is a
+   * different question for each kind: a gatherer knows exactly what it is about
+   * to pick up, where a fight could drop anything and only "no room at all"
+   * answers for it.
+   */
+  private canKeepWhatItFinds(): boolean {
+    const { character } = this.ctx;
+    const skill = this.gatherSkill();
+    if (skill === null) {
+      return character.carriedWeight() < character.carryCapacity();
+    }
+    const node = this.chosenNode(skill);
+    return node === null || character.canCarryItem(node.definition.yieldItemId);
+  }
+
+  private chosenNode(skill: SkillId): ResourceNode | null {
+    const action = chooseAfkNode(this.nodeCandidates(), skill);
+    return action.kind === 'gather' ? (this.deps.nodes[action.index] ?? null) : null;
   }
 
   private fight(): void {
