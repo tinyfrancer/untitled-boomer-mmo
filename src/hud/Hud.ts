@@ -72,6 +72,7 @@ import {
   TRAVEL_REQUESTED_EVENT,
   TITLE_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
+  UNLOCKED_ZONES_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
   type AvailableActions,
@@ -83,7 +84,7 @@ import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { ItemId, TitleId } from '../types/ids';
+import type { ItemId, TitleId, ZoneId } from '../types/ids';
 
 /**
  * Which request each of the inventory panel's buttons is. Lighting a fire is the
@@ -127,6 +128,7 @@ interface HudModel {
   quests: QuestLog;
   kills: KillCounts;
   activeTitleId: TitleId | null;
+  unlockedZones: ZoneId[];
   shopOpen: boolean;
   actions: AvailableActions;
 }
@@ -196,6 +198,7 @@ class Hud {
       quests: character.quests,
       kills: character.kills,
       activeTitleId: character.activeTitleId,
+      unlockedZones: character.unlockedZones,
       shopOpen: false,
       actions: { nearFire: false },
     };
@@ -207,7 +210,13 @@ class Hud {
       currency: this.model.currency,
       quests: this.model.quests,
     }));
-    this.mapSheet = new MapSheet((zoneId) => events.emit(TRAVEL_REQUESTED_EVENT, zoneId));
+    this.mapSheet = new MapSheet({
+      onTravel: (zoneId) => events.emit(TRAVEL_REQUESTED_EVENT, zoneId),
+      access: () => ({
+        inventory: this.model.inventory,
+        unlockedZones: this.model.unlockedZones,
+      }),
+    });
     this.playerColumn = new PlayerColumn(character.name);
     this.actionBar = new ActionBar(character.classId, (abilityId) =>
       this.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
@@ -562,6 +571,10 @@ class Hud {
       this.overlays.closeContextMenu();
     });
     listen(PLAYER_TILE_CHANGED_EVENT, (tile) => this.mapSheet.setPlayerTile(tile));
+    listen(UNLOCKED_ZONES_CHANGED_EVENT, (zoneIds) => {
+      this.model.unlockedZones = zoneIds;
+      this.mapSheet.refreshAccess();
+    });
 
     listen(SKILL_XP_GAINED_EVENT, (progress) => {
       this.model.skills = {
@@ -623,6 +636,8 @@ class Hud {
       // Quest progress is counted off the bag, so every pickup can move it.
       this.tracker.update(this.model.quests, inventory);
       this.questSheet.update(this.model.quests, inventory);
+      // So is whether a key is in hand, which is what a shut zone's cell says.
+      this.mapSheet.refreshAccess();
     });
     listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
       this.model.currency = totalCopper;

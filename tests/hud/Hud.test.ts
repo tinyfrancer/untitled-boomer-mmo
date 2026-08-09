@@ -40,6 +40,7 @@ import {
   TARGET_SELECTED_EVENT,
   ZONE_ENTERED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
+  UNLOCKED_ZONES_CHANGED_EVENT,
   type ContextMenuRequest,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
@@ -962,5 +963,55 @@ describe('the world map', () => {
 
     expect(cell('beach')?.dataset.here).toBe('true');
     expect(cell('town')?.dataset.here).toBeUndefined();
+  });
+
+  /**
+   * A shut zone is drawn shut, in three states rather than two — the key being
+   * in the pack is the difference between a wall and an invitation, and it is
+   * the only thing on this panel that tells a player their looting worked.
+   */
+  describe('a locked zone', () => {
+    it('is drawn shut while there is no way in', () => {
+      openMap();
+      zoom()?.click();
+
+      expect(cell('bandit-hideout')?.dataset.access).toBe('locked');
+      expect(cell('town')?.dataset.access).toBeUndefined();
+    });
+
+    // The key can be looted with this very panel open, which is why the sheet
+    // reads the bag through a getter rather than being handed it once.
+    it('turns to an invitation the moment the key lands in the bag', () => {
+      openMap();
+      zoom()?.click();
+
+      events.emit(INVENTORY_CHANGED_EVENT, { 'hideout-key': 1 });
+
+      expect(cell('bandit-hideout')?.dataset.access).toBe('unlockable');
+    });
+
+    // The key is spent walking through, so the bag cannot answer this: an empty
+    // pack is what someone who has already been in there has.
+    it('opens for good once the door has been opened, key or no key', () => {
+      openMap();
+      zoom()?.click();
+
+      events.emit(UNLOCKED_ZONES_CHANGED_EVENT, ['bandit-hideout']);
+
+      expect(cell('bandit-hideout')?.dataset.access).toBeUndefined();
+    });
+
+    // Still a tap like any other: whether a door opens is the world's answer,
+    // and it says so with the same toast walking into it earns.
+    it('is still asked about, so the world can say why not', () => {
+      openMap();
+      zoom()?.click();
+
+      cell('bandit-hideout')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(emitted.filter((entry) => entry.event === 'travel-requested')).toEqual([
+        { event: 'travel-requested', args: ['bandit-hideout'] },
+      ]);
+    });
   });
 });
