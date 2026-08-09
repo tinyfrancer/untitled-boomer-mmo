@@ -45,7 +45,14 @@ export type WorldEvent =
   | { kind: 'bolt-cast'; abilityId: AbilityId; from: Point; to: Point }
   | { kind: 'gather-tick'; at: Point; nodeId: ResourceNodeId; progress: number }
   /** The player walked onto an exit. The host loads the zone — the world does not. */
-  | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number };
+  | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number }
+  /**
+   * The player travelled from the world map. The same handover as `zone-exit`
+   * and deliberately not the same event: nobody walked through anything, so
+   * there is no edge to arrive on the far side of and the arrival is wherever
+   * that zone puts someone with no particular spot.
+   */
+  | { kind: 'travel'; to: ZoneId };
 
 /**
  * The HUD channel, as much of an emitter as ZoneWorld needs. `createEventBus`

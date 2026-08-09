@@ -1,7 +1,13 @@
 import { Sheet } from './Sheet';
 import { el } from './dom';
-import { tileColor } from '../data/tiles';
-import { zoneMap, type MapMarker, type ZoneMap } from '../systems/MapSystem';
+import { GRASS_TILE, PATH_TILE, tileColor } from '../data/tiles';
+import {
+  worldMap,
+  zoneMap,
+  type MapMarker,
+  type WorldMapZone,
+  type ZoneMap,
+} from '../systems/MapSystem';
 import { THEME, cssColor } from '../ui/theme';
 import type { TilePoint } from '../ui/uiEvents';
 import type { SkillId, ZoneId } from '../types/ids';
@@ -15,6 +21,46 @@ const NPC_RADIUS = 0.6;
 const PLAYER_RADIUS = 0.7;
 const EXIT_SIZE = 1.2;
 const LABEL_HEIGHT = 1.4;
+
+/**
+ * One zone's square on the zoomed-out view, in its own units. The whole view is
+ * drawn in these rather than in tiles: a zone is a cell there, not 475 of them.
+ */
+const CELL = 100;
+
+/**
+ * How many characters fit across a zone's cell before the name has to be
+ * squeezed to stay inside it. "Bandit Camp" is the one that does not, and a
+ * name clipped by the panel edge is worse than one set a little tight.
+ */
+const CELL_NAME_FIT = 8;
+
+// Centred on the cell rather than starting at its middle and running right,
+// which is what a text node does left to itself — "Town" looks centred that way
+// by luck and "Bandit Camp" runs off the edge of the sheet.
+function text(content: string, x: number, y: number, size: number, fill: string): SVGElement {
+  const node = svgEl('text', {
+    x,
+    y,
+    'font-size': size,
+    'text-anchor': 'middle',
+    fill,
+    class: 'hud-map__label',
+  });
+  node.textContent = content;
+  return node;
+}
+
+function cellName(content: string, x: number, y: number): SVGElement {
+  const node = text(content, x, y, CELL * 0.11, THEME.color.text);
+  if (content.length > CELL_NAME_FIT) {
+    // Let SVG do the fitting rather than guessing a font size per name: it
+    // knows the glyph widths and this does not.
+    node.setAttribute('textLength', String(CELL * 0.72));
+    node.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+  }
+  return node;
+}
 
 /**
  * What each marker is drawn in.
@@ -117,25 +163,40 @@ function svgEl<K extends keyof SVGElementTagNameMap>(
  *
  * There are no mobs on it, deliberately. They wander, so drawing them means
  * feeding a moving position to the HUD every frame, and a map of where the rats
- * were a second ago is worse than a map with no rats on it. There is no
- * tap-to-travel either: this tells you where things are, and walking there is
- * still the game.
+ * were a second ago is worse than a map with no rats on it. Nor is there
+ * tap-to-travel *within* a zone: this tells you where things are, and walking
+ * there is still the game.
  *
  * The terrain is rebuilt only when the zone changes and the dot is moved on its
  * own — which is why the two arrive as separate events rather than as one
  * position that would redraw four hundred rectangles on every tile crossing.
+ *
+ * **It zooms out.** The world view is the same sheet drawn from `worldMap()`:
+ * every zone, how they join up, and which one you are standing in. Travelling
+ * *between* zones is a different question from walking within one — nobody
+ * wants to remember that the beach is off the south edge — so that view is
+ * where a tap asks to go somewhere.
  */
 export class MapSheet extends Sheet {
   private readonly figure: HTMLElement;
+  private readonly zoomButton: HTMLButtonElement;
+  private readonly onTravel: (zoneId: ZoneId) => void;
   private svg: SVGSVGElement | null = null;
   private dot: SVGCircleElement | null = null;
   private drawn: ZoneId | null = null;
   private map: ZoneMap | null = null;
   private tile: TilePoint | null = null;
+  private zoomedOut = false;
 
-  constructor() {
+  constructor(onTravel: (zoneId: ZoneId) => void) {
     super('Map', THEME.panelWidth.map, 'hud-sheet--map');
+    this.onTravel = onTravel;
     this.figure = el('div', 'hud-map');
+    this.zoomButton = el('button', 'hud-button hud-map__zoom', 'World');
+    this.zoomButton.type = 'button';
+    this.zoomButton.dataset.action = 'toggle-map-zoom';
+    this.zoomButton.addEventListener('click', () => this.setZoomedOut(!this.zoomedOut));
+    this.head.append(this.zoomButton);
     this.body.append(this.figure);
   }
 
@@ -144,12 +205,120 @@ export class MapSheet extends Sheet {
     if (zoneId === this.drawn) return;
     this.drawn = zoneId;
     this.map = zoneMap(zoneId);
-    this.setTitle(this.map.name);
-    this.build(this.map);
+    this.redraw();
     // A zone walk puts the player somewhere new, and the dot from the last one
     // is not where they are — but the tile event that says so is published by
     // the same frame, so this only has to not draw a stale one.
     this.moveDot();
+  }
+
+  /** Which view is showing. The zoomed-out one is where travel is asked for. */
+  setZoomedOut(zoomedOut: boolean): void {
+    if (zoomedOut === this.zoomedOut) return;
+    this.zoomedOut = zoomedOut;
+    this.redraw();
+    this.moveDot();
+  }
+
+  private redraw(): void {
+    this.zoomButton.textContent = this.zoomedOut ? 'Zone' : 'World';
+    if (this.zoomedOut) {
+      this.setTitle('World');
+      this.buildWorld();
+      return;
+    }
+    if (!this.map) return;
+    this.setTitle(this.map.name);
+    this.build(this.map);
+  }
+
+  /**
+   * The zoomed-out view: a cell per zone, laid out by `worldMap()` from the
+   * exits themselves, with a road drawn along each pair that connects.
+   *
+   * Tapping one asks to travel there — asks, because only the world knows
+   * whether the player is in the middle of a fight. Tapping the one they are
+   * already standing in zooms back in to it instead, which is what a player
+   * pressing their own square means by it.
+   */
+  private buildWorld(): void {
+    const map = worldMap();
+    const svg = svgEl('svg', {
+      viewBox: `0 0 ${map.columns * CELL} ${map.rows * CELL}`,
+      class: 'hud-map__svg hud-map__svg--world',
+    });
+
+    // Roads first, so a cell is never drawn under the line joining it.
+    for (const link of map.links) {
+      const from = map.zones.find((zone) => zone.zoneId === link.from);
+      const to = map.zones.find((zone) => zone.zoneId === link.to);
+      if (!from || !to) continue;
+      svg.append(
+        svgEl('line', {
+          x1: from.column * CELL + CELL / 2,
+          y1: from.row * CELL + CELL / 2,
+          x2: to.column * CELL + CELL / 2,
+          y2: to.row * CELL + CELL / 2,
+          stroke: cssColor(tileColor(PATH_TILE)),
+          'stroke-width': CELL * 0.12,
+        }),
+      );
+    }
+
+    for (const zone of map.zones) {
+      svg.append(this.buildWorldZone(zone));
+    }
+
+    this.svg = svg;
+    this.dot = null;
+    this.figure.replaceChildren(svg);
+  }
+
+  private buildWorldZone(zone: WorldMapZone): SVGElement {
+    const here = zone.zoneId === this.drawn;
+    const x = zone.column * CELL;
+    const y = zone.row * CELL;
+    const group = svgEl('g', { class: 'hud-map__zone' });
+    group.dataset.zone = zone.zoneId;
+    if (here) group.dataset.here = 'true';
+
+    group.append(
+      svgEl('rect', {
+        x: x + CELL * 0.1,
+        y: y + CELL * 0.1,
+        width: CELL * 0.8,
+        height: CELL * 0.8,
+        rx: CELL * 0.06,
+        fill: cssColor(tileColor(GRASS_TILE)),
+        stroke: here ? THEME.color.text : THEME.color.levelUp,
+        'stroke-width': here ? CELL * 0.035 : CELL * 0.015,
+      }),
+    );
+    group.append(
+      cellName(zone.name, x + CELL / 2, y + CELL * 0.42),
+      text(
+        zone.levels ? `Lv ${zone.levels.min}-${zone.levels.max}` : 'No enemies',
+        x + CELL / 2,
+        y + CELL * 0.6,
+        CELL * 0.09,
+        THEME.color.muted,
+      ),
+    );
+
+    const title = svgEl('title', {});
+    title.textContent = zone.description;
+    group.append(title);
+
+    // The whole cell is the target rather than the label inside it: this is
+    // tapped with a thumb.
+    group.addEventListener('click', () => {
+      if (here) {
+        this.setZoomedOut(false);
+        return;
+      }
+      this.onTravel(zone.zoneId);
+    });
+    return group;
   }
 
   setPlayerTile(tile: TilePoint): void {
@@ -202,6 +371,7 @@ export class MapSheet extends Sheet {
   }
 
   private moveDot(): void {
+    // The world view has no dot: which zone you are in is drawn on the cell.
     if (!this.dot || !this.tile || !this.svg) return;
     this.dot.setAttribute('cx', String(this.tile.x));
     this.dot.setAttribute('cy', String(this.tile.y));

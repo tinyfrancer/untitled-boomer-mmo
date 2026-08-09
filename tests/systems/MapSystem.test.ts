@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { terrainBands, tileOf, toTile, zoneMap } from '../../src/systems/MapSystem';
+import {
+  terrainBands,
+  tileOf,
+  toTile,
+  worldMap,
+  zoneLevels,
+  zoneMap,
+} from '../../src/systems/MapSystem';
 import { TILE_SIZE, WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../../src/config/constants';
 import { ZONES } from '../../src/data/zones';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
@@ -135,5 +142,82 @@ describe('zoneMap', () => {
       expect(map.terrain.length).toBeGreaterThan(0);
       expect(map.markers.length).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * The zoomed-out view. Its whole layout is derived from the exits already in
+ * `ZONES` — nothing is hand-placed — so what is worth asserting is that the
+ * derivation agrees with where walking actually takes you.
+ */
+describe('worldMap', () => {
+  it('places a zone in the direction the edge that reaches it points', () => {
+    const map = worldMap();
+    const at = (zoneId: ZoneId) => map.zones.find((zone) => zone.zoneId === zoneId);
+    const town = at('town');
+    const beach = at('beach');
+    const camp = at('bandit-camp');
+    if (!town || !beach || !camp) throw new Error('a zone went missing from the map');
+
+    // Town's exits are south to the beach and east to the bandit camp.
+    expect(beach.row).toBe(town.row + 1);
+    expect(beach.column).toBe(town.column);
+    expect(camp.column).toBe(town.column + 1);
+    expect(camp.row).toBe(town.row);
+  });
+
+  it('reaches every zone that is connected to the world', () => {
+    expect(
+      worldMap()
+        .zones.map((zone) => zone.zoneId)
+        .sort(),
+    ).toEqual(ZONE_IDS.sort());
+  });
+
+  it('never stacks two zones on the same cell', () => {
+    const cells = worldMap().zones.map((zone) => `${zone.column},${zone.row}`);
+    expect(new Set(cells).size).toBe(cells.length);
+  });
+
+  it('keeps every zone inside the grid it reports', () => {
+    const map = worldMap();
+    for (const zone of map.zones) {
+      expect(zone.column).toBeGreaterThanOrEqual(0);
+      expect(zone.row).toBeGreaterThanOrEqual(0);
+      expect(zone.column).toBeLessThan(map.columns);
+      expect(zone.row).toBeLessThan(map.rows);
+    }
+  });
+
+  // One road per pair however many ways it can be walked: town→beach and
+  // beach→town are the same road, and drawing it twice would double its ink.
+  it('names each road once rather than once per direction', () => {
+    const links = worldMap().links;
+    const pairs = links.map((link) => [link.from, link.to].sort().join('-'));
+    expect(new Set(pairs).size).toBe(links.length);
+    expect(links).toHaveLength(2);
+  });
+
+  it('carries what each zone is for, so the map can say more than its name', () => {
+    for (const zone of worldMap().zones) {
+      expect(zone.name.length).toBeGreaterThan(0);
+      expect(zone.description.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('zoneLevels', () => {
+  it('reports the band a zone spawns, off its own table', () => {
+    const town = zoneLevels('town');
+    const levels = ZONES.town.mobSpawns.map((spawn) => spawn.level);
+    expect(town).toEqual({ min: Math.min(...levels), max: Math.max(...levels) });
+  });
+
+  it('answers null for a zone nothing lives in', () => {
+    expect(zoneLevels('beach')).not.toBeNull();
+    // A zone with no mob spawns has no band to report, and "Lv 0-0" would be a
+    // lie rather than an absence.
+    const empty = ZONE_IDS.filter((id) => ZONES[id].mobSpawns.length === 0);
+    for (const id of empty) expect(zoneLevels(id)).toBeNull();
   });
 });

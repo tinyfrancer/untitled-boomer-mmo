@@ -1,0 +1,37 @@
+Feature 12 — Dungeon, travel and casting
+
+The original prompt, kept as a record of what was asked for. Superseded by the code
+wherever the two disagree.
+
+----------------------------------------------------------------------------------
+
+I want to add a new area, a dungeon. Bandit hideout, requires key lot drop rate from
+bandits. Dungeon should have at least 1 boss/named mob that drops unique loot.
+
+Perhaps we should also revisit how zones work and how to go to each one.  What are the
+benefits we have for one large map with instances dungeons vs isolated zones?  If
+sticking with zones is the move, a more intuitive way of switching zones would be
+preferred.
+
+World map should have a max level where it shows all zones.
+
+Some spells should have cast times, and spells can fail based on their level.  Enemies
+should have spells/abilities as well.
+
+----------------------------------------------------------------------------------
+
+Decisions taken in the interview that shaped it:
+
+- Zones, not one continuous world. The alternative is a renderer project — ground
+  chunking, mob culling, and a rewrite of how AFK picks what it was grinding — and a
+  dungeon is an instance either way, so it buys nothing the dungeon needs. What one big
+  map is actually wanted for is travel that feels connected, and that is bought by the
+  world map instead. See docs/dungeon_plan.md for the full reasoning.
+- "Max level" on the world map is a *zoom* level, not a character level: the map zooms
+  out to show every zone and how they connect, and that view is where travel happens.
+  No level gate on what is visible.
+- Spell failure extends what is already there rather than adding spell ranks: each spell
+  carries its own difficulty, and the Destruction skill cuts into it as it already does.
+  Nothing new is stored on the character.
+- The hideout key is consumed opening the door the first time, and the hideout stays open
+  after that. One grind, permanent access.

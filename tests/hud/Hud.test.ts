@@ -11,7 +11,7 @@ import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { recordingBus, type Emitted } from '../world/harness';
 import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSystem';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
-import { zoneMap } from '../../src/systems/MapSystem';
+import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
 import { describeEnemy, describeEnemyLoot } from '../../src/systems/InspectSystem';
 import { THEME } from '../../src/ui/theme';
@@ -882,5 +882,85 @@ describe('the map', () => {
     events.emit(ZONE_ENTERED_EVENT, 'beach');
     expect(svg()).not.toBe(town);
     expect(markers('npc')).toBe(0);
+  });
+});
+
+/**
+ * The zoomed-out view, which is the answer to "which edge was the beach again".
+ * Its layout is `worldMap()`'s business and tested there; what matters here is
+ * that a tap on a zone asks to go there rather than going there itself.
+ */
+describe('the world map', () => {
+  const zoom = (): HTMLButtonElement | null =>
+    parent.querySelector('[data-action="toggle-map-zoom"]');
+  const cells = (): string[] =>
+    [...parent.querySelectorAll<SVGElement>('.hud-map__zone')].map(
+      (cell) => cell.dataset.zone ?? '',
+    );
+  const cell = (zoneId: string): SVGElement | null =>
+    parent.querySelector(`.hud-map__zone[data-zone="${zoneId}"]`);
+
+  function openMap(): void {
+    mount();
+    menuItem('map');
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+  }
+
+  it('zooms out to every zone, and back in again', () => {
+    openMap();
+    expect(cells()).toEqual([]);
+
+    zoom()?.click();
+    expect(cells().sort()).toEqual(
+      worldMap()
+        .zones.map((zone) => zone.zoneId)
+        .sort(),
+    );
+    expect(zoom()?.textContent).toBe('Zone');
+
+    zoom()?.click();
+    expect(cells()).toEqual([]);
+    expect(parent.querySelector('.hud-map__svg')).not.toBeNull();
+  });
+
+  it('says which zone the player is standing in', () => {
+    openMap();
+    zoom()?.click();
+
+    expect(cell('town')?.dataset.here).toBe('true');
+    expect(cell('beach')?.dataset.here).toBeUndefined();
+  });
+
+  // The map asks; the world decides. Only it knows whether the player is in the
+  // middle of a fight, so nothing here may move them.
+  it('asks to travel rather than travelling', () => {
+    openMap();
+    zoom()?.click();
+
+    cell('beach')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(emitted.filter((entry) => entry.event === 'travel-requested')).toEqual([
+      { event: 'travel-requested', args: ['beach'] },
+    ]);
+  });
+
+  // Pressing your own square is not a request to go where you already are.
+  it('zooms in on the zone the player is already in rather than asking', () => {
+    openMap();
+    zoom()?.click();
+
+    cell('town')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(emitted.filter((entry) => entry.event === 'travel-requested')).toEqual([]);
+    expect(cells()).toEqual([]);
+  });
+
+  it('follows the player into the zone they travelled to', () => {
+    openMap();
+    zoom()?.click();
+    events.emit(ZONE_ENTERED_EVENT, 'beach');
+
+    expect(cell('beach')?.dataset.here).toBe('true');
+    expect(cell('town')?.dataset.here).toBeUndefined();
   });
 });

@@ -130,10 +130,17 @@ export class GameContext {
     this.notifications = [];
   }
 
-  // The two ways a world hands the player to the next one. Both are the world
-  // refusing to load a zone on purpose (see ZoneWorld's class comment): it says
-  // where the player is going and stops, and building that zone is this job.
+  // The three ways a world hands the player to the next one. All of them are
+  // the world refusing to load a zone on purpose (see ZoneWorld's class
+  // comment): it says where the player is going and stops, and building that
+  // zone is this job.
   private zoneLoadFor(event: WorldEvent): ZoneLoadRequest | null {
+    if (event.kind === 'travel') {
+      // No entry: nobody walked through anything, so they arrive wherever that
+      // zone puts someone with no particular spot. HP rides across, the way it
+      // does through an exit — travelling is not a way to heal.
+      return { zoneId: event.to, hp: this.world.player.hp };
+    }
     if (event.kind === 'zone-exit') {
       return {
         zoneId: event.to,

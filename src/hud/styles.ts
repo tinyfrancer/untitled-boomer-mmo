@@ -624,6 +624,28 @@ function hudCss(): string {
 .hud-map__player {
   shape-rendering: auto;
 }
+/* The zoomed-out view is cells and roads rather than tiles, so the seam-hiding
+   that terrain wants would only make its text crawl. */
+.hud-map__svg--world {
+  shape-rendering: auto;
+}
+/* A whole cell is the tap target, since this is pressed with a thumb. */
+.hud-map__zone {
+  cursor: pointer;
+  pointer-events: auto;
+}
+.hud-map__zone[data-here='true'] {
+  cursor: default;
+}
+/* The zoom toggle sits in the sheet's head beside its title, which is the one
+   place a sheet has room for a control. */
+.hud-map__zoom {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: ${THEME.font.sm}px;
+  border-color: ${cssColor(THEME.panelStroke)};
+  background: ${cssColor(THEME.buttonBg)};
+}
 
 /* --- Quests, feats, log -------------------------------------------------- */
 

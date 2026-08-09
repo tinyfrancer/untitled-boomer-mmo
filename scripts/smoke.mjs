@@ -1851,9 +1851,63 @@ async function zoneMapSheet() {
     `dot ${JSON.stringify(here.dot)} -> ${JSON.stringify(moved.dot)}, terrain steady at ${moved.terrain}`,
   );
 
+  // --- The zoomed-out view, which is how a phone is meant to change zone: no
+  // remembering that the beach is off the south edge. Its layout is derived
+  // from the exits and unit-tested; what needs a browser is that the cells are
+  // laid out at a real size, and that tapping one actually moves the player. ---
+  await page.click('[data-action="toggle-map-zoom"]');
+  await page.waitForTimeout(120);
+  const overview = await page.evaluate(() => {
+    const cells = [...document.querySelectorAll('.hud-map__zone')];
+    const boxes = cells.map((cell) => cell.getBoundingClientRect());
+    return {
+      zones: cells.map((cell) => cell.getAttribute('data-zone')),
+      here: cells.find((cell) => cell.getAttribute('data-here'))?.getAttribute('data-zone') ?? null,
+      roads: document.querySelectorAll('.hud-map__svg--world line').length,
+      smallest: Math.min(...boxes.map((box) => Math.min(box.width, box.height))),
+      current: window.world.zone.id,
+    };
+  });
+  check(
+    'the world view draws every zone, the roads between them, and where you are',
+    overview.zones.length === 3 && overview.roads === 2 && overview.here === overview.current,
+    `${overview.zones.join(', ')} — here: ${overview.here}, ${overview.roads} roads`,
+  );
+  check(
+    'and gives each one a cell a thumb can hit',
+    overview.smallest >= 44,
+    `smallest cell ${Math.round(overview.smallest)}px`,
+  );
+  await page.screenshot({ path: `${OUT}/22-world-map.png` });
+
+  // The whole point of it. Travel is refused mid-fight, so park first.
+  await park();
+  const goingTo = overview.zones.find((zone) => zone !== overview.current);
+  await page.click(`.hud-map__zone[data-zone="${goingTo}"]`);
+  await stepUntil(async () => (await zoneId()) === goingTo, `travel to ${goingTo}`);
+  await step(2);
+  const travelled = await page.evaluate(() => ({
+    zone: window.world.zone.id,
+    title:
+      document.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent ?? '',
+    mobs: window.world.mobs.length,
+  }));
+  check(
+    'and tapping a zone on it actually takes the player there',
+    travelled.zone === goingTo && travelled.mobs > 0,
+    `${overview.current} -> ${travelled.zone}, ${travelled.mobs} mobs in the rebuilt world`,
+  );
+  // Back to the zone view, which is what the checks below are about.
+  await page.click('[data-action="toggle-map-zoom"]');
+  await page.waitForTimeout(120);
+
   // A zone walk rebuilds the world, and the map has to follow it across. Which
   // exit is taken is read off the zone too, so this works from wherever it ran.
   const leaving = await zoneId();
+  // Read here rather than from the top of the section: the travel check above
+  // has moved the player since, so the zone being left is not the one that was
+  // measured then.
+  const before = await page.evaluate(() => window.world.zone.name);
   await page.evaluate(() => {
     const w = window.world;
     const post = w.signposts[0];
@@ -1870,8 +1924,8 @@ async function zoneMapSheet() {
   const arrived = await drawn();
   check(
     'and it follows the player into the next zone',
-    arrived.title === next && arrived.title !== here.title && arrived.shown === 'visible',
-    `${here.title} -> ${arrived.title}, dot ${JSON.stringify(arrived.dot)}`,
+    arrived.title === next && arrived.title !== before && arrived.shown === 'visible',
+    `${before} -> ${arrived.title}, dot ${JSON.stringify(arrived.dot)}`,
   );
   await page.screenshot({ path: `${OUT}/21-map-next-zone.png` });
 }
