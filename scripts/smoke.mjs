@@ -1862,15 +1862,26 @@ async function zoneMapSheet() {
     const boxes = cells.map((cell) => cell.getBoundingClientRect());
     return {
       zones: cells.map((cell) => cell.getAttribute('data-zone')),
+      // Which of them can actually be walked into right now. A shut door is
+      // drawn shut, and travelling to one is refused rather than obeyed.
+      open: cells
+        .filter((cell) => cell.getAttribute('data-access') === null)
+        .map((cell) => cell.getAttribute('data-zone')),
       here: cells.find((cell) => cell.getAttribute('data-here'))?.getAttribute('data-zone') ?? null,
       roads: document.querySelectorAll('.hud-map__svg--world line').length,
       smallest: Math.min(...boxes.map((box) => Math.min(box.width, box.height))),
       current: window.world.zone.id,
     };
   });
+  // How many cells there are and where each one sits is `worldMap()`'s answer
+  // and is unit-tested against ZONES; what only a browser can say is that they
+  // are joined up, that the roads were drawn, and that the highlight found the
+  // zone the world is actually running.
   check(
     'the world view draws every zone, the roads between them, and where you are',
-    overview.zones.length === 3 && overview.roads === 2 && overview.here === overview.current,
+    overview.zones.length > 1 &&
+      overview.roads >= overview.zones.length - 1 &&
+      overview.here === overview.current,
     `${overview.zones.join(', ')} — here: ${overview.here}, ${overview.roads} roads`,
   );
   check(
@@ -1880,9 +1891,10 @@ async function zoneMapSheet() {
   );
   await page.screenshot({ path: `${OUT}/22-world-map.png` });
 
-  // The whole point of it. Travel is refused mid-fight, so park first.
+  // The whole point of it. Travel is refused mid-fight, so park first, and
+  // somewhere open — a locked door refuses this the same way it refuses a walk.
   await park();
-  const goingTo = overview.zones.find((zone) => zone !== overview.current);
+  const goingTo = overview.open.find((zone) => zone !== overview.current);
   await page.click(`.hud-map__zone[data-zone="${goingTo}"]`);
   await stepUntil(async () => (await zoneId()) === goingTo, `travel to ${goingTo}`);
   await step(2);
@@ -1928,6 +1940,113 @@ async function zoneMapSheet() {
     `${before} -> ${arrived.title}, dot ${JSON.stringify(arrived.dot)}`,
   );
   await page.screenshot({ path: `${OUT}/21-map-next-zone.png` });
+}
+
+async function lockedZone() {
+  // --- The locked door. What a key does to the world is unit-tested from all
+  // three sides in tests/world/lockedZones.test.ts; what needs a browser is the
+  // round trip through the HUD — that a shut zone is *drawn* shut on the world
+  // map, that the cell changes when the key lands in the bag, and that walking
+  // through spends it and rebuilds the view in a zone nothing else reaches. ---
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  // Both tabs toggle, so this asks what is already showing rather than assuming
+  // what the section before it left behind.
+  const showing = () =>
+    page.evaluate(() => ({
+      map: document.querySelector('.hud-sheet[data-sheet="map"]')?.classList.contains('hud-hidden'),
+      world: document.querySelector('[data-action="toggle-map-zoom"]')?.textContent === 'Zone',
+    }));
+  if ((await showing()).map !== false) await tapTab('map');
+  if (!(await showing()).world) {
+    await page.click('[data-action="toggle-map-zoom"]');
+    await page.waitForTimeout(120);
+  }
+
+  const cellAccess = () =>
+    page.evaluate(
+      () =>
+        document
+          .querySelector('.hud-map__zone[data-zone="bandit-hideout"]')
+          ?.getAttribute('data-access') ?? 'open',
+    );
+
+  // Standing next door, which is where the key is found and the only zone the
+  // hideout can be walked into from.
+  if ((await zoneId()) !== 'bandit-camp') {
+    await park();
+    await page.click('.hud-map__zone[data-zone="bandit-camp"]');
+    await stepUntilZone('bandit-camp', 'travel to the bandit camp');
+  }
+  await park();
+
+  check('a zone behind a lock is drawn shut on the world map', (await cellAccess()) === 'locked');
+
+  // Tapped like any other cell: whether a door opens is the world's answer, and
+  // it is the toast that a phone with nothing to hover reads it off.
+  await page.click('.hud-map__zone[data-zone="bandit-hideout"]');
+  await step(2);
+  const refused = await page.evaluate(() => ({
+    zone: window.world.zone.id,
+    toast: document.querySelector('.hud-toast')?.textContent ?? '',
+  }));
+  check(
+    'and tapping it is refused with the reason rather than obeyed',
+    refused.zone === 'bandit-camp' && refused.toast.includes('Hideout Key'),
+    `still in ${refused.zone}, toast: "${refused.toast}"`,
+  );
+  await page.screenshot({ path: `${OUT}/23-locked-zone.png` });
+
+  // Granted rather than farmed: the key is a 3% drop off a bandit, which is a
+  // grind rather than a smoke check.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.addItem('hideout-key', 1);
+    window.events.emit('inventory-changed', w.character.state.inventory);
+  });
+  await page.waitForTimeout(80);
+  check(
+    'the cell turns to an invitation the moment the key lands in the bag',
+    (await cellAccess()) === 'unlockable',
+  );
+
+  // In through the map edge, which is the route the previous section proved for
+  // an open zone. The hideout is east of the camp.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth, w.worldHeight / 2);
+  });
+  await stepUntilZone('bandit-hideout', 'the walk into the hideout');
+  await step(2);
+  await draw();
+  const inside = await page.evaluate(() => ({
+    keys: window.world.character.itemCount('hideout-key'),
+    unlocked: [...window.world.character.state.unlockedZones],
+    mobs: window.world.mobs.length,
+    drawnMobs: window.view.drawnCounts().mobs,
+    access:
+      document
+        .querySelector('.hud-map__zone[data-zone="bandit-hideout"]')
+        ?.getAttribute('data-access') ?? 'open',
+  }));
+  check(
+    'walking in spends the key and opens the door for good',
+    inside.keys === 0 && inside.unlocked.includes('bandit-hideout') && inside.access === 'open',
+    `${inside.keys} keys left, unlocked: ${inside.unlocked.join(', ')}, cell: ${inside.access}`,
+  );
+  check(
+    'and the view rebuilds itself in a zone nothing else reaches',
+    inside.mobs > 0 && inside.drawnMobs === inside.mobs,
+    `${inside.drawnMobs}/${inside.mobs} bandits drawn`,
+  );
+  await page.screenshot({ path: `${OUT}/24-hideout.png` });
+
+  // Back out to the camp, so the sections after this one are not standing in a
+  // room full of things that hit back.
+  await park();
+  await page.evaluate(() => window.world.teleport(0, window.world.worldHeight / 2));
+  await stepUntilZone('bandit-camp', 'the walk back out of the hideout');
+  await park();
 }
 
 async function reset() {
@@ -2268,6 +2387,7 @@ const SECTIONS = [
   ['bag', bagSheet],
   ['character-sheet', characterSheet],
   ['zone-map', zoneMapSheet],
+  ['locked-zone', lockedZone],
   ['reset', reset],
   ['save-resume', saveResume],
   ['offline-camping', offlineCamping],
