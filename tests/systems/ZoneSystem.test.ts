@@ -12,7 +12,7 @@ import {
   signpostPoint,
   zoneWorldSize,
 } from '../../src/systems/ZoneSystem';
-import { TILE_SIZE } from '../../src/config/constants';
+import { PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/constants';
 import { BLOCKING_TILES } from '../../src/data/tiles';
 import { ZONES } from '../../src/data/zones';
 import { ENEMIES } from '../../src/data/enemies';
@@ -225,5 +225,51 @@ describe('signpostPoint', () => {
         expect(BLOCKING_TILES).not.toContain(tile);
       });
     });
+  });
+});
+
+/**
+ * The generalisation of the signpost check above, and the one that matters more
+ * for an interior map: a signpost stands at one spot per edge, but an *arrival*
+ * lands anywhere along it — walking out of a zone keeps the fraction of the
+ * edge it was crossed at, and the far side reproduces it.
+ *
+ * The bandit hideout is what made this worth writing. It is the first map built
+ * out of solid rock rather than open ground, and its first draft had a doorway
+ * only as tall as the corridor behind it: anyone crossing at any other height
+ * arrived inside the wall.
+ */
+describe('arriving through an exit', () => {
+  /**
+   * The range a crossing can actually report. `edgeFraction` clamps to 0..1,
+   * but the world-bounds clamp holds the player's centre `PLAYER_HALF_EXTENT`
+   * from the edge before that — so a real fraction never reaches either end,
+   * and probing 0 or 1 would ask about a point off the grid entirely.
+   */
+  const reach = PLAYER_HALF_EXTENT / (WORLD_H > WORLD_W ? WORLD_H : WORLD_W);
+  const FRACTIONS = [reach, 0.05, 0.25, 0.5, 0.75, 0.95, 1 - reach];
+
+  it('lands on walkable ground wherever along the edge it was crossed', () => {
+    // Walked the way `leaveZone` does it: every exit in the table, arriving in
+    // the zone it names on the opposite edge. An edge no exit leads to is one
+    // nobody ever arrives on, so it is not asked about.
+    for (const zone of Object.values(ZONES)) {
+      for (const exit of zone.exits) {
+        const destination = ZONES[exit.to];
+        const worldW = nth(destination.map, 0).length * TILE_SIZE;
+        const worldH = destination.map.length * TILE_SIZE;
+        const edge = oppositeEdge(exit.edge);
+
+        for (const fraction of FRACTIONS) {
+          const point = arrivalPoint(edge, fraction, worldW, worldH, TILE_SIZE * 1.5);
+          const row = nth(destination.map, Math.floor(point.y / TILE_SIZE));
+          const tile = nth(row, Math.floor(point.x / TILE_SIZE));
+          expect(
+            BLOCKING_TILES,
+            `${zone.id} -> ${exit.to}, arriving on its ${edge} edge at ${fraction}`,
+          ).not.toContain(tile);
+        }
+      }
+    }
   });
 });

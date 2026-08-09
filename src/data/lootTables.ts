@@ -44,6 +44,9 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'brown-cloth-hat', chance: 0.06 },
       { itemId: 'brown-cloth-pants', chance: 0.06 },
       { itemId: 'brown-axe', chance: 0.04 },
+      // The way into the hideout, and the rarest thing on the table by a
+      // distance: it is meant to be a run of bandits rather than an errand.
+      { itemId: 'hideout-key', chance: 0.03 },
     ],
     // Humanoids carry coin; the beasts above never do.
     currency: { min: 8, max: 25, chance: 0.9 },

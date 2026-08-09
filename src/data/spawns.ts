@@ -73,3 +73,14 @@ export const BANDIT_CAMP_MOB_SPAWNS: MobSpawnPoint[] = [
   { dx: 512, dy: 224, enemyId: 'bandit', level: 2 },
   { dx: 576, dy: 0, enemyId: 'bandit', level: 3 },
 ];
+
+// Inside the hideout: the entrance hall is left clear so arriving is not an
+// ambush, and everything stands in the chamber beyond the corridor. Same 1-3
+// band as everywhere else — what makes this worth the key is what drops here,
+// not what it takes to survive.
+export const BANDIT_HIDEOUT_MOB_SPAWNS: MobSpawnPoint[] = [
+  { dx: 160, dy: -224, enemyId: 'bandit', level: 2 },
+  { dx: 288, dy: -64, enemyId: 'bandit', level: 2 },
+  { dx: 160, dy: 224, enemyId: 'bandit', level: 3 },
+  { dx: 288, dy: 96, enemyId: 'bandit', level: 3 },
+];

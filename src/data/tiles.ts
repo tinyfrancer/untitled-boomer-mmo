@@ -2,10 +2,15 @@ export const GRASS_TILE = 0;
 export const PATH_TILE = 1;
 export const WATER_TILE = 2;
 export const SAND_TILE = 3;
+// The hideout's two: a flagged floor, and the rock it is cut out of. The wall
+// is the first blocking tile that is not water, which is the whole reason
+// BLOCKING_TILES is a list rather than a check for one id.
+export const STONE_TILE = 4;
+export const WALL_TILE = 5;
 
 // Tiles nothing can walk over. CollisionSystem blocks exactly these,
 // so adding a walkable tile needs no change there — only a blocking one does.
-export const BLOCKING_TILES = [WATER_TILE];
+export const BLOCKING_TILES = [WATER_TILE, WALL_TILE];
 
 /**
  * What each tile is made of, as one palette.
@@ -23,6 +28,10 @@ export const TILE_COLORS: Record<number, number> = {
   [PATH_TILE]: 0x8d6e63,
   [WATER_TILE]: 0x1565c0,
   [SAND_TILE]: 0xe0c184,
+  [STONE_TILE]: 0x6d6a63,
+  // Darker than the floor by enough to read as solid at a glance, which is all
+  // a wall has to do when the collision grid is what actually stops anyone.
+  [WALL_TILE]: 0x35322e,
 };
 
 /** A tile's colour; anything nobody has coloured yet reads as ground. */

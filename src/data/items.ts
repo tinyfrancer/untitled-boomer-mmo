@@ -99,6 +99,7 @@ const ICON_COLOR = {
   // slot rather than as a dark item.
   burnt: 0x6d6257,
   wood: 0x8d6e63,
+  iron: 0xb0a48c,
 } as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
@@ -126,6 +127,15 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     // real distance casts for it.
     attackRange: 200,
     attackPowerBonus: 2,
+  },
+  // The one item that is not worth anything and cannot be sold: it opens a door
+  // once and is gone, so a vendor price would only ever be a trap.
+  'hideout-key': {
+    id: 'hideout-key',
+    name: 'Hideout Key',
+    weight: 1,
+    kind: 'material',
+    icon: { shape: 'key', color: ICON_COLOR.iron },
   },
   'rat-bones': {
     id: 'rat-bones',

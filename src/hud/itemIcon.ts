@@ -91,6 +91,16 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
         path(`M 74 50 L 90 34 L 90 66 Z`, color),
         circle(34, 44, BOX * 0.04, OUTLINE),
       ];
+    case 'key':
+      // A bow, a shaft and two teeth: at 40px the teeth are the whole of what
+      // says key rather than lollipop.
+      return [
+        circle(34, 34, BOX * 0.17, color),
+        circle(34, 34, BOX * 0.07, OUTLINE),
+        ...line(44, 44, 78, 78, BOX * 0.09, color),
+        ...line(66, 78, 78, 66, BOX * 0.08, color),
+        ...line(54, 66, 64, 56, BOX * 0.08, color),
+      ];
     case 'log':
       return [
         rect(18, 34, 64, 32, color),
