@@ -9,24 +9,7 @@
  * wherever it happened to start.
  */
 
-/**
- * How far a pointer may travel and still be a tap, in CSS pixels.
- *
- * Measured as **cumulative** travel rather than net displacement, and latched:
- * a drag that goes out and comes back finishes where it started, and letting go
- * there must not send the player somewhere.
- */
-export const TAP_SLOP_PX = 8;
-
-/**
- * How long a press may last and still be a tap.
- *
- * The other half of the disambiguation, and the one that only matters on a
- * phone: a thumb resting on the screen while the player reads their bag is not
- * a request to walk anywhere, and it never moves far enough for the slop above
- * to catch it.
- */
-export const TAP_MAX_MS = 500;
+import { TAP_MAX_MS, TAP_SLOP_PX } from '../ui/gestures';
 
 /**
  * How much yaw a pixel of horizontal drag is worth. Half a degree, so a drag
@@ -45,6 +28,7 @@ export function normalizeYaw(yaw: number): number {
 export class OrbitGesture {
   private active = false;
   private dragging = false;
+  private held = false;
   private startedAt = 0;
   private lastX = 0;
   private lastY = 0;
@@ -53,6 +37,7 @@ export class OrbitGesture {
   start(x: number, y: number, timeMs: number): void {
     this.active = true;
     this.dragging = false;
+    this.held = false;
     this.startedAt = timeMs;
     this.lastX = x;
     this.lastY = y;
@@ -75,7 +60,7 @@ export class OrbitGesture {
    * the sign, which is the form that cannot be wrong about which way is which.
    */
   move(x: number, y: number): number {
-    if (!this.active) return 0;
+    if (!this.active || this.held) return 0;
     const dx = x - this.lastX;
     const dy = y - this.lastY;
     this.lastX = x;
@@ -89,16 +74,34 @@ export class OrbitGesture {
     return -dx * YAW_PER_PIXEL;
   }
 
+  /**
+   * A press that has been resting long enough to be a question about what is
+   * under it, and whether it was still eligible to become one.
+   *
+   * The caller owns the clock — a press going nowhere produces no events to
+   * measure, so only a timer can notice it — and this owns whether the gesture
+   * is still a candidate: one already turning the camera is not, and neither is
+   * one that has been released. Saying yes spends the gesture, which is what
+   * stops a release a millisecond later also walking the player to wherever
+   * their thumb happened to be resting.
+   */
+  holdAsLongPress(): boolean {
+    if (!this.active || this.dragging || this.held) return false;
+    this.held = true;
+    return true;
+  }
+
   /** Whether the gesture that just ended was a tap, and so a request. */
   end(timeMs: number): boolean {
     if (!this.active) return false;
     this.active = false;
-    return !this.dragging && timeMs - this.startedAt <= TAP_MAX_MS;
+    return !this.dragging && !this.held && timeMs - this.startedAt <= TAP_MAX_MS;
   }
 
   /** A pointer taken away from us — a browser gesture winning, or a teardown. */
   cancel(): void {
     this.active = false;
     this.dragging = false;
+    this.held = false;
   }
 }

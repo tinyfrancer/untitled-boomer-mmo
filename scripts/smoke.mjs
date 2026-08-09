@@ -623,6 +623,103 @@ async function picking() {
   await page.screenshot({ path: `${OUT}/6-picking.png` });
 }
 
+async function contextMenu() {
+  // --- The context menu: the other thing a press on the world can mean.
+  //
+  // What it says and what it does with the answer are unit-tested either side
+  // of the wire (tests/world/ContextMenuSession.test.ts, tests/hud/Hud.test.ts),
+  // and both halves fake the press. Three things are only true in a browser.
+  //
+  // The first is the button: `contextmenu` and a right `pointerdown` are one
+  // gesture to the platform and two events to us, and getting that wrong walks
+  // the player to whatever they asked about.
+  //
+  // The second is that a held finger is a *clock*, not an event. `LONG_PRESS_MS`
+  // is wall clock — the same reason `TAP_MAX_MS` is checked under the throttle
+  // below — so nothing on the hand crank can produce one and no fake pointer
+  // stream contains one.
+  //
+  // The third is the ray. The menu is opened from the same pick as a tap, so it
+  // is cast through a camera the render loop has already moved this frame, at a
+  // rat 18 screen pixels wide. ---
+
+  await park();
+  await standSouthOf(RAT);
+  const rat = await screenAt(RAT);
+
+  await page.mouse.move(rat.x, rat.y);
+  await page.mouse.click(rat.x, rat.y, { button: 'right' });
+  await draw();
+  const opened = await page.evaluate(() => ({
+    lines: [...document.querySelectorAll('.hud-context__row')].map((n) => n.textContent),
+    title: document.querySelector('.hud-context__title')?.textContent ?? null,
+    target: window.world.target?.name ?? null,
+    walking: window.world.player.hasMoveTarget(),
+  }));
+  check(
+    'a real right click on a rat opens a menu and asks the world for nothing',
+    opened.lines.join(',') === 'Attack,Inspect,Loot' && opened.target === null && !opened.walking,
+    `${opened.title}: ${opened.lines.join(' | ')}, target ${opened.target}`,
+  );
+
+  // The drop table, which is the whole reason the menu is worth having: the
+  // percentages come off LOOT_TABLES, so what is on screen is what the roll
+  // uses rather than a second copy of it written into the UI.
+  await page.click('.hud-context__row[data-context-action="Loot"]');
+  const drops = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-inspect__drop')].map((row) => ({
+      item: /** @type {HTMLElement} */ (row).dataset.item ?? '',
+      text: row.textContent ?? '',
+    })),
+  );
+  check(
+    'Loot lists every drop with the chance the roll actually uses',
+    drops.length === 2 && drops.some((d) => d.item === 'rat-bones' && d.text.includes('60%')),
+    drops.map((d) => d.text).join(' | '),
+  );
+  await page.screenshot({ path: `${OUT}/6b-loot.png` });
+  // Closed by its own button rather than by Escape, which a phone does not
+  // have — and which the *world* also hears as clear-target, off a queue it
+  // drains on the next step rather than when the key was pressed.
+  await page.click('[data-action="close-inspect"]');
+
+  // A finger resting on the same rat. Held past LONG_PRESS_MS in wall clock,
+  // and — the half that is easy to get wrong — released afterwards, which is
+  // still inside the tap window by the clock alone. Only the latch stops the
+  // release also walking the player to the thing they were asking about.
+  const stood = await page.evaluate(() => ({ x: window.world.player.x, y: window.world.player.y }));
+  await touch('touchStart', [{ x: Math.round(rat.x), y: Math.round(rat.y) }]);
+  await page.waitForTimeout(700);
+  const held = await page.evaluate(() => document.querySelectorAll('.hud-context__row').length);
+  await touch('touchEnd', []);
+  await draw();
+  const afterRelease = await page.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+    walking: window.world.player.hasMoveTarget(),
+    target: window.world.target?.name ?? null,
+  }));
+  check(
+    'a finger held on a rat opens the same menu, and letting go walks nowhere',
+    held === 3 &&
+      !afterRelease.walking &&
+      afterRelease.target === null &&
+      Math.hypot(afterRelease.x - stood.x, afterRelease.y - stood.y) < 1,
+    `${held} lines, walking: ${afterRelease.walking}, target ${afterRelease.target}`,
+  );
+  await page.screenshot({ path: `${OUT}/6c-context-menu.png` });
+
+  // And the line that does reach the world, which is the same road a tap takes:
+  // the HUD sends an action id and the world resolves it against the rat it is
+  // still holding.
+  await page.click('.hud-context__row[data-context-action="Attack"]');
+  await step(2);
+  check(
+    'Attack from the menu selects the rat the menu was opened over',
+    (await page.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
+  );
+}
+
 async function feedback() {
   // --- The feedback layer, which the tap above has just started a fight for.
   //
@@ -2105,6 +2202,7 @@ const SECTIONS = [
   ['tab-bar', tabBar],
   ['landscape', landscape],
   ['picking', picking],
+  ['context-menu', contextMenu],
   ['feedback', feedback],
   ['orbit', orbit],
   ['heading', heading],

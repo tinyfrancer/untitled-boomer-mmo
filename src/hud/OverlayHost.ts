@@ -1,4 +1,6 @@
 import { AwayReportModal } from './AwayReportModal';
+import { ContextMenu, type ContextMenuEntry } from './ContextMenu';
+import { InspectModal } from './InspectModal';
 import { MenuOverlay } from './MenuOverlay';
 import { OptionsModal } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
@@ -12,13 +14,23 @@ import {
   SHOP_CLOSED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
 } from '../ui/uiEvents';
+import type { InspectPanel } from '../systems/InspectSystem';
+import type { ScreenPoint } from '../ui/uiEvents';
 import type { PendingNotification } from '../world/GameContext';
 import type { EventBus } from '../world/worldEvents';
 import type { GearSlotId, ItemId } from '../types/ids';
 import type { TabId } from '../ui/tabs';
 
+/** What a context menu is opened with, once the caller has named its lines. */
+export interface ContextMenuSpec {
+  title: string;
+  titleColor?: string;
+  entries: ContextMenuEntry[];
+  at: ScreenPoint;
+}
+
 /**
- * The five overlays, and the only thing that knows how many there are.
+ * The overlays, and the only thing that knows how many there are.
  *
  * Each of them is built on open and gone on close, so what is left to own is
  * which one is up — and every question about that crosses more than one of them:
@@ -41,6 +53,8 @@ export class OverlayHost {
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
   private menu: MenuOverlay | null = null;
+  private contextMenu: ContextMenu | null = null;
+  private inspect: InspectModal | null = null;
 
   constructor(root: HTMLElement, events: EventBus, shopState: () => ShopState) {
     this.root = root;
@@ -68,6 +82,41 @@ export class OverlayHost {
       this.menu = null;
     });
     this.root.append(this.menu.root);
+  }
+
+  /**
+   * The list a right click or a held finger puts under the pointer.
+   *
+   * What the lines say and what they do is the caller's — a rat's come off the
+   * wire and a bag item's are built out of the HUD's own model — so all this
+   * owns is that there is only ever one of them up.
+   */
+  openContextMenu(spec: ContextMenuSpec): void {
+    this.contextMenu?.close();
+    this.contextMenu = new ContextMenu({
+      title: spec.title,
+      titleColor: spec.titleColor,
+      entries: spec.entries,
+      at: spec.at,
+      bounds: { width: this.root.clientWidth, height: this.root.clientHeight },
+      onClosed: () => {
+        this.contextMenu = null;
+      },
+    });
+    this.root.append(this.contextMenu.root);
+  }
+
+  closeContextMenu(): void {
+    this.contextMenu?.close();
+  }
+
+  /** The card behind Inspect and Loot: a stat block, or a drop table. */
+  openInspect(panel: InspectPanel): void {
+    this.inspect?.close();
+    this.inspect = new InspectModal(panel, () => {
+      this.inspect = null;
+    });
+    this.root.append(this.inspect.root);
   }
 
   openSlotPicker(slot: GearSlotId, itemIds: ItemId[], anchor: DOMRect): void {
@@ -138,13 +187,22 @@ export class OverlayHost {
    * is not one of these: the world owns whether it is open.
    */
   closeDismissable(): boolean {
-    if (!this.options && !this.picker && !this.awayReport && !this.menu) {
+    if (
+      !this.options &&
+      !this.picker &&
+      !this.awayReport &&
+      !this.menu &&
+      !this.contextMenu &&
+      !this.inspect
+    ) {
       return false;
     }
     this.options?.close();
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();
+    this.contextMenu?.close();
+    this.inspect?.close();
     return true;
   }
 
@@ -154,5 +212,7 @@ export class OverlayHost {
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();
+    this.contextMenu?.close();
+    this.inspect?.close();
   }
 }

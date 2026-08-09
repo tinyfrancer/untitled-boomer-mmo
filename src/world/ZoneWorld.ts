@@ -28,7 +28,9 @@ import {
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
+  CONTEXT_ACTION_REQUESTED_EVENT,
   type AchievementUnlock,
+  type ContextSubject,
 } from '../ui/uiEvents';
 import { afkXpReward } from '../systems/AfkSystem';
 import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
@@ -60,6 +62,7 @@ import { createSubscriptions, type Subscriptions } from './eventBus';
 import { AbilityCaster } from './AbilityCaster';
 import { ApproachDriver } from './ApproachDriver';
 import { CombatDirector } from './CombatDirector';
+import { ContextMenuSession } from './ContextMenuSession';
 import { GatherSession } from './GatherSession';
 import { AfkCamp, type ParkedAfkResult } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
@@ -150,6 +153,7 @@ export class ZoneWorld implements Targeting {
   private readonly combat: CombatDirector;
   private readonly approach: ApproachDriver;
   private readonly quests: QuestDesk;
+  private readonly contextMenu: ContextMenuSession;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
   // The seven HUD publishers that only speak when what they publish moves; the
@@ -296,6 +300,9 @@ export class ZoneWorld implements Targeting {
       isShopOpen: () => this.shop.isOpen(),
       publishXpGain: (gain) => this.publishXpGain(gain),
     });
+    this.contextMenu = new ContextMenuSession(this.ctx, {
+      perform: (subject) => this.tap(subject),
+    });
 
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt (a zone
@@ -343,6 +350,7 @@ export class ZoneWorld implements Targeting {
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
     listen(TURN_IN_QUEST_REQUESTED_EVENT, (questId) => this.quests.turnIn(questId));
     listen(SET_TITLE_REQUESTED_EVENT, (titleId) => this.quests.wearTitle(titleId));
+    listen(CONTEXT_ACTION_REQUESTED_EVENT, (actionId) => this.contextMenu.run(actionId));
   }
 
   /** Drops every subscription. The host calls this before building the next world. */
@@ -464,6 +472,20 @@ export class ZoneWorld implements Targeting {
     }
   }
 
+  /**
+   * What the view calls when the player asks *about* something rather than
+   * asking for it — a right click, or a press held on a phone.
+   *
+   * It answers with the menu and remembers what the menu is about, so a line
+   * chosen later comes back as nothing but an action id. `null` is the ground,
+   * which has nothing to say for itself. Unlike `tap` this changes nothing:
+   * asking what a rat drops must not drop the gather in progress, nor end the
+   * camp, nor even select the rat.
+   */
+  inspect(target: WorldTap): ContextSubject | null {
+    return this.contextMenu.open(target);
+  }
+
   // Walk toward a tapped node and start the gather once inside its interact
   // radius; startGathering fires immediately when already there.
   approachAndGather(node: ResourceNode): void {
@@ -533,6 +555,7 @@ export class ZoneWorld implements Targeting {
     this.stopGathering();
     this.clearTarget();
     this.closeShop();
+    this.contextMenu.clear();
     // Save the spot in the zone being *entered*, not the one being left: a tab
     // closed mid-walk should come back where the walk was going. The next world
     // computes the same point from the entry edge.
@@ -665,6 +688,7 @@ export class ZoneWorld implements Targeting {
     this.stopGathering();
     this.clearTarget();
     this.closeShop();
+    this.contextMenu.clear();
     this.approach.cancel();
     this.player.stopMoving();
     this.ctx.log(logNotice('You have died.'));

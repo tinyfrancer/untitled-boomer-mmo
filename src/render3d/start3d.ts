@@ -3,9 +3,10 @@ import { bootIntoGame, showCharacterCreate, type GameHost } from '../bootFlow';
 import { hudMounted, mountHud, unmountHud } from '../hud/Hud';
 import { uiRoot } from '../hud/dom';
 import { bindKeyboard } from '../systems/InputState';
-import { RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
+import { CONTEXT_MENU_REQUESTED_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
 import { createEventBus } from '../world/eventBus';
 import { bindUnloadPersist, gameContext, resetGame, type GameContext } from '../world/GameContext';
+import { LONG_PRESS_MS } from '../ui/gestures';
 import { OrbitGesture } from './orbit';
 import { ZoneView3D } from './ZoneView3D';
 import type { DebugView, DrawnCounts } from '../types/debugView';
@@ -61,6 +62,11 @@ class ThreeHost implements GameHost {
   // takes the gesture away as a pointercancel, and letting the finger join in
   // first would make the yaw jump between two thumbs on its way out.
   private pointerId: number | null = null;
+  // Where the held finger is, and the timer watching it. A press that goes
+  // nowhere produces no events, so noticing that it has been held is the one
+  // thing the gesture cannot do for itself.
+  private pressAt = { x: 0, y: 0 };
+  private holdTimer: ReturnType<typeof setTimeout> | null = null;
   private frameHandle: number | null = null;
   private lastFrameAt = 0;
   private resizeObserver: ResizeObserver | null = null;
@@ -96,6 +102,7 @@ class ThreeHost implements GameHost {
     this.view.canvas.addEventListener('pointermove', this.handlePointerMove);
     this.view.canvas.addEventListener('pointerup', this.handlePointerUp);
     this.view.canvas.addEventListener('pointercancel', this.handlePointerCancel);
+    this.view.canvas.addEventListener('contextmenu', this.handleContextMenu);
     this.unbindKeyboard = bindKeyboard(context.input, window);
     this.unbindUnloadPersist = bindUnloadPersist(context, window);
     this.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter);
@@ -131,16 +138,28 @@ class ThreeHost implements GameHost {
    */
   private readonly handlePointerDown = (event: PointerEvent): void => {
     if (!this.context || !this.view || this.pointerId !== null) return;
+    // The primary button only. A right press is a question about what is under
+    // it, answered by `contextmenu` below, and letting it start a gesture would
+    // have its release walk the player to the thing they were asking about.
+    if (event.button !== 0) return;
     this.pointerId = event.pointerId;
     // Captured, so a drag that runs off the canvas — or off the window — keeps
     // reporting instead of leaving the camera stuck mid-turn with no pointerup
     // ever arriving.
     this.view.canvas.setPointerCapture(event.pointerId);
     this.gesture.start(event.clientX, event.clientY, event.timeStamp);
+    this.pressAt = { x: event.clientX, y: event.clientY };
+    // A phone has no second button, so a finger resting is how it asks. Not
+    // armed for a mouse: that one has a right button, and a left button held
+    // still while its owner reads the screen should keep meaning nothing.
+    if (event.pointerType !== 'mouse') {
+      this.holdTimer = setTimeout(this.holdAsLongPress, LONG_PRESS_MS);
+    }
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
     if (event.pointerId !== this.pointerId) return;
+    this.pressAt = { x: event.clientX, y: event.clientY };
     const yawDelta = this.gesture.move(event.clientX, event.clientY);
     if (yawDelta === 0 || !this.view || !this.context) return;
     this.view.orbitBy(yawDelta);
@@ -174,10 +193,59 @@ class ThreeHost implements GameHost {
     this.gesture.cancel();
   };
 
+  /**
+   * The desktop half: a right click asks what something is.
+   *
+   * The browser's own menu is refused whatever the click landed on, including
+   * the sky — offering "Save Image As" over a game world is nobody's intent,
+   * and on a touch device this is also the callout a long press would raise on
+   * top of the menu we are about to open ourselves.
+   */
+  private readonly handleContextMenu = (event: MouseEvent): void => {
+    event.preventDefault();
+    this.openContextMenu(event.clientX, event.clientY);
+  };
+
+  // The phone half, once the timer says the finger has rested long enough.
+  private readonly holdAsLongPress = (): void => {
+    this.holdTimer = null;
+    if (!this.gesture.holdAsLongPress()) return;
+    this.openContextMenu(this.pressAt.x, this.pressAt.y);
+  };
+
+  /**
+   * What is under this point and what can be done with it, handed to the HUD.
+   *
+   * The world answers with the menu's contents and remembers what it is about;
+   * where to draw it is the host's to add, being the only thing here that knows
+   * where the pointer was. Nothing is emitted for the ground — open grass has
+   * nothing to say for itself, and the menu already closes on any press outside
+   * itself.
+   */
+  private openContextMenu(clientX: number, clientY: number): void {
+    const context = this.context;
+    const view = this.view;
+    if (!context || !view) return;
+
+    const bounds = view.canvas.getBoundingClientRect();
+    const tap = view.resolveTap(clientX - bounds.left, clientY - bounds.top);
+    const subject = tap ? context.currentWorld.inspect(tap) : null;
+    if (!subject) return;
+    this.events.emit(CONTEXT_MENU_REQUESTED_EVENT, { ...subject, at: { x: clientX, y: clientY } });
+  }
+
   private releasePointer(pointerId: number): void {
     this.pointerId = null;
+    this.clearHoldTimer();
     if (this.view?.canvas.hasPointerCapture(pointerId)) {
       this.view.canvas.releasePointerCapture(pointerId);
+    }
+  }
+
+  private clearHoldTimer(): void {
+    if (this.holdTimer !== null) {
+      clearTimeout(this.holdTimer);
+      this.holdTimer = null;
     }
   }
 
@@ -213,7 +281,9 @@ class ThreeHost implements GameHost {
     canvas?.removeEventListener('pointermove', this.handlePointerMove);
     canvas?.removeEventListener('pointerup', this.handlePointerUp);
     canvas?.removeEventListener('pointercancel', this.handlePointerCancel);
+    canvas?.removeEventListener('contextmenu', this.handleContextMenu);
     this.gesture.cancel();
+    this.clearHoldTimer();
     this.pointerId = null;
     this.unbindKeyboard?.();
     this.unbindKeyboard = null;

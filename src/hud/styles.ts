@@ -32,6 +32,9 @@ function hudCss(): string {
   color: ${THEME.color.text};
   -webkit-user-select: none;
   user-select: none;
+  /* A held finger is how a phone asks what something is, so iOS must not answer
+     it first with a copy/share callout over the menu we are opening. */
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
 .hud * {
@@ -832,6 +835,76 @@ function hudCss(): string {
 .hud-list-row__sub {
   font-size: ${THEME.font.xs}px;
   color: ${THEME.color.muted};
+}
+
+/* --- Context menu and inspect card --------------------------------------- */
+
+/* Sized to its longest line rather than to a column width: the lines are two
+   words each, and a menu as wide as a sheet would cover the thing it is about.
+   The cap is what stops "Travel to Bandit Camp" setting that width. */
+.hud-context {
+  position: absolute;
+  min-width: 132px;
+  max-width: 200px;
+  pointer-events: auto;
+  background: ${cssRgba(THEME.panelBg, 0.95)};
+  border: 1px solid ${cssColor(THEME.panelStroke)};
+  padding: 4px;
+}
+.hud-context__title {
+  font-size: ${THEME.font.sm}px;
+  font-weight: bold;
+  padding: 2px ${THEME.padding}px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hud-context__row {
+  display: block;
+  width: 100%;
+  min-height: ${THEME.touchMin}px;
+  padding: 4px ${THEME.padding}px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: ${THEME.color.text};
+  font: inherit;
+  font-size: ${THEME.font.sm}px;
+  text-align: left;
+  cursor: pointer;
+}
+.hud-context__row + .hud-context__row {
+  margin-top: 2px;
+}
+
+.hud-modal__box--inspect {
+  width: 300px;
+  gap: 4px;
+}
+.hud-inspect__subtitle {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.dim};
+  flex: 0 0 auto;
+}
+.hud-inspect__line {
+  font-size: ${THEME.font.sm}px;
+  line-height: 22px;
+}
+.hud-inspect__label {
+  color: ${THEME.color.muted};
+}
+/* Right-aligned against the label, so a column of numbers reads as a column. */
+.hud-inspect__value {
+  text-align: right;
+}
+/* A drop row is read, not pressed — unlike every other row this shape. */
+.hud-inspect__drop {
+  cursor: default;
+}
+.hud-inspect__note {
+  margin-top: 6px;
+  font-size: ${THEME.font.xs}px;
+  line-height: 16px;
+  color: ${THEME.color.dim};
 }
 
 /* --- Character creation -------------------------------------------------- */

@@ -17,12 +17,14 @@ import { el } from './dom';
 import { bindHudKeys } from './keys';
 import { injectHudStyles } from './styles';
 import { CLASSES } from '../data/classes';
+import { describeItemName } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { equippableFrom } from '../systems/EquipSystem';
 import { itemsForSlot, type Gear, type Inventory } from '../systems/InventorySystem';
-import { actionsForItem, type ItemActionId } from '../systems/ItemActionsSystem';
+import { describeItem } from '../systems/InspectSystem';
+import { actionsForItem, type ItemAction, type ItemActionId } from '../systems/ItemActionsSystem';
 import { xpToNextLevel } from '../systems/LevelingSystem';
 import { activeQuests, type QuestLog } from '../systems/QuestSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
@@ -39,6 +41,8 @@ import {
   AFK_STATE_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   COMBAT_LOG_EVENT,
+  CONTEXT_ACTION_REQUESTED_EVENT,
+  CONTEXT_MENU_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
   CURRENCY_CHANGED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
@@ -70,6 +74,8 @@ import {
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
   type AvailableActions,
+  type ContextMenuRequest,
+  type ScreenPoint,
   type UiEventName,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
@@ -217,15 +223,11 @@ class Hud {
         this.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot);
       }
     });
-    this.inventorySheet = new InventorySheet(
-      (itemId) =>
-        actionsForItem(itemId, {
-          nearFire: this.model.actions.nearFire,
-          shopOpen: this.model.shopOpen,
-          classId: this.classId,
-        }),
-      (actionId, itemId) => this.dispatchItemAction(actionId, itemId),
-    );
+    this.inventorySheet = new InventorySheet({
+      actionsFor: (itemId) => this.itemActions(itemId),
+      onAction: (actionId, itemId) => this.dispatchItemAction(actionId, itemId),
+      onInspect: (itemId, at) => this.openItemMenu(itemId, at),
+    });
     this.questSheet = new QuestSheet(character.classId);
     this.featsSheet = new FeatsSheet((titleId) =>
       this.events.emit(SET_TITLE_REQUESTED_EVENT, titleId),
@@ -415,6 +417,61 @@ class Hud {
     this.events.emit(event, itemId);
   }
 
+  private itemActions(itemId: ItemId): ItemAction[] {
+    return actionsForItem(itemId, {
+      nearFire: this.model.actions.nearFire,
+      shopOpen: this.model.shopOpen,
+      classId: this.classId,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Context menus
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The menu for something in the world, as the world described it.
+   *
+   * The two lines the HUD adds itself are the two that never leave it: the
+   * panels behind Inspect and Loot arrived with the request, so reading what a
+   * rat drops asks the simulation nothing and cannot go stale while the card is
+   * open. Everything else goes back as a bare action id — the world is holding
+   * the rat, and this end of the wire deliberately is not.
+   */
+  private openSubjectMenu(request: ContextMenuRequest): void {
+    const entries = request.actions.map((action) => ({
+      label: action.label,
+      onSelect: () => this.events.emit(CONTEXT_ACTION_REQUESTED_EVENT, action.id),
+    }));
+    entries.push({
+      label: 'Inspect',
+      onSelect: () => this.overlays.openInspect(request.details),
+    });
+    const loot = request.loot;
+    if (loot) {
+      entries.push({ label: 'Loot', onSelect: () => this.overlays.openInspect(loot) });
+    }
+    this.overlays.openContextMenu({
+      title: request.title,
+      titleColor: request.titleColor,
+      entries,
+      at: request.at,
+    });
+  }
+
+  /** The same menu for a bag cell, whose actions the HUD already computes. */
+  private openItemMenu(itemId: ItemId, at: ScreenPoint): void {
+    const entries = this.itemActions(itemId).map((action) => ({
+      label: action.label,
+      onSelect: () => this.dispatchItemAction(action.id, itemId),
+    }));
+    entries.push({
+      label: 'Inspect',
+      onSelect: () => this.overlays.openInspect(describeItem(itemId)),
+    });
+    this.overlays.openContextMenu({ title: describeItemName(itemId), entries, at });
+  }
+
   // ---------------------------------------------------------------------------
   // Redraws that need more than the event's own payload
   // ---------------------------------------------------------------------------
@@ -484,12 +541,24 @@ class Hud {
       this.refreshCharacterSheet();
       this.refreshHealth();
     });
-    listen(PLAYER_DIED_EVENT, () => this.toast.show('You have died.', THEME.color.playerDamage));
+    listen(PLAYER_DIED_EVENT, () => {
+      this.toast.show('You have died.', THEME.color.playerDamage);
+      // A menu about the bandit that just killed you is a menu about a fight
+      // that is over, and the world has already forgotten which bandit it was.
+      this.overlays.closeContextMenu();
+    });
+
+    listen(CONTEXT_MENU_REQUESTED_EVENT, (request) => this.openSubjectMenu(request));
 
     // The map's two. Both come off the tick rather than from the world's
     // constructor, so they arrive on the first frame after this HUD is mounted
     // and on every zone crossing after that.
-    listen(ZONE_ENTERED_EVENT, (zoneId) => this.mapSheet.setZone(zoneId));
+    listen(ZONE_ENTERED_EVENT, (zoneId) => {
+      this.mapSheet.setZone(zoneId);
+      // The HUD outlives the world; a menu about something in the last zone
+      // does not.
+      this.overlays.closeContextMenu();
+    });
     listen(PLAYER_TILE_CHANGED_EVENT, (tile) => this.mapSheet.setPlayerTile(tile));
 
     listen(SKILL_XP_GAINED_EVENT, (progress) => {

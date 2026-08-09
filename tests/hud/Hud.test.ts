@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { hudMounted, mountHud, unmountHud } from '../../src/hud/Hud';
 import { AwayReportModal } from '../../src/hud/AwayReportModal';
+import { ContextMenu } from '../../src/hud/ContextMenu';
+import { InspectModal } from '../../src/hud/InspectModal';
 import { OptionsModal } from '../../src/hud/OptionsModal';
 import type { Overlay } from '../../src/hud/Overlay';
 import { ShopModal } from '../../src/hud/ShopModal';
@@ -10,9 +12,14 @@ import { recordingBus, type Emitted } from '../world/harness';
 import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSystem';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import { zoneMap } from '../../src/systems/MapSystem';
+import { ENEMIES } from '../../src/data/enemies';
+import { describeEnemy, describeEnemyLoot } from '../../src/systems/InspectSystem';
+import { THEME } from '../../src/ui/theme';
 import {
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
+  CONTEXT_ACTION_REQUESTED_EVENT,
+  CONTEXT_MENU_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
   CURRENCY_CHANGED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
@@ -21,6 +28,7 @@ import {
   INVENTORY_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
+  PLAYER_DIED_EVENT,
   PLAYER_EFFECTS_CHANGED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
@@ -32,6 +40,7 @@ import {
   TARGET_SELECTED_EVENT,
   ZONE_ENTERED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
+  type ContextMenuRequest,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -548,6 +557,131 @@ describe('the inventory panel forwards its buttons', () => {
   });
 });
 
+/**
+ * The right click, and the finger held on a phone. Two menus meet here and are
+ * deliberately one component: what the world found under the pointer arrives on
+ * the wire, and what a bag cell offers the HUD works out itself.
+ */
+describe('the context menu', () => {
+  const RAT: ContextMenuRequest = {
+    title: 'Rat (2)',
+    titleColor: THEME.color.con.high,
+    actions: [{ id: 'attack', label: 'Attack' }],
+    details: describeEnemy(ENEMIES.rat, 2),
+    loot: describeEnemyLoot(ENEMIES.rat),
+    at: { x: 120, y: 200 },
+  };
+
+  const lines = (): string[] =>
+    [...parent.querySelectorAll<HTMLElement>('.hud-context__row')].map(
+      (row) => row.textContent ?? '',
+    );
+  const line = (label: string): HTMLButtonElement => {
+    const button = parent.querySelector<HTMLButtonElement>(
+      `.hud-context__row[data-context-action="${label}"]`,
+    );
+    if (!button) throw new Error(`no ${label} line: ${lines().join(', ')}`);
+    return button;
+  };
+  const card = (): HTMLElement | null => parent.querySelector('.hud-modal__box--inspect');
+  const openFor = (itemId: string): void => {
+    const cell = parent.querySelector<HTMLElement>(`.hud-item[data-item="${itemId}"]`);
+    cell?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 40, clientY: 60 }));
+  };
+
+  describe('over the world', () => {
+    beforeEach(() => {
+      mount();
+      events.emit(CONTEXT_MENU_REQUESTED_EVENT, RAT);
+    });
+
+    it('offers what the world can do, then the two panels it was handed', () => {
+      expect(lines()).toEqual(['Attack', 'Inspect', 'Loot']);
+      expect(parent.querySelector<HTMLElement>('.hud-context__title')?.textContent).toBe('Rat (2)');
+    });
+
+    // The only thing that goes back is which line was pressed: the world is
+    // holding the rat, and the HUD deliberately never has a reference to it.
+    it('asks for the action by id, and closes behind itself', () => {
+      line('Attack').click();
+
+      expect(emitted.at(-1)).toEqual({ event: CONTEXT_ACTION_REQUESTED_EVENT, args: ['attack'] });
+      expect(lines()).toEqual([]);
+    });
+
+    it('shows the stat block without asking the world anything', () => {
+      const before = emitted.length;
+      line('Inspect').click();
+
+      expect(card()?.textContent).toContain('Level 2 Beast');
+      expect(emitted).toHaveLength(before);
+    });
+
+    it('shows every drop with the chance the roll actually uses', () => {
+      line('Loot').click();
+
+      const drops = [...parent.querySelectorAll<HTMLElement>('.hud-inspect__drop')];
+      expect(drops.map((row) => row.dataset.item)).toEqual(['rat-bones', 'rat-meat']);
+      expect(drops[0]?.textContent).toContain('60%');
+    });
+
+    it('closes on Escape, and the card behind it too', () => {
+      line('Inspect').click();
+      press('Escape');
+
+      expect(card()).toBeNull();
+      expect(lines()).toEqual([]);
+    });
+
+    // The HUD outlives the world; a menu about a rat in town does not.
+    it.each([
+      ['a zone change', () => events.emit(ZONE_ENTERED_EVENT, 'beach')],
+      ['a death', () => events.emit(PLAYER_DIED_EVENT)],
+    ])('closes on %s', (_case, happen) => {
+      happen();
+      expect(lines()).toEqual([]);
+    });
+
+    it('replaces itself rather than stacking a second menu', () => {
+      events.emit(CONTEXT_MENU_REQUESTED_EVENT, { ...RAT, title: 'Rat (1)' });
+      expect(parent.querySelectorAll('.hud-context')).toHaveLength(1);
+    });
+  });
+
+  describe('over the bag', () => {
+    beforeEach(() => {
+      mount({ inventory: { 'brown-helmet': 1 } });
+      tab('inventory').click();
+    });
+
+    it('offers the item its own actions, and Inspect after them', () => {
+      openFor('brown-helmet');
+      expect(lines()).toEqual(['Equip', 'Inspect']);
+    });
+
+    it('asks for the action the same way the detail strip does', () => {
+      openFor('brown-helmet');
+      line('Equip').click();
+
+      expect(emitted.at(-1)).toEqual({
+        event: EQUIP_ITEM_REQUESTED_EVENT,
+        args: ['brown-helmet'],
+      });
+    });
+
+    // What the bag has never had room to say: the weight, the price, and which
+    // class is allowed to wear it.
+    it('spells the item out in full', () => {
+      openFor('brown-helmet');
+      line('Inspect').click();
+
+      expect(card()?.textContent).toContain('Leather armour');
+      expect(card()?.textContent).toContain('Warrior');
+      expect(card()?.textContent).toContain('25c');
+    });
+  });
+});
+
 describe('the away report', () => {
   const parked: PendingNotification = { kind: 'offline-afk', report: REPORT };
 
@@ -652,6 +786,8 @@ describe('every overlay has the same lifecycle', () => {
       { onBuy: noop, onSell: noop, onAcceptQuest: noop, onTurnInQuest: noop, onDismiss: noop },
       onClosed,
     ),
+    new ContextMenu({ title: 'Rat', entries: [], at: { x: 0, y: 0 }, bounds: PHONE, onClosed }),
+    new InspectModal(describeEnemy(ENEMIES.rat, 1), onClosed),
   ];
 
   it('takes each one out of the tree and says so once', () => {
@@ -668,7 +804,7 @@ describe('every overlay has the same lifecycle', () => {
       overlay.close();
       expect(() => overlay.close()).not.toThrow();
     }
-    expect(closes).toBe(4);
+    expect(closes).toBe(6);
   });
 });
 

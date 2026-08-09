@@ -80,7 +80,7 @@ change touches the renderer, an actor or the HUD. Screenshots land in gitignored
 
 It runs on a **portrait phone in a touch-capable context**, which is what the game is laid out
 for; two sections leave that viewport on purpose and say why (a landscape resize, and a desktop
-block for the HUD rules that differ on a roomy screen). Four things in it exist nowhere else:
+block for the HUD rules that differ on a roomy screen). Five things in it exist nowhere else:
 
 - **The GPU teardown.** Three zone round trips have to leave `renderer.info.memory` where they
   found it. That number counts what has actually been _uploaded_, which is why both snapshots are
@@ -90,6 +90,11 @@ block for the HUD rules that differ on a roomy screen). Four things in it exist 
   and a mouse can break neither — it never pans the page and is never a thumb resting on the
   screen. Touch sequences go through CDP `Input.dispatchTouchEvent`; Playwright's touchscreen can
   tap but not drag.
+- **A press held in wall clock.** `LONG_PRESS_MS` is measured on the same clock `TAP_MAX_MS` is,
+  so nothing on the hand crank produces one and no fake pointer stream contains one — the
+  `context-menu` section holds a real finger still for 700ms and then checks that letting go walks
+  nowhere. It is also where the two events one right click arrives as (`pointerdown` with a
+  non-primary button, then `contextmenu`) are held to being one gesture.
 - **A landscape resize**, which is the one shape `tests/render3d/camera.test.ts` does not measure.
   A landscape camera frames twelve tiles of _depth_ rather than of width, so the south signpost is
   out of frame from the spawn point; what holds is that walking toward it brings it into reach.
@@ -200,7 +205,8 @@ add to it:
 
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
-the pan, the food), `AbilityCaster`, `AfkCamp`, `ShopSession`, `QuestDesk`, and `ApproachDriver`
+the pan, the food), `AbilityCaster`, `AfkCamp`, `ShopSession`, `QuestDesk`, `ContextMenuSession`
+(what a press held is about, and what was chosen from it), and `ApproachDriver`
 (the two click-to-move walks). Each owns its own state, is constructed by `ZoneWorld` and reaches
 the rest of the zone through two things and no others: the `WorldContext` they all share — the
 clock, the character, the player, both channels out of the simulation, and the handful of
@@ -325,9 +331,9 @@ is `display: none !important` on purpose: it is a utility and has to beat whatev
 element sets for itself.
 
 **`ui/` is the vocabulary, `hud/` is the DOM that renders it.** `ui/layout.ts` (geometry),
-`ui/theme.ts` (palette and scale), `ui/tabs.ts` (the tab table) and `ui/uiEvents.ts` (the event
-names and payloads) are shared, tested, engine-free definitions; everything that builds an element
-lives in `hud/`.
+`ui/theme.ts` (palette and scale), `ui/tabs.ts` (the tab table), `ui/gestures.ts` (when a press is
+a tap, a drag or a question) and `ui/uiEvents.ts` (the event names and payloads) are shared,
+tested, engine-free definitions; everything that builds an element lives in `hud/`.
 
 **An item's icon is derived from what the item already is** (`ui/itemIcons.ts`, drawn by
 `hud/itemIcon.ts`). Equipment needs no icon data: a weapon names its `weaponShape`, armour fills a
@@ -662,6 +668,30 @@ screen past `TAP_MAX_MS` is not a request to walk. Only the horizontal component
 pitch is not the player's to change, since it is what keeps the world clear of the tab bar _and_
 what guarantees every pixel on screen is ground rather than sky. The host owns the events, the
 pointer capture and `touch-action: none`; `ZoneView3D` owns the angle, and it outlives a zone.
+
+**A press held is the third thing those events can mean, and it is a question rather than a
+request.** Right-clicking — or, on a phone, resting a finger — asks what something is: the host
+resolves the same pick a tap uses and calls `world.inspect(tap)`, which answers with a menu and
+**changes nothing** (a player reading a drop table mid-chop has not decided to stop chopping).
+`LONG_PRESS_MS` is `TAP_MAX_MS`, deliberately: a press held that long had already stopped being a
+tap and did nothing at all, so the phone's right click costs no gesture that meant something else.
+Reaching it **latches** (`holdAsLongPress`) — at exactly 500ms the press is a menu and never also a
+walk, which is not something a comparison against the clock can promise. The numbers live in
+`ui/gestures.ts` rather than in the renderer because `hud/longPress.ts` reads them too: a bag cell
+and a rat have to answer to the same press, and an element in an overlay has no drag to
+disambiguate against and no pointer to capture, so all that is left of the rule there is a timer.
+
+The menu itself is the ask/answer split the shop makes, and the reason is the same one twice over.
+`world/ContextMenuSession.ts` holds **the only reference to the rat**; the HUD is handed a
+description and sends back a bare `ContextActionId`, so a panel in an HTML overlay never outlives
+the zone it was about, and a line chosen after the mob died, after the zone changed, or naming
+something other than what was pressed resolves to nothing. Choosing an action runs it through
+`ZoneWorld.tap` — a menu is a slower way of saying the same thing, not a second set of rules about
+attacking and gathering. Everything a menu _shows_ comes from `systems/InspectSystem.ts`, which is
+a pure function of the data tables and is settled at the moment the menu opens: a drop rate on
+screen is the number `rollLootTable` rolls against, and a card left up is describing rats rather
+than a stale rat. Anything that ticks stays off it on purpose — a creature's current HP belongs to
+the target frame, which is redrawn as it changes.
 
 Two things follow from the camera being movable at all:
 

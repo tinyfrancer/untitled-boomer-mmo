@@ -49,6 +49,11 @@ export interface ZoneMap {
 // is called is a decision the whole game makes.
 const NPC_NAMES: Record<NpcId, string> = { shopkeeper: 'Shopkeeper' };
 
+/** What an NPC is called, for the map's marker and for anyone examining them. */
+export function npcName(npcId: NpcId): string {
+  return NPC_NAMES[npcId];
+}
+
 /** Where a world point falls on the map. Fractional — a dot is not on a grid. */
 export function toTile(x: number, y: number): { x: number; y: number } {
   return { x: x / TILE_SIZE, y: y / TILE_SIZE };

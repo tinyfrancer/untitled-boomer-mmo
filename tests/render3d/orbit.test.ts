@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  OrbitGesture,
-  TAP_MAX_MS,
-  TAP_SLOP_PX,
-  YAW_PER_PIXEL,
-  normalizeYaw,
-} from '../../src/render3d/orbit';
+import { OrbitGesture, YAW_PER_PIXEL, normalizeYaw } from '../../src/render3d/orbit';
+import { LONG_PRESS_MS, TAP_MAX_MS, TAP_SLOP_PX } from '../../src/ui/gestures';
 
 /** Drags in a straight line, one pixel at a time, summing the yaw it is worth. */
 function drag(gesture: OrbitGesture, dx: number, dy = 0): number {
@@ -86,6 +81,49 @@ describe('OrbitGesture', () => {
     gesture.cancel();
     expect(gesture.move(400, 200)).toBe(0);
     expect(gesture.end(10)).toBe(false);
+  });
+
+  /**
+   * The whole point of the latch. `LONG_PRESS_MS` and `TAP_MAX_MS` are the same
+   * number, so a release a moment after the menu opened is inside the tap
+   * window by the clock alone — and walking the player to whatever they were
+   * asking about is precisely the bug.
+   */
+  it('spends the tap on a press that became a long press', () => {
+    const gesture = new OrbitGesture();
+    gesture.start(100, 200, 0);
+    expect(gesture.holdAsLongPress()).toBe(true);
+    expect(gesture.end(LONG_PRESS_MS)).toBe(false);
+  });
+
+  it('answers a long press once, however often the timer asks', () => {
+    const gesture = new OrbitGesture();
+    gesture.start(100, 200, 0);
+    expect(gesture.holdAsLongPress()).toBe(true);
+    expect(gesture.holdAsLongPress()).toBe(false);
+  });
+
+  it('refuses a long press to a gesture already turning the camera', () => {
+    const gesture = new OrbitGesture();
+    gesture.start(0, 0, 0);
+    drag(gesture, TAP_SLOP_PX + 20);
+    expect(gesture.holdAsLongPress()).toBe(false);
+  });
+
+  it('refuses a long press to a pointer that has already been lifted', () => {
+    const gesture = new OrbitGesture();
+    gesture.start(100, 200, 0);
+    gesture.end(40);
+    expect(gesture.holdAsLongPress()).toBe(false);
+  });
+
+  // The menu is open and under the finger: dragging on from there must not also
+  // swing the camera round behind it.
+  it('stops turning the camera once the press has become a menu', () => {
+    const gesture = new OrbitGesture();
+    gesture.start(0, 0, 0);
+    gesture.holdAsLongPress();
+    expect(drag(gesture, 120)).toBe(0);
   });
 });
 
