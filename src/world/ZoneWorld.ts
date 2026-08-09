@@ -26,6 +26,7 @@ import {
   TRAVEL_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
+  UNLOCKED_ZONES_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
@@ -37,6 +38,7 @@ import { afkXpReward } from '../systems/AfkSystem';
 import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
 import { conColor } from '../systems/EnemySystem';
 import { effectElapsed } from '../systems/EffectSystem';
+import { zoneAccess } from '../systems/ZoneAccessSystem';
 import { tileOf, toTile } from '../systems/MapSystem';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import type { GatherState } from '../systems/GatherSystem';
@@ -165,7 +167,16 @@ export class ZoneWorld implements Targeting {
   private readonly publishAbilityState: () => void;
   private readonly publishActions: () => void;
   private readonly publishZone: () => void;
+  private readonly publishUnlockedZones: () => void;
   private readonly publishPlayerTile: () => void;
+  /**
+   * The locked edge the player is currently standing against, if any.
+   *
+   * Leaning on a shut door is one refusal rather than one a frame: `findExit`
+   * keeps answering for as long as they are inside the exit margin, and without
+   * this the toast would re-fire sixty times a second.
+   */
+  private blockedAtEdge: ZoneId | null = null;
 
   constructor(options: ZoneWorldOptions) {
     const { zone, character, events, input, entry, hp, rng } = options;
@@ -252,6 +263,14 @@ export class ZoneWorld implements Targeting {
       () => this.zone.id,
       String,
       (zoneId) => this.ctx.events.emit(ZONE_ENTERED_EVENT, zoneId),
+    );
+    // Unseeded for the same reason, and it needs no more than that: a key is
+    // spent on the way through a door, so the world that opens one is a world
+    // about to be torn down and the next one says so on its first frame.
+    this.publishUnlockedZones = publishOnChange(
+      () => [...this.character.state.unlockedZones],
+      (zoneIds) => zoneIds.join('|'),
+      (zoneIds) => this.ctx.events.emit(UNLOCKED_ZONES_CHANGED_EVENT, zoneIds),
     );
     // Keyed to whole tiles so this speaks on a crossing rather than every
     // frame, but carrying the fractional position, so the dot sits where the
@@ -397,6 +416,7 @@ export class ZoneWorld implements Targeting {
     this.publishAbilityState();
     this.publishActions();
     this.publishZone();
+    this.publishUnlockedZones();
     this.publishPlayerTile();
     this.updateShopRange();
     this.checkZoneExit();
@@ -505,13 +525,19 @@ export class ZoneWorld implements Targeting {
   // Walk toward a tapped signpost and take its exit on arrival — the mobile
   // route out of a zone; walking into the map edge still works for WASD.
   approachSignpost(signpost: WorldSignpost): void {
+    // Asked on arrival rather than on the tap: the key could be picked up on
+    // the way, and a door refusing before the walk even starts would be
+    // answering a question about a moment that has not happened yet.
+    const enter = (): void => {
+      if (this.openWayInto(signpost.exit.to)) {
+        this.leaveZone(signpost.exit);
+      }
+    };
     if (withinRadius(this.player, signpost, SIGNPOST_INTERACT_RADIUS)) {
-      this.leaveZone(signpost.exit);
+      enter();
       return;
     }
-    this.approach.walkTo({ kind: 'signpost', radius: SIGNPOST_INTERACT_RADIUS }, signpost, () =>
-      this.leaveZone(signpost.exit),
-    );
+    this.approach.walkTo({ kind: 'signpost', radius: SIGNPOST_INTERACT_RADIUS }, signpost, enter);
   }
 
   approachShop(npc: WorldNpc): void {
@@ -528,6 +554,37 @@ export class ZoneWorld implements Targeting {
   // Zones
   // ---------------------------------------------------------------------------
 
+  /**
+   * Whether the way into a zone is open, spending the key if this is the moment
+   * it opens.
+   *
+   * Every route into a zone asks this — the edge walk, the signpost, and travel
+   * from the world map — so a door cannot be locked against one of them and
+   * open to another. It is the only place a key is ever spent, which is what
+   * makes "consumed once, open for good" one rule rather than three.
+   */
+  private openWayInto(zoneId: ZoneId): boolean {
+    const access = zoneAccess(zoneId, {
+      inventory: this.character.state.inventory,
+      unlockedZones: this.character.state.unlockedZones,
+    });
+    if (access.kind === 'open') return true;
+    if (access.kind === 'locked') {
+      this.ctx.notice(access.reason);
+      return false;
+    }
+
+    if (!this.character.unlockZone(zoneId, access.keyItemId)) {
+      return false;
+    }
+    // Both channels: a door opening for good is worth a toast as it happens and
+    // a line in the log to find again afterwards.
+    this.ctx.notice(access.reason);
+    this.ctx.log(logNotice(access.reason));
+    this.ctx.publishInventory();
+    return true;
+  }
+
   private checkZoneExit(): void {
     const exit = findExit(
       this.zone.exits,
@@ -537,9 +594,16 @@ export class ZoneWorld implements Targeting {
       this.worldHeight,
       EXIT_MARGIN,
     );
-    if (exit) {
-      this.leaveZone(exit);
+    if (!exit) {
+      this.blockedAtEdge = null;
+      return;
     }
+    if (this.blockedAtEdge === exit.to) return;
+    if (this.openWayInto(exit.to)) {
+      this.leaveZone(exit);
+      return;
+    }
+    this.blockedAtEdge = exit.to;
   }
 
   private leaveZone(exit: ZoneExit): void {
@@ -593,6 +657,9 @@ export class ZoneWorld implements Targeting {
       this.ctx.notice('You cannot travel while something is fighting you.');
       return;
     }
+    // A locked door is locked from the map too: travel is a shortcut past the
+    // walk, not past the key.
+    if (!this.openWayInto(to)) return;
 
     this.changingZone = true;
     this.afk.set(false);

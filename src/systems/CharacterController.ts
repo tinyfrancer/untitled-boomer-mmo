@@ -289,4 +289,31 @@ export class CharacterController {
       : null;
     this.state.updatedAt = new Date().toISOString();
   }
+
+  /** Whether the character has already opened this zone's door. */
+  hasUnlocked(zoneId: ZoneId): boolean {
+    return this.state.unlockedZones.includes(zoneId);
+  }
+
+  /**
+   * Spends the key and remembers the door. Returns false, changing nothing, if
+   * the key is not there — the caller has already asked, but this is the one
+   * that actually takes it, so it refuses as a whole rather than half-applying
+   * the way `turnInQuest` does.
+   *
+   * Idempotent by design: unlocking a zone that is already open takes no second
+   * key, so a door that somehow gets opened twice cannot cost two.
+   */
+  unlockZone(zoneId: ZoneId, keyItemId: ItemId): boolean {
+    if (this.hasUnlocked(zoneId)) {
+      return true;
+    }
+    if (this.itemCount(keyItemId) <= 0) {
+      return false;
+    }
+    this.removeItem(keyItemId, 1);
+    this.state.unlockedZones = [...this.state.unlockedZones, zoneId];
+    this.state.updatedAt = new Date().toISOString();
+    return true;
+  }
 }

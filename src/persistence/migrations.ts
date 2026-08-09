@@ -57,6 +57,10 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // land — off the map, or inside the pond. Null sends them to the zone's
   // default spawn, which is where every load put them until now anyway.
   10: (state) => ({ ...state, position: null }),
+  // v11 → v12: the bandit hideout arrives behind a locked door. Nobody has
+  // opened it, so an existing character starts with nothing unlocked and finds
+  // the key the same way a new one does.
+  11: (state) => ({ ...state, unlockedZones: [] }),
 };
 
 /**

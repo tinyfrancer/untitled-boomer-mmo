@@ -348,3 +348,43 @@ describe('CharacterController achievements', () => {
     expect(character.earnedTitles()).toEqual([]);
   });
 });
+
+describe('CharacterController locked zones', () => {
+  it('starts with every door still shut', () => {
+    const character = makeController();
+    expect(character.state.unlockedZones).toEqual([]);
+    expect(character.hasUnlocked('bandit-hideout')).toBe(false);
+  });
+
+  it('spends exactly one key and remembers the door', () => {
+    const character = makeController();
+    character.addItem('hideout-key', 2);
+
+    expect(character.unlockZone('bandit-hideout', 'hideout-key')).toBe(true);
+    expect(character.itemCount('hideout-key')).toBe(1);
+    expect(character.hasUnlocked('bandit-hideout')).toBe(true);
+  });
+
+  // The one outcome that cannot be undone is taking the key and not opening
+  // anything, so this refuses as a whole rather than half-applying.
+  it('refuses without a key, and takes nothing', () => {
+    const character = makeController();
+
+    expect(character.unlockZone('bandit-hideout', 'hideout-key')).toBe(false);
+    expect(character.hasUnlocked('bandit-hideout')).toBe(false);
+    expect(character.state.unlockedZones).toEqual([]);
+  });
+
+  // Every route into a zone asks, so the same door can be opened twice in a
+  // session; a second key is not what that should cost.
+  it('opens an already-open door for free', () => {
+    const character = makeController();
+    character.addItem('hideout-key', 1);
+    character.unlockZone('bandit-hideout', 'hideout-key');
+    character.addItem('hideout-key', 1);
+
+    expect(character.unlockZone('bandit-hideout', 'hideout-key')).toBe(true);
+    expect(character.itemCount('hideout-key')).toBe(1);
+    expect(character.state.unlockedZones).toEqual(['bandit-hideout']);
+  });
+});
