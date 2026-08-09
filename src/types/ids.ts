@@ -26,7 +26,8 @@ export type ItemId =
   | 'burnt-fish'
   | 'crab-meat'
   | 'cooked-crab'
-  | 'burnt-crab';
+  | 'burnt-crab'
+  | 'hideout-key';
 
 // Recipes are keyed by what goes in the pan, so a recipe id is the id of a raw
 // item. Spelling that as a subset of ItemId rather than as its own list is what
@@ -61,7 +62,7 @@ export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
  * `WeaponShapeId` by name so a new weapon gets an icon by construction.
  */
 export type ItemIconShape =
-  WeaponShapeId | 'helmet' | 'chest' | 'pants' | 'bone' | 'meat' | 'fish' | 'log';
+  WeaponShapeId | 'helmet' | 'chest' | 'pants' | 'bone' | 'meat' | 'fish' | 'log' | 'key';
 
 export type GatherSkillId = 'fishing' | 'woodcutting' | 'cooking';
 
@@ -73,7 +74,7 @@ export type SkillId = GatherSkillId | CombatSkillId;
 
 export type ResourceNodeId = 'tree' | 'fishing-spot' | 'ocean-fishing-spot';
 
-export type ZoneId = 'town' | 'beach' | 'bandit-camp';
+export type ZoneId = 'town' | 'beach' | 'bandit-camp' | 'bandit-hideout';
 
 // Which side of a map an exit sits on. See EDGE_TABLE in systems/ZoneSystem.ts
 // for the geometry each one implies.

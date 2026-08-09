@@ -195,7 +195,13 @@ describe('worldMap', () => {
     const links = worldMap().links;
     const pairs = links.map((link) => [link.from, link.to].sort().join('-'));
     expect(new Set(pairs).size).toBe(links.length);
-    expect(links).toHaveLength(2);
+    // One per connected pair in the table, however many zones there are.
+    const wired = new Set(
+      Object.values(ZONES).flatMap((zone) =>
+        zone.exits.map((exit) => [zone.id, exit.to].sort().join('-')),
+      ),
+    );
+    expect(links).toHaveLength(wired.size);
   });
 
   it('carries what each zone is for, so the map can say more than its name', () => {

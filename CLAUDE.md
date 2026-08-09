@@ -6,13 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; three zones (town with leveled rats and a shop, a beach with crabs and
-ocean fishing, a bandit camp with aggressive humanoids); character creation, leveling, gear,
+v1: single-player only; four zones (town with leveled rats and a shop, a beach with crabs and
+ocean fishing, a bandit camp with aggressive humanoids, and the bandit hideout behind a locked
+door); character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency and vendoring;
 a weight-limited pack; two collection quests from the shopkeeper; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
-mobile-first HUD; and local save/load with versioned migrations. All three zones are level 1-3 starter content — what separates them is
-what they drop, not how hard they are.
+mobile-first HUD; and local save/load with versioned migrations. Every zone is level 1-3 starter
+content — what separates them is what they drop, not how hard they are, and the hideout is gated by
+a rare key rather than by a level.
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
@@ -255,7 +257,22 @@ node spawns, exits), each built into one `ZoneWorld` by the `GameContext` and dr
 tappable signpost (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not new
-view code.
+view code. Travel from the world map is the third route in and goes through the same tables;
+`ZoneWorld` refuses it mid-fight, which is the one thing it can do that a walk cannot.
+
+**A zone may be locked, and the key is spent rather than carried** (`ZoneDefinition.requiresKey`,
+ruled on by `systems/ZoneAccessSystem.ts`). `zoneAccess` answers three things and not two — `open`,
+`locked`, and `unlockable`, which is "shut, and the key is in the pack" — because a door about to
+open costs something and the caller has to know that before it walks through. All three routes into
+a zone ask `ZoneWorld.openWayInto`, which is the **only** place a key is ever spent, so "consumed
+once, open for good" is one rule rather than three; leaning on a shut edge is latched
+(`blockedAtEdge`) so the refusal is one toast rather than one a frame. What the key opened is stored
+on `CharacterState.unlockedZones` and is the one thing here that could not be derived — the key is
+gone afterwards, so an empty pack means either "never found one" or "already been", and the world
+map draws those two cells very differently. The bandit hideout is the only locked zone today; its
+map (`data/banditHideoutMap.ts`) is the inverse of every other one, solid `WALL_TILE` with rooms
+painted back out of it, which is why `tests/systems/ZoneSystem.test.ts` checks that an arrival
+_anywhere_ along an exit edge lands on walkable ground rather than only where the signpost stands.
 
 **The HUD is an HTML overlay over the canvas** (`src/hud/`, engine-free). `mountHud()` builds one
 `<div class="hud">` inside `#app` and it outlives every zone, like the session does. The only thing
@@ -289,6 +306,14 @@ not `player.isInCombat()`, which is a regen lockout a freshly built world starts
 would leave someone unable to leave a zone for seconds after arriving in it. Travel records no
 position in the zone it is sending them to, which is what puts them on its spawn point rather than
 wherever they last stood there.
+
+A locked zone is drawn shut on that view and is **still tapped like any other cell** — whether a
+door opens is the world's answer, and the toast it refuses with is what a phone reads the reason off,
+there being no tooltip to hover. The cell is drawn from `zoneAccess`'s three answers, so holding the
+key looks different from not holding it; the sheet reads the bag through a **getter** rather than
+being handed it once, because the key can be looted with that very panel open. Which doors have been
+opened is the one thing about this the HUD cannot derive, so it rides its own event
+(`unlocked-zones-changed`), unseeded like the map's other two.
 
 **The map is drawn from the zone's id and nothing else** (`systems/MapSystem.ts`, drawn by
 `hud/MapSheet.ts` as inline SVG in tile units). Terrain, the exits and what is worth walking to all
@@ -484,9 +509,11 @@ stays the renderer's, keyed by the same shape in `render3d/palette.ts`.
 **Only humanoids drop gear and coin.** `EnemyDefinition.family` is `beast | humanoid`, and it is
 what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by
 a test rather than by construction, since the tables are hand-written. It is also the thing that
-makes three same-level zones worth visiting: rats give quest parts, crabs give food, bandits give
+makes same-level zones worth visiting: rats give quest parts, crabs give food, bandits give
 gear and coin. The bandit table carries **both** armor types on purpose: the shop sells tools
 only, so that table plus the two class-keyed quest rewards is the whole of anyone's armor supply.
+It also carries the hideout key at 3%, which is the rarest thing on any table by a distance and is
+meant to be a run of bandits rather than an errand.
 
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
 only `active | done` per quest; how far along a "bring me N of X" objective is gets counted off the

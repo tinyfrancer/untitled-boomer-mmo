@@ -1,9 +1,11 @@
-import type { NpcId, ZoneEdge, ZoneId } from '../types/ids';
+import type { ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
+import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
 import {
   BANDIT_CAMP_MOB_SPAWNS,
+  BANDIT_HIDEOUT_MOB_SPAWNS,
   BEACH_MOB_SPAWNS,
   BEACH_NODE_SPAWNS,
   TOWN_MOB_SPAWNS,
@@ -40,6 +42,14 @@ export interface ZoneDefinition {
   nodeSpawns: NodeSpawnPoint[];
   npcSpawns: NpcSpawnPoint[];
   exits: ZoneExit[];
+  /**
+   * The item that opens the way in, for a zone that is shut until it is found.
+   *
+   * Spent on the first entry and never needed again — `CharacterState.unlocked`
+   * remembers, so the grind is one key rather than one per visit. A zone with
+   * no lock leaves this unset, which is every zone but the hideout.
+   */
+  requiresKey?: ItemId;
 }
 
 export const ZONES: Record<ZoneId, ZoneDefinition> = {
@@ -75,6 +85,20 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     mobSpawns: BANDIT_CAMP_MOB_SPAWNS,
     nodeSpawns: [],
     npcSpawns: [],
-    exits: [{ edge: 'west', to: 'town' }],
+    exits: [
+      { edge: 'west', to: 'town' },
+      { edge: 'east', to: 'bandit-hideout' },
+    ],
+  },
+  'bandit-hideout': {
+    id: 'bandit-hideout',
+    name: 'Bandit Hideout',
+    description: 'Locked. Whatever they are guarding in there, they guard it well.',
+    map: BANDIT_HIDEOUT_MAP,
+    mobSpawns: BANDIT_HIDEOUT_MOB_SPAWNS,
+    nodeSpawns: [],
+    npcSpawns: [],
+    exits: [{ edge: 'west', to: 'bandit-camp' }],
+    requiresKey: 'hideout-key',
   },
 };

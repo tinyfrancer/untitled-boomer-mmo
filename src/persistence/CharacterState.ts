@@ -5,7 +5,7 @@ import type { QuestLog } from '../systems/QuestSystem';
 import type { ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 11;
+export const CHARACTER_STATE_VERSION = 12;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -41,6 +41,15 @@ export interface CharacterState {
   // Which earned title is worn, if any. Only the choice is state — the right to
   // wear it comes from kills.
   activeTitleId: TitleId | null;
+  /**
+   * Zones whose lock has been opened, which is the one thing about a locked
+   * door that has to survive the tab closing.
+   *
+   * Stored rather than derived, and it is the key being *spent* that puts an id
+   * in here: the key is gone afterwards, so there is nothing left in the bag to
+   * read the answer off. Every other zone is open and is never named here.
+   */
+  unlockedZones: ZoneId[];
   createdAt: string;
   updatedAt: string;
 }
@@ -69,6 +78,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     quests: {},
     kills: {},
     activeTitleId: null,
+    unlockedZones: [],
     createdAt: now,
     updatedAt: now,
   };

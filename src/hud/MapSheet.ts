@@ -1,6 +1,7 @@
 import { Sheet } from './Sheet';
 import { el } from './dom';
-import { GRASS_TILE, PATH_TILE, tileColor } from '../data/tiles';
+import { describeItemName } from '../data/items';
+import { GRASS_TILE, PATH_TILE, WALL_TILE, tileColor } from '../data/tiles';
 import {
   worldMap,
   zoneMap,
@@ -8,6 +9,7 @@ import {
   type WorldMapZone,
   type ZoneMap,
 } from '../systems/MapSystem';
+import { zoneAccess, type ZoneAccess, type ZoneAccessContext } from '../systems/ZoneAccessSystem';
 import { THEME, cssColor } from '../ui/theme';
 import type { TilePoint } from '../ui/uiEvents';
 import type { SkillId, ZoneId } from '../types/ids';
@@ -86,6 +88,20 @@ function markerColor(marker: MapMarker): string {
 }
 
 /**
+ * The line a shut zone carries under its level band, and what colour it is in.
+ *
+ * Two words rather than a sentence: the cell is 80 units across and the full
+ * reason ("You need a Hideout Key") belongs in the toast the world answers a tap
+ * with, which is the version a phone with no pointer to hover actually gets.
+ * Holding the key is worth saying differently from not holding it — that is the
+ * difference between a wall and an invitation.
+ */
+const ACCESS_NOTE: Record<Exclude<ZoneAccess['kind'], 'open'>, { text: string; color: string }> = {
+  locked: { text: 'Locked', color: THEME.color.muted },
+  unlockable: { text: 'Key in pack', color: THEME.color.equippable },
+};
+
+/**
  * Which way a label runs from the marker it hangs under.
  *
  * Centred in the middle of the map and turned inward at either end, so a
@@ -152,6 +168,16 @@ function svgEl<K extends keyof SVGElementTagNameMap>(
   return node;
 }
 
+export interface MapSheetOptions {
+  onTravel: (zoneId: ZoneId) => void;
+  /**
+   * What the world view needs to tell a shut door from an open one, read fresh
+   * each time it draws. A getter rather than a value because the answer moves
+   * with the bag — the key can be looted with this very panel open.
+   */
+  access: () => ZoneAccessContext;
+}
+
 /**
  * The zone map, opened from the Menu.
  *
@@ -176,11 +202,16 @@ function svgEl<K extends keyof SVGElementTagNameMap>(
  * *between* zones is a different question from walking within one — nobody
  * wants to remember that the beach is off the south edge — so that view is
  * where a tap asks to go somewhere.
+ *
+ * A shut zone is drawn shut but is still tapped like any other: whether a door
+ * opens is the world's answer, not this one's, and it says so with the same
+ * toast the walk into the map edge earns.
  */
 export class MapSheet extends Sheet {
   private readonly figure: HTMLElement;
   private readonly zoomButton: HTMLButtonElement;
   private readonly onTravel: (zoneId: ZoneId) => void;
+  private readonly access: () => ZoneAccessContext;
   private svg: SVGSVGElement | null = null;
   private dot: SVGCircleElement | null = null;
   private drawn: ZoneId | null = null;
@@ -188,9 +219,10 @@ export class MapSheet extends Sheet {
   private tile: TilePoint | null = null;
   private zoomedOut = false;
 
-  constructor(onTravel: (zoneId: ZoneId) => void) {
+  constructor(options: MapSheetOptions) {
     super('Map', THEME.panelWidth.map, 'hud-sheet--map');
-    this.onTravel = onTravel;
+    this.onTravel = options.onTravel;
+    this.access = options.access;
     this.figure = el('div', 'hud-map');
     this.zoomButton = el('button', 'hud-button hud-map__zoom', 'World');
     this.zoomButton.type = 'button';
@@ -218,6 +250,15 @@ export class MapSheet extends Sheet {
     this.zoomedOut = zoomedOut;
     this.redraw();
     this.moveDot();
+  }
+
+  /**
+   * Redraws the world view against a lock that has moved — a key found, or a
+   * door opened with one. Only the zoomed-out view says anything about locks,
+   * and it is four cells, so this is cheaper than working out which one changed.
+   */
+  refreshAccess(): void {
+    if (this.zoomedOut) this.buildWorld();
   }
 
   private redraw(): void {
@@ -276,11 +317,13 @@ export class MapSheet extends Sheet {
 
   private buildWorldZone(zone: WorldMapZone): SVGElement {
     const here = zone.zoneId === this.drawn;
+    const access = zoneAccess(zone.zoneId, this.access());
     const x = zone.column * CELL;
     const y = zone.row * CELL;
     const group = svgEl('g', { class: 'hud-map__zone' });
     group.dataset.zone = zone.zoneId;
     if (here) group.dataset.here = 'true';
+    if (access.kind !== 'open') group.dataset.access = access.kind;
 
     group.append(
       svgEl('rect', {
@@ -289,7 +332,9 @@ export class MapSheet extends Sheet {
         width: CELL * 0.8,
         height: CELL * 0.8,
         rx: CELL * 0.06,
-        fill: cssColor(tileColor(GRASS_TILE)),
+        // Rock rather than grass for a zone that is shut: the fill is what the
+        // eye reaches before any of the three lines on the cell.
+        fill: cssColor(tileColor(access.kind === 'open' ? GRASS_TILE : WALL_TILE)),
         stroke: here ? THEME.color.text : THEME.color.levelUp,
         'stroke-width': here ? CELL * 0.035 : CELL * 0.015,
       }),
@@ -304,9 +349,16 @@ export class MapSheet extends Sheet {
         THEME.color.muted,
       ),
     );
+    if (access.kind !== 'open') {
+      const note = ACCESS_NOTE[access.kind];
+      group.append(text(note.text, x + CELL / 2, y + CELL * 0.77, CELL * 0.09, note.color));
+    }
 
     const title = svgEl('title', {});
-    title.textContent = zone.description;
+    title.textContent =
+      access.kind === 'open'
+        ? zone.description
+        : `${zone.description} Opened with a ${describeItemName(access.keyItemId)}.`;
     group.append(title);
 
     // The whole cell is the target rather than the label inside it: this is
