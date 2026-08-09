@@ -16,6 +16,7 @@ import {
   PLAYER_EFFECTS_CHANGED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
+  PLAYER_TILE_CHANGED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
@@ -25,6 +26,7 @@ import {
   TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
+  ZONE_ENTERED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
   type AchievementUnlock,
 } from '../ui/uiEvents';
@@ -32,6 +34,7 @@ import { afkXpReward } from '../systems/AfkSystem';
 import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
 import { conColor } from '../systems/EnemySystem';
 import { effectElapsed } from '../systems/EffectSystem';
+import { tileOf, toTile } from '../systems/MapSystem';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
@@ -149,13 +152,15 @@ export class ZoneWorld implements Targeting {
   private readonly quests: QuestDesk;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  // The five HUD publishers that only speak when what they publish moves; the
+  // The seven HUD publishers that only speak when what they publish moves; the
   // constructor says what each one counts as a change.
   private readonly publishPlayerHp: () => void;
   private readonly publishPlayerMana: () => void;
   private readonly publishPlayerEffects: () => void;
   private readonly publishAbilityState: () => void;
   private readonly publishActions: () => void;
+  private readonly publishZone: () => void;
+  private readonly publishPlayerTile: () => void;
 
   constructor(options: ZoneWorldOptions) {
     const { zone, character, events, input, entry, hp, rng } = options;
@@ -232,6 +237,27 @@ export class ZoneWorld implements Targeting {
       (actions) => String(actions.nearFire),
       (actions) => this.ctx.events.emit(ACTIONS_CHANGED_EVENT, actions),
       'false',
+    );
+    // The map's two. Neither carries a seed, and both are read from the tick
+    // rather than sent from here: the host mounts the HUD after building the
+    // world, so anything emitted in this constructor on first boot arrives
+    // before there is a listener. An unseeded publisher speaks on the first
+    // frame instead, which every new world gets a fresh set of.
+    this.publishZone = publishOnChange(
+      () => this.zone.id,
+      String,
+      (zoneId) => this.ctx.events.emit(ZONE_ENTERED_EVENT, zoneId),
+    );
+    // Keyed to whole tiles so this speaks on a crossing rather than every
+    // frame, but carrying the fractional position, so the dot sits where the
+    // player is rather than snapping to the corner of a tile.
+    this.publishPlayerTile = publishOnChange(
+      () => toTile(this.player.x, this.player.y),
+      () => {
+        const tile = tileOf(this.player.x, this.player.y);
+        return `${tile.x},${tile.y}`;
+      },
+      (tile) => this.ctx.events.emit(PLAYER_TILE_CHANGED_EVENT, tile),
     );
 
     this.approach = new ApproachDriver(this.ctx, {
@@ -360,6 +386,8 @@ export class ZoneWorld implements Targeting {
     this.publishPlayerEffects();
     this.publishAbilityState();
     this.publishActions();
+    this.publishZone();
+    this.publishPlayerTile();
     this.updateShopRange();
     this.checkZoneExit();
     return this.ctx.drain();

@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { harness, nodeNamed } from './harness';
 import { ZONES } from '../../src/data/zones';
-import { PLAYER_DIED_EVENT } from '../../src/ui/uiEvents';
+import {
+  PLAYER_DIED_EVENT,
+  PLAYER_TILE_CHANGED_EVENT,
+  ZONE_ENTERED_EVENT,
+} from '../../src/ui/uiEvents';
+import { TILE_SIZE } from '../../src/config/constants';
 
 /**
  * The core loop, with nothing rendering it: what a zone is made of, a fight
@@ -175,5 +180,62 @@ describe('ZoneWorld', () => {
     emitted.length = 0;
     bus.emit('buy-item-requested', 'felling-axe');
     expect(emitted.filter((e) => e.event !== 'buy-item-requested')).toEqual([]);
+  });
+});
+
+/**
+ * The map's two inputs. Both are published from the tick rather than from the
+ * constructor, because the host mounts the HUD *after* building the world — an
+ * emit from the constructor on first boot fires into a bus with nobody
+ * listening, and the map would stay blank until the player's first zone walk.
+ */
+describe('what the world tells the map', () => {
+  it('names its zone on the first frame, not before it', () => {
+    const kit = harness();
+    expect(kit.emissions(ZONE_ENTERED_EVENT)).toEqual([]);
+
+    kit.tick(1);
+
+    expect(kit.emissions(ZONE_ENTERED_EVENT)).toEqual([['town']]);
+  });
+
+  it('says so once and then stops, since a world never changes zone', () => {
+    const kit = harness();
+    kit.tick(5);
+    expect(kit.emissions(ZONE_ENTERED_EVENT)).toHaveLength(1);
+  });
+
+  it('places the player in tiles rather than in world pixels', () => {
+    const kit = harness();
+    kit.world.teleport(TILE_SIZE * 4, TILE_SIZE * 2);
+    kit.tick(1);
+
+    expect(kit.emissions(PLAYER_TILE_CHANGED_EVENT).at(-1)).toEqual([{ x: 4, y: 2 }]);
+  });
+
+  // The whole reason it is keyed to tiles: a position on the per-frame channel
+  // is what the HUD's side of the architecture deliberately avoids.
+  it('speaks on a tile crossing rather than once a frame', () => {
+    const kit = harness();
+    kit.world.teleport(TILE_SIZE * 4, TILE_SIZE * 2);
+    kit.tick(1);
+    const settled = kit.emissions(PLAYER_TILE_CHANGED_EVENT).length;
+
+    // Moved, but not out of the tile they were standing in.
+    kit.world.teleport(TILE_SIZE * 4.4, TILE_SIZE * 2.4);
+    kit.tick(5);
+    expect(kit.emissions(PLAYER_TILE_CHANGED_EVENT)).toHaveLength(settled);
+
+    kit.world.teleport(TILE_SIZE * 5.1, TILE_SIZE * 2.4);
+    kit.tick(1);
+    expect(kit.emissions(PLAYER_TILE_CHANGED_EVENT).length).toBeGreaterThan(settled);
+  });
+
+  it('carries where they actually are, not the corner of the tile', () => {
+    const kit = harness();
+    kit.world.teleport(TILE_SIZE * 3.5, TILE_SIZE * 6.25);
+    kit.tick(1);
+
+    expect(kit.emissions(PLAYER_TILE_CHANGED_EVENT).at(-1)).toEqual([{ x: 3.5, y: 6.25 }]);
   });
 });
