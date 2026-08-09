@@ -62,7 +62,7 @@ const REPORT: OfflineAfkReport = {
   xp: 60,
   copper: 40,
   drops: { 'rat-bones': 3 },
-  packFilled: false,
+  missed: {},
   gathers: 0,
   skill: null,
   skillXp: 0,
@@ -560,6 +560,41 @@ describe('the away report', () => {
   it('shows nothing when the session was not parked', () => {
     mount({}, []);
     expect(modals()).toHaveLength(0);
+  });
+
+  /**
+   * A full pack never stops an unattended session — it keeps working and keeps
+   * earning — so this list is the only place the cost of one is ever stated.
+   */
+  it('itemises what the pack had no room for, under its own heading', () => {
+    mount({}, [
+      {
+        kind: 'offline-afk',
+        report: {
+          ...REPORT,
+          kills: 0,
+          xp: 0,
+          gathers: 15,
+          skill: 'fishing',
+          skillXp: 100,
+          drops: {},
+          missed: { 'raw-fish': 15, 'rat-bones': 1 },
+        },
+      },
+    ]);
+
+    const modal = modals()[0];
+    expect(modal?.textContent).toContain('15 gathered, 100 Fishing XP');
+    expect(modal?.textContent).toContain('Could not carry:');
+    const lost = [...(modal?.querySelectorAll('.hud-modal__missed') ?? [])].map(
+      (line) => line.textContent,
+    );
+    expect(lost).toEqual(['Raw Fish x15', 'Rat Bones x1']);
+  });
+
+  it('says nothing about carrying when everything fitted', () => {
+    mount({}, [parked]);
+    expect(modals()[0]?.textContent).not.toContain('Could not carry');
   });
 });
 

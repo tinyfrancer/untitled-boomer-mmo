@@ -498,8 +498,12 @@ chain by construction; a test still asserts the grid is complete.
 **Acquiring an item can fail.** The pack has a weight limit (`systems/EncumbranceSystem.ts`,
 capacity from strength), so gathering, loot and buying all go through
 `CharacterController.tryAddItem`, which adds nothing and returns false when the pack is full.
-Use it rather than `addItem` for anything the world hands the player, and handle the refusal —
-a full pack is what ends an unattended gathering session. Currency is weightless and never fails.
+Use it rather than `addItem` for anything the world hands the player, and handle the refusal.
+**What a refusal means depends on who is watching**: an attended player is stopped — they are right
+there and can make room, and nothing is destroyed while they do — where an unattended one keeps
+going and loses the haul, since the swing happened and stopping the camp dead would cost them a
+night's XP rather than one load of logs. `GatherSession` asks `isCamping()` to tell the two apart.
+Currency is weightless and never fails.
 
 **Frame rate is not an assumption you may make.** A loaded CI runner or a cheap phone steps the
 game at single-digit fps, where one frame carries the player ~46px. Anything comparing a distance
@@ -545,8 +549,15 @@ ready node of that skill inside the anchor radius and moves to the next when one
 camp does between respawns, `none` means the tool has no work in this zone and the caller falls
 back to fighting). Anything already chasing is answered first whichever camp it is — being hit
 breaks the channel, so a woodcutter that ignored it would re-arm a gather it could never finish
-until it died — and a haul the pack has no room for stops the loop rather than spinning on a node
-it cannot take anything from.
+until it died.
+
+**A full pack never stops an unattended session; it only stops it keeping anything.** The camp keeps
+fighting or working and keeps earning, and everything it cannot pocket is counted into
+`OfflineAfkReport.missed` and itemised on the away report — "60 kills, 75 XP / Could not carry: Rat
+Bones x33, Rat Meat x26" rather than a bare "your pack filled up", which tells a player nothing
+about what a night cost them. Settling in with a pack that is already full is allowed and warned
+about at the toggle, since the XP is worth having on its own but nobody means to do it; that warning
+is latched (`packFull`) so it is said once rather than every frame for as long as the camp runs.
 
 **Gathering is the one thing the camp is _not_ penalised for while the tab is open**, and that is
 deliberate rather than an oversight: an attended player gathers by tapping a node and watching it

@@ -51,8 +51,15 @@ export interface OfflineAfkReport {
   xp: number;
   copper: number;
   drops: Inventory;
-  // Whether the pack ran out of room and later drops were left behind.
-  packFilled: boolean;
+  /**
+   * What the session found and could not carry, itemised.
+   *
+   * A full pack never stops an unattended session — it keeps fighting or
+   * working and keeps earning, and what it cannot pocket is lost. Naming each
+   * one is the whole difference between "your pack filled up" and knowing that
+   * a night away cost you fifteen fish.
+   */
+  missed: Inventory;
   // What a gathering camp brought back instead. A session is one or the other,
   // never both, so a fought session leaves these at zero and a worked one
   // leaves the kills and the coin there. The haul itself rides in `drops`,
@@ -69,7 +76,7 @@ const NOTHING: OfflineAfkReport = {
   xp: 0,
   copper: 0,
   drops: {},
-  packFilled: false,
+  missed: {},
   gathers: 0,
   skill: null,
   skillXp: 0,
@@ -169,7 +176,7 @@ export function resolveOfflineAfk(
 
   let copper = 0;
   let drops: Inventory = {};
-  let packFilled = false;
+  let missed: Inventory = {};
   // Tracked against the pack as it fills, so a bag that ran out of room
   // partway through stops taking drops at exactly that point.
   let carried = context.inventory;
@@ -182,12 +189,15 @@ export function resolveOfflineAfk(
     // Coin is weightless, so it keeps coming in however full the pack is.
     copper += loot.copper;
     for (const drop of loot.drops) {
-      if (!canCarry(carried, drop.itemId, drop.quantity, context.capacity)) {
-        packFilled = true;
-        continue;
+      // A drop with nowhere to go is named rather than merely counted: the
+      // fights happened either way, and what they cost is the useful half.
+      const bag = canCarry(carried, drop.itemId, drop.quantity, context.capacity) ? 'kept' : 'lost';
+      if (bag === 'kept') {
+        carried = addItemToInventory(carried, drop.itemId, drop.quantity);
+        drops = addItemToInventory(drops, drop.itemId, drop.quantity);
+      } else {
+        missed = addItemToInventory(missed, drop.itemId, drop.quantity);
       }
-      carried = addItemToInventory(carried, drop.itemId, drop.quantity);
-      drops = addItemToInventory(drops, drop.itemId, drop.quantity);
     }
   }
 
@@ -199,7 +209,7 @@ export function resolveOfflineAfk(
     xp,
     copper: Math.floor(copper * OFFLINE_RATE_MULTIPLIER),
     drops,
-    packFilled,
+    missed,
   };
 }
 
@@ -215,8 +225,11 @@ export function resolveOfflineAfk(
  * awake camp slower than this arithmetic; the level ceiling is what stops that
  * mattering however long the tab was shut and whatever zone gets added next.
  *
- * A skill already at its cap earns no XP but still fills the pack, which is
- * then the only thing bounding it.
+ * A full pack does not stop it. The session keeps working and keeps training —
+ * the swing happened, and the skill is what the swing teaches — and every haul
+ * with nowhere to go is named in `missed` instead. A skill already at its cap
+ * earns no XP but still works, so a capped fisher away overnight comes back to
+ * a bag of fish and nothing else.
  */
 function resolveOfflineGather(
   session: AfkSession,
@@ -239,30 +252,30 @@ function resolveOfflineGather(
   const xpToNext = skillXpToNextLevel(skill, level, context.characterLevel);
   const affordable = xpToNext > 0 ? Math.floor(xpToNext / perGatherXp) : Number.POSITIVE_INFINITY;
 
-  let gathers = 0;
-  let packFilled = false;
+  const gathers = Math.min(elapsedGathers, affordable);
   let drops: Inventory = {};
+  let missed: Inventory = {};
   // Tracked against the pack as it fills, so a bag that ran out of room partway
-  // through stops taking the haul at exactly that point.
+  // through starts losing the haul at exactly that point rather than from the
+  // first gather or the last.
   let carried = context.inventory;
 
-  for (let gather = 0; gather < Math.min(elapsedGathers, affordable); gather += 1) {
+  for (let gather = 0; gather < gathers; gather += 1) {
     // One per gather: the bonus-yield roll is a perk for an attended player,
     // the way the action bar is.
-    if (!canCarry(carried, node.yieldItemId, 1, context.capacity)) {
-      packFilled = true;
-      break;
+    if (canCarry(carried, node.yieldItemId, 1, context.capacity)) {
+      carried = addItemToInventory(carried, node.yieldItemId, 1);
+      drops = addItemToInventory(drops, node.yieldItemId, 1);
+    } else {
+      missed = addItemToInventory(missed, node.yieldItemId, 1);
     }
-    carried = addItemToInventory(carried, node.yieldItemId, 1);
-    drops = addItemToInventory(drops, node.yieldItemId, 1);
-    gathers += 1;
   }
 
   return {
     ...NOTHING,
     elapsedMs,
     drops,
-    packFilled,
+    missed,
     gathers,
     skill,
     // Floored rather than rounded, so a session can never come out ahead of the

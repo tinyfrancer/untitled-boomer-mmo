@@ -1921,11 +1921,16 @@ async function offlineCamping() {
   // the harder cases. Written through the live game rather than into
   // localStorage directly: the page's own unload handler persists on reload and
   // would overwrite a hand-written save. Only the clock is faked. ---
+  // Parked with a pack stuffed to the brim, which is the case worth driving
+  // through a real reload: a full pack does not stop an unattended session, so
+  // the report has to come back with the night's XP *and* an itemised list of
+  // what it could not carry.
   await tapTab('camp');
   await page.evaluate(() => {
     const w = window.world;
     w.character.state.level = 1;
     w.character.state.xp = 0;
+    w.character.state.inventory = { 'rat-bones': w.character.carryCapacity() };
     const afk = w.character.state.afk;
     if (!afk) throw new Error('the camp tab left no parked session behind');
     afk.startedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -1939,6 +1944,8 @@ async function offlineCamping() {
       level: state.level,
       afk: state.afk,
       panel: document.querySelector('[data-action="dismiss-away-report"]') !== null,
+      heading: document.body.textContent?.includes('Could not carry:') ?? false,
+      missed: [...document.querySelectorAll('.hud-modal__missed')].map((n) => n.textContent),
     };
   });
   check(
@@ -1949,6 +1956,11 @@ async function offlineCamping() {
   check('the away report reaches a HUD that was not listening yet', away.panel === true);
   // Cleared on the load that paid it, so a second load can't pay it twice.
   check('the parked session is cleared once resolved', away.afk === null);
+  check(
+    'a night with a full pack still pays, and names what it could not carry',
+    away.xp > 0 && away.heading && away.missed.length > 0,
+    `${away.xp} xp, could not carry: ${away.missed.join(', ') || 'nothing'}`,
+  );
   await page.screenshot({ path: `${OUT}/18-away-report.png` });
   await page.click('[data-action="dismiss-away-report"]');
 }
