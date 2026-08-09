@@ -4,6 +4,7 @@ import { CombatLogSheet } from './CombatLogSheet';
 import { FeatsSheet } from './FeatsSheet';
 import { GatherBar } from './GatherBar';
 import { InventorySheet } from './InventorySheet';
+import { MapSheet } from './MapSheet';
 import { OverlayHost } from './OverlayHost';
 import { PlayerColumn } from './PlayerColumn';
 import { QuestSheet } from './QuestSheet';
@@ -55,6 +56,7 @@ import {
   PLAYER_EFFECTS_CHANGED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
+  PLAYER_TILE_CHANGED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
@@ -66,6 +68,7 @@ import {
   TITLE_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
+  ZONE_ENTERED_EVENT,
   type AvailableActions,
   type UiEventName,
 } from '../ui/uiEvents';
@@ -154,6 +157,7 @@ class Hud {
   private readonly questSheet: QuestSheet;
   private readonly featsSheet: FeatsSheet;
   private readonly combatLogSheet: CombatLogSheet;
+  private readonly mapSheet = new MapSheet();
   private readonly sheets: Partial<Record<TabId, Sheet>>;
 
   private readonly overlays: OverlayHost;
@@ -233,6 +237,7 @@ class Hud {
       quests: this.questSheet,
       feats: this.featsSheet,
       log: this.combatLogSheet,
+      map: this.mapSheet,
     };
     for (const [id, sheet] of Object.entries(this.sheets)) {
       sheet.root.dataset.sheet = id;
@@ -250,6 +255,7 @@ class Hud {
       this.questSheet.root,
       this.featsSheet.root,
       this.combatLogSheet.root,
+      this.mapSheet.root,
       this.tabBar.root,
     );
     parent.append(this.root);
@@ -479,6 +485,12 @@ class Hud {
       this.refreshHealth();
     });
     listen(PLAYER_DIED_EVENT, () => this.toast.show('You have died.', THEME.color.playerDamage));
+
+    // The map's two. Both come off the tick rather than from the world's
+    // constructor, so they arrive on the first frame after this HUD is mounted
+    // and on every zone crossing after that.
+    listen(ZONE_ENTERED_EVENT, (zoneId) => this.mapSheet.setZone(zoneId));
+    listen(PLAYER_TILE_CHANGED_EVENT, (tile) => this.mapSheet.setPlayerTile(tile));
 
     listen(SKILL_XP_GAINED_EVENT, (progress) => {
       this.model.skills = {

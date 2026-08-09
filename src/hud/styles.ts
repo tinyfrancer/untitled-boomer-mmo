@@ -592,6 +592,36 @@ function hudCss(): string {
   background: ${cssColor(THEME.buttonBg)};
 }
 
+/* --- Map ----------------------------------------------------------------- */
+
+/* The sheet's body scrolls; the map inside it must not, so it takes whatever
+   width it is given and keeps the zone's own proportions. */
+.hud-map {
+  display: flex;
+  justify-content: center;
+}
+.hud-map__svg {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  border: 1px solid ${cssColor(THEME.panelStroke)};
+  /* Terrain is drawn a tile at a time and the browser would otherwise blend
+     the seams between them into a haze at this size. */
+  shape-rendering: crispEdges;
+}
+/* The anchor is set per label — it turns inward near an edge, so a destination
+   name always runs into the map rather than off it. */
+.hud-map__label {
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.85);
+  stroke-width: 0.5;
+  stroke-linejoin: round;
+}
+/* The one thing on the map that moves, and the only thing drawn over the rest. */
+.hud-map__player {
+  shape-rendering: auto;
+}
+
 /* --- Quests, feats, log -------------------------------------------------- */
 
 .hud-quest {

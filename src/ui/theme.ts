@@ -26,6 +26,10 @@ export const THEME = {
     inventory: 260,
     target: 160,
     combatLog: 300,
+    // Wider than the rest: the zone it draws is 25 tiles across and 19 down,
+    // and a map narrow enough to fit the other panels' column would leave each
+    // tile too few pixels to tell a fishing spot from the pond it sits in.
+    map: 320,
   },
   paperdollSize: 102,
   /**
