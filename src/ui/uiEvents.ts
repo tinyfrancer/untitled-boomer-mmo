@@ -85,6 +85,10 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 // emit on first boot fires into a bus with nobody listening and the map stays
 // blank until the first zone walk.
 export const ZONE_ENTERED_EVENT = 'zone-entered';
+// Asked for from the world map's zoomed-out view. An ask, not an order: only
+// the world knows whether the player is in the middle of a fight, so it decides
+// and the map is told by the zone it ends up in.
+export const TRAVEL_REQUESTED_EVENT = 'travel-requested';
 export const PLAYER_TILE_CHANGED_EVENT = 'player-tile-changed';
 // The context menu, which is the one thing on this channel that starts with a
 // press on the *world* rather than on the HUD. The host resolves what was under
@@ -243,6 +247,7 @@ export interface UiEventMap {
   [AFK_TOGGLE_REQUESTED_EVENT]: [];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
+  [TRAVEL_REQUESTED_EVENT]: [zoneId: ZoneId];
   [PLAYER_TILE_CHANGED_EVENT]: [tile: TilePoint];
   [CONTEXT_MENU_REQUESTED_EVENT]: [request: ContextMenuRequest];
   [CONTEXT_ACTION_REQUESTED_EVENT]: [actionId: ContextActionId];

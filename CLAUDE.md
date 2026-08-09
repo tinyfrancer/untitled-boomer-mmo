@@ -278,6 +278,18 @@ Max HP is not on the wire — `player-hp-changed` carries the current value alon
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
 
+**The map zooms out, and the zoomed-out view is how you travel** (`worldMap()` in
+`systems/MapSystem.ts`). Its whole layout is **derived from the exits already in `ZONES`** — walked
+breadth-first from town, placing each zone one step from its neighbour in the direction the edge
+that reaches it points — so a coordinate cannot drift out of step with where walking actually takes
+you, and a zone added to the table with its exits wired appears on the map with nothing else written
+down. A zone's level band is derived the same way, off its own `mobSpawns`. Tapping a cell asks to
+travel; the world decides, and refuses while **anything is engaged on the player** — deliberately
+not `player.isInCombat()`, which is a regen lockout a freshly built world starts inside, so using it
+would leave someone unable to leave a zone for seconds after arriving in it. Travel records no
+position in the zone it is sending them to, which is what puts them on its spawn point rather than
+wherever they last stood there.
+
 **The map is drawn from the zone's id and nothing else** (`systems/MapSystem.ts`, drawn by
 `hud/MapSheet.ts` as inline SVG in tile units). Terrain, the exits and what is worth walking to all
 come back out of the tables the world was built from — read with the same centre-plus-offset

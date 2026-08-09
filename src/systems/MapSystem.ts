@@ -2,7 +2,7 @@ import { TILE_SIZE } from '../config/constants';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
 import { signpostPoint, zoneWorldSize } from './ZoneSystem';
-import type { NpcId, SkillId, ZoneId } from '../types/ids';
+import type { NpcId, SkillId, ZoneEdge, ZoneId } from '../types/ids';
 
 /** What a marker stands for, which is the whole of how it is drawn. */
 export type MapMarkerKind = 'node' | 'npc' | 'exit';
@@ -131,5 +131,110 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
     rows: zone.map.length,
     terrain: terrainBands(zone.map),
     markers,
+  };
+}
+
+/** One zone as the zoomed-out view draws it: a cell on a grid of zones. */
+export interface WorldMapZone {
+  zoneId: ZoneId;
+  name: string;
+  description: string;
+  /** Where it sits on the world grid, derived from the edges that reach it. */
+  column: number;
+  row: number;
+  /** The band its spawns sit in, or null for a zone nothing lives in. */
+  levels: { min: number; max: number } | null;
+}
+
+/** A road between two zones, named once rather than once per direction. */
+export interface WorldMapLink {
+  from: ZoneId;
+  to: ZoneId;
+}
+
+export interface WorldMap {
+  zones: WorldMapZone[];
+  links: WorldMapLink[];
+  columns: number;
+  rows: number;
+}
+
+// Which way each edge moves you on the world grid. A zone reached by walking
+// off the south edge is drawn below the one you left, which is the only
+// arrangement that agrees with what walking actually does.
+const EDGE_STEP: Record<ZoneEdge, { column: number; row: number }> = {
+  north: { column: 0, row: -1 },
+  south: { column: 0, row: 1 },
+  west: { column: -1, row: 0 },
+  east: { column: 1, row: 0 },
+};
+
+/** The band a zone's spawns sit in, which is what makes it worth visiting or not. */
+export function zoneLevels(zoneId: ZoneId): { min: number; max: number } | null {
+  const levels = ZONES[zoneId].mobSpawns.map((spawn) => spawn.level);
+  if (levels.length === 0) {
+    return null;
+  }
+  return { min: Math.min(...levels), max: Math.max(...levels) };
+}
+
+/**
+ * Every zone and how they join up, laid out for the zoomed-out map.
+ *
+ * The layout is **derived from the exits**, walked breadth-first from the
+ * starting town and placing each zone one step from its neighbour in the
+ * direction the edge that reaches it points. Nothing is hand-placed, so a
+ * coordinate cannot drift out of step with where walking actually takes you,
+ * and a zone added to `ZONES` with its exits wired appears on the map with
+ * nothing else written down.
+ *
+ * A zone no exit reaches would be unreachable in play, so it is left off rather
+ * than parked in a corner of the map pretending otherwise.
+ */
+export function worldMap(root: ZoneId = 'town'): WorldMap {
+  const placed = new Map<ZoneId, { column: number; row: number }>([[root, { column: 0, row: 0 }]]);
+  const links: WorldMapLink[] = [];
+  const seen = new Set<string>();
+  const queue: ZoneId[] = [root];
+
+  while (queue.length > 0) {
+    const zoneId = queue.shift();
+    if (!zoneId) break;
+    const at = placed.get(zoneId);
+    if (!at) continue;
+
+    for (const exit of ZONES[zoneId].exits) {
+      // One road per pair, whichever end of it is walked first.
+      const key = [zoneId, exit.to].sort().join('->');
+      if (!seen.has(key)) {
+        seen.add(key);
+        links.push({ from: zoneId, to: exit.to });
+      }
+      if (placed.has(exit.to)) continue;
+      const step = EDGE_STEP[exit.edge];
+      placed.set(exit.to, { column: at.column + step.column, row: at.row + step.row });
+      queue.push(exit.to);
+    }
+  }
+
+  // Shifted so the top-left of whatever was reached is the origin: the root
+  // being (0,0) is an implementation detail, not a corner of the map.
+  const columns = [...placed.values()].map((cell) => cell.column);
+  const rows = [...placed.values()].map((cell) => cell.row);
+  const left = Math.min(...columns);
+  const top = Math.min(...rows);
+
+  return {
+    zones: [...placed.entries()].map(([zoneId, cell]) => ({
+      zoneId,
+      name: ZONES[zoneId].name,
+      description: ZONES[zoneId].description,
+      column: cell.column - left,
+      row: cell.row - top,
+      levels: zoneLevels(zoneId),
+    })),
+    links,
+    columns: Math.max(...columns) - left + 1,
+    rows: Math.max(...rows) - top + 1,
   };
 }

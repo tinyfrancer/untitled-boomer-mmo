@@ -69,6 +69,7 @@ import {
   SKILL_XP_GAINED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
+  TRAVEL_REQUESTED_EVENT,
   TITLE_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   XP_GAINED_EVENT,
@@ -163,7 +164,7 @@ class Hud {
   private readonly questSheet: QuestSheet;
   private readonly featsSheet: FeatsSheet;
   private readonly combatLogSheet: CombatLogSheet;
-  private readonly mapSheet = new MapSheet();
+  private readonly mapSheet: MapSheet;
   private readonly sheets: Partial<Record<TabId, Sheet>>;
 
   private readonly overlays: OverlayHost;
@@ -206,6 +207,7 @@ class Hud {
       currency: this.model.currency,
       quests: this.model.quests,
     }));
+    this.mapSheet = new MapSheet((zoneId) => events.emit(TRAVEL_REQUESTED_EVENT, zoneId));
     this.playerColumn = new PlayerColumn(character.name);
     this.actionBar = new ActionBar(character.classId, (abilityId) =>
       this.events.emit(ABILITY_REQUESTED_EVENT, abilityId),

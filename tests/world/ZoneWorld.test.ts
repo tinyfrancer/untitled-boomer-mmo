@@ -3,6 +3,8 @@ import { nth } from '../nth';
 import { harness, nodeNamed } from './harness';
 import { ZONES } from '../../src/data/zones';
 import {
+  AFK_TOGGLE_REQUESTED_EVENT,
+  NOTICE_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_TILE_CHANGED_EVENT,
   ZONE_ENTERED_EVENT,
@@ -237,5 +239,86 @@ describe('what the world tells the map', () => {
     kit.tick(1);
 
     expect(kit.emissions(PLAYER_TILE_CHANGED_EVENT).at(-1)).toEqual([{ x: 3.5, y: 6.25 }]);
+  });
+});
+
+/**
+ * Travel from the world map. The map asks and the world decides, for the same
+ * reason the shop and the quest desk work that way: only the world knows what
+ * the player is in the middle of.
+ */
+describe('travelling from the world map', () => {
+  it('hands the player to the host, the way an exit does', () => {
+    const kit = harness();
+
+    kit.world.handleTravelRequested('beach');
+
+    expect(kit.world.changingZone).toBe(true);
+    expect(kit.tick(1)).toContainEqual({ kind: 'travel', to: 'beach' });
+  });
+
+  // No entry edge rides along: nobody walked through anything, so the arrival
+  // is wherever that zone puts someone with no particular spot.
+  it('records no spot in the zone it is sending them to', () => {
+    const kit = harness();
+
+    kit.world.handleTravelRequested('beach');
+
+    expect(kit.state.zoneId).toBe('beach');
+    expect(kit.state.position).toBeNull();
+  });
+
+  /**
+   * The one rule. Without it the map is an escape hatch out of any fight that
+   * is going badly, which would make dying something only the careless do.
+   */
+  it('refuses while something is chasing, and says why', () => {
+    const kit = harness();
+    nth(kit.world.mobs).engage();
+
+    kit.world.handleTravelRequested('beach');
+
+    expect(kit.world.changingZone).toBe(false);
+    expect(kit.emissions(NOTICE_EVENT).at(-1)).toEqual([
+      'You cannot travel while something is fighting you.',
+    ]);
+  });
+
+  /**
+   * `player.isInCombat()` is a regen lockout and a freshly built world starts
+   * inside it, so using it here would have left a player unable to leave a zone
+   * for several seconds after arriving in it.
+   */
+  it('lets a player who has merely been hit recently travel', () => {
+    const kit = harness();
+    kit.world.player.takeDamage(1);
+    expect(kit.world.player.isInCombat()).toBe(true);
+
+    kit.world.handleTravelRequested('beach');
+
+    expect(kit.world.changingZone).toBe(true);
+  });
+
+  it('refuses to travel to the zone it is already in', () => {
+    const kit = harness();
+
+    kit.world.handleTravelRequested('town');
+
+    expect(kit.world.changingZone).toBe(false);
+    expect(kit.emissions(NOTICE_EVENT).at(-1)).toEqual(['You are already in Town.']);
+  });
+
+  // A camp is a spot in the zone being left, so it cannot survive the trip —
+  // the same reasoning that ends it when the player walks out through an edge.
+  it('takes the camp and the selection with it', () => {
+    const kit = harness();
+    kit.world.setTarget(nth(kit.world.mobs));
+    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    expect(kit.world.afkActive).toBe(true);
+
+    kit.world.handleTravelRequested('beach');
+
+    expect(kit.world.afkActive).toBe(false);
+    expect(kit.world.target).toBeNull();
   });
 });
