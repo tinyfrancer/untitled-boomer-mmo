@@ -11,8 +11,8 @@ Each PR stands alone — it ships green, with no dead buttons and no half-wired 
 | 1   | Navigation: five tabs and a Menu | merged 2026-08-07, `2d612b1` |
 | 2   | Quest marker over the shopkeeper | merged 2026-08-07, `413b960` |
 | 3   | The worn title over the player   | merged 2026-08-07, `0a24c56` |
-| 4   | The bag as an icon grid          | in review                    |
-| 5   | The zone map                     | not started                  |
+| 4   | The bag as an icon grid          | merged 2026-08-08, `6df55c1` |
+| 5   | The zone map                     | merged 2026-08-09            |
 
 ## 1 — Navigation
 
@@ -103,5 +103,16 @@ subscriber and the map stays blank until the first zone walk. Publishing from th
 events on the first frame after mount, on boot and on every crossing since a new world brings fresh
 unseeded publishers.
 
-Position is keyed to tile coordinates, so it speaks on a tile crossing rather than once a frame.
-The sheet caches the 475 terrain rects per zone and moves only the dot.
+Position is keyed to tile coordinates, so it speaks on a tile crossing rather than once a frame —
+though it carries the _fractional_ position, so the dot sits where the player is rather than snapping
+to a tile corner.
+
+Built as planned, with two things the sketch did not have. The 475 rects are **banded** into runs of
+identical tiles first (`terrainBands`), which takes the town from 475 down to 65 and the beach to 20;
+it is arithmetic, so it is unit-tested rather than counted in a browser. And a node is coloured by
+the skill that works it rather than by being a node — a pale green on the grass, a pale blue on the
+water — because at this size the colour is the only thing telling a tree from a fishing spot.
+
+An exit's label turns inward within a third of either edge (`labelAnchor`). Centred, "Bandit Camp"
+on the east exit ran half off the sheet, and the exits are the one thing on the map that sit against
+an edge by definition.

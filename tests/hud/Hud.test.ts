@@ -9,6 +9,7 @@ import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { recordingBus, type Emitted } from '../world/harness';
 import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSystem';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
+import { zoneMap } from '../../src/systems/MapSystem';
 import {
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
@@ -23,11 +24,13 @@ import {
   PLAYER_EFFECTS_CHANGED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
+  PLAYER_TILE_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   SHOP_OPENED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
+  ZONE_ENTERED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
@@ -631,5 +634,82 @@ describe('every overlay has the same lifecycle', () => {
       expect(() => overlay.close()).not.toThrow();
     }
     expect(closes).toBe(4);
+  });
+});
+
+/**
+ * The map, which is the only sheet drawn from something the HUD is *told*
+ * rather than something it already holds: which zone is running and where the
+ * player is standing are both the world's to know.
+ */
+describe('the map', () => {
+  const svg = (): SVGSVGElement | null => parent.querySelector('.hud-map__svg');
+  const dot = (): SVGCircleElement | null => parent.querySelector('.hud-map__player');
+  const markers = (kind: string): number =>
+    parent.querySelectorAll(`.hud-map__svg [data-marker="${kind}"]`).length;
+
+  it('stays blank until the world says which zone it is', () => {
+    mount();
+    menuItem('map');
+    expect(svg()).toBeNull();
+  });
+
+  it('draws the terrain, the exits and what is worth walking to', () => {
+    mount();
+    menuItem('map');
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+
+    const map = zoneMap('town');
+    expect(svg()?.getAttribute('viewBox')).toBe(`0 0 ${map.columns} ${map.rows}`);
+    expect(parent.querySelectorAll('.hud-map__svg rect[fill]').length).toBeGreaterThan(0);
+    expect(markers('node')).toBe(map.markers.filter((m) => m.kind === 'node').length);
+    expect(markers('npc')).toBe(1);
+    expect(markers('exit')).toBe(2);
+    expect(
+      parent.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent,
+    ).toBe('Town');
+  });
+
+  // A dot parked in the corner would read as a position rather than as an
+  // absence, so it waits for a tile of its own.
+  it('shows the player only once it has been told where they are', () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    expect(dot()?.getAttribute('visibility')).toBe('hidden');
+
+    events.emit(PLAYER_TILE_CHANGED_EVENT, { x: 4, y: 7 });
+    expect(dot()?.getAttribute('visibility')).toBe('visible');
+    expect(dot()?.getAttribute('cx')).toBe('4');
+    expect(dot()?.getAttribute('cy')).toBe('7');
+  });
+
+  /**
+   * The reason the two arrive as separate events: the terrain is four hundred
+   * rectangles and the dot is one, so a walk across a zone must not redraw the
+   * first to move the second.
+   */
+  it('moves the dot without rebuilding the terrain under it', () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    const before = svg();
+
+    events.emit(PLAYER_TILE_CHANGED_EVENT, { x: 1, y: 1 });
+    events.emit(PLAYER_TILE_CHANGED_EVENT, { x: 9, y: 3 });
+
+    expect(svg()).toBe(before);
+    expect(dot()?.getAttribute('cx')).toBe('9');
+  });
+
+  it('redraws for a new zone, and not for the one it is already showing', () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    const town = svg();
+
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    expect(svg()).toBe(town);
+
+    events.emit(ZONE_ENTERED_EVENT, 'beach');
+    expect(svg()).not.toBe(town);
+    expect(markers('npc')).toBe(0);
   });
 });

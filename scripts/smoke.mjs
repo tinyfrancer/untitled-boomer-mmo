@@ -230,6 +230,8 @@ const tabBarTop = () =>
 
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
 const BAR_TABS = ['character', 'inventory', 'quests', 'camp', 'menu'];
+/** How many the Menu opens: Map, Feats, Combat Log, Options. */
+const MENU_TAB_COUNT = 4;
 
 /**
  * Opens a surface the way a thumb reaches it — off the bar when it is there,
@@ -1098,7 +1100,9 @@ async function touchGestures() {
   });
   check(
     'and the menu behind it gives its own buttons a full touch target',
-    menuBoxes.count === 3 && menuBoxes.narrowest >= 44 && menuBoxes.shortest >= 44,
+    // Counted against the table rather than against a number written here: the
+    // menu is where a new surface goes, so this grows and the minimum does not.
+    menuBoxes.count === MENU_TAB_COUNT && menuBoxes.narrowest >= 44 && menuBoxes.shortest >= 44,
     `${menuBoxes.count} items, narrowest ${menuBoxes.narrowest.toFixed(1)}x${menuBoxes.shortest.toFixed(1)}px`,
   );
   await page.screenshot({ path: `${OUT}/10-menu-375.png` });
@@ -1670,6 +1674,111 @@ async function characterSheet() {
   await page.screenshot({ path: `${OUT}/14-character-sheet.png` });
 }
 
+async function zoneMapSheet() {
+  // --- The zone map. Everything on it except the dot is a pure function of the
+  // zone's id and is checked in vitest; what only a browser can answer is that
+  // the SVG is actually built and laid out inside the sheet, that the dot moves
+  // when the player does, and that walking to another zone redraws it. ---
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  await park();
+  await tapTab('map');
+
+  const drawn = () =>
+    page.evaluate(() => {
+      const svg = document.querySelector('.hud-map__svg');
+      const dot = document.querySelector('.hud-map__player');
+      const box = svg?.getBoundingClientRect();
+      return {
+        title:
+          document.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent ??
+          '',
+        terrain: document.querySelectorAll('.hud-map__svg rect[fill]').length,
+        nodes: document.querySelectorAll('.hud-map__svg [data-marker="node"]').length,
+        exits: document.querySelectorAll('.hud-map__svg [data-marker="exit"]').length,
+        npcs: document.querySelectorAll('.hud-map__svg [data-marker="npc"]').length,
+        labels: [...document.querySelectorAll('.hud-map__label')].map((n) => n.textContent),
+        dot: dot ? { x: Number(dot.getAttribute('cx')), y: Number(dot.getAttribute('cy')) } : null,
+        shown: dot?.getAttribute('visibility') ?? 'hidden',
+        width: Math.round(box?.width ?? 0),
+        height: Math.round(box?.height ?? 0),
+      };
+    });
+
+  // Whichever zone the sections above left the player in — the map is checked
+  // against `window.world` rather than against a zone named here, which is
+  // also the stronger question: the two have to agree.
+  const world = await page.evaluate(() => ({
+    name: window.world.zone.name,
+    nodes: window.world.nodes.length,
+    npcs: window.world.npcs.length,
+    exits: window.world.signposts.map((post) => post.label),
+  }));
+  const here = await drawn();
+  check(
+    'the map draws the zone the player is standing in, with its exits named',
+    here.title === world.name &&
+      here.terrain > 0 &&
+      here.nodes === world.nodes &&
+      here.npcs === world.npcs &&
+      here.exits === world.exits.length &&
+      world.exits.every((label) => here.labels.includes(label)),
+    `${here.title}: ${here.terrain} terrain, ${here.nodes}/${world.nodes} nodes, ` +
+      `${here.npcs}/${world.npcs} npcs, exits to ${here.labels.join(', ')}`,
+  );
+  check(
+    'and lays it out inside the sheet rather than at zero size',
+    here.width > 100 && here.height > 100 && here.width <= PHONE.width,
+    `${here.width}x${here.height} in a ${PHONE.width}px viewport`,
+  );
+  check(
+    'and puts the player on it',
+    here.shown === 'visible' && here.dot !== null,
+    `dot at ${JSON.stringify(here.dot)}`,
+  );
+  await page.screenshot({ path: `${OUT}/20-map.png` });
+
+  // The dot rides a tile crossing, so this moves several tiles.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.spawnPoint.x - 320, w.spawnPoint.y - 256);
+  });
+  await step(2);
+  const moved = await drawn();
+  check(
+    'the dot follows the player without redrawing the terrain under it',
+    moved.dot !== null &&
+      here.dot !== null &&
+      (moved.dot.x !== here.dot.x || moved.dot.y !== here.dot.y) &&
+      moved.terrain === here.terrain,
+    `dot ${JSON.stringify(here.dot)} -> ${JSON.stringify(moved.dot)}, terrain steady at ${moved.terrain}`,
+  );
+
+  // A zone walk rebuilds the world, and the map has to follow it across. Which
+  // exit is taken is read off the zone too, so this works from wherever it ran.
+  const leaving = await zoneId();
+  await page.evaluate(() => {
+    const w = window.world;
+    const post = w.signposts[0];
+    if (!post) throw new Error('zone has no exit');
+    // Onto the edge the exit sits on, which is what the world watches for.
+    if (post.exit.edge === 'north') w.teleport(post.x, 0);
+    else if (post.exit.edge === 'south') w.teleport(post.x, w.worldHeight);
+    else if (post.exit.edge === 'west') w.teleport(0, post.y);
+    else w.teleport(w.worldWidth, post.y);
+  });
+  await stepUntil(async () => (await zoneId()) !== leaving, 'the walk out of the zone');
+  await step(2);
+  const next = await page.evaluate(() => window.world.zone.name);
+  const arrived = await drawn();
+  check(
+    'and it follows the player into the next zone',
+    arrived.title === next && arrived.title !== here.title && arrived.shown === 'visible',
+    `${here.title} -> ${arrived.title}, dot ${JSON.stringify(arrived.dot)}`,
+  );
+  await page.screenshot({ path: `${OUT}/21-map-next-zone.png` });
+}
+
 async function reset() {
   // --- Resetting: the mobile route to a fresh character, which used to be
   // bound to F9 and so unreachable on a phone. Two taps, on purpose. It is also
@@ -1994,6 +2103,7 @@ const SECTIONS = [
   ['achievements', achievements],
   ['bag', bagSheet],
   ['character-sheet', characterSheet],
+  ['zone-map', zoneMapSheet],
   ['reset', reset],
   ['save-resume', saveResume],
   ['offline-camping', offlineCamping],

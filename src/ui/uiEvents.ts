@@ -1,4 +1,12 @@
-import type { AbilityId, ItemId, AchievementId, GearSlotId, QuestId, TitleId } from '../types/ids';
+import type {
+  AbilityId,
+  ItemId,
+  AchievementId,
+  GearSlotId,
+  QuestId,
+  TitleId,
+  ZoneId,
+} from '../types/ids';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
@@ -68,6 +76,15 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 // carrying an AchievementUnlock). Wearing a title is an ask/answer pair like
 // the quests above: the HUD forwards the tap, the controller re-checks that the
 // kills back it, and the answer is the title actually worn.
+// The map's two inputs, and the only things the HUD is told about where it is.
+// Which zone is running is otherwise unknown to it, and the player's position
+// was never on the wire at all — the world is the only thing that knows either.
+// Both are published from the tick rather than from `ZoneWorld`'s constructor:
+// the host mounts the HUD *after* building the world, so a constructor-time
+// emit on first boot fires into a bus with nobody listening and the map stays
+// blank until the first zone walk.
+export const ZONE_ENTERED_EVENT = 'zone-entered';
+export const PLAYER_TILE_CHANGED_EVENT = 'player-tile-changed';
 export const KILLS_CHANGED_EVENT = 'kills-changed';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
@@ -107,6 +124,15 @@ export interface AbilityState {
 export interface ManaPool {
   mana: number;
   maxMana: number;
+}
+
+// Payload for PLAYER_TILE_CHANGED_EVENT: where the player is, in tiles rather
+// than in world pixels. Fractional, so the dot sits where they actually are —
+// but only *published* on a whole-tile crossing, which is what keeps a position
+// off the per-frame channel the architecture avoids for the HUD.
+export interface TilePoint {
+  x: number;
+  y: number;
 }
 
 // Payload for ACHIEVEMENT_UNLOCKED_EVENT. Carries the title separately from the
@@ -167,6 +193,8 @@ export interface UiEventMap {
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
   [AFK_TOGGLE_REQUESTED_EVENT]: [];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
+  [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
+  [PLAYER_TILE_CHANGED_EVENT]: [tile: TilePoint];
   [KILLS_CHANGED_EVENT]: [kills: KillCounts];
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
