@@ -233,6 +233,29 @@ export function pickerPosition(
 }
 
 /**
+ * Where a menu opened *at* a point sits, given how big it turned out to be.
+ *
+ * Down and to the right of the press, which is where every menu on every
+ * platform opens, and folded back over the press when that side has no room —
+ * folded rather than clamped, because a menu shoved up the screen to fit would
+ * sit over the thing it is about, and on a phone that thing is under a thumb.
+ * The clamp is still there behind the fold for a menu taller than the viewport,
+ * which is the one case the fold cannot solve.
+ */
+export function menuPosition(
+  at: Point,
+  box: { width: number; height: number },
+  bounds: { width: number; height: number },
+): Point {
+  const foldedX = at.x + box.width <= bounds.width ? at.x : at.x - box.width;
+  const foldedY = at.y + box.height <= bounds.height ? at.y : at.y - box.height;
+  return {
+    x: clamp(foldedX, 0, Math.max(0, bounds.width - box.width)),
+    y: clamp(foldedY, 0, Math.max(0, bounds.height - box.height)),
+  };
+}
+
+/**
  * Where an open panel goes. Only one is open at a time — that is what the tab
  * bar means — so a sheet gets the whole column rather than sharing it.
  *

@@ -11,6 +11,7 @@ import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
+import type { InspectPanel } from '../systems/InspectSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
 import type { QuestLog } from '../systems/QuestSystem';
 
@@ -85,6 +86,14 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 // blank until the first zone walk.
 export const ZONE_ENTERED_EVENT = 'zone-entered';
 export const PLAYER_TILE_CHANGED_EVENT = 'player-tile-changed';
+// The context menu, which is the one thing on this channel that starts with a
+// press on the *world* rather than on the HUD. The host resolves what was under
+// the pointer and asks the world what can be done with it; the world remembers
+// which rat that was and answers with a menu, which is why choosing a line
+// comes back as a bare action id — the HUD never holds a reference to anything
+// simulated, and cannot ask for a rat that has since been killed.
+export const CONTEXT_MENU_REQUESTED_EVENT = 'context-menu-requested';
+export const CONTEXT_ACTION_REQUESTED_EVENT = 'context-action-requested';
 export const KILLS_CHANGED_EVENT = 'kills-changed';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
@@ -133,6 +142,46 @@ export interface ManaPool {
 export interface TilePoint {
   x: number;
   y: number;
+}
+
+/**
+ * The world actions a context menu can offer.
+ *
+ * Inspect and Loot are deliberately not among them. Both are panels the menu is
+ * already carrying the contents of, so choosing one is a HUD affair that never
+ * reaches the simulation — which is also what keeps a card readable while the
+ * thing it describes wanders off or dies.
+ */
+export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop';
+
+export interface ContextAction {
+  id: ContextActionId;
+  label: string;
+}
+
+/** What the world found under the pointer, and what can be done about it. */
+export interface ContextSubject {
+  title: string;
+  /** A creature's con colour; absent for everything that has no level. */
+  titleColor?: string;
+  actions: ContextAction[];
+  details: InspectPanel;
+  /** Only something that can be killed has a drop table to show. */
+  loot?: InspectPanel;
+}
+
+/** Where on the canvas a press landed, in CSS pixels. */
+export interface ScreenPoint {
+  x: number;
+  y: number;
+}
+
+// Payload for CONTEXT_MENU_REQUESTED_EVENT: the subject, plus the spot to open
+// against. The anchor is the host's to add and never enters the simulation —
+// the world knows what a rat drops and has no business knowing where on a phone
+// it was pressed.
+export interface ContextMenuRequest extends ContextSubject {
+  at: ScreenPoint;
 }
 
 // Payload for ACHIEVEMENT_UNLOCKED_EVENT. Carries the title separately from the
@@ -195,6 +244,8 @@ export interface UiEventMap {
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
   [PLAYER_TILE_CHANGED_EVENT]: [tile: TilePoint];
+  [CONTEXT_MENU_REQUESTED_EVENT]: [request: ContextMenuRequest];
+  [CONTEXT_ACTION_REQUESTED_EVENT]: [actionId: ContextActionId];
   [KILLS_CHANGED_EVENT]: [kills: KillCounts];
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];

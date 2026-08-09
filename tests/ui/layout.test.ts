@@ -4,6 +4,7 @@ import {
   gatherBarTop,
   hudLayout,
   isNarrowViewport,
+  menuPosition,
   pickerPosition,
   playerColumnBottom,
   sheetRect,
@@ -283,5 +284,32 @@ describe('pickerPosition', () => {
     const { x, y } = pickerPosition(anchorAt(10, 10), BOX, tight);
     expect(x).toBeGreaterThanOrEqual(0);
     expect(y).toBeGreaterThanOrEqual(0);
+  });
+});
+
+/**
+ * Where a menu opened at a point lands. The press it belongs to is usually a
+ * thumb, so the rule is about not opening the menu under the thing that asked
+ * for it — which a clamp cannot do and a fold can.
+ */
+describe('menuPosition', () => {
+  const BOUNDS = { width: 375, height: 812 };
+  const BOX = { width: 160, height: 180 };
+
+  it('opens down and to the right of the press, where every menu does', () => {
+    expect(menuPosition({ x: 80, y: 200 }, BOX, BOUNDS)).toEqual({ x: 80, y: 200 });
+  });
+
+  it('folds back over the press rather than sliding along the edge', () => {
+    const { x, y } = menuPosition({ x: 340, y: 780 }, BOX, BOUNDS);
+    expect(x).toBe(340 - BOX.width);
+    expect(y).toBe(780 - BOX.height);
+  });
+
+  it('holds a menu bigger than the screen inside it anyway', () => {
+    const tight = { width: 120, height: 120 };
+    const { x, y } = menuPosition({ x: 10, y: 10 }, BOX, tight);
+    expect(x).toBe(0);
+    expect(y).toBe(0);
   });
 });
