@@ -1,5 +1,9 @@
 # UI upgrade — running status
 
+**Status:** complete as of 2026-08-09, all five PRs landed. Written 2026-08-07 against `f1b97b9`.
+The table below is the record of what shipped, and the per-PR sections are the reason the HUD looks
+the way it does; keep this readable as history rather than as a work queue.
+
 Five stacked PRs off the brief in `docs/feature_11_ui_upgrade.txt`. One feature each, in
 dependency order: the navigation goes first because the map needs a home before it can be built.
 

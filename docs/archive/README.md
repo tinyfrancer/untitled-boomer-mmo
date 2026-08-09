@@ -9,6 +9,7 @@ Anything in `docs/` outside this directory describes work that is live or still 
 
 | Plan                       | What it was                             | Finished   |
 | -------------------------- | --------------------------------------- | ---------- |
+| `ui_upgrade_plan.md`       | The HUD upgrade, over 5 PRs             | 2026-08-09 |
 | `cleanup_plan.md`          | Post-port consolidation, over 11 PRs    | 2026-08-07 |
 | `3d_port_plan.md`          | 2D Phaser → 3D Three.js, over 20 PRs    | 2026-08-05 |
 | `upgrade_plan.md`          | The dependency upgrade stack            | 2026-07-28 |
@@ -23,6 +24,13 @@ code cannot: why `ZoneWorld.ts` came in at 720 lines rather than the 500 the row
 approach fraction is one number and not two, why creature colour is keyed by shape. Its
 instructions are written in the present tense to a session picking up the next row, and there is no
 next row; read them as the record of how the stack was worked.
+
+`ui_upgrade_plan.md` is the newest of these and the one written against a codebase most like
+today's, so it reads closest to a description of the present — but it is history like the rest. Its
+per-PR sections are where the arithmetic behind the HUD is written down: why the bar holds five tabs
+and not seven, why `map` joined `MENU_TABS` in PR 5 alongside its sheet rather than in PR 1 with the
+rest of the menu, and why the map's two publishers speak from the tick rather than from
+`ZoneWorld`'s constructor.
 
 `upgrade_plan.md`'s TypeScript 7 row is the one part of it that had not finished; it lives on as
 `docs/upgrade_plan.md`, which is where to look before attempting that bump.

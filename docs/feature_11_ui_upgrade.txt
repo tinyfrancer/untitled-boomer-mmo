@@ -35,5 +35,5 @@ Decisions taken in the interview that shaped it:
   channel the architecture deliberately avoids. No tap-to-travel.
 
 Delivered as five stacked PRs, one feature each, in dependency order — the navigation
-first, because the map needs a home before it can be built. See docs/ui_upgrade_plan.md
-for the running status.
+first, because the map needs a home before it can be built. All five landed; the record
+of how is docs/archive/ui_upgrade_plan.md.
