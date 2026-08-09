@@ -24,6 +24,16 @@ import type { WorldContext } from './WorldContext';
  * gathered logs, it is what makes cooking legal, and whether one is in reach is
  * the only thing the item buttons in the bag are driven off.
  */
+/** What the gather channel needs from the rest of the zone, and the whole of it. */
+export interface GatherSessionDeps {
+  /**
+   * Whether nobody is at the keyboard, which is the whole of what decides what
+   * a full pack means: an attended player is stopped so they can make room, an
+   * unattended one keeps working and loses the haul.
+   */
+  isCamping(): boolean;
+}
+
 export class GatherSession {
   /** The channel in flight, or null. The HUD's progress bar is drawn off it. */
   state: GatherState | null = null;
@@ -31,10 +41,12 @@ export class GatherSession {
   campfire: Campfire | null = null;
 
   private readonly ctx: WorldContext;
+  private readonly deps: GatherSessionDeps;
   private node: ResourceNode | null = null;
 
-  constructor(ctx: WorldContext) {
+  constructor(ctx: WorldContext, deps: GatherSessionDeps) {
     this.ctx = ctx;
+    this.deps = deps;
   }
 
   start(node: ResourceNode): void {
@@ -178,15 +190,25 @@ export class GatherSession {
     const { definition } = node;
 
     const quantity = rollGatherQuantity(character.skillLevelOf(definition.skill));
-    // A haul with nowhere to go is not a gather: the node keeps its charge, the
-    // skill earns nothing, and the channel stops rather than spinning forever.
-    // This is what ends an unattended gathering session.
+    /**
+     * What a full pack means depends on who is watching.
+     *
+     * An attended player is stopped: they are right there, the node keeps its
+     * charge, and nothing is destroyed while they go and make room. An
+     * unattended one keeps working and loses the haul — the swing happened and
+     * the skill is what the swing teaches, so stopping the camp dead would cost
+     * them the whole night rather than the logs. What it cost is itemised on
+     * the away report; see `OfflineAfkSystem`.
+     */
     if (!character.tryAddItem(definition.yieldItemId, quantity)) {
-      this.ctx.notice('Your pack is full.');
-      this.stop();
-      return;
+      if (!this.deps.isCamping()) {
+        this.ctx.notice('Your pack is full.');
+        this.stop();
+        return;
+      }
+    } else {
+      this.ctx.publishInventory();
     }
-    this.ctx.publishInventory();
     this.ctx.awardSkillXp(definition.skill, definition.xpReward);
 
     if (node.consumeCharge()) {

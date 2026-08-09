@@ -3,7 +3,7 @@ import { ENEMIES } from '../../src/data/enemies';
 import { AFK_ANCHOR_RADIUS, AFK_ENGAGE_RADIUS } from '../../src/systems/AfkSystem';
 import { OUT_OF_COMBAT_DELAY_MS } from '../../src/systems/RegenSystem';
 import type { EnemyId, ItemId } from '../../src/types/ids';
-import { AFK_STATE_CHANGED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
+import { AFK_STATE_CHANGED_EVENT } from '../../src/ui/uiEvents';
 import { AfkCamp } from '../../src/world/AfkCamp';
 import { Mob } from '../../src/world/Mob';
 import { ResourceNode } from '../../src/world/ResourceNode';
@@ -232,6 +232,11 @@ describe('a gathering camp', () => {
   const treeAt = (x: number, y: number): ResourceNode =>
     new ResourceNode(x, y, RESOURCE_NODES.tree);
 
+  /** How many times the full-pack warning was said, on either channel. */
+  const warnings = (emitted: { args: unknown[] }[]): number =>
+    emitted.filter((entry) => JSON.stringify(entry.args).includes('nothing you find will be kept'))
+      .length;
+
   function chopping(nodes: ResourceNode[], mobs: Mob[] = []) {
     const kit = camped(mobs, nodes);
     kit.character.addItem('felling-axe', 1);
@@ -335,16 +340,43 @@ describe('a gathering camp', () => {
     expect(kit.selected()).toBe(rat);
   });
 
-  // Without this the camp walks to a tree, fails to pocket the logs, stops,
-  // and walks to it again for as long as the tab stays open.
-  it('stops working a node it has no room for, and says so once', () => {
-    const kit = chopping([treeAt(40, 0)]);
+  /**
+   * A full pack does not stop the camp, it only stops it keeping anything: the
+   * swing happened and the skill is what the swing teaches, so standing still
+   * would cost the whole session rather than the logs. What it actually cost is
+   * itemised on the away report.
+   */
+  it('keeps working a node it has no room for, and says so once', () => {
+    const tree = treeAt(40, 0);
+    const kit = chopping([tree]);
     kit.character.addItem('logs', kit.character.carryCapacity());
     kit.camp.toggle();
     kit.camp.update();
+    kit.stopGathering();
     kit.camp.update();
 
-    expect(kit.worked).toEqual([]);
-    expect(kit.emissions(NOTICE_EVENT)).toEqual([['Your pack is full.']]);
+    expect(kit.worked).toEqual([tree, tree]);
+    // Once, at the toggle — the latch is what stops the frame after it saying
+    // the same thing again, and every frame after that.
+    expect(warnings(kit.emitted)).toBe(1);
+  });
+
+  // Said at the toggle rather than discovered on the away report in the
+  // morning: settling in with a full pack is allowed, but nobody means to.
+  it('warns up front when settling in with a pack that is already full', () => {
+    const kit = chopping([treeAt(40, 0)]);
+    kit.character.addItem('logs', kit.character.carryCapacity());
+
+    kit.camp.toggle();
+
+    const said = JSON.stringify(kit.emitted);
+    expect(said).toContain('You settle in to chop wood.');
+    expect(said).toContain('nothing you find will be kept');
+  });
+
+  it('says nothing of the sort when there is room', () => {
+    const kit = chopping([treeAt(40, 0)]);
+    kit.camp.toggle();
+    expect(JSON.stringify(kit.emitted)).not.toContain('nothing you find will be kept');
   });
 });

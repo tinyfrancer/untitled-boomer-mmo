@@ -265,7 +265,7 @@ export class ZoneWorld implements Targeting {
       // A hand on the keyboard is a hand on the controls, camp included.
       onKeyboardMove: () => this.afk.set(false),
     });
-    this.gathering = new GatherSession(this.ctx);
+    this.gathering = new GatherSession(this.ctx, { isCamping: () => this.afk.active });
     this.shop = new ShopSession(this.ctx);
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,

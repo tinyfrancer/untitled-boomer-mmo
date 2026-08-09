@@ -22,9 +22,12 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-function session() {
+function session(options: { camping?: boolean } = {}) {
   const kit = testContext();
-  return { ...kit, gathering: new GatherSession(kit.ctx) };
+  return {
+    ...kit,
+    gathering: new GatherSession(kit.ctx, { isCamping: () => options.camping ?? false }),
+  };
 }
 
 function treeAt(x: number, y: number): ResourceNode {
@@ -185,5 +188,66 @@ describe('eating', () => {
 
     expect(character.itemCount('rat-bones')).toBe(1);
     expect(emitted).toHaveLength(0);
+  });
+});
+
+/**
+ * What a full pack means depends on who is watching, and that is the whole of
+ * the fork: an attended player is right there and can make room, so nothing is
+ * destroyed while they do. An unattended one is not, and stopping the camp dead
+ * would cost them a night's XP rather than one haul.
+ */
+describe('a pack with no room for the haul', () => {
+  function chopping(options: { camping?: boolean } = {}) {
+    const kit = session(options);
+    kit.character.addItem('felling-axe', 1);
+    kit.character.equip('felling-axe');
+    return kit;
+  }
+
+  /** Runs one gather to completion on a node the player is standing on. */
+  function chop(kit: ReturnType<typeof chopping>, node: ResourceNode): void {
+    kit.gathering.start(node);
+    kit.player.setPosition(node.x, node.y);
+    kit.gathering.update(RESOURCE_NODES.tree.baseGatherMs + 100);
+  }
+
+  it('stops an attended player rather than destroying what they cut', () => {
+    const kit = chopping();
+    const tree = treeAt(0, 0);
+    kit.character.addItem('logs', kit.character.carryCapacity());
+    const before = kit.character.skillLevelOf('woodcutting');
+
+    chop(kit, tree);
+
+    expect(kit.gathering.state).toBeNull();
+    expect(kit.emissions(NOTICE_EVENT)).toEqual([['Your pack is full.']]);
+    // The node keeps its charge and the skill earns nothing: the gather did
+    // not happen, so nothing about the world moved.
+    expect(tree.isAvailable()).toBe(true);
+    expect(kit.state.skills.woodcutting.xp).toBe(0);
+    expect(kit.character.skillLevelOf('woodcutting')).toBe(before);
+  });
+
+  it('keeps an unattended one working, and trains the skill for it', () => {
+    const kit = chopping({ camping: true });
+    const tree = treeAt(0, 0);
+    kit.character.addItem('logs', kit.character.carryCapacity());
+
+    chop(kit, tree);
+
+    // Still channelling, re-armed for the next swing.
+    expect(kit.gathering.state).not.toBeNull();
+    expect(kit.state.skills.woodcutting.xp).toBeGreaterThan(0);
+  });
+
+  it('loses the haul rather than pocketing it, either way', () => {
+    const camped = chopping({ camping: true });
+    camped.character.addItem('logs', camped.character.carryCapacity());
+    const carried = camped.character.itemCount('logs');
+
+    chop(camped, treeAt(0, 0));
+
+    expect(camped.character.itemCount('logs')).toBe(carried);
   });
 });
