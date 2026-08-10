@@ -4,6 +4,7 @@ import type {
   GearSlotId,
   ItemIconShape,
   ItemId,
+  OffhandShapeId,
   SkillId,
   TierId,
   WeaponShapeId,
@@ -47,10 +48,16 @@ interface EquipmentItemDefinition extends BaseItemDefinition {
   // and tools leave it unset and stay open to every class.
   armorType?: ArmorTypeId;
   weaponShape?: WeaponShapeId;
+  // What fills the other hand. Same bargain `weaponShape` makes: the row says
+  // what it is and both the figure and the paperdoll draw it from that.
+  offhandShape?: OffhandShapeId;
   // How far this weapon can reach. Unset means melee — only something built to
   // strike at distance says so, and empty hands are shorter still.
   attackRange?: number;
   attackPowerBonus?: number;
+  // What it stops, fed through the mitigation curve in CombatSystem. Armour and
+  // the offhand carry it; a weapon does not.
+  armorValue?: number;
   healthBonus?: number;
   strengthBonus?: number;
   intellectBonus?: number;
@@ -147,6 +154,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     slot: 'helmet',
     color: 0x8e1c1c,
     armorType: 'cloth',
+    armorValue: 3,
     healthBonus: 5,
   },
   'cutthroats-blade': {
@@ -174,6 +182,42 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weaponShape: 'wand',
     attackRange: 220,
     attackPowerBonus: 4,
+    intellectBonus: 2,
+  },
+  /**
+   * The offhand, and the first two things there have ever been to put in one.
+   *
+   * One per class, because a slot that is furniture for half the roster is a
+   * dead button: the shield is leather and so a warrior's, the orb is cloth and
+   * so anyone's — a warrior who wants +INT is welcome to the nothing it buys
+   * them. The shield is where most of the armour on a warrior comes from, which
+   * is what makes the slot worth filling rather than merely fillable.
+   */
+  'brown-shield': {
+    id: 'brown-shield',
+    name: 'Brown Shield',
+    value: 45,
+    weight: 6,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    armorType: 'leather',
+    offhandShape: 'shield',
+    armorValue: 5,
+    healthBonus: 2,
+  },
+  'apprentice-orb': {
+    id: 'apprentice-orb',
+    name: 'Apprentice Orb',
+    value: 45,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: 0x5c6bc0,
+    armorType: 'cloth',
+    offhandShape: 'orb',
+    armorValue: 1,
     intellectBonus: 2,
   },
   // The one item that is not worth anything and cannot be sold: it opens a door
@@ -211,6 +255,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'leather',
+    armorValue: 4,
     healthBonus: 1,
     strengthBonus: 1,
   },
@@ -224,6 +269,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'leather',
+    armorValue: 2,
     healthBonus: 1,
   },
   'brown-legs': {
@@ -236,6 +282,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'leather',
+    armorValue: 3,
     healthBonus: 1,
     strengthBonus: 1,
   },
@@ -249,6 +296,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'cloth',
+    armorValue: 2,
     healthBonus: 1,
     intellectBonus: 1,
   },
@@ -262,6 +310,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'cloth',
+    armorValue: 1,
     healthBonus: 1,
   },
   'brown-cloth-pants': {
@@ -274,6 +323,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'cloth',
+    armorValue: 1,
     healthBonus: 1,
     intellectBonus: 1,
   },

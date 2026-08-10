@@ -1,7 +1,7 @@
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 import { stripIllegalGear } from '../systems/EquipSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
-import type { Gear, Inventory } from '../systems/InventorySystem';
+import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 import type { ClassId } from '../types/ids';
 
 // Each step upgrades a save from exactly `fromVersion` to `fromVersion + 1`.
@@ -61,6 +61,10 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // opened it, so an existing character starts with nothing unlocked and finds
   // the key the same way a new one does.
   11: (state) => ({ ...state, unlockedZones: [] }),
+  // v12 → v13: the offhand arrives, and every stored gear set is a slot short.
+  // Spread under rather than over, the way v6 → v7 did with the skills: what a
+  // character is already wearing wins, and only the new key takes its default.
+  12: (state) => ({ ...state, gear: { ...NO_GEAR, ...(state.gear as Partial<Gear>) } }),
 };
 
 /**

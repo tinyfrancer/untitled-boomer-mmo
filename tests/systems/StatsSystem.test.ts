@@ -9,6 +9,7 @@ const NO_GEAR: Gear = {
   chest: null,
   pants: null,
   weapon: null,
+  offhand: null,
 };
 
 describe('computeEffectiveStats', () => {

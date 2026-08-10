@@ -90,7 +90,13 @@ describe('PlayerActor', () => {
   it('puts on gear the moment the simulation is wearing it', () => {
     const { world } = harness();
     const actor = new PlayerActor(world.player);
-    const gear: Gear = { helmet: null, chest: 'brown-chestplate', pants: null, weapon: null };
+    const gear: Gear = {
+      helmet: null,
+      chest: 'brown-chestplate',
+      pants: null,
+      weapon: null,
+      offhand: null,
+    };
 
     world.player.setGear(gear);
     actor.sync(0, null);

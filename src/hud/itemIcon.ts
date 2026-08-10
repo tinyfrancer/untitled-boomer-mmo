@@ -101,6 +101,17 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
         ...line(66, 78, 78, 66, BOX * 0.08, color),
         ...line(54, 66, 64, 56, BOX * 0.08, color),
       ];
+    case 'shield':
+      // A heater: square shoulders down to a point, with a boss in the middle
+      // so it does not read as a nameplate.
+      return [
+        path('M 22 20 L 78 20 L 78 54 L 50 86 L 22 54 Z', color),
+        circle(50, 46, BOX * 0.1, OUTLINE),
+      ];
+    case 'orb':
+      // A sphere with a highlight, which at this size is the whole difference
+      // between a held orb and a dropped coin.
+      return [circle(50, 52, BOX * 0.3, color), circle(40, 40, BOX * 0.08, 0xe8eaf6)];
     case 'log':
       return [
         rect(18, 34, 64, 32, color),

@@ -285,6 +285,7 @@ describe('the redraws that are derived rather than sent', () => {
       chest: 'brown-chestplate',
       pants: 'brown-legs',
       weapon: 'rusty-sword',
+      offhand: null,
     });
     expect(weightLine()).not.toBe(before);
   });
@@ -299,6 +300,7 @@ describe('the redraws that are derived rather than sent', () => {
       chest: 'brown-chestplate',
       pants: null,
       weapon: 'rusty-sword',
+      offhand: null,
     });
     expect(slot?.textContent).toContain('Brown Chestplate');
   });

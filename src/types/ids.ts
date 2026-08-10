@@ -1,6 +1,6 @@
 export type ClassId = 'warrior' | 'wizard';
 
-export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon';
+export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 
 export type TierId = 'brown';
 
@@ -32,7 +32,11 @@ export type ItemId =
   // one creature. Nothing sells them and nothing else drops them.
   | 'cutthroats-bandana'
   | 'cutthroats-blade'
-  | 'stolen-wand';
+  | 'stolen-wand'
+  // The offhand, which is the slot the game had a Block skill for and nothing
+  // to put in.
+  | 'brown-shield'
+  | 'apprentice-orb';
 
 // Recipes are keyed by what goes in the pan, so a recipe id is the id of a raw
 // item. Spelling that as a subset of ItemId rather than as its own list is what
@@ -58,6 +62,11 @@ export type LootTableId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
 
+// What fills the hand that is not holding the weapon. Its own union rather than
+// a slice of WeaponShapeId: nothing here is swung, and the two hands are drawn
+// by different code on both the paperdoll and the figure.
+export type OffhandShapeId = 'shield' | 'orb';
+
 /**
  * What an item is drawn as in the bag, at the size of a thumbnail.
  *
@@ -67,7 +76,16 @@ export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
  * `WeaponShapeId` by name so a new weapon gets an icon by construction.
  */
 export type ItemIconShape =
-  WeaponShapeId | 'helmet' | 'chest' | 'pants' | 'bone' | 'meat' | 'fish' | 'log' | 'key';
+  | WeaponShapeId
+  | OffhandShapeId
+  | 'helmet'
+  | 'chest'
+  | 'pants'
+  | 'bone'
+  | 'meat'
+  | 'fish'
+  | 'log'
+  | 'key';
 
 export type GatherSkillId = 'fishing' | 'woodcutting' | 'cooking';
 

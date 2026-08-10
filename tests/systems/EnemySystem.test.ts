@@ -122,7 +122,13 @@ function duel(player: Combatant, enemy: Combatant): 'player' | 'enemy' {
 function gearedWarrior(level: number): Combatant {
   const stats = computeEffectiveStats(
     'warrior',
-    { helmet: 'brown-helmet', chest: 'brown-chestplate', pants: 'brown-legs', weapon: 'brown-axe' },
+    {
+      helmet: 'brown-helmet',
+      chest: 'brown-chestplate',
+      pants: 'brown-legs',
+      weapon: 'brown-axe',
+      offhand: null,
+    },
     level,
   );
   return { hp: stats.maxHp, attackPower: stats.attackPower, cooldownMs: stats.attackCooldownMs };
@@ -131,7 +137,7 @@ function gearedWarrior(level: number): Combatant {
 function freshWarrior(): Combatant {
   const stats = computeEffectiveStats(
     'warrior',
-    { helmet: null, chest: null, pants: null, weapon: 'rusty-sword' },
+    { helmet: null, chest: null, pants: null, weapon: 'rusty-sword', offhand: null },
     1,
   );
   return { hp: stats.maxHp, attackPower: stats.attackPower, cooldownMs: stats.attackCooldownMs };
@@ -235,6 +241,7 @@ describe('difficulty curve', () => {
         chest: 'brown-chestplate',
         pants: 'brown-legs',
         weapon: 'cutthroats-blade',
+        offhand: null,
       },
       3,
     );
@@ -278,6 +285,7 @@ describe('difficulty curve', () => {
       chest: null,
       pants: null,
       weapon: null,
+      offhand: null,
     }).speed;
     Object.values(ENEMIES).forEach((enemy) => {
       expect(enemy.chaseSpeed).toBeLessThan(playerSpeed);

@@ -9,7 +9,7 @@ import {
   type Gear,
 } from '../../src/systems/InventorySystem';
 
-const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null };
+const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null, offhand: null };
 
 describe('addItemToInventory', () => {
   it('adds a new item at the given quantity', () => {

@@ -14,6 +14,7 @@ describe('createNewCharacter', () => {
       chest: null,
       pants: null,
       weapon: 'apprentice-wand',
+      offhand: null,
     });
   });
 

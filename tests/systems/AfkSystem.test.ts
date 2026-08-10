@@ -195,6 +195,7 @@ describe('afkGatherSkill', () => {
     chest: null,
     pants: null,
     weapon,
+    offhand: null,
   });
 
   it('reads the skill straight off the tool in hand', () => {

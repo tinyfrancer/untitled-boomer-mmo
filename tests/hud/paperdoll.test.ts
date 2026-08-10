@@ -19,6 +19,7 @@ const BARE: Gear = {
   chest: null,
   pants: null,
   weapon: null,
+  offhand: null,
 };
 
 function svgNumber(node: Element, name: string): number {
@@ -237,6 +238,7 @@ describe('paperdollSvg', () => {
       chest: 'brown-chestplate',
       pants: 'brown-legs',
       weapon: 'rusty-sword',
+      offhand: 'brown-shield',
     };
     const svg = paperdollSvg(gear);
     const painted = [...strokes(svg), ...fills(svg)];

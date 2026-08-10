@@ -4,7 +4,7 @@ import { staleItemId } from '../staleIds';
 import { canEquip, equippableFrom, stripIllegalGear } from '../../src/systems/EquipSystem';
 import type { Gear } from '../../src/systems/InventorySystem';
 
-const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null };
+const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null, offhand: null };
 
 describe('canEquip', () => {
   it('lets a warrior wear leather and a wizard wear cloth', () => {
@@ -70,5 +70,29 @@ describe('stripIllegalGear', () => {
     const result = stripIllegalGear(gear, inventory, 'warrior');
     expect(result.gear).toEqual(gear);
     expect(result.inventory).toEqual(inventory);
+  });
+});
+
+/**
+ * The offhand is the first slot to arrive after the class rules did, so it is
+ * the first one whose restrictions had to work on the way in rather than being
+ * grandfathered by a migration.
+ */
+describe('the offhand', () => {
+  it('lets a warrior take the shield and anyone take the orb', () => {
+    expect(canEquip('brown-shield', 'warrior').ok).toBe(true);
+    expect(canEquip('brown-shield', 'wizard').ok).toBe(false);
+    expect(canEquip('apprentice-orb', 'warrior').ok).toBe(true);
+    expect(canEquip('apprentice-orb', 'wizard').ok).toBe(true);
+  });
+
+  // stripIllegalGear walks whatever keys the gear has, so the new slot is
+  // covered the day it exists — which is worth an assertion precisely because
+  // nothing in that function names a slot.
+  it('takes a shield off a wizard who somehow has one on', () => {
+    const stripped = stripIllegalGear({ ...EMPTY_GEAR, offhand: 'brown-shield' }, {}, 'wizard');
+
+    expect(stripped.gear.offhand).toBeNull();
+    expect(stripped.inventory['brown-shield']).toBe(1);
   });
 });
