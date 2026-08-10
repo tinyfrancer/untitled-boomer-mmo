@@ -383,6 +383,17 @@ coarser than the item list, since at thumbnail size a raw fish and a cooked one 
 two colours. The bag, the equip picker and the shop all draw it through the one `row({icon})` helper
 in `hud/dom.ts` rather than formatting an item three ways.
 
+**Selling a stack is one request with a count on it**, not a second rule about vendoring:
+`sell-item-requested` carries a quantity, `ShopSession.sell` clamps it to what the pack actually
+holds, and "sell all" is that number rather than a separate path. The clamp is what makes the panel
+safe to draw from a copy of the bag — a stale count can only ever sell fewer. **The two are separate
+targets**, though: the shop row and the bag's Sell button still part with one, and emptying a stack
+is a button of its own beside them (`sell-all` in `ItemActionsSystem`, `.hud-sell__all` in the shop
+panel). A stack of quest turn-ins is exactly the thing a mis-tap must not be able to sell, so the
+bulk button is deliberately the smaller of the pair rather than the row itself growing a second
+meaning — and it is offered only on a stack, since on one of something it is the Sell button beside
+it wearing a longer name.
+
 **The paperdoll is SVG built from the same rig the figure in the world is built from**
 (`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by `render3d/figure.ts`).
 The HUD does not reach into the renderer for a canvas, which is what let the sheet keep showing
@@ -602,10 +613,21 @@ thing the shield is for — without it a caster in melee could never finish a sp
 standing your ground is a decision rather than a mistake. Only the nuke has a cast time; the shield
 is instant on purpose, being the thing you press once you are already in trouble.
 
-**A gather and a cast share one bar** (`hud/ChannelBar.ts`, on the `channel-*` events). They are the
-same shape — something you are in the middle of, with a duration and something that can break it —
-and they can never both be running, since casting stops a gather and a hit breaks either. One
-widget rather than two stacked in the same place.
+**A gather, a cook and a cast share one bar** (`hud/ChannelBar.ts`, on the `channel-*` events). They
+are the same shape — something you are in the middle of, with a duration and something that can
+break it — and no two of them can be running at once, since starting any one gives up whatever was
+already going and a hit breaks all three. One widget rather than three stacked in the same place.
+
+**Cooking is a channel too, and it works down the stack** (`beginCook`/`advanceCook` in
+`systems/CookingSystem.ts`, run by `GatherSession` beside the gather it is built as the twin of). A
+fish takes the recipe's `cookMs` over the fire, which is what makes a burn worth avoiding rather
+than merely worth noticing — before it, the roll happened at the press and the standing still cost
+nothing. What cancels it is losing the fire: walking off one, or letting it burn out under you,
+which is the same shape as a gather's range check and is why shuffling around the flames is free.
+It re-arms itself on whatever is left in the bag the way the gather channel does, because a stack of
+twenty fish is one decision and not twenty. The duration is flat rather than shaved down by the
+cooking level the way `gatherDurationMs` is: that level already buys the burn chance down, and
+selling it speed as well would make the last levels worth about double the first.
 
 **AFK play must stay behind active play** (`systems/AfkSystem.ts`, `systems/OfflineAfkSystem.ts`).
 Two mechanisms hold that, and both matter: the AFK loop never uses an ability, so the action bar

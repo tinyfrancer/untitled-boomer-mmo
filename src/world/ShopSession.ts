@@ -71,12 +71,20 @@ export class ShopSession {
     this.ctx.publishCurrency();
   }
 
-  sell(itemId: ItemId): void {
+  /**
+   * Parts with some of a stack, or all of it. The count is clamped to what is
+   * actually in the pack rather than trusted: the panel asking is drawn from a
+   * copy of the bag, and the pack is the thing that holds it — so "sell all" is
+   * a number the HUD sends and the counter agrees to, not a second code path.
+   */
+  sell(itemId: ItemId, quantity = 1): void {
     if (!this.npc) return;
     const value = itemValue(itemId);
-    if (value === null || this.ctx.character.itemCount(itemId) <= 0) return;
-    this.ctx.character.removeItem(itemId, 1);
-    this.ctx.character.addCurrency(value);
+    if (value === null) return;
+    const count = Math.min(Math.floor(quantity), this.ctx.character.itemCount(itemId));
+    if (count <= 0) return;
+    this.ctx.character.removeItem(itemId, count);
+    this.ctx.character.addCurrency(value * count);
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
   }

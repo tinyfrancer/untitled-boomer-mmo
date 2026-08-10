@@ -38,6 +38,8 @@ export const ACTIONS_CHANGED_EVENT = 'actions-changed';
 export const SHOP_OPENED_EVENT = 'shop-opened';
 export const SHOP_CLOSED_EVENT = 'shop-closed';
 export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
+// Carries how many, so emptying a stack is the same request as parting with one
+// of it rather than a second rule about vendoring.
 export const SELL_ITEM_REQUESTED_EVENT = 'sell-item-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 // Quests. Taken and handed in at the shopkeeper, so these ride the same
@@ -243,7 +245,7 @@ export interface UiEventMap {
   [SHOP_OPENED_EVENT]: [];
   [SHOP_CLOSED_EVENT]: [];
   [BUY_ITEM_REQUESTED_EVENT]: [itemId: ItemId];
-  [SELL_ITEM_REQUESTED_EVENT]: [itemId: ItemId];
+  [SELL_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
   [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
   [TURN_IN_QUEST_REQUESTED_EVENT]: [questId: QuestId];

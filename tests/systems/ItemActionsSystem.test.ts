@@ -3,9 +3,11 @@ import { actionsForItem } from '../../src/systems/ItemActionsSystem';
 import type { ItemId } from '../../src/types/ids';
 import { staleItemId } from '../staleIds';
 
-const away = { nearFire: false, shopOpen: false, classId: 'warrior' } as const;
-const byFire = { nearFire: true, shopOpen: false, classId: 'warrior' } as const;
-const atShop = { nearFire: false, shopOpen: true, classId: 'warrior' } as const;
+// A stack of one unless a test says otherwise, which is what keeps "Sell All"
+// off every line that has nothing to sell in bulk.
+const away = { nearFire: false, shopOpen: false, classId: 'warrior', stackSize: 1 } as const;
+const byFire = { nearFire: true, shopOpen: false, classId: 'warrior', stackSize: 1 } as const;
+const atShop = { nearFire: false, shopOpen: true, classId: 'warrior', stackSize: 1 } as const;
 
 function ids(itemId: ItemId, context: Parameters<typeof actionsForItem>[1]): string[] {
   return actionsForItem(itemId, context).map((action) => action.id);
@@ -35,6 +37,21 @@ describe('actionsForItem', () => {
   it('anything with a value sells while the shop is open', () => {
     expect(ids('rat-bones', atShop)).toEqual(['sell']);
     expect(ids('rat-bones', away)).toEqual([]);
+  });
+
+  it('offers the whole stack only when there is more than one of it', () => {
+    expect(ids('rat-bones', { ...atShop, stackSize: 12 })).toEqual(['sell', 'sell-all']);
+    // Away from the counter it is not a thing that can be sold at all, in bulk
+    // or otherwise.
+    expect(ids('rat-bones', { ...away, stackSize: 12 })).toEqual([]);
+  });
+
+  it('says how many the bulk button is about, since the bag cell is not beside it', () => {
+    const all = actionsForItem('rat-bones', { ...atShop, stackSize: 12 }).find(
+      (action) => action.id === 'sell-all',
+    );
+
+    expect(all?.label).toContain('12');
   });
 
   it('unknown items offer nothing', () => {

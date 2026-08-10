@@ -131,4 +131,49 @@ describe('trading', () => {
     expect(character.itemCount('rat-bones')).toBe(1);
     expect(state.currency).toBe(itemValue('rat-bones'));
   });
+
+  it('takes a whole stack in one sale, and pays for every one of it', () => {
+    const { shop, character, state, emissions } = counter();
+    state.currency = 0;
+    character.addItem('rat-bones', 12);
+    shop.open(KEEPER);
+
+    shop.sell('rat-bones', 12);
+
+    expect(character.itemCount('rat-bones')).toBe(0);
+    expect(state.currency).toBe((itemValue('rat-bones') ?? 0) * 12);
+    // One sale is one redraw, which is the point of asking for the lot at once.
+    expect(emissions(INVENTORY_CHANGED_EVENT)).toHaveLength(1);
+  });
+
+  /**
+   * The panel asking is drawn from a copy of the bag, so the count it sends can
+   * only ever be a claim. What the pack holds settles it — otherwise a stale
+   * "sell all" would mint coin for bones that are not there.
+   */
+  it('clamps the count to what is actually in the pack', () => {
+    const { shop, character, state } = counter();
+    state.currency = 0;
+    character.addItem('rat-bones', 3);
+    shop.open(KEEPER);
+
+    shop.sell('rat-bones', 99);
+
+    expect(character.itemCount('rat-bones')).toBe(0);
+    expect(state.currency).toBe((itemValue('rat-bones') ?? 0) * 3);
+  });
+
+  it('sells nothing on a count of none, and leaves the purse alone', () => {
+    const { shop, character, state, emitted } = counter();
+    state.currency = 0;
+    character.addItem('rat-bones', 3);
+    shop.open(KEEPER);
+
+    shop.sell('rat-bones', 0);
+    shop.sell('rat-bones', -5);
+
+    expect(character.itemCount('rat-bones')).toBe(3);
+    expect(state.currency).toBe(0);
+    expect(emitted).toHaveLength(1);
+  });
 });

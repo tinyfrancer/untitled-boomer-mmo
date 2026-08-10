@@ -829,6 +829,30 @@ async function feedback() {
       shopIcons.questIcons === 0,
     `${shopIcons.withIcon}/${shopIcons.items} item rows, ${shopIcons.questIcons}/${shopIcons.quests} quest rows`,
   );
+  // A stack grows a second button that empties it. What needs a browser here is
+  // that the two are separate targets on a real panel: the row still parts with
+  // one, and only the button beside it takes the lot.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.inventory = { ...w.character.state.inventory, 'rat-bones': 12 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+  });
+  const purse = await page.evaluate(() => window.world.character.state.currency);
+  await page.click('.hud-modal .hud-list-row[data-item="rat-bones"]');
+  await page.waitForTimeout(100);
+  const one = await page.evaluate(() => window.world.character.state.inventory['rat-bones'] ?? 0);
+  await page.click('.hud-modal [data-sell-all="rat-bones"]');
+  await page.waitForTimeout(150);
+  const sold = await page.evaluate(() => ({
+    left: window.world.character.state.inventory['rat-bones'] ?? 0,
+    currency: window.world.character.state.currency,
+    button: document.querySelector('.hud-modal [data-sell-all="rat-bones"]') !== null,
+  }));
+  check(
+    'a shop row sells one and the button beside it sells the rest of the stack',
+    one === 11 && sold.left === 0 && sold.currency > purse && !sold.button,
+    `12 -> ${one} -> ${sold.left} bones, ${purse} -> ${sold.currency} copper`,
+  );
   await page.screenshot({ path: `${OUT}/8-shop.png` });
 
   // The marker over that shopkeeper is *polled* off the character rather than

@@ -4,7 +4,7 @@ import { canEquip } from './EquipSystem';
 import { isRecipeInput } from './CookingSystem';
 import type { ClassId, ItemId } from '../types/ids';
 
-export type ItemActionId = 'equip' | 'eat' | 'light-fire' | 'cook' | 'sell';
+export type ItemActionId = 'equip' | 'eat' | 'light-fire' | 'cook' | 'sell' | 'sell-all';
 
 export interface ItemAction {
   id: ItemActionId;
@@ -17,6 +17,12 @@ export interface ItemActionContext {
   nearFire: boolean;
   shopOpen: boolean;
   classId: ClassId;
+  /**
+   * How many of it are in the pack. Only "sell the lot" cares, and it is not
+   * offered on a stack of one — there it would be the Sell button beside it
+   * wearing a longer name.
+   */
+  stackSize: number;
 }
 
 /**
@@ -45,6 +51,9 @@ export function actionsForItem(itemId: ItemId, context: ItemActionContext): Item
   }
   if (context.shopOpen && itemValue(itemId) !== null) {
     actions.push({ id: 'sell', label: 'Sell' });
+    if (context.stackSize > 1) {
+      actions.push({ id: 'sell-all', label: `Sell All (${context.stackSize})` });
+    }
   }
   return actions;
 }
