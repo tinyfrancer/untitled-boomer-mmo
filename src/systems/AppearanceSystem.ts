@@ -184,7 +184,8 @@ export function computeAppearance(gear: Gear): Appearance {
 }
 
 /**
- * The two figures nobody is wearing gear for: the shopkeeper and the bandit.
+ * The figures nobody is wearing gear for: the shopkeeper, the bandit, and the
+ * one bandit worth telling apart from the rest.
  *
  * They are the same rig as the player with no `CharacterState` behind them, so
  * the colours have to come from somewhere — and from here rather than from
@@ -207,10 +208,21 @@ export const NPC_APPEARANCES = {
     // The short dagger it holds; a sword's blade-up shape at a smaller size.
     weapon: { shape: 'sword', color: 0xb0bec5 },
   },
-} as const satisfies Record<'shopkeeper' | 'bandit', Appearance>;
+  // Same outlaw, richer: a stolen coat over the grey, and the blade he drops.
+  'bandit-chief': {
+    headColor: SKIN_COLOR,
+    torsoColor: 0x4e342e,
+    legColor: 0x3e2723,
+    weapon: { shape: 'sword', color: 0xeceff1 },
+  },
+} as const satisfies Record<'shopkeeper' | 'bandit' | 'bandit-chief', Appearance>;
 
 /** The bandana over the bandit's face, which is not part of the rig. */
 export const BANDIT_MASK_COLOR = 0xc62828;
+
+// The chief's, which is the thing he drops: dark where the men outside wear
+// red, so a glance at the room says which one he is.
+export const CHIEF_MASK_COLOR = 0x8e1c1c;
 
 // A pure function of everything the figure draws, so two looks share a key
 // exactly when they draw the same. That is what lets a view detect a gear

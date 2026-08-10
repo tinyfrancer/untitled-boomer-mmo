@@ -62,6 +62,27 @@ describe('buildCreature', () => {
     expect(drawn.z).toBeGreaterThan(drawn.x);
   });
 
+  /**
+   * A named mob among its own men has to be tellable apart at a glance, and
+   * both halves of that come out of the data: the height off the collision
+   * body, which is what says he takes up more room, and a look of his own —
+   * the one exception to colour being the shape's business.
+   */
+  it('draws the chief bigger than the men he leads, and in his own colours', () => {
+    const chief = buildCreature(ENEMIES['bandit-chief']);
+    const bandit = buildCreature(ENEMIES.bandit);
+    expect(chief.height).toBeGreaterThan(bandit.height);
+    expect(footprint('bandit-chief').x).toBeGreaterThan(footprint('bandit').x);
+
+    const colors: number[] = [];
+    chief.object.traverse((object) => {
+      if (object instanceof Mesh)
+        colors.push((object.material as MeshLambertMaterial).color.getHex());
+    });
+    expect(colors).toContain(NPC_APPEARANCES['bandit-chief'].torsoColor);
+    expect(colors).not.toContain(NPC_APPEARANCES.bandit.torsoColor);
+  });
+
   it('dresses a bandit in the outlaw colours both renderers read', () => {
     const found: number[] = [];
     buildCreature(ENEMIES.bandit).object.traverse((object) => {
