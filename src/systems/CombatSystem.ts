@@ -92,7 +92,9 @@ export function resolveAttack(attacker: Attacker, rng: () => number = Math.rando
  * than a skill, because a crab does not train.
  */
 export function enemyAvoids(avoidChance = 0, rng: () => number = Math.random): boolean {
-  return rng() < Math.max(0, avoidChance);
+  // Nothing to roll for something that never dodges, which is every row but the
+  // crab: a chance of zero should not consume a random number to answer no.
+  return avoidChance > 0 && rng() < avoidChance;
 }
 
 // Which weapon skill an equipped item trains. Anything in the weapon slot is

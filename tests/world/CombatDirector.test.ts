@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
 import type { CombatLogEntry } from '../../src/systems/CombatLogSystem';
 import {
@@ -220,40 +220,59 @@ describe('what hits back', () => {
  * Both halves of PR 4 as the world runs them: a swing the crab slips, and one
  * that lands hard. `CombatSystem.test.ts` holds the arithmetic; this holds that
  * the two paths reach it and that what comes back is announced.
+ *
+ * Both rolls go through `Math.random` inside the director, so the die is loaded
+ * here rather than swung at until it comes up — a fight left to chance is a
+ * test that passes most of the time, which is worth less than no test at all.
  */
 describe('a swing that can miss, and one that can land hard', () => {
+  let rolls: number[] = [];
+
+  beforeEach(() => {
+    rolls = [];
+    // Every roll in order, falling back to the midpoint once the script runs
+    // out: 0.5 is under no chance in the game and over none of them either.
+    vi.spyOn(Math, 'random').mockImplementation(() => rolls.shift() ?? 0.5);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   function crabAt(x: number, y: number): Mob {
     return new Mob(x, y, ENEMIES.crab, 1, () => 0.5);
   }
 
-  it('lets a crab slip a swing, costing the skill its rep', () => {
+  function swing(kit: ReturnType<typeof fight>): void {
+    kit.ctx.now += 10000;
+    kit.combat.update();
+  }
+
+  it('lets a crab slip a swing entirely, damage and rep alike', () => {
     const crab = crabAt(10, 0);
     const kit = fight([crab], crab);
     const before = crab.hp;
 
-    // Every roll comes back under the crab's 15%, so every swing is slipped.
-    kit.character.state.skills['one-handed'] = { level: 5, xp: 0 };
-    for (let swing = 0; swing < 5; swing += 1) {
-      kit.ctx.now += 10000;
-      kit.combat.update();
-    }
+    // Under the crab's 15%, so the swing never reaches the damage roll.
+    rolls = [0.05];
+    swing(kit);
 
-    expect(crab.hp).toBeLessThanOrEqual(before);
+    expect(crab.hp).toBe(before);
     expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
       expect.objectContaining({ text: 'Crab slips your attack.' }),
     );
   });
 
-  // Nothing else in the game dodges, so a rat takes every swing that reaches it.
+  // Nothing else in the game dodges, so the same roll lands on a rat.
   it('leaves a rat with nothing to slip', () => {
     const rat = ratAt(10, 0);
     const kit = fight([rat], rat);
+    const before = rat.hp;
 
-    for (let swing = 0; swing < 5; swing += 1) {
-      kit.ctx.now += 10000;
-      kit.combat.update();
-    }
+    rolls = [0.05];
+    swing(kit);
 
+    expect(rat.hp).toBeLessThan(before);
     expect(kit.emissions(COMBAT_LOG_EVENT).flat()).not.toContainEqual(
       expect.objectContaining({ text: 'Rat slips your attack.' }),
     );
@@ -261,24 +280,31 @@ describe('a swing that can miss, and one that can land hard', () => {
 
   it('announces a crit as its own line and its own number', () => {
     const rat = ratAt(10, 0);
-    rat.hp = 100000;
+    rat.hp = 1000;
+    const kit = fight([rat], rat);
+    // A capped weapon skill, which is where the 20% crit chance is.
+    kit.character.state.skills['one-handed'] = { level: 50, xp: 0 };
+
+    // The variance roll at the midpoint, then one under the crit chance.
+    rolls = [0.5, 0.05];
+    swing(kit);
+
+    expect(kit.drain()).toContainEqual(expect.objectContaining({ kind: 'hit', crit: true }));
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+      expect.objectContaining({ text: expect.stringContaining('hard for') }),
+    );
+  });
+
+  it('leaves an ordinary swing ordinary', () => {
+    const rat = ratAt(10, 0);
+    rat.hp = 1000;
     const kit = fight([rat], rat);
     kit.character.state.skills['one-handed'] = { level: 50, xp: 0 };
 
-    // A capped skill crits one swing in five, so this swings until one lands
-    // rather than betting a test on a roll.
-    for (let swing = 0; swing < 200; swing += 1) {
-      kit.ctx.now += 10000;
-      kit.combat.update();
-      const drawn = kit.drain();
-      const hit = drawn.find((event) => event.kind === 'hit' && event.crit);
-      if (hit) {
-        expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
-          expect.objectContaining({ text: expect.stringContaining('hard for') }),
-        );
-        return;
-      }
-    }
-    throw new Error('two hundred swings and none of them crit');
+    // Over the crit chance this time, so the same swing lands flat.
+    rolls = [0.5, 0.9];
+    swing(kit);
+
+    expect(kit.drain()).toContainEqual(expect.objectContaining({ kind: 'hit', crit: false }));
   });
 });

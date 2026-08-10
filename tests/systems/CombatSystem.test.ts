@@ -304,6 +304,23 @@ describe('enemyAvoids', () => {
     expect(enemyAvoids(0, () => 0)).toBe(false);
   });
 
+  // Nothing to roll for something that never dodges, which is every row but the
+  // crab. Cheap, and it keeps a scripted rng meaning what it says: a swing at a
+  // rat spends its rolls on the damage rather than on a question with one
+  // answer.
+  it('rolls nothing at all when there is no chance to roll against', () => {
+    let rolled = 0;
+    const counted = (): number => {
+      rolled += 1;
+      return 0;
+    };
+
+    expect(enemyAvoids(0, counted)).toBe(false);
+    expect(rolled).toBe(0);
+    expect(enemyAvoids(0.15, counted)).toBe(true);
+    expect(rolled).toBe(1);
+  });
+
   /**
    * One user the day it exists, and only one: a scuttling armoured thing already
    * designed as a long fight rather than a dangerous one is what a dodge is for,
