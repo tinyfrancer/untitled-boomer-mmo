@@ -35,7 +35,8 @@ import {
   type ContextSubject,
 } from '../ui/uiEvents';
 import { afkXpReward } from '../systems/AfkSystem';
-import { logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
+import { logDeathToll, logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
+import { deathToll } from '../systems/DeathSystem';
 import { conColor } from '../systems/EnemySystem';
 import { effectElapsed } from '../systems/EffectSystem';
 import { zoneAccess } from '../systems/ZoneAccessSystem';
@@ -110,7 +111,7 @@ export interface ZoneWorldOptions {
   input: InputState;
   /** Which edge the player walked in through, when they did. */
   entry?: { edge: ZoneEdge; fraction: number };
-  /** HP carried across a zone walk; absent on death, where full is the point. */
+  /** HP carried across a zone walk or a travel; absent on a session's first world. */
   hp?: number;
   rng?: () => number;
 }
@@ -328,15 +329,15 @@ export class ZoneWorld implements Targeting {
     });
 
     this.subscribe();
-    // The HUD may be carrying HP from before the world was rebuilt (a zone
-    // walk, or the death that sent us here) — resync it unconditionally.
+    // The HUD may be carrying HP from before the world was rebuilt by a zone
+    // walk or a travel — resync it unconditionally.
     this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   // Where the player stands when this world opens: the arrival point if they
   // walked in through an exit, the spot the save was left at if they are
   // resuming into the zone that save names, and the middle of the map
-  // otherwise — a new character, or one who owes a respawn.
+  // otherwise — a new character, or one who travelled here from the map.
   private startPoint(entry: ZoneWorldOptions['entry']): Point {
     if (entry) {
       return arrivalPoint(
@@ -811,24 +812,34 @@ export class ZoneWorld implements Targeting {
     this.player.stopMoving();
     this.ctx.log(logNotice('You have died.'));
     this.ctx.events.emit(PLAYER_DIED_EVENT);
+    this.chargeDeathToll();
 
-    // Dying away from home sends you back to town — respawning in the middle
-    // of a hostile zone would just feed the same bandit again.
-    if (this.zone.id !== 'town') {
-      this.changingZone = true;
-      // No spot: a corpse owes a respawn, and town's default spawn is where
-      // the host's next world puts them anyway.
-      this.character.recordLocation('town', null);
-      saveService.save(this.character.state);
-      this.ctx.push({ kind: 'death', on: 'player', respawnZone: 'town' });
-      return;
-    }
-
+    // Back on your feet where you fell, rather than carried home. Being moved
+    // to town for nothing made dying the fastest way to travel and a free heal
+    // on arrival; what it costs now is the walk back.
+    //
+    // The spawn point is the middle of the map, which is where travelling from
+    // the world map already puts someone — so a respawn is exactly as exposed
+    // as an arrival the game has always allowed, and no zone's centre sits
+    // inside a mob's aggro radius.
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
     this.player.setVelocity(0, 0);
     this.player.restoreToFull();
     this.persistCharacter();
-    this.ctx.push({ kind: 'death', on: 'player', respawnZone: null });
+    this.ctx.push({ kind: 'death', on: 'player' });
+  }
+
+  /**
+   * The fee, taken on the way back up. Never refused for want of coin: a purse
+   * too thin pays what it has, since a character who cannot afford to die is
+   * the one who can least afford to stay dead.
+   */
+  private chargeDeathToll(): void {
+    const { paid } = deathToll(this.character.state.level, this.character.state.currency);
+    if (paid <= 0) return;
+    this.character.spendCurrency(paid);
+    this.ctx.log(logDeathToll(paid));
+    this.ctx.publishCurrency();
   }
 
   /** Everything a corpse is worth. Both kill paths end here. */
