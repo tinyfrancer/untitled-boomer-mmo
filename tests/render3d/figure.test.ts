@@ -11,6 +11,7 @@ const BARE: Appearance = computeAppearance({
   chest: null,
   pants: null,
   weapon: null,
+  offhand: null,
 });
 
 function colors(root: Object3D): number[] {
@@ -49,6 +50,7 @@ describe('buildFigure', () => {
       torsoColor: 0x333444,
       legColor: 0x555666,
       weapon: { shape: 'sword', color: 0x777888 },
+      offhand: null,
     });
     expect(colors(dressed.object)).toEqual(
       expect.arrayContaining([0x111222, 0x333444, 0x555666, 0x777888]),
@@ -89,5 +91,34 @@ describe('the walk', () => {
     const right = nth(figure.object.children, 1);
     expect(left.rotation.x).toBeCloseTo(-right.rotation.x, 6);
     expect(Math.abs(left.rotation.x)).toBeGreaterThan(0);
+  });
+});
+
+// The other hand. Drawn on the opposite side from the weapon, so the two never
+// occupy the same space however the figure is turned.
+describe('the off hand', () => {
+  const held = (offhand: Appearance['offhand']): Object3D =>
+    buildFigure({
+      headColor: 0x111222,
+      torsoColor: 0x333444,
+      legColor: 0x555666,
+      weapon: { shape: 'sword', color: 0x777888 },
+      offhand,
+    }).object;
+
+  it('draws nothing extra for an empty slot', () => {
+    const empty = new Box3().setFromObject(held(null));
+    const shielded = new Box3().setFromObject(held({ shape: 'shield', color: 0x8d6e63 }));
+
+    expect(shielded.min.x).toBeLessThan(empty.min.x);
+  });
+
+  it('paints it in the colour it is handed', () => {
+    const colors: number[] = [];
+    held({ shape: 'orb', color: 0x5c6bc0 }).traverse((object) => {
+      if (object instanceof Mesh)
+        colors.push((object.material as MeshLambertMaterial).color.getHex());
+    });
+    expect(colors).toContain(0x5c6bc0);
   });
 });

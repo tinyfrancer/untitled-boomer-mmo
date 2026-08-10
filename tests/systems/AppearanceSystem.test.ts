@@ -13,7 +13,7 @@ import type { Gear } from '../../src/systems/InventorySystem';
 
 const PHASES: LegPhase[] = [0, 1, 2];
 
-const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null };
+const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null, offhand: null };
 
 describe('computeAppearance', () => {
   it('paints the bare limbs black, the bare head in skin, and holds no weapon', () => {
@@ -22,6 +22,7 @@ describe('computeAppearance', () => {
       torsoColor: BASE_FIGURE_COLOR,
       legColor: BASE_FIGURE_COLOR,
       weapon: null,
+      offhand: null,
     });
   });
 
@@ -61,12 +62,14 @@ describe('computeAppearance', () => {
       chest: 'rat-meat',
       pants: null,
       weapon: 'rat-bones',
+      offhand: null,
     });
     expect(appearance).toEqual({
       headColor: SKIN_COLOR,
       torsoColor: BASE_FIGURE_COLOR,
       legColor: BASE_FIGURE_COLOR,
       weapon: null,
+      offhand: null,
     });
   });
 });
@@ -97,7 +100,12 @@ describe('legOffsets', () => {
 
 describe('appearanceKey', () => {
   it('is stable for the same gear', () => {
-    const gear: Gear = { ...EMPTY_GEAR, helmet: 'brown-helmet', weapon: 'brown-axe' };
+    const gear: Gear = {
+      ...EMPTY_GEAR,
+      helmet: 'brown-helmet',
+      weapon: 'brown-axe',
+      offhand: null,
+    };
     expect(appearanceKey(computeAppearance(gear))).toBe(appearanceKey(computeAppearance(gear)));
   });
 

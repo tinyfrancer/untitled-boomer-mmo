@@ -1,5 +1,5 @@
 import { ITEMS } from '../data/items';
-import type { ItemId, WeaponShapeId } from '../types/ids';
+import type { ItemId, OffhandShapeId, WeaponShapeId } from '../types/ids';
 import type { Gear } from './InventorySystem';
 
 export const BASE_FIGURE_COLOR = 0x111111;
@@ -156,6 +156,14 @@ export interface Appearance {
   torsoColor: number;
   legColor: number;
   weapon: WeaponAppearance | null;
+  // What the other hand is holding. Null for everyone who is holding nothing,
+  // which is every NPC and every character with the slot empty.
+  offhand: OffhandAppearance | null;
+}
+
+export interface OffhandAppearance {
+  shape: OffhandShapeId;
+  color: number;
 }
 
 function equipmentColor(itemId: ItemId | null): number | null {
@@ -174,12 +182,21 @@ function weaponAppearance(itemId: ItemId | null): WeaponAppearance | null {
   return { shape: item.weaponShape, color: item.color };
 }
 
+function offhandAppearance(itemId: ItemId | null): OffhandAppearance | null {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  if (!item || item.kind !== 'equipment' || !item.offhandShape) {
+    return null;
+  }
+  return { shape: item.offhandShape, color: item.color };
+}
+
 export function computeAppearance(gear: Gear): Appearance {
   return {
     headColor: equipmentColor(gear.helmet) ?? SKIN_COLOR,
     torsoColor: equipmentColor(gear.chest) ?? BASE_FIGURE_COLOR,
     legColor: equipmentColor(gear.pants) ?? BASE_FIGURE_COLOR,
     weapon: weaponAppearance(gear.weapon),
+    offhand: offhandAppearance(gear.offhand),
   };
 }
 
@@ -200,6 +217,7 @@ export const NPC_APPEARANCES = {
     torsoColor: 0xffb300,
     legColor: 0x8d6e63,
     weapon: null,
+    offhand: null,
   },
   bandit: {
     headColor: SKIN_COLOR,
@@ -207,6 +225,7 @@ export const NPC_APPEARANCES = {
     legColor: 0x424242,
     // The short dagger it holds; a sword's blade-up shape at a smaller size.
     weapon: { shape: 'sword', color: 0xb0bec5 },
+    offhand: null,
   },
   // Same outlaw, richer: a stolen coat over the grey, and the blade he drops.
   'bandit-chief': {
@@ -214,6 +233,7 @@ export const NPC_APPEARANCES = {
     torsoColor: 0x4e342e,
     legColor: 0x3e2723,
     weapon: { shape: 'sword', color: 0xeceff1 },
+    offhand: null,
   },
 } as const satisfies Record<'shopkeeper' | 'bandit' | 'bandit-chief', Appearance>;
 

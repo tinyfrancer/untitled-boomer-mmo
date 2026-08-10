@@ -49,6 +49,23 @@ describe('itemIcon', () => {
     expect(unshaped).toEqual([]);
   });
 
+  // Same bargain as the weapon fallback above, and the same reason: an offhand
+  // row that named no shape would silently be drawn as a shield.
+  it('leaves no offhand relying on the shape fallback', () => {
+    const unshaped = ALL_ITEMS.filter((itemId) => {
+      const item = ITEMS[itemId];
+      return item.kind === 'equipment' && item.slot === 'offhand' && !item.offhandShape;
+    });
+    expect(unshaped).toEqual([]);
+  });
+
+  // A shield and an orb are not one outline in two colours, so the offhand is
+  // drawn as what it is rather than as the slot the way armour is.
+  it('draws the offhand as its own shape rather than as its slot', () => {
+    expect(itemIcon('brown-shield').shape).toBe('shield');
+    expect(itemIcon('apprentice-orb').shape).toBe('orb');
+  });
+
   // A raw fish, a cooked one and a burnt one are one outline in three colours,
   // so the colours are the only thing telling them apart and cannot collide.
   it('tells the three cooking steps apart by colour alone', () => {

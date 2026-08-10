@@ -19,6 +19,7 @@ const gearWith = (weapon: ItemId | null): Gear => ({
   chest: null,
   pants: null,
   weapon,
+  offhand: null,
 });
 
 const AXE = gearWith('felling-axe');

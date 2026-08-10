@@ -11,9 +11,10 @@ import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import { exhaustive, mapKeys } from '../types/exhaustive';
 import type { GearSlotId, SkillId } from '../types/ids';
 
-const SLOT_ORDER = exhaustive<GearSlotId>()(['weapon', 'helmet', 'chest', 'pants']);
+const SLOT_ORDER = exhaustive<GearSlotId>()(['weapon', 'offhand', 'helmet', 'chest', 'pants']);
 export const SLOT_LABELS: Record<GearSlotId, string> = {
   weapon: 'Weapon',
+  offhand: 'Offhand',
   helmet: 'Helmet',
   chest: 'Chest',
   pants: 'Pants',

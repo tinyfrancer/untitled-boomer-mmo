@@ -25,7 +25,14 @@ export function itemIcon(itemId: ItemId): ItemIcon {
     // names its shape, which is the thing that actually holds it.
     return { shape: item.weaponShape ?? 'sword', color: item.color };
   }
-  // Armour is drawn as the slot it fills — the only three left once weapons are
-  // out, which is what makes this exhaustive rather than a default.
+  if (item.slot === 'offhand') {
+    // Same bargain, and held by the same test: what fills the other hand is
+    // drawn as what it is rather than as the slot, since a shield and an orb
+    // are not one outline in two colours.
+    return { shape: item.offhandShape ?? 'shield', color: item.color };
+  }
+  // Armour is drawn as the slot it fills — the only three left once weapons and
+  // the offhand are out, which is what makes this exhaustive rather than a
+  // default.
   return { shape: item.slot, color: item.color };
 }

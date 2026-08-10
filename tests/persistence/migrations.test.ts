@@ -60,6 +60,7 @@ describe('migrateCharacterState', () => {
       chest: null,
       pants: null,
       weapon: 'apprentice-wand',
+      offhand: null,
     });
     expect(migrated?.inventory['brown-helmet']).toBe(1);
     expect(migrated?.inventory['brown-chestplate']).toBe(1);
@@ -161,6 +162,35 @@ describe('migrateCharacterState', () => {
     expect(migrated?.skills['one-handed']).toEqual({ level: 1, xp: 0 });
     // ...without flattening the gathering progress it did have.
     expect(migrated?.skills.woodcutting).toEqual({ level: 2, xp: 10 });
+  });
+
+  /**
+   * The offhand arrives on a save that has four slots. Spread under rather than
+   * over, the way the skills step does: what a character is already wearing
+   * wins, and only the new key takes its default.
+   */
+  it('gives a v12 save the offhand slot without disturbing what it wears', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 12,
+      classId: 'warrior',
+      currency: 0,
+      zoneId: 'town',
+      quests: {},
+      kills: {},
+      activeTitleId: null,
+      unlockedZones: [],
+      position: null,
+      gear: { helmet: 'brown-helmet', chest: null, pants: null, weapon: 'rusty-sword' },
+    });
+
+    expect(migrated?.gear).toEqual({
+      helmet: 'brown-helmet',
+      chest: null,
+      pants: null,
+      weapon: 'rusty-sword',
+      offhand: null,
+    });
   });
 
   it('drops saves older than the migration chain', () => {

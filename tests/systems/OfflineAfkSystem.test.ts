@@ -27,7 +27,13 @@ function sessionStartedAgo(ms: number, zoneId: AfkSession['zoneId'] = 'town'): A
 // A fighter by default: what is in the weapon slot is what decides whether a
 // parked session fought or gathered, so a sword is what makes these the
 // combat cases.
-const SWORD_IN_HAND: Gear = { helmet: null, chest: null, pants: null, weapon: 'rusty-sword' };
+const SWORD_IN_HAND: Gear = {
+  helmet: null,
+  chest: null,
+  pants: null,
+  weapon: 'rusty-sword',
+  offhand: null,
+};
 
 function context(overrides: Partial<Parameters<typeof resolveOfflineAfk>[1]> = {}) {
   return {
@@ -228,8 +234,20 @@ describe('formatAwayDuration', () => {
  * frame, so nothing new had to be written into the save for this.
  */
 describe('a parked gathering camp', () => {
-  const AXE: Gear = { helmet: null, chest: null, pants: null, weapon: 'felling-axe' };
-  const POLE: Gear = { helmet: null, chest: null, pants: null, weapon: 'fishing-pole' };
+  const AXE: Gear = {
+    helmet: null,
+    chest: null,
+    pants: null,
+    weapon: 'felling-axe',
+    offhand: null,
+  };
+  const POLE: Gear = {
+    helmet: null,
+    chest: null,
+    pants: null,
+    weapon: 'fishing-pole',
+    offhand: null,
+  };
   const TREE = RESOURCE_NODES.tree;
 
   const gathering = (gear: Gear, overrides = {}) => context({ gear, ...overrides });

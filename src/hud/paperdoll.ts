@@ -3,10 +3,11 @@ import {
   computeAppearance,
   stickFigure,
   weaponRig,
+  type StickFigure,
 } from '../systems/AppearanceSystem';
 import { cssColor } from '../ui/theme';
 import { NO_GEAR, type Gear } from '../systems/InventorySystem';
-import type { ItemId, WeaponShapeId } from '../types/ids';
+import type { ItemId, OffhandShapeId, WeaponShapeId } from '../types/ids';
 
 const OUTLINE_COLOR = 0x000000;
 const BOX = 100;
@@ -59,7 +60,41 @@ export function paperdollSvg(gear: Gear): SVGSVGElement {
   if (appearance.weapon) {
     weapon(appearance.weapon.shape, appearance.weapon.color, figure).forEach(add);
   }
+  if (appearance.offhand) {
+    offhand(appearance.offhand.shape, appearance.offhand.color, figure).forEach(add);
+  }
   return svg;
+}
+
+/**
+ * The other hand, on the side the figure in the world carries it. A shield is
+ * seen edge-on there and face-on here, which is the one place the two drawings
+ * differ on purpose: a slab drawn edge-on in a 100-unit box is a line.
+ */
+function offhand(shape: OffhandShapeId, color: number, figure: StickFigure): SVGElement[] {
+  const x = figure.leftHandX;
+  const y = figure.shoulderY + BOX * 0.06;
+  if (shape === 'orb') {
+    return [
+      svgEl('circle', {
+        cx: x,
+        cy: y,
+        r: BOX * 0.07,
+        fill: cssColor(color),
+        stroke: cssColor(OUTLINE_COLOR),
+        'stroke-width': BOX * 0.025,
+      }),
+    ];
+  }
+  const half = BOX * 0.075;
+  return [
+    svgEl('path', {
+      d: `M ${x - half} ${y - half} L ${x + half} ${y - half} L ${x + half} ${y + half * 0.4} L ${x} ${y + half * 1.5} L ${x - half} ${y + half * 0.4} Z`,
+      fill: cssColor(color),
+      stroke: cssColor(OUTLINE_COLOR),
+      'stroke-width': BOX * 0.025,
+    }),
+  ];
 }
 
 /**

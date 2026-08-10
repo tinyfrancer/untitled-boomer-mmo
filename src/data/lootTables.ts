@@ -44,6 +44,11 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'brown-cloth-hat', chance: 0.06 },
       { itemId: 'brown-cloth-pants', chance: 0.06 },
       { itemId: 'brown-axe', chance: 0.04 },
+      // The offhand, at the same rate as the rest of the set: the camp is the
+      // whole of anyone's armour supply, and a slot nothing drops into is a
+      // slot nobody fills.
+      { itemId: 'brown-shield', chance: 0.06 },
+      { itemId: 'apprentice-orb', chance: 0.06 },
       // The way into the hideout, and the rarest thing on the table by a
       // distance: it is meant to be a run of bandits rather than an errand.
       { itemId: 'hideout-key', chance: 0.03 },

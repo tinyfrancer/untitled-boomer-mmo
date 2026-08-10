@@ -189,9 +189,15 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
      * written so he is already the hardest thing in the game at level 1 — he
      * only ever spawns at 4, but a boss placed anywhere else should still read
      * as one.
+     *
+     * Moved up when armour arrived. Mitigation makes everyone tankier, and this
+     * is the one fight in the game tuned to a knife edge — at the old line a
+     * geared level *2* took him, which is precisely the gate the hideout exists
+     * to be. The content moves with the arithmetic rather than the other way
+     * round.
      */
-    base: { maxHp: 70, attackPower: 7, xpReward: 55 },
-    perLevel: { maxHp: 20, attackPower: 1, xpReward: 20 },
+    base: { maxHp: 80, attackPower: 8, xpReward: 55 },
+    perLevel: { maxHp: 20, attackPower: 2, xpReward: 20 },
     attackRange: 80,
     attackCooldownMs: 2200,
     // Long enough that killing him is an occasion rather than a rotation, and

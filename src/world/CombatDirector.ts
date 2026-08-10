@@ -1,4 +1,4 @@
-import { describeItemName } from '../data/items';
+import { describeItemName, isShield } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { titleName } from '../systems/AchievementSystem';
 import {
@@ -15,7 +15,13 @@ import {
   logNotice,
   logTitleEarned,
 } from '../systems/CombatLogSystem';
-import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../systems/CombatSystem';
+import {
+  isCooldownReady,
+  isInRange,
+  mitigatedDamage,
+  resolveAttack,
+  rollDefense,
+} from '../systems/CombatSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { rollLootTable } from '../systems/LootSystem';
 import { distance } from '../systems/MovementSystem';
@@ -269,6 +275,7 @@ export class CombatDirector {
       blockLevel: character.skillLevelOf('block'),
       parryLevel: character.skillLevelOf('parry'),
       hasWeapon: character.state.gear.weapon !== null,
+      hasShield: isShield(character.state.gear.offhand),
     });
     if (defense.avoided && defense.skillId) {
       this.ctx.push({
@@ -281,7 +288,9 @@ export class CombatDirector {
       return;
     }
 
-    const { damage } = resolveAttack({ attackPower });
+    // Armour first, then the shield: what the mana shield soaks is what got
+    // through the plate, not what was swung at it.
+    const damage = mitigatedDamage(resolveAttack({ attackPower }).damage, player.armor);
     const absorbed = player.takeDamage(damage);
     this.ctx.push({
       kind: 'hit',

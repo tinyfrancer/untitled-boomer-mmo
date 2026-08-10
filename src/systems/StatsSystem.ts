@@ -13,6 +13,8 @@ export interface EffectiveStats {
   strength: number;
   intellect: number;
   attackPower: number;
+  // What every piece worn adds up to, before the curve in CombatSystem.
+  armor: number;
   attackRange: number;
   attackCooldownMs: number;
   speed: number;
@@ -26,9 +28,10 @@ function sumGearBonuses(gear: Gear) {
       total.strength += bonuses.strength;
       total.intellect += bonuses.intellect;
       total.attackPower += bonuses.attackPower;
+      total.armor += bonuses.armor;
       return total;
     },
-    { health: 0, strength: 0, intellect: 0, attackPower: 0 },
+    { health: 0, strength: 0, intellect: 0, attackPower: 0, armor: 0 },
   );
 }
 
@@ -49,6 +52,7 @@ export function computeEffectiveStats(classId: ClassId, gear: Gear, level = 1): 
     strength,
     intellect,
     attackPower: primaryStatValue + bonuses.attackPower,
+    armor: bonuses.armor,
     attackRange: weaponAttackRange(gear.weapon),
     attackCooldownMs: classDef.baseStats.attackCooldownMs,
     speed: classDef.baseStats.speed,

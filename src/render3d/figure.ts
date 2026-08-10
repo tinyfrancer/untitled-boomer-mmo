@@ -6,6 +6,7 @@ import {
   Mesh,
   MeshLambertMaterial,
   SphereGeometry,
+  type Object3D,
 } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import {
@@ -15,7 +16,7 @@ import {
   weaponRig,
   type Appearance,
 } from '../systems/AppearanceSystem';
-import type { WeaponShapeId } from '../types/ids';
+import type { OffhandShapeId, WeaponShapeId } from '../types/ids';
 
 /** As tall as the box the rig is measured in: one tile. */
 export const FIGURE_HEIGHT = TILE_SIZE;
@@ -113,6 +114,14 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
     group.add(weapon);
   }
 
+  // The other hand. Left, so the two never occupy the same space however the
+  // figure is turned — which is the whole reason the rig names both.
+  if (appearance.offhand) {
+    const offhand = buildOffhand(appearance.offhand.shape, appearance.offhand.color, size);
+    offhand.position.set(rig.leftHandX - rig.cx, shoulderY, 0);
+    group.add(offhand);
+  }
+
   let walkingNow = false;
   let phase = 0;
 
@@ -186,5 +195,37 @@ function buildWeapon(shape: WeaponShapeId, color: number, size: number): Group {
   // Tipped over until its end stands `lean` off the grip's vertical, which is
   // the same tilt the paperdoll draws it at.
   group.rotation.z = -Math.asin(rig.lean / rig.tip);
+  return group;
+}
+
+/**
+ * What the off hand holds. A shield is a slab standing across the body, so it
+ * is drawn in the plane a viewer sees rather than along the weapon's axis; an
+ * orb is a sphere and needs no orientation at all.
+ */
+function buildOffhand(shape: OffhandShapeId, color: number, size: number): Object3D {
+  const group = new Group();
+  if (shape === 'orb') {
+    const orb = new Mesh(
+      new SphereGeometry(size * 0.075, 10, 8),
+      new MeshLambertMaterial({ color }),
+    );
+    group.add(orb);
+    return group;
+  }
+
+  const board = new Mesh(
+    new BoxGeometry(size * 0.03, size * 0.26, size * 0.18),
+    new MeshLambertMaterial({ color }),
+  );
+  group.add(board);
+  // The boss, proud of the face, which is what keeps a shield from reading as a
+  // plank at the size a creature is drawn.
+  const boss = new Mesh(
+    new SphereGeometry(size * 0.035, 8, 6),
+    new MeshLambertMaterial({ color: WEAPON_GEM_COLOR }),
+  );
+  boss.position.x = -size * 0.02;
+  group.add(boss);
   return group;
 }

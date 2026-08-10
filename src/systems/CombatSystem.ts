@@ -61,6 +61,11 @@ export function weaponSkillFor(weaponItemId: ItemId | null): CombatSkillId {
   return weaponItemId && isEquippable(weaponItemId) ? 'one-handed' : 'unarmed';
 }
 
+// What a shield is worth to a block, on top of the skill. Multiplied rather
+// than added so it scales with training instead of drowning it, and still
+// clamped by MAX_AVOIDANCE — a shield makes blocking likelier, never certain.
+const SHIELD_BLOCK_BONUS = 2;
+
 export function avoidanceChance(skillLevel: number): number {
   return Math.min(MAX_AVOIDANCE, Math.max(0, skillLevel) * AVOIDANCE_PER_SKILL);
 }
@@ -68,9 +73,15 @@ export function avoidanceChance(skillLevel: number): number {
 export interface DefenseContext {
   blockLevel: number;
   parryLevel: number;
-  // Parrying takes a weapon to parry with; blocking doesn't, since there are
-  // no shields yet.
+  // Parrying takes a weapon to parry with.
   hasWeapon: boolean;
+  /**
+   * Whether there is a shield in the off hand, which *helps* Block rather than
+   * being required by it. Requiring one would strand every point of Block every
+   * existing character has trained, in a skill that has been trainable since
+   * before the slot existed.
+   */
+  hasShield?: boolean;
 }
 
 export interface DefenseResult {
@@ -91,10 +102,37 @@ export function rollDefense(
   if (context.hasWeapon && rng() < avoidanceChance(context.parryLevel)) {
     return { avoided: true, skillId: 'parry' };
   }
-  if (rng() < avoidanceChance(context.blockLevel)) {
+  const blockChance =
+    avoidanceChance(context.blockLevel) * (context.hasShield ? SHIELD_BLOCK_BONUS : 1);
+  if (rng() < Math.min(MAX_AVOIDANCE, blockChance)) {
     return { avoided: true, skillId: 'block' };
   }
   return { avoided: false, skillId: null };
+}
+
+/**
+ * How much of a hit armour turns away, as a fraction.
+ *
+ * Proportional with diminishing returns — `armor / (armor + K)` — rather than
+ * flat subtraction, because at these damage numbers a rat hits for 3 and any
+ * flat reduction worth wearing is immunity inside one tier. K is tuned so a
+ * full brown set with the shield sits near 15% and the plate tier that arrives
+ * with smithing lands near 30%; nothing here can reach 1, so armour can never
+ * become immunity however much of it is stacked.
+ */
+const ARMOR_HALVING_POINT = 80;
+
+export function damageReduction(armor: number): number {
+  const value = Math.max(0, armor);
+  return value / (value + ARMOR_HALVING_POINT);
+}
+
+/**
+ * A hit after the armour on the far side of it. `MIN_DAMAGE` still floors the
+ * result, so the most armour can do is make a blow the smallest blow there is.
+ */
+export function mitigatedDamage(damage: number, armor: number): number {
+  return Math.max(MIN_DAMAGE, Math.round(damage * (1 - damageReduction(armor))));
 }
 
 export function isInRange(distance: number, range: number): boolean {
