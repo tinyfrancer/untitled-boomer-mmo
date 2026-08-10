@@ -115,21 +115,31 @@ describe('loading a zone', () => {
     expect(game.currentWorld.player.hp).toBe(7);
   });
 
-  it('sends a corpse home at full health', () => {
+  it('keeps the world a corpse fell in rather than loading another', () => {
     const state = createNewCharacter('Tester', 'warrior');
     state.zoneId = 'bandit-camp';
     const { context: game } = context(state);
+    const world = game.currentWorld;
 
-    // Standing on a bandit with one hit point left: it engages, swings, and the
-    // death is the world asking to be sent home rather than a flag set here.
-    const bandit = nth(game.currentWorld.mobs, 0);
-    game.currentWorld.player.setPosition(bandit.x, bandit.y);
-    game.currentWorld.player.setHp(1);
-    for (let i = 0; i < 50 && game.currentWorld.zone.id !== 'town'; i += 1) {
-      tick(game, 1);
+    // Standing on a bandit with one hit point left: it engages and swings. A
+    // death used to be the third way a world handed the player to the next one,
+    // and is now the one stop that changes no worlds — so the session must not
+    // rebuild anything, which is the half only this level can check.
+    const bandit = nth(world.mobs, 0);
+    world.player.setPosition(bandit.x, bandit.y);
+    world.player.setHp(1);
+    let died = false;
+    let rebuilt = false;
+    for (let i = 0; i < 50 && !died; i += 1) {
+      const frame = game.update(200);
+      rebuilt = frame.zoneChanged || rebuilt;
+      died = frame.events.some((e) => e.kind === 'death' && e.on === 'player');
     }
 
-    expect(game.currentWorld.zone.id).toBe('town');
+    expect(died).toBe(true);
+    expect(rebuilt).toBe(false);
+    expect(game.currentWorld).toBe(world);
+    expect(game.currentWorld.zone.id).toBe('bandit-camp');
     expect(game.currentWorld.player.hp).toBe(game.currentWorld.player.maxHp);
   });
 

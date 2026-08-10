@@ -463,11 +463,22 @@ modules. An event carrying more than two or three values should pass one object 
 
 **`ZoneWorld` does not load zones, and that is on purpose.** Walking onto an exit emits
 `{kind: 'zone-exit', to, edge, fraction}` and stops the world; the `GameContext` acts on it,
-because tearing this world down is its job too. Player death away from town comes back the same
-way, as `{kind: 'death', on: 'player', respawnZone: 'town'}`. HP rides across an exit walk and is
-deliberately dropped on a respawn — arriving at full is the point of dying. A frame that changed
-zone hands its events back with `zoneChanged: true`; they belong to a world that no longer exists,
-so a view rebuilds instead of drawing them.
+because tearing this world down is its job too. Travelling from the world map is the same handover
+under a different event. HP rides across both, so crossing a line is never a free heal. A frame
+that changed zone hands its events back with `zoneChanged: true`; they belong to a world that no
+longer exists, so a view rebuilds instead of drawing them.
+
+**A death is the one stop that changes no worlds.** It used to be the third way a world handed the
+player on — a corpse away from home was carried to town at full health for nothing, which made
+walking into a bandit both a faster way home than walking and a free heal on arrival. A respawn now
+happens where it happened, at the zone's spawn point, and `{kind: 'death', on: 'player'}` asks the
+host for nothing. What dying costs is the walk back plus the fee in `systems/DeathSystem.ts` — the
+first thing in the game currency is spent on, and deliberately coin rather than XP, since on a
+quadratic curve a penalty big enough to be felt is big enough to erase an evening. A purse too thin
+pays what it has: a respawn is never blocked on affordability. Arriving at full is still the point
+of dying, which is why the spawn point is safe by construction — it is the middle of the map, where
+travelling from the world map already puts someone, and no zone's centre sits inside an aggro
+radius.
 
 **There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate
 themselves each frame against `systems/CollisionSystem.ts`, which is the only thing that decides

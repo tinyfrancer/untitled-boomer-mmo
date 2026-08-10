@@ -93,7 +93,7 @@ describe('ZoneWorld', () => {
     rat.engage();
 
     const events = tickUntil((seen) => seen.some((e) => e.kind === 'death'));
-    expect(events).toContainEqual({ kind: 'death', on: 'player', respawnZone: null });
+    expect(events).toContainEqual({ kind: 'death', on: 'player' });
     expect(emitted.some((e) => e.event === PLAYER_DIED_EVENT)).toBe(true);
     // A fight always restarts from a clean slate: everything drops aggro and
     // the corpse gets up at the zone's spawn point, whole.
@@ -102,8 +102,8 @@ describe('ZoneWorld', () => {
     expect({ x: world.player.x, y: world.player.y }).toEqual(world.spawnPoint);
   });
 
-  it('sends a corpse home to town rather than respawning it in a hostile zone', () => {
-    const { world, tickUntil } = harness({ zoneId: 'bandit-camp' });
+  it('leaves a corpse in the zone it fell in rather than carrying it home', () => {
+    const { world, state, tickUntil } = harness({ zoneId: 'bandit-camp' });
     const bandit = nth(world.mobs, 0);
 
     world.teleport(bandit.x - 40, bandit.y);
@@ -111,9 +111,36 @@ describe('ZoneWorld', () => {
     bandit.engage();
 
     const events = tickUntil((seen) => seen.some((e) => e.kind === 'death'));
-    expect(events).toContainEqual({ kind: 'death', on: 'player', respawnZone: 'town' });
-    // The host loads the zone, so the world stops rather than doing it itself.
-    expect(world.changingZone).toBe(true);
+    expect(events).toContainEqual({ kind: 'death', on: 'player' });
+    // Being carried to town for nothing made dying the fastest way to travel,
+    // so nothing changes worlds and the walk back is what death costs.
+    expect(world.changingZone).toBe(false);
+    expect(state.zoneId).toBe('bandit-camp');
+    expect({ x: world.player.x, y: world.player.y }).toEqual(world.spawnPoint);
+    expect(world.player.hp).toBe(world.player.maxHp);
+  });
+
+  it('takes the recovery fee out of the purse, and never more than is in it', () => {
+    const rich = harness({ zoneId: 'bandit-camp' });
+    rich.state.currency = 1000;
+    const before = rich.state.currency;
+    const bandit = nth(rich.world.mobs, 0);
+    rich.world.teleport(bandit.x - 40, bandit.y);
+    rich.world.player.takeDamage(rich.world.player.hp - 1);
+    bandit.engage();
+    rich.tickUntil((seen) => seen.some((e) => e.kind === 'death'));
+    expect(rich.state.currency).toBeLessThan(before);
+
+    // A purse too thin pays what it has: a respawn is never blocked on it.
+    const broke = harness({ zoneId: 'bandit-camp' });
+    broke.state.currency = 0;
+    const other = nth(broke.world.mobs, 0);
+    broke.world.teleport(other.x - 40, other.y);
+    broke.world.player.takeDamage(broke.world.player.hp - 1);
+    other.engage();
+    broke.tickUntil((seen) => seen.some((e) => e.kind === 'death'));
+    expect(broke.state.currency).toBe(0);
+    expect(broke.world.player.hp).toBe(broke.world.player.maxHp);
   });
 
   it('hands the exit to the host and stops, rather than loading the next zone', () => {

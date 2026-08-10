@@ -112,6 +112,10 @@ export function logTitleEarned(titleName: string): CombatLogEntry {
   return { text: `You are now known as ${titleName}.`, color: THEME.color.levelUp };
 }
 
+export function logDeathToll(copper: number): CombatLogEntry {
+  return { text: `Recovering costs you ${formatCurrency(copper)}.`, color: THEME.color.dim };
+}
+
 export function logNotice(message: string): CombatLogEntry {
   return { text: message, color: THEME.color.muted };
 }

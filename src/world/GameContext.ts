@@ -17,7 +17,7 @@ export interface ZoneLoadRequest {
   zoneId: ZoneId;
   /** Which edge they walked in through, when they walked. */
   entry?: { edge: ZoneEdge; fraction: number };
-  /** HP carried across a zone walk; absent on death, where full is the point. */
+  /** HP carried across a zone walk or a travel; absent on a session's first world. */
   hp?: number;
 }
 
@@ -130,10 +130,11 @@ export class GameContext {
     this.notifications = [];
   }
 
-  // The three ways a world hands the player to the next one. All of them are
-  // the world refusing to load a zone on purpose (see ZoneWorld's class
-  // comment): it says where the player is going and stops, and building that
-  // zone is this job.
+  // The two ways a world hands the player to the next one. Both are the world
+  // refusing to load a zone on purpose (see ZoneWorld's class comment): it says
+  // where the player is going and stops, and building that zone is this job.
+  // Death is deliberately not one of them any more — a respawn happens in the
+  // zone it happened in, so it changes no worlds and asks nothing of the host.
   private zoneLoadFor(event: WorldEvent): ZoneLoadRequest | null {
     if (event.kind === 'travel') {
       // No entry: nobody walked through anything, so they arrive wherever that
@@ -148,10 +149,6 @@ export class GameContext {
         // Carried so crossing a zone line is never a free heal.
         hp: this.world.player.hp,
       };
-    }
-    if (event.kind === 'death' && event.on === 'player' && event.respawnZone) {
-      // No hp: a respawn is the one arrival that is meant to be at full.
-      return { zoneId: event.respawnZone };
     }
     return null;
   }
