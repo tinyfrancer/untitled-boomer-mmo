@@ -643,9 +643,13 @@ selling it speed as well would make the last levels worth about double the first
 **AFK play must stay behind active play** (`systems/AfkSystem.ts`, `systems/OfflineAfkSystem.ts`).
 Two mechanisms hold that, and both matter: the AFK loop never uses an ability, so the action bar
 is an advantage only a real player gets, and `awardXp` halves what it earns. Offline progress
-accrues only from a session parked with the toggle, and is capped at **one level per session** —
-a per-kill rate alone is not safe, since eight hours in the richest zone out-earned the entire
-level 1-10 curve several times over. Keep that cap if you add a zone or change the XP curve.
+accrues only from a session parked with the toggle, and is capped at **half a level per session** —
+a per-kill rate alone is not safe, since eight hours in the richest zone out-earned the whole
+level curve several times over. It is a share of a level rather than a level because a level is a
+share of the game and the cap moved under it: on a quadratic curve the last level is the biggest
+share of all, a quarter of the old ten-level total and very nearly half of the five-level one, so
+halving the ceiling left a session worth what it had always been worth. Move it with the curve
+again if you add a zone or raise the cap.
 The camp penalty is for XP a character earns unattended, so a quest reward goes through
 `ZoneWorld.publishXpGain` rather than `awardXp` — handing a quest in is something the player did.
 Kills are the exception to the penalty: an offline session credits its full count to the slayer
@@ -688,6 +692,24 @@ without giving characters growth (or vice versa) silently breaks the difficulty 
 name colors come from `conColor()` in `systems/EnemySystem.ts`: gray/green below the player,
 white even, yellow +1, red +2 and up. Every zone sits in the 1-3 band except the chief at the back
 of the hideout, who is level 4 and is what makes the top of that scale reachable at all.
+
+**`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 5 because
+that is where the content reaches: the hardest thing in the world is the level 4 chief, and the ten
+it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to be
+an achievement rather than an asymptote, so **a zone added raises the cap** — and
+`tests/systems/progression.test.ts` is what holds the two together, asserting that the cap sits one
+level past the highest thing that spawns and that the climb from the end of the starter arc is
+another session or two of the best kill there is rather than another game.
+
+Two things ride the cap and have to move with it, which is exactly what neither did before: the
+combat skill ceiling is `combatSkillCap` (`level × 10`, so 50 now), and **what a trained combat
+skill is worth is written as the ceiling and divided down by that cap** rather than as a rate
+(`MAX_WEAPON_SKILL_DAMAGE_BONUS` and `MAX_AVOIDANCE` in `systems/CombatSystem.ts`). A rate is the
+thing that silently stops meaning what it says when the cap moves: `MAX_AVOIDANCE` claimed 25%
+against a rate that needed skill 125 to reach it and so had never once been reachable at any cap the
+game has had. Derived, the number in the source is the number a capped character actually has. Both
+clamp at the ceiling as well as reaching it, so a save made under the old cap cannot swing harder
+than the game says anyone can.
 
 Combat tuning is deliberate, not arbitrary: a fresh level 1 character should beat a level 1 rat
 comfortably, sweat against a level 2, and lose to a level 3. If you change class stats, weapon

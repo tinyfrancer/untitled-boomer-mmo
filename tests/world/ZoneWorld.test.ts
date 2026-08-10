@@ -9,7 +9,7 @@ import {
   PLAYER_TILE_CHANGED_EVENT,
   ZONE_ENTERED_EVENT,
 } from '../../src/ui/uiEvents';
-import { TILE_SIZE } from '../../src/config/constants';
+import { MAX_CHARACTER_LEVEL, TILE_SIZE } from '../../src/config/constants';
 
 /**
  * The core loop, with nothing rendering it: what a zone is made of, a fight
@@ -57,8 +57,9 @@ describe('ZoneWorld', () => {
 
   it('runs a full kill, credit and respawn cycle with nothing rendering it', () => {
     // Enough level that the fight's outcome is the loop being tested rather
-    // than the damage rolls.
-    const { world, state, tick, tickUntil } = harness({ level: 5 });
+    // than the damage rolls, and one short of the cap because the payout is
+    // half of what is being tested — a capped character earns no xp at all.
+    const { world, state, tick, tickUntil } = harness({ level: MAX_CHARACTER_LEVEL - 1 });
     const rat = world.mobs.find((mob) => mob.level === 1);
     if (!rat) throw new Error('town has no level 1 rat');
 

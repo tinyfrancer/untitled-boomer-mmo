@@ -1,3 +1,4 @@
+import { MAX_CHARACTER_LEVEL, combatSkillCap } from '../config/constants';
 import { isEquippable } from '../data/items';
 import type { CombatSkillId, ItemId } from '../types/ids';
 
@@ -15,17 +16,34 @@ export interface AttackResult {
 const DAMAGE_VARIANCE = 0.25; // +/- 25% of base attack power
 const MIN_DAMAGE = 1;
 
-// Per point of weapon skill. Deliberately small: a fresh character sits at
-// skill 1 and swings for what they always did, and only a level 10 character
-// (cap 100) is hitting appreciably harder for it.
-const DAMAGE_PER_WEAPON_SKILL = 0.004;
-
-// Per point of block or parry, each capped so neither ever becomes immunity.
-const AVOIDANCE_PER_SKILL = 0.002;
+/**
+ * What training a combat skill all the way is worth: +40% damage on the weapon
+ * skill, and a 25% chance to turn a hit aside on block or parry, neither ever
+ * becoming immunity.
+ *
+ * Both are written as the ceiling and divided down by the cap rather than as a
+ * rate, because the rate is what silently stops meaning what it says when the
+ * level cap moves. MAX_AVOIDANCE claimed 25% against a rate that needed skill
+ * 125 to get there — above even the old cap of 100 — so it had never once been
+ * reachable; the weapon skill's 0.004 had been sloped against that same 100 and
+ * would have halved to +20% here. Derived, the number in the source is the
+ * number a capped character actually has, and a cap raised for a new zone
+ * re-slopes both without anyone remembering to.
+ */
+const MAX_WEAPON_SKILL_DAMAGE_BONUS = 0.4;
 const MAX_AVOIDANCE = 0.25;
+const TOP_COMBAT_SKILL = combatSkillCap(MAX_CHARACTER_LEVEL);
+// Per point of weapon skill, and per point of block or parry. Still small
+// enough that a fresh character at skill 1 swings for what they always did.
+const DAMAGE_PER_WEAPON_SKILL = MAX_WEAPON_SKILL_DAMAGE_BONUS / TOP_COMBAT_SKILL;
+const AVOIDANCE_PER_SKILL = MAX_AVOIDANCE / TOP_COMBAT_SKILL;
 
+// Both clamp at the ceiling rather than only reaching it, which is what keeps a
+// save made under a higher cap from hitting harder than the game says it can.
 export function weaponSkillBonus(skillLevel = 0): number {
-  return 1 + Math.max(0, skillLevel) * DAMAGE_PER_WEAPON_SKILL;
+  return (
+    1 + Math.min(MAX_WEAPON_SKILL_DAMAGE_BONUS, Math.max(0, skillLevel) * DAMAGE_PER_WEAPON_SKILL)
+  );
 }
 
 export function resolveAttack(attacker: Attacker, rng: () => number = Math.random): AttackResult {

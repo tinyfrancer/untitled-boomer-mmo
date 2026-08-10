@@ -21,12 +21,21 @@ const OFFLINE_KILL_INTERVAL_MS = 60000;
 // Stacked on top of the AFK penalty, which puts offline at roughly a quarter
 // of what the same time played actively would pay.
 const OFFLINE_RATE_MULTIPLIER = 0.5;
-// The ceiling that actually matters: however long they were away and however
-// rich the zone, a night away is worth at most one level. A per-kill rate
-// alone doesn't hold — eight hours at the bandit camp out-earned the entire
-// level 1-10 curve seven times over — and this keeps the same meaning at
-// level 1, at level 9, and in whatever zone gets added next.
-const OFFLINE_MAX_LEVELS_GAINED = 1;
+/**
+ * The ceiling that actually matters: however long they were away and however
+ * rich the zone, a night away is worth at most this much of the level they are
+ * on. A per-kill rate alone doesn't hold — eight hours at the bandit camp
+ * out-earned the whole level curve seven times over — and a share of a level
+ * keeps the same meaning at level 1, at the cap, and in whatever zone gets
+ * added next.
+ *
+ * Half a level rather than the whole one it was, because the cap moved under
+ * it. A level is a share of the game, and on a quadratic curve the last one is
+ * the largest share of all: 1 to 10 was 30,720 XP, of which the last level was
+ * a quarter, and 1 to 5 is 4,320, of which it is very nearly a half. Halving
+ * this leaves a session worth what it has always been worth.
+ */
+const OFFLINE_MAX_LEVEL_FRACTION = 0.5;
 
 export interface OfflineAfkContext {
   now: number;
@@ -93,6 +102,11 @@ export function elapsedOfflineMs(startedAt: string, now: number): number {
     return 0;
   }
   return Math.min(OFFLINE_CAP_MS, Math.max(0, now - started));
+}
+
+/** The most XP a parked session may hand back to a character at this level. */
+export function offlineXpCeiling(characterLevel: number): number {
+  return xpToReachLevel(characterLevel + 1) * OFFLINE_MAX_LEVEL_FRACTION;
 }
 
 // What the camp was parked next to: the spawn in that zone closest to the
@@ -169,9 +183,7 @@ export function resolveOfflineAfk(
   // The cap is applied to the kill count rather than to the xp, so the coin
   // and the loot in the report come from the same fights the xp did.
   const affordableKills =
-    perKillXp > 0
-      ? Math.floor(xpToReachLevel(context.characterLevel + OFFLINE_MAX_LEVELS_GAINED) / perKillXp)
-      : 0;
+    perKillXp > 0 ? Math.floor(offlineXpCeiling(context.characterLevel) / perKillXp) : 0;
   const kills = Math.min(elapsedKills, affordableKills);
   if (kills <= 0) {
     return { ...NOTHING, elapsedMs };

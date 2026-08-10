@@ -9,22 +9,22 @@ systems already in the code **disagree with themselves** — a death that pays t
 with nothing to buy, a level cap six levels past the content, armour that stops nothing, and four
 gathered materials that lead nowhere.
 
-| #   | PR                                                       | Phase             | State   |
-| --- | -------------------------------------------------------- | ----------------- | ------- |
-| 1   | Death has a price                                        | Arithmetic        | planned |
-| 2   | The level cap meets the content                          | Arithmetic        | planned |
-| 3   | Armour that stops something, and a hand to hold a shield | Arithmetic        | planned |
-| 4   | A swing that can miss, and one that can land hard        | Arithmetic        | planned |
-| 5   | The bank                                                 | Economy           | planned |
-| 6   | Stock worth coming back for                              | Economy           | planned |
-| 7   | The trainer                                              | Economy           | planned |
-| 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned |
-| 9   | Smithing, and the forge it happens at                    | Crafting web      | planned |
-| 10  | Nothing gathered is a dead end                           | Crafting web      | planned |
-| 11  | A camp that can cook and craft                           | Crafting web      | planned |
-| 12  | Quests that ask for something other than a bag           | Reasons to return | planned |
-| 13  | Repeatable work                                          | Reasons to return | planned |
-| 14  | Mastery                                                  | Reasons to return | planned |
+| #   | PR                                                       | Phase             | State             |
+| --- | -------------------------------------------------------- | ----------------- | ----------------- |
+| 1   | Death has a price                                        | Arithmetic        | merged 2026-08-10 |
+| 2   | The level cap meets the content                          | Arithmetic        | planned           |
+| 3   | Armour that stops something, and a hand to hold a shield | Arithmetic        | planned           |
+| 4   | A swing that can miss, and one that can land hard        | Arithmetic        | planned           |
+| 5   | The bank                                                 | Economy           | planned           |
+| 6   | Stock worth coming back for                              | Economy           | planned           |
+| 7   | The trainer                                              | Economy           | planned           |
+| 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned           |
+| 9   | Smithing, and the forge it happens at                    | Crafting web      | planned           |
+| 10  | Nothing gathered is a dead end                           | Crafting web      | planned           |
+| 11  | A camp that can cook and craft                           | Crafting web      | planned           |
+| 12  | Quests that ask for something other than a bag           | Reasons to return | planned           |
+| 13  | Repeatable work                                          | Reasons to return | planned           |
+| 14  | Mastery                                                  | Reasons to return | planned           |
 
 ## The decision behind the order: the arithmetic before the content
 
