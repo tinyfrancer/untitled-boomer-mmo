@@ -431,6 +431,7 @@ describe('the buff row', () => {
 
 describe('the target frame', () => {
   const hp = (): HTMLElement | null => parent.querySelector('.hud-target__hp .hud-bar__fill');
+  const winding = (): HTMLElement | null => parent.querySelector('.hud-target__winding');
 
   it('draws the target’s health as a bar with the numbers inside it', () => {
     mount();
@@ -440,16 +441,35 @@ describe('the target frame', () => {
       hp: 3,
       maxHp: 12,
       conColor: '#ffffff',
+      winding: null,
     });
 
     const frame = parent.querySelector<HTMLElement>('.hud-target');
     expect(frame?.classList.contains('hud-hidden')).toBe(false);
+    expect(winding()?.classList.contains('hud-hidden')).toBe(true);
     expect(frame?.querySelector('.hud-target__name')?.textContent).toBe('Rat (Lv 2)');
     expect(frame?.querySelector('.hud-target__hp .hud-bar__label')?.textContent).toBe('3 / 12 hp');
     expect(hp()?.style.width).toBe('25%');
 
     events.emit(TARGET_CLEARED_EVENT);
     expect(frame?.classList.contains('hud-hidden')).toBe(true);
+  });
+
+  /**
+   * The other half of an enemy ability's telegraph. The shout goes over the
+   * creature's head in the world; this is the line where the player is already
+   * looking mid-fight, and it is only ever there when something is coming.
+   */
+  it('says what the target is winding up, and stops saying it when it lands', () => {
+    mount();
+    const rat = { name: 'Rat', level: 2, hp: 3, maxHp: 12, conColor: '#ffffff' };
+
+    events.emit(TARGET_SELECTED_EVENT, { ...rat, winding: 'Cleave' });
+    expect(winding()?.textContent).toBe('Cleave');
+    expect(winding()?.classList.contains('hud-hidden')).toBe(false);
+
+    events.emit(TARGET_SELECTED_EVENT, { ...rat, winding: null });
+    expect(winding()?.classList.contains('hud-hidden')).toBe(true);
   });
 });
 

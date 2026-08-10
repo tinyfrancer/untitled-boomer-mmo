@@ -40,6 +40,7 @@ import { conColor } from '../systems/EnemySystem';
 import { effectElapsed } from '../systems/EffectSystem';
 import { zoneAccess } from '../systems/ZoneAccessSystem';
 import { tileOf, toTile } from '../systems/MapSystem';
+import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
@@ -771,6 +772,7 @@ export class ZoneWorld implements Targeting {
       hp: this.target.hp,
       maxHp: this.target.maxHp,
       conColor: conColor(this.character.state.level, this.target.level),
+      winding: this.target.windUp ? ENEMY_ABILITIES[this.target.windUp.abilityId].name : null,
     });
   }
 

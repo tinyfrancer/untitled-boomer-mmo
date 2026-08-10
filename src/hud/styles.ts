@@ -244,6 +244,15 @@ function hudCss(): string {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.hud-target__winding {
+  font-size: ${THEME.font.xs}px;
+  line-height: 14px;
+  margin-top: 3px;
+  color: ${THEME.color.playerDamage};
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 
 /* --- Quest tracker ------------------------------------------------------- */
 

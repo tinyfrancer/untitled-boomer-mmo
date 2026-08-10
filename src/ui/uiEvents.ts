@@ -116,6 +116,12 @@ export interface TargetInfo {
   hp: number;
   maxHp: number;
   conColor: string;
+  /**
+   * What it is winding up, if anything. The other half of an enemy ability's
+   * telegraph — the shout goes over its head in the world, and this is the line
+   * that says so where the player is already looking mid-fight.
+   */
+  winding: string | null;
 }
 
 // Payload for ACTIONS_CHANGED_EVENT: what the world around the player allows
