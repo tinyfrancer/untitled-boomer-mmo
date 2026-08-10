@@ -671,6 +671,28 @@ the HP — so the fight lasts long enough for a cooldown, a meal, or running awa
 is what every duel here models; a wizard's answer to 80 units of reach and a chase slower than they
 walk is not to stand in it, and no arithmetic about swapping hits describes that.
 
+**An enemy ability is telegraphed, avoidable, and spends the swing it replaces**
+(`data/enemyAbilities.ts`, chosen by `systems/EnemyAbilitySystem.ts` and run by `CombatDirector`).
+One rule covers all of them: it shouts for `windUpMs` — a float over the creature's own head, a line
+in the combat log, and a line in the target frame — and lands on whoever is still inside `range`
+when the clock runs out. An instant one would be unavoidable by construction, so there are none.
+
+Two things follow that are easy to get wrong. **The wind-up spends the creature's attack cooldown**,
+so an ability is a swing spent differently rather than one on top: standing in every Cleave is worse
+than being plainly auto-attacked and stepping out of every one is better, which is what makes moving
+worth the trouble instead of merely polite. And **a mob winding up plants its feet** (`Mob.update`
+returns early on it) — something that kept closing while it shouted would land every one of these on
+a player who did walk away, and the telegraph would be a lie.
+
+Abilities are a **humanoid** thing, the same line `family` already draws for what a loot table may
+hold: a rat has only its teeth. The chief's Cleave is what the boss fight is actually about, and the
+bandit's thrown knife is what it reaches for when it _cannot_ reach you — `minRange` keeps it out of
+melee, which is also what keeps the toe-to-toe curve the duels hold exactly where it was.
+
+The tuning contract moved with it: `tests/systems/EnemySystem.test.ts` folds an ability into the
+duel both ways, and the chief's line is now that a geared level 3 who stands in every Cleave loses
+and the same character who steps out of each one wins.
+
 **A boss is a named mob, and `boss: true` is a rule rather than a label.** An unattended camp never
 _picks_ a fight with one — `decideAfkAction` filters it out of what is in reach and `campQuarry`
 leaves it off the offline list — because a night parked beside him would mint sixty of the only

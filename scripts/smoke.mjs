@@ -158,6 +158,29 @@ const stepUntil = async (fn, label, budgetMs = 60000, deltaMs = FRAME_MS) => {
 const stepUntilZone = (zone, label, budgetMs) =>
   stepUntil(async () => (await zoneId()) === zone, label, budgetMs);
 
+/**
+ * Cranks until `read` returns something `done` accepts, and hands back what it
+ * saw. `stepUntil` answers whether a condition held; several checks want the
+ * value that satisfied it, which is what would otherwise be read one frame late.
+ *
+ * @template T
+ * @param {() => Promise<T>} read
+ * @param {(value: T) => boolean} done
+ * @param {string} label
+ * @param {number} [budgetMs]
+ * @returns {Promise<T>}
+ */
+const stepFor = async (read, done, label, budgetMs = 60000) => {
+  let last = await read();
+  for (let elapsed = 0; elapsed < budgetMs; elapsed += FRAMES_PER_POLL * FRAME_MS) {
+    if (done(last)) return last;
+    await step(FRAMES_PER_POLL);
+    last = await read();
+  }
+  if (done(last)) return last;
+  throw new Error(`timed out waiting for: ${label}`);
+};
+
 /** Drops the player back on the zone's spawn point with nothing selected. */
 const park = async () => {
   await page.evaluate(() => {
@@ -2090,8 +2113,62 @@ async function lockedZone() {
   );
   await page.screenshot({ path: `${OUT}/25-chief.png` });
 
-  // Back out to the camp, so the sections after this one are not standing in a
-  // room full of things that hit back.
+  // --- His Cleave. What it does is unit-tested; what needs a browser is the
+  // half of the telegraph that is a DOM element — the target frame is where a
+  // player is already looking mid-fight, and a line only there when something
+  // is coming is the warning. ---
+  // The map has been open over the target frame since the top of this section,
+  // and the frame is the thing being read now.
+  await tapTab('map');
+  await page.evaluate(() => {
+    const w = window.world;
+    const mob = w.mobs.find((m) => m.definition.id === 'bandit-chief');
+    if (!mob) throw new Error('the hideout has no chief');
+    // Nobody else in the fight, and a shield deep enough to stand in a Cleave:
+    // this section is about whether the warning is drawn, not about whether a
+    // level 1 survives the thing it is warning about.
+    w.mobs.forEach((other) => other.disengage());
+    w.player.restoreToFull();
+    w.player.applyManaShield({ remaining: 10000, remainingMs: 600000, durationMs: 600000 });
+    // Toe to toe and already fighting: he only winds up at somebody.
+    w.teleport(mob.x - 40, mob.y);
+    w.setTarget(mob);
+    mob.engage();
+  });
+  const winding = await stepFor(
+    () =>
+      page.evaluate(
+        () => document.querySelector('.hud-target__winding:not(.hud-hidden)')?.textContent ?? '',
+      ),
+    (text) => text.length > 0,
+    'the chief to wind up',
+  );
+  check(
+    'a wound-up enemy ability names itself in the target frame',
+    winding === 'Cleave',
+    `frame says "${winding}"`,
+  );
+  await page.screenshot({ path: `${OUT}/27-cleave.png` });
+
+  // And is gone again once it has landed or missed, so the line is only ever
+  // there when something is actually coming.
+  const cleared = await stepFor(
+    () =>
+      page.evaluate(() => document.querySelector('.hud-target__winding:not(.hud-hidden)') === null),
+    (gone) => gone === true,
+    'the cleave to land or miss',
+  );
+  check('and takes it back down once it lands', cleared === true);
+
+  // Back out to the camp, with the fight called off first: the sections after
+  // this one should not be standing in a room full of things that hit back.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.mobs.forEach((mob) => mob.disengage());
+    w.clearTarget();
+    w.player.applyManaShield(null);
+    w.player.restoreToFull();
+  });
   await park();
   await page.evaluate(() => window.world.teleport(0, window.world.worldHeight / 2));
   await stepUntilZone('bandit-camp', 'the walk back out of the hideout');
