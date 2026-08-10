@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { ITEMS, armorTypeOf } from '../../src/data/items';
-import { TOWN_MOB_SPAWNS } from '../../src/data/spawns';
+import { BANDIT_HIDEOUT_MOB_SPAWNS, TOWN_MOB_SPAWNS } from '../../src/data/spawns';
+import { ZONES } from '../../src/data/zones';
+import { nth } from '../nth';
 import { conColor, enemyDisplayName, scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { THEME } from '../../src/ui/theme';
 
@@ -169,7 +171,60 @@ describe('difficulty curve', () => {
     expect(duel(gearedWarrior(3), enemyAt('bandit', 3))).toBe('player');
   });
 
-  it('keeps the bandit the hardest thing at any given level', () => {
+  /**
+   * The one fight above the starter band, and the whole reason to open the
+   * door. The contract is that a level 3 in what the camp outside drops can
+   * take him and a level 2 in the same gear cannot — so the hideout is the
+   * first thing in the game gated on the level rather than on the kit.
+   *
+   * Modelled toe to toe like every duel here, which is a warrior's fight. A
+   * wizard's answer to something with 80 units of reach and a chase slower than
+   * they walk is not to stand in it, and nothing this arithmetic can say about
+   * trading blows describes that.
+   */
+  it('makes the chief a level 3 fight in bandit gear, and a wall below that', () => {
+    expect(duel(freshWarrior(), enemyAt('bandit-chief', 4))).toBe('enemy');
+    expect(duel(gearedWarrior(2), enemyAt('bandit-chief', 4))).toBe('enemy');
+    expect(duel(gearedWarrior(3), enemyAt('bandit-chief', 4))).toBe('player');
+  });
+
+  // What the fight pays for itself: the blade off his own table turns a fight
+  // won by a hair into one won comfortably, which is what a boss drop is for.
+  it('makes his own blade the reward for beating him', () => {
+    const chief = enemyAt('bandit-chief', 4);
+    const withBlade = computeEffectiveStats(
+      'warrior',
+      {
+        helmet: 'brown-helmet',
+        chest: 'brown-chestplate',
+        pants: 'brown-legs',
+        weapon: 'cutthroats-blade',
+      },
+      3,
+    );
+    const before = gearedWarrior(3);
+
+    expect(withBlade.attackPower).toBeGreaterThan(before.attackPower);
+    expect(duel({ ...before, attackPower: withBlade.attackPower }, chief)).toBe('player');
+  });
+
+  it('keeps the chief the hardest thing in the game, level for level', () => {
+    [1, 2, 3, 4].forEach((level) => {
+      const chief = scaleEnemyStats(ENEMIES['bandit-chief'], level);
+      const bandit = scaleEnemyStats(ENEMIES.bandit, level);
+      expect(chief.maxHp).toBeGreaterThan(bandit.maxHp);
+      expect(chief.xpReward).toBeGreaterThan(bandit.xpReward);
+    });
+  });
+
+  // He is the only one of his kind, which is what "named" means here and what
+  // the AFK rules key off.
+  it('leaves the chief the only boss in the tables', () => {
+    const bosses = Object.values(ENEMIES).filter((enemy) => enemy.boss === true);
+    expect(bosses.map((enemy) => enemy.id)).toEqual(['bandit-chief']);
+  });
+
+  it('keeps the bandit the hardest of the three that fill a zone', () => {
     [1, 2, 3].forEach((level) => {
       const bandit = scaleEnemyStats(ENEMIES.bandit, level);
       const crab = scaleEnemyStats(ENEMIES.crab, level);
@@ -215,6 +270,34 @@ describe('zone spawn tables', () => {
       spawns.forEach((s) => expect(s.enemyId).toBe(enemyId));
     },
   );
+
+  /**
+   * The hideout is the exception, and the only one: it is reached through a
+   * locked door rather than by walking, so it is allowed to ask for more than a
+   * new character has. Everything in it except the chief is still starter
+   * content — what the door is really gating is the table, not the difficulty.
+   */
+  it('keeps the hideout to bandits plus the one thing above the band', () => {
+    const trash = BANDIT_HIDEOUT_MOB_SPAWNS.filter((spawn) => spawn.enemyId !== 'bandit-chief');
+    const bosses = BANDIT_HIDEOUT_MOB_SPAWNS.filter((spawn) => spawn.enemyId === 'bandit-chief');
+
+    expect(bosses).toHaveLength(1);
+    expect(nth(bosses, 0).level).toBe(4);
+    trash.forEach((spawn) => {
+      expect(spawn.enemyId).toBe('bandit');
+      expect(spawn.level).toBeGreaterThanOrEqual(2);
+      expect(spawn.level).toBeLessThanOrEqual(3);
+    });
+  });
+
+  // A boss is one of a kind by definition; two of him standing in the same room
+  // is the sort of thing only a table would say and nothing would notice.
+  it('spawns no boss more than once anywhere', () => {
+    const bossSpawns = Object.values(ZONES).flatMap((zone) =>
+      zone.mobSpawns.filter((spawn) => ENEMIES[spawn.enemyId].boss === true),
+    );
+    expect(bossSpawns).toHaveLength(1);
+  });
 });
 
 // The rule the whole starter arc is built on: each zone teaches a different

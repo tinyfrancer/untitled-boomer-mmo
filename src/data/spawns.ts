@@ -78,9 +78,13 @@ export const BANDIT_CAMP_MOB_SPAWNS: MobSpawnPoint[] = [
 // ambush, and everything stands in the chamber beyond the corridor. Same 1-3
 // band as everywhere else — what makes this worth the key is what drops here,
 // not what it takes to survive.
+// The one exception to the levels above: the chief is level 4, the only thing
+// anywhere above the starter band, and he stands at the back of the chamber so
+// the men in front of him are fought first.
 export const BANDIT_HIDEOUT_MOB_SPAWNS: MobSpawnPoint[] = [
   { dx: 160, dy: -224, enemyId: 'bandit', level: 2 },
   { dx: 288, dy: -64, enemyId: 'bandit', level: 2 },
   { dx: 160, dy: 224, enemyId: 'bandit', level: 3 },
   { dx: 288, dy: 96, enemyId: 'bandit', level: 3 },
+  { dx: 448, dy: 0, enemyId: 'bandit-chief', level: 4 },
 ];
