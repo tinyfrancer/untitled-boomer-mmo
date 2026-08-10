@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness, type Harness } from './harness';
+import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { ENEMIES } from '../../src/data/enemies';
 import { ENEMY_ABILITIES } from '../../src/data/enemyAbilities';
 import {
@@ -72,15 +73,17 @@ describe('the chief', () => {
    * without a line written for it.
    */
   it('credits its own kill counter and pays out its own table', () => {
-    // Well past the fight's own level: standing in his chamber pulls one of his
-    // men too, and the point of this is what a corpse is worth rather than
-    // whether the fight is winnable — which the duel tests hold.
-    const kit = hideout(10);
+    // Killed off one swing rather than fought: standing in his chamber pulls
+    // his men as well as his Cleave, and a test about what a corpse is worth
+    // should not also be a bet on surviving the fight — which is what the duel
+    // tests hold, and what this one was quietly re-rolling every run.
+    const kit = hideout(MAX_CHARACTER_LEVEL);
     const chief = chiefIn(kit);
 
     kit.world.teleport(chief.x, chief.y - 40);
     kit.world.setTarget(chief);
-    kit.until(() => !chief.isAlive(), 'the chief to go down', 240000);
+    chief.hp = 1;
+    kit.until(() => !chief.isAlive(), 'the chief to go down', 20000);
 
     expect(kit.state.kills[CHIEF]).toBe(1);
     expect(kit.emissions(KILLS_CHANGED_EVENT).at(-1)).toEqual([{ [CHIEF]: 1 }]);
@@ -132,7 +135,7 @@ describe('the chief winds up', () => {
 
   /** Toe to toe with him, with the fight already started. */
   function toeToToe(): { kit: Harness; chief: Mob } {
-    const kit = hideout(10);
+    const kit = hideout(MAX_CHARACTER_LEVEL);
     const chief = chiefIn(kit);
     kit.world.teleport(chief.x - 40, chief.y);
     kit.world.setTarget(chief);
