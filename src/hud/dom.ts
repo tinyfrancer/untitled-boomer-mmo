@@ -105,6 +105,43 @@ export function row(options: RowOptions): Row {
   return { root, label, value };
 }
 
+/**
+ * A row with a smaller button beside it that does the same thing to the whole
+ * stack — "Sell all", "Store all", "Take all".
+ *
+ * Two buttons rather than one row with two meanings: a stack of quest turn-ins
+ * is exactly the thing a mis-tap must not be able to empty, and the bank reads
+ * the same way as the shop precisely so a player never has to remember which of
+ * the two panels a row clears. They are siblings rather than nested, since a
+ * button inside a button is neither valid nor tappable.
+ */
+export function stackRow(row: HTMLElement, options: StackRowOptions): StackRow {
+  const all = el('button', 'hud-stack__all', options.label ?? 'All');
+  all.type = 'button';
+  // The one number a player wants before emptying a stack, and there is no
+  // hover on a phone to put it behind.
+  all.title = options.title;
+  all.classList.add('hud-button');
+  all.addEventListener('click', options.onClick);
+
+  const root = el('div', 'hud-stack');
+  root.append(row, all);
+  return { root, all };
+}
+
+export interface StackRowOptions {
+  /** Defaults to "All", which is what fits beside a 34px row. */
+  label?: string;
+  title: string;
+  onClick: () => void;
+}
+
+export interface StackRow {
+  root: HTMLElement;
+  /** Handed back so a caller can tag it for the checks that click it. */
+  all: HTMLButtonElement;
+}
+
 /** What a panel says instead of a list when it has nothing to list. */
 export function emptyLine(text: string): HTMLElement {
   return el('div', 'hud-empty', text);

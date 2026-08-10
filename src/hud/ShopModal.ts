@@ -1,5 +1,5 @@
 import { Overlay } from './Overlay';
-import { el, emptyLine, row, sectionHeader } from './dom';
+import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName, itemValue } from '../data/items';
 import { SHOP_STOCK } from '../data/shop';
@@ -119,17 +119,12 @@ export class ShopModal extends Overlay {
     });
     if (quantity < 2) return row;
 
-    const all = el('button', 'hud-button hud-sell__all', 'All');
-    all.type = 'button';
-    all.dataset.sellAll = itemId;
-    // The one number a player wants before emptying a stack, and there is no
-    // hover on a phone to put it behind.
-    all.title = `Sell all ${quantity} for ${formatCurrency(unit * quantity)}`;
-    all.addEventListener('click', () => this.handlers.onSell(itemId, quantity));
-
-    const pair = el('div', 'hud-sell');
-    pair.append(row, all);
-    return pair;
+    const pair = stackRow(row, {
+      title: `Sell all ${quantity} for ${formatCurrency(unit * quantity)}`,
+      onClick: () => this.handlers.onSell(itemId, quantity),
+    });
+    pair.all.dataset.sellAll = itemId;
+    return pair.root;
   }
 
   // A quest row says what it wants and how far along it is, so the player never
