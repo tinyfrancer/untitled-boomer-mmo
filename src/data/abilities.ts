@@ -21,6 +21,17 @@ export interface AbilityDefinition {
   cooldownMs: number;
   // 0 means it targets the caster and needs nothing selected.
   range: number;
+  /**
+   * How long the caster stands still before it goes off. 0 is instant, which is
+   * every physical ability and the one spell that exists to be pressed in a
+   * panic.
+   *
+   * A cast time is not paid in damage anywhere — the auto-attack keeps swinging
+   * through it — so what it actually costs is a window in which moving or
+   * taking a hit loses the spell, the mana and the cooldown together. That is
+   * the whole of the trade, and it is why only the nuke has one.
+   */
+  castTimeMs: number;
   // The skill that governs it, if any. Spells are Destruction; the warrior's
   // abilities are governed by the weapon skill they already train by swinging.
   skill?: CombatSkillId;
@@ -40,6 +51,9 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     cooldownMs: 6000,
     // Matches the wizard's wand reach, so anything they can shoot they can burn.
     range: 280,
+    // Long enough to be a decision in a fight and short enough to land one
+    // between a bandit's swings, which are 1400ms apart at their fastest.
+    castTimeMs: 1400,
     skill: 'destruction',
     baseFailureChance: 0.2,
     effect: { kind: 'damage', powerMultiplier: 2 },
@@ -52,6 +66,9 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     manaCost: 12,
     cooldownMs: 15000,
     range: 0,
+    // Instant on purpose. It is the answer to being hit, and a shield you have
+    // to stand still for is one you can never get up once you need it.
+    castTimeMs: 0,
     skill: 'destruction',
     baseFailureChance: 0.1,
     effect: { kind: 'absorb', amount: 25, durationMs: 20000 },
@@ -65,6 +82,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     manaCost: 0,
     cooldownMs: 8000,
     range: 80,
+    castTimeMs: 0,
     baseFailureChance: 0,
     effect: { kind: 'damage', powerMultiplier: 2.2 },
   },
@@ -76,6 +94,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     manaCost: 0,
     cooldownMs: 20000,
     range: 0,
+    castTimeMs: 0,
     baseFailureChance: 0,
     effect: { kind: 'haste', cooldownMultiplier: 0.6, durationMs: 8000 },
   },

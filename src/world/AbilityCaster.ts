@@ -8,10 +8,21 @@ import {
   startHaste,
   startManaShield,
 } from '../systems/AbilitySystem';
-import { logAbilityUsed, logDamageDealt, logSpellFailed } from '../systems/CombatLogSystem';
+import {
+  logAbilityUsed,
+  logCastInterrupted,
+  logCastStarted,
+  logDamageDealt,
+  logSpellFailed,
+} from '../systems/CombatLogSystem';
 import { distance } from '../systems/MovementSystem';
 import type { AbilityId } from '../types/ids';
-import type { AbilityState } from '../ui/uiEvents';
+import {
+  CHANNEL_ENDED_EVENT,
+  CHANNEL_PROGRESS_EVENT,
+  CHANNEL_STARTED_EVENT,
+  type AbilityState,
+} from '../ui/uiEvents';
 import type { Mob } from './Mob';
 import type { Targeting } from './targeting';
 import type { WorldContext } from './WorldContext';
@@ -31,6 +42,13 @@ export interface AbilityCasterDeps {
   publishAbilityState(): void;
 }
 
+/** A spell part-way through, which is the only thing here that spans frames. */
+interface Cast {
+  ability: AbilityDefinition;
+  elapsedMs: number;
+  skillLevel: number;
+}
+
 /**
  * The action bar's other half: whether a button may be pressed, and what
  * happens when it is.
@@ -39,6 +57,13 @@ export interface AbilityCasterDeps {
  * selected are the world's to know — the HUD asks and renders whatever comes
  * back. A caster's reach is the spell rather than the class, which is why
  * nothing here consults the weapon.
+ *
+ * **A spell with a cast time is committed at the press and resolved later.**
+ * Mana and cooldown are spent the moment the button goes down, so an interrupted
+ * cast costs everything and does nothing — the same bargain the fizzle already
+ * makes, and what gives standing still its weight. What is rolled at the *end*
+ * is whether it fizzles and whether the target is still there to hit, because
+ * both are questions about the moment it lands rather than the moment it began.
  */
 export class AbilityCaster {
   /** When each ability was last cast, for the cooldown check and the bar's sweep. */
@@ -46,6 +71,7 @@ export class AbilityCaster {
 
   private readonly ctx: WorldContext;
   private readonly deps: AbilityCasterDeps;
+  private casting: Cast | null = null;
 
   constructor(ctx: WorldContext, deps: AbilityCasterDeps) {
     this.ctx = ctx;
@@ -64,6 +90,8 @@ export class AbilityCaster {
       elapsedMs: this.elapsedSince(abilityId),
       hasTarget: target !== null && target.isAlive(),
       targetDistance: target ? distance(player, target) : Infinity,
+      moving: player.isMoving() || player.hasMoveTarget(),
+      casting: this.casting !== null,
     });
     if (!check.ok) {
       this.ctx.notice(check.reason);
@@ -76,9 +104,71 @@ export class AbilityCaster {
     player.markInCombat();
     this.deps.publishAbilityState();
 
-    // A spell that fizzles still costs the mana and the cooldown; that is what
-    // makes Destruction worth levelling.
     const skillLevel = ability.skill ? this.ctx.character.skillLevelOf(ability.skill) : 0;
+    if (ability.castTimeMs > 0) {
+      this.casting = { ability, elapsedMs: 0, skillLevel };
+      this.ctx.log(logCastStarted(ability.name));
+      this.ctx.events.emit(CHANNEL_STARTED_EVENT, ability.name);
+      this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
+      return;
+    }
+    this.resolve(ability, skillLevel);
+  }
+
+  /**
+   * Runs a cast's clock, and breaks it if the caster moved.
+   *
+   * Movement is read off the player rather than pushed in, so every way there is
+   * to move — a key, a tap, a walk already under way — breaks a cast without any
+   * of them knowing a cast exists.
+   */
+  update(deltaMs: number): void {
+    const cast = this.casting;
+    if (!cast) return;
+    if (!this.ctx.player.isAlive()) {
+      this.clearCast();
+      return;
+    }
+    if (this.ctx.player.isMoving() || this.ctx.player.hasMoveTarget()) {
+      this.interrupt();
+      return;
+    }
+
+    cast.elapsedMs += Math.max(0, deltaMs);
+    if (cast.elapsedMs < cast.ability.castTimeMs) {
+      this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, cast.elapsedMs / cast.ability.castTimeMs);
+      return;
+    }
+    this.clearCast();
+    this.resolve(cast.ability, cast.skillLevel);
+  }
+
+  /**
+   * Breaks whatever is being cast. The mana and the cooldown are already gone —
+   * that is what makes an interrupt worth avoiding rather than an inconvenience.
+   */
+  interrupt(): void {
+    const cast = this.casting;
+    if (!cast) return;
+    this.clearCast();
+    this.ctx.float('Interrupted!', 'player-damage');
+    this.ctx.log(logCastInterrupted(cast.ability.name));
+  }
+
+  /** Whether something is part-way through, for the world's own decisions. */
+  isCasting(): boolean {
+    return this.casting !== null;
+  }
+
+  private clearCast(): void {
+    this.casting = null;
+    this.ctx.events.emit(CHANNEL_ENDED_EVENT);
+  }
+
+  // Everything that happens the moment a spell goes off, whether it waited or
+  // not. A spell that fizzles still costs the mana and the cooldown; that is
+  // what makes Destruction worth levelling.
+  private resolve(ability: AbilityDefinition, skillLevel: number): void {
     this.ctx.log(logAbilityUsed(ability.name));
     if (ability.skill && rollSpellFailure(ability, skillLevel)) {
       this.ctx.float('Fizzle!', 'dim');
@@ -120,6 +210,13 @@ export class AbilityCaster {
       case 'damage': {
         const target = this.deps.targeting.target;
         if (!target?.isAlive()) return;
+        // Asked again here rather than only at the press: a cast takes over a
+        // second, and a mob that leashed home during it is out of reach of a
+        // spell that was in range when it started.
+        if (distance(player, target) > ability.range) {
+          this.ctx.notice('Your target is too far away.');
+          return;
+        }
         const damage = resolveAbilityDamage(ability, player.attackPower, skillLevel);
         // A bolt thrown from the caster to the target. Purely cosmetic, but a
         // ranged nuke that produced only a number over the mob read as nothing

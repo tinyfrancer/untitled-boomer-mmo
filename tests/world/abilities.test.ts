@@ -1,4 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ABILITIES } from '../../src/data/abilities';
+import {
+  CHANNEL_ENDED_EVENT,
+  CHANNEL_PROGRESS_EVENT,
+  CHANNEL_STARTED_EVENT,
+  COMBAT_LOG_EVENT,
+} from '../../src/ui/uiEvents';
 import { harness } from './harness';
 
 /**
@@ -127,22 +134,96 @@ describe('what the HUD is told is up', () => {
 
 describe('killing with an ability', () => {
   it('credits the same counter a swing does', () => {
-    const { world, state } = wizard();
+    const kit = wizard();
+    const { world, state } = kit;
     const mob = world.mobs.find((candidate) => candidate.isAlive());
     if (!mob) throw new Error('town has no live mob');
 
-    world.teleport(mob.x, mob.y);
     world.setTarget(mob);
     // Fireball fizzles a fair fraction of the time, so cast until one lands
-    // rather than letting a spell failure read as a missing counter.
+    // rather than letting a spell failure read as a missing counter. Cast from
+    // a distance and with the rat sent home each time: a fireball takes over a
+    // second now, and a rat chewing on the caster would break every one of them.
     for (let cast = 0; cast < 40 && mob.isAlive(); cast += 1) {
+      mob.disengage();
       mob.hp = 1;
+      world.teleport(mob.x - 200, mob.y);
       world.player.restoreToFull();
       world.lastAbilityAt.clear();
       world.handleAbilityRequested('fireball');
+      kit.tick(Math.ceil(ABILITIES.fireball.castTimeMs / 100) + 1, 100);
     }
 
     expect(mob.isAlive()).toBe(false);
     expect(state.kills[mob.definition.id]).toBe(1);
+  });
+});
+
+/**
+ * The cast time as the world actually runs it: the bar on the wire, the walk
+ * that breaks it, and the hit that does. `AbilityCaster.test.ts` holds the rule
+ * itself; this is the wiring — that the tick runs the clock at all, and that
+ * being hurt reaches the cast from the far side of the fight.
+ */
+describe('casting in a running zone', () => {
+  function castingWizard() {
+    const kit = harness({ classId: 'wizard' });
+    const mob = kit.world.mobs.find((candidate) => candidate.isAlive());
+    if (!mob) throw new Error('town has no live mob');
+    // In range of the spell and well out of reach of anything the rat can do.
+    kit.world.teleport(mob.x - 200, mob.y);
+    kit.world.setTarget(mob);
+    return { ...kit, mob };
+  }
+
+  it('runs the cast off the tick and tells the HUD about it', () => {
+    const kit = castingWizard();
+
+    kit.world.handleAbilityRequested('fireball');
+    kit.tick(2, 100);
+
+    expect(kit.emissions(CHANNEL_STARTED_EVENT)).toEqual([['Fireball']]);
+    const progress = kit.emissions(CHANNEL_PROGRESS_EVENT).flat();
+    expect(progress.at(-1)).toBeGreaterThan(0);
+    expect(kit.emissions(CHANNEL_ENDED_EVENT)).toHaveLength(0);
+
+    kit.tick(Math.ceil(ABILITIES.fireball.castTimeMs / 100) + 1, 100);
+    expect(kit.emissions(CHANNEL_ENDED_EVENT)).toHaveLength(1);
+  });
+
+  // Every way there is to move breaks a cast, and none of them knows a cast
+  // exists: the caster reads the player rather than being told.
+  it('is broken by a tap on the ground, like any other walk', () => {
+    const kit = castingWizard();
+    kit.world.handleAbilityRequested('fireball');
+    kit.tick(1, 100);
+
+    kit.world.tap({
+      kind: 'ground',
+      point: { x: kit.world.player.x + 400, y: kit.world.player.y },
+    });
+    kit.tick(2, 100);
+
+    expect(kit.emissions(CHANNEL_ENDED_EVENT)).toHaveLength(1);
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+      expect.objectContaining({ text: 'Your Fireball is interrupted.' }),
+    );
+  });
+
+  it('is broken by a hit that gets through', () => {
+    const kit = castingWizard();
+    kit.world.teleport(kit.mob.x - 40, kit.mob.y);
+    kit.world.handleAbilityRequested('fireball');
+    kit.mob.engage();
+
+    kit.until(
+      () => kit.emissions(CHANNEL_ENDED_EVENT).length > 0,
+      'the rat to break the cast',
+      20000,
+    );
+
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+      expect.objectContaining({ text: 'Your Fireball is interrupted.' }),
+    );
   });
 });

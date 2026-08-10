@@ -296,6 +296,7 @@ export class ZoneWorld implements Targeting {
       targeting: this,
       awardXp: (reward) => this.awardXp(reward),
       interruptGather: () => this.gathering.interrupt(),
+      interruptCast: () => this.abilities.interrupt(),
       onPlayerDeath: () => this.handlePlayerDeath(),
     });
     this.abilities = new AbilityCaster(this.ctx, {
@@ -409,6 +410,7 @@ export class ZoneWorld implements Targeting {
     this.nodes.forEach((node) => node.update(deltaMs));
     this.dropDeadTarget();
     this.gathering.update(deltaMs);
+    this.abilities.update(deltaMs);
     this.combat.update();
     this.publishPlayerHp();
     this.publishPlayerMana();

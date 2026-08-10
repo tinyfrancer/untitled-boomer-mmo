@@ -43,6 +43,7 @@ function fight(mobs: Mob[] = [], target: Mob | null = mobs[0] ?? null) {
     targeting,
     awardXp: (reward: number) => awarded.push(reward),
     interruptGather: vi.fn(),
+    interruptCast: vi.fn(),
     onPlayerDeath: vi.fn(),
   };
   return { ...kit, deps, awarded, targeting, combat: new CombatDirector(kit.ctx, deps) };
@@ -168,6 +169,34 @@ describe('what hits back', () => {
     }
 
     expect(kit.deps.interruptGather).toHaveBeenCalled();
+  });
+
+  /**
+   * Being *hurt* breaks a cast, which is not the same as being hit. A blow the
+   * shield eats leaves the spell standing, and that is the second thing the
+   * shield is for: without it a caster in melee could never finish one.
+   */
+  it('breaks a cast only when the blow gets past the shield', () => {
+    const rat = ratAt(10, 0);
+    rat.engage();
+    const kit = fight([rat], null);
+    // Far more than anything a level 1 rat can swing for, so every hit below is
+    // eaten whole.
+    kit.player.applyManaShield({ remaining: 10000, remainingMs: 60000, durationMs: 60000 });
+
+    for (let swing = 0; swing < 20; swing += 1) {
+      kit.ctx.now += rat.attackCooldownMs;
+      kit.combat.update();
+    }
+    expect(kit.deps.interruptGather).toHaveBeenCalled();
+    expect(kit.deps.interruptCast).not.toHaveBeenCalled();
+
+    kit.player.applyManaShield(null);
+    for (let swing = 0; swing < 20; swing += 1) {
+      kit.ctx.now += rat.attackCooldownMs;
+      kit.combat.update();
+    }
+    expect(kit.deps.interruptCast).toHaveBeenCalled();
   });
 
   it('hands a dead player to the world rather than deciding anything itself', () => {
