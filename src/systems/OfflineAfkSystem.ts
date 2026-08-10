@@ -98,8 +98,14 @@ export function elapsedOfflineMs(startedAt: string, now: number): number {
 // What the camp was parked next to: the spawn in that zone closest to the
 // character's own level, since that is what an anchored camp would have been
 // grinding. Ties go to the easier one.
+//
+// A boss is not on the list at all, matching what the awake camp does: a night
+// parked in the hideout is a night of bandits however high the character is,
+// because sixty offline kills would empty a table meant to be run for.
 function campQuarry(zoneId: keyof typeof ZONES, characterLevel: number) {
-  const spawns = ZONES[zoneId]?.mobSpawns ?? [];
+  const spawns = (ZONES[zoneId]?.mobSpawns ?? []).filter(
+    (spawn) => ENEMIES[spawn.enemyId].boss !== true,
+  );
   if (spawns.length === 0) {
     return null;
   }

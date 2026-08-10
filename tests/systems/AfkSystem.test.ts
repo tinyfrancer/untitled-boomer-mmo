@@ -55,6 +55,32 @@ describe('decideAfkAction', () => {
     expect(action).toEqual({ kind: 'idle' });
   });
 
+  /**
+   * The rule that keeps unique loot unique. A camp left overnight beside a boss
+   * would mint sixty of whatever is on its table; nothing else in this function
+   * is about what a mob *is*, and this is the exception worth making.
+   */
+  it('never picks a fight with a boss, however close it is standing', () => {
+    const action = decideAfkAction(
+      [mob({ index: 0, distance: 10, boss: true }), mob({ index: 1, distance: 200 })],
+      HEALTHY,
+    );
+    expect(action).toEqual({ kind: 'engage', index: 1 });
+    expect(decideAfkAction([mob({ index: 0, distance: 10, boss: true })], HEALTHY)).toEqual({
+      kind: 'idle',
+    });
+  });
+
+  // Not picking one is not the same as ignoring one. A boss that has engaged is
+  // coming regardless, and an AFK character that stood there would simply die.
+  it('answers a boss that started it', () => {
+    const action = decideAfkAction(
+      [mob({ index: 0, distance: 200, boss: true, engaged: true })],
+      HEALTHY,
+    );
+    expect(action).toEqual({ kind: 'engage', index: 0 });
+  });
+
   // Retaliation beats target selection: something already chasing you is
   // arriving whether or not you picked it.
   it('answers a mob already engaged over a nearer idle one', () => {

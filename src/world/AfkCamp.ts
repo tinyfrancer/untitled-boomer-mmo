@@ -293,6 +293,7 @@ export class AfkCamp {
         distance: distance(this.anchor, mob),
         alive: mob.isAlive(),
         engaged: mob.isEngaged(),
+        boss: mob.definition.boss === true,
       })),
       {
         hp: this.ctx.player.hp,
