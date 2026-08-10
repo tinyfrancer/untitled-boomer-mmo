@@ -18,8 +18,3 @@ export const SHOP_STOCK: ShopStockEntry[] = [
 export function shopPriceFor(itemId: ItemId): number | null {
   return SHOP_STOCK.find((entry) => entry.itemId === itemId)?.price ?? null;
 }
-
-// How close the player has to stand to trade, and how far they can drift
-// before the shop closes on them.
-export const SHOP_INTERACT_RADIUS = 120;
-export const SHOP_CLOSE_RADIUS = 200;

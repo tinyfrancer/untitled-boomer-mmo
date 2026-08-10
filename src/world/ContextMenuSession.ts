@@ -1,3 +1,4 @@
+import { npcRole, type NpcRoleId } from '../data/npcs';
 import { SKILLS } from '../data/skills';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import {
@@ -22,8 +23,24 @@ const SUBJECT_ACTIONS = {
   mob: 'attack',
   node: 'gather',
   signpost: 'travel',
-  npc: 'shop',
-} as const satisfies Record<Subject['kind'], ContextActionId>;
+} as const satisfies Record<Exclude<Subject['kind'], 'npc'>, ContextActionId>;
+
+/** What each counter is called, on the one line a menu gives it. */
+const ROLE_ACTIONS = {
+  merchant: { id: 'shop', label: 'Shop' },
+  banker: { id: 'bank', label: 'Bank' },
+} as const satisfies Record<NpcRoleId, ContextAction>;
+
+/**
+ * The single action a subject offers. An NPC is the one kind whose answer is
+ * not a fact about the kind: two people stand still in town and only one of
+ * them sells anything, so this reads the role rather than assuming the shop.
+ */
+function subjectAction(subject: Subject): ContextActionId {
+  return subject.kind === 'npc'
+    ? ROLE_ACTIONS[npcRole(subject.npc.npcId)].id
+    : SUBJECT_ACTIONS[subject.kind];
+}
 
 export interface ContextMenuDeps {
   /**
@@ -94,7 +111,7 @@ export class ContextMenuSession {
   run(actionId: ContextActionId): void {
     const subject = this.subject;
     this.subject = null;
-    if (!subject || SUBJECT_ACTIONS[subject.kind] !== actionId) return;
+    if (!subject || subjectAction(subject) !== actionId) return;
     // The corpse case: a mob may die between the menu opening and a line being
     // chosen, and a walk to attack one would end standing over it.
     if (subject.kind === 'mob' && !subject.mob.isAlive()) return;
@@ -136,9 +153,10 @@ export class ContextMenuSession {
   }
 
   private npcMenu(npc: WorldNpc): ContextSubject {
+    const offer = ROLE_ACTIONS[npcRole(npc.npcId)];
     return {
       title: describeNpc(npc.npcId).title,
-      actions: [action('shop', 'Shop')],
+      actions: [action(offer.id, offer.label)],
       details: describeNpc(npc.npcId),
     };
   }

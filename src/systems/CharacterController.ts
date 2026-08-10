@@ -9,9 +9,11 @@ import {
 } from './InventorySystem';
 import type { CharacterState } from '../persistence/CharacterState';
 import { weaponSkillFor } from './CombatSystem';
+import { bankSlotPrice, bankSlotsUsed, hasBankRoom } from './BankSystem';
 import {
   canCarry,
   carryCapacity as capacityForStrength,
+  carryableCount,
   inventoryWeight,
 } from './EncumbranceSystem';
 import { computeEffectiveStats } from './StatsSystem';
@@ -62,6 +64,16 @@ export interface SkillXpGain {
   xpToNext: number;
   leveledUp: boolean;
 }
+
+/**
+ * One way across the counter. `left` is what a withdrawal could not fit in the
+ * pack and put back on the shelf — it is still the player's, which is exactly
+ * why it is worth saying rather than leaving them to compare two panels.
+ */
+export type BankMove = { ok: false; reason: string } | { ok: true; moved: number; left?: number };
+
+export type BankSlotPurchase =
+  { ok: false; reason: string } | { ok: true; price: number; slots: number };
 
 export type QuestTurnIn =
   | { ok: false; reason: string }
@@ -123,6 +135,82 @@ export class CharacterController {
     }
     this.addItem(itemId, quantity);
     return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // The bank
+  // ---------------------------------------------------------------------------
+
+  bankCount(itemId: ItemId): number {
+    return this.state.bank[itemId] ?? 0;
+  }
+
+  /** Shelves spoken for, out of the shelves bought. */
+  bankSlotsUsed(): number {
+    return bankSlotsUsed(this.state.bank);
+  }
+
+  /**
+   * Moves some of a stack behind the counter, or nothing at all.
+   *
+   * All-or-nothing on the *shelf* question and clamped on the count, which is
+   * the same bargain `sell` makes: the panel asking is drawn from a copy of the
+   * bag, so a stale number can only ever move fewer. Weight is not asked about
+   * at this end — the vault is weightless, and what it costs instead is a slot
+   * per item id.
+   */
+  deposit(itemId: ItemId, quantity = 1): BankMove {
+    const count = Math.min(Math.floor(quantity), this.itemCount(itemId));
+    if (count <= 0) {
+      return { ok: false, reason: 'You have none of that to store.' };
+    }
+    if (!hasBankRoom(this.state.bank, this.state.bankSlots, itemId)) {
+      return { ok: false, reason: 'The bank has no free slot for that.' };
+    }
+    this.removeItem(itemId, count);
+    this.state.bank = addItemToInventory(this.state.bank, itemId, count);
+    return { ok: true, moved: count };
+  }
+
+  /**
+   * Takes back as much of a stack as the pack will hold.
+   *
+   * The one acquisition in the game that is deliberately *not* all-or-nothing:
+   * everything else the world hands over is a fixed amount that is destroyed if
+   * it is refused, where the rest of a withdrawal simply stays on the shelf. A
+   * pack with room for twelve of thirty logs gets twelve.
+   */
+  withdraw(itemId: ItemId, quantity = 1): BankMove {
+    const held = Math.min(Math.floor(quantity), this.bankCount(itemId));
+    if (held <= 0) {
+      return { ok: false, reason: 'The bank is not holding that.' };
+    }
+    const count = Math.min(
+      held,
+      carryableCount(this.state.inventory, itemId, this.carryCapacity()),
+    );
+    if (count <= 0) {
+      return { ok: false, reason: 'Your pack is too full to carry that.' };
+    }
+    this.state.bank = removeItemFromInventory(this.state.bank, itemId, count);
+    this.addItem(itemId, count);
+    return { ok: true, moved: count, left: held - count };
+  }
+
+  /**
+   * Buys one more shelf. Refuses as a whole — at the cap, or short of the price
+   * — so the coin and the slot move together or neither does.
+   */
+  buyBankSlot(): BankSlotPurchase {
+    const price = bankSlotPrice(this.state.bankSlots);
+    if (price === null) {
+      return { ok: false, reason: 'The bank has no more room to rent.' };
+    }
+    if (!this.spendCurrency(price)) {
+      return { ok: false, reason: "You can't afford that." };
+    }
+    this.state.bankSlots += 1;
+    return { ok: true, price, slots: this.state.bankSlots };
   }
 
   addCurrency(copper: number): void {

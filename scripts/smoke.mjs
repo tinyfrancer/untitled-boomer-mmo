@@ -279,6 +279,10 @@ const spawned = () =>
     mobs: window.world.mobs.length,
     nodes: window.world.nodes.length,
     npcs: window.world.npcs.length,
+    // Not the same number as `npcs` since the banker arrived, which is exactly
+    // what the marker check below would otherwise have kept asserting. The
+    // shopkeeper is the game's only quest giver; the banker offers none.
+    questGivers: window.world.npcs.filter((npc) => npc.npcId === 'shopkeeper').length,
     signposts: window.world.signposts.length,
   }));
 
@@ -310,12 +314,12 @@ const checkZoneDrawn = async (zone) => {
   );
   // A quest marker is counted apart from the labels precisely so the total
   // above stays one-per-drawn-thing. Every zone check runs before anything is
-  // taken on at the shopkeeper, so every quest giver is still calling — which
-  // makes one marker per NPC the answer, and none at all where there is no NPC.
+  // taken on at the shopkeeper, so every quest giver is still calling — one
+  // marker each, and none over the NPCs who have nothing to offer.
   check(
     `and marks the ${zone}'s quest givers without adding to that count`,
-    drawn.markers === spawn.npcs,
-    `${drawn.markers} markers for ${spawn.npcs} npcs`,
+    drawn.markers === spawn.questGivers,
+    `${drawn.markers} markers for ${spawn.questGivers} quest givers of ${spawn.npcs} npcs`,
   );
 };
 
@@ -351,7 +355,10 @@ const sweep = async () => {
 // evaluates: a function cannot be handed across to the browser, and naming
 // the thing twice — once to stand near, once to click — is what these avoid.
 const RAT = 'window.world.mobs.find((m) => m.isAlive())';
-const SHOPKEEPER = 'window.world.npcs[0]';
+const SHOPKEEPER = "window.world.npcs.find((n) => n.npcId === 'shopkeeper')";
+// Named rather than indexed now that there are two of them a few steps apart:
+// which counter a tap opens is the whole point of the section below.
+const BANKER = "window.world.npcs.find((n) => n.npcId === 'banker')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 
 /**
@@ -424,8 +431,8 @@ async function boot() {
   const town = await spawned();
   check(
     'the view is built against a zone with something in it',
-    town.mobs === 9 && town.nodes === 6 && town.npcs === 1 && town.signposts === 2,
-    `${town.mobs} mobs, ${town.nodes} nodes, ${town.npcs} npc, ${town.signposts} signposts`,
+    town.mobs === 9 && town.nodes === 6 && town.npcs === 2 && town.signposts === 2,
+    `${town.mobs} mobs, ${town.nodes} nodes, ${town.npcs} npcs, ${town.signposts} signposts`,
   );
 }
 
@@ -909,6 +916,101 @@ async function feedback() {
     'a real click on the ground walks the player to that spot in the simulation',
     Math.hypot(walked.x - destination.x, walked.y - destination.y) < 24,
     `player at ${Math.round(walked.x)},${Math.round(walked.y)} for ${destination.x},${destination.y}`,
+  );
+}
+
+async function bank() {
+  // --- The second counter, and the reason an NPC has a role at all.
+  //
+  // Every NPC in the game opened the shop until the banker existed, and no
+  // state assertion would have caught the banker selling felling axes — the two
+  // stand a few steps apart either side of the crossroads, so what has to be
+  // true is that a ray cast at *this* figure reaches *this* counter. That is
+  // the same pick-box case the shopkeeper is here for, asked of the person
+  // standing next to them. ---
+  await standSouthOf(BANKER);
+  await clickAt(await screenAt(BANKER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.bankNpc !== null),
+    'the tapped banker to open the bank',
+  );
+  const opened = await page.evaluate(() => ({
+    bank: window.world.bankNpc?.npcId ?? null,
+    shop: window.world.shopNpc?.npcId ?? null,
+    panel: document.querySelector('.hud-modal__box--bank') !== null,
+  }));
+  check(
+    'a click on the banker opens the bank and not the shop standing beside it',
+    opened.bank === 'banker' && opened.shop === null && opened.panel,
+    `bank: ${opened.bank}, shop: ${opened.shop}`,
+  );
+
+  // The panel round trip: a real click on a real row, the world deciding, and
+  // the panel redrawing off the answer rather than off what it just asked for.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.inventory = { ...w.character.state.inventory, logs: 6 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+  });
+  await page.click('.hud-modal .hud-list-row[data-bank="deposit"][data-item="logs"]');
+  await page.waitForTimeout(150);
+  const one = await page.evaluate(() => ({
+    bag: window.world.character.state.inventory.logs ?? 0,
+    vault: window.world.character.state.bank.logs ?? 0,
+  }));
+  await page.click('.hud-modal [data-bank-all="logs"]');
+  await page.waitForTimeout(150);
+  const stored = await page.evaluate(() => ({
+    bag: window.world.character.state.inventory.logs ?? 0,
+    vault: window.world.character.state.bank.logs ?? 0,
+    slots: /** @type {HTMLElement | null} */ (document.querySelector('.hud-bank__slots'))
+      ?.textContent,
+    // The deposit row is gone with the stack, and a withdraw row stands in its
+    // place — the panel is drawn from what the world sent, not from the tap.
+    deposits: document.querySelectorAll('.hud-modal [data-bank="deposit"][data-item="logs"]')
+      .length,
+    withdraws: document.querySelectorAll('.hud-modal [data-bank="withdraw"][data-item="logs"]')
+      .length,
+  }));
+  check(
+    'a bank row stores one and the button beside it stores the rest of the stack',
+    one.bag === 5 && one.vault === 1 && stored.bag === 0 && stored.vault === 6,
+    `6 -> ${one.bag} -> ${stored.bag} carried, 0 -> ${one.vault} -> ${stored.vault} stored`,
+  );
+  check(
+    'the panel redraws from the shelves the world answered with',
+    stored.deposits === 0 && stored.withdraws === 1 && stored.slots === '1/8 slots',
+    `${stored.deposits} deposit rows, ${stored.withdraws} withdraw rows, "${stored.slots}"`,
+  );
+  await page.screenshot({ path: `${OUT}/9-bank.png` });
+
+  // The second coin sink, bought through the panel's own row.
+  const purse = await page.evaluate(() => {
+    window.world.character.state.currency = 500;
+    window.events.emit('currency-changed', 500);
+    return window.world.character.state.bankSlots;
+  });
+  await page.click('.hud-modal [data-action="buy-bank-slot"]');
+  await page.waitForTimeout(150);
+  const rented = await page.evaluate(() => ({
+    slots: window.world.character.state.bankSlots,
+    currency: window.world.character.state.currency,
+  }));
+  check(
+    'renting a slot takes the coin and the panel says so',
+    rented.slots === purse + 1 && rented.currency < 500,
+    `${purse} -> ${rented.slots} slots, 500 -> ${rented.currency} copper`,
+  );
+
+  // Closing from the panel's own X, which asks the world rather than telling it.
+  await page.click('.hud-modal [data-action="close-bank"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.bankNpc === null),
+    'the bank panel to close the counter',
+  );
+  check(
+    'the bank panel closes the counter it was opened by',
+    (await page.evaluate(() => document.querySelector('.hud-modal__box--bank') === null)) === true,
   );
 }
 
@@ -2325,6 +2427,10 @@ async function saveResume() {
     const w = window.world;
     const anchor = w.mobs[0];
     if (!anchor) throw new Error('the zone has no mob to park on');
+    // Staged here rather than left over from the `bank` section: `reset`
+    // rerolls the character in between, so anything stored back there is gone
+    // along with the character who stored it.
+    w.character.state.bank = { logs: 7 };
     const spot = { x: Math.round(anchor.spawnX), y: Math.round(anchor.spawnY) };
     w.clearTarget();
     w.teleport(spot.x, spot.y);
@@ -2332,6 +2438,8 @@ async function saveResume() {
       spot,
       zoneId: w.zone.id,
       fromCentre: Math.round(Math.hypot(spot.x - w.spawnPoint.x, spot.y - w.spawnPoint.y)),
+      bank: { ...w.character.state.bank },
+      bankSlots: w.character.state.bankSlots,
     };
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -2343,6 +2451,8 @@ async function saveResume() {
     y: Math.round(window.world.player.y),
     zoneId: window.world.zone.id,
     ground: window.view.drawnCounts().ground,
+    bank: { ...window.world.character.state.bank },
+    bankSlots: window.world.character.state.bankSlots,
   }));
   check(
     'a save resumes where it was left, with a rebuilt view',
@@ -2351,6 +2461,18 @@ async function saveResume() {
       Math.hypot(resumed.x - parked.spot.x, resumed.y - parked.spot.y) <= 4 &&
       resumed.ground === 1,
     `left at ${parked.spot.x},${parked.spot.y} (${parked.fromCentre}px off centre), back at ${resumed.x},${resumed.y}`,
+  );
+
+  // The vault is the newest thing in `CharacterState`, and a reload is the only
+  // place the save, the migration chain and the boot's resume branch all run
+  // for real — a stack put away and gone by morning is the one bank bug that
+  // costs a player something they cannot get back.
+  check(
+    'what was banked is still on the shelves after a reload',
+    JSON.stringify(resumed.bank) === JSON.stringify(parked.bank) &&
+      Object.keys(parked.bank).length > 0 &&
+      resumed.bankSlots === parked.bankSlots,
+    `stored ${JSON.stringify(parked.bank)} in ${parked.bankSlots} slots, back with ${JSON.stringify(resumed.bank)} in ${resumed.bankSlots}`,
   );
 }
 
@@ -2548,6 +2670,7 @@ const SECTIONS = [
   ['picking', picking],
   ['context-menu', contextMenu],
   ['feedback', feedback],
+  ['bank', bank],
   ['orbit', orbit],
   ['heading', heading],
   ['keyboard', keyboard],

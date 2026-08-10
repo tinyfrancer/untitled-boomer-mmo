@@ -41,6 +41,19 @@ export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
 // Carries how many, so emptying a stack is the same request as parting with one
 // of it rather than a second rule about vendoring.
 export const SELL_ITEM_REQUESTED_EVENT = 'sell-item-requested';
+// The bank, which is the shop's shape a second time: the world owns whether the
+// counter is open (it knows about range), the HUD draws a copy of what is on the
+// shelves, and a row tapped comes back as a bare item id and a count. Nothing in
+// an HTML overlay ever holds the vault itself.
+export const BANK_OPENED_EVENT = 'bank-opened';
+export const BANK_CLOSED_EVENT = 'bank-closed';
+export const DEPOSIT_ITEM_REQUESTED_EVENT = 'deposit-item-requested';
+export const WITHDRAW_ITEM_REQUESTED_EVENT = 'withdraw-item-requested';
+export const BUY_BANK_SLOT_REQUESTED_EVENT = 'buy-bank-slot-requested';
+// What is on the shelves and how many shelves there are, whole, each time
+// either moves. One event rather than two because the panel draws them
+// together: a slot count with nothing to put in it says nothing.
+export const BANK_CHANGED_EVENT = 'bank-changed';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 // Quests. Taken and handed in at the shopkeeper, so these ride the same
 // ask/decide split as buying: the HUD forwards the tap, ZoneWorld re-checks
@@ -152,6 +165,20 @@ export interface ManaPool {
   maxMana: number;
 }
 
+/**
+ * Payload for BANK_CHANGED_EVENT: the shelves, as the panel draws them.
+ *
+ * A copy of the contents rather than the vault itself, for the reason the shop
+ * is handed a copy of the bag: the panel is an HTML overlay that outlives no
+ * zone in particular, and every count it sends back is clamped by the counter
+ * that holds the real one — so a stale number can only ever move fewer.
+ */
+export interface BankState {
+  contents: Inventory;
+  /** Slots bought, which is how many item *kinds* the vault will hold. */
+  slots: number;
+}
+
 // Payload for PLAYER_TILE_CHANGED_EVENT: where the player is, in tiles rather
 // than in world pixels. Fractional, so the dot sits where they actually are —
 // but only *published* on a whole-tile crossing, which is what keeps a position
@@ -169,7 +196,7 @@ export interface TilePoint {
  * reaches the simulation — which is also what keeps a card readable while the
  * thing it describes wanders off or dies.
  */
-export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop';
+export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop' | 'bank';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -246,6 +273,12 @@ export interface UiEventMap {
   [SHOP_CLOSED_EVENT]: [];
   [BUY_ITEM_REQUESTED_EVENT]: [itemId: ItemId];
   [SELL_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [BANK_OPENED_EVENT]: [];
+  [BANK_CLOSED_EVENT]: [];
+  [DEPOSIT_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [WITHDRAW_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [BUY_BANK_SLOT_REQUESTED_EVENT]: [];
+  [BANK_CHANGED_EVENT]: [vault: BankState];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
   [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
   [TURN_IN_QUEST_REQUESTED_EVENT]: [questId: QuestId];

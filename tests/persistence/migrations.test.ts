@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { migrateCharacterState } from '../../src/persistence/migrations';
 import { CHARACTER_STATE_VERSION, createNewCharacter } from '../../src/persistence/CharacterState';
+import { STARTING_BANK_SLOTS } from '../../src/systems/BankSystem';
 
 // A save as v4 wrote it: no currency, optional zoneId, tools in the bag.
 function v4Save(): Record<string, unknown> {
@@ -191,6 +192,34 @@ describe('migrateCharacterState', () => {
       weapon: 'rusty-sword',
       offhand: null,
     });
+  });
+
+  /**
+   * The bank opens in town. There is nothing to reconstruct — everything an
+   * existing character owns is either worn or in the pack — so they arrive with
+   * the shelves a new character gets and nothing on them.
+   */
+  it('gives a v13 save an empty bank and the free shelves', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 13,
+      classId: 'warrior',
+      currency: 0,
+      zoneId: 'town',
+      quests: {},
+      kills: {},
+      activeTitleId: null,
+      unlockedZones: [],
+      position: null,
+      gear: { helmet: null, chest: null, pants: null, weapon: 'rusty-sword', offhand: null },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.bank).toEqual({});
+    expect(migrated?.bankSlots).toBe(STARTING_BANK_SLOTS);
+    // The pack it already had is untouched: nothing is moved onto the shelves
+    // on the player's behalf.
+    expect(migrated?.inventory).toEqual({ 'felling-axe': 1, 'fishing-pole': 1, logs: 4 });
   });
 
   it('drops saves older than the migration chain', () => {

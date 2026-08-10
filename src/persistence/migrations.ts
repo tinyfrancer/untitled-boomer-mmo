@@ -1,4 +1,5 @@
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
+import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { stripIllegalGear } from '../systems/EquipSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
@@ -65,6 +66,10 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // Spread under rather than over, the way v6 → v7 did with the skills: what a
   // character is already wearing wins, and only the new key takes its default.
   12: (state) => ({ ...state, gear: { ...NO_GEAR, ...(state.gear as Partial<Gear>) } }),
+  // v13 → v14: the bank opens in town. An existing character arrives with the
+  // shelves a new one gets and nothing on them — there is nothing to
+  // reconstruct, since everything they own is either worn or in the pack.
+  13: (state) => ({ ...state, bank: {}, bankSlots: STARTING_BANK_SLOTS }),
 };
 
 /**

@@ -27,7 +27,8 @@ export interface AfkCampDeps {
   targeting: Targeting;
   /** Settling in gives up both of the things a hand on the mouse was doing. */
   stopGathering(): void;
-  closeShop(): void;
+  /** Both of them: nobody trades or banks while the character is parked. */
+  closeCounters(): void;
   eat(itemId: ItemId): void;
   /** Walk over and start the channel — the same approach a tap on a node uses. */
   gatherAt(node: ResourceNode): void;
@@ -100,7 +101,7 @@ export class AfkCamp {
     this.recovering = false;
     this.packFull = false;
     if (active) {
-      this.deps.closeShop();
+      this.deps.closeCounters();
       this.anchor = this.ctx.playerPoint();
       const skill = this.gatherSkill();
       // A gather already in flight is left running — settling in beside the

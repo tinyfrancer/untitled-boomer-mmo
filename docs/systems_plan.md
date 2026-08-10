@@ -15,7 +15,7 @@ gathered materials that lead nowhere.
 | 2   | The level cap meets the content                          | Arithmetic        | merged 2026-08-10 |
 | 3   | Armour that stops something, and a hand to hold a shield | Arithmetic        | merged 2026-08-10 |
 | 4   | A swing that can miss, and one that can land hard        | Arithmetic        | merged 2026-08-10 |
-| 5   | The bank                                                 | Economy           | planned           |
+| 5   | The bank                                                 | Economy           | in review         |
 | 6   | Stock worth coming back for                              | Economy           | planned           |
 | 7   | The trainer                                              | Economy           | planned           |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned           |

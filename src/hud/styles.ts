@@ -777,6 +777,20 @@ function hudCss(): string {
   border-color: ${THEME.color.levelUp};
   gap: 4px;
 }
+/* The shop's shape in the banker's colour, so which counter is open is
+   answerable without reading the title. */
+.hud-modal__box--bank {
+  width: 300px;
+  border-color: ${THEME.color.skillUp};
+  gap: 4px;
+}
+/* Beside the purse in the head, and the one number that says why a deposit was
+   refused — so it is the only thing in there that changes colour. */
+.hud-bank__slots {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  margin-left: auto;
+}
 .hud-modal__title {
   font-size: ${THEME.font.lg}px;
   font-weight: bold;

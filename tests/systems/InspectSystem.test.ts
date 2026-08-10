@@ -3,6 +3,8 @@ import { ENEMIES } from '../../src/data/enemies';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { ZONES } from '../../src/data/zones';
+import { STARTING_BANK_SLOTS, bankSlotPrice } from '../../src/systems/BankSystem';
+import { formatCurrency } from '../../src/systems/CurrencySystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
 import {
   describeEnemy,
@@ -128,6 +130,26 @@ describe('describing the rest of the world', () => {
     expect(panel.title).toBe('Shopkeeper');
     expect(valueOf(panel, 'Sells')).toContain('Fishing Pole');
     expect(valueOf(panel, 'Quests')).toBe('2');
+  });
+
+  /**
+   * The second counter gets a card about the *service* rather than about this
+   * character's shelves: a panel is settled the moment it opens, so a slot
+   * count read off a player would be stale the first time they used it.
+   */
+  it('describes the banker by what the counter does, not by what is on it', () => {
+    const panel = describeNpc('banker');
+
+    expect(panel.title).toBe('Banker');
+    expect(panel.subtitle).toBe('Banker');
+    expect(valueOf(panel, 'Stores')).toContain('no weight');
+    expect(valueOf(panel, 'Slots')).toContain(String(STARTING_BANK_SLOTS));
+    expect(valueOf(panel, 'Charges')).toContain(
+      formatCurrency(bankSlotPrice(STARTING_BANK_SLOTS) ?? 0),
+    );
+    expect(panel.note).toContain('one kind of thing');
+    // Nothing about the shop leaks into it.
+    expect(valueOf(panel, 'Sells')).toBeUndefined();
   });
 });
 

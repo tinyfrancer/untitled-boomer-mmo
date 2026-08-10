@@ -5,8 +5,12 @@ import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
+  BANK_CLOSED_EVENT,
+  BUY_BANK_SLOT_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
+  DEPOSIT_ITEM_REQUESTED_EVENT,
+  WITHDRAW_ITEM_REQUESTED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   GEAR_CHANGED_EVENT,
@@ -42,7 +46,7 @@ import { effectElapsed } from '../systems/EffectSystem';
 import { zoneAccess } from '../systems/ZoneAccessSystem';
 import { tileOf, toTile } from '../systems/MapSystem';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
-import { SHOP_INTERACT_RADIUS } from '../data/shop';
+import { NPC_INTERACT_RADIUS, npcRole } from '../data/npcs';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CookState } from '../systems/CookingSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
@@ -67,6 +71,7 @@ import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
 import { AbilityCaster } from './AbilityCaster';
 import { ApproachDriver } from './ApproachDriver';
+import { BankSession } from './BankSession';
 import { CombatDirector } from './CombatDirector';
 import { ContextMenuSession } from './ContextMenuSession';
 import { GatherSession } from './GatherSession';
@@ -154,6 +159,7 @@ export class ZoneWorld implements Targeting {
   private readonly ctx: WorldContext;
   private readonly gathering: GatherSession;
   private readonly shop: ShopSession;
+  private readonly bank: BankSession;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly combat: CombatDirector;
@@ -294,6 +300,7 @@ export class ZoneWorld implements Targeting {
     });
     this.gathering = new GatherSession(this.ctx, { isCamping: () => this.afk.active });
     this.shop = new ShopSession(this.ctx);
+    this.bank = new BankSession(this.ctx);
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,
       targeting: this,
@@ -313,7 +320,7 @@ export class ZoneWorld implements Targeting {
       nodes: this.nodes,
       targeting: this,
       stopGathering: () => this.gathering.stop(),
-      closeShop: () => this.shop.close(),
+      closeCounters: () => this.closeCounters(),
       eat: (itemId) => this.gathering.eat(itemId),
       gatherAt: (node) => this.approachAndGather(node),
       isChanneling: () => this.gathering.isChanneling(),
@@ -369,6 +376,12 @@ export class ZoneWorld implements Targeting {
     listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => this.shop.buy(itemId));
     listen(SELL_ITEM_REQUESTED_EVENT, (itemId, quantity) => this.shop.sell(itemId, quantity));
     listen(SHOP_CLOSED_EVENT, () => this.shop.closedByUi());
+    listen(DEPOSIT_ITEM_REQUESTED_EVENT, (itemId, quantity) => this.bank.deposit(itemId, quantity));
+    listen(WITHDRAW_ITEM_REQUESTED_EVENT, (itemId, quantity) =>
+      this.bank.withdraw(itemId, quantity),
+    );
+    listen(BUY_BANK_SLOT_REQUESTED_EVENT, () => this.bank.buySlot());
+    listen(BANK_CLOSED_EVENT, () => this.bank.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
     listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
@@ -423,7 +436,7 @@ export class ZoneWorld implements Targeting {
     this.publishZone();
     this.publishUnlockedZones();
     this.publishPlayerTile();
-    this.updateShopRange();
+    this.updateNpcRange();
     this.checkZoneExit();
     return this.ctx.drain();
   }
@@ -492,7 +505,7 @@ export class ZoneWorld implements Targeting {
         this.approachSignpost(target.signpost);
         return;
       case 'npc':
-        this.approachShop(target.npc);
+        this.approachNpc(target.npc);
         return;
       case 'ground':
         this.player.moveTo(target.point.x, target.point.y);
@@ -545,14 +558,29 @@ export class ZoneWorld implements Targeting {
     this.approach.walkTo({ kind: 'signpost', radius: SIGNPOST_INTERACT_RADIUS }, signpost, enter);
   }
 
-  approachShop(npc: WorldNpc): void {
-    if (withinRadius(this.player, npc, SHOP_INTERACT_RADIUS)) {
-      this.shop.open(npc);
+  /**
+   * Walk up to whoever was tapped and open their counter.
+   *
+   * Which counter is a fact about the person and not about the tap, which is
+   * exactly what this used to assume: every NPC in the game opened the shop,
+   * and the second one to exist would have sold tools from behind the bank's
+   * desk. The role decides, so a third counter is a case here and a row in
+   * `NPCS` rather than another silent assumption.
+   */
+  approachNpc(npc: WorldNpc): void {
+    const serve = (): void => {
+      if (npcRole(npc.npcId) === 'banker') {
+        this.bank.open(npc);
+      } else {
+        this.shop.open(npc);
+      }
+    };
+    if (withinRadius(this.player, npc, NPC_INTERACT_RADIUS)) {
+      serve();
       return;
     }
-    this.approach.walkTo({ kind: 'shop', radius: SHOP_INTERACT_RADIUS }, npc, () =>
-      this.shop.open(npc),
-    );
+    const kind = npcRole(npc.npcId) === 'banker' ? 'bank' : 'shop';
+    this.approach.walkTo({ kind, radius: NPC_INTERACT_RADIUS }, npc, serve);
   }
 
   // ---------------------------------------------------------------------------
@@ -625,7 +653,7 @@ export class ZoneWorld implements Targeting {
     this.afk.set(false);
     this.stopGathering();
     this.clearTarget();
-    this.closeShop();
+    this.closeCounters();
     this.contextMenu.clear();
     // Save the spot in the zone being *entered*, not the one being left: a tab
     // closed mid-walk should come back where the walk was going. The next world
@@ -670,7 +698,7 @@ export class ZoneWorld implements Targeting {
     this.afk.set(false);
     this.stopGathering();
     this.clearTarget();
-    this.closeShop();
+    this.closeCounters();
     this.contextMenu.clear();
     // No spot recorded: arriving with no particular place to stand is what puts
     // the player on the zone's own spawn point, which is where travel should
@@ -682,7 +710,7 @@ export class ZoneWorld implements Targeting {
   }
 
   // ---------------------------------------------------------------------------
-  // Shop and vendoring
+  // The two counters: vendoring and the bank
   // ---------------------------------------------------------------------------
 
   /** The shopkeeper the open shop belongs to; null when the shop is closed. */
@@ -690,17 +718,26 @@ export class ZoneWorld implements Targeting {
     return this.shop.npc;
   }
 
+  /** The banker the open vault belongs to; null when the counter is shut. */
+  get bankNpc(): WorldNpc | null {
+    return this.bank.npc;
+  }
+
   /** Whether the character has been left camping. */
   get afkActive(): boolean {
     return this.afk.active;
   }
 
-  updateShopRange(): void {
+  /** Walking away shuts whichever counter is open; both ask the same distance. */
+  updateNpcRange(): void {
     this.shop.updateRange();
+    this.bank.updateRange();
   }
 
-  closeShop(): void {
+  /** Everything that stops a session at once shuts both, never only one. */
+  closeCounters(): void {
     this.shop.close();
+    this.bank.close();
   }
 
   handleBuyRequested(itemId: ItemId): void {
@@ -709,6 +746,18 @@ export class ZoneWorld implements Targeting {
 
   handleSellRequested(itemId: ItemId, quantity = 1): void {
     this.shop.sell(itemId, quantity);
+  }
+
+  handleDepositRequested(itemId: ItemId, quantity = 1): void {
+    this.bank.deposit(itemId, quantity);
+  }
+
+  handleWithdrawRequested(itemId: ItemId, quantity = 1): void {
+    this.bank.withdraw(itemId, quantity);
+  }
+
+  handleBuyBankSlotRequested(): void {
+    this.bank.buySlot();
   }
 
   // ---------------------------------------------------------------------------
@@ -806,7 +855,7 @@ export class ZoneWorld implements Targeting {
     this.mobs.forEach((mob) => mob.disengage());
     this.stopGathering();
     this.clearTarget();
-    this.closeShop();
+    this.closeCounters();
     this.contextMenu.clear();
     this.approach.cancel();
     this.player.stopMoving();

@@ -1,5 +1,5 @@
 import { ITEMS } from '../data/items';
-import type { ItemId, OffhandShapeId, WeaponShapeId } from '../types/ids';
+import type { ItemId, NpcId, OffhandShapeId, WeaponShapeId } from '../types/ids';
 import type { Gear } from './InventorySystem';
 
 export const BASE_FIGURE_COLOR = 0x111111;
@@ -219,6 +219,16 @@ export const NPC_APPEARANCES = {
     weapon: null,
     offhand: null,
   },
+  // The other counter, and deliberately nothing like the first: the two stand
+  // a few steps apart either side of the crossroads, so which one you are
+  // walking toward has to be answerable at a glance rather than off the plate.
+  banker: {
+    headColor: SKIN_COLOR,
+    torsoColor: 0x26a69a,
+    legColor: 0x37474f,
+    weapon: null,
+    offhand: null,
+  },
   bandit: {
     headColor: SKIN_COLOR,
     torsoColor: 0x757575,
@@ -235,7 +245,9 @@ export const NPC_APPEARANCES = {
     weapon: { shape: 'sword', color: 0xeceff1 },
     offhand: null,
   },
-} as const satisfies Record<'shopkeeper' | 'bandit' | 'bandit-chief', Appearance>;
+  // Keyed by `NpcId` rather than by a hand-written list of names, so a new
+  // person standing in a town is a compile error here until they have a look.
+} as const satisfies Record<NpcId | 'bandit' | 'bandit-chief', Appearance>;
 
 /** The bandana over the bandit's face, which is not part of the rig. */
 export const BANDIT_MASK_COLOR = 0xc62828;

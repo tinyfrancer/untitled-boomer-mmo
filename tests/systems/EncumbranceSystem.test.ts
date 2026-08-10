@@ -3,10 +3,11 @@ import { staleItemId } from '../staleIds';
 import {
   canCarry,
   carryCapacity,
+  carryableCount,
   encumbranceLevel,
   inventoryWeight,
 } from '../../src/systems/EncumbranceSystem';
-import { DEFAULT_ITEM_WEIGHT } from '../../src/data/items';
+import { DEFAULT_ITEM_WEIGHT, itemWeight } from '../../src/data/items';
 
 describe('inventoryWeight', () => {
   it('is nothing for an empty pack', () => {
@@ -100,5 +101,28 @@ describe('encumbranceLevel', () => {
     // An over-capacity save (gear that lost its strength bonus, say) still
     // reads as full rather than wrapping around to ok.
     expect(encumbranceLevel(150, 100)).toBe('full');
+  });
+});
+
+/**
+ * The other shape of the same question, and the one a withdrawal asks: not
+ * "would this fit" but "how much of it would". Only the bank needs it, because
+ * only the bank can hand over part of a stack and keep the rest.
+ */
+describe('carryableCount', () => {
+  const capacity = carryCapacity(6);
+
+  it('answers how many more of a thing the pack has room for', () => {
+    const each = itemWeight('logs');
+    expect(carryableCount({}, 'logs', each * 5)).toBe(5);
+  });
+
+  it('is zero for a pack already at or over capacity', () => {
+    expect(carryableCount({ 'rat-bones': 999 }, 'logs', capacity)).toBe(0);
+  });
+
+  it('rounds down rather than promising a fraction of an item', () => {
+    const each = itemWeight('logs');
+    expect(carryableCount({}, 'logs', each * 3 + each - 1)).toBe(3);
   });
 });

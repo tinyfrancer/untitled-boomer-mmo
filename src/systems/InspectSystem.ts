@@ -13,13 +13,14 @@ import {
 } from '../data/items';
 import { CLASSES } from '../data/classes';
 import { LOOT_TABLES } from '../data/lootTables';
+import { npcName, npcRole } from '../data/npcs';
 import { SHOP_STOCK } from '../data/shop';
 import { SKILLS } from '../data/skills';
 import { ZONES, type ZoneExit } from '../data/zones';
 import { QUESTS } from '../data/quests';
+import { MAX_BANK_SLOTS, STARTING_BANK_SLOTS, bankSlotPrice } from './BankSystem';
 import { formatCurrency } from './CurrencySystem';
 import { scaleEnemyStats } from './EnemySystem';
-import { npcName } from './MapSystem';
 import type { EnemyDefinition } from '../data/enemies';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 import type { EnemyFamilyId, ItemId, NpcId, ZoneEdge } from '../types/ids';
@@ -172,11 +173,32 @@ export function describeSignpost(exit: ZoneExit): InspectPanel {
   };
 }
 
-/** Who an NPC is and what standing at them gets you. */
+/**
+ * Who an NPC is and what standing at them gets you.
+ *
+ * Two counters, two cards. It stays a pure function of the tables — the
+ * banker's lines describe the *service* rather than this character's shelves,
+ * because a card is settled the moment it opens and a slot count read off a
+ * player would be stale the first time they put something away.
+ */
 export function describeNpc(npcId: NpcId): InspectPanel {
+  const title = npcName(npcId);
+  if (npcRole(npcId) === 'banker') {
+    return {
+      title,
+      subtitle: 'Banker',
+      lines: [
+        { label: 'Stores', value: 'Anything, at no weight' },
+        { label: 'Slots', value: `${STARTING_BANK_SLOTS} to start, up to ${MAX_BANK_SLOTS}` },
+        { label: 'Charges', value: `${formatCurrency(BANK_SLOT_FROM)} for the next slot` },
+      ],
+      note: 'One slot holds one kind of thing, however deep the stack on it.',
+    };
+  }
+
   const quests = Object.values(QUESTS).filter((quest) => quest.giverNpcId === npcId);
   return {
-    title: npcName(npcId),
+    title,
     subtitle: 'Merchant',
     lines: [
       {
@@ -188,6 +210,10 @@ export function describeNpc(npcId: NpcId): InspectPanel {
     ],
   };
 }
+
+// What the first bought slot costs, which is the number that makes the card's
+// "Charges" line mean something without reading a character.
+const BANK_SLOT_FROM = bankSlotPrice(STARTING_BANK_SLOTS) ?? 0;
 
 /**
  * Everything an item is, which is more than the bag's one-line summary of it.
