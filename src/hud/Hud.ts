@@ -2,7 +2,7 @@ import { ActionBar } from './ActionBar';
 import { CharacterSheet } from './CharacterSheet';
 import { CombatLogSheet } from './CombatLogSheet';
 import { FeatsSheet } from './FeatsSheet';
-import { GatherBar } from './GatherBar';
+import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
 import { OverlayHost } from './OverlayHost';
@@ -47,9 +47,9 @@ import {
   CURRENCY_CHANGED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
-  GATHER_ENDED_EVENT,
-  GATHER_PROGRESS_EVENT,
-  GATHER_STARTED_EVENT,
+  CHANNEL_ENDED_EVENT,
+  CHANNEL_PROGRESS_EVENT,
+  CHANNEL_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
@@ -157,7 +157,7 @@ class Hud {
   private readonly playerColumn: PlayerColumn;
   private readonly tracker = new QuestTracker();
   private readonly actionBar: ActionBar;
-  private readonly gatherBar = new GatherBar();
+  private readonly channelBar = new ChannelBar();
   private readonly toast = new Toast();
   private readonly tabBar: TabBar;
 
@@ -261,7 +261,7 @@ class Hud {
       this.playerColumn.root,
       this.tracker.root,
       this.actionBar.root,
-      this.gatherBar.root,
+      this.channelBar.root,
       this.toast.root,
       this.characterSheet.root,
       this.inventorySheet.root,
@@ -350,7 +350,7 @@ class Hud {
     this.playerColumn.layout(layout.playerColumn);
     this.tracker.layout(layout.tracker);
     this.actionBar.layout(layout.actionBar);
-    this.gatherBar.layout(height);
+    this.channelBar.layout(height);
     this.toast.layout(height);
     this.tabBar.root.style.height = `${layout.tabBar.height}px`;
     for (const sheet of Object.values(this.sheets)) {
@@ -662,9 +662,9 @@ class Hud {
       this.inventorySheet.refreshActions();
     });
 
-    listen(GATHER_STARTED_EVENT, (label) => this.gatherBar.show(label));
-    listen(GATHER_PROGRESS_EVENT, (progress) => this.gatherBar.setProgress(progress));
-    listen(GATHER_ENDED_EVENT, () => this.gatherBar.hide());
+    listen(CHANNEL_STARTED_EVENT, (label) => this.channelBar.show(label));
+    listen(CHANNEL_PROGRESS_EVENT, (progress) => this.channelBar.setProgress(progress));
+    listen(CHANNEL_ENDED_EVENT, () => this.channelBar.hide());
     listen(NOTICE_EVENT, (message) => this.toast.show(message, THEME.color.muted));
 
     listen(AFK_STATE_CHANGED_EVENT, (active) => {

@@ -10,7 +10,7 @@ import {
 } from '../systems/GatherSystem';
 import { distance, withinRadius } from '../systems/MovementSystem';
 import type { ItemId } from '../types/ids';
-import { GATHER_ENDED_EVENT, GATHER_PROGRESS_EVENT, GATHER_STARTED_EVENT } from '../ui/uiEvents';
+import { CHANNEL_ENDED_EVENT, CHANNEL_PROGRESS_EVENT, CHANNEL_STARTED_EVENT } from '../ui/uiEvents';
 import { Campfire } from './Campfire';
 import type { ResourceNode } from './ResourceNode';
 import type { WorldContext } from './WorldContext';
@@ -64,14 +64,14 @@ export class GatherSession {
 
     this.node = node;
     this.state = beginGather(node.definition, character.skillLevelOf(node.definition.skill));
-    this.ctx.events.emit(GATHER_STARTED_EVENT, node.definition.name);
+    this.ctx.events.emit(CHANNEL_STARTED_EVENT, node.definition.name);
   }
 
   stop(): void {
     if (!this.state) return;
     this.state = null;
     this.node = null;
-    this.ctx.events.emit(GATHER_ENDED_EVENT);
+    this.ctx.events.emit(CHANNEL_ENDED_EVENT);
   }
 
   /**
@@ -95,7 +95,7 @@ export class GatherSession {
 
     if (outcome.status === 'gathering') {
       this.state = outcome.state;
-      this.ctx.events.emit(GATHER_PROGRESS_EVENT, outcome.progress);
+      this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, outcome.progress);
       this.ctx.push({
         kind: 'gather-tick',
         at: { x: node.x, y: node.y },
@@ -219,6 +219,6 @@ export class GatherSession {
     // Auto-repeat: re-arm the channel so gathering runs unattended until
     // something interrupts it.
     this.state = beginGather(definition, character.skillLevelOf(definition.skill));
-    this.ctx.events.emit(GATHER_PROGRESS_EVENT, 0);
+    this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 }

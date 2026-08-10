@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_TRACKED_QUESTS,
-  gatherBarTop,
+  channelBarTop,
   hudLayout,
   isNarrowViewport,
   menuPosition,
@@ -242,12 +242,12 @@ describe('the two lines over the middle of the playfield', () => {
   it('puts the toast above centre and the gather bar below it', () => {
     const { height } = PHONE_PORTRAIT;
     expect(toastTop(height)).toBeLessThan(height / 2);
-    expect(gatherBarTop(height)).toBeGreaterThan(height / 2);
+    expect(channelBarTop(height)).toBeGreaterThan(height / 2);
   });
 
   it('rounds to whole pixels on an odd viewport', () => {
     expect(Number.isInteger(toastTop(667))).toBe(true);
-    expect(Number.isInteger(gatherBarTop(667))).toBe(true);
+    expect(Number.isInteger(channelBarTop(667))).toBe(true);
   });
 });
 

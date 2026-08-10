@@ -1,26 +1,30 @@
 import { el, fillPercent } from './dom';
-import { gatherBarTop } from '../ui/layout';
+import { channelBarTop } from '../ui/layout';
 
 /**
- * The channel bar shown while gathering. Screen-space rather than pinned over
- * the player, who the camera keeps centred anyway.
+ * The bar for anything the player is in the middle of: a gather, a cast.
+ *
+ * One widget rather than one per kind, because they are the same shape and can
+ * never both be running — casting stops a gather and being hit breaks either.
+ * Screen-space rather than pinned over the player, who the camera keeps centred
+ * anyway.
  */
-export class GatherBar {
+export class ChannelBar {
   readonly root: HTMLElement;
   private readonly label: HTMLElement;
   private readonly fill: HTMLElement;
 
   constructor() {
-    this.root = el('div', 'hud-gather hud-hidden');
-    this.label = el('div', 'hud-gather__label');
-    const bar = el('div', 'hud-bar hud-gather__bar');
+    this.root = el('div', 'hud-channel hud-hidden');
+    this.label = el('div', 'hud-channel__label');
+    const bar = el('div', 'hud-bar hud-channel__bar');
     this.fill = el('div', 'hud-bar__fill');
     bar.append(this.fill);
     this.root.append(this.label, bar);
   }
 
   layout(viewportHeight: number): void {
-    this.root.style.top = `${gatherBarTop(viewportHeight)}px`;
+    this.root.style.top = `${channelBarTop(viewportHeight)}px`;
   }
 
   show(label: string): void {

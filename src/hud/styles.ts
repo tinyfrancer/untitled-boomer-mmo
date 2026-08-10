@@ -323,21 +323,21 @@ function hudCss(): string {
   text-align: center;
 }
 
-/* --- Gather bar and toasts ----------------------------------------------- */
+/* --- Channel bar and toasts ---------------------------------------------- */
 
-.hud-gather {
+.hud-channel {
   position: absolute;
   left: 50%;
   width: 120px;
   margin-left: -60px;
   pointer-events: none;
 }
-.hud-gather__label {
+.hud-channel__label {
   font-size: ${THEME.font.xs}px;
   text-align: center;
   margin-bottom: 4px;
 }
-.hud-gather__bar {
+.hud-channel__bar {
   height: 10px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid ${cssColor(THEME.panelStroke)};
