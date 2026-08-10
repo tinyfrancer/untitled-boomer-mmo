@@ -11,6 +11,7 @@ import {
 import {
   logAbilityUsed,
   logCastInterrupted,
+  logCriticalHit,
   logCastStarted,
   logDamageDealt,
   logSpellFailed,
@@ -217,7 +218,7 @@ export class AbilityCaster {
           this.ctx.notice('Your target is too far away.');
           return;
         }
-        const damage = resolveAbilityDamage(ability, player.attackPower, skillLevel);
+        const { damage, crit } = resolveAbilityDamage(ability, player.attackPower, skillLevel);
         // A bolt thrown from the caster to the target. Purely cosmetic, but a
         // ranged nuke that produced only a number over the mob read as nothing
         // happening. A melee ability has no flight to draw.
@@ -233,11 +234,14 @@ export class AbilityCaster {
           kind: 'hit',
           on: 'mob',
           via: 'ability',
+          crit,
           at: { x: target.x, y: target.y },
           damage,
           absorbed: 0,
         });
-        this.ctx.log(logDamageDealt(target.name, damage));
+        this.ctx.log(
+          crit ? logCriticalHit(target.name, damage) : logDamageDealt(target.name, damage),
+        );
         target.takeDamage(damage);
         target.engage();
         this.deps.targeting.publishTarget();

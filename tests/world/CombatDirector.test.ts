@@ -215,3 +215,70 @@ describe('what hits back', () => {
     expect(kit.deps.onPlayerDeath).toHaveBeenCalled();
   });
 });
+
+/**
+ * Both halves of PR 4 as the world runs them: a swing the crab slips, and one
+ * that lands hard. `CombatSystem.test.ts` holds the arithmetic; this holds that
+ * the two paths reach it and that what comes back is announced.
+ */
+describe('a swing that can miss, and one that can land hard', () => {
+  function crabAt(x: number, y: number): Mob {
+    return new Mob(x, y, ENEMIES.crab, 1, () => 0.5);
+  }
+
+  it('lets a crab slip a swing, costing the skill its rep', () => {
+    const crab = crabAt(10, 0);
+    const kit = fight([crab], crab);
+    const before = crab.hp;
+
+    // Every roll comes back under the crab's 15%, so every swing is slipped.
+    kit.character.state.skills['one-handed'] = { level: 5, xp: 0 };
+    for (let swing = 0; swing < 5; swing += 1) {
+      kit.ctx.now += 10000;
+      kit.combat.update();
+    }
+
+    expect(crab.hp).toBeLessThanOrEqual(before);
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+      expect.objectContaining({ text: 'Crab slips your attack.' }),
+    );
+  });
+
+  // Nothing else in the game dodges, so a rat takes every swing that reaches it.
+  it('leaves a rat with nothing to slip', () => {
+    const rat = ratAt(10, 0);
+    const kit = fight([rat], rat);
+
+    for (let swing = 0; swing < 5; swing += 1) {
+      kit.ctx.now += 10000;
+      kit.combat.update();
+    }
+
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).not.toContainEqual(
+      expect.objectContaining({ text: 'Rat slips your attack.' }),
+    );
+  });
+
+  it('announces a crit as its own line and its own number', () => {
+    const rat = ratAt(10, 0);
+    rat.hp = 100000;
+    const kit = fight([rat], rat);
+    kit.character.state.skills['one-handed'] = { level: 50, xp: 0 };
+
+    // A capped skill crits one swing in five, so this swings until one lands
+    // rather than betting a test on a roll.
+    for (let swing = 0; swing < 200; swing += 1) {
+      kit.ctx.now += 10000;
+      kit.combat.update();
+      const drawn = kit.drain();
+      const hit = drawn.find((event) => event.kind === 'hit' && event.crit);
+      if (hit) {
+        expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+          expect.objectContaining({ text: expect.stringContaining('hard for') }),
+        );
+        return;
+      }
+    }
+    throw new Error('two hundred swings and none of them crit');
+  });
+});

@@ -14,7 +14,7 @@ gathered materials that lead nowhere.
 | 1   | Death has a price                                        | Arithmetic        | merged 2026-08-10 |
 | 2   | The level cap meets the content                          | Arithmetic        | merged 2026-08-10 |
 | 3   | Armour that stops something, and a hand to hold a shield | Arithmetic        | merged 2026-08-10 |
-| 4   | A swing that can miss, and one that can land hard        | Arithmetic        | planned           |
+| 4   | A swing that can miss, and one that can land hard        | Arithmetic        | in review         |
 | 5   | The bank                                                 | Economy           | planned           |
 | 6   | Stock worth coming back for                              | Economy           | planned           |
 | 7   | The trainer                                              | Economy           | planned           |

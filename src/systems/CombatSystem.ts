@@ -11,6 +11,9 @@ export interface Attacker {
 
 export interface AttackResult {
   damage: number;
+  // Whether this one landed hard. Mobs never crit — they carry no weapon skill,
+  // and the chance comes out of that skill and nowhere else.
+  crit: boolean;
 }
 
 const DAMAGE_VARIANCE = 0.25; // +/- 25% of base attack power
@@ -30,13 +33,32 @@ const MIN_DAMAGE = 1;
  * number a capped character actually has, and a cap raised for a new zone
  * re-slopes both without anyone remembering to.
  */
-const MAX_WEAPON_SKILL_DAMAGE_BONUS = 0.4;
+const MAX_WEAPON_SKILL_DAMAGE = 0.4;
 const MAX_AVOIDANCE = 0.25;
+
+/**
+ * How much of that budget is paid as crits rather than as a flat multiplier.
+ *
+ * The skill used to buy 0.4% damage a level, which is imperceptible by
+ * construction: a level's worth of training is a rounding error on a damage
+ * number. Moving part of the same budget into a chance to land hard changes
+ * nothing about the average and everything about whether training is *felt*,
+ * because a crit is a moment and a multiplier is not.
+ *
+ * The flat half is derived from the crit half rather than written down, so the
+ * average at cap is unchanged by construction — retuning the crit chance or the
+ * multiplier re-slopes the flat part instead of quietly moving the total.
+ */
+const MAX_CRIT_CHANCE = 0.2;
+const CRIT_MULTIPLIER = 2;
+const CRIT_AVERAGE_BONUS = 1 + MAX_CRIT_CHANCE * (CRIT_MULTIPLIER - 1);
+const MAX_WEAPON_SKILL_DAMAGE_BONUS = (1 + MAX_WEAPON_SKILL_DAMAGE) / CRIT_AVERAGE_BONUS - 1;
 const TOP_COMBAT_SKILL = combatSkillCap(MAX_CHARACTER_LEVEL);
 // Per point of weapon skill, and per point of block or parry. Still small
 // enough that a fresh character at skill 1 swings for what they always did.
 const DAMAGE_PER_WEAPON_SKILL = MAX_WEAPON_SKILL_DAMAGE_BONUS / TOP_COMBAT_SKILL;
 const AVOIDANCE_PER_SKILL = MAX_AVOIDANCE / TOP_COMBAT_SKILL;
+const CRIT_PER_SKILL = MAX_CRIT_CHANCE / TOP_COMBAT_SKILL;
 
 // Both clamp at the ceiling rather than only reaching it, which is what keeps a
 // save made under a higher cap from hitting harder than the game says it can.
@@ -46,13 +68,31 @@ export function weaponSkillBonus(skillLevel = 0): number {
   );
 }
 
+/** The chance a swing lands hard, bought with the weapon skill like the rest. */
+export function critChance(skillLevel = 0): number {
+  return Math.min(MAX_CRIT_CHANCE, Math.max(0, skillLevel) * CRIT_PER_SKILL);
+}
+
 export function resolveAttack(attacker: Attacker, rng: () => number = Math.random): AttackResult {
   const variance = 1 + (rng() * 2 - 1) * DAMAGE_VARIANCE;
-  const damage = Math.max(
-    MIN_DAMAGE,
-    Math.round(attacker.attackPower * variance * weaponSkillBonus(attacker.weaponSkillLevel)),
-  );
-  return { damage };
+  const swing = attacker.attackPower * variance * weaponSkillBonus(attacker.weaponSkillLevel);
+  const crit = rng() < critChance(attacker.weaponSkillLevel);
+  return {
+    damage: Math.max(MIN_DAMAGE, Math.round(swing * (crit ? CRIT_MULTIPLIER : 1))),
+    crit,
+  };
+}
+
+/**
+ * Whether a creature slips a swing entirely.
+ *
+ * The other half of the finding this pays off: `rollDefense` had exactly one
+ * caller and it was the player being hit, so nothing in the game had ever
+ * avoided anything the player swung at. It is a flat chance off the row rather
+ * than a skill, because a crab does not train.
+ */
+export function enemyAvoids(avoidChance = 0, rng: () => number = Math.random): boolean {
+  return rng() < Math.max(0, avoidChance);
 }
 
 // Which weapon skill an equipped item trains. Anything in the weapon slot is

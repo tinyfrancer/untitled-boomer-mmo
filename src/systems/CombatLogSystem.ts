@@ -32,6 +32,14 @@ export function logDamageDealt(targetName: string, damage: number): CombatLogEnt
   return { text: `You hit ${targetName} for ${damage}.`, color: THEME.color.text };
 }
 
+export function logCriticalHit(targetName: string, damage: number): CombatLogEntry {
+  return { text: `You hit ${targetName} hard for ${damage}!`, color: THEME.color.equippable };
+}
+
+export function logEnemyAvoided(targetName: string): CombatLogEntry {
+  return { text: `${targetName} slips your attack.`, color: THEME.color.dim };
+}
+
 export function logDamageTaken(sourceName: string, damage: number): CombatLogEntry {
   return { text: `${sourceName} hits you for ${damage}.`, color: THEME.color.playerDamage };
 }

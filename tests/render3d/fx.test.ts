@@ -99,6 +99,7 @@ describe('what a WorldEvent is drawn as', () => {
     kind: 'hit',
     on: 'mob',
     via: 'weapon',
+    crit: false,
     at: AT,
     damage: 6,
     absorbed: 0,

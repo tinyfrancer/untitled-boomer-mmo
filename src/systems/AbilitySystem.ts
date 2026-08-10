@@ -1,5 +1,5 @@
 import { ABILITIES, CLASS_ABILITIES, type AbilityDefinition } from '../data/abilities';
-import { resolveAttack } from './CombatSystem';
+import { resolveAttack, type AttackResult } from './CombatSystem';
 import type { AbilityId, ClassId } from '../types/ids';
 
 // How much a point of the governing skill shaves off a spell's failure chance,
@@ -89,9 +89,9 @@ export function resolveAbilityDamage(
   attackPower: number,
   skillLevel: number,
   rng: () => number = Math.random,
-): number {
+): AttackResult {
   if (ability.effect.kind !== 'damage') {
-    return 0;
+    return { damage: 0, crit: false };
   }
   return resolveAttack(
     {
@@ -99,7 +99,7 @@ export function resolveAbilityDamage(
       weaponSkillLevel: skillLevel,
     },
     rng,
-  ).damage;
+  );
 }
 
 // A buff with a clock on it. Both of the ones that exist today are timed, so

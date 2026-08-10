@@ -47,6 +47,13 @@ export interface EnemyDefinition {
   // Whether the enemy opens combat on its own; rats only ever retaliate.
   aggressive: boolean;
   /**
+   * The chance it slips a swing entirely. Only the crab has one: a scuttling,
+   * armoured thing already designed as a long fight rather than a dangerous one
+   * is exactly what a dodge is for, and every other row leaving it at zero is
+   * what keeps this from being a tax on every fight in the game.
+   */
+  avoidChance?: number;
+  /**
    * A named mob: one of a kind, on a long respawn, and never what an unattended
    * camp picks a fight with.
    *
@@ -115,6 +122,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     shape: 'crustacean',
     body: { width: TILE_SIZE * 0.85, height: TILE_SIZE * 0.55 },
     aggressive: false,
+    avoidChance: 0.15,
     // Tanky and slow-swinging, which is what makes the beach the zone you fight
     // while gathering: far more HP than a rat of the same level but half the
     // swing rate, so a fight is long rather than dangerous.

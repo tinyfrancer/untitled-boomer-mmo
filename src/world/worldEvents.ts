@@ -17,7 +17,7 @@ import type { Mob } from './Mob';
  * thing happened and the view decides what that looks like, which is the whole
  * point of having the channel at all.
  */
-export type FloatTone = 'damage' | 'player-damage' | 'heal' | 'reward' | 'skill' | 'dim';
+export type FloatTone = 'damage' | 'player-damage' | 'heal' | 'reward' | 'skill' | 'crit' | 'dim';
 
 export type WorldEvent =
   /**
@@ -29,6 +29,9 @@ export type WorldEvent =
       kind: 'hit';
       on: 'player' | 'mob';
       via: 'weapon' | 'ability';
+      // Whether it landed hard. Required rather than optional so a new path to
+      // a hit has to say, which is the same reason `absorbed` is.
+      crit: boolean;
       at: Point;
       damage: number;
       absorbed: number;
