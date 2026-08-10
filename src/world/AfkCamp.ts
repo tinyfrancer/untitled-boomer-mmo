@@ -31,8 +31,11 @@ export interface AfkCampDeps {
   eat(itemId: ItemId): void;
   /** Walk over and start the channel — the same approach a tap on a node uses. */
   gatherAt(node: ResourceNode): void;
-  /** Whether a channel is already running, which is the loop's "leave it alone". */
-  isGathering(): boolean;
+  /**
+   * Whether a channel is already running — a gather, or something in the pan —
+   * which is the loop's "leave it alone".
+   */
+  isChanneling(): boolean;
   /** The choke point the camp's own XP penalty is applied at. */
   awardXp(reward: number): void;
   /** A kill either happened or it didn't, so an offline count is credited in full. */
@@ -226,8 +229,10 @@ export class AfkCamp {
 
     this.deps.targeting.clearTarget();
     // The channel re-arms itself and the walk finishes on its own; re-issuing
-    // either every frame would restart it and it would never complete.
-    if (this.deps.isGathering() || this.ctx.player.hasMoveTarget()) {
+    // either every frame would restart it and it would never complete. A pan
+    // left on the fire counts: settling in beside one finishes the stack before
+    // the axe comes out, the same way a gather already under way is left alone.
+    if (this.deps.isChanneling() || this.ctx.player.hasMoveTarget()) {
       return true;
     }
     if (action.kind === 'wait') {
