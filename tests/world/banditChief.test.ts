@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness, type Harness } from './harness';
 import { ENEMIES } from '../../src/data/enemies';
-import { AFK_TOGGLE_REQUESTED_EVENT, KILLS_CHANGED_EVENT } from '../../src/ui/uiEvents';
+import { ENEMY_ABILITIES } from '../../src/data/enemyAbilities';
+import {
+  AFK_TOGGLE_REQUESTED_EVENT,
+  COMBAT_LOG_EVENT,
+  KILLS_CHANGED_EVENT,
+  TARGET_SELECTED_EVENT,
+} from '../../src/ui/uiEvents';
 import type { Mob } from '../../src/world/Mob';
 
 /**
@@ -112,5 +118,99 @@ describe('the chief', () => {
 
     chief.engage();
     kit.until(() => kit.world.target === chief, 'the camp to answer the chief');
+  });
+});
+
+/**
+ * The Cleave, which is what the fight is about. `EnemyAbilitySystem.test.ts`
+ * holds the choice and `EnemySystem.test.ts` holds what it does to the curve;
+ * this is the cadence — that it is telegraphed before it lands, that leaving is
+ * an answer, and that it costs him the swing it interrupts either way.
+ */
+describe('the chief winds up', () => {
+  const CLEAVE = ENEMY_ABILITIES.cleave;
+
+  /** Toe to toe with him, with the fight already started. */
+  function toeToToe(): { kit: Harness; chief: Mob } {
+    const kit = hideout(10);
+    const chief = chiefIn(kit);
+    kit.world.teleport(chief.x - 40, chief.y);
+    kit.world.setTarget(chief);
+    chief.engage();
+    return { kit, chief };
+  }
+
+  it('shouts before it lands, in the world and in the frame', () => {
+    const { kit, chief } = toeToToe();
+
+    // Everything the tick hands the view, kept so the shout can be found in it.
+    const drawn = kit.tickUntil(() => chief.windUp !== null);
+
+    expect(chief.windUp?.abilityId).toBe('cleave');
+    expect(drawn).toContainEqual({
+      kind: 'float',
+      at: { x: chief.x, y: chief.y },
+      text: 'Cleave',
+      tone: 'player-damage',
+    });
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+      expect.objectContaining({ text: 'Hollis the Cutthroat winds up Cleave!' }),
+    );
+    expect(kit.emissions(TARGET_SELECTED_EVENT).at(-1)).toEqual([
+      expect.objectContaining({ winding: 'Cleave' }),
+    ]);
+  });
+
+  // Feet planted for the whole wind-up. Something that kept closing while it
+  // shouted would land every one of these on a player who did walk away.
+  it('plants its feet for the whole wind-up', () => {
+    const { kit, chief } = toeToToe();
+    kit.until(() => chief.windUp !== null, 'the chief to wind up');
+    const stood = { x: chief.x, y: chief.y };
+
+    kit.world.teleport(chief.x - 400, chief.y);
+    kit.tick(3);
+
+    expect({ x: chief.x, y: chief.y }).toEqual(stood);
+  });
+
+  // The whole mechanic: the shout is a second to walk out of reach in.
+  it('misses whoever left while it was being wound up', () => {
+    const { kit, chief } = toeToToe();
+    kit.until(() => chief.windUp !== null, 'the chief to wind up');
+
+    kit.world.teleport(chief.x - CLEAVE.range - 200, chief.y);
+    kit.until(() => chief.windUp === null, 'the cleave to land or miss');
+
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+      expect.objectContaining({ text: 'You step out of Cleave.' }),
+    );
+    expect(kit.emissions(TARGET_SELECTED_EVENT).at(-1)).toEqual([
+      expect.objectContaining({ winding: null }),
+    ]);
+  });
+
+  it('lands on whoever stood still for it', () => {
+    const { kit, chief } = toeToToe();
+    kit.until(() => chief.windUp !== null, 'the chief to wind up');
+    const before = kit.world.player.hp;
+
+    kit.until(() => chief.windUp === null, 'the cleave to land');
+    // Blocks and parries mean one swing is not proof, so this is about what was
+    // said rather than about the number: a dodge would have said otherwise.
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).not.toContainEqual(
+      expect.objectContaining({ text: 'You step out of Cleave.' }),
+    );
+    expect(kit.world.player.hp).toBeLessThanOrEqual(before);
+  });
+
+  // A fight that ended takes its wind-up with it, or a corpse lands a Cleave.
+  it('drops what it was winding up when the fight ends', () => {
+    const { kit, chief } = toeToToe();
+    kit.until(() => chief.windUp !== null, 'the chief to wind up');
+
+    chief.disengage();
+
+    expect(chief.windUp).toBeNull();
   });
 });

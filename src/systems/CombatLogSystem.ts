@@ -55,6 +55,14 @@ export function logAbilityUsed(abilityName: string): CombatLogEntry {
   return { text: `You cast ${abilityName}.`, color: THEME.color.muted };
 }
 
+export function logEnemyWindUp(sourceName: string, abilityName: string): CombatLogEntry {
+  return { text: `${sourceName} winds up ${abilityName}!`, color: THEME.color.playerDamage };
+}
+
+export function logEnemyAbilityDodged(abilityName: string): CombatLogEntry {
+  return { text: `You step out of ${abilityName}.`, color: THEME.color.heal };
+}
+
 export function logCastStarted(abilityName: string): CombatLogEntry {
   return { text: `You begin casting ${abilityName}.`, color: THEME.color.muted };
 }
