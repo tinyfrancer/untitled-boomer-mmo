@@ -2041,6 +2041,55 @@ async function lockedZone() {
   );
   await page.screenshot({ path: `${OUT}/24-hideout.png` });
 
+  // --- The named mob at the back of it. What he is and what he drops is
+  // unit-tested; what a browser adds is that a creature drawn at a size no
+  // other one uses still gets exactly one nameplate, is still picked by a real
+  // tap, and does not arrive wearing the same face as his own men. ---
+  await page.evaluate(() => {
+    const w = window.world;
+    const chief = w.mobs.find((mob) => mob.definition.id === 'bandit-chief');
+    if (!chief) throw new Error('the hideout has no chief');
+    // Alongside rather than on top of him: close enough to tap, far enough that
+    // the ray is cast at a figure standing clear of the player's own.
+    w.teleport(chief.x - 120, chief.y);
+  });
+  await step(4);
+  await draw();
+  const chief = await page.evaluate(() => {
+    const w = window.world;
+    const mob = w.mobs.find((m) => m.definition.id === 'bandit-chief');
+    if (!mob) throw new Error('the hideout has no chief');
+    return {
+      name: mob.definition.name,
+      level: mob.level,
+      at: window.view.worldToScreen(mob.x, mob.y),
+      counts: window.view.drawnCounts(),
+      // Everything with a name over it, plus the player's own — the same total
+      // the boot section holds every zone to.
+      named: w.mobs.length + w.npcs.length + w.signposts.length + 1,
+    };
+  });
+  check(
+    'the chief is drawn like everything else, one nameplate and no more',
+    chief.counts.labels === chief.named && chief.level === 4,
+    `${chief.name} (${chief.level}), ${chief.counts.labels} labels for ${chief.named} named things`,
+  );
+
+  // A real tap on him, which is the whole reason `pickBox` is a box: he is
+  // drawn at a size nothing else is, and picking has to follow the body.
+  await clickAt(chief.at);
+  await step(2);
+  const targeted = await page.evaluate(() => ({
+    target: window.world.target?.definition.id ?? null,
+    frame: document.querySelector('.hud-target__name')?.textContent ?? '',
+  }));
+  check(
+    'and a tap on him selects him by name',
+    targeted.target === 'bandit-chief' && targeted.frame.includes('Hollis'),
+    `target ${targeted.target}, frame "${targeted.frame}"`,
+  );
+  await page.screenshot({ path: `${OUT}/25-chief.png` });
+
   // Back out to the camp, so the sections after this one are not standing in a
   // room full of things that hit back.
   await park();
