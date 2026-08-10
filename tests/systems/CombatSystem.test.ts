@@ -9,6 +9,12 @@ import {
   weaponSkillBonus,
   weaponSkillFor,
 } from '../../src/systems/CombatSystem';
+import { MAX_CHARACTER_LEVEL, combatSkillCap } from '../../src/config/constants';
+
+// What a character who has trained a combat skill as far as the game allows
+// holds. Both ceilings are sloped against it, so the tests below read it off
+// the cap rather than naming a number that moves when the cap does.
+const TOP_SKILL = combatSkillCap(MAX_CHARACTER_LEVEL);
 
 describe('resolveAttack', () => {
   it('returns base damage when rng lands exactly on the midpoint (no variance)', () => {
@@ -39,8 +45,10 @@ describe('resolveAttack', () => {
     // Skill 1 is where every new character starts: the level-1 combat curve
     // must not move, so this rounds back to the same number.
     expect(resolveAttack({ attackPower: 10, weaponSkillLevel: 1 }, () => 0.5).damage).toBe(10);
-    // A capped level 10 character is the other end of the range.
-    expect(resolveAttack({ attackPower: 100, weaponSkillLevel: 100 }, () => 0.5).damage).toBe(140);
+    // A capped character is the other end of the range.
+    expect(resolveAttack({ attackPower: 100, weaponSkillLevel: TOP_SKILL }, () => 0.5).damage).toBe(
+      140,
+    );
   });
 });
 
@@ -48,7 +56,19 @@ describe('weaponSkillBonus', () => {
   it('is neutral with no skill and grows linearly with it', () => {
     expect(weaponSkillBonus()).toBe(1);
     expect(weaponSkillBonus(0)).toBe(1);
-    expect(weaponSkillBonus(100)).toBeCloseTo(1.4);
+  });
+
+  // The point of sloping it against the cap rather than writing a rate: what a
+  // fully-trained character is worth is the same number whatever the cap is.
+  it('is worth exactly +40% to a capped character', () => {
+    expect(weaponSkillBonus(TOP_SKILL)).toBeCloseTo(1.4);
+  });
+
+  // A save made under the old level 10 cap carries combat skills past this one,
+  // and must not swing harder than the game says anyone can.
+  it('goes no further than that on a skill above the cap', () => {
+    expect(weaponSkillBonus(TOP_SKILL * 2)).toBeCloseTo(1.4);
+    expect(weaponSkillBonus(1000)).toBeCloseTo(1.4);
   });
 
   it('never goes below neutral on a nonsense level', () => {
@@ -68,9 +88,17 @@ describe('weaponSkillFor', () => {
 
 describe('avoidanceChance', () => {
   it('is negligible at level 1 and capped well short of immunity', () => {
-    expect(avoidanceChance(1)).toBeCloseTo(0.002);
-    expect(avoidanceChance(100)).toBe(0.2);
+    expect(avoidanceChance(1)).toBeCloseTo(0.005);
     expect(avoidanceChance(1000)).toBe(0.25);
+  });
+
+  // The finding this PR closes: the 25% ceiling wanted skill 125 and no cap the
+  // game has ever had let anyone reach it, so the number in the source
+  // described something impossible. Training a skill out is now worth what it
+  // claims to be worth.
+  it('reaches its ceiling exactly at the cap rather than short of it', () => {
+    expect(avoidanceChance(TOP_SKILL)).toBeCloseTo(0.25);
+    expect(avoidanceChance(TOP_SKILL - 1)).toBeLessThan(0.25);
   });
 });
 

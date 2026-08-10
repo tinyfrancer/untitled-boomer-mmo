@@ -3,6 +3,7 @@ import { nth } from '../nth';
 import type { ItemId } from '../../src/types/ids';
 import { harness } from './harness';
 import { COMBAT_LOG_EVENT, SET_TITLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
+import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 
 /**
  * Two-way combat, the aggro contract, and what a corpse is worth. All of it
@@ -131,7 +132,8 @@ describe('what a corpse is worth', () => {
  */
 describe('a bandit out of reach', () => {
   function kiting() {
-    const kit = harness({ zoneId: 'bandit-camp', level: 10 });
+    // Capped, so the kiting sequence plays out rather than ending in a death.
+    const kit = harness({ zoneId: 'bandit-camp', level: MAX_CHARACTER_LEVEL });
     const bandit = nth(kit.world.mobs, 0);
     kit.world.teleport(bandit.x - 200, bandit.y);
     kit.world.setTarget(bandit);

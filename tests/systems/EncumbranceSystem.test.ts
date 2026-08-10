@@ -45,8 +45,9 @@ describe('carryCapacity', () => {
   });
 
   // The tuning claim in the source: strength is a second job, not a second
-  // class system. A level 10 warrior (str 24) should roughly double, not dwarf,
-  // a level 10 wizard (str 1).
+  // class system. A geared warrior at the cap is str 17 against a wizard's 4, so
+  // 24 against 1 is comfortably wider than anything the game can produce — the
+  // bound holds with room, and keeps holding if a later cap widens the spread.
   it('keeps the strongest character within about double the weakest', () => {
     expect(carryCapacity(24) / carryCapacity(1)).toBeLessThan(2.2);
   });

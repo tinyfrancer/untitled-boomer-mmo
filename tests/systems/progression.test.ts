@@ -13,6 +13,9 @@ import { addXp, type LevelState } from '../../src/systems/LevelingSystem';
 import { addSkillXp, createInitialSkills, skillLevel } from '../../src/systems/SkillSystem';
 import { burnChance } from '../../src/systems/CookingSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
+import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
+import { xpToReachLevel } from '../../src/data/xpTable';
+import { ZONES } from '../../src/data/zones';
 import type { EnemyId, ItemId, LootTableId } from '../../src/types/ids';
 
 // The pacing contract for the starter arc, simulated rather than played: a
@@ -101,6 +104,36 @@ function levelAfter(xp: number): LevelState {
   return addXp({ level: 1, xp: 0 }, xp).state;
 }
 
+/** Total character XP from level 1 to the cap — the whole game, in XP. */
+function xpToCap(): number {
+  let total = 0;
+  for (let level = 2; level <= MAX_CHARACTER_LEVEL; level += 1) {
+    total += xpToReachLevel(level);
+  }
+  return total;
+}
+
+const everySpawn = () => Object.values(ZONES).flatMap((zone) => zone.mobSpawns);
+
+/**
+ * The best kill anyone can actually grind. A boss is one key-gated fight at the
+ * back of a locked zone, so counting a climb in chiefs would flatter it — the
+ * same reason the offline camp leaves them off the list it picks a quarry from.
+ */
+function richestRepeatableKillXp(): number {
+  return everySpawn()
+    .filter((spawn) => ENEMIES[spawn.enemyId].boss !== true)
+    .reduce(
+      (best, spawn) =>
+        Math.max(best, scaleEnemyStats(ENEMIES[spawn.enemyId], spawn.level).xpReward),
+      0,
+    );
+}
+
+/** The highest level the world actually puts in front of anyone. */
+const highestSpawnLevel = (): number =>
+  everySpawn().reduce((highest, spawn) => Math.max(highest, spawn.level), 0);
+
 describe('the starter arc', () => {
   const arc = intendedArc();
 
@@ -142,5 +175,41 @@ describe('the starter arc', () => {
     expect(arc.fishCooked).toBeGreaterThan(0);
     // Reaching the gate should be a detour, not a second grind.
     expect(arc.fishCooked).toBeLessThan(30);
+  });
+});
+
+// The cap is a claim about the content rather than about the curve: it says the
+// game has something for every level it offers. What follows is what makes that
+// claim checkable, and every line of it failed at the level 10 cap this
+// replaced — 30,720 XP and six levels past the hardest fight in the world.
+describe('the level cap', () => {
+  const arc = intendedArc();
+
+  it('reaches the top of what the world actually spawns, and stops just past it', () => {
+    expect(MAX_CHARACTER_LEVEL).toBeGreaterThanOrEqual(highestSpawnLevel());
+    expect(MAX_CHARACTER_LEVEL - highestSpawnLevel()).toBeLessThanOrEqual(1);
+  });
+
+  it('is past the end of the starter arc rather than reached by it', () => {
+    expect(levelAfter(arcXp(arc)).level).toBeLessThan(MAX_CHARACTER_LEVEL);
+  });
+
+  /**
+   * Max level should be an achievement, not an asymptote. The climb from where
+   * the two quests leave off is measured in the best thing there is to kill and
+   * held against the arc that got you there: more than the arc, so the cap is
+   * earned past the quests rather than fallen into, and a small multiple of it,
+   * so it is another session or two rather than another game.
+   *
+   * At the old cap it was ~950 bandits against an arc of 71 — thirteen times
+   * everything the player had done so far, for six levels with nothing in them.
+   */
+  it('is a session or two past the quests rather than an evening a level', () => {
+    const remaining = xpToCap() - arcXp(arc);
+    const kills = Math.ceil(remaining / richestRepeatableKillXp());
+    const arcKills = arc.ratKills + arc.crabKills + arc.banditKills;
+
+    expect(kills).toBeGreaterThan(arcKills * 0.5);
+    expect(kills).toBeLessThan(arcKills * 3);
   });
 });

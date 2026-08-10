@@ -6,7 +6,8 @@ import type { ItemId } from '../types/ids';
 // frailest wizard still leaves town with a working kit.
 const BASE_CARRY_CAPACITY = 70;
 // Deliberately gentle: it should be strength's second job, not a second class
-// system. A level 10 warrior roughly doubles a level 1 wizard, no more.
+// system. The strongest character the game can produce roughly doubles the
+// weakest, no more.
 const CAPACITY_PER_STRENGTH = 3;
 // Where the HUD starts warning — far enough ahead of full that a gather run
 // can be wrapped up rather than cut off mid-swing.

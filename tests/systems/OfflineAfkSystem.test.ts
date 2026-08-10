@@ -3,6 +3,7 @@ import {
   OFFLINE_CAP_MS,
   elapsedOfflineMs,
   formatAwayDuration,
+  offlineXpCeiling,
   resolveOfflineAfk,
 } from '../../src/systems/OfflineAfkSystem';
 import { AFK_XP_MULTIPLIER, afkXpReward } from '../../src/systems/AfkSystem';
@@ -91,9 +92,10 @@ describe('resolveOfflineAfk', () => {
   });
 
   // The ceiling that keeps the whole feature honest. Without it, eight hours
-  // at the bandit camp paid 20,520 xp — more than seven times the entire
-  // level 1-10 curve.
-  it('is worth at most one level, however long the session and however rich the zone', () => {
+  // at the bandit camp paid 20,520 xp — more than seven times the whole level
+  // curve. It is a share of a level rather than a level because the cap moved:
+  // against five levels a whole one is nearly half the game.
+  it('is worth at most a share of a level, however long the session and however rich the zone', () => {
     for (const [level, zoneId] of [
       [1, 'town'],
       [1, 'bandit-camp'],
@@ -104,7 +106,9 @@ describe('resolveOfflineAfk', () => {
         sessionStartedAgo(OFFLINE_CAP_MS, zoneId),
         context({ characterLevel: level }),
       );
-      expect(report.xp).toBeLessThanOrEqual(xpToReachLevel(level + 1));
+      expect(report.xp).toBeLessThanOrEqual(offlineXpCeiling(level));
+      // And short of the level itself, which is what changed here.
+      expect(report.xp).toBeLessThan(xpToReachLevel(level + 1));
     }
   });
 
