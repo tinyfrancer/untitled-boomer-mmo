@@ -6,9 +6,10 @@ import {
   MeshLambertMaterial,
   SphereGeometry,
 } from 'three';
+import { TILE_SIZE } from '../config/constants';
 import { stickFigure } from '../systems/AppearanceSystem';
 import { FIGURE_HEIGHT, buildFigure, type Figure } from './figure';
-import { CREATURE_LOOKS, PALETTE, type BeastLook, type PersonLook } from './palette';
+import { CREATURE_LOOKS, PALETTE, humanoidLook, type BeastLook, type PersonLook } from './palette';
 import type { EnemyDefinition } from '../data/enemies';
 
 /**
@@ -31,7 +32,7 @@ export function buildCreature(definition: EnemyDefinition): Figure {
     case 'crustacean':
       return buildCrustacean(definition, CREATURE_LOOKS.crustacean);
     case 'humanoid':
-      return buildHumanoid(CREATURE_LOOKS.humanoid);
+      return buildHumanoid(definition, humanoidLook(definition.id));
   }
 }
 
@@ -125,10 +126,20 @@ function buildCrustacean(definition: EnemyDefinition, look: BeastLook): Figure {
   return bobbing(group, height * 1.5, height * 0.08);
 }
 
-/** A person, in outlaw colours, with the bandana the rig has no room for. */
-function buildHumanoid(look: PersonLook): Figure {
-  const figure = buildFigure(look.appearance);
-  const rig = stickFigure(FIGURE_HEIGHT);
+/**
+ * A person, in outlaw colours, with the bandana the rig has no room for — at
+ * the size its body says it is.
+ *
+ * Everyone drawn this way stood exactly `FIGURE_HEIGHT` tall while there was
+ * one of them; the height comes off the collision footprint now, so a creature
+ * that takes up half again the room a bandit does looks it. Same direction as
+ * everything else here: how big it is decides how big it looks, never the other
+ * way round.
+ */
+function buildHumanoid(definition: EnemyDefinition, look: PersonLook): Figure {
+  const size = FIGURE_HEIGHT * (definition.body.width / TILE_SIZE);
+  const figure = buildFigure(look.appearance, size);
+  const rig = stickFigure(size);
   const mask = new Mesh(
     new BoxGeometry(rig.headRadius * 1.7, rig.headRadius * 0.75, rig.headRadius * 1.7),
     new MeshLambertMaterial({ color: look.mask }),

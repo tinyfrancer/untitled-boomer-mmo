@@ -51,4 +51,22 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     // Humanoids carry coin; the beasts above never do.
     currency: { min: 8, max: 25, chance: 0.9 },
   },
+  /**
+   * The only table in the game whose contents come off nothing else.
+   *
+   * The bandana always drops, because a fight this long has to be worth
+   * something every time and it is the one piece both classes can wear. The two
+   * weapons are the chase, and there are two of them so the run is worth making
+   * whoever you rolled — a warrior selling a wand is still selling 150 copper.
+   */
+  'bandit-chief': {
+    id: 'bandit-chief',
+    entries: [
+      { itemId: 'cutthroats-bandana', chance: 1 },
+      { itemId: 'cutthroats-blade', chance: 0.2 },
+      { itemId: 'stolen-wand', chance: 0.2 },
+    ],
+    // A chief's purse: several times what the men outside are carrying.
+    currency: { min: 60, max: 120, chance: 1 },
+  },
 };

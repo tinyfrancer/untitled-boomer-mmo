@@ -14,7 +14,9 @@ a weight-limited pack; two collection quests from the shopkeeper; slayer achieve
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
 mobile-first HUD; and local save/load with versioned migrations. Every zone is level 1-3 starter
 content — what separates them is what they drop, not how hard they are, and the hideout is gated by
-a rare key rather than by a level.
+a rare key rather than by a level. The one exception is the named mob at the back of it, who is
+level 4, carries the only loot in the game that comes off a single creature, and is the fight
+everything else is the run-up to.
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
@@ -504,7 +506,13 @@ should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numb
 **The renderer is on the far side of that too**: an `EnemyDefinition` names a
 `shape` (`quadruped | crustacean | humanoid`) and `render3d/creatures.ts` switches on _that_, so a
 new row picks a body it is drawn with rather than waiting for a builder written for its id. Colour
-stays the renderer's, keyed by the same shape in `render3d/palette.ts`.
+stays the renderer's, keyed by the same shape in `render3d/palette.ts` — with one exception the
+table always said would come: `CREATURE_OVERRIDES` there keys a look to an `EnemyId`, for a second
+humanoid who is not the same man as the first. A named mob standing in a room full of its own men
+is precisely the case where sharing a shape's colour is wrong. **How big a person is drawn comes
+off the body too**: `buildHumanoid` scales the rig by `body.width / TILE_SIZE`, so the chief takes
+up half again the room a bandit does and looks it, in the same direction everything else here runs
+— what it _is_ decides what it looks like, never the other way round.
 
 **Only humanoids drop gear and coin.** `EnemyDefinition.family` is `beast | humanoid`, and it is
 what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by
@@ -513,7 +521,10 @@ makes same-level zones worth visiting: rats give quest parts, crabs give food, b
 gear and coin. The bandit table carries **both** armor types on purpose: the shop sells tools
 only, so that table plus the two class-keyed quest rewards is the whole of anyone's armor supply.
 It also carries the hideout key at 3%, which is the rarest thing on any table by a distance and is
-meant to be a run of bandits rather than an errand.
+meant to be a run of bandits rather than an errand. The chief's table is the other end of the same
+idea: the trophy always drops because a fight that long has to be worth something every time, and
+it is cloth so it fits either class, while the two weapons behind it are the chase — one per class,
+so the run is worth making whoever you rolled.
 
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
 only `active | done` per quest; how far along a "bring me N of X" objective is gets counted off the
@@ -618,14 +629,32 @@ honoured offline too — parking overnight is not a way past a gate.
 `computeEffectiveStats(classId, gear, level)`. Keep those in step — making enemies tougher
 without giving characters growth (or vice versa) silently breaks the difficulty curve. Enemy
 name colors come from `conColor()` in `systems/EnemySystem.ts`: gray/green below the player,
-white even, yellow +1, red +2 and up. With every zone in the 1-3 band that spans only three
-shades today — expected, not a bug, and it comes back the moment a higher zone is added.
+white even, yellow +1, red +2 and up. Every zone sits in the 1-3 band except the chief at the back
+of the hideout, who is level 4 and is what makes the top of that scale reachable at all.
 
 Combat tuning is deliberate, not arbitrary: a fresh level 1 character should beat a level 1 rat
 comfortably, sweat against a level 2, and lose to a level 3. If you change class stats, weapon
 bonuses, or enemy growth, re-check that curve — simulating duels across the level range is much
 faster than playing it. Crabs are long fights rather than dangerous ones; the bandit camp is
 gated on gear rather than on level, which is the point given it is where gear comes from.
+
+**The chief is the one fight gated on the level rather than the kit** (`bandit-chief` in
+`ENEMIES`). A level 3 in what the camp outside drops takes him and a level 2 in the same gear does
+not, which is the whole difference between the hideout and everywhere else. He is slow and heavy
+rather than fast and sharp — a bandit's damage at not much over half its swing rate, on four times
+the HP — so the fight lasts long enough for a cooldown, a meal, or running away, and the duels in
+`tests/systems/EnemySystem.test.ts` are what hold that. Those model a warrior trading blows, which
+is what every duel here models; a wizard's answer to 80 units of reach and a chase slower than they
+walk is not to stand in it, and no arithmetic about swapping hits describes that.
+
+**A boss is a named mob, and `boss: true` is a rule rather than a label.** An unattended camp never
+_picks_ a fight with one — `decideAfkAction` filters it out of what is in reach and `campQuarry`
+leaves it off the offline list — because a night parked beside him would mint sixty of the only
+loot in the game that comes off one creature. It is still answered once it engages: something
+already chasing an AFK character is arriving whether or not the camp chose it. His table is the one
+place `cutthroats-bandana`, `cutthroats-blade` and `stolen-wand` exist, and
+`tests/systems/uniqueLoot.test.ts` holds that over the data — uniqueness is nothing but every other
+table not naming them, which is exactly what stops being true the day someone pads one.
 
 **Pacing is held by a simulation, not by judgement** (`tests/systems/progression.test.ts`). It
 walks the arc the two quests push a player down — rat kills for the bones, fish cooked to open the

@@ -134,6 +134,23 @@ describe('resolveOfflineAfk', () => {
     expect(resolveOfflineAfk(sessionStartedAgo(HOUR_MS, 'beach'), context()).enemyId).toBe('crab');
   });
 
+  /**
+   * A night parked in the hideout is a night of bandits, whatever level the
+   * character is. The awake camp refuses to pick a boss for the same reason:
+   * sixty offline kills would empty a table meant to be run for, and the drop
+   * that made the trip worth making would arrive in a stack.
+   */
+  it('grinds the hideout bandits rather than the chief, at every level', () => {
+    for (const characterLevel of [1, 3, 4, 6]) {
+      const report = resolveOfflineAfk(
+        sessionStartedAgo(OFFLINE_CAP_MS, 'bandit-hideout'),
+        context({ characterLevel }),
+      );
+      expect(report.enemyId, `parked at level ${characterLevel}`).toBe('bandit');
+      expect(Object.keys(report.drops)).not.toContain('cutthroats-bandana');
+    }
+  });
+
   it('names no creature when nothing died', () => {
     const report = resolveOfflineAfk(sessionStartedAgo(1000), context());
     expect(report.kills).toBe(0);

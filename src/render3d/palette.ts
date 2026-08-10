@@ -1,5 +1,10 @@
-import { BANDIT_MASK_COLOR, NPC_APPEARANCES, type Appearance } from '../systems/AppearanceSystem';
-import type { CreatureShapeId } from '../types/ids';
+import {
+  BANDIT_MASK_COLOR,
+  CHIEF_MASK_COLOR,
+  NPC_APPEARANCES,
+  type Appearance,
+} from '../systems/AppearanceSystem';
+import type { CreatureShapeId, EnemyId } from '../types/ids';
 
 /**
  * The colours the placeholder primitives are made of.
@@ -63,3 +68,21 @@ export const CREATURE_LOOKS = {
   crustacean: { body: 0xd84315, limb: 0xbf360c },
   humanoid: { appearance: NPC_APPEARANCES.bandit, mask: BANDIT_MASK_COLOR },
 } satisfies Record<CreatureShapeId, BeastLook | PersonLook>;
+
+/**
+ * A look that belongs to one creature rather than to its shape.
+ *
+ * The shape is the default and stays the rule — it is what lets a new `ENEMIES`
+ * row be drawn with no view code written for it. This is the exception the
+ * table above always said would come: a second humanoid that is not the same
+ * man as the first. A named mob standing in a room full of its own men is
+ * exactly the case where sharing a shape's colour is wrong.
+ */
+const CREATURE_OVERRIDES: Partial<Record<EnemyId, PersonLook>> = {
+  'bandit-chief': { appearance: NPC_APPEARANCES['bandit-chief'], mask: CHIEF_MASK_COLOR },
+};
+
+/** What to draw a person-shaped creature in: its own look, or its shape's. */
+export function humanoidLook(enemyId: EnemyId): PersonLook {
+  return CREATURE_OVERRIDES[enemyId] ?? CREATURE_LOOKS.humanoid;
+}

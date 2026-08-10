@@ -27,14 +27,19 @@ export type ItemId =
   | 'crab-meat'
   | 'cooked-crab'
   | 'burnt-crab'
-  | 'hideout-key';
+  | 'hideout-key'
+  // The three the chief carries, and the only things in the game that come off
+  // one creature. Nothing sells them and nothing else drops them.
+  | 'cutthroats-bandana'
+  | 'cutthroats-blade'
+  | 'stolen-wand';
 
 // Recipes are keyed by what goes in the pan, so a recipe id is the id of a raw
 // item. Spelling that as a subset of ItemId rather than as its own list is what
 // lets recipeForInput narrow an arbitrary item down to a recipe without a cast.
 export type RecipeId = Extract<ItemId, 'raw-fish' | 'crab-meat'>;
 
-export type EnemyId = 'rat' | 'crab' | 'bandit';
+export type EnemyId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
 
 // What an enemy is, which is what decides what it can carry: humanoids have
 // pockets and wear gear, beasts drop the parts they are made of.
@@ -49,7 +54,7 @@ export type CreatureShapeId = 'quadruped' | 'crustacean' | 'humanoid';
 // One per creature that drops anything. Its own union rather than EnemyId: what
 // a table is called is a fact about the table, and two creatures sharing one is
 // a decision LOOT_TABLES should be free to make.
-export type LootTableId = 'rat' | 'crab' | 'bandit';
+export type LootTableId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
 

@@ -128,6 +128,54 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     attackRange: 200,
     attackPowerBonus: 2,
   },
+  /**
+   * The three off the chief, and the best of each kind in the game.
+   *
+   * They are the only reason to fight something that takes half a minute and
+   * respawns on a timer, so they have to beat what the camp outside drops by a
+   * margin worth the walk — and they are worth real coin, which is what makes a
+   * second bandana something other than dead weight. The bandana is cloth on
+   * purpose: it is the one piece here both classes can wear, so the trophy is
+   * the same trophy whoever took it.
+   */
+  'cutthroats-bandana': {
+    id: 'cutthroats-bandana',
+    name: "Cutthroat's Bandana",
+    value: 120,
+    weight: 1,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: 0x8e1c1c,
+    armorType: 'cloth',
+    healthBonus: 5,
+  },
+  'cutthroats-blade': {
+    id: 'cutthroats-blade',
+    name: "Cutthroat's Blade",
+    value: 150,
+    weight: 4,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0xcfd8dc,
+    weaponShape: 'sword',
+    attackPowerBonus: 6,
+    strengthBonus: 1,
+  },
+  // Taken off someone the chief robbed, which is the only reason a bandit is
+  // holding one — and the only weapon upgrade a caster has ever had.
+  'stolen-wand': {
+    id: 'stolen-wand',
+    name: 'Stolen Wand',
+    value: 150,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0x7e57c2,
+    weaponShape: 'wand',
+    attackRange: 220,
+    attackPowerBonus: 4,
+    intellectBonus: 2,
+  },
   // The one item that is not worth anything and cannot be sold: it opens a door
   // once and is gone, so a vendor price would only ever be a trap.
   'hideout-key': {

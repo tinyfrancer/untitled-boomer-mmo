@@ -34,6 +34,9 @@ export interface AfkCandidate {
   alive: boolean;
   // Whether it is already chasing the player, rather than merely nearby.
   engaged: boolean;
+  // A named mob, which an unattended character never starts a fight with. It
+  // still has to be answered once it starts one.
+  boss?: boolean;
 }
 
 export interface AfkHealth {
@@ -126,6 +129,10 @@ export function chooseAfkNode(
  * them is answered whatever their health or its distance — it is coming
  * regardless, and ignoring it is how an AFK character dies. Only with nothing
  * on them is resting an option.
+ *
+ * A boss is the one thing never *picked*, only answered. It is where the unique
+ * loot is, and a camp that ground one down overnight would turn a drop worth
+ * making the trip for into a stack of them.
  */
 export function decideAfkAction(
   candidates: AfkCandidate[],
@@ -145,7 +152,7 @@ export function decideAfkAction(
     return { kind: 'recover' };
   }
 
-  const inReach = living.filter((candidate) => candidate.distance <= radius);
+  const inReach = living.filter((candidate) => candidate.distance <= radius && !candidate.boss);
   if (inReach.length === 0) {
     return { kind: 'idle' };
   }

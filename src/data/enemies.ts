@@ -40,6 +40,16 @@ export interface EnemyDefinition {
   body: BodySize;
   // Whether the enemy opens combat on its own; rats only ever retaliate.
   aggressive: boolean;
+  /**
+   * A named mob: one of a kind, on a long respawn, and never what an unattended
+   * camp picks a fight with.
+   *
+   * That last part is the load-bearing half. A boss is where the unique loot
+   * is, and a night of offline kills would mint sixty of whatever it carries —
+   * so `AfkSystem` leaves one alone unless it has already engaged, which is the
+   * one case an AFK character has no choice about.
+   */
+  boss?: boolean;
   // How close a wandering aggressive enemy lets the player get before
   // attacking. Only read when aggressive is true.
   aggroRadius?: number;
@@ -136,6 +146,50 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
       minPauseMs: 1200,
       maxPauseMs: 3000,
       speed: 90,
+    },
+  },
+  'bandit-chief': {
+    id: 'bandit-chief',
+    name: 'Hollis the Cutthroat',
+    family: 'humanoid',
+    shape: 'humanoid',
+    // Half again the size of the men he leads, and drawn from this rather than
+    // the other way round: `render3d/creatures.ts` scales the figure by how
+    // wide the body is, so being bigger is a fact about the creature.
+    body: { width: TILE_SIZE * 1.4, height: TILE_SIZE * 1.4 },
+    aggressive: true,
+    // Wider than a bandit's, and the room he stands in is wider still: walking
+    // into the chamber is not walking into him.
+    aggroRadius: 220,
+    boss: true,
+    /**
+     * The one fight in the game a level 3 character can only just win, and the
+     * only thing above the 1-3 band anywhere.
+     *
+     * Slow and heavy rather than fast and sharp: he swings at not much over
+     * half a bandit's rate and takes half a minute to chew through, which is
+     * what leaves room for a cooldown, a meal, or running away. The curve is
+     * written so he is already the hardest thing in the game at level 1 — he
+     * only ever spawns at 4, but a boss placed anywhere else should still read
+     * as one.
+     */
+    base: { maxHp: 70, attackPower: 7, xpReward: 55 },
+    perLevel: { maxHp: 20, attackPower: 1, xpReward: 20 },
+    attackRange: 80,
+    attackCooldownMs: 2200,
+    // Long enough that killing him is an occasion rather than a rotation, and
+    // short enough to try again after a wipe without leaving the zone.
+    respawnDelayMs: 45000,
+    leashRadius: 420,
+    chaseSpeed: 190,
+    lootTableId: 'bandit-chief',
+    // Barely moves. He is what the room is for, and a boss that wandered into
+    // the corridor would be pulled one bandit at a time from the doorway.
+    wander: {
+      radius: 64,
+      minPauseMs: 2500,
+      maxPauseMs: 5000,
+      speed: 70,
     },
   },
 };

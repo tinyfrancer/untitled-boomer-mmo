@@ -9,8 +9,8 @@ Each PR stands alone — it ships green, with no dead buttons and no half-wired 
 | #   | PR                                              | State             |
 | --- | ----------------------------------------------- | ----------------- |
 | 1   | Zones as a graph, and travel from the world map | merged 2026-08-09 |
-| 2   | Locked zones, the key, and the Bandit Hideout   | in review         |
-| 3   | The boss and its unique loot                    | not started       |
+| 2   | Locked zones, the key, and the Bandit Hideout   | merged 2026-08-09 |
+| 3   | The boss and its unique loot                    | in review         |
 | 4   | Cast times, and what interrupts them            | not started       |
 | 5   | Enemy abilities                                 | not started       |
 
@@ -46,3 +46,23 @@ its own `mobSpawns`.
 
 Travel is what the zoomed-out view is for: tap a zone to go there. Not in combat, which is the one
 rule that keeps it from being an escape hatch out of a fight the player is losing.
+
+## 3 — The boss and its unique loot
+
+Hollis the Cutthroat, level 4, at the back of the hideout chamber: the only thing anywhere above
+the 1-3 band, and the first fight gated on the level rather than on the kit. A level 3 in what the
+camp outside drops takes him; a level 2 in the same gear does not.
+
+He is slow and heavy rather than fast and sharp — a bandit's damage at not much over half its swing
+rate, on four times the HP — so the fight runs long enough for a cooldown, a meal, or a retreat.
+Drawn from the same data: the figure is scaled by `body.width / TILE_SIZE`, and he is the first
+creature to take a look of his own rather than his shape's.
+
+Three items exist on his table and nowhere else. The bandana always drops and is cloth, so the
+trophy is the same trophy whoever took it; the blade and the stolen wand are the chase, one per
+class. Uniqueness is not a flag — it is every other table not naming them, which is what
+`tests/systems/uniqueLoot.test.ts` is for.
+
+`boss: true` is a rule rather than a label: an unattended camp never picks a fight with one, awake
+or offline, because a night parked beside him would mint sixty of the only loot in the game worth
+making a trip for. It is still answered once it engages.
