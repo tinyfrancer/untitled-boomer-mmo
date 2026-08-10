@@ -2179,10 +2179,31 @@ async function reset() {
   // a disabled button is not clickable.
   await step(3);
   await page.click('.hud-ability__key[data-ability="fireball"]');
+  // The bar the spell is cast behind, which only a real DOM can be asked about:
+  // it is shown on the press and gone once the spell goes off.
   await step(1);
+  const channel = await page.evaluate(() => {
+    const bar = document.querySelector('.hud-channel');
+    const fill = document.querySelector('.hud-channel .hud-bar__fill');
+    return {
+      shown: bar !== null && !bar.classList.contains('hud-hidden'),
+      label: document.querySelector('.hud-channel__label')?.textContent ?? '',
+      box: bar?.getBoundingClientRect().width ?? 0,
+      fill: /** @type {HTMLElement | null} */ (fill)?.style.width ?? '',
+    };
+  });
+  check(
+    'a spell with a cast time puts a bar on screen while it is being cast',
+    channel.shown && channel.label === 'Fireball' && channel.box > 0,
+    `"${channel.label}" bar ${Math.round(channel.box)}px wide, filled to ${channel.fill}`,
+  );
+  await page.screenshot({ path: `${OUT}/26-casting.png` });
+
+  // Standing still for the whole cast, which is the only way one lands.
+  await step(Math.ceil(1400 / FRAME_MS) + 2);
   const cast = await page.evaluate(() => window.view.drawnCounts().fx);
   check(
-    'a real cast draws itself — a bolt in flight, or a fizzle over the caster',
+    'and the cast lands when the clock runs out — a bolt in flight, or a fizzle',
     cast > 0,
     `${cast} effect(s) in flight`,
   );

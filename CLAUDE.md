@@ -209,7 +209,8 @@ add to it:
 
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
-the pan, the food), `AbilityCaster`, `AfkCamp`, `ShopSession`, `QuestDesk`, `ContextMenuSession`
+the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
+through), `AfkCamp`, `ShopSession`, `QuestDesk`, `ContextMenuSession`
 (what a press held is about, and what was chosen from it), and `ApproachDriver`
 (the two click-to-move walks). Each owns its own state, is constructed by `ZoneWorld` and reaches
 the rest of the zone through two things and no others: the `WorldContext` they all share — the
@@ -582,6 +583,29 @@ onto a tree freezes it there for good), and the world-bounds clamp uses the name
 `PLAYER_HALF_EXTENT`, which **must stay below `EXIT_MARGIN`** — the clamp stops the player exactly
 that far from the edge, so a half-extent that grew past the margin would silently stop zone
 transitions firing with nothing to show for it.
+
+**A cast time is a window in which standing still is the whole cost**
+(`AbilityDefinition.castTimeMs`, run by `AbilityCaster`). Mana and the cooldown are spent at the
+press and the spell is resolved later, so an interrupted cast costs everything and delivers
+nothing — the same bargain the fizzle already makes, and what gives the window its weight. What is
+decided at the _end_ is deliberately a different list from what is committed at the start: whether
+it fizzles, and whether the target is still in reach, because both are questions about the moment
+it lands. Nothing is paid in damage anywhere — the auto-attack keeps swinging through a cast — so
+the cost is the window itself.
+
+Two things break one. **Moving** does, and the caster reads that off the player rather than being
+told, so every way there is to move (a key, a tap, a walk already under way) breaks a cast without
+knowing one exists; starting one while already walking is refused up front instead, since a spell
+that could never finish should not take the mana with it. **Being hurt** does, which is not the
+same as being hit: a blow the mana shield eats leaves the cast standing, and that is the second
+thing the shield is for — without it a caster in melee could never finish a spell, and with it
+standing your ground is a decision rather than a mistake. Only the nuke has a cast time; the shield
+is instant on purpose, being the thing you press once you are already in trouble.
+
+**A gather and a cast share one bar** (`hud/ChannelBar.ts`, on the `channel-*` events). They are the
+same shape — something you are in the middle of, with a duration and something that can break it —
+and they can never both be running, since casting stops a gather and a hit breaks either. One
+widget rather than two stacked in the same place.
 
 **AFK play must stay behind active play** (`systems/AfkSystem.ts`, `systems/OfflineAfkSystem.ts`).
 Two mechanisms hold that, and both matter: the AFK loop never uses an ability, so the action bar

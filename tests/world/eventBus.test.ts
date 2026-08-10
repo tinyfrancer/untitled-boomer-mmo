@@ -64,9 +64,9 @@ describe('createEventBus', () => {
   it('does not deliver an event to a listener added while it is being delivered', () => {
     const bus = createEventBus();
     const late = vi.fn();
-    bus.on('gather-ended', () => bus.on('gather-ended', late));
+    bus.on('channel-ended', () => bus.on('channel-ended', late));
 
-    bus.emit('gather-ended');
+    bus.emit('channel-ended');
 
     expect(late).not.toHaveBeenCalled();
   });

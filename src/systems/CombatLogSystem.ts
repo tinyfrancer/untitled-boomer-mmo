@@ -55,6 +55,14 @@ export function logAbilityUsed(abilityName: string): CombatLogEntry {
   return { text: `You cast ${abilityName}.`, color: THEME.color.muted };
 }
 
+export function logCastStarted(abilityName: string): CombatLogEntry {
+  return { text: `You begin casting ${abilityName}.`, color: THEME.color.muted };
+}
+
+export function logCastInterrupted(abilityName: string): CombatLogEntry {
+  return { text: `Your ${abilityName} is interrupted.`, color: THEME.color.playerDamage };
+}
+
 export function logSpellFailed(abilityName: string): CombatLogEntry {
   return { text: `Your ${abilityName} fizzles.`, color: THEME.color.dim };
 }

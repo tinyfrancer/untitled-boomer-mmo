@@ -44,14 +44,14 @@ export const MAX_TRACKED_QUESTS = 2;
 // enough to clear the figure — the announcement above them, the channel bar
 // below.
 const TOAST_ABOVE_CENTRE = 80;
-const GATHER_BAR_BELOW_CENTRE = 60;
+const CHANNEL_BAR_BELOW_CENTRE = 60;
 
 export function toastTop(viewportHeight: number): number {
   return Math.round(viewportHeight / 2 - TOAST_ABOVE_CENTRE);
 }
 
-export function gatherBarTop(viewportHeight: number): number {
-  return Math.round(viewportHeight / 2 + GATHER_BAR_BELOW_CENTRE);
+export function channelBarTop(viewportHeight: number): number {
+  return Math.round(viewportHeight / 2 + CHANNEL_BAR_BELOW_CENTRE);
 }
 
 export interface HudLayout {

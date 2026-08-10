@@ -10,8 +10,8 @@ Each PR stands alone — it ships green, with no dead buttons and no half-wired 
 | --- | ----------------------------------------------- | ----------------- |
 | 1   | Zones as a graph, and travel from the world map | merged 2026-08-09 |
 | 2   | Locked zones, the key, and the Bandit Hideout   | merged 2026-08-09 |
-| 3   | The boss and its unique loot                    | in review         |
-| 4   | Cast times, and what interrupts them            | not started       |
+| 3   | The boss and its unique loot                    | merged 2026-08-10 |
+| 4   | Cast times, and what interrupts them            | in review         |
 | 5   | Enemy abilities                                 | not started       |
 
 ## The decision behind all of it: zones, not one continuous world
@@ -66,3 +66,21 @@ class. Uniqueness is not a flag — it is every other table not naming them, whi
 `boss: true` is a rule rather than a label: an unattended camp never picks a fight with one, awake
 or offline, because a night parked beside him would mint sixty of the only loot in the game worth
 making a trip for. It is still answered once it engages.
+
+## 4 — Cast times, and what interrupts them
+
+`castTimeMs` on an ability, run by `AbilityCaster` off the tick. Fireball takes 1400ms; Mana Shield
+stays instant, being the thing you press once you are already in trouble, and both physical
+abilities are instant because they are swings.
+
+Everything is committed at the press — mana, cooldown — and resolved at the end, so an interrupted
+cast costs the lot and delivers nothing. That is the same bargain the fizzle already made, and it
+is what gives the window weight. The fizzle roll and the range check both move to the end, because
+both are questions about the moment the spell lands.
+
+Moving breaks a cast, read off the player rather than pushed in, so every way there is to move
+breaks one without knowing a cast exists. Being _hurt_ breaks one — a hit the mana shield eats does
+not, which is the second thing the shield is for.
+
+The gather bar became the channel bar in the commit before, since a gather and a cast are the same
+shape and can never both be running.

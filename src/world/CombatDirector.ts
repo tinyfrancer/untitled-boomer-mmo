@@ -42,6 +42,14 @@ export interface CombatDirectorDeps {
   /** Being hit breaks a gather channel, whoever was swinging. */
   interruptGather(): void;
   /**
+   * Being *hurt* breaks a cast, which is not the same thing.
+   *
+   * A hit the mana shield eats leaves the cast standing, and that is the second
+   * thing the shield is for: without it a caster in melee could never finish a
+   * spell, and with it standing your ground is a decision rather than a mistake.
+   */
+  interruptCast(): void;
+  /**
    * Dying stops everything else the session was doing and may hand the player
    * to another zone, so the world takes it from here.
    */
@@ -205,6 +213,7 @@ export class CombatDirector {
       }
       if (damage > absorbed) {
         this.ctx.log(logDamageTaken(mob.name, damage - absorbed));
+        this.deps.interruptCast();
       }
       this.deps.interruptGather();
 

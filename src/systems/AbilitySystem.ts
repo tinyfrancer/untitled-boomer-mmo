@@ -23,6 +23,10 @@ export interface AbilityContext {
   elapsedMs: number;
   hasTarget: boolean;
   targetDistance: number;
+  // Whether the player is on the move, and whether something is already being
+  // cast. Both only rule anything out for a spell with a cast time to spend.
+  moving?: boolean;
+  casting?: boolean;
 }
 
 /** Whether the ability can be cast right now, and what to say if not. */
@@ -41,6 +45,15 @@ export function canUseAbility(ability: AbilityDefinition, context: AbilityContex
     if (context.targetDistance > ability.range) {
       return { ok: false, reason: 'Your target is too far away.' };
     }
+  }
+  // Refused up front rather than begun and broken on the next frame: starting a
+  // cast while already walking would spend the mana and the cooldown on a spell
+  // that could never finish, which reads as the button being broken.
+  if (ability.castTimeMs > 0 && context.moving) {
+    return { ok: false, reason: 'You cannot cast while moving.' };
+  }
+  if (context.casting) {
+    return { ok: false, reason: 'You are already casting.' };
   }
   return { ok: true };
 }

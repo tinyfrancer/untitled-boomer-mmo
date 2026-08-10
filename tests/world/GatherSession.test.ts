@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { FIRE_COOK_RADIUS } from '../../src/data/recipes';
 import {
-  GATHER_ENDED_EVENT,
-  GATHER_STARTED_EVENT,
+  CHANNEL_ENDED_EVENT,
+  CHANNEL_STARTED_EVENT,
   INVENTORY_CHANGED_EVENT,
   NOTICE_EVENT,
 } from '../../src/ui/uiEvents';
@@ -41,7 +41,7 @@ describe('the channel', () => {
     gathering.start(treeAt(0, 0));
 
     expect(gathering.state).toBeNull();
-    expect(emissions(GATHER_STARTED_EVENT)).toHaveLength(0);
+    expect(emissions(CHANNEL_STARTED_EVENT)).toHaveLength(0);
     expect(emissions(NOTICE_EVENT)).toHaveLength(1);
   });
 
@@ -86,7 +86,7 @@ describe('the channel', () => {
 
     expect(gathering.state).toBeNull();
     expect(emissions(NOTICE_EVENT)).toEqual([['You are interrupted!']]);
-    expect(emissions(GATHER_ENDED_EVENT)).toHaveLength(1);
+    expect(emissions(CHANNEL_ENDED_EVENT)).toHaveLength(1);
   });
 });
 
