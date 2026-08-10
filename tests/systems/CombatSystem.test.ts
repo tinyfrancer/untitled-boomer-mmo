@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
+import { ENEMIES } from '../../src/data/enemies';
 import {
   approachRange,
   avoidanceChance,
+  critChance,
   damageReduction,
+  enemyAvoids,
   isCooldownReady,
   isInRange,
   mitigatedDamage,
@@ -47,12 +50,35 @@ describe('resolveAttack', () => {
 
   it('hits harder with weapon skill, but barely at the level a fresh character has', () => {
     // Skill 1 is where every new character starts: the level-1 combat curve
-    // must not move, so this rounds back to the same number.
+    // must not move, so this rounds back to the same number. 0.5 is the
+    // no-variance midpoint and is above any crit chance, so neither roll fires.
     expect(resolveAttack({ attackPower: 10, weaponSkillLevel: 1 }, () => 0.5).damage).toBe(10);
-    // A capped character is the other end of the range.
-    expect(resolveAttack({ attackPower: 100, weaponSkillLevel: TOP_SKILL }, () => 0.5).damage).toBe(
-      140,
+    // A capped character, on a swing that did not crit: the flat half alone.
+    expect(resolveAttack({ attackPower: 100, weaponSkillLevel: TOP_SKILL }, () => 0.5)).toEqual({
+      damage: 117,
+      crit: false,
+    });
+  });
+
+  /**
+   * The half that makes training felt. A crit is a moment where a multiplier is
+   * not — which is the whole reason part of the same budget moved here.
+   */
+  it('doubles a swing that lands hard, and says that it did', () => {
+    // Below the crit chance on the second roll and at the midpoint on the first.
+    const rolls = [0.5, 0];
+    const hard = resolveAttack(
+      { attackPower: 100, weaponSkillLevel: TOP_SKILL },
+      () => rolls.shift() ?? 0.5,
     );
+
+    expect(hard.crit).toBe(true);
+    expect(hard.damage).toBe(233);
+  });
+
+  it('never crits for something with no weapon skill at all', () => {
+    const mob = resolveAttack({ attackPower: 100 }, () => 0);
+    expect(mob.crit).toBe(false);
   });
 });
 
@@ -62,17 +88,27 @@ describe('weaponSkillBonus', () => {
     expect(weaponSkillBonus(0)).toBe(1);
   });
 
-  // The point of sloping it against the cap rather than writing a rate: what a
-  // fully-trained character is worth is the same number whatever the cap is.
-  it('is worth exactly +40% to a capped character', () => {
-    expect(weaponSkillBonus(TOP_SKILL)).toBeCloseTo(1.4);
+  /**
+   * The budget is still +40% at cap; what moved is how it is *paid*. Part of it
+   * is a chance to land hard now, so the flat half alone is worth less and the
+   * two together are worth exactly what the one used to be — which is the whole
+   * claim of the change, and the reason the flat part is derived rather than
+   * written down.
+   */
+  it('still averages exactly +40% to a capped character, crits included', () => {
+    const flat = weaponSkillBonus(TOP_SKILL);
+    const averageWithCrits = flat * (1 + critChance(TOP_SKILL));
+
+    expect(flat).toBeLessThan(1.4);
+    expect(averageWithCrits).toBeCloseTo(1.4);
   });
 
   // A save made under the old level 10 cap carries combat skills past this one,
-  // and must not swing harder than the game says anyone can.
+  // and must not swing harder than the game says anyone can — on either half.
   it('goes no further than that on a skill above the cap', () => {
-    expect(weaponSkillBonus(TOP_SKILL * 2)).toBeCloseTo(1.4);
-    expect(weaponSkillBonus(1000)).toBeCloseTo(1.4);
+    expect(weaponSkillBonus(TOP_SKILL * 2)).toBeCloseTo(weaponSkillBonus(TOP_SKILL));
+    expect(critChance(TOP_SKILL * 2)).toBeCloseTo(critChance(TOP_SKILL));
+    expect(critChance(1000)).toBeCloseTo(critChance(TOP_SKILL));
   });
 
   it('never goes below neutral on a nonsense level', () => {
@@ -252,5 +288,47 @@ describe('a shield in the off hand', () => {
       () => 0.99,
     );
     expect(always.avoided).toBe(false);
+  });
+});
+
+/**
+ * The other half of the finding: `rollDefense` had exactly one caller and it was
+ * the player being hit, so nothing in the game had ever avoided anything the
+ * player swung at.
+ */
+describe('enemyAvoids', () => {
+  it('slips a swing at its own rate, and never without one', () => {
+    expect(enemyAvoids(0.15, () => 0.1)).toBe(true);
+    expect(enemyAvoids(0.15, () => 0.2)).toBe(false);
+    expect(enemyAvoids(undefined, () => 0)).toBe(false);
+    expect(enemyAvoids(0, () => 0)).toBe(false);
+  });
+
+  // Nothing to roll for something that never dodges, which is every row but the
+  // crab. Cheap, and it keeps a scripted rng meaning what it says: a swing at a
+  // rat spends its rolls on the damage rather than on a question with one
+  // answer.
+  it('rolls nothing at all when there is no chance to roll against', () => {
+    let rolled = 0;
+    const counted = (): number => {
+      rolled += 1;
+      return 0;
+    };
+
+    expect(enemyAvoids(0, counted)).toBe(false);
+    expect(rolled).toBe(0);
+    expect(enemyAvoids(0.15, counted)).toBe(true);
+    expect(rolled).toBe(1);
+  });
+
+  /**
+   * One user the day it exists, and only one: a scuttling armoured thing already
+   * designed as a long fight rather than a dangerous one is what a dodge is for,
+   * and every other row leaving it at zero is what keeps this from being a tax
+   * on every fight in the game.
+   */
+  it("is the crab's alone", () => {
+    const dodgers = Object.values(ENEMIES).filter((enemy) => (enemy.avoidChance ?? 0) > 0);
+    expect(dodgers.map((enemy) => enemy.id)).toEqual(['crab']);
   });
 });

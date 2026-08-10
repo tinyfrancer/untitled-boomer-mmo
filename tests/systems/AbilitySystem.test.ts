@@ -76,19 +76,29 @@ describe('spellFailureChance', () => {
 
 describe('resolveAbilityDamage', () => {
   it('multiplies a normal swing by the ability’s power', () => {
-    // rng 0.5 is the no-variance midpoint; skill 0 leaves the bonus neutral.
-    expect(resolveAbilityDamage(ABILITIES.fireball, 10, 0, () => 0.5)).toBe(20);
-    expect(resolveAbilityDamage(ABILITIES['power-slash'], 10, 0, () => 0.5)).toBe(22);
+    // rng 0.5 is the no-variance midpoint; skill 0 leaves the bonus neutral and
+    // cannot crit, since the chance comes out of the skill.
+    expect(resolveAbilityDamage(ABILITIES.fireball, 10, 0, () => 0.5)).toEqual({
+      damage: 20,
+      crit: false,
+    });
+    expect(resolveAbilityDamage(ABILITIES['power-slash'], 10, 0, () => 0.5)).toEqual({
+      damage: 22,
+      crit: false,
+    });
   });
 
   it('scales with the governing skill', () => {
     const unskilled = resolveAbilityDamage(ABILITIES.fireball, 100, 0, () => 0.5);
     const skilled = resolveAbilityDamage(ABILITIES.fireball, 100, 100, () => 0.5);
-    expect(skilled).toBeGreaterThan(unskilled);
+    expect(skilled.damage).toBeGreaterThan(unskilled.damage);
   });
 
   it('is zero for an ability that deals no damage', () => {
-    expect(resolveAbilityDamage(ABILITIES['mana-shield'], 100, 0, () => 0.5)).toBe(0);
+    expect(resolveAbilityDamage(ABILITIES['mana-shield'], 100, 0, () => 0.5)).toEqual({
+      damage: 0,
+      crit: false,
+    });
   });
 });
 

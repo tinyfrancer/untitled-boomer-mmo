@@ -97,7 +97,11 @@ export class FxLayer {
         }
         if (event.damage > event.absorbed) {
           const shown = event.on === 'player' ? event.damage - event.absorbed : event.damage;
-          this.float(event.at, `-${shown}`, event.via === 'ability' ? 'reward' : tone);
+          // The bang as well as the colour: a crit has to read as one on a
+          // screen being looked at rather than watched.
+          const text = event.crit ? `-${shown}!` : `-${shown}`;
+          const hue = event.via === 'ability' ? 'reward' : tone;
+          this.float(event.at, text, event.crit ? 'crit' : hue);
         }
         return;
       }

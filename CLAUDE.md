@@ -726,6 +726,26 @@ the HP — so the fight lasts long enough for a cooldown, a meal, or running awa
 is what every duel here models; a wizard's answer to 80 units of reach and a chase slower than they
 walk is not to stand in it, and no arithmetic about swapping hits describes that.
 
+**A swing can miss and a swing can land hard, and both come out of the weapon
+skill** (`critChance` and `enemyAvoids` in `systems/CombatSystem.ts`). `rollDefense` used to have
+exactly one caller — the player being hit — so nothing in the game had ever avoided anything the
+player swung at, and the player had never crit.
+
+Crit chance is **paid out of the weapon skill's existing budget** rather than added beside it: the
+flat multiplier is derived from the crit half so the average at cap is unchanged by construction,
+and only the _shape_ of it moves. The skill used to buy 0.4% damage a level, which is imperceptible
+by design; a crit is a moment where a multiplier is not, which is what makes training felt. Retuning
+the chance or the multiplier re-slopes the flat part instead of quietly moving the total.
+
+Avoidance is `EnemyDefinition.avoidChance` and the **crab is its only user** — a scuttling armoured
+thing already designed as a long fight rather than a dangerous one is what a dodge is for, and every
+other row leaving it at zero is what keeps it from being a tax on every fight. It is rolled before
+the damage is, so a slipped swing costs the weapon skill its rep too.
+
+Neither needed a new channel: a crit is a `crit` flag on the `hit` event the view already draws,
+coloured from `FLOAT_TONE_COLORS` and marked with a bang so it reads on a screen being looked at
+rather than watched.
+
 **Armour stops a share of a hit, and a shield is a hand rather than a stat**
 (`armorValue` on an equipment row, curved by `mitigatedDamage` in `systems/CombatSystem.ts`).
 Mitigation is **proportional with diminishing returns** — `armor / (armor + 80)` — rather than flat

@@ -98,6 +98,9 @@ export const FLOAT_TONE_COLORS: Record<FloatTone, string> = {
   heal: THEME.color.heal,
   reward: THEME.color.levelUp,
   skill: THEME.color.skillUp,
+  // Hotter than an ordinary hit and unlike anything else on screen: a crit is
+  // the one number that is supposed to interrupt what the player was reading.
+  crit: '#ff7043',
   dim: THEME.color.dim,
 };
 

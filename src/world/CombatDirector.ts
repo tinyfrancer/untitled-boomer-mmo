@@ -5,8 +5,10 @@ import {
   logAbsorbed,
   logAchievement,
   logCoin,
+  logCriticalHit,
   logDamageDealt,
   logDamageTaken,
+  logEnemyAvoided,
   logDefense,
   logEnemyAbilityDodged,
   logEnemyWindUp,
@@ -16,6 +18,7 @@ import {
   logTitleEarned,
 } from '../systems/CombatLogSystem';
 import {
+  enemyAvoids,
   isCooldownReady,
   isInRange,
   mitigatedDamage,
@@ -153,7 +156,23 @@ export class CombatDirector {
 
     this.lastAttackAt = this.ctx.now;
     const weaponSkill = character.activeWeaponSkill();
-    const { damage } = resolveAttack({
+
+    // Asked before the damage is rolled: a swing that is slipped never happened,
+    // and the skill takes no rep for it either.
+    if (enemyAvoids(target.definition.avoidChance)) {
+      this.ctx.push({
+        kind: 'float',
+        at: { x: target.x, y: target.y },
+        text: 'Miss',
+        tone: 'dim',
+      });
+      this.ctx.log(logEnemyAvoided(target.name));
+      player.markInCombat();
+      target.engage();
+      return;
+    }
+
+    const { damage, crit } = resolveAttack({
       attackPower: player.attackPower,
       weaponSkillLevel: character.skillLevelOf(weaponSkill),
     });
@@ -161,11 +180,12 @@ export class CombatDirector {
       kind: 'hit',
       on: 'mob',
       via: 'weapon',
+      crit,
       at: { x: target.x, y: target.y },
       damage,
       absorbed: 0,
     });
-    this.ctx.log(logDamageDealt(target.name, damage));
+    this.ctx.log(crit ? logCriticalHit(target.name, damage) : logDamageDealt(target.name, damage));
     player.markInCombat();
     target.takeDamage(damage);
     // Anything the player hits fights back, whether or not it opens combat itself.
@@ -296,6 +316,9 @@ export class CombatDirector {
       kind: 'hit',
       on: 'player',
       via: 'weapon',
+      // Nothing that swings at the player carries a weapon skill, and the crit
+      // chance comes out of that skill and nowhere else.
+      crit: false,
       at: this.ctx.playerPoint(),
       damage,
       absorbed,
