@@ -1,5 +1,11 @@
 import { TILE_SIZE } from '../config/constants';
-import type { CreatureShapeId, EnemyFamilyId, EnemyId, LootTableId } from '../types/ids';
+import type {
+  CreatureShapeId,
+  EnemyAbilityId,
+  EnemyFamilyId,
+  EnemyId,
+  LootTableId,
+} from '../types/ids';
 
 /**
  * The collision box, in world pixels. Named here rather than measured off
@@ -62,6 +68,14 @@ export interface EnemyDefinition {
   leashRadius: number;
   chaseSpeed: number;
   lootTableId?: LootTableId;
+  /**
+   * What it does instead of swinging, in priority order (`data/enemyAbilities.ts`).
+   *
+   * A humanoid thing, and deliberately: an ability is something learned, where a
+   * rat has only its teeth. That is the same line `family` already draws for
+   * what a loot table may hold, and a test holds it over the table.
+   */
+  abilities?: EnemyAbilityId[];
   wander: WanderConfig;
 }
 
@@ -141,6 +155,9 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     // Slower than any class's move speed, so fleeing an ambush always works.
     chaseSpeed: 170,
     lootTableId: 'bandit',
+    // Thrown only when it cannot reach you, so kiting one is still right and no
+    // longer free — and so the toe-to-toe curve is exactly where it was.
+    abilities: ['throw-knife'],
     wander: {
       radius: 112,
       minPauseMs: 1200,
@@ -183,6 +200,9 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     leashRadius: 420,
     chaseSpeed: 190,
     lootTableId: 'bandit-chief',
+    // The thing the fight is actually about. Standing in every Cleave loses a
+    // fight a level 3 wins by stepping back from each one.
+    abilities: ['cleave'],
     // Barely moves. He is what the room is for, and a boss that wandered into
     // the corridor would be pulled one bandit at a time from the doorway.
     wander: {
