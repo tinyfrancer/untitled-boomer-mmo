@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { nth } from '../nth';
+import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import {
   approachRange,
   avoidanceChance,
+  damageReduction,
   isCooldownReady,
   isInRange,
+  mitigatedDamage,
   resolveAttack,
   rollDefense,
   weaponSkillBonus,
@@ -173,5 +177,80 @@ describe('isCooldownReady', () => {
 
   it('is true once the cooldown has been exceeded', () => {
     expect(isCooldownReady(1500, 1000)).toBe(true);
+  });
+});
+
+/**
+ * Armour, which the game had none of: `armorType` was a class restriction and
+ * nothing anywhere reduced a hit.
+ */
+describe('mitigatedDamage', () => {
+  it('takes nothing off an unarmoured hit', () => {
+    expect(mitigatedDamage(20, 0)).toBe(20);
+  });
+
+  it('takes proportionally more off the more is worn, and never all of it', () => {
+    const steps = [0, 5, 14, 40, 200, 10000].map((armor) => mitigatedDamage(100, armor));
+    // Strictly decreasing, so every point of armour is worth something...
+    steps.forEach((damage, at) => {
+      if (at > 0) expect(damage).toBeLessThan(nth(steps, at - 1));
+    });
+    // ...and never worth immunity, however much of it is stacked.
+    steps.forEach((damage) => expect(damage).toBeGreaterThanOrEqual(1));
+    expect(damageReduction(10000)).toBeLessThan(1);
+  });
+
+  /**
+   * The number the plan was tuned to: a full brown set with the shield sits near
+   * 15%, which is what makes the tier worth wearing without making a rat
+   * harmless. Read off the items rather than restated, so retuning a piece moves
+   * this rather than leaving it lying.
+   */
+  it('puts a full brown set near 15%', () => {
+    const set = computeEffectiveStats(
+      'warrior',
+      {
+        helmet: 'brown-helmet',
+        chest: 'brown-chestplate',
+        pants: 'brown-legs',
+        weapon: 'brown-axe',
+        offhand: 'brown-shield',
+      },
+      1,
+    );
+
+    expect(damageReduction(set.armor)).toBeGreaterThan(0.12);
+    expect(damageReduction(set.armor)).toBeLessThan(0.18);
+  });
+
+  // MIN_DAMAGE already floors a hit at 1, so mitigation can only ever make a
+  // blow the smallest blow there is.
+  it('leaves the smallest hit landing', () => {
+    expect(mitigatedDamage(1, 10000)).toBe(1);
+  });
+});
+
+describe('a shield in the off hand', () => {
+  // It helps Block rather than being required by it: requiring one would strand
+  // every point of Block every existing character has already trained.
+  it('makes a block likelier without being needed for one', () => {
+    // A roll between the two chances: at skill 20 the bare skill blocks one hit
+    // in ten and a shielded one blocks one in five.
+    const roll = (): number => 0.15;
+    const bare = { blockLevel: 20, parryLevel: 0, hasWeapon: false };
+
+    expect(rollDefense(bare, roll).avoided).toBe(false);
+    expect(rollDefense({ ...bare, hasShield: true }, roll)).toEqual({
+      avoided: true,
+      skillId: 'block',
+    });
+  });
+
+  it('never turns blocking into immunity', () => {
+    const always = rollDefense(
+      { blockLevel: 10000, parryLevel: 0, hasWeapon: false, hasShield: true },
+      () => 0.99,
+    );
+    expect(always.avoided).toBe(false);
   });
 });

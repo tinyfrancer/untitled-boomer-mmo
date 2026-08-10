@@ -35,6 +35,8 @@ export class Player {
   speed: number;
   attackPower: number;
   attackRange: number;
+  /** What the worn set adds up to, before the curve `mitigatedDamage` applies. */
+  armor = 0;
   attackCooldownMs: number;
   private readonly keyboard: InputState;
   private moveTarget: Point | null = null;
@@ -142,8 +144,10 @@ export class Player {
     this.intellect = stats.intellect;
     this.attackPower = stats.attackPower;
     // Reach rides the weapon, so putting the wand away has to shorten it here
-    // rather than waiting for the view to rebuild the figure.
+    // rather than waiting for the view to rebuild the figure. Armour is the
+    // same: a shield taken off has to stop stopping things this frame.
     this.attackRange = stats.attackRange;
+    this.armor = stats.armor;
   }
 
   /** Returns how much a mana shield soaked, for the caller to show. */

@@ -726,6 +726,33 @@ the HP — so the fight lasts long enough for a cooldown, a meal, or running awa
 is what every duel here models; a wizard's answer to 80 units of reach and a chase slower than they
 walk is not to stand in it, and no arithmetic about swapping hits describes that.
 
+**Armour stops a share of a hit, and a shield is a hand rather than a stat**
+(`armorValue` on an equipment row, curved by `mitigatedDamage` in `systems/CombatSystem.ts`).
+Mitigation is **proportional with diminishing returns** — `armor / (armor + 80)` — rather than flat
+subtraction, because at these damage numbers a rat hits for 3 and any flat reduction worth wearing
+is immunity inside one tier. Nothing can reach 1, so armour never becomes immunity however much is
+stacked, and `MIN_DAMAGE` still floors a blow at 1 underneath it. A full brown set with the shield
+sits near 15%.
+
+It is **player-side only**, deliberately: a field on `EnemyDefinition` that every row leaves unset
+is the kind of dead data this codebase does not keep. It is applied in `CombatDirector.strike`,
+which is the one path everything that lands on the player goes down — so a swing and a Cleave are
+mitigated by the same line, and the mana shield soaks what got _through_ the plate rather than what
+was swung at it.
+
+**The offhand is the fifth slot**, and `NO_GEAR`'s comment predicted exactly how it would land — "a
+fifth slot would have been four separate compile errors away from anyone noticing" — which is what
+`exhaustive<GearSlotId>()` and a `Record<GearSlotId, …>` buy. One item per class, because a slot
+that is furniture for half the roster is a dead button, and both drop off bandits like the rest of
+the set: a slot nothing drops into is a slot nobody fills. A shield **helps** Block rather than
+being required by it, since requiring one would strand every point of Block every existing
+character has trained in a skill that predates the slot.
+
+Armour moved the one fight tuned to a knife edge. A geared level _2_ took the chief once everyone
+got tankier, which is precisely the gate the hideout exists to be — so the chief moved with it. That
+direction is the rule: the content follows the arithmetic, and `tests/systems/EnemySystem.test.ts`
+is where both are held.
+
 **An enemy ability is telegraphed, avoidable, and spends the swing it replaces**
 (`data/enemyAbilities.ts`, chosen by `systems/EnemyAbilitySystem.ts` and run by `CombatDirector`).
 One rule covers all of them: it shouts for `windUpMs` — a float over the creature's own head, a line

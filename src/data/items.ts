@@ -449,18 +449,26 @@ export interface EquipmentBonuses {
   strength: number;
   intellect: number;
   attackPower: number;
+  armor: number;
+}
+
+/** Whether what is in the off hand is a shield, which is what Block reads. */
+export function isShield(itemId: ItemId | null): boolean {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.kind === 'equipment' && item.offhandShape === 'shield';
 }
 
 export function getEquipmentBonuses(itemId: ItemId | null): EquipmentBonuses {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment') {
-    return { health: 0, strength: 0, intellect: 0, attackPower: 0 };
+    return { health: 0, strength: 0, intellect: 0, attackPower: 0, armor: 0 };
   }
   return {
     health: item.healthBonus ?? 0,
     strength: item.strengthBonus ?? 0,
     intellect: item.intellectBonus ?? 0,
     attackPower: item.attackPowerBonus ?? 0,
+    armor: item.armorValue ?? 0,
   };
 }
 
@@ -473,6 +481,7 @@ export function describeItemBonuses(itemId: ItemId | null): string {
   const bonuses = getEquipmentBonuses(itemId);
   const parts: string[] = [];
   if (bonuses.attackPower) parts.push(`+${bonuses.attackPower} ATK`);
+  if (bonuses.armor) parts.push(`+${bonuses.armor} ARM`);
   if (bonuses.health) parts.push(`+${bonuses.health} HP`);
   if (bonuses.strength) parts.push(`+${bonuses.strength} STR`);
   if (bonuses.intellect) parts.push(`+${bonuses.intellect} INT`);

@@ -101,6 +101,8 @@ describe('TOWN_MOB_SPAWNS', () => {
 // whoever lands their killing blow first wins; the player wins exact ties by
 // swinging simultaneously.
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
+import { mitigatedDamage } from '../../src/systems/CombatSystem';
+import type { Gear } from '../../src/systems/InventorySystem';
 import { BANDIT_CAMP_MOB_SPAWNS, BEACH_MOB_SPAWNS } from '../../src/data/spawns';
 import type { MobSpawnPoint } from '../../src/data/spawns';
 import type { EnemyId } from '../../src/types/ids';
@@ -109,38 +111,50 @@ interface Combatant {
   hp: number;
   attackPower: number;
   cooldownMs: number;
+  // What the defender is wearing. Enemies have none — armour is player-side
+  // only until something needs otherwise.
+  armor: number;
 }
 
+// Through the real curve rather than a copy of it: a duel that modelled
+// mitigation with its own arithmetic would agree with the game only until one
+// of the two moved.
 function duel(player: Combatant, enemy: Combatant): 'player' | 'enemy' {
   const playerKillTime = (Math.ceil(enemy.hp / player.attackPower) - 1) * player.cooldownMs;
-  const enemyKillTime = (Math.ceil(player.hp / enemy.attackPower) - 1) * enemy.cooldownMs;
+  const perHit = mitigatedDamage(enemy.attackPower, player.armor);
+  const enemyKillTime = (Math.ceil(player.hp / perHit) - 1) * enemy.cooldownMs;
   return playerKillTime <= enemyKillTime ? 'player' : 'enemy';
 }
 
-// A warrior in the brown set with the brown axe — the gear the previous zone
-// drops, which is what "expected level" means for the next one.
+const BROWN_SET: Gear = {
+  helmet: 'brown-helmet',
+  chest: 'brown-chestplate',
+  pants: 'brown-legs',
+  weapon: 'brown-axe',
+  offhand: 'brown-shield',
+};
+
+function combatant(gear: Gear, level: number): Combatant {
+  const stats = computeEffectiveStats('warrior', gear, level);
+  return {
+    hp: stats.maxHp,
+    attackPower: stats.attackPower,
+    cooldownMs: stats.attackCooldownMs,
+    armor: stats.armor,
+  };
+}
+
+// A warrior in everything the previous zone drops, shield included, which is
+// what "expected level" means for the next one.
 function gearedWarrior(level: number): Combatant {
-  const stats = computeEffectiveStats(
-    'warrior',
-    {
-      helmet: 'brown-helmet',
-      chest: 'brown-chestplate',
-      pants: 'brown-legs',
-      weapon: 'brown-axe',
-      offhand: null,
-    },
-    level,
-  );
-  return { hp: stats.maxHp, attackPower: stats.attackPower, cooldownMs: stats.attackCooldownMs };
+  return combatant(BROWN_SET, level);
 }
 
 function freshWarrior(): Combatant {
-  const stats = computeEffectiveStats(
-    'warrior',
+  return combatant(
     { helmet: null, chest: null, pants: null, weapon: 'rusty-sword', offhand: null },
     1,
   );
-  return { hp: stats.maxHp, attackPower: stats.attackPower, cooldownMs: stats.attackCooldownMs };
 }
 
 /**
@@ -168,6 +182,7 @@ function enemyAt(id: EnemyId, level: number): Combatant {
     hp: stats.maxHp,
     attackPower: stats.attackPower,
     cooldownMs: ENEMIES[id].attackCooldownMs,
+    armor: 0,
   };
 }
 
@@ -199,56 +214,40 @@ describe('difficulty curve', () => {
 
   /**
    * The one fight above the starter band, and the whole reason to open the
-   * door. The contract is that a level 3 in what the camp outside drops can
-   * take him and a level 2 in the same gear cannot — so the hideout is the
-   * first thing in the game gated on the level rather than on the kit.
+   * door — stated as the fight actually is, with his Cleave folded in, since he
+   * always has one and the plain trade of blows is a fiction.
+   *
+   * Two questions at once, and they are the point of the hideout. **Moving** is
+   * the first: the Cleave spends the swing it interrupts, so standing in every
+   * one loses a fight that stepping out of each one wins. **Level** is the
+   * second: it is a level 3 who wins it, and a level 2 in the same gear who does
+   * not, however well they move.
    *
    * Modelled toe to toe like every duel here, which is a warrior's fight. A
-   * wizard's answer to something with 80 units of reach and a chase slower than
-   * they walk is not to stand in it, and nothing this arithmetic can say about
-   * trading blows describes that.
+   * wizard's answer to 80 units of reach and a chase slower than they walk is
+   * not to stand in it, and nothing this arithmetic can say about trading blows
+   * describes that.
    */
-  it('makes the chief a level 3 fight in bandit gear, and a wall below that', () => {
-    const chief = enemyAt('bandit-chief', 4);
-    expect(duel(freshWarrior(), chief)).toBe('enemy');
-    expect(duel(gearedWarrior(2), chief)).toBe('enemy');
-    expect(duel(gearedWarrior(3), chief)).toBe('player');
-  });
-
-  /**
-   * With his Cleave folded in, which is what the fight actually is. It replaces
-   * the swing it interrupts rather than arriving on top of one, so standing in
-   * every single one is worse than being plainly auto-attacked and stepping out
-   * of every single one is better — the fight has a thing to do in it, and doing
-   * it is what wins.
-   */
-  it('turns the chief fight into a question about moving', () => {
-    const chief = enemyAt('bandit-chief', 4);
+  it('gates the chief on level 3, and on moving', () => {
     const cleave = ENEMY_ABILITIES.cleave;
+    const standing = withAbility(enemyAt('bandit-chief', 4), cleave, 'lands');
+    const dodging = withAbility(enemyAt('bandit-chief', 4), cleave, 'dodged');
 
-    expect(duel(gearedWarrior(3), withAbility(chief, cleave, 'lands'))).toBe('enemy');
-    expect(duel(gearedWarrior(3), withAbility(chief, cleave, 'dodged'))).toBe('player');
+    expect(duel(gearedWarrior(3), standing)).toBe('enemy');
+    expect(duel(gearedWarrior(3), dodging)).toBe('player');
+    expect(duel(gearedWarrior(2), dodging)).toBe('enemy');
+    expect(duel(freshWarrior(), dodging)).toBe('enemy');
   });
 
   // What the fight pays for itself: the blade off his own table turns a fight
   // won by a hair into one won comfortably, which is what a boss drop is for.
   it('makes his own blade the reward for beating him', () => {
-    const chief = enemyAt('bandit-chief', 4);
-    const withBlade = computeEffectiveStats(
-      'warrior',
-      {
-        helmet: 'brown-helmet',
-        chest: 'brown-chestplate',
-        pants: 'brown-legs',
-        weapon: 'cutthroats-blade',
-        offhand: null,
-      },
-      3,
-    );
+    const dodging = withAbility(enemyAt('bandit-chief', 4), ENEMY_ABILITIES.cleave, 'dodged');
     const before = gearedWarrior(3);
+    const after = combatant({ ...BROWN_SET, weapon: 'cutthroats-blade' }, 3);
 
-    expect(withBlade.attackPower).toBeGreaterThan(before.attackPower);
-    expect(duel({ ...before, attackPower: withBlade.attackPower }, chief)).toBe('player');
+    expect(after.attackPower).toBeGreaterThan(before.attackPower);
+    expect(duel(after, dodging)).toBe('player');
   });
 
   it('keeps the chief the hardest thing in the game, level for level', () => {
