@@ -10,7 +10,7 @@ Each PR stands alone — it ships green, with no dead buttons and no half-wired 
 | --- | ----------------------------------------------- | ----------------- |
 | 1   | Zones as a graph, and travel from the world map | merged 2026-08-09 |
 | 2   | Locked zones, the key, and the Bandit Hideout   | merged 2026-08-09 |
-| 3   | The boss and its unique loot                    | in review         |
+| 3   | The boss and its unique loot                    | merged 2026-08-10 |
 | 4   | Cast times, and what interrupts them            | not started       |
 | 5   | Enemy abilities                                 | not started       |
 
