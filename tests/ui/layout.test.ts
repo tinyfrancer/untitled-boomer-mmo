@@ -143,6 +143,21 @@ describe('hudLayout', () => {
   it('gives the target frame its full width when there is room for it', () => {
     expect(layoutFor(DESKTOP).targetFrame.width).toBe(THEME.panelWidth.target);
   });
+
+  /**
+   * A wound-up enemy ability names itself under the health bar, and the frame
+   * has to be tall enough to hold the warning or the warning is clipped. Only
+   * while something is coming — the same bargain the worn title and the buff row
+   * make in the other corner.
+   */
+  it('grows the target frame by a line while the target is winding up', () => {
+    const quiet = layoutFor(PHONE_PORTRAIT);
+    const winding = layoutFor(PHONE_PORTRAIT, { targetWinding: true });
+
+    expect(winding.targetFrame.height).toBeGreaterThan(quiet.targetFrame.height);
+    expect(winding.targetFrame.width).toBe(quiet.targetFrame.width);
+    expect(topRowBottom(winding)).toBeGreaterThanOrEqual(topRowBottom(quiet));
+  });
 });
 
 describe('sheetRect', () => {

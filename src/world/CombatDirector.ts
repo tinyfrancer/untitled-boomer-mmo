@@ -8,6 +8,8 @@ import {
   logDamageDealt,
   logDamageTaken,
   logDefense,
+  logEnemyAbilityDodged,
+  logEnemyWindUp,
   logKill,
   logLoot,
   logNotice,
@@ -17,6 +19,8 @@ import { isCooldownReady, isInRange, resolveAttack, rollDefense } from '../syste
 import { formatCurrency } from '../systems/CurrencySystem';
 import { rollLootTable } from '../systems/LootSystem';
 import { distance } from '../systems/MovementSystem';
+import { ENEMY_ABILITIES, type EnemyAbilityDefinition } from '../data/enemyAbilities';
+import { abilityConnects, chooseEnemyAbility } from '../systems/EnemyAbilitySystem';
 import type { EnemyId, LootTableId } from '../types/ids';
 import {
   ACHIEVEMENT_UNLOCKED_EVENT,
@@ -169,58 +173,135 @@ export class CombatDirector {
   }
 
   private updateEnemyAttacks(): void {
-    const { player, character } = this.ctx;
+    const { player } = this.ctx;
     if (!player.isAlive()) return;
 
     for (const mob of this.deps.mobs) {
       if (!mob.isEngaged()) continue;
 
-      if (!isInRange(distance(mob, player), mob.attackRange)) continue;
-      if (!isCooldownReady(this.ctx.now - mob.lastAttackAt, mob.attackCooldownMs)) continue;
-
-      mob.lastAttackAt = this.ctx.now;
-
-      // A turned-aside hit trains the skill that turned it aside and stops
-      // there — no damage, and nothing to interrupt a gather.
-      const defense = rollDefense({
-        blockLevel: character.skillLevelOf('block'),
-        parryLevel: character.skillLevelOf('parry'),
-        hasWeapon: character.state.gear.weapon !== null,
-      });
-      if (defense.avoided && defense.skillId) {
-        this.ctx.push({
-          kind: 'defend',
-          at: this.ctx.playerPoint(),
-          skillName: SKILLS[defense.skillId].name,
-        });
-        this.ctx.log(logDefense(SKILLS[defense.skillId].name, mob.name));
-        this.ctx.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
+      // A wind-up already running is the whole of this creature's turn: it
+      // spent its swing starting it, and what it does now is land or miss.
+      if (mob.windUp) {
+        this.resolveWindUp(mob);
+        if (!player.isAlive()) return;
         continue;
       }
 
-      const { damage } = resolveAttack({ attackPower: mob.attackPower });
-      const absorbed = player.takeDamage(damage);
-      this.ctx.push({
-        kind: 'hit',
-        on: 'player',
-        via: 'weapon',
-        at: this.ctx.playerPoint(),
-        damage,
-        absorbed,
+      const gap = distance(mob, player);
+      const ability = chooseEnemyAbility(mob.definition, {
+        distance: gap,
+        elapsedSince: (candidate) =>
+          this.ctx.now - (mob.lastAbilityAt.get(candidate.id) ?? -Infinity),
       });
-      if (absorbed > 0) {
-        this.ctx.log(logAbsorbed(absorbed));
+      if (ability) {
+        this.startWindUp(mob, ability);
+        continue;
       }
-      if (damage > absorbed) {
-        this.ctx.log(logDamageTaken(mob.name, damage - absorbed));
-        this.deps.interruptCast();
-      }
-      this.deps.interruptGather();
 
-      if (!player.isAlive()) {
-        this.deps.onPlayerDeath();
-        return;
-      }
+      if (!isInRange(gap, mob.attackRange)) continue;
+      if (!isCooldownReady(this.ctx.now - mob.lastAttackAt, mob.attackCooldownMs)) continue;
+
+      mob.lastAttackAt = this.ctx.now;
+      this.strike(mob, mob.attackPower);
+      if (!player.isAlive()) return;
+    }
+  }
+
+  /**
+   * Starts a telegraph. The swing cooldown goes with it, so an ability is a
+   * swing spent differently rather than one on top: standing in it is worse
+   * than being auto-attacked and stepping out of it is better, which is what
+   * makes moving worth the trouble.
+   */
+  private startWindUp(mob: Mob, ability: EnemyAbilityDefinition): void {
+    mob.windUp = { abilityId: ability.id, landsAt: this.ctx.now + ability.windUpMs };
+    mob.lastAbilityAt.set(ability.id, this.ctx.now);
+    mob.lastAttackAt = this.ctx.now;
+    // Shouted over its own head rather than over the player: what the player
+    // has to read is which creature is about to do something.
+    this.ctx.push({
+      kind: 'float',
+      at: { x: mob.x, y: mob.y },
+      text: ability.name,
+      tone: 'player-damage',
+    });
+    this.ctx.log(logEnemyWindUp(mob.name, ability.name));
+    // The target frame is the other half of the telegraph, and it only redraws
+    // when it is told to.
+    this.deps.targeting.publishTarget();
+  }
+
+  private resolveWindUp(mob: Mob): void {
+    const windUp = mob.windUp;
+    if (!windUp || this.ctx.now < windUp.landsAt) return;
+    const ability = ENEMY_ABILITIES[windUp.abilityId];
+    mob.windUp = null;
+    this.deps.targeting.publishTarget();
+
+    if (!abilityConnects(ability, distance(mob, this.ctx.player))) {
+      this.ctx.float(`${ability.name} misses!`, 'heal', 20);
+      this.ctx.log(logEnemyAbilityDodged(ability.name));
+      return;
+    }
+    // Drawn crossing the gap for the one that is thrown; a swing has no flight.
+    if (ability.thrown) {
+      this.ctx.push({
+        kind: 'bolt-cast',
+        abilityId: ability.id,
+        from: { x: mob.x, y: mob.y },
+        to: this.ctx.playerPoint(),
+      });
+    }
+    this.strike(mob, mob.attackPower * ability.powerMultiplier);
+  }
+
+  /**
+   * One blow landing on the player, whether it was a swing or something wound
+   * up for. Defense, the shield, both log lines and both interrupts are the
+   * same either way — an ability is a bigger hit, not a different kind of one.
+   */
+  private strike(mob: Mob, attackPower: number): void {
+    const { player, character } = this.ctx;
+
+    // A turned-aside hit trains the skill that turned it aside and stops
+    // there — no damage, and nothing to interrupt a gather.
+    const defense = rollDefense({
+      blockLevel: character.skillLevelOf('block'),
+      parryLevel: character.skillLevelOf('parry'),
+      hasWeapon: character.state.gear.weapon !== null,
+    });
+    if (defense.avoided && defense.skillId) {
+      this.ctx.push({
+        kind: 'defend',
+        at: this.ctx.playerPoint(),
+        skillName: SKILLS[defense.skillId].name,
+      });
+      this.ctx.log(logDefense(SKILLS[defense.skillId].name, mob.name));
+      this.ctx.awardSkillXp(defense.skillId, DEFENSE_SKILL_XP_PER_SAVE, { silent: true });
+      return;
+    }
+
+    const { damage } = resolveAttack({ attackPower });
+    const absorbed = player.takeDamage(damage);
+    this.ctx.push({
+      kind: 'hit',
+      on: 'player',
+      via: 'weapon',
+      at: this.ctx.playerPoint(),
+      damage,
+      absorbed,
+    });
+    if (absorbed > 0) {
+      this.ctx.log(logAbsorbed(absorbed));
+    }
+    if (damage > absorbed) {
+      this.ctx.log(logDamageTaken(mob.name, damage - absorbed));
+      this.deps.interruptCast();
+    }
+    this.deps.interruptGather();
+
+    if (!player.isAlive()) {
+      this.deps.onPlayerDeath();
     }
   }
 

@@ -343,6 +343,7 @@ class Hud {
       hasMana: this.model.maxMana > 0,
       hasTitle: this.model.activeTitleId !== null,
       hasEffects: this.playerColumn.hasEffects(),
+      targetWinding: this.targetFrame.isWinding(),
       trackedQuests: activeQuests(this.model.quests).length,
     });
 
@@ -530,7 +531,15 @@ class Hud {
 
   private subscribe(): void {
     const { listen } = this.subscriptions;
-    listen(TARGET_SELECTED_EVENT, (target) => this.targetFrame.show(target));
+    listen(TARGET_SELECTED_EVENT, (target) => {
+      const wasWinding = this.targetFrame.isWinding();
+      this.targetFrame.show(target);
+      // A wind-up line costs the frame a line of height, the same way a worn
+      // title costs the other corner one.
+      if (this.targetFrame.isWinding() !== wasWinding) {
+        this.applyLayout();
+      }
+    });
     listen(TARGET_CLEARED_EVENT, () => this.targetFrame.hide());
 
     listen(XP_GAINED_EVENT, (gain) => {

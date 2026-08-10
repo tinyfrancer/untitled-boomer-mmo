@@ -11,8 +11,8 @@ Each PR stands alone — it ships green, with no dead buttons and no half-wired 
 | 1   | Zones as a graph, and travel from the world map | merged 2026-08-09 |
 | 2   | Locked zones, the key, and the Bandit Hideout   | merged 2026-08-09 |
 | 3   | The boss and its unique loot                    | merged 2026-08-10 |
-| 4   | Cast times, and what interrupts them            | in review         |
-| 5   | Enemy abilities                                 | not started       |
+| 4   | Cast times, and what interrupts them            | merged 2026-08-10 |
+| 5   | Enemy abilities                                 | in review         |
 
 ## The decision behind all of it: zones, not one continuous world
 
@@ -84,3 +84,24 @@ not, which is the second thing the shield is for.
 
 The gather bar became the channel bar in the commit before, since a gather and a cast are the same
 shape and can never both be running.
+
+## 5 — Enemy abilities
+
+One rule for all of them: an ability shouts for `windUpMs` and lands on whoever is still inside
+`range` when the clock runs out. An instant one would be unavoidable by construction, so there are
+none. The wind-up spends the creature's attack cooldown, so standing in every one is worse than
+being plainly auto-attacked and stepping out of every one is better — the fight has a thing to do in
+it, and doing it is what wins.
+
+A mob winding up plants its feet. Something that kept closing while it shouted would land every one
+of these on a player who did walk away.
+
+The chief's Cleave is what the boss fight is about, and it moved the tuning contract with it: a
+geared level 3 who stands in every one loses and the same character who steps out of each one wins.
+The bandit's thrown knife is what it reaches for when it cannot reach you — `minRange` keeps it out
+of melee, which is what leaves the toe-to-toe curve exactly where it was.
+
+The telegraph is three things at once: a float over the creature's head, a combat log line, and a
+line in the target frame, which is where a player is already looking mid-fight. The frame grows a
+line to hold it and gives the line back afterwards, the same bargain the worn title and the buff row
+make in the other corner.

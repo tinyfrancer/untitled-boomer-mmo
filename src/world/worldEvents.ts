@@ -1,5 +1,5 @@
 import type { Point } from '../systems/MovementSystem';
-import type { AbilityId, ResourceNodeId, ZoneEdge, ZoneId } from '../types/ids';
+import type { AbilityId, EnemyAbilityId, ResourceNodeId, ZoneEdge, ZoneId } from '../types/ids';
 import type { UiEventMap, UiEventName } from '../ui/uiEvents';
 import type { Mob } from './Mob';
 
@@ -41,8 +41,13 @@ export type WorldEvent =
   | { kind: 'death'; on: 'player'; respawnZone: ZoneId | null }
   | { kind: 'death'; on: 'mob'; mob: Mob }
   | { kind: 'spawn'; mob: Mob }
-  /** A projectile to draw between two points; instant-hit abilities omit it. */
-  | { kind: 'bolt-cast'; abilityId: AbilityId; from: Point; to: Point }
+  /**
+   * A projectile to draw between two points; instant-hit abilities omit it.
+   * Either side of a fight can throw one, and the id says which — nothing draws
+   * them differently yet, but a bolt and a knife are not the same object and
+   * the event should not have to be widened again to say so.
+   */
+  | { kind: 'bolt-cast'; abilityId: AbilityId | EnemyAbilityId; from: Point; to: Point }
   | { kind: 'gather-tick'; at: Point; nodeId: ResourceNodeId; progress: number }
   /** The player walked onto an exit. The host loads the zone — the world does not. */
   | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number }

@@ -91,6 +91,11 @@ export type QuestId = 'rat-bones' | 'crab-feast';
 
 export type AbilityId = 'fireball' | 'mana-shield' | 'power-slash' | 'battle-fury';
 
+// What an enemy does instead of a swing. Its own union rather than a slice of
+// AbilityId: nothing a creature does is on the player's action bar, and the two
+// lists have no reason to grow together.
+export type EnemyAbilityId = 'cleave' | 'throw-knife';
+
 // What the player is carrying right now, as opposed to what applied it: eating
 // is not an ability and two abilities could one day leave the same mark, so
 // this is its own union rather than a slice of AbilityId.

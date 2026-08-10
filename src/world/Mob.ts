@@ -2,7 +2,7 @@ import { approachRange } from '../systems/CombatSystem';
 import { distance, stepToward } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import { scaleEnemyStats } from '../systems/EnemySystem';
-import type { LootTableId } from '../types/ids';
+import type { EnemyAbilityId, LootTableId } from '../types/ids';
 import type { EnemyDefinition } from '../data/enemies';
 
 type AiState = 'wander' | 'chase' | 'returning';
@@ -37,6 +37,17 @@ export class Mob {
   // Never zero, so a mob that has not swung yet is off cooldown rather than
   // waiting one out: the world's clock starts at zero.
   lastAttackAt = -Infinity;
+  /** When each ability was last started, on the same clock and for the same reason. */
+  readonly lastAbilityAt = new Map<EnemyAbilityId, number>();
+  /**
+   * What it is winding up and when that lands, or null.
+   *
+   * State rather than a timer because a headless world has no timers to hang
+   * one on, and public because the HUD is told about it: a shout the player
+   * cannot see is not a telegraph. `CombatDirector` owns when it is set — this
+   * only knows to drop it when the fight ends.
+   */
+  windUp: { abilityId: EnemyAbilityId; landsAt: number } | null = null;
   vx = 0;
   vy = 0;
   /** How long this mob has been dead, for the view's fade and the respawn. */
@@ -108,6 +119,14 @@ export class Mob {
 
     this.maybeAggro(playerX, playerY);
 
+    // Feet planted for the whole wind-up, which is what makes the telegraph
+    // mean anything: something that could keep closing while it shouted would
+    // land every one of these on a player who did walk away.
+    if (this.windUp) {
+      this.setVelocity(0, 0);
+      return false;
+    }
+
     switch (this.aiState) {
       case 'chase':
         this.updateChase(playerX, playerY, deltaMs);
@@ -173,6 +192,7 @@ export class Mob {
     this.aiState = 'returning';
     this.wanderTarget = null;
     this.lastAttackAt = -Infinity;
+    this.forgetAbilities();
     this.setVelocity(0, 0);
   }
 
@@ -236,7 +256,15 @@ export class Mob {
     this.aiState = 'wander';
     this.wanderTarget = null;
     this.deadForMs = 0;
+    this.forgetAbilities();
     this.setVelocity(0, 0);
+  }
+
+  // A fight that ended takes its wind-up with it. Leaving one running is how a
+  // corpse lands a Cleave, and how a leashed mob arrives home mid-swing.
+  private forgetAbilities(): void {
+    this.windUp = null;
+    this.lastAbilityAt.clear();
   }
 
   private respawn(): void {
@@ -245,6 +273,7 @@ export class Mob {
     this.aiState = 'wander';
     this.wanderTarget = null;
     this.lastAttackAt = -Infinity;
+    this.forgetAbilities();
     this.deadForMs = 0;
     this.setPosition(this.spawnX, this.spawnY);
     this.scheduleNextWander();

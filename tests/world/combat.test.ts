@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import type { ItemId } from '../../src/types/ids';
 import { harness } from './harness';
-import { SET_TITLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
+import { COMBAT_LOG_EVENT, SET_TITLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
 
 /**
  * Two-way combat, the aggro contract, and what a corpse is worth. All of it
@@ -120,5 +120,50 @@ describe('what a corpse is worth', () => {
     bus.emit(SET_TITLE_REQUESTED_EVENT, 'bandit-slayer');
 
     expect(state.activeTitleId).toBe('rat-slayer');
+  });
+});
+
+/**
+ * The one ability a common enemy has, and the reason it exists: kiting was free
+ * before it. A knife is what a bandit reaches for when it cannot reach you, so
+ * it never fires at swinging distance — which is also what keeps the melee curve
+ * the duel tests hold exactly where it was.
+ */
+describe('a bandit out of reach', () => {
+  function kiting() {
+    const kit = harness({ zoneId: 'bandit-camp', level: 10 });
+    const bandit = nth(kit.world.mobs, 0);
+    kit.world.teleport(bandit.x - 200, bandit.y);
+    kit.world.setTarget(bandit);
+    bandit.engage();
+    return { kit, bandit };
+  }
+
+  it('throws a knife rather than closing in silence', () => {
+    const { kit, bandit } = kiting();
+
+    const drawn = kit.tickUntil(
+      (events) => events.some((event) => event.kind === 'bolt-cast'),
+      20000,
+    );
+
+    expect(drawn).toContainEqual(
+      expect.objectContaining({ kind: 'bolt-cast', abilityId: 'throw-knife' }),
+    );
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
+      expect.objectContaining({ text: 'Bandit winds up Throw Knife!' }),
+    );
+    expect(bandit.windUp).toBeNull();
+  });
+
+  it('swings instead once it has closed the gap', () => {
+    const { kit, bandit } = kiting();
+    kit.world.teleport(bandit.x - 40, bandit.y);
+
+    kit.until(() => kit.world.player.hp < kit.world.player.maxHp, 'the bandit to land a swing');
+
+    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).not.toContainEqual(
+      expect.objectContaining({ text: 'Bandit winds up Throw Knife!' }),
+    );
   });
 });

@@ -9,6 +9,7 @@ export class TargetFrame {
   private readonly nameLine: HTMLElement;
   private readonly hpFill: HTMLElement;
   private readonly hpText: HTMLElement;
+  private readonly windUp: HTMLElement;
 
   constructor() {
     this.root = el('div', 'hud-panel hud-target hud-hidden');
@@ -22,11 +23,20 @@ export class TargetFrame {
     this.hpText = el('div', 'hud-bar__label');
     hpBar.append(this.hpFill, this.hpText);
 
-    this.root.append(this.nameLine, hpBar);
+    // Under the bar, and empty most of the time: a line that is only ever there
+    // when something is about to happen is read as the warning it is.
+    this.windUp = el('div', 'hud-target__winding hud-hidden');
+
+    this.root.append(this.nameLine, hpBar, this.windUp);
   }
 
   layout(rect: Rect): void {
     place(this.root, rect, 'box');
+  }
+
+  /** Whether the wind-up line is showing, which is a line of height to reserve. */
+  isWinding(): boolean {
+    return !this.windUp.classList.contains('hud-hidden');
   }
 
   show(target: TargetInfo): void {
@@ -34,6 +44,8 @@ export class TargetFrame {
     this.nameLine.style.color = target.conColor;
     this.hpFill.style.width = fillPercent(barFill(target.hp, target.maxHp));
     this.hpText.textContent = `${target.hp} / ${target.maxHp} hp`;
+    this.windUp.textContent = target.winding ?? '';
+    this.windUp.classList.toggle('hud-hidden', target.winding === null);
     this.root.classList.remove('hud-hidden');
   }
 

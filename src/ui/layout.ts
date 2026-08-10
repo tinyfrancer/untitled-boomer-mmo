@@ -20,6 +20,10 @@ const SHORT_HEIGHT = 560;
 // The name-and-level line and the health bar under it, inside the panel's own
 // padding and border.
 const TARGET_FRAME_HEIGHT = 56;
+// The line naming what the target is winding up. Only there while something is
+// coming, so the frame is the height above the rest of the time — the same
+// bargain the worn title and the buff row make in the other corner.
+const WIND_UP_LINE_HEIGHT = 17;
 // The name-and-level line, the health bar and the XP bar. Every number a bar
 // carries is printed inside it, so none of the three costs a line of its own.
 const PLAYER_COLUMN_HEIGHT = 60;
@@ -74,6 +78,8 @@ export interface HudLayoutOptions {
   // Whether any buff or debuff is up. How many there are does not matter: they
   // sit in a row, so the first one costs the height and the rest are free.
   hasEffects?: boolean;
+  // Whether the target is winding something up, which costs the frame a line.
+  targetWinding?: boolean;
   trackedQuests?: number;
 }
 
@@ -98,6 +104,7 @@ export function hudLayout(
     scale = 1,
     hasMana = false,
     hasTitle = false,
+    targetWinding = false,
     hasEffects = false,
     trackedQuests = 0,
   } = options;
@@ -141,7 +148,7 @@ export function hudLayout(
     x: width - margin - targetWidth,
     y: margin,
     width: targetWidth,
-    height: px(TARGET_FRAME_HEIGHT, scale),
+    height: px(TARGET_FRAME_HEIGHT + (targetWinding ? WIND_UP_LINE_HEIGHT : 0), scale),
   };
 
   return {

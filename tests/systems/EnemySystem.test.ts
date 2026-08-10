@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
+import { ENEMY_ABILITIES, type EnemyAbilityDefinition } from '../../src/data/enemyAbilities';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { ITEMS, armorTypeOf } from '../../src/data/items';
 import { BANDIT_HIDEOUT_MOB_SPAWNS, TOWN_MOB_SPAWNS } from '../../src/data/spawns';
@@ -136,6 +137,25 @@ function freshWarrior(): Combatant {
   return { hp: stats.maxHp, attackPower: stats.attackPower, cooldownMs: stats.attackCooldownMs };
 }
 
+/**
+ * The same enemy with a telegraphed ability folded into its damage, either
+ * landing every time or dodged every time.
+ *
+ * An ability spends the swing it interrupts, so over one of its cooldowns the
+ * creature makes the same number of attacks and one of them is worth
+ * `powerMultiplier` swings — or nothing at all, if the player walked out of it.
+ */
+function withAbility(
+  enemy: Combatant,
+  ability: EnemyAbilityDefinition,
+  outcome: 'lands' | 'dodged',
+): Combatant {
+  const swings = ability.cooldownMs / enemy.cooldownMs;
+  const spent = outcome === 'lands' ? ability.powerMultiplier : 0;
+  const total = (swings - 1) * enemy.attackPower + enemy.attackPower * spent;
+  return { ...enemy, attackPower: total / swings };
+}
+
 function enemyAt(id: EnemyId, level: number): Combatant {
   const stats = scaleEnemyStats(ENEMIES[id], level);
   return {
@@ -183,9 +203,25 @@ describe('difficulty curve', () => {
    * trading blows describes that.
    */
   it('makes the chief a level 3 fight in bandit gear, and a wall below that', () => {
-    expect(duel(freshWarrior(), enemyAt('bandit-chief', 4))).toBe('enemy');
-    expect(duel(gearedWarrior(2), enemyAt('bandit-chief', 4))).toBe('enemy');
-    expect(duel(gearedWarrior(3), enemyAt('bandit-chief', 4))).toBe('player');
+    const chief = enemyAt('bandit-chief', 4);
+    expect(duel(freshWarrior(), chief)).toBe('enemy');
+    expect(duel(gearedWarrior(2), chief)).toBe('enemy');
+    expect(duel(gearedWarrior(3), chief)).toBe('player');
+  });
+
+  /**
+   * With his Cleave folded in, which is what the fight actually is. It replaces
+   * the swing it interrupts rather than arriving on top of one, so standing in
+   * every single one is worse than being plainly auto-attacked and stepping out
+   * of every single one is better — the fight has a thing to do in it, and doing
+   * it is what wins.
+   */
+  it('turns the chief fight into a question about moving', () => {
+    const chief = enemyAt('bandit-chief', 4);
+    const cleave = ENEMY_ABILITIES.cleave;
+
+    expect(duel(gearedWarrior(3), withAbility(chief, cleave, 'lands'))).toBe('enemy');
+    expect(duel(gearedWarrior(3), withAbility(chief, cleave, 'dodged'))).toBe('player');
   });
 
   // What the fight pays for itself: the blade off his own table turns a fight
