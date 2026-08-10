@@ -1,6 +1,14 @@
-import { consumableFor } from '../data/items';
-import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID } from '../data/recipes';
-import { canCook, findCookableItem, recipeForInput, rollCook } from '../systems/CookingSystem';
+import { consumableFor, describeItemName } from '../data/items';
+import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID, type CookingRecipe } from '../data/recipes';
+import {
+  advanceCook,
+  beginCook,
+  canCook,
+  findCookableItem,
+  recipeForInput,
+  rollCook,
+  type CookState,
+} from '../systems/CookingSystem';
 import {
   advanceGather,
   beginGather,
@@ -35,8 +43,13 @@ export interface GatherSessionDeps {
 }
 
 export class GatherSession {
-  /** The channel in flight, or null. The HUD's progress bar is drawn off it. */
+  /** The gather channel in flight, or null. */
   state: GatherState | null = null;
+  /**
+   * What is in the pan, or null. It is the gather's twin rather than a second
+   * kind of thing: one bar draws both, and only one of them can ever be running.
+   */
+  cooking: CookState | null = null;
   /** One fire at a time, and it burns out on its own clock. */
   campfire: Campfire | null = null;
 
@@ -62,24 +75,33 @@ export class GatherSession {
       return;
     }
 
+    // One bar, so a swing at a tree takes it off whatever was in the pan.
+    this.cooking = null;
     this.node = node;
     this.state = beginGather(node.definition, character.skillLevelOf(node.definition.skill));
     this.ctx.events.emit(CHANNEL_STARTED_EVENT, node.definition.name);
   }
 
+  /** Drops whichever channel is running: the gather, or the pan over the fire. */
   stop(): void {
-    if (!this.state) return;
+    if (!this.isChanneling()) return;
     this.state = null;
     this.node = null;
+    this.cooking = null;
     this.ctx.events.emit(CHANNEL_ENDED_EVENT);
   }
 
+  /** Whether either channel is running, which is a camp's "leave it alone". */
+  isChanneling(): boolean {
+    return this.state !== null || this.cooking !== null;
+  }
+
   /**
-   * Being hit breaks the channel, so gathering is never a way to ignore a mob
-   * already chewing on you. Silent when there was nothing to break.
+   * Being hit breaks the channel, so neither gathering nor cooking is a way to
+   * ignore a mob already chewing on you. Silent when there was nothing to break.
    */
   interrupt(): void {
-    if (!this.state) return;
+    if (!this.isChanneling()) return;
     this.ctx.notice('You are interrupted!');
     this.stop();
   }
@@ -88,6 +110,7 @@ export class GatherSession {
     if (this.campfire?.update(deltaMs)) {
       this.campfire = null;
     }
+    this.updateCooking(deltaMs);
     if (!this.state || !this.node) return;
 
     const node = this.node;
@@ -134,8 +157,11 @@ export class GatherSession {
   }
 
   /**
-   * With an item selected in the bag the HUD names what to cook; without one
-   * (dev console, older callers) fall back to the first cookable thing.
+   * Puts something in the pan, which is a channel rather than a tap: a fish
+   * takes `cookMs` over the fire, and standing there for it is what the burn is
+   * now worth avoiding. With an item selected in the bag the HUD names what to
+   * cook; without one (dev console, older callers) fall back to the first
+   * cookable thing.
    */
   cook(itemId?: ItemId): void {
     const { character } = this.ctx;
@@ -145,6 +171,9 @@ export class GatherSession {
       this.ctx.notice('You have nothing to cook.');
       return;
     }
+    // Already in the pan: pressing Cook again is nothing rather than a restart,
+    // or a double tap would keep putting the same fish back on a cold clock.
+    if (this.cooking?.recipe.inputItemId === recipe.inputItemId) return;
 
     const check = canCook(
       recipe,
@@ -157,15 +186,11 @@ export class GatherSession {
       return;
     }
 
-    const result = rollCook(recipe, character.skillLevelOf('cooking'));
-    character.removeItem(recipe.inputItemId, 1);
-    character.addItem(result.itemId, 1);
-    this.ctx.publishInventory();
-    if (result.burnt) {
-      this.ctx.notice('You burn it.');
-    } else {
-      this.ctx.awardSkillXp('cooking', result.xp);
-    }
+    // One bar between them, so whatever was running gives it up.
+    this.stop();
+    this.cooking = beginCook(recipe);
+    this.ctx.events.emit(CHANNEL_STARTED_EVENT, describeItemName(recipe.inputItemId));
+    this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 
   eat(itemId: ItemId): void {
@@ -183,6 +208,57 @@ export class GatherSession {
 
     character.removeItem(itemId, 1);
     this.ctx.publishInventory();
+  }
+
+  private updateCooking(deltaMs: number): void {
+    const cooking = this.cooking;
+    if (!cooking) return;
+
+    // The fire is the pan's range check, and it answers for both ways of losing
+    // one: walking off it, and letting it burn out under you.
+    const outcome = advanceCook(cooking, deltaMs, this.isNearFire());
+    if (outcome.status === 'cooking') {
+      this.cooking = outcome.state;
+      this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, outcome.progress);
+      return;
+    }
+    if (outcome.status === 'cancelled') {
+      this.stop();
+      return;
+    }
+
+    this.completeCook(cooking.recipe);
+  }
+
+  private completeCook(recipe: CookingRecipe): void {
+    const { character } = this.ctx;
+
+    const result = rollCook(recipe, character.skillLevelOf('cooking'));
+    character.removeItem(recipe.inputItemId, 1);
+    character.addItem(result.itemId, 1);
+    this.ctx.publishInventory();
+    if (result.burnt) {
+      this.ctx.notice('You burn it.');
+    } else {
+      this.ctx.awardSkillXp('cooking', result.xp);
+    }
+
+    // Auto-repeat down the stack, the way the gather channel re-arms itself: a
+    // bag of twenty fish is one decision rather than twenty. Asked again rather
+    // than counted, since the fire can go out and the bag can empty — and a
+    // refusal here is the stack finishing, so it is silent.
+    const again = canCook(
+      recipe,
+      character.state.skills,
+      character.state.inventory,
+      this.isNearFire(),
+    );
+    if (!again.ok) {
+      this.stop();
+      return;
+    }
+    this.cooking = beginCook(recipe);
+    this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 
   private complete(node: ResourceNode): void {

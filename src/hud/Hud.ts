@@ -87,15 +87,17 @@ import type { EventBus } from '../world/worldEvents';
 import type { ItemId, TitleId, ZoneId } from '../types/ids';
 
 /**
- * Which request each of the inventory panel's buttons is. Lighting a fire is the
- * one that is about where the player is standing rather than about the item it
- * was pressed on, which is why its event is the one carrying nothing.
+ * Which request each of the inventory panel's buttons is. Two are not simply
+ * "this item": lighting a fire is about where the player is standing, which is
+ * why its event carries nothing, and the two sell buttons are the same request
+ * with a different count attached.
  */
 const ITEM_ACTION_EVENTS = {
   equip: EQUIP_ITEM_REQUESTED_EVENT,
   eat: EAT_ITEM_REQUESTED_EVENT,
   cook: COOK_REQUESTED_EVENT,
   sell: SELL_ITEM_REQUESTED_EVENT,
+  'sell-all': SELL_ITEM_REQUESTED_EVENT,
   'light-fire': LIGHT_FIRE_REQUESTED_EVENT,
 } satisfies Record<ItemActionId, UiEventName>;
 
@@ -426,6 +428,12 @@ class Hud {
       this.events.emit(event);
       return;
     }
+    if (event === SELL_ITEM_REQUESTED_EVENT) {
+      // The count the button was drawn with. The counter clamps it to what is
+      // really in the pack, so a stale number can only ever sell fewer.
+      this.events.emit(event, itemId, actionId === 'sell-all' ? this.stackSize(itemId) : 1);
+      return;
+    }
     this.events.emit(event, itemId);
   }
 
@@ -434,7 +442,12 @@ class Hud {
       nearFire: this.model.actions.nearFire,
       shopOpen: this.model.shopOpen,
       classId: this.classId,
+      stackSize: this.stackSize(itemId),
     });
+  }
+
+  private stackSize(itemId: ItemId): number {
+    return this.model.inventory[itemId] ?? 0;
   }
 
   // ---------------------------------------------------------------------------

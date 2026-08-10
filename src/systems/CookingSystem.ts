@@ -17,6 +17,18 @@ export interface CookResult {
   burnt: boolean;
 }
 
+/** One thing in the pan, which is the only part of cooking that spans frames. */
+export interface CookState {
+  recipe: CookingRecipe;
+  elapsedMs: number;
+  durationMs: number;
+}
+
+export type CookOutcome =
+  | { status: 'cooking'; state: CookState; progress: number }
+  | { status: 'complete' }
+  | { status: 'cancelled'; reason: 'off-the-fire' };
+
 /** Whether there is a recipe that starts from this item. */
 export function isRecipeInput(itemId: ItemId): itemId is RecipeId {
   return itemId in COOKING_RECIPES;
@@ -64,6 +76,38 @@ export function canCook(
   }
 
   return { ok: true };
+}
+
+/**
+ * Puts one in the pan. The duration is the recipe's flat `cookMs` rather than
+ * something a level shaves down the way `gatherDurationMs` does: cooking already
+ * pays for its levels in burn chance, and buying speed with the same levels
+ * would make the last ones worth roughly double what the first are.
+ */
+export function beginCook(recipe: CookingRecipe): CookState {
+  return { recipe, elapsedMs: 0, durationMs: recipe.cookMs };
+}
+
+/**
+ * Advances the pan by one frame. Losing the fire — walking off it, or letting it
+ * burn out — cancels; every other interruption (taking a hit, tapping elsewhere)
+ * is the caller dropping the session, since only the caller knows those happened.
+ */
+export function advanceCook(state: CookState, deltaMs: number, nearFire: boolean): CookOutcome {
+  if (!nearFire) {
+    return { status: 'cancelled', reason: 'off-the-fire' };
+  }
+
+  const elapsedMs = state.elapsedMs + deltaMs;
+  if (elapsedMs >= state.durationMs) {
+    return { status: 'complete' };
+  }
+
+  return {
+    status: 'cooking',
+    state: { ...state, elapsedMs },
+    progress: elapsedMs / state.durationMs,
+  };
 }
 
 export function rollCook(

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { COOKING_RECIPES } from '../../src/data/recipes';
 import {
+  advanceCook,
+  beginCook,
   burnChance,
   canCook,
   findCookableItem,
@@ -77,6 +79,40 @@ describe('burnChance', () => {
   it('reaches zero by level 9 and never goes negative', () => {
     expect(burnChance(9)).toBe(0);
     expect(burnChance(10)).toBe(0);
+  });
+});
+
+describe('the pan', () => {
+  it('runs for the recipe’s own time, flat — cooking buys reliability, not speed', () => {
+    expect(beginCook(FISH).durationMs).toBe(FISH.cookMs);
+    expect(beginCook(COOKING_RECIPES['crab-meat']).durationMs).toBe(
+      COOKING_RECIPES['crab-meat'].cookMs,
+    );
+  });
+
+  it('reports how far through it is while it runs', () => {
+    const outcome = advanceCook(beginCook(FISH), FISH.cookMs / 4, true);
+
+    expect(outcome.status).toBe('cooking');
+    expect(outcome.status === 'cooking' && outcome.progress).toBeCloseTo(0.25);
+  });
+
+  it('completes on the frame that carries it past the duration', () => {
+    // One frame of a phone at ~7fps is a fifth of the whole cook, which is
+    // exactly the case a comparison against a fixed step would step over.
+    const half = advanceCook(beginCook(FISH), FISH.cookMs - 10, true);
+
+    expect(half.status).toBe('cooking');
+    expect(
+      advanceCook(half.status === 'cooking' ? half.state : beginCook(FISH), 140, true),
+    ).toEqual({ status: 'complete' });
+  });
+
+  it('cancels the moment the fire is gone', () => {
+    expect(advanceCook(beginCook(FISH), 100, false)).toEqual({
+      status: 'cancelled',
+      reason: 'off-the-fire',
+    });
   });
 });
 

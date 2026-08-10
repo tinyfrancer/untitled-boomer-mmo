@@ -18,7 +18,8 @@ export interface ShopState {
 
 export interface ShopHandlers {
   onBuy: (itemId: ItemId) => void;
-  onSell: (itemId: ItemId) => void;
+  /** How many to part with: the row taps one, the button beside it the lot. */
+  onSell: (itemId: ItemId, quantity: number) => void;
   onAcceptQuest: (questId: QuestId) => void;
   onTurnInQuest: (questId: QuestId) => void;
   /** The X: the world owns whether the shop is open, so this asks rather than does. */
@@ -91,17 +92,44 @@ export class ShopModal extends Overlay {
       this.body.append(emptyLine('(nothing worth selling)'));
     }
     for (const [itemId, quantity] of sellable) {
-      this.body.append(
-        listRow({
-          label: `${describeItemName(itemId)} x${quantity}`,
-          value: formatCurrency(itemValue(itemId) ?? 0),
-          labelColor: THEME.color.text,
-          valueColor: THEME.color.levelUp,
-          onClick: () => this.handlers.onSell(itemId),
-          itemId,
-        }),
-      );
+      this.body.append(this.sellRow(itemId, quantity));
     }
+  }
+
+  /**
+   * One line of the bag, priced. The row itself parts with one, which is what a
+   * vendor tap has always meant; a stack grows a second button that empties it,
+   * because clearing forty rat bones one tap at a time is not a decision anyone
+   * is making forty times.
+   *
+   * They are two buttons rather than one row with two meanings — a stack of
+   * quest turn-ins is exactly the thing a mis-tap must not be able to sell — and
+   * siblings rather than nested, since a button inside a button is neither valid
+   * nor tappable.
+   */
+  private sellRow(itemId: ItemId, quantity: number): HTMLElement {
+    const unit = itemValue(itemId) ?? 0;
+    const row = listRow({
+      label: `${describeItemName(itemId)} x${quantity}`,
+      value: formatCurrency(unit),
+      labelColor: THEME.color.text,
+      valueColor: THEME.color.levelUp,
+      onClick: () => this.handlers.onSell(itemId, 1),
+      itemId,
+    });
+    if (quantity < 2) return row;
+
+    const all = el('button', 'hud-button hud-sell__all', 'All');
+    all.type = 'button';
+    all.dataset.sellAll = itemId;
+    // The one number a player wants before emptying a stack, and there is no
+    // hover on a phone to put it behind.
+    all.title = `Sell all ${quantity} for ${formatCurrency(unit * quantity)}`;
+    all.addEventListener('click', () => this.handlers.onSell(itemId, quantity));
+
+    const pair = el('div', 'hud-sell');
+    pair.append(row, all);
+    return pair;
   }
 
   // A quest row says what it wants and how far along it is, so the player never

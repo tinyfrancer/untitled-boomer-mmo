@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
-import { FIRE_COOK_RADIUS } from '../../src/data/recipes';
+import { COOKING_RECIPES, FIRE_BURN_MS, FIRE_COOK_RADIUS } from '../../src/data/recipes';
 import {
   CHANNEL_ENDED_EVENT,
   CHANNEL_STARTED_EVENT,
@@ -151,9 +151,55 @@ describe('the pan', () => {
     gathering.lightFire();
 
     gathering.cook('raw-fish');
+    gathering.update(COOKING_RECIPES['raw-fish'].cookMs);
 
     expect(character.itemCount('raw-fish')).toBe(0);
     expect(character.itemCount('cooked-fish') + character.itemCount('burnt-fish')).toBe(1);
+  });
+
+  it('is a channel: the press starts it and spends nothing', () => {
+    const { gathering, character, emissions } = session();
+    character.addItem('logs', 1);
+    character.addItem('raw-fish', 1);
+    gathering.lightFire();
+
+    gathering.cook('raw-fish');
+
+    expect(gathering.cooking).not.toBeNull();
+    expect(character.itemCount('raw-fish')).toBe(1);
+    expect(emissions(CHANNEL_STARTED_EVENT)).toEqual([['Raw Fish']]);
+  });
+
+  // The pan and the gather are one bar and one channel, so neither can be
+  // running behind the other.
+  it('gives the bar up to a gather started on top of it', () => {
+    const { gathering, character } = session();
+    character.addItem('logs', 1);
+    character.addItem('raw-fish', 1);
+    character.addItem('felling-axe', 1);
+    character.equip('felling-axe');
+    gathering.lightFire();
+    gathering.cook('raw-fish');
+
+    gathering.start(treeAt(0, 0));
+
+    expect(gathering.cooking).toBeNull();
+    expect(gathering.state).not.toBeNull();
+  });
+
+  it('ends when the fire it was over goes out', () => {
+    const { gathering, character, emissions } = session();
+    character.addItem('logs', 1);
+    character.addItem('raw-fish', 1);
+    gathering.lightFire();
+    gathering.cook('raw-fish');
+
+    gathering.update(FIRE_BURN_MS + 1);
+
+    expect(gathering.cooking).toBeNull();
+    expect(gathering.campfire).toBeNull();
+    expect(emissions(CHANNEL_ENDED_EVENT)).toHaveLength(1);
+    expect(character.itemCount('raw-fish')).toBe(1);
   });
 });
 

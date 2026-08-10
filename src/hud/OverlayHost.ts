@@ -143,7 +143,7 @@ export class OverlayHost {
     this.shop = new ShopModal(
       {
         onBuy: (itemId) => this.events.emit(BUY_ITEM_REQUESTED_EVENT, itemId),
-        onSell: (itemId) => this.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId),
+        onSell: (itemId, quantity) => this.events.emit(SELL_ITEM_REQUESTED_EVENT, itemId, quantity),
         onAcceptQuest: (questId) => this.events.emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
         onTurnInQuest: (questId) => this.events.emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
         // The shop closes when the world says so, which is what this asks for.

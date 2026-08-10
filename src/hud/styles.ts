@@ -868,6 +868,28 @@ function hudCss(): string {
   color: ${THEME.color.muted};
 }
 
+/* A sell row and the button that empties the stack, side by side. The row keeps
+   the margin it had on its own, so a bag of stacks and a bag of singles are the
+   same list with the same gaps down it. */
+.hud-sell {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+.hud-sell > .hud-list-row {
+  margin-bottom: 0;
+}
+/* Sized to the row rather than to \`touchMin\`: it stands beside a 34px target
+   and is the one of the pair a mis-tap costs something, so it is deliberately
+   not the bigger of the two. */
+.hud-sell__all {
+  flex: none;
+  min-height: 0;
+  min-width: 44px;
+  font-size: ${THEME.font.sm}px;
+}
+
 /* --- Context menu and inspect card --------------------------------------- */
 
 /* Sized to its longest line rather than to a column width: the lines are two

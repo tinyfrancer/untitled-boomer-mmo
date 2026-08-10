@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness } from './harness';
-import { NOTICE_EVENT } from '../../src/ui/uiEvents';
-import { FIRE_COOK_RADIUS } from '../../src/data/recipes';
+import { CHANNEL_PROGRESS_EVENT, CHANNEL_STARTED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
+import { COOKING_RECIPES, FIRE_COOK_RADIUS } from '../../src/data/recipes';
 
 /**
  * The chain the two gathering skills feed: logs to a fire, raw fish to food,
@@ -59,26 +59,100 @@ describe('cooking', () => {
     return kit;
   }
 
+  it('takes the recipe’s time over the fire before anything comes off it', () => {
+    const { world, character, tick } = atAFire();
+    character.addItem('raw-fish', 1);
+
+    world.handleCookRequested();
+    tick(1, COOKING_RECIPES['raw-fish'].cookMs - 100);
+
+    expect(world.cookState).not.toBeNull();
+    expect(character.itemCount('raw-fish')).toBe(1);
+  });
+
+  it('draws the channel bar the gather and the cast share', () => {
+    const { world, character, emissions, tick } = atAFire();
+    character.addItem('raw-fish', 1);
+
+    world.handleCookRequested();
+    tick(1, 100);
+
+    expect(emissions(CHANNEL_STARTED_EVENT).at(-1)).toEqual(['Raw Fish']);
+    expect(Number(emissions(CHANNEL_PROGRESS_EVENT).at(-1)?.[0])).toBeGreaterThan(0);
+  });
+
   it('consumes the raw fish and produces food or a burnt mess either way', () => {
-    const { world, character } = atAFire();
+    const { world, character, until } = atAFire();
     character.addItem('raw-fish', 6);
 
-    // Cook the lot: which way each one goes is a dice roll at level 1, so the
-    // assertion is on the trade rather than on the outcome.
-    for (let i = 0; i < 6; i += 1) world.handleCookRequested();
+    // One tap cooks the stack: the channel re-arms itself down it, the way the
+    // gather channel does. Which way each fish goes is a dice roll at level 1,
+    // so the assertion is on the trade rather than on the outcome.
+    world.handleCookRequested();
+    until(() => character.itemCount('raw-fish') === 0, 'the stack to go through the pan', 30000);
 
-    expect(character.itemCount('raw-fish')).toBe(0);
     expect(character.itemCount('cooked-fish') + character.itemCount('burnt-fish')).toBe(6);
+    expect(world.cookState).toBeNull();
   });
 
   it('trains cooking on the ones that come off the fire whole', () => {
-    const { world, character, state } = atAFire();
+    const { world, character, state, until } = atAFire();
     character.addItem('raw-fish', 20);
 
-    for (let i = 0; i < 20; i += 1) world.handleCookRequested();
+    world.handleCookRequested();
+    until(() => character.itemCount('raw-fish') === 0, 'the stack to go through the pan', 60000);
 
     expect(character.itemCount('cooked-fish')).toBeGreaterThan(0);
     expect(state.skills.cooking.xp + state.skills.cooking.level).toBeGreaterThan(1);
+  });
+
+  it('is cancelled by walking off the fire, and keeps what was in the pan raw', () => {
+    const { world, character, tick } = atAFire();
+    character.addItem('raw-fish', 2);
+    world.handleCookRequested();
+    tick(1, 200);
+
+    world.teleport(world.player.x + FIRE_COOK_RADIUS * 4, world.player.y);
+    tick(1, 200);
+
+    expect(world.cookState).toBeNull();
+    expect(character.itemCount('raw-fish')).toBe(2);
+  });
+
+  // The same rule the gather channel is held to: standing at a fire is not a way
+  // to ignore the thing chewing on you.
+  it('is broken by a hit', () => {
+    const { world, character, emitted, until } = atAFire();
+    // Enough to keep the pan going far longer than the rat needs to swing, so
+    // the channel ending can only be the hit rather than the stack running out.
+    character.addItem('raw-fish', 20);
+    world.handleCookRequested();
+
+    // Bring the fight to the fire, and with a rat that can reach it without
+    // leashing — one that turns for home on the first frame never swings.
+    const rat = world.mobs.find(
+      (mob) =>
+        Math.hypot(mob.spawnX - world.player.x, mob.spawnY - world.player.y) <
+        mob.definition.leashRadius,
+    );
+    if (!rat) throw new Error('no rat spawns within leash of the town spawn point');
+    rat.setPosition(world.player.x, world.player.y);
+    rat.engage();
+
+    until(() => world.cookState === null, 'a hit to break the pan');
+    expect(refusals(emitted)).toContain('You are interrupted!');
+  });
+
+  it('is a no-op rather than a restart while the same thing is already in the pan', () => {
+    const { world, character, tick } = atAFire();
+    character.addItem('raw-fish', 1);
+    world.handleCookRequested();
+    tick(1, COOKING_RECIPES['raw-fish'].cookMs - 200);
+
+    world.handleCookRequested();
+    tick(1, 200);
+
+    expect(character.itemCount('raw-fish')).toBe(0);
   });
 
   it('is refused away from the fire', () => {

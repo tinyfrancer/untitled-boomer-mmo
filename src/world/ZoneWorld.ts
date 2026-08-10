@@ -43,6 +43,7 @@ import { tileOf, toTile } from '../systems/MapSystem';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { SHOP_INTERACT_RADIUS } from '../data/shop';
 import type { GatherState } from '../systems/GatherSystem';
+import type { CookState } from '../systems/CookingSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
 import { withinRadius, type Point } from '../systems/MovementSystem';
 import type { InputState } from '../systems/InputState';
@@ -314,7 +315,7 @@ export class ZoneWorld implements Targeting {
       closeShop: () => this.shop.close(),
       eat: (itemId) => this.gathering.eat(itemId),
       gatherAt: (node) => this.approachAndGather(node),
-      isGathering: () => this.gathering.state !== null,
+      isChanneling: () => this.gathering.isChanneling(),
       awardXp: (reward) => this.awardXp(reward),
       creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),
     });
@@ -365,7 +366,7 @@ export class ZoneWorld implements Targeting {
     listen(COOK_REQUESTED_EVENT, (itemId) => this.gathering.cook(itemId));
     listen(LIGHT_FIRE_REQUESTED_EVENT, () => this.gathering.lightFire());
     listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => this.shop.buy(itemId));
-    listen(SELL_ITEM_REQUESTED_EVENT, (itemId) => this.shop.sell(itemId));
+    listen(SELL_ITEM_REQUESTED_EVENT, (itemId, quantity) => this.shop.sell(itemId, quantity));
     listen(SHOP_CLOSED_EVENT, () => this.shop.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
     listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
@@ -705,8 +706,8 @@ export class ZoneWorld implements Targeting {
     this.shop.buy(itemId);
   }
 
-  handleSellRequested(itemId: ItemId): void {
-    this.shop.sell(itemId);
+  handleSellRequested(itemId: ItemId, quantity = 1): void {
+    this.shop.sell(itemId, quantity);
   }
 
   // ---------------------------------------------------------------------------
@@ -721,6 +722,11 @@ export class ZoneWorld implements Targeting {
   /** The gather channel in flight, or null. */
   get gatherState(): GatherState | null {
     return this.gathering.state;
+  }
+
+  /** What is over the fire, or null. The gather channel's twin; see `GatherSession`. */
+  get cookState(): CookState | null {
+    return this.gathering.cooking;
   }
 
   startGathering(node: ResourceNode): void {

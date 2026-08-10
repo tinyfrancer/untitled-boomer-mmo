@@ -64,7 +64,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = []) {
       worked.push(node);
       gathering = true;
     },
-    isGathering: () => gathering,
+    isChanneling: () => gathering,
     awardXp: (reward: number) => awarded.push(reward),
     creditKill: (enemyId: EnemyId, count: number) => {
       credited.push({ enemyId, count });

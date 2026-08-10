@@ -496,6 +496,24 @@ describe('the shop', () => {
     events.emit(CURRENCY_CHANGED_EVENT, 1234);
     expect(shop()?.textContent).toContain('12s');
   });
+
+  /**
+   * The row parts with one and the button beside it empties the stack. They are
+   * two targets rather than one row with two meanings: a stack of quest turn-ins
+   * is exactly the thing a mis-tap must not be able to sell.
+   */
+  it('grows a bulk button on a stack, and asks for the whole of it', () => {
+    mount();
+    events.emit(SHOP_OPENED_EVENT);
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 12, 'brown-helmet': 1 });
+
+    expect(shop()?.querySelector('[data-sell-all="brown-helmet"]')).toBeNull();
+    shop()?.querySelector<HTMLButtonElement>('[data-sell-all="rat-bones"]')?.click();
+    expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['rat-bones', 12] });
+
+    shop()?.querySelector<HTMLButtonElement>('.hud-list-row[data-item="rat-bones"]')?.click();
+    expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['rat-bones', 1] });
+  });
 });
 
 describe('the character sheet asks for what it cannot do itself', () => {
@@ -537,7 +555,9 @@ describe('the character sheet asks for what it cannot do itself', () => {
  * — an Eat that emitted the cook request would look right until it burnt.
  */
 describe('the inventory panel forwards its buttons', () => {
-  const BAG = { 'brown-helmet': 1, 'cooked-fish': 1, logs: 1, 'raw-fish': 1 };
+  // One stack among the singles: what a bag cell offers depends on how many of
+  // it there are, and only "sell the lot" asks.
+  const BAG = { 'brown-helmet': 1, 'cooked-fish': 1, logs: 1, 'raw-fish': 1, 'rat-bones': 12 };
 
   function pressAction(itemId: string, action: string): void {
     parent.querySelector<HTMLButtonElement>(`.hud-item[data-item="${itemId}"]`)?.click();
@@ -567,7 +587,19 @@ describe('the inventory panel forwards its buttons', () => {
 
     events.emit(SHOP_OPENED_EVENT);
     pressAction('cooked-fish', 'sell');
-    expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['cooked-fish'] });
+    expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['cooked-fish', 1] });
+  });
+
+  // The bulk half of the same request: one event with a count on it, so the
+  // counter has one rule about vendoring rather than two.
+  it('asks to sell the whole stack, and offers that only on a stack', () => {
+    events.emit(SHOP_OPENED_EVENT);
+
+    pressAction('rat-bones', 'sell-all');
+    expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['rat-bones', 12] });
+
+    parent.querySelector<HTMLButtonElement>('.hud-item[data-item="cooked-fish"]')?.click();
+    expect(parent.querySelector('[data-item-action="sell-all"]')).toBeNull();
   });
 
   // The one button that is about where the player is standing rather than about
