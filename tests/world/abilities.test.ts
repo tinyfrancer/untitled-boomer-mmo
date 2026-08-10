@@ -6,6 +6,7 @@ import {
   CHANNEL_STARTED_EVENT,
   COMBAT_LOG_EVENT,
 } from '../../src/ui/uiEvents';
+import type { CombatLogEntry } from '../../src/systems/CombatLogSystem';
 import { harness } from './harness';
 
 /**
@@ -210,20 +211,29 @@ describe('casting in a running zone', () => {
     );
   });
 
+  /**
+   * Blocks and parries turn swings aside, and a cast can beat the next one — so
+   * this re-arms until a blow actually gets through rather than betting a test
+   * on a single race. What is being asserted is the wiring: a hit reaching the
+   * player's HP reaches the cast, from the far side of the fight.
+   */
   it('is broken by a hit that gets through', () => {
     const kit = castingWizard();
     kit.world.teleport(kit.mob.x - 40, kit.mob.y);
-    kit.world.handleAbilityRequested('fireball');
     kit.mob.engage();
+    const said = (): string[] =>
+      kit
+        .emissions(COMBAT_LOG_EVENT)
+        .flat()
+        .map((entry) => (entry as CombatLogEntry).text);
 
-    kit.until(
-      () => kit.emissions(CHANNEL_ENDED_EVENT).length > 0,
-      'the rat to break the cast',
-      20000,
-    );
-
-    expect(kit.emissions(COMBAT_LOG_EVENT).flat()).toContainEqual(
-      expect.objectContaining({ text: 'Your Fireball is interrupted.' }),
-    );
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      kit.world.player.restoreToFull();
+      kit.world.lastAbilityAt.clear();
+      kit.world.handleAbilityRequested('fireball');
+      kit.tick(Math.ceil(ABILITIES.fireball.castTimeMs / 100) + 1, 100);
+      if (said().includes('Your Fireball is interrupted.')) return;
+    }
+    throw new Error('thirty casts and the rat never broke one');
   });
 });

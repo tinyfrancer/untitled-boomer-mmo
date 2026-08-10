@@ -253,15 +253,24 @@ describe('a spell with a cast time', () => {
    * when it started.
    */
   it('misses a target that left while it was being cast', () => {
-    const rat = ratAt(10, 0);
-    const kit = bar(rat);
-    kit.caster.cast('fireball');
+    // A fizzle never reaches the range question at all, so this re-casts until
+    // one gets far enough to ask it. Nothing is drawn either way, which is the
+    // half that holds on every attempt.
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const rat = ratAt(10, 0);
+      const kit = bar(rat);
+      kit.caster.cast('fireball');
 
-    rat.x = ABILITIES.fireball.range + 100;
-    kit.caster.update(CAST_MS);
+      rat.x = ABILITIES.fireball.range + 100;
+      kit.caster.update(CAST_MS);
 
-    expect(kit.drain().filter((event) => event.kind === 'bolt-cast')).toEqual([]);
-    expect(kit.emissions(NOTICE_EVENT)).toEqual([['Your target is too far away.']]);
+      expect(kit.drain().filter((event) => event.kind === 'bolt-cast')).toEqual([]);
+      if (kit.emissions(NOTICE_EVENT).length > 0) {
+        expect(kit.emissions(NOTICE_EVENT)).toEqual([['Your target is too far away.']]);
+        return;
+      }
+    }
+    throw new Error('forty casts of Fireball all fizzled');
   });
 
   // The panic button. A shield you have to stand still for is one you can never
