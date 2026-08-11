@@ -2373,6 +2373,17 @@ async function lockedZone() {
   // unit-tested; what a browser adds is that a creature drawn at a size no
   // other one uses still gets exactly one nameplate, is still picked by a real
   // tap, and does not arrive wearing the same face as his own men. ---
+
+  // The map sheet has been open since the top of this section, and the checks
+  // below are real taps on the *world*. The HUD swallows anything that lands on
+  // it on purpose (the overlay is `pointer-events: none` and each piece of
+  // furniture opts back in), so the sheet has to be shut first. It was not, and
+  // the tap below passed anyway for as long as the world map happened to be
+  // short enough to leave the chief's corner of the screen uncovered — which
+  // stopped being true the moment a fifth zone added a row to it. A check that
+  // depends on how tall an unrelated panel is is not checking what it says.
+  if ((await showing()).map === false) await tapTab('map');
+
   await page.evaluate(() => {
     const w = window.world;
     const chief = w.mobs.find((mob) => mob.definition.id === 'bandit-chief');
