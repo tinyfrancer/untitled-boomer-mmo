@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
+import { describeItemName } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
+import { SHOP_STOCK } from '../../src/data/shop';
 import { ZONES } from '../../src/data/zones';
 import { STARTING_BANK_SLOTS, bankSlotPrice } from '../../src/systems/BankSystem';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
@@ -124,12 +126,24 @@ describe('describing the rest of the world', () => {
     expect(panel.note).toBe(ZONES.beach.description);
   });
 
-  it('says what the shopkeeper is for', () => {
+  /**
+   * The merchant's card names no stock, for a reason the banker's card only
+   * half shares: this one is a pure function of an id and so cannot read the
+   * player at all, and half the shelf is gated behind a level or a finished
+   * quest. A list here would promise a stranger things they have not earned.
+   */
+  it('says what the shopkeeper is for without promising a shelf they cannot see', () => {
     const panel = describeNpc('shopkeeper');
+    const stocked = SHOP_STOCK.filter((entry) => !entry.requires).length;
 
     expect(panel.title).toBe('Shopkeeper');
-    expect(valueOf(panel, 'Sells')).toContain('Fishing Pole');
+    expect(valueOf(panel, 'Sells')).toBe('Tools, food and supplies');
+    expect(valueOf(panel, 'Stocks')).toBe(`${stocked} to start, up to ${SHOP_STOCK.length}`);
     expect(valueOf(panel, 'Quests')).toBe('2');
+    expect(panel.note).toContain('the work you finish');
+    // No item name appears anywhere on it, gated or not.
+    const said = [...panel.lines.map((line) => line.value), panel.note ?? ''].join(' ');
+    SHOP_STOCK.forEach((entry) => expect(said).not.toContain(describeItemName(entry.itemId)));
   });
 
   /**

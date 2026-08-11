@@ -221,6 +221,7 @@ class Hud {
         inventory: this.model.inventory,
         currency: this.model.currency,
         quests: this.model.quests,
+        level: this.model.level,
       }),
       bank: () => ({
         contents: this.model.bank,
@@ -584,6 +585,9 @@ class Hud {
       this.refreshHealth();
       // A level buys strength, which buys capacity.
       this.refreshEncumbrance();
+      // And it puts rows on the shelf. A quest handed in at the counter pays XP,
+      // so a level can land with the shop open and in front of the player.
+      this.overlays.refreshShop();
       this.toast.show(`Level Up! Level ${level}`, THEME.color.levelUp);
     });
     listen(PLAYER_HP_CHANGED_EVENT, (hp) => {

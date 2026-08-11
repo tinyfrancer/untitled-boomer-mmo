@@ -2,9 +2,9 @@ import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName, itemValue } from '../data/items';
-import { SHOP_STOCK } from '../data/shop';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { questsForNpc, type QuestLog, type QuestOffer } from '../systems/QuestSystem';
+import { shopOffers, type StockOffer } from '../systems/ShopSystem';
 import { THEME } from '../ui/theme';
 import type { QuestId } from '../types/ids';
 import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
@@ -14,6 +14,8 @@ export interface ShopState {
   inventory: Inventory;
   currency: number;
   quests: QuestLog;
+  // The other half of what the shelf is gated on, beside the quest log.
+  level: number;
 }
 
 export interface ShopHandlers {
@@ -71,17 +73,8 @@ export class ShopModal extends Overlay {
     }
 
     this.body.append(sectionHeader('For sale'));
-    for (const entry of SHOP_STOCK) {
-      this.body.append(
-        listRow({
-          label: describeItemName(entry.itemId),
-          value: formatCurrency(entry.price),
-          labelColor: state.currency >= entry.price ? THEME.color.equippable : THEME.color.dim,
-          valueColor: THEME.color.levelUp,
-          onClick: () => this.handlers.onBuy(entry.itemId),
-          itemId: entry.itemId,
-        }),
-      );
+    for (const offer of shopOffers({ level: state.level, quests: state.quests })) {
+      this.body.append(this.stockRow(offer, state.currency));
     }
 
     const sellable = inventoryEntries(state.inventory).filter(
@@ -94,6 +87,33 @@ export class ShopModal extends Overlay {
     for (const [itemId, quantity] of sellable) {
       this.body.append(this.sellRow(itemId, quantity));
     }
+  }
+
+  /**
+   * One line of the shelf. A row the player has not earned yet is drawn rather
+   * than left out — it is the reason to come back — and carries what it is
+   * waiting on where its price would be, since a locked row with a price on it
+   * would read as one they merely cannot afford.
+   *
+   * It stays tappable on purpose, like a shut zone's cell on the world map: the
+   * world answers with the full sentence, which is the version a phone with no
+   * tooltip to hover ever gets.
+   */
+  private stockRow({ entry, access }: StockOffer, currency: number): HTMLElement {
+    const gated = access.kind === 'gated';
+    const affordable = currency >= entry.price;
+    const row = listRow({
+      label: describeItemName(entry.itemId),
+      value: gated ? access.requirement : formatCurrency(entry.price),
+      labelColor: !gated && affordable ? THEME.color.equippable : THEME.color.dim,
+      valueColor: gated ? THEME.color.muted : THEME.color.levelUp,
+      onClick: () => this.handlers.onBuy(entry.itemId),
+      itemId: entry.itemId,
+    });
+    if (gated) {
+      row.dataset.locked = entry.itemId;
+    }
+    return row;
   }
 
   /**

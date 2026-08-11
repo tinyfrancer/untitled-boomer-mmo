@@ -1,7 +1,8 @@
 import { NPC_CLOSE_RADIUS } from '../data/npcs';
-import { shopPriceFor } from '../data/shop';
+import { shopEntryFor } from '../data/shop';
 import { itemValue } from '../data/items';
 import { withinRadius } from '../systems/MovementSystem';
+import { stockAccess } from '../systems/ShopSystem';
 import type { ItemId } from '../types/ids';
 import { SHOP_CLOSED_EVENT, SHOP_OPENED_EVENT } from '../ui/uiEvents';
 import type { WorldContext } from './WorldContext';
@@ -55,15 +56,26 @@ export class ShopSession {
 
   buy(itemId: ItemId): void {
     if (!this.npc) return;
-    const price = shopPriceFor(itemId);
-    if (price === null) return;
+    const entry = shopEntryFor(itemId);
+    if (!entry) return;
+    // What is on the shelf is settled here rather than trusted, for the same
+    // reason a sale's count is: the panel asking was drawn from a copy of the
+    // character, and only the character says whether the row has been earned.
+    const access = stockAccess(entry, {
+      level: this.ctx.character.state.level,
+      quests: this.ctx.character.state.quests,
+    });
+    if (access.kind === 'gated') {
+      this.ctx.notice(access.reason);
+      return;
+    }
     // Checked before the coin leaves the purse, so a full pack never sells the
     // player something they can't take home.
     if (!this.ctx.character.canCarryItem(itemId, 1)) {
       this.ctx.notice('Your pack is too full to carry that.');
       return;
     }
-    if (!this.ctx.character.spendCurrency(price)) {
+    if (!this.ctx.character.spendCurrency(entry.price)) {
       this.ctx.notice("You can't afford that.");
       return;
     }
