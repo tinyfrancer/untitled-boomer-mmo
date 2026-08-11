@@ -16,7 +16,7 @@ gathered materials that lead nowhere.
 | 3   | Armour that stops something, and a hand to hold a shield | Arithmetic        | merged 2026-08-10 |
 | 4   | A swing that can miss, and one that can land hard        | Arithmetic        | merged 2026-08-10 |
 | 5   | The bank                                                 | Economy           | merged 2026-08-11 |
-| 6   | Stock worth coming back for                              | Economy           | in review         |
+| 6   | Stock worth coming back for                              | Economy           | merged 2026-08-11 |
 | 7   | The trainer                                              | Economy           | planned           |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned           |
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | planned           |
