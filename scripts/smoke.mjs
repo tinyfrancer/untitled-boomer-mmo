@@ -513,7 +513,26 @@ async function teardown() {
     w.teleport(33, w.worldHeight / 2);
   });
   await stepUntilZone('town', 'the west exit to return to town');
-  check('zone travel round-trips town -> beach -> town -> bandit camp -> town', true);
+  // And the fourth, for the same reason one zone up but about props rather than
+  // creatures: an ore vein is the first new prop since the port, and the quarry
+  // is the only place one is drawn. A shape built and never uploaded to a real
+  // GPU is a shape whose only cover is jsdom counting its meshes.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('quarry', 'the north exit to load the quarry');
+  await checkZoneDrawn('quarry');
+  await page.screenshot({ path: `${OUT}/5-quarry.png` });
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('town', 'the south exit to return to town');
+  check(
+    'zone travel round-trips town -> beach -> town -> bandit camp -> town -> quarry -> town',
+    true,
+  );
 }
 
 async function walkCycle() {

@@ -1010,7 +1010,7 @@ describe('the map', () => {
     expect(parent.querySelectorAll('.hud-map__svg rect[fill]').length).toBeGreaterThan(0);
     expect(markers('node')).toBe(map.markers.filter((m) => m.kind === 'node').length);
     expect(markers('npc')).toBe(map.markers.filter((m) => m.kind === 'npc').length);
-    expect(markers('exit')).toBe(2);
+    expect(markers('exit')).toBe(map.markers.filter((m) => m.kind === 'exit').length);
     expect(
       parent.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent,
     ).toBe('Town');

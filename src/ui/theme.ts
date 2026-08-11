@@ -64,6 +64,11 @@ export const THEME = {
     levelUp: '#ffd54f',
     // Distinct from levelUp so a skill gain never reads as a combat level.
     skillUp: '#4fc3f7',
+    // Metal in rock, for the one node kind whose ground has no shade in this
+    // palette: the map's trees and fishing spots are each a lighter version of
+    // the grass or water under them, and stone is a grey a marker would vanish
+    // into. See NODE_COLOR in hud/MapSheet.ts.
+    ore: '#d9a441',
     // The third counter's border. The shop and the bank took the two above, and
     // which one is open has to be answerable without reading the title.
     trainer: '#ba68c8',

@@ -114,7 +114,12 @@ describe('zoneMap', () => {
   // What a signpost is *for* is where it goes, so that is what the map says.
   it('names an exit by its destination rather than by its edge', () => {
     const exits = zoneMap('town').markers.filter((marker) => marker.kind === 'exit');
-    expect(exits.map((exit) => exit.label).sort()).toEqual(['Bandit Camp', 'Beach']);
+    expect(exits.map((exit) => exit.label).sort()).toEqual(
+      ZONES.town.exits.map((exit) => ZONES[exit.to].name).sort(),
+    );
+    // Which is only worth asserting because a name is not an edge: nothing on
+    // the map says "south".
+    expect(exits.map((exit) => exit.label)).not.toContain('south');
   });
 
   /**

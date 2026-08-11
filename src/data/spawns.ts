@@ -45,8 +45,8 @@ export const TOWN_NODE_SPAWNS: NodeSpawnPoint[] = [
 
 // Crabs live on the sand band (see beachMap.ts), away from the grass strip
 // where the road from town arrives. Same weighting-by-level idea as the rats:
-// all three zones are level 1-3, so which one to visit is a question of what
-// you need — parts, food, or gear — rather than what you can survive.
+// every zone is level 1-3, so which one to visit is a question of what you
+// need — parts, food, ore, or gear — rather than what you can survive.
 export const BEACH_MOB_SPAWNS: MobSpawnPoint[] = [
   { dx: -384, dy: 32, enemyId: 'crab', level: 1 },
   { dx: 64, dy: 128, enemyId: 'crab', level: 1 },
@@ -61,6 +61,35 @@ export const BEACH_NODE_SPAWNS: NodeSpawnPoint[] = [
   { dx: -256, dy: 384, nodeId: 'ocean-fishing-spot' },
   { dx: 64, dy: 384, nodeId: 'ocean-fishing-spot' },
   { dx: 384, dy: 384, nodeId: 'ocean-fishing-spot' },
+];
+
+// The rats that got in among the spoil heaps. Same 1-3 band as everywhere else
+// and the same weighting, and they climb with depth rather than with distance
+// from the middle: the road in is along the south edge, so the further north the
+// cut goes the less anyone should want to be standing there with a pickaxe out.
+//
+// Nothing new lives here, on purpose. What makes the quarry worth the walk is
+// the only two veins in the world, not a creature — the same argument that has
+// the beach's crabs paying in food rather than in coin.
+export const QUARRY_MOB_SPAWNS: MobSpawnPoint[] = [
+  { dx: -96, dy: 224, enemyId: 'rat', level: 1 },
+  { dx: -320, dy: 96, enemyId: 'rat', level: 1 },
+  { dx: 352, dy: 128, enemyId: 'rat', level: 1 },
+  { dx: -448, dy: -96, enemyId: 'rat', level: 2 },
+  { dx: 480, dy: -32, enemyId: 'rat', level: 2 },
+  { dx: 128, dy: -320, enemyId: 'rat', level: 3 },
+];
+
+// Tin across the open floor and iron hard against the face at the back, which
+// is the same shape the pond and the ocean make: the gated one is further from
+// where you come in, so the level that opens it is earned on the walk to it.
+export const QUARRY_NODE_SPAWNS: NodeSpawnPoint[] = [
+  { dx: -416, dy: -160, nodeId: 'tin-vein' },
+  { dx: -160, dy: -288, nodeId: 'tin-vein' },
+  { dx: 192, dy: -224, nodeId: 'tin-vein' },
+  { dx: 448, dy: -128, nodeId: 'tin-vein' },
+  { dx: -64, dy: -384, nodeId: 'iron-vein' },
+  { dx: 320, dy: -384, nodeId: 'iron-vein' },
 ];
 
 // All inside the dirt clearing (see banditCampMap.ts), far enough east that

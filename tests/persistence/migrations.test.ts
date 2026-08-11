@@ -277,6 +277,43 @@ describe('migrateCharacterState', () => {
     ]);
   });
 
+  /**
+   * The skills half of the same bargain, and the one v6 → v7 made first: a save
+   * written before a skill existed has to come back with the skill at its
+   * default and everything already trained untouched. Spread the other way
+   * round, a returning woodcutter would come back at level 1.
+   */
+  it('adds mining to a v15 save without disturbing what it had trained', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 15,
+      currency: 0,
+      zoneId: 'town',
+      quests: {},
+      kills: {},
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: ['mana-shield'],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      gear: { helmet: null, chest: null, pants: null, weapon: 'apprentice-wand', offhand: null },
+      skills: {
+        woodcutting: { level: 4, xp: 30 },
+        fishing: { level: 1, xp: 0 },
+        cooking: { level: 2, xp: 5 },
+      },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.skills.mining).toEqual({ level: 1, xp: 0 });
+    expect(migrated?.skills.woodcutting).toEqual({ level: 4, xp: 30 });
+    expect(migrated?.skills.cooking).toEqual({ level: 2, xp: 5 });
+    // The abilities the trainer was paid for are not re-granted or dropped on
+    // the way past, which is the step before this one still meaning what it did.
+    expect(migrated?.learnedAbilities).toEqual(['mana-shield']);
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();

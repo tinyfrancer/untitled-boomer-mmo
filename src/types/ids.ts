@@ -20,7 +20,13 @@ export type ItemId =
   | 'brown-axe'
   | 'felling-axe'
   | 'fishing-pole'
+  | 'pickaxe'
   | 'logs'
+  // What the quarry is for. Heavy on purpose: ore is the first thing worth
+  // making a second trip for, which is what the bank behind the counter in town
+  // is there to hold.
+  | 'tin-ore'
+  | 'iron-ore'
   | 'raw-fish'
   | 'cooked-fish'
   | 'burnt-fish'
@@ -60,7 +66,7 @@ export type CreatureShapeId = 'quadruped' | 'crustacean' | 'humanoid';
 // a decision LOOT_TABLES should be free to make.
 export type LootTableId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
 
-export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole';
+export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick';
 
 // What fills the hand that is not holding the weapon. Its own union rather than
 // a slice of WeaponShapeId: nothing here is swung, and the two hands are drawn
@@ -72,8 +78,9 @@ export type OffhandShapeId = 'shield' | 'orb';
  *
  * Deliberately coarser than the item list: a raw fish, a cooked one and a burnt
  * one are one shape in three colours, because at 40px what tells them apart is
- * the colour and nothing else. The four weapon shapes are shared with
- * `WeaponShapeId` by name so a new weapon gets an icon by construction.
+ * the colour and nothing else — and so are the two ores. The weapon shapes are
+ * shared with `WeaponShapeId` by name so a new weapon gets an icon by
+ * construction.
  */
 export type ItemIconShape =
   | WeaponShapeId
@@ -85,9 +92,10 @@ export type ItemIconShape =
   | 'meat'
   | 'fish'
   | 'log'
+  | 'ore'
   | 'key';
 
-export type GatherSkillId = 'fishing' | 'woodcutting' | 'cooking';
+export type GatherSkillId = 'fishing' | 'woodcutting' | 'mining' | 'cooking';
 
 // Skills that level by fighting rather than by gathering. Their cap rides the
 // character's level (see combatSkillCap), so they can't be ground ahead of it.
@@ -95,9 +103,19 @@ export type CombatSkillId = 'one-handed' | 'unarmed' | 'block' | 'parry' | 'dest
 
 export type SkillId = GatherSkillId | CombatSkillId;
 
-export type ResourceNodeId = 'tree' | 'fishing-spot' | 'ocean-fishing-spot';
+export type ResourceNodeId =
+  'tree' | 'fishing-spot' | 'ocean-fishing-spot' | 'tin-vein' | 'iron-vein';
 
-export type ZoneId = 'town' | 'beach' | 'bandit-camp' | 'bandit-hideout';
+/**
+ * Which body a renderer draws a node with, and the same bargain `CreatureShapeId`
+ * makes: a new `RESOURCE_NODES` row names a shape it is drawn as rather than
+ * waiting for view code written for its id. Coarser than the node list on
+ * purpose — the two fishing spots are one set of ripples and the two ore veins
+ * one rock, which is what stops a third of either costing a builder.
+ */
+export type NodeShapeId = 'tree' | 'ripple' | 'vein';
+
+export type ZoneId = 'town' | 'beach' | 'quarry' | 'bandit-camp' | 'bandit-hideout';
 
 // Which side of a map an exit sits on. See EDGE_TABLE in systems/ZoneSystem.ts
 // for the geometry each one implies.

@@ -176,6 +176,67 @@ describe('ZONES data integrity', () => {
     });
   });
 
+  /**
+   * Spawn offsets are written against a map nobody has in front of them, and the
+   * zones cut out of solid rock are where that goes wrong: a vein one row too far
+   * north is a vein inside the quarry face — drawn in the wall, unreachable, and
+   * never wandering out to prove it the way a misplaced rat would.
+   *
+   * The question is reachability rather than walkability, because a fishing spot
+   * standing *on* blocking water is the whole design of one: what has to be true
+   * is that there is somewhere to stand within the node's own interact radius.
+   * That is the same rule for both kinds of node and needs no exception for
+   * either.
+   */
+  it('leaves somewhere to stand within reach of every node', () => {
+    zones.forEach((zone) => {
+      const width = nth(zone.map, 0).length * TILE_SIZE;
+      const height = zone.map.length * TILE_SIZE;
+
+      zone.nodeSpawns.forEach(({ dx, dy, nodeId }) => {
+        const { interactRadius } = RESOURCE_NODES[nodeId];
+        const at = { x: width / 2 + dx, y: height / 2 + dy };
+        const reachable = zone.map.some((row, y) =>
+          row.some(
+            (tile, x) =>
+              !BLOCKING_TILES.includes(tile) &&
+              Math.hypot(
+                x * TILE_SIZE + TILE_SIZE / 2 - at.x,
+                y * TILE_SIZE + TILE_SIZE / 2 - at.y,
+              ) <= interactRadius,
+          ),
+        );
+        expect(reachable, `${zone.id}: ${nodeId} at ${dx},${dy} has nowhere to work it from`).toBe(
+          true,
+        );
+      });
+    });
+  });
+
+  // A mob, unlike a node, has to stand on the ground itself — nothing spawns
+  // swimming or inside the rock.
+  it('puts every mob spawn on walkable ground', () => {
+    zones.forEach((zone) => {
+      const width = nth(zone.map, 0).length * TILE_SIZE;
+      const height = zone.map.length * TILE_SIZE;
+
+      zone.mobSpawns.forEach(({ dx, dy, enemyId }) => {
+        const row = nth(zone.map, Math.floor((height / 2 + dy) / TILE_SIZE));
+        const tile = nth(row, Math.floor((width / 2 + dx) / TILE_SIZE));
+        expect(BLOCKING_TILES, `${zone.id}: ${enemyId} at ${dx},${dy}`).not.toContain(tile);
+      });
+    });
+  });
+
+  // Where a character with no particular spot is put, which is the middle of the
+  // map — a zone whose centre is rock would strand every arrival inside it.
+  it('puts every zone spawn point on walkable ground', () => {
+    zones.forEach((zone) => {
+      const row = nth(zone.map, Math.floor(zone.map.length / 2));
+      expect(BLOCKING_TILES, zone.id).not.toContain(nth(row, Math.floor(row.length / 2)));
+    });
+  });
+
   it('every map is a non-empty rectangular grid', () => {
     zones.forEach((zone) => {
       expect(zone.map.length).toBeGreaterThan(0);

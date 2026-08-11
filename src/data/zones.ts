@@ -1,6 +1,7 @@
 import type { ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
+import { QUARRY_MAP } from './quarryMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
 import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
 import {
@@ -8,6 +9,8 @@ import {
   BANDIT_HIDEOUT_MOB_SPAWNS,
   BEACH_MOB_SPAWNS,
   BEACH_NODE_SPAWNS,
+  QUARRY_MOB_SPAWNS,
+  QUARRY_NODE_SPAWNS,
   TOWN_MOB_SPAWNS,
   TOWN_NODE_SPAWNS,
   type MobSpawnPoint,
@@ -32,9 +35,11 @@ export interface ZoneDefinition {
   name: string;
   /**
    * What is over there, in one sentence, for a player reading the signpost
-   * pointing at it. All three zones are level 1-3, so what separates them is
-   * what they drop rather than how hard they are — which is the thing the line
-   * has to say, and the thing a name alone cannot.
+   * pointing at it. Every zone is level 1-3 but the chief at the back of the
+   * hideout, so what separates them is what they drop rather than how hard they
+   * are — which is the thing the line has to say, and the thing a name alone
+   * cannot. The quarry's says to bring a pickaxe for that reason: a zone whose
+   * whole point is a tool is a wasted walk without it.
    */
   description: string;
   map: number[][];
@@ -79,6 +84,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },
+      { edge: 'north', to: 'quarry' },
     ],
   },
   beach: {
@@ -90,6 +96,16 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     nodeSpawns: BEACH_NODE_SPAWNS,
     npcSpawns: [],
     exits: [{ edge: 'north', to: 'town' }],
+  },
+  quarry: {
+    id: 'quarry',
+    name: 'Quarry',
+    description: 'Tin and iron in the rock, and rats in the spoil. Bring a pickaxe.',
+    map: QUARRY_MAP,
+    mobSpawns: QUARRY_MOB_SPAWNS,
+    nodeSpawns: QUARRY_NODE_SPAWNS,
+    npcSpawns: [],
+    exits: [{ edge: 'south', to: 'town' }],
   },
   'bandit-camp': {
     id: 'bandit-camp',

@@ -201,6 +201,11 @@ describe('afkGatherSkill', () => {
   it('reads the skill straight off the tool in hand', () => {
     expect(afkGatherSkill(holding('felling-axe'))).toBe('woodcutting');
     expect(afkGatherSkill(holding('fishing-pole'))).toBe('fishing');
+    // Mining cost this rule nothing: a pickaxe is a tool in the weapon slot, so
+    // the camp absorbed a whole new skill without a line of AFK code, a stored
+    // mode or a second button. That is the payoff being asserted rather than
+    // assumed — a skill that needed a case here would have failed the promise.
+    expect(afkGatherSkill(holding('pickaxe'))).toBe('mining');
   });
 
   it('makes a weapon or an empty hand the fighting camp', () => {

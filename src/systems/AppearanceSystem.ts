@@ -128,6 +128,17 @@ const WEAPON_RIGS: Record<WeaponShapeId, WeaponRig> = {
     guard: null,
     head: { kind: 'blade', reach: 0.11, drop: 0.14 },
   },
+  // The axe's haft under a head that reaches further and bites shallower: a
+  // wedge for splitting where the axe's is a wedge for chopping, which is the
+  // whole of what separates the two at the size either is ever drawn.
+  pick: {
+    butt: 0.18,
+    tip: 0.34,
+    lean: 0,
+    thickness: 0.035,
+    guard: null,
+    head: { kind: 'blade', reach: 0.17, drop: 0.05 },
+  },
 };
 
 export function weaponRig(shape: WeaponShapeId, size: number): WeaponRig {

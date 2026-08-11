@@ -28,7 +28,12 @@ describe('ZoneWorld', () => {
     expect(world.mobs).toHaveLength(ZONES.town.mobSpawns.length);
     expect(world.nodes).toHaveLength(ZONES.town.nodeSpawns.length);
     expect(world.npcs).toHaveLength(ZONES.town.npcSpawns.length);
-    expect(world.signposts.map((post) => post.exit.to)).toEqual(['beach', 'bandit-camp']);
+    // One post per exit, in the table's own order: which zones town reaches is
+    // `data/zones.ts`'s business, and what is being asked here is that the world
+    // was populated from the definition it was handed rather than from a list.
+    expect(world.signposts.map((post) => post.exit.to)).toEqual(
+      ZONES.town.exits.map((exit) => exit.to),
+    );
     expect(world.player.x).toBe(world.worldWidth / 2);
   });
 

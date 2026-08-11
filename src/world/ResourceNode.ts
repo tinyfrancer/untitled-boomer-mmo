@@ -1,15 +1,10 @@
 import type { Bounds } from '../systems/CollisionSystem';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 
-// How much of a solid node's body is trunk. Only the trunk blocks movement —
-// walking "behind" a tree means walking through its canopy, which is the usual
-// top-down convention.
-const TRUNK_FRACTION = 0.3;
-
 /**
- * A gatherable thing in the world: a tree, a fishing spot. Deliberately much
- * thinner than Mob — no AI, no health, no combat. It owns only how many gathers
- * are left in it and when it comes back.
+ * A gatherable thing in the world: a tree, a fishing spot, an ore vein.
+ * Deliberately much thinner than Mob — no AI, no health, no combat. It owns only
+ * how many gathers are left in it and when it comes back.
  */
 export class ResourceNode {
   readonly definition: ResourceNodeDefinition;
@@ -33,19 +28,24 @@ export class ResourceNode {
   }
 
   /**
-   * What actually stops the player: the trunk, anchored to the body's foot
-   * rather than centred on its origin. A tree stands a tile and a half tall, so
-   * a blocker centred on the origin would sit ~30px too high and put anything
-   * standing at the tree's feet inside it.
+   * What actually stops the player — the trunk of a tree, the rock of a vein —
+   * anchored to the body's foot rather than centred on its origin. A tree stands
+   * a tile and a half tall, so a blocker centred on the origin would sit ~30px
+   * too high and put anything standing at the tree's feet inside it.
+   *
+   * A node that blocks nothing gets an empty rect rather than a special case —
+   * `populateZone` leaves those out of the collision world, and an empty one
+   * would stop nobody if it ever reached it.
    */
   blockerRect(): Bounds {
+    const fraction = this.definition.blocks ?? 0;
     const { width, height } = this.definition.body;
-    const trunkWidth = width * TRUNK_FRACTION;
+    const blockerWidth = width * fraction;
     const bottom = this.y + height / 2;
     return {
-      left: this.x - trunkWidth / 2,
-      right: this.x + trunkWidth / 2,
-      top: bottom - height * TRUNK_FRACTION,
+      left: this.x - blockerWidth / 2,
+      right: this.x + blockerWidth / 2,
+      top: bottom - height * fraction,
       bottom,
     };
   }

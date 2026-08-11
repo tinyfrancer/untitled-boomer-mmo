@@ -318,7 +318,7 @@ describe('the rest of the zone', () => {
 
   it('draws a node where it stands and follows it as it is used up', () => {
     const { world } = harness();
-    const node = world.nodes.find((candidate) => candidate.definition.solid)!;
+    const node = world.nodes.find((candidate) => candidate.definition.shape === 'tree')!;
     const actor = new NodeActor(node);
     expect(actor.object.position).toEqual(simToWorld(node.x, node.y));
     expect(actor.object.getObjectByName('canopy')?.visible).toBe(true);

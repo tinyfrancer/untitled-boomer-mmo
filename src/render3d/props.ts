@@ -11,6 +11,7 @@ import {
   SphereGeometry,
 } from 'three';
 import { TILE_SIZE } from '../config/constants';
+import { itemIcon } from '../ui/itemIcons';
 import { WATER_DEPTH } from './ground';
 import { PALETTE } from './palette';
 import type { ResourceNode } from '../world/ResourceNode';
@@ -29,8 +30,20 @@ export interface NodeProp {
   sightBlock(): { width: number; height: number } | null;
 }
 
+/**
+ * Which body a node is drawn with comes from the data, as `shape` — the same
+ * bargain `buildCreature` makes, and the reason a switch over the id is what
+ * this is not: a vein picked out by `solid` would have been drawn as a tree.
+ */
 export function buildNode(node: ResourceNode): NodeProp {
-  return node.definition.solid ? buildTree(node) : buildFishingSpot(node);
+  switch (node.definition.shape) {
+    case 'tree':
+      return buildTree(node);
+    case 'ripple':
+      return buildFishingSpot(node);
+    case 'vein':
+      return buildVein(node);
+  }
 }
 
 /**
@@ -144,6 +157,78 @@ function buildFishingSpot(node: ResourceNode): NodeProp {
     // would be the fade putting them back wrong.
     sightBlock: () => null,
   };
+}
+
+/**
+ * An outcrop of rock with the metal still showing in it, sized off the blocker
+ * for the reason the trunk is: what stops you should be what you can see
+ * stopping you.
+ *
+ * What a mined-out vein leaves is the rock with the metal gone — the same
+ * bargain the felled tree makes with its stump, and for the same reason. A node
+ * that vanished on the last swing would take with it the thing a player aims at
+ * to check whether it is back yet.
+ */
+function buildVein(node: ResourceNode): NodeProp {
+  const { height } = node.definition.body;
+  const blocker = node.blockerRect();
+  const span = blocker.right - blocker.left;
+  const rockHeight = height * 0.72;
+
+  const group = new Group();
+  const rock = new Mesh(
+    // Six-sided and squashed, which is a boulder where the smooth sphere the
+    // canopy is built from would read as a bush without its leaves.
+    new SphereGeometry(span / 2, 6, 4),
+    new MeshLambertMaterial({ color: PALETTE.stone, flatShading: true }),
+  );
+  rock.name = 'rock';
+  rock.scale.y = rockHeight / span;
+  rock.position.y = rockHeight / 2;
+  group.add(rock);
+
+  // The seam itself: a handful of nuggets sat proud of the rock's shoulders,
+  // which is the only thing telling a tin vein from an iron one at any distance
+  // anyone plays at.
+  const seam = new Group();
+  seam.name = 'seam';
+  const nuggets: Array<[number, number, number, number]> = [
+    [-span * 0.16, rockHeight * 0.74, span * 0.14, 0.13],
+    [span * 0.22, rockHeight * 0.56, -span * 0.1, 0.11],
+    [span * 0.02, rockHeight * 0.86, -span * 0.2, 0.09],
+  ];
+  nuggets.forEach(([x, y, z, radius]) => {
+    const nugget = new Mesh(
+      new SphereGeometry(span * radius, 6, 5),
+      new MeshLambertMaterial({ color: nodeOreColor(node), flatShading: true }),
+    );
+    nugget.position.set(x, y, z);
+    seam.add(nugget);
+  });
+  group.add(seam);
+
+  return {
+    object: group,
+    setAvailable(available) {
+      seam.visible = available;
+    },
+    // The rock is there whether or not the metal is, so what it hides never
+    // changes — unlike a tree, which is a canopy one swing and a stump the next.
+    sightBlock: () => ({ width: span, height: rockHeight }),
+  };
+}
+
+/**
+ * What the metal in a vein is drawn in: the colour of the ore it yields, read
+ * off the bag's own palette rather than chosen here.
+ *
+ * This is the one thing about a prop that is not the renderer's to decide, and
+ * it is the same argument `TILE_COLORS` makes: which metal is in the rock is a
+ * fact the whole game shares, and a lump of tin that is grey in the pack and
+ * rust-red in the ground is two answers to one question.
+ */
+function nodeOreColor(node: ResourceNode): number {
+  return itemIcon(node.definition.yieldItemId).color;
 }
 
 /**

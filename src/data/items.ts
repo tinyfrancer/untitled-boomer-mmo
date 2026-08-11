@@ -107,6 +107,10 @@ const ICON_COLOR = {
   burnt: 0x6d6257,
   wood: 0x8d6e63,
   iron: 0xb0a48c,
+  // The two ores, which are one rock in two colours the way the fish are one
+  // outline in three: pale grey tin against the warm rust of iron.
+  tinOre: 0x9aa7ad,
+  ironOre: 0xa0562f,
 } as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
@@ -365,6 +369,21 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     attackPowerBonus: 0,
     toolFor: 'fishing',
   },
+  // The heaviest of the three tools and the only one with a metal head, which is
+  // also the only reason it hits harder than the pole: a swung rock is a swung
+  // rock, and it still sits under both starting weapons.
+  pickaxe: {
+    id: 'pickaxe',
+    name: 'Pickaxe',
+    value: 30,
+    weight: 6,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0x90a4ae,
+    weaponShape: 'pick',
+    attackPowerBonus: 1,
+    toolFor: 'mining',
+  },
   logs: {
     id: 'logs',
     name: 'Logs',
@@ -372,6 +391,32 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'material',
     icon: { shape: 'log', color: ICON_COLOR.wood },
+  },
+  /**
+   * What comes out of the quarry, and the heaviest thing in the game that is
+   * gathered by the armful.
+   *
+   * The weight is the feature. Everything else a gathering skill produces is
+   * light enough that a full pack is a long session's problem; a run of ore is
+   * over inside twenty swings, which is what turns the counter in town from
+   * somewhere to dump loot into somewhere to keep it. Iron is the heavier and
+   * the dearer of the two because it is the one behind a level.
+   */
+  'tin-ore': {
+    id: 'tin-ore',
+    name: 'Tin Ore',
+    value: 5,
+    weight: 3,
+    kind: 'material',
+    icon: { shape: 'ore', color: ICON_COLOR.tinOre },
+  },
+  'iron-ore': {
+    id: 'iron-ore',
+    name: 'Iron Ore',
+    value: 10,
+    weight: 4,
+    kind: 'material',
+    icon: { shape: 'ore', color: ICON_COLOR.ironOre },
   },
   'raw-fish': {
     id: 'raw-fish',

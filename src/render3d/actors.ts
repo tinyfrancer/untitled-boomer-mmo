@@ -262,24 +262,26 @@ export class NodeActor implements Actor, Pickable, Occluder {
 
   /**
    * Whatever is still drawn is what can still be tapped: a felled tree leaves
-   * its stump to aim at, where a fished-out spot leaves nothing on the water.
+   * its stump to aim at and a mined-out vein its rock, where a fished-out spot
+   * leaves nothing on the water.
    *
    * A node's `body` is a top-down footprint, so which of its two spans is a
    * *height* is the prop's decision rather than the data's, and this reads it
-   * the way `props.ts` draws it — a tree stands `body.height` tall on a square
-   * of `body.width`, a fishing spot lies flat on water the ground mesh sinks.
+   * the way `props.ts` draws it — anything standing up out of the ground is
+   * `body.height` tall on a square of `body.width`, where ripples lie flat on
+   * water the ground mesh sinks.
    */
   pickBox(): Box3 | null {
     if (!this.prop.object.visible) return null;
     const { width, height } = this.node.definition.body;
-    return this.node.definition.solid
-      ? pickBox(this.node.x, this.node.y, { width, depth: width, height })
-      : pickBox(this.node.x, this.node.y, {
+    return this.node.definition.shape === 'ripple'
+      ? pickBox(this.node.x, this.node.y, {
           width,
           depth: height,
           height: 0,
           base: -WATER_DEPTH,
-        });
+        })
+      : pickBox(this.node.x, this.node.y, { width, depth: width, height });
   }
 
   occluderBox(): Box3 | null {
