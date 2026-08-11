@@ -17,7 +17,7 @@ gathered materials that lead nowhere.
 | 4   | A swing that can miss, and one that can land hard        | Arithmetic        | merged 2026-08-10 |
 | 5   | The bank                                                 | Economy           | merged 2026-08-11 |
 | 6   | Stock worth coming back for                              | Economy           | merged 2026-08-11 |
-| 7   | The trainer                                              | Economy           | in review         |
+| 7   | The trainer                                              | Economy           | merged 2026-08-11 |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned           |
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | planned           |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | planned           |
