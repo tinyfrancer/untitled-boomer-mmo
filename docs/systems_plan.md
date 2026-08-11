@@ -18,7 +18,7 @@ gathered materials that lead nowhere.
 | 5   | The bank                                                 | Economy           | merged 2026-08-11 |
 | 6   | Stock worth coming back for                              | Economy           | merged 2026-08-11 |
 | 7   | The trainer                                              | Economy           | merged 2026-08-11 |
-| 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned           |
+| 8   | Mining, and the first thing worth carrying home          | Crafting web      | merged 2026-08-11 |
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | planned           |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | planned           |
 | 11  | A camp that can cook and craft                           | Crafting web      | planned           |
@@ -279,6 +279,40 @@ The payoff worth naming: **the AFK system absorbs the new skill for free**. `afk
 `toolSkill(gear.weapon)`, so a pickaxe in the weapon slot makes a mining camp — awake and offline —
 with no new AFK code, no stored mode and no second button. That is the "read it off the tool" rule
 paying for itself.
+
+Shipped as **two** ores rather than one, and it is the fishing gate wearing different clothes: a tin
+vein anyone can work and an iron vein behind mining 5, the way the town pond and the ocean stand.
+One ore would have been a skill with nothing to climb toward, and PR 9 needs a soft metal and a hard
+one anyway. Tin rather than copper for the plainest possible reason — the currency is already
+copper, and "Copper Ore x12" sitting a panel away from a purse counted in copper is a sentence
+nobody should have to parse. The pickaxe joins the shelf ungated beside the other two tools, since a
+gate on a tool is a gate on the skill.
+
+Three things the section did not say and that turned out to matter.
+
+**"Almost all of this is data" was true of the simulation and false of the renderer.** `buildNode`
+picked its prop with `node.definition.solid`, which had been standing in for "is it a tree" for as
+long as trees were the only solid node — so the first vein would have been drawn with a trunk and a
+canopy. `ResourceNodeDefinition` names a `shape` now, switched on the way `buildCreature` switches
+on an enemy's, which is the rule this codebase already had and had never had a second case for.
+
+**The blocker fraction had to become data in the same breath.** It was one constant, `TRUNK_FRACTION
+= 0.3`, and a boulder wearing a third of a tile lets the player walk most of the way into it — while
+sizing the mesh off that blocker, which is the convention that keeps what stops you and what you see
+agreeing, would have drawn the vein as a pebble. `blocks` is a fraction per row now, or `null` for a
+fishing spot.
+
+**A fifth zone broke a browser check that had nothing to do with mining**, which is the sort of thing
+only the real thing catches. The hideout section taps the chief with the map sheet still open; the
+HUD swallows taps that land on it by design, and that tap had been getting through only because the
+world map was short enough to leave that corner of the screen uncovered. A third row of zones covered
+it. The section shuts the sheet now — a check that depends on how tall an unrelated panel is is not
+checking what it says it is.
+
+The cap stayed at 5, and the plan's own "each new zone raises it again" is the line that wanted
+amending rather than obeying: what raises the cap is content that reaches _higher_, and the quarry
+spawns nothing above level 3. `progression.test.ts` says so directly, and `CLAUDE.md` now says it in
+those terms.
 
 ## 9 — Smithing, and the forge it happens at
 

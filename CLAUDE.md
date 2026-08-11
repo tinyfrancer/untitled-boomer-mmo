@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; four zones (town with leveled rats and a shop, a beach with crabs and
-ocean fishing, a bandit camp with aggressive humanoids, and the bandit hideout behind a locked
+v1: single-player only; five zones (town with leveled rats, a shop, a bank and a trainer, a beach
+with crabs and ocean fishing, a quarry cut into the hills north of town with tin and iron to mine,
+a bandit camp with aggressive humanoids, and the bandit hideout behind a locked
 door); character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; two collection quests from the shopkeeper; slayer achievements and the
@@ -205,7 +206,12 @@ add to it:
 - **Collision bodies are data** (`EnemyDefinition.body`, `ResourceNodeDefinition.body`), not
   measurements off anything drawn, for the same reason `PLAYER_HALF_EXTENT` is: how big a rat looks
   is the renderer's decision and how big a rat _is_ is not. `render3d/creatures.ts` sizes the mesh
-  _from_ the data, which is the direction that keeps the two agreeing.
+  _from_ the data, which is the direction that keeps the two agreeing. **How much of a node's body
+  blocks is data too** (`ResourceNodeDefinition.blocks`, a fraction of the footprint or `null` for
+  something you walk straight through), and that had to stop being one constant the day a second
+  solid node existed: a tree is a canopy you walk under on a trunk you cannot, where a vein is rock
+  all the way up. `props.ts` draws both off `blockerRect()`, so what stops you stays what you can
+  see stopping you.
 
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
@@ -262,6 +268,14 @@ a phone); walking into the map edge still transitions too, for keyboards. Both a
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not new
 view code. Travel from the world map is the third route in and goes through the same tables;
 `ZoneWorld` refuses it mid-fight, which is the one thing it can do that a walk cannot.
+
+The quarry is what that claim looks like when it is cashed: a map file, a spawn list, a row and one
+exit each way, and it appeared on the world map, in the zone map, in the offline camp and in travel
+with nothing else written down. Two things a `ZONES` row still cannot promise on its own, both held
+by `tests/systems/ZoneSystem.test.ts`: that an arrival _anywhere_ along an exit edge lands on
+walkable ground, and that every spawn offset is somewhere something can actually reach — a vein one
+row too far north is a vein inside the rock face, and unlike a misplaced rat it never wanders out to
+prove it.
 
 **A zone may be locked, and the key is spent rather than carried** (`ZoneDefinition.requiresKey`,
 ruled on by `systems/ZoneAccessSystem.ts`). `zoneAccess` answers three things and not two — `open`,
@@ -621,6 +635,14 @@ off the body too**: `buildHumanoid` scales the rig by `body.width / TILE_SIZE`, 
 up half again the room a bandit does and looks it, in the same direction everything else here runs
 — what it _is_ decides what it looks like, never the other way round.
 
+**A `ResourceNodeDefinition` names a `shape` for the same reason** (`tree | ripple | vein`, switched
+on in `render3d/props.ts`). It used to be picked out by `solid`, which was a two-way question
+standing in for "is it a tree" — and the day a solid node that was not a tree arrived, an ore vein
+would have been drawn with a trunk and a canopy. The one thing a vein's prop does _not_ decide for
+itself is what colour the metal in it is: that is read off the ore the row yields
+(`itemIcon(yieldItemId).color`), because a lump of tin that is grey in the bag and rust-red in the
+ground is two answers to one question. Same argument as `TILE_COLORS`, one prop down.
+
 **Only humanoids drop gear and coin.** `EnemyDefinition.family` is `beast | humanoid`, and it is
 what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by
 a test rather than by construction, since the tables are hand-written. It is also the thing that
@@ -748,9 +770,12 @@ chains, since a kill either happened or it didn't. It grinds a single spawn, whi
 one `enemyId` on the report enough to credit them all.
 
 **What a camp does is read off the tool, not out of a mode** (`afkGatherSkill`). A gathering tool
-_is_ the weapon slot, so a fishing pole or a felling axe makes the Camp tab a gathering camp and a
+_is_ the weapon slot, so a fishing pole, a felling axe or a pickaxe makes the Camp tab a gathering
+camp and a
 sword, a wand or an empty hand makes it the fighting one — the same question `canGather` already
-asks, which is why this needed nothing stored, no migration and no second button. It re-derives
+asks, which is why this needed nothing stored, no migration and no second button. Mining is what
+collected on that: a whole third skill, awake and offline, cost the AFK code not one line. It
+re-derives
 every frame, so a gear swap changes what the camp is doing. A gathering camp works the nearest
 ready node of that skill inside the anchor radius and moves to the next when one is chopped out
 (`chooseAfkNode`, whose `wait` and `none` are deliberately different answers: waiting is what a
@@ -787,10 +812,15 @@ of the hideout, who is level 4 and is what makes the top of that scale reachable
 **`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 5 because
 that is where the content reaches: the hardest thing in the world is the level 4 chief, and the ten
 it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to be
-an achievement rather than an asymptote, so **a zone added raises the cap** — and
+an achievement rather than an asymptote, so **content that reaches higher raises the cap** — and
 `tests/systems/progression.test.ts` is what holds the two together, asserting that the cap sits one
 level past the highest thing that spawns and that the climb from the end of the starter arc is
 another session or two of the best kill there is rather than another game.
+
+It is what a zone _holds_ rather than a zone arriving that moves it, which the quarry is the worked
+example of: a fifth zone that spawns nothing above level 3 left the cap exactly where it was, because
+the hardest fight in the world is still the chief. A zone whose mobs out-level him is what raises it
+next, and the test will say so before anyone has to remember.
 
 Two things ride the cap and have to move with it, which is exactly what neither did before: the
 combat skill ceiling is `combatSkillCap` (`level × 10`, so 50 now), and **what a trained combat
