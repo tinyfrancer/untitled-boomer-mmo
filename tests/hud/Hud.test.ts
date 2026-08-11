@@ -15,8 +15,11 @@ import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSys
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
+import { SHOP_STOCK } from '../../src/data/shop';
+import { formatCurrency } from '../../src/systems/CurrencySystem';
 import { describeEnemy, describeEnemyLoot } from '../../src/systems/InspectSystem';
 import { THEME } from '../../src/ui/theme';
+import { nth } from '../nth';
 import {
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
@@ -485,6 +488,12 @@ describe('the target frame', () => {
 
 describe('the shop', () => {
   const shop = (): HTMLElement | null => parent.querySelector('.hud-modal__box--shop');
+  const locked = (): string[] =>
+    [...parent.querySelectorAll<HTMLElement>('.hud-modal__box--shop [data-locked]')].map(
+      (row) => row.dataset.locked ?? '',
+    );
+  const gated = nth(SHOP_STOCK.filter((row) => row.requires?.kind === 'level'));
+  const gateLevel = gated.requires?.kind === 'level' ? gated.requires.level : 0;
 
   it('opens and closes with the world, not with a tab', () => {
     mount();
@@ -505,6 +514,41 @@ describe('the shop', () => {
 
     events.emit(CURRENCY_CHANGED_EVENT, 1234);
     expect(shop()?.textContent).toContain('12s');
+  });
+
+  /**
+   * Half the shelf is earned rather than bought. A row that has not been is
+   * drawn rather than hidden — it is the whole reason to come back — and carries
+   * what it is waiting on where its price would sit, which is what stops it
+   * reading as something the purse is merely short of.
+   */
+  it('draws a row it has not earned with the requirement where the price goes', () => {
+    mount();
+    events.emit(SHOP_OPENED_EVENT);
+
+    const row = shop()?.querySelector<HTMLElement>(`.hud-list-row[data-item="${gated.itemId}"]`);
+    expect(row?.dataset.locked).toBe(gated.itemId);
+    expect(row?.querySelector('.hud-list-row__value')?.textContent).toBe(`Level ${gateLevel}`);
+  });
+
+  /**
+   * A quest handed in at this counter pays XP, so a level can land with the
+   * panel open and the player looking at the row it stocks. The shelf is drawn
+   * from the HUD's own model, which is what makes that a redraw rather than
+   * anything the world has to re-send.
+   */
+  it('puts the row on the shelf the moment the level lands', () => {
+    mount();
+    events.emit(SHOP_OPENED_EVENT);
+    expect(locked()).toContain(gated.itemId);
+
+    events.emit(LEVEL_UP_EVENT, gateLevel);
+
+    expect(locked()).not.toContain(gated.itemId);
+    const row = shop()?.querySelector<HTMLElement>(`.hud-list-row[data-item="${gated.itemId}"]`);
+    expect(row?.querySelector('.hud-list-row__value')?.textContent).toBe(
+      formatCurrency(gated.price),
+    );
   });
 
   /**

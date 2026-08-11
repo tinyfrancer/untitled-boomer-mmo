@@ -201,15 +201,22 @@ export function describeNpc(npcId: NpcId): InspectPanel {
     title,
     subtitle: 'Merchant',
     lines: [
-      {
-        label: 'Sells',
-        value: SHOP_STOCK.map((entry) => describeItemName(entry.itemId)).join(', '),
-      },
+      { label: 'Sells', value: 'Tools, food and supplies' },
       { label: 'Buys', value: 'Anything with a value' },
+      {
+        label: 'Stocks',
+        value: `${STOCKED_FROM_THE_START} to start, up to ${SHOP_STOCK.length}`,
+      },
       { label: 'Quests', value: quests.length > 0 ? String(quests.length) : 'None' },
     ],
+    note: 'The rest of the shelf arrives with the levels you gain and the work you finish.',
   };
 }
+
+// The shelf a stranger walks in on. The card is a pure function of an id and so
+// cannot read this player, which is exactly why it counts rows rather than
+// naming them: a list here would promise things they have not earned.
+const STOCKED_FROM_THE_START = SHOP_STOCK.filter((entry) => !entry.requires).length;
 
 // What the first bought slot costs, which is the number that makes the card's
 // "Charges" line mean something without reading a character.

@@ -836,6 +836,38 @@ async function feedback() {
       shopIcons.questIcons === 0,
     `${shopIcons.withIcon}/${shopIcons.items} item rows, ${shopIcons.questIcons}/${shopIcons.quests} quest rows`,
   );
+  // Half the shelf is earned. A locked row is drawn like any other and tapped
+  // like any other — what needs a browser is the same round trip the locked zone
+  // cell gets: a real tap on the panel, the world refusing, and the reason
+  // arriving on the toast, which on a phone is the only place it can.
+  const shelf = await page.evaluate(() => ({
+    rows: document.querySelectorAll('.hud-modal__box--shop .hud-list-row[data-item]').length,
+    locked: [...document.querySelectorAll('.hud-modal__box--shop [data-locked]')].map(
+      (r) => /** @type {HTMLElement} */ (r).dataset.locked ?? '',
+    ),
+  }));
+  const shut = /** @type {import('../src/types/ids').ItemId} */ (shelf.locked[0] ?? '');
+  const purseBefore = await page.evaluate(() => window.world.character.state.currency);
+  await page.click(`.hud-modal__box--shop .hud-list-row[data-item="${shut}"]`);
+  await step(2);
+  const refusedStock = await page.evaluate(
+    (itemId) => ({
+      held: window.world.character.state.inventory[itemId] ?? 0,
+      currency: window.world.character.state.currency,
+      toast: document.querySelector('.hud-toast')?.textContent ?? '',
+    }),
+    shut,
+  );
+  check(
+    'a shop row not yet earned is drawn shut, and tapping it is refused rather than sold',
+    shelf.locked.length > 0 &&
+      shelf.rows > shelf.locked.length &&
+      refusedStock.held === 0 &&
+      refusedStock.currency === purseBefore &&
+      refusedStock.toast.length > 0,
+    `${shelf.locked.length}/${shelf.rows} rows shut, tapped ${shut}, toast: "${refusedStock.toast}"`,
+  );
+
   // A stack grows a second button that empties it. What needs a browser here is
   // that the two are separate targets on a real panel: the row still parts with
   // one, and only the button beside it takes the lot.

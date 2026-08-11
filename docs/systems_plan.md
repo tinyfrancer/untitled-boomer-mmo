@@ -15,8 +15,8 @@ gathered materials that lead nowhere.
 | 2   | The level cap meets the content                          | Arithmetic        | merged 2026-08-10 |
 | 3   | Armour that stops something, and a hand to hold a shield | Arithmetic        | merged 2026-08-10 |
 | 4   | A swing that can miss, and one that can land hard        | Arithmetic        | merged 2026-08-10 |
-| 5   | The bank                                                 | Economy           | in review         |
-| 6   | Stock worth coming back for                              | Economy           | planned           |
+| 5   | The bank                                                 | Economy           | merged 2026-08-11 |
+| 6   | Stock worth coming back for                              | Economy           | in review         |
 | 7   | The trainer                                              | Economy           | planned           |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned           |
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | planned           |
@@ -209,12 +209,23 @@ carrying 8-25 at 90%, a chief carrying 60-120 at 100%, and 360 from the two ques
 spread it does not.
 
 Ships: a gate on `ShopStockEntry` — a level or a finished quest — and a stock list that grows behind
-it: food, the starter shield from PR 3, and crafting supplies once PR 9 lands.
+it: food, fuel and inputs now, and crafting supplies once PR 9 lands.
 
 **The shop must never stock what the world is supposed to drop.** That decision is already made and
 written down — armour used to be sold here and was deliberately moved out, so that gearing up is
 something every class goes and takes. The rule this PR adds is that the stock is tools, consumables
 and inputs, and never the gear tier.
+
+That rule contradicted this section's own shopping list, which named "the starter shield from PR 3":
+`brown-shield` carries a tier, an armour type and a 6% slot on the bandit table, so stocking it would
+have broken the rule in the same breath as writing it down. **The rule won** — it is stated twice
+more (in `CLAUDE.md` and in the bandit loot table's own comment) and it is the load-bearing half. The
+shop stocks no equipment but the two gathering tools, and what keeps it that way is a test rather
+than a comment: stocked equipment has to be a tool. The offhand stays a bandit drop.
+
+Bulk buying is deliberately **not** here, and the reason is worth keeping when consumables make it
+tempting: "sell all" is exact because a stack is finite, and there is no matching number on a shelf
+that never runs out. A "buy 5" button would be the arbitrary constant this codebase does not keep.
 
 ## 7 — The trainer
 

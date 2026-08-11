@@ -21,7 +21,12 @@ import { testContext } from './context';
  */
 
 const KEEPER: WorldNpc = { x: 0, y: 0, npcId: 'shopkeeper' };
-const STOCKED = nth(SHOP_STOCK, 0);
+const STOCKED = nth(SHOP_STOCK.filter((entry) => !entry.requires));
+// The cheapest thing to gate a purchase on is a level, since a quest log would
+// have to be walked through to change: the arithmetic itself is held in
+// tests/systems/ShopSystem.test.ts.
+const GATED = nth(SHOP_STOCK.filter((entry) => entry.requires?.kind === 'level'));
+const GATE_LEVEL = GATED.requires?.kind === 'level' ? GATED.requires.level : 0;
 
 beforeEach(() => {
   localStorage.clear();
@@ -105,6 +110,38 @@ describe('trading', () => {
     expect(character.itemCount(STOCKED.itemId)).toBe(0);
     expect(state.currency).toBe(STOCKED.price);
     expect(emissions(NOTICE_EVENT)).toEqual([['Your pack is too full to carry that.']]);
+  });
+
+  /**
+   * The panel was drawn from a copy of the character, so what it asks for is a
+   * claim like the count on a sale is. The gate is settled here, and a refusal
+   * leaves the purse exactly where it found it — a row the player has not
+   * earned is not a row they can spend their way past.
+   */
+  it('refuses a row that is not on the shelf yet, and says which one it is waiting on', () => {
+    const { shop, character, state, emissions } = counter();
+    state.currency = 10000;
+    state.level = 1;
+    shop.open(KEEPER);
+
+    shop.buy(GATED.itemId);
+
+    expect(character.itemCount(GATED.itemId)).toBe(0);
+    expect(state.currency).toBe(10000);
+    expect(emissions(NOTICE_EVENT)).toHaveLength(1);
+    expect(emissions(CURRENCY_CHANGED_EVENT)).toHaveLength(0);
+  });
+
+  it('sells it the moment the gate is met', () => {
+    const { shop, character, state } = counter();
+    state.currency = GATED.price;
+    state.level = GATE_LEVEL;
+    shop.open(KEEPER);
+
+    shop.buy(GATED.itemId);
+
+    expect(character.itemCount(GATED.itemId)).toBe(1);
+    expect(state.currency).toBe(0);
   });
 
   it('neither buys nor sells with the window shut', () => {

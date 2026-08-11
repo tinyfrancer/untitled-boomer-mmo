@@ -383,6 +383,26 @@ coarser than the item list, since at thumbnail size a raw fish and a cooked one 
 two colours. The bag, the equip picker and the shop all draw it through the one `row({icon})` helper
 in `hud/dom.ts` rather than formatting an item three ways.
 
+**What is on the shelf is earned, and a locked row is still drawn** (`StockRequirement` in
+`data/shop.ts`, ruled on by `systems/ShopSystem.ts`). A stock row may name a character level or a
+finished quest, and until it is met the row is drawn dimmed with what it is waiting on where its
+price would sit — the same call the world map makes for a shut zone, and for the same reason: what is
+not on the shelf yet **is** the reason to come back, so hiding it tells the player nothing. It is
+tapped like any other row and the world refuses with the full sentence, since a phone has no tooltip
+to hover. `stockAccess` answers two things where `zoneAccess` answers three, and the missing one is
+the point — a door with the key in the pack is about to cost something, where a gated shelf is simply
+not yet.
+
+The gate is settled in `ShopSession.buy` rather than trusted from the panel, for the reason the sale
+count is clamped there: the overlay was drawn from a copy of the character. Two rules ride on the
+table and are held by `tests/systems/ShopSystem.test.ts` rather than by comments, since it is
+hand-written — **every price sits above the item's own value**, so nothing here can be bought and
+sold straight back at a profit, and **stocked equipment has to be a tool**, which is what keeps the
+gear tier the world's job alone. The shop sells time back: everything on it can also be earned by
+playing, and the spread is what keeps playing the cheaper road. The merchant's inspect card names no
+stock at all — it is a pure function of an npc id and so cannot read the player, and half the shelf
+depends on one.
+
 **Selling a stack is one request with a count on it**, not a second rule about vendoring:
 `sell-item-requested` carries a quantity, `ShopSession.sell` clamps it to what the pack actually
 holds, and "sell all" is that number rather than a separate path. The clamp is what makes the panel
