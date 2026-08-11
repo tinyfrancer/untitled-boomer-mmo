@@ -87,7 +87,7 @@ describe('trainingOffers', () => {
   it('lists the whole syllabus, gated rows included', () => {
     const offers = trainingOffers({ classId: 'wizard', level: 1, learnedAbilities: [] });
     expect(offers.map((offer) => offer.ability.id)).toEqual(CLASS_ABILITIES.wizard);
-    expect(offers.map((offer) => offer.access.kind)).toEqual(['known', 'gated']);
+    expect(offers.map((offer) => offer.access.kind)).toEqual(['known', 'gated', 'gated', 'gated']);
   });
 });
 

@@ -160,6 +160,22 @@ export class Player {
     return absorb.absorbed;
   }
 
+  /**
+   * Puts HP back at once, and answers with how much actually landed.
+   *
+   * Clamped at the ceiling and reported honestly: a heal cast at full restores
+   * nothing, and the caller floats and logs what it is told rather than what it
+   * asked for. Deliberately not routed through the heal pulse — that batches a
+   * trickle from regen and food into something readable, where this is already
+   * one number arriving at one moment.
+   */
+  heal(amount: number): number {
+    const restored = Math.min(Math.max(0, amount), this.maxHp - this.hpFloat);
+    this.hpFloat += restored;
+    this.hp = Math.round(this.hpFloat);
+    return Math.round(restored);
+  }
+
   /** Returns false, spending nothing, if the pool is short. */
   spendMana(amount: number): boolean {
     if (this.manaFloat < amount) {

@@ -9,6 +9,15 @@ export type AbilityEffect =
   | { kind: 'damage'; powerMultiplier: number }
   // Soaks up to `amount` damage until it runs out or the timer does.
   | { kind: 'absorb'; amount: number; durationMs: number }
+  /**
+   * Puts `amount` HP back, at once.
+   *
+   * The first thing in the game that heals on demand: food is a channel and
+   * regen is a lockout, so both are answers to *having been* in a fight rather
+   * than to being in one. Nothing new is needed to draw it — the view channel
+   * has carried a `heal` event since food did.
+   */
+  | { kind: 'heal'; amount: number }
   // Multiplies the attack cooldown, so below 1 means swinging faster.
   | { kind: 'haste'; cooldownMultiplier: number; durationMs: number };
 
@@ -97,6 +106,40 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     baseFailureChance: 0.1,
     effect: { kind: 'absorb', amount: 25, durationMs: 20000 },
   },
+  mend: {
+    id: 'mend',
+    name: 'Mend',
+    description: 'Knits 28 health back over a short cast.',
+    classId: 'wizard',
+    training: { level: 3, cost: 300 },
+    manaCost: 14,
+    cooldownMs: 18000,
+    range: 0,
+    // Cast rather than instant, which is what makes the shield worth having up
+    // first: being hurt breaks this, so a caster in melee has to buy the window
+    // with the other spell rather than simply out-healing the damage.
+    castTimeMs: 1200,
+    skill: 'destruction',
+    baseFailureChance: 0.15,
+    effect: { kind: 'heal', amount: 28 },
+  },
+  firestorm: {
+    id: 'firestorm',
+    name: 'Firestorm',
+    description: 'A long cast for two and a half times a Fireball’s power.',
+    classId: 'wizard',
+    training: { level: 4, cost: 600 },
+    manaCost: 18,
+    cooldownMs: 20000,
+    range: 280,
+    // The opener rather than the rotation, and the trade is legible: 10.5x a
+    // swing a minute against Fireball's 20x, bought with a window nearly twice
+    // as long to be knocked out of.
+    castTimeMs: 2400,
+    skill: 'destruction',
+    baseFailureChance: 0.2,
+    effect: { kind: 'damage', powerMultiplier: 3.5 },
+  },
   'power-slash': {
     id: 'power-slash',
     name: 'Power Slash',
@@ -123,6 +166,38 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     baseFailureChance: 0,
     effect: { kind: 'haste', cooldownMultiplier: 0.6, durationMs: 8000 },
   },
+  'second-wind': {
+    id: 'second-wind',
+    name: 'Second Wind',
+    description: 'Catch your breath for 30 health.',
+    classId: 'warrior',
+    training: { level: 3, cost: 300 },
+    manaCost: 0,
+    // Instant where the wizard's heal is cast, and paid for in a cooldown half
+    // again as long: a warrior has no pool to spend and no shield to stand
+    // behind, so a heal they had to stand still for is one they could never
+    // finish in the melee they are always in.
+    cooldownMs: 25000,
+    range: 0,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    effect: { kind: 'heal', amount: 30 },
+  },
+  'crushing-blow': {
+    id: 'crushing-blow',
+    name: 'Crushing Blow',
+    description: 'A wind-up swing for over three times the damage.',
+    classId: 'warrior',
+    training: { level: 4, cost: 600 },
+    manaCost: 0,
+    cooldownMs: 18000,
+    range: 80,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    // Not a better Power Slash: 11.3x a swing a minute against its 16.5x. It is
+    // the opener and the finisher, where Power Slash is what fills a fight.
+    effect: { kind: 'damage', powerMultiplier: 3.4 },
+  },
 };
 
 /**
@@ -132,6 +207,6 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
  * always the one nobody had to buy.
  */
 export const CLASS_ABILITIES: Record<ClassId, AbilityId[]> = {
-  warrior: ['power-slash', 'battle-fury'],
-  wizard: ['fireball', 'mana-shield'],
+  warrior: ['power-slash', 'battle-fury', 'second-wind', 'crushing-blow'],
+  wizard: ['fireball', 'mana-shield', 'mend', 'firestorm'],
 };

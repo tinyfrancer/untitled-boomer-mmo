@@ -15,6 +15,7 @@ import {
   logCriticalHit,
   logCastStarted,
   logDamageDealt,
+  logHealed,
   logSpellFailed,
 } from '../systems/CombatLogSystem';
 import { distance } from '../systems/MovementSystem';
@@ -270,6 +271,15 @@ export class AbilityCaster {
         const haste = startHaste(ability);
         if (haste) player.applyHaste(haste);
         this.ctx.float(ability.name, 'reward');
+        return;
+      }
+      case 'heal': {
+        // What was actually restored rather than what was asked for: healing at
+        // full is a spell wasted, and floating the full number over it would
+        // say otherwise.
+        const healed = player.heal(ability.effect.amount);
+        this.ctx.push({ kind: 'heal', at: this.ctx.playerPoint(), amount: healed });
+        this.ctx.log(logHealed(ability.name, healed));
         return;
       }
     }

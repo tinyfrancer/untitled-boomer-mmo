@@ -41,11 +41,15 @@ it('opens a sheet on its own tab key, whatever case it is typed in', () => {
 it('fires the action bar slots by index, in the order the bar draws them', () => {
   press({ key: '1' });
   press({ key: '2' });
-  expect(handlers.onAbilitySlot.mock.calls).toEqual([[0], [1]]);
-
-  // The bar has two slots; a third number belongs to nobody.
   press({ key: '3' });
-  expect(handlers.onAbilitySlot).toHaveBeenCalledTimes(2);
+  press({ key: '4' });
+  expect(handlers.onAbilitySlot.mock.calls).toEqual([[0], [1], [2], [3]]);
+
+  // Four is the whole of a class list, so a fifth number belongs to nobody.
+  // Which of the four are *filled* is the bar's business — a slot bound to
+  // nothing is answered there rather than by refusing the key here.
+  press({ key: '5' });
+  expect(handlers.onAbilitySlot).toHaveBeenCalledTimes(4);
 });
 
 describe('the keys it refuses to take', () => {

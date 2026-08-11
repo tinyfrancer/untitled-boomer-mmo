@@ -110,7 +110,16 @@ export type NpcId = 'shopkeeper' | 'banker' | 'trainer';
 
 export type QuestId = 'rat-bones' | 'crab-feast';
 
-export type AbilityId = 'fireball' | 'mana-shield' | 'power-slash' | 'battle-fury';
+export type AbilityId =
+  // The two each class opens with, and the two it buys.
+  | 'fireball'
+  | 'mana-shield'
+  | 'mend'
+  | 'firestorm'
+  | 'power-slash'
+  | 'battle-fury'
+  | 'second-wind'
+  | 'crushing-blow';
 
 // What an enemy does instead of a swing. Its own union rather than a slice of
 // AbilityId: nothing a creature does is on the player's action bar, and the two
