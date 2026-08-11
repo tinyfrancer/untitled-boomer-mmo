@@ -1,4 +1,6 @@
 import { addXp, xpToNextLevel } from './LevelingSystem';
+import { abilityById } from './AbilitySystem';
+import { trainingAccess } from './TrainerSystem';
 import { canEquip, type EquipCheck } from './EquipSystem';
 import { addSkillXp, skillLevel, skillXpToNextLevel } from './SkillSystem';
 import {
@@ -39,6 +41,7 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
 import type { AchievementDefinition } from '../data/achievements';
 import type {
+  AbilityId,
   AchievementId,
   CombatSkillId,
   EnemyId,
@@ -74,6 +77,9 @@ export type BankMove = { ok: false; reason: string } | { ok: true; moved: number
 
 export type BankSlotPurchase =
   { ok: false; reason: string } | { ok: true; price: number; slots: number };
+
+export type AbilityTraining =
+  { ok: false; reason: string } | { ok: true; abilityId: AbilityId; cost: number };
 
 export type QuestTurnIn =
   | { ok: false; reason: string }
@@ -211,6 +217,34 @@ export class CharacterController {
     }
     this.state.bankSlots += 1;
     return { ok: true, price, slots: this.state.bankSlots };
+  }
+
+  /**
+   * Pays for a lesson. Refuses as a whole — already known, not yet earned, or
+   * short of the price — so the coin and the ability move together or neither
+   * does, the way a bank slot does.
+   */
+  learnAbility(abilityId: AbilityId): AbilityTraining {
+    const ability = abilityById(abilityId);
+    if (ability.classId !== this.state.classId) {
+      return { ok: false, reason: 'That is not something you can learn.' };
+    }
+    const access = trainingAccess(ability, {
+      classId: this.state.classId,
+      level: this.state.level,
+      learnedAbilities: this.state.learnedAbilities,
+    });
+    if (access.kind === 'known') {
+      return { ok: false, reason: `You already know ${ability.name}.` };
+    }
+    if (access.kind === 'gated') {
+      return { ok: false, reason: access.reason };
+    }
+    if (!this.spendCurrency(access.cost)) {
+      return { ok: false, reason: "You can't afford that." };
+    }
+    this.state.learnedAbilities = [...this.state.learnedAbilities, abilityId];
+    return { ok: true, abilityId, cost: access.cost };
   }
 
   addCurrency(copper: number): void {

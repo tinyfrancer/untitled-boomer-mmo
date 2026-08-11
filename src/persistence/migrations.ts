@@ -70,6 +70,22 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // shelves a new one gets and nothing on them — there is nothing to
   // reconstruct, since everything they own is either worn or in the pack.
   13: (state) => ({ ...state, bank: {}, bankSlots: STARTING_BANK_SLOTS }),
+  // v14 → v15: abilities are learned at a trainer rather than granted with the
+  // class. Everything a character already had stays theirs — charging again for
+  // what they have been pressing since level 1 would be a bill for the status
+  // quo — so the one that is now sold is granted as already bought. Only that
+  // one: the opener was never withheld, so it is derived rather than stored, and
+  // listing it here would put a row in the save that means nothing.
+  //
+  // The two ids are written out rather than read off `ABILITIES`, and that is
+  // the whole point of a migration step: this upgrades a v14 save, and a v14
+  // save was written by a game with exactly these four abilities in it. A step
+  // that asked the live table would hand every ability added later to every old
+  // save that had never paid for one.
+  14: (state) => ({
+    ...state,
+    learnedAbilities: state.classId === 'warrior' ? ['battle-fury'] : ['mana-shield'],
+  }),
 };
 
 /**

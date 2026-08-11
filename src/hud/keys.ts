@@ -39,7 +39,7 @@ export function bindHudKeys(handlers: HudKeyHandlers): () => void {
       handlers.onTab(tab.id);
       return;
     }
-    const slot = ['1', '2'].indexOf(event.key);
+    const slot = ['1', '2', '3', '4'].indexOf(event.key);
     if (slot >= 0) {
       handlers.onAbilitySlot(slot);
     }

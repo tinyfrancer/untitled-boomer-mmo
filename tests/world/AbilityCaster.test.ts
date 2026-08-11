@@ -303,7 +303,12 @@ describe('what the bar draws', () => {
   it('is one state per ability of the class, and nobody else’s', () => {
     const { caster } = bar();
 
-    expect(caster.states().map((state) => state.abilityId)).toEqual(['fireball', 'mana-shield']);
+    expect(caster.states().map((state) => state.abilityId)).toEqual([
+      'fireball',
+      'mana-shield',
+      'mend',
+      'firestorm',
+    ]);
   });
 
   it('sweeps a full cooldown down to nothing over the world’s clock', () => {

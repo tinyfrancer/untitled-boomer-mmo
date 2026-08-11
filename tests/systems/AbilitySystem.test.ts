@@ -16,8 +16,18 @@ const READY = { mana: 100, elapsedMs: Infinity, hasTarget: true, targetDistance:
 
 describe('abilitiesFor', () => {
   it('gives each class only its own abilities', () => {
-    expect(abilitiesFor('wizard').map((a) => a.id)).toEqual(['fireball', 'mana-shield']);
-    expect(abilitiesFor('warrior').map((a) => a.id)).toEqual(['power-slash', 'battle-fury']);
+    expect(abilitiesFor('wizard').map((a) => a.id)).toEqual([
+      'fireball',
+      'mana-shield',
+      'mend',
+      'firestorm',
+    ]);
+    expect(abilitiesFor('warrior').map((a) => a.id)).toEqual([
+      'power-slash',
+      'battle-fury',
+      'second-wind',
+      'crushing-blow',
+    ]);
     abilitiesFor('wizard').forEach((a) => expect(a.classId).toBe('wizard'));
   });
 });

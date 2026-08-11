@@ -54,6 +54,18 @@ export const BUY_BANK_SLOT_REQUESTED_EVENT = 'buy-bank-slot-requested';
 // either moves. One event rather than two because the panel draws them
 // together: a slot count with nothing to put in it says nothing.
 export const BANK_CHANGED_EVENT = 'bank-changed';
+// The trainer, which is the same shape a third time — the world owns whether
+// the counter is open, the panel is handed a copy of the syllabus, and a row
+// tapped comes back as a bare ability id.
+export const TRAINER_OPENED_EVENT = 'trainer-opened';
+export const TRAINER_CLOSED_EVENT = 'trainer-closed';
+export const LEARN_ABILITY_REQUESTED_EVENT = 'learn-ability-requested';
+// What has been bought, whole, each time it grows. The bar is rebuilt from it
+// rather than told which button to add, so a lesson landing with the panel open
+// redraws both. Unseeded like the map's events, since a world is built before
+// the HUD that listens exists — the HUD reads its opening set off the character
+// it is constructed with.
+export const LEARNED_ABILITIES_CHANGED_EVENT = 'learned-abilities-changed';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 // Quests. Taken and handed in at the shopkeeper, so these ride the same
 // ask/decide split as buying: the HUD forwards the tap, ZoneWorld re-checks
@@ -196,7 +208,7 @@ export interface TilePoint {
  * reaches the simulation — which is also what keeps a card readable while the
  * thing it describes wanders off or dies.
  */
-export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop' | 'bank';
+export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -279,6 +291,10 @@ export interface UiEventMap {
   [WITHDRAW_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [BUY_BANK_SLOT_REQUESTED_EVENT]: [];
   [BANK_CHANGED_EVENT]: [vault: BankState];
+  [TRAINER_OPENED_EVENT]: [];
+  [TRAINER_CLOSED_EVENT]: [];
+  [LEARN_ABILITY_REQUESTED_EVENT]: [abilityId: AbilityId];
+  [LEARNED_ABILITIES_CHANGED_EVENT]: [abilityIds: AbilityId[]];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
   [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
   [TURN_IN_QUEST_REQUESTED_EVENT]: [questId: QuestId];

@@ -1,8 +1,9 @@
 import type { AbilityDefinition } from '../data/abilities';
 import {
-  abilitiesFor,
   abilityById,
   canUseAbility,
+  knowsAbility,
+  knownAbilities,
   resolveAbilityDamage,
   rollSpellFailure,
   startHaste,
@@ -14,6 +15,7 @@ import {
   logCriticalHit,
   logCastStarted,
   logDamageDealt,
+  logHealed,
   logSpellFailed,
 } from '../systems/CombatLogSystem';
 import { distance } from '../systems/MovementSystem';
@@ -83,7 +85,11 @@ export class AbilityCaster {
     const { player } = this.ctx;
     if (!player.isAlive()) return;
     const ability = abilityById(abilityId);
-    if (ability.classId !== this.ctx.character.state.classId) return;
+    // Asked here rather than trusted from the bar, for the reason the shop's
+    // gate is settled at the counter: the button was drawn from a copy of the
+    // character, and a key press names a slot rather than proving one.
+    const { classId, learnedAbilities } = this.ctx.character.state;
+    if (!knowsAbility(classId, learnedAbilities, abilityId)) return;
 
     const { target } = this.deps.targeting;
     const check = canUseAbility(ability, {
@@ -184,9 +190,9 @@ export class AbilityCaster {
     }
   }
 
-  /** What the action bar draws, for the class the player chose. */
+  /** What the action bar draws: what the player has, not what the class could. */
   states(): AbilityState[] {
-    return abilitiesFor(this.ctx.character.state.classId).map((ability) => {
+    return this.known().map((ability) => {
       const cooldownRemaining = Math.min(
         1,
         Math.max(0, (ability.cooldownMs - this.elapsedSince(ability.id)) / ability.cooldownMs),
@@ -197,6 +203,11 @@ export class AbilityCaster {
         usable: cooldownRemaining === 0 && this.ctx.player.mana >= ability.manaCost,
       };
     });
+  }
+
+  private known(): AbilityDefinition[] {
+    const { classId, learnedAbilities } = this.ctx.character.state;
+    return knownAbilities(classId, learnedAbilities);
   }
 
   // -Infinity rather than 0 for "never cast": the world's clock starts at zero,
@@ -260,6 +271,15 @@ export class AbilityCaster {
         const haste = startHaste(ability);
         if (haste) player.applyHaste(haste);
         this.ctx.float(ability.name, 'reward');
+        return;
+      }
+      case 'heal': {
+        // What was actually restored rather than what was asked for: healing at
+        // full is a spell wasted, and floating the full number over it would
+        // say otherwise.
+        const healed = player.heal(ability.effect.amount);
+        this.ctx.push({ kind: 'heal', at: this.ctx.playerPoint(), amount: healed });
+        this.ctx.log(logHealed(ability.name, healed));
         return;
       }
     }

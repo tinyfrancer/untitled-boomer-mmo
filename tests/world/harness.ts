@@ -4,7 +4,8 @@ import { CharacterController } from '../../src/systems/CharacterController';
 import { InputState } from '../../src/systems/InputState';
 import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { ZONES } from '../../src/data/zones';
-import type { ClassId, ZoneId } from '../../src/types/ids';
+import { ABILITIES, CLASS_ABILITIES } from '../../src/data/abilities';
+import type { AbilityId, ClassId, ZoneId } from '../../src/types/ids';
 import type { UiEventMap, UiEventName } from '../../src/ui/uiEvents';
 import type { EventBus, WorldEvent } from '../../src/world/worldEvents';
 
@@ -68,6 +69,13 @@ export interface HarnessOptions {
   zoneId?: ZoneId;
   level?: number;
   classId?: ClassId;
+  /**
+   * What has been bought from the trainer. Defaults to the whole class list,
+   * because almost every test here is about what an ability *does* rather than
+   * about having paid for it — pass `[]` to start from what a new character
+   * actually walks out of creation with.
+   */
+  learnedAbilities?: AbilityId[];
   /** Deterministic by default: see the note on the rng below. */
   rng?: () => number;
 }
@@ -75,6 +83,9 @@ export interface HarnessOptions {
 export function harness(options: HarnessOptions = {}): Harness {
   const state = createNewCharacter('Tester', options.classId ?? 'warrior');
   state.level = options.level ?? 1;
+  state.learnedAbilities =
+    options.learnedAbilities ??
+    CLASS_ABILITIES[state.classId].filter((id) => ABILITIES[id].training);
   const emitted: Emitted[] = [];
   const bus = recordingBus(emitted);
   const character = new CharacterController(state);

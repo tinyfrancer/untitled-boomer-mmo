@@ -437,17 +437,53 @@ to the autosave — a haul put away and lost to a closed tab is worse than one n
 the banker there was one NPC and five places assumed it: the tap, the context menu's line, the
 plate over their head, the figure it hangs off, and the inspect card all opened, said or drew the
 shopkeeper. A second person standing in the same town would have sold felling axes from behind the
-bank's desk, and no state assertion would have caught it. All five read the role now, so a third
-counter is a row in `NPCS` plus a case in each of them. `NPC_APPEARANCES` is keyed by `NpcId` for
-the same reason `NO_GEAR` is keyed by `GearSlotId`: a new person is a compile error until they have
-a look, and `zoneMap` puts them on the map off `npcSpawns` with nothing else written down.
+bank's desk, and no state assertion would have caught it. All five read the role now, and the
+trainer collected on it: a third counter cost a row in `NPCS` plus a case in each of them.
+`ZoneWorld.approachNpc` keeps that honest with one `COUNTERS` table keyed by role rather than a pair
+of matching conditionals — which counter to open and what the walk toward it is called are the same
+fact, and the two drifting apart is how a walk ends at the wrong desk. `NPC_APPEARANCES` is keyed by
+`NpcId` for the same reason `NO_GEAR` is keyed by `GearSlotId`: a new person is a compile error until
+they have a look, and `zoneMap` puts them on the map off `npcSpawns` with nothing else written down.
+
+**Where a counter stands is a tap rule twice over.** Every pair of NPCs in a zone sits more than
+`NPC_INTERACT_RADIUS` apart, so which one a tap opens is never a question about pixels — and none of
+them stands on the crossroads. A person on the road a few tiles ahead of the spawn point is standing
+exactly where a player taps to walk forward: the trainer was first placed three tiles up the north
+road and turned "go north" into "open a counter", which smoke caught as three ground-walk checks
+stopping an interact radius short of where they aimed. It is the same class of mistake as drawing a
+signpost under the tab bar, and `tests/world/trainer.test.ts` holds the spacing half of it.
+
+**Abilities are learned, not granted** (`AbilityDefinition.training`, ruled on by
+`systems/TrainerSystem.ts` and sold by `world/TrainerSession.ts`). A row names a level to have
+reached and a price; **absent means the one ability the class opens with**, which is the shape
+`ShopStockEntry.requires` and `ZoneDefinition.requiresKey` both use, so the table reads as a list of
+what is _held back_ rather than of what is free. Each class has four: the opener, then three bought
+at levels 2, 3 and 4.
+
+`CharacterState.learnedAbilities` stores **only what was paid for** — what a class opens with is a
+fact about `ABILITIES`, and `knownAbilities` derives the bar from the table and the save together.
+That is the split `unlockedZones` makes for the same reason: the free one cannot go missing because
+nothing has to remember it, and an ability that stops being sold stops needing a migration to hand it
+back. `AbilityCaster` asks what is _known_ at the press as well as for the bar, since the button was
+drawn from a copy of the character and a number key names a slot without proving one exists.
+
+`trainingAccess` answers three things where `stockAccess` answers two, and the extra one is `known`:
+a shelf sells the same thing forever, where a lesson bought is neither for sale nor withheld. A gated
+row is still drawn and still tapped — the reason to reach a level is the thing waiting at it — and
+each row carries what the ability _does_, which the shop's rows do not: a price is a fact to weigh at
+a glance, where "attack 40% faster for 8 seconds" is the entire decision.
+
+The gating levels are chosen against the content rather than spread evenly. The chief is the level 4
+fight, so the level 4 purchases land after it rather than trivialising it, and the duels in
+`tests/systems/EnemySystem.test.ts` still model auto-attacks alone — a bought ability moves what a
+player who spent the coin can do, not the baseline the tuning contract is about.
 
 **The paperdoll is SVG built from the same rig the figure in the world is built from**
 (`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by `render3d/figure.ts`).
 The HUD does not reach into the renderer for a canvas, which is what let the sheet keep showing
 what you are wearing when the world became meshes. Both read that rig, so a shoulder is in the same
-place in either; `NPC_APPEARANCES` beside it is the same argument for the two figures nobody is
-wearing gear for, the shopkeeper and the bandit.
+place in either; `NPC_APPEARANCES` beside it is the same argument for the figures nobody is wearing
+gear for — the three who stand in town, and the two bandits.
 
 **The bar holds five; everything else folds behind Menu.** It splits its width evenly (`ui/tabs.ts`),
 so every seat costs every other seat: seven tabs gave each one 44.4px on a 375px phone against a

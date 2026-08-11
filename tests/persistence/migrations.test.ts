@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { migrateCharacterState } from '../../src/persistence/migrations';
 import { CHARACTER_STATE_VERSION, createNewCharacter } from '../../src/persistence/CharacterState';
+import { knownAbilities } from '../../src/systems/AbilitySystem';
 import { STARTING_BANK_SLOTS } from '../../src/systems/BankSystem';
 
 // A save as v4 wrote it: no currency, optional zoneId, tools in the bag.
@@ -220,6 +221,60 @@ describe('migrateCharacterState', () => {
     // The pack it already had is untouched: nothing is moved onto the shelves
     // on the player's behalf.
     expect(migrated?.inventory).toEqual({ 'felling-axe': 1, 'fishing-pole': 1, logs: 4 });
+  });
+
+  /**
+   * Abilities start being bought. What a character already had stays theirs —
+   * charging again for what they have been pressing since level 1 would be a
+   * bill for the status quo — and only the one that is now *sold* is granted,
+   * since the opener is derived from the table and needs nothing stored.
+   */
+  it('grants a v14 save the ability it already had, and not the free one', () => {
+    const upgraded = (classId: 'warrior' | 'wizard') =>
+      migrateCharacterState({
+        ...v4Save(),
+        version: 14,
+        classId,
+        currency: 0,
+        zoneId: 'town',
+        quests: {},
+        kills: {},
+        activeTitleId: null,
+        unlockedZones: [],
+        position: null,
+        bank: {},
+        bankSlots: STARTING_BANK_SLOTS,
+        gear: { helmet: null, chest: null, pants: null, weapon: 'rusty-sword', offhand: null },
+      });
+
+    expect(upgraded('warrior')?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(upgraded('warrior')?.learnedAbilities).toEqual(['battle-fury']);
+    expect(upgraded('wizard')?.learnedAbilities).toEqual(['mana-shield']);
+  });
+
+  // The bar an upgraded save comes back with has to be the bar it had, which is
+  // the only thing the step above is actually for.
+  it('leaves an upgraded character holding both abilities they had', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 14,
+      classId: 'wizard',
+      currency: 0,
+      zoneId: 'town',
+      quests: {},
+      kills: {},
+      activeTitleId: null,
+      unlockedZones: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      gear: { helmet: null, chest: null, pants: null, weapon: 'apprentice-wand', offhand: null },
+    });
+
+    expect(knownAbilities('wizard', migrated?.learnedAbilities ?? []).map((a) => a.id)).toEqual([
+      'fireball',
+      'mana-shield',
+    ]);
   });
 
   it('drops saves older than the migration chain', () => {

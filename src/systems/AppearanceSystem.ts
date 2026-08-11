@@ -201,8 +201,8 @@ export function computeAppearance(gear: Gear): Appearance {
 }
 
 /**
- * The figures nobody is wearing gear for: the shopkeeper, the bandit, and the
- * one bandit worth telling apart from the rest.
+ * The figures nobody is wearing gear for: the three who stand in town, the
+ * bandit, and the one bandit worth telling apart from the rest.
  *
  * They are the same rig as the player with no `CharacterState` behind them, so
  * the colours have to come from somewhere — and from here rather than from
@@ -227,6 +227,15 @@ export const NPC_APPEARANCES = {
     torsoColor: 0x26a69a,
     legColor: 0x37474f,
     weapon: null,
+    offhand: null,
+  },
+  // The third counter, and the only one of them holding anything: what they
+  // teach is swung, so they are drawn carrying the thing a warrior opens with.
+  trainer: {
+    headColor: SKIN_COLOR,
+    torsoColor: 0x8e24aa,
+    legColor: 0x4a148c,
+    weapon: { shape: 'sword', color: 0xd7ccc8 },
     offhand: null,
   },
   bandit: {

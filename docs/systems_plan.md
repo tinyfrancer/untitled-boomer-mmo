@@ -16,8 +16,8 @@ gathered materials that lead nowhere.
 | 3   | Armour that stops something, and a hand to hold a shield | Arithmetic        | merged 2026-08-10 |
 | 4   | A swing that can miss, and one that can land hard        | Arithmetic        | merged 2026-08-10 |
 | 5   | The bank                                                 | Economy           | merged 2026-08-11 |
-| 6   | Stock worth coming back for                              | Economy           | in review         |
-| 7   | The trainer                                              | Economy           | planned           |
+| 6   | Stock worth coming back for                              | Economy           | merged 2026-08-11 |
+| 7   | The trainer                                              | Economy           | in review         |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | planned           |
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | planned           |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | planned           |
@@ -246,6 +246,20 @@ be something to choose between and something to save for.
 
 Existing characters keep what they have — the migration grants both current abilities as already
 learned.
+
+Shipped with one amendment to that last line, and it is the load-bearing detail: the migration grants
+only the ability that is now **sold**, because the one each class opens with is not stored at all.
+`AbilityDefinition.training` being absent is what makes an ability free, so `knownAbilities` derives
+the bar from the table and `learnedAbilities` together and the save holds exactly what coin was spent
+on — the `unlockedZones` split again. Granting the opener too would have put a row in every save that
+means nothing, and a step that read the live `ABILITIES` table instead of naming the two ids outright
+would have handed every ability added later to every old save that never paid for one.
+
+Two things the section did not say and that turned out to matter. The gating levels are chosen
+against the content: the chief is the level 4 fight, so the level 4 purchases land after it rather
+than trivialising it. And where the trainer _stands_ is a tap rule — the first placement put them
+three tiles up the north road out of the spawn point, which is exactly where a player taps to walk
+forward, and smoke caught it as three ground-walk checks stopping an interact radius short.
 
 ---
 

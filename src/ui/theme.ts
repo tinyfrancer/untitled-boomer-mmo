@@ -64,6 +64,9 @@ export const THEME = {
     levelUp: '#ffd54f',
     // Distinct from levelUp so a skill gain never reads as a combat level.
     skillUp: '#4fc3f7',
+    // The third counter's border. The shop and the bank took the two above, and
+    // which one is open has to be answerable without reading the title.
+    trainer: '#ba68c8',
     playerDamage: '#ff5252',
     heal: '#66bb6a',
     // Difficulty ("con") shades for an enemy's name, relative to the player.

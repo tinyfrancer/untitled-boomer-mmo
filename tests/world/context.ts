@@ -1,7 +1,8 @@
 import { CharacterController } from '../../src/systems/CharacterController';
 import { InputState } from '../../src/systems/InputState';
 import { createNewCharacter, type CharacterState } from '../../src/persistence';
-import type { ClassId, ZoneId } from '../../src/types/ids';
+import { ABILITIES, CLASS_ABILITIES } from '../../src/data/abilities';
+import type { AbilityId, ClassId, ZoneId } from '../../src/types/ids';
 import { Player } from '../../src/world/Player';
 import { WorldContext } from '../../src/world/WorldContext';
 import type { EventBus, WorldEvent } from '../../src/world/worldEvents';
@@ -35,11 +36,16 @@ export interface TestContextOptions {
   classId?: ClassId;
   level?: number;
   zoneId?: ZoneId;
+  /** Defaults to the whole class list; see the note in `harness.ts`. */
+  learnedAbilities?: AbilityId[];
 }
 
 export function testContext(options: TestContextOptions = {}): TestContext {
   const state = createNewCharacter('Tester', options.classId ?? 'warrior');
   state.level = options.level ?? 1;
+  state.learnedAbilities =
+    options.learnedAbilities ??
+    CLASS_ABILITIES[state.classId].filter((id) => ABILITIES[id].training);
   const emitted: Emitted[] = [];
   const bus = recordingBus(emitted);
   const character = new CharacterController(state);

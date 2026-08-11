@@ -83,6 +83,12 @@ export function logSpellFailed(abilityName: string): CombatLogEntry {
   return { text: `Your ${abilityName} fizzles.`, color: THEME.color.dim };
 }
 
+// Says what was restored rather than what was asked for, so healing at full
+// reads as the wasted cooldown it is instead of as 30 points that went nowhere.
+export function logHealed(abilityName: string, amount: number): CombatLogEntry {
+  return { text: `${abilityName} restores ${amount} health.`, color: THEME.color.heal };
+}
+
 export function logXpGain(amount: number): CombatLogEntry {
   return { text: `You gain ${amount} experience.`, color: THEME.color.levelUp };
 }

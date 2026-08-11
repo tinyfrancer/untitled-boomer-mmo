@@ -359,6 +359,7 @@ const SHOPKEEPER = "window.world.npcs.find((n) => n.npcId === 'shopkeeper')";
 // Named rather than indexed now that there are two of them a few steps apart:
 // which counter a tap opens is the whole point of the section below.
 const BANKER = "window.world.npcs.find((n) => n.npcId === 'banker')";
+const TRAINER = "window.world.npcs.find((n) => n.npcId === 'trainer')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 
 /**
@@ -429,9 +430,24 @@ async function boot() {
   check('the game boots a session through the creation screen', true);
 
   const town = await spawned();
+  // Against the zone's own table rather than against four constants: what town
+  // holds is `data/zones.ts`'s business and is unit-tested there, and a check
+  // that repeats the numbers here fails on every row anyone adds to it. What
+  // this is for is that the world was populated from the zone it was handed at
+  // all, and that none of the four kinds came back empty.
+  const table = await page.evaluate(() => ({
+    mobs: window.world.zone.mobSpawns.length,
+    nodes: window.world.zone.nodeSpawns.length,
+    npcs: window.world.zone.npcSpawns.length,
+    signposts: window.world.zone.exits.length,
+  }));
   check(
     'the view is built against a zone with something in it',
-    town.mobs === 9 && town.nodes === 6 && town.npcs === 2 && town.signposts === 2,
+    town.mobs === table.mobs &&
+      town.nodes === table.nodes &&
+      town.npcs === table.npcs &&
+      town.signposts === table.signposts &&
+      Math.min(town.mobs, town.nodes, town.npcs, town.signposts) > 0,
     `${town.mobs} mobs, ${town.nodes} nodes, ${town.npcs} npcs, ${town.signposts} signposts`,
   );
 }
@@ -1044,6 +1060,137 @@ async function bank() {
     'the bank panel closes the counter it was opened by',
     (await page.evaluate(() => document.querySelector('.hud-modal__box--bank') === null)) === true,
   );
+}
+
+async function trainer() {
+  // --- The third counter, and the one whose purchase changes what the player
+  // can do rather than what they are carrying.
+  //
+  // Three things need a browser here and nothing else does: that a ray cast at
+  // *this* figure reaches *this* counter with two others standing nearby, that
+  // a row the character has not earned is drawn and refused rather than sold,
+  // and that a lesson bought rebuilds the action bar underneath the panel that
+  // sold it — which is a DOM element appearing, and the one thing no state
+  // assertion can see. ---
+  await standSouthOf(TRAINER);
+  await clickAt(await screenAt(TRAINER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.trainerNpc !== null),
+    'the tapped trainer to open the syllabus',
+  );
+  const opened = await page.evaluate(() => ({
+    trainer: window.world.trainerNpc?.npcId ?? null,
+    shop: window.world.shopNpc?.npcId ?? null,
+    bank: window.world.bankNpc?.npcId ?? null,
+    panel: document.querySelector('.hud-modal__box--trainer') !== null,
+  }));
+  check(
+    'a click on the trainer opens the trainer and neither counter beside it',
+    opened.trainer === 'trainer' && opened.shop === null && opened.bank === null && opened.panel,
+    `trainer: ${opened.trainer}, shop: ${opened.shop}, bank: ${opened.bank}`,
+  );
+
+  // A level 1 character has not earned anything on this list, so every row on
+  // it is a locked one — drawn, tappable, and refused with the reason.
+  const shut = await page.evaluate(() => ({
+    rows: document.querySelectorAll('.hud-modal__box--trainer .hud-list-row[data-ability]').length,
+    locked: [...document.querySelectorAll('.hud-modal__box--trainer [data-locked]')].map(
+      (r) => /** @type {HTMLElement} */ (r).dataset.locked ?? '',
+    ),
+    // Every row carries what it does, which is the whole of the decision.
+    notes: document.querySelectorAll('.hud-modal__box--trainer .hud-list-row__note').length,
+  }));
+  const lesson = /** @type {import('../src/types/ids').AbilityId} */ (shut.locked[0] ?? '');
+  const purseBefore = await page.evaluate(() => window.world.character.state.currency);
+  await page.click(`.hud-modal__box--trainer .hud-list-row[data-ability="${lesson}"]`);
+  await step(2);
+  const refused = await page.evaluate(() => ({
+    learned: window.world.character.state.learnedAbilities.length,
+    currency: window.world.character.state.currency,
+    toast: document.querySelector('.hud-toast')?.textContent ?? '',
+    buttons: document.querySelectorAll('.hud-actions .hud-ability__key').length,
+  }));
+  check(
+    'a lesson not yet earned is drawn shut, and tapping it is refused rather than taught',
+    shut.locked.length > 0 &&
+      shut.notes === shut.rows &&
+      refused.learned === 0 &&
+      refused.currency === purseBefore &&
+      refused.toast.length > 0 &&
+      refused.buttons === 1,
+    `${shut.locked.length}/${shut.rows} shut, ${refused.buttons} button(s) on the bar, toast: "${refused.toast}"`,
+  );
+  await page.screenshot({ path: `${OUT}/10-trainer.png` });
+
+  // Earn it, in the two ways a row here opens: the level, and the coin. The
+  // panel redraws off the level-up rather than off the tap that caused it.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.currency = 1000;
+    window.events.emit('currency-changed', 1000);
+    w.character.state.level = 5;
+    window.events.emit('level-up', 5);
+  });
+  await step(2);
+  const unlocked = await page.evaluate(() => ({
+    locked: document.querySelectorAll('.hud-modal__box--trainer [data-locked]').length,
+    rows: document.querySelectorAll('.hud-modal__box--trainer .hud-list-row[data-ability]').length,
+  }));
+  await page.click(`.hud-modal__box--trainer .hud-list-row[data-ability="${lesson}"]`);
+  await step(2);
+  const taught = await page.evaluate(() => ({
+    learned: window.world.character.state.learnedAbilities,
+    currency: window.world.character.state.currency,
+    // The bar is rebuilt from what is known, so the new button is a real
+    // element with a real slot number under it.
+    buttons: [...document.querySelectorAll('.hud-actions .hud-ability__key')].map(
+      (b) => /** @type {HTMLElement} */ (b).dataset.ability ?? '',
+    ),
+    slots: [...document.querySelectorAll('.hud-actions .hud-ability__slot')].map(
+      (n) => n.textContent ?? '',
+    ),
+    // And the row that sold it stops being for sale, in the panel still open.
+    known: [...document.querySelectorAll('.hud-modal__box--trainer .hud-list-row__value')]
+      .map((n) => n.textContent ?? '')
+      .filter((text) => text === 'Known').length,
+  }));
+  check(
+    'a level opens the rows it gates, in the panel already on screen',
+    unlocked.locked === 0 && unlocked.rows > 0,
+    `${unlocked.locked}/${unlocked.rows} rows still shut at level 5`,
+  );
+  check(
+    'buying a lesson adds its button to the bar and marks the row known',
+    taught.learned.includes(lesson) &&
+      taught.currency < 1000 &&
+      taught.buttons.includes(lesson) &&
+      taught.slots.join(',') === '1,2' &&
+      taught.known >= 2,
+    `learned ${taught.learned.join(', ')}, bar: ${taught.buttons.join(', ')}, slots ${taught.slots.join(',')}`,
+  );
+
+  // Closing from the panel's own X, which asks the world rather than telling it.
+  await page.click('.hud-modal [data-action="close-trainer"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.trainerNpc === null),
+    'the trainer panel to close the counter',
+  );
+  check(
+    'the trainer panel closes the counter it was opened by',
+    (await page.evaluate(() => document.querySelector('.hud-modal__box--trainer') === null)) ===
+      true,
+  );
+
+  // Put the character back where the rest of the run expects to find them: the
+  // sections after this one are written against a level 1 with a thin purse.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.level = 1;
+    w.character.state.currency = 0;
+    window.events.emit('level-up', 1);
+    window.events.emit('currency-changed', 0);
+  });
+  await step(2);
 }
 
 async function orbit() {
@@ -2703,6 +2850,7 @@ const SECTIONS = [
   ['context-menu', contextMenu],
   ['feedback', feedback],
   ['bank', bank],
+  ['trainer', trainer],
   ['orbit', orbit],
   ['heading', heading],
   ['keyboard', keyboard],

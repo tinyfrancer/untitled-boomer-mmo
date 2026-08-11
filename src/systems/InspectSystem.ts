@@ -11,6 +11,7 @@ import {
   toolSkill,
   weaponAttackRange,
 } from '../data/items';
+import { ABILITIES } from '../data/abilities';
 import { CLASSES } from '../data/classes';
 import { LOOT_TABLES } from '../data/lootTables';
 import { npcName, npcRole } from '../data/npcs';
@@ -176,42 +177,65 @@ export function describeSignpost(exit: ZoneExit): InspectPanel {
 /**
  * Who an NPC is and what standing at them gets you.
  *
- * Two counters, two cards. It stays a pure function of the tables — the
- * banker's lines describe the *service* rather than this character's shelves,
- * because a card is settled the moment it opens and a slot count read off a
- * player would be stale the first time they put something away.
+ * One card per counter, and each stays a pure function of the tables: the lines
+ * describe the *service* rather than this character's shelves, bar or purse,
+ * because a card is settled the moment it opens and anything read off a player
+ * would be stale the first time they changed it. The trainer is the sharpest
+ * case — a syllabus here would be listing spells to someone who cannot see
+ * which of them they have already bought.
  */
 export function describeNpc(npcId: NpcId): InspectPanel {
   const title = npcName(npcId);
-  if (npcRole(npcId) === 'banker') {
-    return {
-      title,
-      subtitle: 'Banker',
-      lines: [
-        { label: 'Stores', value: 'Anything, at no weight' },
-        { label: 'Slots', value: `${STARTING_BANK_SLOTS} to start, up to ${MAX_BANK_SLOTS}` },
-        { label: 'Charges', value: `${formatCurrency(BANK_SLOT_FROM)} for the next slot` },
-      ],
-      note: 'One slot holds one kind of thing, however deep the stack on it.',
-    };
+  switch (npcRole(npcId)) {
+    case 'banker':
+      return {
+        title,
+        subtitle: 'Banker',
+        lines: [
+          { label: 'Stores', value: 'Anything, at no weight' },
+          { label: 'Slots', value: `${STARTING_BANK_SLOTS} to start, up to ${MAX_BANK_SLOTS}` },
+          { label: 'Charges', value: `${formatCurrency(BANK_SLOT_FROM)} for the next slot` },
+        ],
+        note: 'One slot holds one kind of thing, however deep the stack on it.',
+      };
+    case 'trainer':
+      return {
+        title,
+        subtitle: 'Trainer',
+        lines: [
+          { label: 'Teaches', value: 'The abilities your class did not start with' },
+          { label: 'Asks', value: 'A level reached, and coin' },
+          { label: 'Charges', value: `from ${formatCurrency(TRAINING_FROM)}` },
+        ],
+        note: 'A lesson is bought once and never expires.',
+      };
+    case 'merchant': {
+      const quests = Object.values(QUESTS).filter((quest) => quest.giverNpcId === npcId);
+      return {
+        title,
+        subtitle: 'Merchant',
+        lines: [
+          { label: 'Sells', value: 'Tools, food and supplies' },
+          { label: 'Buys', value: 'Anything with a value' },
+          {
+            label: 'Stocks',
+            value: `${STOCKED_FROM_THE_START} to start, up to ${SHOP_STOCK.length}`,
+          },
+          { label: 'Quests', value: quests.length > 0 ? String(quests.length) : 'None' },
+        ],
+        note: 'The rest of the shelf arrives with the levels you gain and the work you finish.',
+      };
+    }
   }
-
-  const quests = Object.values(QUESTS).filter((quest) => quest.giverNpcId === npcId);
-  return {
-    title,
-    subtitle: 'Merchant',
-    lines: [
-      { label: 'Sells', value: 'Tools, food and supplies' },
-      { label: 'Buys', value: 'Anything with a value' },
-      {
-        label: 'Stocks',
-        value: `${STOCKED_FROM_THE_START} to start, up to ${SHOP_STOCK.length}`,
-      },
-      { label: 'Quests', value: quests.length > 0 ? String(quests.length) : 'None' },
-    ],
-    note: 'The rest of the shelf arrives with the levels you gain and the work you finish.',
-  };
 }
+
+// The cheapest lesson on any class's list, which is what makes the card's
+// "Charges" line mean something without reading a character.
+const TRAINING_FROM = Math.min(
+  ...Object.values(ABILITIES)
+    .map((ability) => ability.training?.cost)
+    .filter((cost): cost is number => cost !== undefined),
+);
 
 // The shelf a stranger walks in on. The card is a pure function of an id and so
 // cannot read this player, which is exactly why it counts rows rather than

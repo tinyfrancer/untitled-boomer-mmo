@@ -1,8 +1,8 @@
 import { el, fillPercent, place } from './dom';
-import { abilitiesFor } from '../systems/AbilitySystem';
+import type { AbilityDefinition } from '../data/abilities';
 import type { Rect } from '../ui/layout';
 import type { AbilityState } from '../ui/uiEvents';
-import type { AbilityId, ClassId } from '../types/ids';
+import type { AbilityId } from '../types/ids';
 
 interface AbilityButton {
   button: HTMLButtonElement;
@@ -18,16 +18,32 @@ interface AbilityButton {
 export class ActionBar {
   readonly root: HTMLElement;
   private readonly buttons = new Map<AbilityId, AbilityButton>();
+  private readonly onUse: (abilityId: AbilityId) => void;
 
-  constructor(classId: ClassId, onUse: (abilityId: AbilityId) => void) {
+  constructor(onUse: (abilityId: AbilityId) => void) {
     this.root = el('div', 'hud-actions');
-    abilitiesFor(classId).forEach((ability, index) => {
+    this.onUse = onUse;
+  }
+
+  /**
+   * What is on the bar, rebuilt whole.
+   *
+   * The bar no longer knows what a class has — abilities are bought one at a
+   * time now — so it is handed the answer rather than deriving one, and it
+   * takes the list in the order it should draw it. Rebuilding rather than
+   * appending is what keeps the slot numbers contiguous: a button is a slot, and
+   * a gap in them would be a keyboard shortcut that presses nothing.
+   */
+  setAbilities(abilities: AbilityDefinition[]): void {
+    this.buttons.clear();
+    this.root.replaceChildren();
+    abilities.forEach((ability, index) => {
       const slot = el('div', 'hud-ability');
 
       const button = el('button', 'hud-ability__key', ability.name.replace(' ', '\n'));
       button.type = 'button';
       button.dataset.ability = ability.id;
-      button.addEventListener('click', () => onUse(ability.id));
+      button.addEventListener('click', () => this.onUse(ability.id));
 
       const sweep = el('div', 'hud-ability__sweep');
       // The slot number doubles as the keyboard hint.

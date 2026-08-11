@@ -106,11 +106,20 @@ export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.
-export type NpcId = 'shopkeeper' | 'banker';
+export type NpcId = 'shopkeeper' | 'banker' | 'trainer';
 
 export type QuestId = 'rat-bones' | 'crab-feast';
 
-export type AbilityId = 'fireball' | 'mana-shield' | 'power-slash' | 'battle-fury';
+export type AbilityId =
+  // The two each class opens with, and the two it buys.
+  | 'fireball'
+  | 'mana-shield'
+  | 'mend'
+  | 'firestorm'
+  | 'power-slash'
+  | 'battle-fury'
+  | 'second-wind'
+  | 'crushing-blow';
 
 // What an enemy does instead of a swing. Its own union rather than a slice of
 // AbilityId: nothing a creature does is on the player's action bar, and the two

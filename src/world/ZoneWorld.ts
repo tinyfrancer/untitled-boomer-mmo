@@ -7,6 +7,8 @@ import {
   AFK_TOGGLE_REQUESTED_EVENT,
   BANK_CLOSED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
+  LEARN_ABILITY_REQUESTED_EVENT,
+  TRAINER_CLOSED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
   DEPOSIT_ITEM_REQUESTED_EVENT,
@@ -46,7 +48,8 @@ import { effectElapsed } from '../systems/EffectSystem';
 import { zoneAccess } from '../systems/ZoneAccessSystem';
 import { tileOf, toTile } from '../systems/MapSystem';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
-import { NPC_INTERACT_RADIUS, npcRole } from '../data/npcs';
+import { NPC_INTERACT_RADIUS, npcRole, type NpcRoleId } from '../data/npcs';
+import type { InteractionKind } from '../systems/InteractionSystem';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CookState } from '../systems/CookingSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
@@ -72,6 +75,7 @@ import { createSubscriptions, type Subscriptions } from './eventBus';
 import { AbilityCaster } from './AbilityCaster';
 import { ApproachDriver } from './ApproachDriver';
 import { BankSession } from './BankSession';
+import { TrainerSession } from './TrainerSession';
 import { CombatDirector } from './CombatDirector';
 import { ContextMenuSession } from './ContextMenuSession';
 import { GatherSession } from './GatherSession';
@@ -108,6 +112,22 @@ export type WorldTap =
   | { kind: 'npc'; npc: WorldNpc }
   | { kind: 'mob'; mob: Mob }
   | { kind: 'ground'; point: Point };
+
+/**
+ * Which counter each role stands behind, and what the walk toward it is called.
+ *
+ * Keyed by `NpcRoleId` so a fourth person in a town is a compile error here
+ * until someone says what standing at them does — the same argument
+ * `NPC_APPEARANCES` makes for what they look like.
+ */
+const COUNTERS = {
+  merchant: { kind: 'shop', open: 'shop' },
+  banker: { kind: 'bank', open: 'bank' },
+  trainer: { kind: 'train', open: 'trainer' },
+} as const satisfies Record<
+  NpcRoleId,
+  { kind: InteractionKind; open: 'shop' | 'bank' | 'trainer' }
+>;
 
 export interface ZoneWorldOptions {
   zone: ZoneDefinition;
@@ -160,6 +180,7 @@ export class ZoneWorld implements Targeting {
   private readonly gathering: GatherSession;
   private readonly shop: ShopSession;
   private readonly bank: BankSession;
+  private readonly trainer: TrainerSession;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly combat: CombatDirector;
@@ -301,6 +322,9 @@ export class ZoneWorld implements Targeting {
     this.gathering = new GatherSession(this.ctx, { isCamping: () => this.afk.active });
     this.shop = new ShopSession(this.ctx);
     this.bank = new BankSession(this.ctx);
+    this.trainer = new TrainerSession(this.ctx, {
+      publishAbilityState: () => this.publishAbilityState(),
+    });
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,
       targeting: this,
@@ -382,6 +406,8 @@ export class ZoneWorld implements Targeting {
     );
     listen(BUY_BANK_SLOT_REQUESTED_EVENT, () => this.bank.buySlot());
     listen(BANK_CLOSED_EVENT, () => this.bank.closedByUi());
+    listen(LEARN_ABILITY_REQUESTED_EVENT, (abilityId) => this.trainer.learn(abilityId));
+    listen(TRAINER_CLOSED_EVENT, () => this.trainer.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
     listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
@@ -568,18 +594,16 @@ export class ZoneWorld implements Targeting {
    * `NPCS` rather than another silent assumption.
    */
   approachNpc(npc: WorldNpc): void {
-    const serve = (): void => {
-      if (npcRole(npc.npcId) === 'banker') {
-        this.bank.open(npc);
-      } else {
-        this.shop.open(npc);
-      }
-    };
+    // One table rather than a pair of matching conditionals: which counter to
+    // open and what the walk toward it is called are the same fact about the
+    // person, and the two drifting apart is exactly how a walk ends at the
+    // wrong desk.
+    const { kind, open } = COUNTERS[npcRole(npc.npcId)];
+    const serve = (): void => this[open].open(npc);
     if (withinRadius(this.player, npc, NPC_INTERACT_RADIUS)) {
       serve();
       return;
     }
-    const kind = npcRole(npc.npcId) === 'banker' ? 'bank' : 'shop';
     this.approach.walkTo({ kind, radius: NPC_INTERACT_RADIUS }, npc, serve);
   }
 
@@ -710,7 +734,7 @@ export class ZoneWorld implements Targeting {
   }
 
   // ---------------------------------------------------------------------------
-  // The two counters: vendoring and the bank
+  // The three counters: vendoring, the bank and the trainer
   // ---------------------------------------------------------------------------
 
   /** The shopkeeper the open shop belongs to; null when the shop is closed. */
@@ -723,21 +747,32 @@ export class ZoneWorld implements Targeting {
     return this.bank.npc;
   }
 
+  /** The trainer the open syllabus belongs to; null when it is shut. */
+  get trainerNpc(): WorldNpc | null {
+    return this.trainer.npc;
+  }
+
   /** Whether the character has been left camping. */
   get afkActive(): boolean {
     return this.afk.active;
   }
 
-  /** Walking away shuts whichever counter is open; both ask the same distance. */
+  /** Walking away shuts whichever counter is open; all ask the same distance. */
   updateNpcRange(): void {
     this.shop.updateRange();
     this.bank.updateRange();
+    this.trainer.updateRange();
   }
 
-  /** Everything that stops a session at once shuts both, never only one. */
+  /** Everything that stops a session at once shuts all of them, never one. */
   closeCounters(): void {
     this.shop.close();
     this.bank.close();
+    this.trainer.close();
+  }
+
+  handleLearnRequested(abilityId: AbilityId): void {
+    this.trainer.learn(abilityId);
   }
 
   handleBuyRequested(itemId: ItemId): void {
