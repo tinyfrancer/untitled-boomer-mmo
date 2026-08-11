@@ -60,12 +60,21 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     map: TOWN_MAP,
     mobSpawns: TOWN_MOB_SPAWNS,
     nodeSpawns: TOWN_NODE_SPAWNS,
-    // Both just off the crossroads and clear of every mob spawn point, one
-    // either side of it: the two counters a player walks between are a few
-    // steps apart rather than a trip across town.
+    // All three just off the crossroads and clear of every mob spawn point: the
+    // counters a player walks between are a few steps apart rather than a trip
+    // across town.
+    //
+    // Two rules put each of them where they are, and both are about taps. Every
+    // pair is more than `NPC_INTERACT_RADIUS` apart, so which counter a tap
+    // opens is never a question about pixels. And none of them stands on the
+    // crossroads itself — a person on the road a few tiles ahead of the spawn
+    // point is standing exactly where a player taps to walk forward, which turns
+    // "go north" into "open a shop" and is the same class of mistake as drawing
+    // a signpost under the tab bar.
     npcSpawns: [
       { dx: 96, dy: -96, npcId: 'shopkeeper' },
       { dx: -96, dy: -96, npcId: 'banker' },
+      { dx: -192, dy: 64, npcId: 'trainer' },
     ],
     exits: [
       { edge: 'south', to: 'beach' },

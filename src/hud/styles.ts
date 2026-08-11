@@ -784,6 +784,30 @@ function hudCss(): string {
   border-color: ${THEME.color.skillUp};
   gap: 4px;
 }
+/* And the third counter in a third colour, for the same reason. Wider than the
+   other two: every row here carries a line of prose under it, and the two that
+   do not are lists of names and numbers. */
+.hud-modal__box--trainer {
+  width: 320px;
+  border-color: ${THEME.color.trainer};
+  gap: 4px;
+}
+/* A lesson is its row and the sentence describing it, kept together so the
+   sentence cannot end up beside the wrong price. The row keeps its own margin,
+   the way a stack row does, so one list has one rhythm down it. */
+.hud-lesson {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 6px;
+}
+.hud-lesson > .hud-list-row {
+  margin-bottom: 0;
+}
+.hud-list-row__note {
+  padding: 2px ${THEME.padding}px 0;
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+}
 /* Beside the purse in the head, and the one number that says why a deposit was
    refused — so it is the only thing in there that changes colour. */
 .hud-bank__slots {

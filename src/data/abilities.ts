@@ -12,11 +12,34 @@ export type AbilityEffect =
   // Multiplies the attack cooldown, so below 1 means swinging faster.
   | { kind: 'haste'; cooldownMultiplier: number; durationMs: number };
 
+/**
+ * What the trainer asks before an ability is taught: a character level to have
+ * reached, and the coin to hand over.
+ *
+ * Absent means it is not sold at all because it was never withheld — the one
+ * ability a class starts knowing. That is the same shape `ShopStockEntry.requires`
+ * and `ZoneDefinition.requiresKey` use for the same reason: the unrestricted case
+ * is the empty one, so the table reads as a list of what is *held back*.
+ */
+export interface TrainingTerms {
+  level: number;
+  cost: number;
+}
+
 export interface AbilityDefinition {
   id: AbilityId;
   name: string;
   description: string;
   classId: ClassId;
+  /**
+   * What it takes to learn this, or absent for the one a class opens with.
+   *
+   * Storing the terms rather than a `learned` flag is what keeps the *save*
+   * holding only what was paid for: what a character gets for free is a fact
+   * about the table, so it cannot be lost, and `knownAbilities` derives the bar
+   * from the two together (see `systems/AbilitySystem.ts`).
+   */
+  training?: TrainingTerms;
   manaCost: number;
   cooldownMs: number;
   // 0 means it targets the caster and needs nothing selected.
@@ -63,6 +86,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     name: 'Mana Shield',
     description: 'Soaks the next 25 damage for 20 seconds.',
     classId: 'wizard',
+    training: { level: 2, cost: 120 },
     manaCost: 12,
     cooldownMs: 15000,
     range: 0,
@@ -91,6 +115,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     name: 'Battle Fury',
     description: 'Attack 40% faster for 8 seconds.',
     classId: 'warrior',
+    training: { level: 2, cost: 120 },
     manaCost: 0,
     cooldownMs: 20000,
     range: 0,
@@ -100,8 +125,12 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
   },
 };
 
-// Bar order per class: the attack first, the sustain second, so slot 1 is always
-// the one you press in a fight.
+/**
+ * Everything a class could ever put on its bar, in the order the bar draws it
+ * and the trainer lists it: the attack first, then what is bought in the order
+ * the levels open it. Slot 1 is always the one you press in a fight, and it is
+ * always the one nobody had to buy.
+ */
 export const CLASS_ABILITIES: Record<ClassId, AbilityId[]> = {
   warrior: ['power-slash', 'battle-fury'],
   wizard: ['fireball', 'mana-shield'],

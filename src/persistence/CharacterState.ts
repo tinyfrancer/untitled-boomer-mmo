@@ -3,10 +3,10 @@ import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { QuestLog } from '../systems/QuestSystem';
-import type { ClassId, TitleId, ZoneId } from '../types/ids';
+import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 14;
+export const CHARACTER_STATE_VERSION = 15;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -30,6 +30,15 @@ export interface CharacterState {
   // Total copper; rendered as gold/silver/copper by CurrencySystem.
   currency: number;
   skills: Skills;
+  /**
+   * Abilities bought from the trainer, and only those.
+   *
+   * The one a class opens with is never in here: what is free is a fact about
+   * `ABILITIES` and is derived on read (see `knownAbilities`), so this holds
+   * exactly what coin was spent on — the same split `unlockedZones` makes, for
+   * the same reason. The coin is gone afterwards, so nothing else remembers.
+   */
+  learnedAbilities: AbilityId[];
   zoneId: ZoneId;
   // Where in `zoneId` the character was left, honoured on load. Null means "no
   // particular spot" — a new character, or one who died and owes a respawn —
@@ -82,6 +91,9 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     bankSlots: STARTING_BANK_SLOTS,
     currency: STARTING_COPPER,
     skills: createInitialSkills(),
+    // Empty rather than seeded: the opening ability is free because the table
+    // says so, not because a new character is handed a copy of it.
+    learnedAbilities: [],
     zoneId: 'town',
     position: null,
     afk: null,

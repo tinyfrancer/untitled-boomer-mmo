@@ -28,6 +28,7 @@ import { actionsForItem, type ItemAction, type ItemActionId } from '../systems/I
 import { xpToNextLevel } from '../systems/LevelingSystem';
 import { activeQuests, type QuestLog } from '../systems/QuestSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
+import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import { hudLayout } from '../ui/layout';
@@ -69,6 +70,9 @@ import {
   SET_TITLE_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   SHOP_OPENED_EVENT,
+  TRAINER_OPENED_EVENT,
+  TRAINER_CLOSED_EVENT,
+  LEARNED_ABILITIES_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
@@ -87,7 +91,7 @@ import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { ItemId, TitleId, ZoneId } from '../types/ids';
+import type { AbilityId, ItemId, TitleId, ZoneId } from '../types/ids';
 
 /**
  * Which request each of the inventory panel's buttons is. Two are not simply
@@ -139,6 +143,10 @@ interface HudModel {
   // Seeded from the save like the bag, then kept current by the world.
   bank: Inventory;
   bankSlots: number;
+  // What has been bought from the trainer. Seeded from the save because the bar
+  // has to be built before the world can publish anything, then kept current by
+  // the world — which is the same reason the bag is seeded and the map is not.
+  learnedAbilities: AbilityId[];
   actions: AvailableActions;
 }
 
@@ -211,6 +219,7 @@ class Hud {
       shopOpen: false,
       bank: character.bank,
       bankSlots: character.bankSlots,
+      learnedAbilities: character.learnedAbilities,
       actions: { nearFire: false },
     };
 
@@ -229,6 +238,12 @@ class Hud {
         inventory: this.model.inventory,
         currency: this.model.currency,
       }),
+      trainer: () => ({
+        classId: this.classId,
+        level: this.model.level,
+        learnedAbilities: this.model.learnedAbilities,
+        currency: this.model.currency,
+      }),
     });
     this.mapSheet = new MapSheet({
       onTravel: (zoneId) => events.emit(TRAVEL_REQUESTED_EVENT, zoneId),
@@ -238,9 +253,10 @@ class Hud {
       }),
     });
     this.playerColumn = new PlayerColumn(character.name);
-    this.actionBar = new ActionBar(character.classId, (abilityId) =>
+    this.actionBar = new ActionBar((abilityId) =>
       this.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
     );
+    this.refreshActionBar();
     this.tabBar = new TabBar((tab) => this.selectTab(tab));
 
     this.characterSheet = new CharacterSheet((slot, isEmpty) => {
@@ -556,6 +572,19 @@ class Hud {
     );
   }
 
+  /**
+   * Rebuilds the bar from what is known, which is the only way a button gets
+   * onto it.
+   *
+   * A rebuild rather than an append: what the bar holds is derived from the
+   * class table and the learned list together, so handing it the whole answer
+   * keeps the slot numbers — and the keys that mirror them — in table order
+   * however the lessons were bought.
+   */
+  private refreshActionBar(): void {
+    this.actionBar.setAbilities(knownAbilities(this.classId, this.model.learnedAbilities));
+  }
+
   // ---------------------------------------------------------------------------
   // Listening
   // ---------------------------------------------------------------------------
@@ -588,6 +617,9 @@ class Hud {
       // And it puts rows on the shelf. A quest handed in at the counter pays XP,
       // so a level can land with the shop open and in front of the player.
       this.overlays.refreshShop();
+      // The trainer's list is gated on a level in exactly the same way, and a
+      // level is far likelier to land while standing at one.
+      this.overlays.refreshTrainer();
       this.toast.show(`Level Up! Level ${level}`, THEME.color.levelUp);
     });
     listen(PLAYER_HP_CHANGED_EVENT, (hp) => {
@@ -688,6 +720,7 @@ class Hud {
       this.inventorySheet.setCurrency(totalCopper);
       this.overlays.refreshShop();
       this.overlays.refreshBank();
+      this.overlays.refreshTrainer();
     });
     listen(ACTIONS_CHANGED_EVENT, (actions) => {
       this.model.actions = actions;
@@ -714,6 +747,16 @@ class Hud {
       this.model.bank = vault.contents;
       this.model.bankSlots = vault.slots;
       this.overlays.refreshBank();
+    });
+
+    listen(TRAINER_OPENED_EVENT, () => this.overlays.openTrainer());
+    listen(TRAINER_CLOSED_EVENT, () => this.overlays.closeTrainer());
+    // A lesson lands on the bar and in the panel that sold it, in that order:
+    // the bar is what the player pressed the row to get.
+    listen(LEARNED_ABILITIES_CHANGED_EVENT, (abilityIds) => {
+      this.model.learnedAbilities = abilityIds;
+      this.refreshActionBar();
+      this.overlays.refreshTrainer();
     });
 
     listen(CHANNEL_STARTED_EVENT, (label) => this.channelBar.show(label));

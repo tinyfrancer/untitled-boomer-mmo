@@ -7,8 +7,29 @@ import type { AbilityId, ClassId } from '../types/ids';
 const FAILURE_REDUCTION_PER_SKILL = 0.0015;
 const MIN_FAILURE_CHANCE = 0.02;
 
+/** Everything the class could ever hold, which is the trainer's whole list. */
 export function abilitiesFor(classId: ClassId): AbilityDefinition[] {
   return CLASS_ABILITIES[classId].map((id) => ABILITIES[id]);
+}
+
+/**
+ * What is actually on the bar: the one the class opens with, plus whatever has
+ * been paid for.
+ *
+ * Derived from the table and the save together rather than read off a stored
+ * list, which is what makes the free one impossible to lose — a save holds only
+ * what was bought, so an ability that stops being sold stops needing a
+ * migration to hand back. Ids for another class, or for an ability that no
+ * longer exists, fall out here rather than reaching the bar.
+ */
+export function knownAbilities(classId: ClassId, learned: AbilityId[]): AbilityDefinition[] {
+  return abilitiesFor(classId).filter(
+    (ability) => !ability.training || learned.includes(ability.id),
+  );
+}
+
+export function knowsAbility(classId: ClassId, learned: AbilityId[], id: AbilityId): boolean {
+  return knownAbilities(classId, learned).some((ability) => ability.id === id);
 }
 
 export function abilityById(id: AbilityId): AbilityDefinition {

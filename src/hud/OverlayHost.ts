@@ -5,6 +5,7 @@ import { InspectModal } from './InspectModal';
 import { MenuOverlay } from './MenuOverlay';
 import { OptionsModal } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
+import { TrainerModal, type TrainerState } from './TrainerModal';
 import { SlotPicker } from './SlotPicker';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -17,6 +18,8 @@ import {
   RESET_CHARACTER_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
+  LEARN_ABILITY_REQUESTED_EVENT,
+  TRAINER_CLOSED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
 } from '../ui/uiEvents';
 import type { InspectPanel } from '../systems/InspectSystem';
@@ -27,15 +30,16 @@ import type { GearSlotId, ItemId } from '../types/ids';
 import type { TabId } from '../ui/tabs';
 
 /**
- * How the two counters' panels read the HUD's model.
+ * How the three counters' panels read the HUD's model.
  *
  * Getters rather than copies handed over once: the bag, the purse, the quest
- * log and the shelves are the HUD's own state, and each panel is a view of some
- * of it that happens to be open sometimes.
+ * log, the shelves and what has been learned are the HUD's own state, and each
+ * panel is a view of some of it that happens to be open sometimes.
  */
 export interface OverlayPanelState {
   shop: () => ShopState;
   bank: () => BankPanelState;
+  trainer: () => TrainerState;
 }
 
 /** What a context menu is opened with, once the caller has named its lines. */
@@ -52,23 +56,26 @@ export interface ContextMenuSpec {
  * Each of them is built on open and gone on close, so what is left to own is
  * which one is up — and every question about that crosses more than one of them:
  * the picker closes when the sheet under it does, Escape closes whatever the
- * player opened and nothing the world did, and a teardown has to reach all four
- * without naming them one at a time, which is exactly what the shop was left out
- * of when they were four fields on the HUD.
+ * player opened and nothing the world did, and a teardown has to reach every one
+ * of them without naming them one at a time, which is exactly what the shop was
+ * left out of when they were four fields on the HUD.
  *
  * It reads each panel's state through a getter rather than holding a copy: the
- * bag, the purse, the quest log and the shelves are the HUD's model, and the
- * shop and the bank are views of them that happen to be open sometimes.
+ * bag, the purse, the quest log, the shelves and what has been learned are the
+ * HUD's model, and the three counters are views of them that happen to be open
+ * sometimes.
  */
 export class OverlayHost {
   private readonly root: HTMLElement;
   private readonly events: EventBus;
   private readonly shopState: () => ShopState;
   private readonly bankState: () => BankPanelState;
+  private readonly trainerState: () => TrainerState;
 
   private options: OptionsModal | null = null;
   private shop: ShopModal | null = null;
   private bank: BankModal | null = null;
+  private trainer: TrainerModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
   private menu: MenuOverlay | null = null;
@@ -80,6 +87,7 @@ export class OverlayHost {
     this.events = events;
     this.shopState = panels.shop;
     this.bankState = panels.bank;
+    this.trainerState = panels.trainer;
   }
 
   openOptions(): void {
@@ -215,6 +223,35 @@ export class OverlayHost {
     this.shop?.update(this.shopState());
   }
 
+  openTrainer(): void {
+    this.trainer?.close();
+    this.trainer = new TrainerModal(
+      {
+        onLearn: (abilityId) => this.events.emit(LEARN_ABILITY_REQUESTED_EVENT, abilityId),
+        // Same ask as the other two X's: the world owns whether it is open.
+        onDismiss: () => this.events.emit(TRAINER_CLOSED_EVENT),
+      },
+      () => {
+        this.trainer = null;
+      },
+    );
+    this.trainer.update(this.trainerState());
+    this.root.append(this.trainer.root);
+  }
+
+  closeTrainer(): void {
+    this.trainer?.close();
+  }
+
+  /**
+   * The purse, the level and what is known all move while this is open — and
+   * the last two move *because* of it, since a lesson bought is a row that has
+   * to stop being for sale in the panel that just sold it.
+   */
+  refreshTrainer(): void {
+    this.trainer?.update(this.trainerState());
+  }
+
   // The session queues these on the boot that resolved a parked camp. It had
   // already paid the character out by then, so a missed panel costs nothing but
   // the news.
@@ -259,6 +296,7 @@ export class OverlayHost {
     this.options?.close();
     this.shop?.close();
     this.bank?.close();
+    this.trainer?.close();
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();

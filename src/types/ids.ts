@@ -106,7 +106,7 @@ export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.
-export type NpcId = 'shopkeeper' | 'banker';
+export type NpcId = 'shopkeeper' | 'banker' | 'trainer';
 
 export type QuestId = 'rat-bones' | 'crab-feast';
 
