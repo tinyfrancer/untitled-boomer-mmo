@@ -1,5 +1,6 @@
 import { Box3, Group, Vector3, type Camera } from 'three';
 import { TILE_SIZE } from '../config/constants';
+import { npcName } from '../data/npcs';
 import { NPC_APPEARANCES, appearanceKey, computeAppearance } from '../systems/AppearanceSystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import { titleName } from '../systems/AchievementSystem';
@@ -322,14 +323,16 @@ export class NpcActor implements Actor, Pickable {
     this.object.userData.kind = 'npc';
     this.object.position.copy(simToWorld(npc.x, npc.y));
 
-    const figure = buildFigure(NPC_APPEARANCES.shopkeeper);
-    // Facing south, out of the shop and toward the camera's default position.
+    // Both off the same table the name is: which person this is decides what
+    // they look like, the direction everything else here runs in.
+    const figure = buildFigure(NPC_APPEARANCES[npc.npcId]);
+    // Facing south, out over the counter and toward the camera's default spot.
     figure.object.rotation.y = facingYaw(0, 1);
     this.object.add(figure.object);
     this.height = figure.height;
 
     this.plate = new Nameplate(figure.height + PLATE_CLEARANCE, { healthBar: false });
-    this.plate.setLabel('Shopkeeper', THEME.color.levelUp);
+    this.plate.setLabel(npcName(npc.npcId), THEME.color.levelUp);
     this.object.add(this.plate.object);
   }
 

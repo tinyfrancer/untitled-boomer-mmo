@@ -5,6 +5,8 @@ import { ContextMenu } from '../../src/hud/ContextMenu';
 import { InspectModal } from '../../src/hud/InspectModal';
 import { OptionsModal } from '../../src/hud/OptionsModal';
 import type { Overlay } from '../../src/hud/Overlay';
+import { BankModal } from '../../src/hud/BankModal';
+import { MAX_BANK_SLOTS } from '../../src/systems/BankSystem';
 import { ShopModal } from '../../src/hud/ShopModal';
 import { SlotPicker } from '../../src/hud/SlotPicker';
 import { createNewCharacter, type CharacterState } from '../../src/persistence';
@@ -36,6 +38,12 @@ import {
   SELL_ITEM_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   SHOP_OPENED_EVENT,
+  BANK_CHANGED_EVENT,
+  BANK_CLOSED_EVENT,
+  BANK_OPENED_EVENT,
+  BUY_BANK_SLOT_REQUESTED_EVENT,
+  DEPOSIT_ITEM_REQUESTED_EVENT,
+  WITHDRAW_ITEM_REQUESTED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   ZONE_ENTERED_EVENT,
@@ -518,6 +526,67 @@ describe('the shop', () => {
   });
 });
 
+describe('the bank', () => {
+  const bank = (): HTMLElement | null => parent.querySelector('.hud-modal__box--bank');
+
+  it('opens and closes with the world, like the other counter', () => {
+    mount();
+    expect(bank()).toBeNull();
+    events.emit(BANK_OPENED_EVENT);
+    expect(bank()).not.toBeNull();
+    events.emit(BANK_CLOSED_EVENT);
+    expect(bank()).toBeNull();
+  });
+
+  it('draws the shelves the world sent and the pack it already holds', () => {
+    mount();
+    events.emit(BANK_OPENED_EVENT);
+    events.emit(BANK_CHANGED_EVENT, { contents: { logs: 30 }, slots: 8 });
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
+
+    expect(bank()?.textContent).toContain('Logs');
+    expect(bank()?.textContent).toContain('Rat Bones');
+    expect(bank()?.textContent).toContain('1/8 slots');
+  });
+
+  /**
+   * Both directions are one gesture: a row moves one across the counter and the
+   * smaller button beside it moves the rest, whichever way it is being crossed.
+   */
+  it('sends a row as one and the button beside it as the stack, both ways', () => {
+    mount();
+    events.emit(BANK_OPENED_EVENT);
+    events.emit(BANK_CHANGED_EVENT, { contents: { logs: 30 }, slots: 8 });
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 12 });
+
+    bank()?.querySelector<HTMLButtonElement>('.hud-list-row[data-bank="deposit"]')?.click();
+    expect(emitted.at(-1)).toEqual({
+      event: DEPOSIT_ITEM_REQUESTED_EVENT,
+      args: ['rat-bones', 1],
+    });
+
+    bank()
+      ?.querySelector<HTMLButtonElement>('.hud-stack:has([data-bank="withdraw"]) [data-bank-all]')
+      ?.click();
+    expect(emitted.at(-1)).toEqual({ event: WITHDRAW_ITEM_REQUESTED_EVENT, args: ['logs', 30] });
+  });
+
+  it('offers a slot to rent until there are none left', () => {
+    mount();
+    events.emit(BANK_OPENED_EVENT);
+    events.emit(BANK_CHANGED_EVENT, { contents: {}, slots: 8 });
+
+    bank()?.querySelector<HTMLButtonElement>('[data-action="buy-bank-slot"]')?.click();
+    expect(emitted.at(-1)).toEqual({ event: BUY_BANK_SLOT_REQUESTED_EVENT, args: [] });
+
+    // At the cap it is a line rather than a button: "there are no more" and
+    // "you cannot afford it" are different things to tell a player.
+    events.emit(BANK_CHANGED_EVENT, { contents: {}, slots: MAX_BANK_SLOTS });
+    expect(bank()?.querySelector('[data-action="buy-bank-slot"]')).toBeNull();
+    expect(bank()?.textContent).toContain('Every slot rented');
+  });
+});
+
 describe('the character sheet asks for what it cannot do itself', () => {
   it('opens a picker on an empty slot and asks to unequip a filled one', () => {
     mount();
@@ -841,6 +910,10 @@ describe('every overlay has the same lifecycle', () => {
       { onBuy: noop, onSell: noop, onAcceptQuest: noop, onTurnInQuest: noop, onDismiss: noop },
       onClosed,
     ),
+    new BankModal(
+      { onDeposit: noop, onWithdraw: noop, onBuySlot: noop, onDismiss: noop },
+      onClosed,
+    ),
     new ContextMenu({ title: 'Rat', entries: [], at: { x: 0, y: 0 }, bounds: PHONE, onClosed }),
     new InspectModal(describeEnemy(ENEMIES.rat, 1), onClosed),
   ];
@@ -855,11 +928,14 @@ describe('every overlay has the same lifecycle', () => {
 
   it('closes idempotently: the second close does nothing and calls nothing', () => {
     let closes = 0;
-    for (const overlay of overlays(() => closes++)) {
+    // Counted off the list rather than written down, so the next overlay to
+    // exist is held to the same rule without an edit here.
+    const built = overlays(() => closes++);
+    for (const overlay of built) {
       overlay.close();
       expect(() => overlay.close()).not.toThrow();
     }
-    expect(closes).toBe(6);
+    expect(closes).toBe(built.length);
   });
 });
 
@@ -889,7 +965,7 @@ describe('the map', () => {
     expect(svg()?.getAttribute('viewBox')).toBe(`0 0 ${map.columns} ${map.rows}`);
     expect(parent.querySelectorAll('.hud-map__svg rect[fill]').length).toBeGreaterThan(0);
     expect(markers('node')).toBe(map.markers.filter((m) => m.kind === 'node').length);
-    expect(markers('npc')).toBe(1);
+    expect(markers('npc')).toBe(map.markers.filter((m) => m.kind === 'npc').length);
     expect(markers('exit')).toBe(2);
     expect(
       parent.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent,

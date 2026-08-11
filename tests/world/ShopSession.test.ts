@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { itemValue } from '../../src/data/items';
-import { SHOP_CLOSE_RADIUS, SHOP_STOCK } from '../../src/data/shop';
+import { NPC_CLOSE_RADIUS } from '../../src/data/npcs';
+import { SHOP_STOCK } from '../../src/data/shop';
 import {
   CURRENCY_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
@@ -48,7 +49,7 @@ describe('the window', () => {
     shop.open(KEEPER);
 
     shop.updateRange();
-    player.setPosition(SHOP_CLOSE_RADIUS + 1, 0);
+    player.setPosition(NPC_CLOSE_RADIUS + 1, 0);
     shop.updateRange();
     shop.updateRange();
 

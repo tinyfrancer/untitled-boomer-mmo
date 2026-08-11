@@ -99,9 +99,13 @@ describe('zoneMap', () => {
     expect(marker).toMatchObject(toTile(size.width / 2 + spawn.dx, size.height / 2 + spawn.dy));
   });
 
-  it('marks the shopkeeper and every node the zone holds', () => {
+  it('marks everyone standing in the zone and every node it holds', () => {
     const map = zoneMap('town');
-    expect(map.markers.filter((marker) => marker.kind === 'npc')).toHaveLength(1);
+    // Counted off the table rather than written down, so the next counter to
+    // open in town appears on the map with no test to edit.
+    expect(map.markers.filter((marker) => marker.kind === 'npc')).toHaveLength(
+      ZONES.town.npcSpawns.length,
+    );
     expect(map.markers.filter((marker) => marker.kind === 'node')).toHaveLength(
       ZONES.town.nodeSpawns.length,
     );

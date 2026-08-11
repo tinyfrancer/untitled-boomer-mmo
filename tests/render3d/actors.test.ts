@@ -328,12 +328,19 @@ describe('the rest of the zone', () => {
     expect(actor.object.getObjectByName('canopy')?.visible).toBe(false);
   });
 
-  it('names the shopkeeper and every signpost', () => {
+  it('names each NPC off the table rather than assuming the shopkeeper', () => {
     const painted = stubCanvas();
     const { world } = harness();
     const npc = new NpcActor(nth(world.npcs));
     expect(npc.object.userData.kind).toBe('npc');
     expect(lastPainted(painted)).toEqual({ text: 'Shopkeeper', color: THEME.color.levelUp });
+
+    // The second person to stand in a town is the case this used to get wrong:
+    // both the plate and the figure were the shopkeeper's, whoever it was.
+    const teller = world.npcs.find((candidate) => candidate.npcId === 'banker');
+    if (!teller) throw new Error('town has no banker');
+    new NpcActor(teller);
+    expect(lastPainted(painted)).toEqual({ text: 'Banker', color: THEME.color.levelUp });
 
     const signpost = new SignpostActor(nth(world.signposts));
     expect(signpost.object.userData.kind).toBe('signpost');

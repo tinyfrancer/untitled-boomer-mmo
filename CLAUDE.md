@@ -9,8 +9,8 @@ side project by a professional software engineer with no prior game-dev experien
 v1: single-player only; four zones (town with leveled rats and a shop, a beach with crabs and
 ocean fishing, a bandit camp with aggressive humanoids, and the bandit hideout behind a locked
 door); character creation, leveling, gear,
-two-way combat with death and respawn; gathering/cooking skills; currency and vendoring;
-a weight-limited pack; two collection quests from the shopkeeper; slayer achievements and the
+two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
+to keep a haul in; a weight-limited pack; two collection quests from the shopkeeper; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
 mobile-first HUD; and local save/load with versioned migrations. Every zone is level 1-3 starter
 content — what separates them is what they drop, not how hard they are, and the hideout is gated by
@@ -210,7 +210,7 @@ add to it:
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
-through), `AfkCamp`, `ShopSession`, `QuestDesk`, `ContextMenuSession`
+through), `AfkCamp`, `ShopSession`, `BankSession`, `QuestDesk`, `ContextMenuSession`
 (what a press held is about, and what was chosen from it), and `ApproachDriver`
 (the two click-to-move walks). Each owns its own state, is constructed by `ZoneWorld` and reaches
 the rest of the zone through two things and no others: the `WorldContext` they all share — the
@@ -388,11 +388,39 @@ in `hud/dom.ts` rather than formatting an item three ways.
 holds, and "sell all" is that number rather than a separate path. The clamp is what makes the panel
 safe to draw from a copy of the bag — a stale count can only ever sell fewer. **The two are separate
 targets**, though: the shop row and the bag's Sell button still part with one, and emptying a stack
-is a button of its own beside them (`sell-all` in `ItemActionsSystem`, `.hud-sell__all` in the shop
-panel). A stack of quest turn-ins is exactly the thing a mis-tap must not be able to sell, so the
+is a button of its own beside them (`sell-all` in `ItemActionsSystem`, `stackRow` in `hud/dom.ts`).
+A stack of quest turn-ins is exactly the thing a mis-tap must not be able to sell, so the
 bulk button is deliberately the smaller of the pair rather than the row itself growing a second
 meaning — and it is offered only on a stack, since on one of something it is the Sell button beside
-it wearing a longer name.
+it wearing a longer name. The bank's two directions are the same widget: a move across that counter
+is reversible where a sale is not, so the safety argument is weaker there — but the two panels are
+read the same way, and a player should never have to remember which of them a row empties.
+
+**The bank is weightless and limited by _kinds_, not by weight** (`systems/BankSystem.ts`, run by
+`world/BankSession.ts`, stored as `CharacterState.bank` and `bankSlots`). One slot per item id,
+however deep the stack on it — a stack of one and a stack of two hundred cost the same shelf — so
+putting a gathering run's haul away is a decision made once and the _first_ of something is what is
+paid for. A second weight limit behind the counter would only have made the pack's decision twice;
+what the vault costs instead is `bankSlotPrice`, a rising price that is the **second coin sink**
+after the death fee, and the reason the pack stays small and awkward while the depth goes on the
+shelves.
+
+The counter is the shop's twin down to the shape: opened at `NPC_INTERACT_RADIUS`, shut by walking
+past `NPC_CLOSE_RADIUS`, a HUD overlay handed a _copy_ of the contents on `bank-changed`, and bare
+item ids and counts coming back — so a panel in an HTML overlay never holds the vault, and a count
+the panel sends is clamped by the thing that actually holds the goods. Every move goes through
+`CharacterController`, which refuses as a whole: a deposit with no shelf for it leaves the pack
+exactly as it was. It is also the one counter that **persists on every move** rather than leaving it
+to the autosave — a haul put away and lost to a closed tab is worse than one never put away.
+
+**What standing at an NPC gets you is a role, not a guess** (`NpcRoleId` in `data/npcs.ts`). Before
+the banker there was one NPC and five places assumed it: the tap, the context menu's line, the
+plate over their head, the figure it hangs off, and the inspect card all opened, said or drew the
+shopkeeper. A second person standing in the same town would have sold felling axes from behind the
+bank's desk, and no state assertion would have caught it. All five read the role now, so a third
+counter is a row in `NPCS` plus a case in each of them. `NPC_APPEARANCES` is keyed by `NpcId` for
+the same reason `NO_GEAR` is keyed by `GearSlotId`: a new person is a compile error until they have
+a look, and `zoneMap` puts them on the map off `npcSpawns` with nothing else written down.
 
 **The paperdoll is SVG built from the same rig the figure in the world is built from**
 (`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by `render3d/figure.ts`).
@@ -583,6 +611,13 @@ there and can make room, and nothing is destroyed while they do — where an una
 going and loses the haul, since the swing happened and stopping the camp dead would cost them a
 night's XP rather than one load of logs. `GatherSession` asks `isCamping()` to tell the two apart.
 Currency is weightless and never fails.
+
+**A withdrawal is the one acquisition that takes what fits** (`CharacterController.withdraw`, using
+`carryableCount` in `EncumbranceSystem`). Every other path hands over a fixed amount that is
+_destroyed_ by a refusal — a gather yields two logs or swings for nothing — which is what makes
+all-or-nothing the right answer there. The rest of a withdrawal simply stays on the shelf and is
+still the player's, so refusing thirty logs outright because twelve fit would be inventing a loss.
+It says what stayed behind, since asking for thirty and getting twelve otherwise reads as a bug.
 
 **Frame rate is not an assumption you may make.** A loaded CI runner or a cheap phone steps the
 game at single-digit fps, where one frame carries the player ~46px. Anything comparing a distance

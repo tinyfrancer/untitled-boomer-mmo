@@ -777,6 +777,20 @@ function hudCss(): string {
   border-color: ${THEME.color.levelUp};
   gap: 4px;
 }
+/* The shop's shape in the banker's colour, so which counter is open is
+   answerable without reading the title. */
+.hud-modal__box--bank {
+  width: 300px;
+  border-color: ${THEME.color.skillUp};
+  gap: 4px;
+}
+/* Beside the purse in the head, and the one number that says why a deposit was
+   refused — so it is the only thing in there that changes colour. */
+.hud-bank__slots {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  margin-left: auto;
+}
 .hud-modal__title {
   font-size: ${THEME.font.lg}px;
   font-weight: bold;
@@ -871,19 +885,20 @@ function hudCss(): string {
 /* A sell row and the button that empties the stack, side by side. The row keeps
    the margin it had on its own, so a bag of stacks and a bag of singles are the
    same list with the same gaps down it. */
-.hud-sell {
+.hud-stack {
   display: flex;
   align-items: stretch;
   gap: 2px;
   margin-bottom: 2px;
 }
-.hud-sell > .hud-list-row {
+.hud-stack > .hud-list-row {
   margin-bottom: 0;
 }
 /* Sized to the row rather than to \`touchMin\`: it stands beside a 34px target
    and is the one of the pair a mis-tap costs something, so it is deliberately
-   not the bigger of the two. */
-.hud-sell__all {
+   not the bigger of the two. Shared by the shop's "Sell all" and the bank's
+   two, which is the point of the pair being one helper. */
+.hud-stack__all {
   flex: none;
   min-height: 0;
   min-width: 44px;

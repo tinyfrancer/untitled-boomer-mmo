@@ -28,6 +28,7 @@ const SIGNPOST: WorldSignpost = {
   label: 'Beach',
 };
 const KEEPER: WorldNpc = { x: 0, y: 0, npcId: 'shopkeeper' };
+const TELLER: WorldNpc = { x: 0, y: 0, npcId: 'banker' };
 
 beforeEach(() => {
   localStorage.clear();
@@ -88,6 +89,22 @@ describe('what a menu offers', () => {
     expect(menu.open({ kind: 'ground', point: { x: 10, y: 10 } })).toBeNull();
   });
 
+  /**
+   * The line an NPC offers is a fact about the person and not about their being
+   * an NPC. Before the banker existed every one of them said "Shop", which the
+   * second person to stand in a town would have inherited.
+   */
+  it('offers each counter its own line rather than the shop twice', () => {
+    const { menu } = session();
+
+    expect(menu.open({ kind: 'npc', npc: KEEPER })?.actions).toEqual([
+      { id: 'shop', label: 'Shop' },
+    ]);
+    expect(menu.open({ kind: 'npc', npc: TELLER })?.actions).toEqual([
+      { id: 'bank', label: 'Bank' },
+    ]);
+  });
+
   // A creature has no drop table until it is a creature; a tree is not one.
   it('offers Loot only for something that can be killed', () => {
     const { menu } = session();
@@ -125,6 +142,24 @@ describe('answering a menu', () => {
     menu.run('attack');
 
     expect(perform).not.toHaveBeenCalled();
+  });
+
+  // Two NPCs share a subject kind and not an action, so the guard has to
+  // compare the *role's* line rather than the kind's.
+  it('will not bank at the shopkeeper or shop at the banker', () => {
+    const { menu, perform } = session();
+
+    menu.open({ kind: 'npc', npc: KEEPER });
+    menu.run('bank');
+    expect(perform).not.toHaveBeenCalled();
+
+    menu.open({ kind: 'npc', npc: TELLER });
+    menu.run('shop');
+    expect(perform).not.toHaveBeenCalled();
+
+    menu.open({ kind: 'npc', npc: TELLER });
+    menu.run('bank');
+    expect(perform).toHaveBeenCalledWith({ kind: 'npc', npc: TELLER });
   });
 
   // The gap between opening a menu and choosing a line is as long as the player

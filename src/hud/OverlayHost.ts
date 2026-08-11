@@ -1,4 +1,5 @@
 import { AwayReportModal } from './AwayReportModal';
+import { BankModal, type BankPanelState } from './BankModal';
 import { ContextMenu, type ContextMenuEntry } from './ContextMenu';
 import { InspectModal } from './InspectModal';
 import { MenuOverlay } from './MenuOverlay';
@@ -7,7 +8,11 @@ import { ShopModal, type ShopState } from './ShopModal';
 import { SlotPicker } from './SlotPicker';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
+  BANK_CLOSED_EVENT,
+  BUY_BANK_SLOT_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
+  DEPOSIT_ITEM_REQUESTED_EVENT,
+  WITHDRAW_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
@@ -20,6 +25,18 @@ import type { PendingNotification } from '../world/GameContext';
 import type { EventBus } from '../world/worldEvents';
 import type { GearSlotId, ItemId } from '../types/ids';
 import type { TabId } from '../ui/tabs';
+
+/**
+ * How the two counters' panels read the HUD's model.
+ *
+ * Getters rather than copies handed over once: the bag, the purse, the quest
+ * log and the shelves are the HUD's own state, and each panel is a view of some
+ * of it that happens to be open sometimes.
+ */
+export interface OverlayPanelState {
+  shop: () => ShopState;
+  bank: () => BankPanelState;
+}
 
 /** What a context menu is opened with, once the caller has named its lines. */
 export interface ContextMenuSpec {
@@ -39,27 +56,30 @@ export interface ContextMenuSpec {
  * without naming them one at a time, which is exactly what the shop was left out
  * of when they were four fields on the HUD.
  *
- * It reads the shop's state through a getter rather than holding a copy: the
- * bag, the purse and the quest log are the HUD's model, and the shop is a view
- * of them that happens to be open sometimes.
+ * It reads each panel's state through a getter rather than holding a copy: the
+ * bag, the purse, the quest log and the shelves are the HUD's model, and the
+ * shop and the bank are views of them that happen to be open sometimes.
  */
 export class OverlayHost {
   private readonly root: HTMLElement;
   private readonly events: EventBus;
   private readonly shopState: () => ShopState;
+  private readonly bankState: () => BankPanelState;
 
   private options: OptionsModal | null = null;
   private shop: ShopModal | null = null;
+  private bank: BankModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
   private menu: MenuOverlay | null = null;
   private contextMenu: ContextMenu | null = null;
   private inspect: InspectModal | null = null;
 
-  constructor(root: HTMLElement, events: EventBus, shopState: () => ShopState) {
+  constructor(root: HTMLElement, events: EventBus, panels: OverlayPanelState) {
     this.root = root;
     this.events = events;
-    this.shopState = shopState;
+    this.shopState = panels.shop;
+    this.bankState = panels.bank;
   }
 
   openOptions(): void {
@@ -138,6 +158,35 @@ export class OverlayHost {
     this.picker?.close();
   }
 
+  openBank(): void {
+    this.bank?.close();
+    this.bank = new BankModal(
+      {
+        onDeposit: (itemId, quantity) =>
+          this.events.emit(DEPOSIT_ITEM_REQUESTED_EVENT, itemId, quantity),
+        onWithdraw: (itemId, quantity) =>
+          this.events.emit(WITHDRAW_ITEM_REQUESTED_EVENT, itemId, quantity),
+        onBuySlot: () => this.events.emit(BUY_BANK_SLOT_REQUESTED_EVENT),
+        // Same ask as the shop's X: the world owns whether the counter is open.
+        onDismiss: () => this.events.emit(BANK_CLOSED_EVENT),
+      },
+      () => {
+        this.bank = null;
+      },
+    );
+    this.bank.update(this.bankState());
+    this.root.append(this.bank.root);
+  }
+
+  closeBank(): void {
+    this.bank?.close();
+  }
+
+  /** The shelves, the pack and the purse all move while this is open. */
+  refreshBank(): void {
+    this.bank?.update(this.bankState());
+  }
+
   openShop(): void {
     this.shop?.close();
     this.shop = new ShopModal(
@@ -209,6 +258,7 @@ export class OverlayHost {
   closeAll(): void {
     this.options?.close();
     this.shop?.close();
+    this.bank?.close();
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();

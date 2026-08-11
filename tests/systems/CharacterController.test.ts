@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_BANK_SLOTS, STARTING_BANK_SLOTS, bankSlotPrice } from '../../src/systems/BankSystem';
 import { CharacterController } from '../../src/systems/CharacterController';
 import { STARTING_COPPER, createNewCharacter } from '../../src/persistence/CharacterState';
 import { QUESTS } from '../../src/data/quests';
@@ -386,5 +387,104 @@ describe('CharacterController locked zones', () => {
     expect(character.unlockZone('bandit-hideout', 'hideout-key')).toBe(true);
     expect(character.itemCount('hideout-key')).toBe(1);
     expect(character.state.unlockedZones).toEqual(['bandit-hideout']);
+  });
+});
+
+/**
+ * The vault, at the level the state is actually changed. `BankSession` covers
+ * the counter's refusals; what is worth saying here is that both directions
+ * either happen whole or leave both sides exactly as they were.
+ */
+describe('CharacterController banking', () => {
+  it('starts with the free shelves and nothing on them', () => {
+    const character = makeController();
+    expect(character.state.bank).toEqual({});
+    expect(character.state.bankSlots).toBe(STARTING_BANK_SLOTS);
+    expect(character.bankSlotsUsed()).toBe(0);
+  });
+
+  it('moves a stack across and back, clamped to what is really there', () => {
+    const character = makeController();
+    character.addItem('logs', 4);
+
+    expect(character.deposit('logs', 99)).toEqual({ ok: true, moved: 4 });
+    expect(character.itemCount('logs')).toBe(0);
+    expect(character.bankCount('logs')).toBe(4);
+
+    expect(character.withdraw('logs', 99)).toMatchObject({ ok: true, moved: 4 });
+    expect(character.bankCount('logs')).toBe(0);
+  });
+
+  it('refuses a deposit of nothing, and one with no shelf for it', () => {
+    const character = makeController();
+    character.state.bankSlots = 1;
+    character.state.bank = { logs: 1 };
+    character.addItem('raw-fish', 1);
+
+    expect(character.deposit('logs', 0).ok).toBe(false);
+    expect(character.deposit('cooked-fish', 1).ok).toBe(false);
+    expect(character.deposit('raw-fish', 1).ok).toBe(false);
+    expect(character.itemCount('raw-fish')).toBe(1);
+  });
+
+  // A slot is spent on the id, so the vault is never full for something that
+  // already has a shelf.
+  it('always stacks onto a shelf it already has', () => {
+    const character = makeController();
+    character.state.bankSlots = 1;
+    character.state.bank = { logs: 1 };
+    character.addItem('logs', 9);
+
+    expect(character.deposit('logs', 9)).toEqual({ ok: true, moved: 9 });
+    expect(character.bankCount('logs')).toBe(10);
+  });
+
+  /**
+   * The one acquisition deliberately not all-or-nothing: what will not fit is
+   * still the player's, sitting on the shelf, rather than destroyed by the
+   * refusal the way a gather's yield would be.
+   */
+  it('withdraws what the pack will hold and reports what stayed behind', () => {
+    const character = makeController();
+    character.state.bank = { logs: 200 };
+
+    const result = character.withdraw('logs', 200);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.moved).toBeGreaterThan(0);
+    expect(result.left).toBe(200 - result.moved);
+    expect(character.bankCount('logs')).toBe(result.left);
+  });
+
+  it('refuses a withdrawal into a pack with no room, keeping the shelf intact', () => {
+    const character = makeController();
+    character.state.bank = { logs: 5 };
+    character.addItem('rat-bones', character.carryCapacity());
+
+    expect(character.withdraw('logs', 5).ok).toBe(false);
+    expect(character.bankCount('logs')).toBe(5);
+  });
+
+  it('buys a shelf, and refuses as a whole when short or at the cap', () => {
+    const character = makeController();
+    const price = bankSlotPrice(character.state.bankSlots) ?? 0;
+
+    character.state.currency = price - 1;
+    expect(character.buyBankSlot().ok).toBe(false);
+    expect(character.state.currency).toBe(price - 1);
+
+    character.state.currency = price;
+    expect(character.buyBankSlot()).toEqual({
+      ok: true,
+      price,
+      slots: STARTING_BANK_SLOTS + 1,
+    });
+    expect(character.state.currency).toBe(0);
+
+    character.state.bankSlots = MAX_BANK_SLOTS;
+    character.state.currency = 10000;
+    expect(character.buyBankSlot().ok).toBe(false);
+    expect(character.state.currency).toBe(10000);
   });
 });

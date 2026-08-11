@@ -1,8 +1,9 @@
 import { TILE_SIZE } from '../config/constants';
+import { npcName } from '../data/npcs';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
 import { signpostPoint, zoneWorldSize } from './ZoneSystem';
-import type { NpcId, SkillId, ZoneEdge, ZoneId } from '../types/ids';
+import type { SkillId, ZoneEdge, ZoneId } from '../types/ids';
 
 /** What a marker stands for, which is the whole of how it is drawn. */
 export type MapMarkerKind = 'node' | 'npc' | 'exit';
@@ -42,16 +43,6 @@ export interface ZoneMap {
   rows: number;
   terrain: TerrainBand[];
   markers: MapMarker[];
-}
-
-// The only NPC there is. Named here rather than reached for from the renderer,
-// which holds the same string for the plate over their head: what a shopkeeper
-// is called is a decision the whole game makes.
-const NPC_NAMES: Record<NpcId, string> = { shopkeeper: 'Shopkeeper' };
-
-/** What an NPC is called, for the map's marker and for anyone examining them. */
-export function npcName(npcId: NpcId): string {
-  return NPC_NAMES[npcId];
 }
 
 /** Where a world point falls on the map. Fractional — a dot is not on a grid. */
@@ -109,7 +100,7 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
     markers.push({
       kind: 'npc',
       ...toTile(centre.x + dx, centre.y + dy),
-      label: NPC_NAMES[npcId],
+      label: npcName(npcId),
       skill: null,
     });
   }

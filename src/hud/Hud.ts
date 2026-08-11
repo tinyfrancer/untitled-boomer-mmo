@@ -40,6 +40,9 @@ import {
   ACTIONS_CHANGED_EVENT,
   AFK_STATE_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
+  BANK_CHANGED_EVENT,
+  BANK_CLOSED_EVENT,
+  BANK_OPENED_EVENT,
   COMBAT_LOG_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
   CONTEXT_MENU_REQUESTED_EVENT,
@@ -132,6 +135,10 @@ interface HudModel {
   activeTitleId: TitleId | null;
   unlockedZones: ZoneId[];
   shopOpen: boolean;
+  // What is behind the counter in town, and how much room there is for it.
+  // Seeded from the save like the bag, then kept current by the world.
+  bank: Inventory;
+  bankSlots: number;
   actions: AvailableActions;
 }
 
@@ -202,16 +209,26 @@ class Hud {
       activeTitleId: character.activeTitleId,
       unlockedZones: character.unlockedZones,
       shopOpen: false,
+      bank: character.bank,
+      bankSlots: character.bankSlots,
       actions: { nearFire: false },
     };
 
     injectHudStyles();
     this.root = el('div', 'hud');
-    this.overlays = new OverlayHost(this.root, events, () => ({
-      inventory: this.model.inventory,
-      currency: this.model.currency,
-      quests: this.model.quests,
-    }));
+    this.overlays = new OverlayHost(this.root, events, {
+      shop: () => ({
+        inventory: this.model.inventory,
+        currency: this.model.currency,
+        quests: this.model.quests,
+      }),
+      bank: () => ({
+        contents: this.model.bank,
+        slots: this.model.bankSlots,
+        inventory: this.model.inventory,
+        currency: this.model.currency,
+      }),
+    });
     this.mapSheet = new MapSheet({
       onTravel: (zoneId) => events.emit(TRAVEL_REQUESTED_EVENT, zoneId),
       access: () => ({
@@ -655,6 +672,7 @@ class Hud {
       this.inventorySheet.update(inventory);
       this.refreshEncumbrance();
       this.overlays.refreshShop();
+      this.overlays.refreshBank();
       // Quest progress is counted off the bag, so every pickup can move it.
       this.tracker.update(this.model.quests, inventory);
       this.questSheet.update(this.model.quests, inventory);
@@ -665,6 +683,7 @@ class Hud {
       this.model.currency = totalCopper;
       this.inventorySheet.setCurrency(totalCopper);
       this.overlays.refreshShop();
+      this.overlays.refreshBank();
     });
     listen(ACTIONS_CHANGED_EVENT, (actions) => {
       this.model.actions = actions;
@@ -682,6 +701,15 @@ class Hud {
       this.model.shopOpen = false;
       this.overlays.closeShop();
       this.inventorySheet.refreshActions();
+    });
+
+    // The bank draws the pack beside the shelves, so it redraws on either.
+    listen(BANK_OPENED_EVENT, () => this.overlays.openBank());
+    listen(BANK_CLOSED_EVENT, () => this.overlays.closeBank());
+    listen(BANK_CHANGED_EVENT, (vault) => {
+      this.model.bank = vault.contents;
+      this.model.bankSlots = vault.slots;
+      this.overlays.refreshBank();
     });
 
     listen(CHANNEL_STARTED_EVENT, (label) => this.channelBar.show(label));

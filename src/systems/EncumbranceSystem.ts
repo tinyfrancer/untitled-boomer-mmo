@@ -47,6 +47,29 @@ export function canCarry(
   return inventoryWeight(inventory) + itemWeight(itemId) * quantity <= capacity;
 }
 
+/**
+ * How many of this the pack still has room for, which is the other question
+ * `canCarry` answers yes or no to.
+ *
+ * It exists for the one acquisition that is not all-or-nothing: a withdrawal
+ * from the bank. Everything else the world hands the player is a fixed amount
+ * that either goes in the pack or does not happen — a gather yields two logs or
+ * swings for nothing — and nothing is destroyed by the refusal. A withdrawal is
+ * the player naming a count from a store they already own, so the honest answer
+ * to "give me thirty logs" with room for twelve is twelve logs, and the other
+ * eighteen stay on the shelf.
+ */
+export function carryableCount(inventory: Inventory, itemId: ItemId, capacity: number): number {
+  const spare = capacity - inventoryWeight(inventory);
+  if (spare < 0) {
+    return 0;
+  }
+  const each = itemWeight(itemId);
+  // Nothing in ITEMS is weightless (see DEFAULT_ITEM_WEIGHT), but a row that
+  // ever set weight to 0 would otherwise divide its way to Infinity here.
+  return each <= 0 ? Number.MAX_SAFE_INTEGER : Math.floor(spare / each);
+}
+
 export function encumbranceLevel(weight: number, capacity: number): EncumbranceLevel {
   if (weight >= capacity) {
     return 'full';

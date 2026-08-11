@@ -56,7 +56,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = []) {
     nodes,
     targeting,
     stopGathering: vi.fn(),
-    closeShop: vi.fn(),
+    closeCounters: vi.fn(),
     eat: (itemId: ItemId) => eaten.push(itemId),
     // The world walks over and starts the channel; here that is just the record
     // of which node was chosen, plus the flag the loop reads back.
@@ -97,7 +97,7 @@ describe('settling in', () => {
 
     expect(camp.active).toBe(true);
     expect(deps.stopGathering).toHaveBeenCalled();
-    expect(deps.closeShop).toHaveBeenCalled();
+    expect(deps.closeCounters).toHaveBeenCalled();
     expect(state.afk).toMatchObject({ zoneId: 'town' });
     expect(emissions(AFK_STATE_CHANGED_EVENT)).toEqual([[true]]);
   });

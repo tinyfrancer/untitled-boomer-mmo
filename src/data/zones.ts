@@ -60,8 +60,13 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     map: TOWN_MAP,
     mobSpawns: TOWN_MOB_SPAWNS,
     nodeSpawns: TOWN_NODE_SPAWNS,
-    // Just off the crossroads, clear of every mob spawn point.
-    npcSpawns: [{ dx: 96, dy: -96, npcId: 'shopkeeper' }],
+    // Both just off the crossroads and clear of every mob spawn point, one
+    // either side of it: the two counters a player walks between are a few
+    // steps apart rather than a trip across town.
+    npcSpawns: [
+      { dx: 96, dy: -96, npcId: 'shopkeeper' },
+      { dx: -96, dy: -96, npcId: 'banker' },
+    ],
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },

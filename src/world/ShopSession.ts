@@ -1,4 +1,5 @@
-import { SHOP_CLOSE_RADIUS, shopPriceFor } from '../data/shop';
+import { NPC_CLOSE_RADIUS } from '../data/npcs';
+import { shopPriceFor } from '../data/shop';
 import { itemValue } from '../data/items';
 import { withinRadius } from '../systems/MovementSystem';
 import type { ItemId } from '../types/ids';
@@ -47,7 +48,7 @@ export class ShopSession {
   /** Walking off mid-trade closes the window, like any vendor would. */
   updateRange(): void {
     if (!this.npc) return;
-    if (!withinRadius(this.ctx.player, this.npc, SHOP_CLOSE_RADIUS)) {
+    if (!withinRadius(this.ctx.player, this.npc, NPC_CLOSE_RADIUS)) {
       this.close();
     }
   }

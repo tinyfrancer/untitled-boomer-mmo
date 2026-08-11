@@ -1,11 +1,12 @@
 import { CLASSES } from '../data/classes';
+import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { QuestLog } from '../systems/QuestSystem';
 import type { ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 13;
+export const CHARACTER_STATE_VERSION = 14;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -19,6 +20,13 @@ export interface CharacterState {
   xp: number;
   gear: Gear;
   inventory: Inventory;
+  // What is behind the counter in town. Weightless, and limited by `bankSlots`
+  // rather than by what it weighs — one slot per item id, however deep the
+  // stack on it (see BankSystem).
+  bank: Inventory;
+  // How many kinds of thing the vault will hold. Stored because it is bought:
+  // the coin it cost is gone, so there is nothing left to derive it from.
+  bankSlots: number;
   // Total copper; rendered as gold/silver/copper by CurrencySystem.
   currency: number;
   skills: Skills;
@@ -70,6 +78,8 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     gear: { ...NO_GEAR, weapon: CLASSES[classId].startingWeaponId },
     // Gathering tools come from the shop now, not the starting bag.
     inventory: {},
+    bank: {},
+    bankSlots: STARTING_BANK_SLOTS,
     currency: STARTING_COPPER,
     skills: createInitialSkills(),
     zoneId: 'town',
