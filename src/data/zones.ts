@@ -94,10 +94,25 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
       { dx: -96, dy: -96, npcId: 'banker' },
       { dx: -192, dy: 64, npcId: 'trainer' },
     ],
-    // Off the road east of the crossroads and clear of every counter and mob
-    // spawn, for the reason the three of them are: a station is tapped, and
-    // anything standing where a player taps to walk is a walk that stops short.
-    stationSpawns: [{ dx: 192, dy: 64, station: 'forge' }],
+    /**
+     * North-east of the crossroads, and the placement rule here is a third one
+     * beyond the two the counters follow.
+     *
+     * A station is a tile of solid furniture that can be tapped, so it must not
+     * sit **between the camera and anything else worth tapping**. The camera
+     * stands south of the player and looks north, so a ray aimed at a creature
+     * passes over the ground *south* of it — and a forge parked there quietly
+     * eats every tap on that creature. The first placement was at `192, 64`,
+     * which is directly south of the rat at `192, -128` and 42px from where a
+     * player stands to fight it; smoke caught it as a finger tap that selected
+     * nothing, one run in three.
+     *
+     * North of every mob spawn's approach, then, and clear of all three
+     * counters. Beyond a creature is safe where in front of it is not: the
+     * camera looks down, so past the ground it is aimed at the ray is
+     * underground and hits nothing standing on it.
+     */
+    stationSpawns: [{ dx: 288, dy: -256, station: 'forge' }],
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },

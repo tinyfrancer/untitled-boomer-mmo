@@ -372,6 +372,11 @@ const standSouthOf = async (what) => {
   await page.evaluate(`(() => {
     const at = ${what};
     window.world.clearTarget();
+    // And shut whatever counter is open. A panel is only closed by walking out
+    // of NPC_CLOSE_RADIUS, so one opened by an earlier section survives a
+    // teleport that happens to land nearby — and then swallows the very tap
+    // this helper exists to set up, three sections later.
+    window.world.closeCounters();
     // Stopped as well as moved. A walk left pending by an earlier section
     // survives a teleport, and the player then drifts off the spot this put
     // them on — which moves the camera between reading a screen point and
@@ -1541,7 +1546,21 @@ async function touchGestures() {
   const theRat = `window.world.mobs[${ratIndex}]`;
   await standSouthOf(theRat);
   const ratTouch = await screenAt(theRat);
-  await page.touchscreen.tap(Math.round(ratTouch.x), Math.round(ratTouch.y));
+  /**
+   * Dispatched as two CDP events rather than through `touchscreen.tap`.
+   *
+   * `TAP_MAX_MS` is wall clock — deliberately, since it is the rule a slow
+   * device has to keep passing — so how long a press *lasts* is the one thing
+   * about this gesture that a loaded machine can change. Playwright's tap is a
+   * convenience with its own timing between the two events; sending them back
+   * to back is the only way to ask "was this read as a tap" without also
+   * measuring the runner.
+   */
+  const ratPoint = /** @type {{x: number, y: number}[]} */ ([
+    { x: Math.round(ratTouch.x), y: Math.round(ratTouch.y) },
+  ]);
+  await touch('touchStart', ratPoint);
+  await touch('touchEnd', /** @type {{x: number, y: number}[]} */ ([]));
   await draw();
   check(
     'and a finger tap still selects what it landed on',
