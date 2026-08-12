@@ -44,10 +44,11 @@ export type ItemId =
   | 'brown-shield'
   | 'apprentice-orb';
 
-// Recipes are keyed by what goes in the pan, so a recipe id is the id of a raw
-// item. Spelling that as a subset of ItemId rather than as its own list is what
-// lets recipeForInput narrow an arbitrary item down to a recipe without a cast.
-export type RecipeId = Extract<ItemId, 'raw-fish' | 'crab-meat'>;
+// A recipe is named for what it makes, which is how one is asked for at a
+// station: "what am I making?" rather than "what raw thing do I have?". It was
+// keyed by its input while cooking was the only kind and every recipe took one
+// of one thing — a list of inputs has no single item to key on.
+export type RecipeId = 'cooked-fish' | 'cooked-crab';
 
 export type EnemyId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
 

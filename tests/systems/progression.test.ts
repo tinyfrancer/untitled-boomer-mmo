@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
 import { QUESTS } from '../../src/data/quests';
-import { COOKING_RECIPES } from '../../src/data/recipes';
+import { RECIPES } from '../../src/data/recipes';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import {
   BANDIT_CAMP_MOB_SPAWNS,
@@ -11,7 +11,7 @@ import {
 } from '../../src/data/spawns';
 import { addXp, type LevelState } from '../../src/systems/LevelingSystem';
 import { addSkillXp, createInitialSkills, skillLevel } from '../../src/systems/SkillSystem';
-import { burnChance } from '../../src/systems/CookingSystem';
+import { failureChance } from '../../src/systems/CraftingSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { xpToReachLevel } from '../../src/data/xpTable';
@@ -59,23 +59,23 @@ function intendedArc(): Arc {
 
   // Cooking crab is gated on a cooking level, and the only way to that level is
   // cooking fish — so the fish quest-adjacent grind is part of the arc.
-  const crabRecipe = COOKING_RECIPES['crab-meat'];
+  const crabRecipe = RECIPES['cooked-crab'];
   const skills = createInitialSkills();
   let cooking = skills;
   let fishCooked = 0;
   while (skillLevel(cooking, 'cooking') < crabRecipe.requiredLevel) {
     fishCooked += 1;
-    const successRate = 1 - burnChance(skillLevel(cooking, 'cooking'));
+    const successRate = 1 - failureChance(skillLevel(cooking, 'cooking'));
     cooking = addSkillXp(
       cooking,
       'cooking',
-      COOKING_RECIPES['raw-fish'].xpReward * successRate,
+      RECIPES['cooked-fish'].xpReward * successRate,
       1,
     ).skills;
   }
 
   // Crab meat has to survive the burn rate on the way to 20 cooked.
-  const crabCooked = Math.ceil(feast.quantity / (1 - burnChance(crabRecipe.requiredLevel)));
+  const crabCooked = Math.ceil(feast.quantity / (1 - failureChance(crabRecipe.requiredLevel)));
   const crabKills = killsFor(crabCooked, chanceOf('crab', 'crab-meat'));
 
   // A gear set is three armour slots and a weapon; the bandit table is the only
@@ -171,7 +171,7 @@ describe('the starter arc', () => {
   });
 
   it('needs the cooking skill levelled before the crab quest is possible at all', () => {
-    expect(COOKING_RECIPES['crab-meat'].requiredLevel).toBeGreaterThan(1);
+    expect(RECIPES['cooked-crab'].requiredLevel).toBeGreaterThan(1);
     expect(arc.fishCooked).toBeGreaterThan(0);
     // Reaching the gate should be a detour, not a second grind.
     expect(arc.fishCooked).toBeLessThan(30);

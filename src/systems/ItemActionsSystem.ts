@@ -1,7 +1,7 @@
 import { ITEMS, consumableFor, itemValue } from '../data/items';
 import { FIRE_INPUT_ITEM_ID } from '../data/recipes';
 import { canEquip } from './EquipSystem';
-import { isRecipeInput } from './CookingSystem';
+import { isRecipeInput } from './CraftingSystem';
 import type { ClassId, ItemId } from '../types/ids';
 
 export type ItemActionId = 'equip' | 'eat' | 'light-fire' | 'cook' | 'sell' | 'sell-all';
@@ -46,7 +46,7 @@ export function actionsForItem(itemId: ItemId, context: ItemActionContext): Item
   if (itemId === FIRE_INPUT_ITEM_ID && !context.nearFire) {
     actions.push({ id: 'light-fire', label: 'Light Fire' });
   }
-  if (isRecipeInput(itemId) && context.nearFire) {
+  if (context.nearFire && isRecipeInput(itemId, 'fire')) {
     actions.push({ id: 'cook', label: 'Cook' });
   }
   if (context.shopOpen && itemValue(itemId) !== null) {

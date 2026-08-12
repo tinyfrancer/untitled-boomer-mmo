@@ -51,7 +51,7 @@ import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { NPC_INTERACT_RADIUS, npcRole, type NpcRoleId } from '../data/npcs';
 import type { InteractionKind } from '../systems/InteractionSystem';
 import type { GatherState } from '../systems/GatherSystem';
-import type { CookState } from '../systems/CookingSystem';
+import type { CraftState } from '../systems/CraftingSystem';
 import type { CharacterController, CombatXpGain } from '../systems/CharacterController';
 import { withinRadius, type Point } from '../systems/MovementSystem';
 import type { InputState } from '../systems/InputState';
@@ -810,7 +810,7 @@ export class ZoneWorld implements Targeting {
   }
 
   /** What is over the fire, or null. The gather channel's twin; see `GatherSession`. */
-  get cookState(): CookState | null {
+  get cookState(): CraftState | null {
     return this.gathering.cooking;
   }
 

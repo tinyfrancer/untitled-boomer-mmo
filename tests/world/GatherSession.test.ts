@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
-import { COOKING_RECIPES, FIRE_BURN_MS, FIRE_COOK_RADIUS } from '../../src/data/recipes';
+import { RECIPES, FIRE_BURN_MS, STATION_RADIUS } from '../../src/data/recipes';
 import {
   CHANNEL_ENDED_EVENT,
   CHANNEL_STARTED_EVENT,
@@ -120,7 +120,7 @@ describe('the fire', () => {
     gathering.lightFire();
 
     expect(gathering.isNearFire()).toBe(true);
-    player.setPosition(FIRE_COOK_RADIUS * 2, 0);
+    player.setPosition(STATION_RADIUS * 2, 0);
     expect(gathering.isNearFire()).toBe(false);
   });
 });
@@ -151,7 +151,7 @@ describe('the pan', () => {
     gathering.lightFire();
 
     gathering.cook('raw-fish');
-    gathering.update(COOKING_RECIPES['raw-fish'].cookMs);
+    gathering.update(RECIPES['cooked-fish'].durationMs);
 
     expect(character.itemCount('raw-fish')).toBe(0);
     expect(character.itemCount('cooked-fish') + character.itemCount('burnt-fish')).toBe(1);

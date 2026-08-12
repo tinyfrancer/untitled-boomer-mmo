@@ -1,14 +1,14 @@
-import { consumableFor, describeItemName } from '../data/items';
-import { FIRE_COOK_RADIUS, FIRE_INPUT_ITEM_ID, type CookingRecipe } from '../data/recipes';
+import { consumableFor } from '../data/items';
+import { STATION_RADIUS, FIRE_INPUT_ITEM_ID, type CraftingRecipe } from '../data/recipes';
 import {
-  advanceCook,
-  beginCook,
-  canCook,
-  findCookableItem,
-  recipeForInput,
-  rollCook,
-  type CookState,
-} from '../systems/CookingSystem';
+  advanceCraft,
+  beginCraft,
+  canCraft,
+  findCraftableFrom,
+  recipeFromItem,
+  rollCraft,
+  type CraftState,
+} from '../systems/CraftingSystem';
 import {
   advanceGather,
   beginGather,
@@ -49,7 +49,7 @@ export class GatherSession {
    * What is in the pan, or null. It is the gather's twin rather than a second
    * kind of thing: one bar draws both, and only one of them can ever be running.
    */
-  cooking: CookState | null = null;
+  cooking: CraftState | null = null;
   /** One fire at a time, and it burns out on its own clock. */
   campfire: Campfire | null = null;
 
@@ -138,7 +138,7 @@ export class GatherSession {
 
   isNearFire(): boolean {
     if (!this.campfire?.isLit()) return false;
-    return withinRadius(this.ctx.player, this.campfire, FIRE_COOK_RADIUS);
+    return withinRadius(this.ctx.player, this.campfire, STATION_RADIUS);
   }
 
   lightFire(): void {
@@ -166,16 +166,17 @@ export class GatherSession {
   cook(itemId?: ItemId): void {
     const { character } = this.ctx;
     const recipe =
-      (itemId ? recipeForInput(itemId) : null) ?? findCookableItem(character.state.inventory);
+      (itemId ? recipeFromItem(itemId, 'fire') : null) ??
+      findCraftableFrom(character.state.inventory, 'fire');
     if (!recipe) {
       this.ctx.notice('You have nothing to cook.');
       return;
     }
     // Already in the pan: pressing Cook again is nothing rather than a restart,
     // or a double tap would keep putting the same fish back on a cold clock.
-    if (this.cooking?.recipe.inputItemId === recipe.inputItemId) return;
+    if (this.cooking?.recipe.id === recipe.id) return;
 
-    const check = canCook(
+    const check = canCraft(
       recipe,
       character.state.skills,
       character.state.inventory,
@@ -188,8 +189,8 @@ export class GatherSession {
 
     // One bar between them, so whatever was running gives it up.
     this.stop();
-    this.cooking = beginCook(recipe);
-    this.ctx.events.emit(CHANNEL_STARTED_EVENT, describeItemName(recipe.inputItemId));
+    this.cooking = beginCraft(recipe);
+    this.ctx.events.emit(CHANNEL_STARTED_EVENT, recipe.name);
     this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 
@@ -216,8 +217,8 @@ export class GatherSession {
 
     // The fire is the pan's range check, and it answers for both ways of losing
     // one: walking off it, and letting it burn out under you.
-    const outcome = advanceCook(cooking, deltaMs, this.isNearFire());
-    if (outcome.status === 'cooking') {
+    const outcome = advanceCraft(cooking, deltaMs, this.isNearFire());
+    if (outcome.status === 'crafting') {
       this.cooking = outcome.state;
       this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, outcome.progress);
       return;
@@ -230,24 +231,31 @@ export class GatherSession {
     this.completeCook(cooking.recipe);
   }
 
-  private completeCook(recipe: CookingRecipe): void {
+  private completeCook(recipe: CraftingRecipe): void {
     const { character } = this.ctx;
 
-    const result = rollCook(recipe, character.skillLevelOf('cooking'));
-    character.removeItem(recipe.inputItemId, 1);
-    character.addItem(result.itemId, 1);
+    const result = rollCraft(recipe, character.skillLevelOf(recipe.skill));
+    // A failure with nothing to show for it spends nothing: see `rollCraft`.
+    if (result.consumed) {
+      for (const input of recipe.inputs) {
+        character.removeItem(input.itemId, input.quantity);
+      }
+    }
+    if (result.itemId) {
+      character.addItem(result.itemId, 1);
+    }
     this.ctx.publishInventory();
-    if (result.burnt) {
+    if (result.failed) {
       this.ctx.notice('You burn it.');
     } else {
-      this.ctx.awardSkillXp('cooking', result.xp);
+      this.ctx.awardSkillXp(recipe.skill, result.xp);
     }
 
     // Auto-repeat down the stack, the way the gather channel re-arms itself: a
     // bag of twenty fish is one decision rather than twenty. Asked again rather
     // than counted, since the fire can go out and the bag can empty — and a
     // refusal here is the stack finishing, so it is silent.
-    const again = canCook(
+    const again = canCraft(
       recipe,
       character.state.skills,
       character.state.inventory,
@@ -257,7 +265,7 @@ export class GatherSession {
       this.stop();
       return;
     }
-    this.cooking = beginCook(recipe);
+    this.cooking = beginCraft(recipe);
     this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 
