@@ -19,7 +19,7 @@ gathered materials that lead nowhere.
 | 6   | Stock worth coming back for                              | Economy           | merged 2026-08-11 |
 | 7   | The trainer                                              | Economy           | merged 2026-08-11 |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | merged 2026-08-11 |
-| 9   | Smithing, and the forge it happens at                    | Crafting web      | in review         |
+| 9   | Smithing, and the forge it happens at                    | Crafting web      | merged 2026-08-12 |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | planned           |
 | 11  | A camp that can cook and craft                           | Crafting web      | planned           |
 | 12  | Quests that ask for something other than a bag           | Reasons to return | planned           |
