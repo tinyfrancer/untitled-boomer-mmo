@@ -1,3 +1,4 @@
+import type { StationId } from './recipes';
 import type { ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
@@ -23,6 +24,12 @@ export interface NpcSpawnPoint {
   npcId: NpcId;
 }
 
+export interface StationSpawnPoint {
+  dx: number;
+  dy: number;
+  station: StationId;
+}
+
 // Walking onto the matching edge of the map leaves for the target zone; the
 // player arrives on the opposite edge of that zone (see systems/ZoneSystem.ts).
 export interface ZoneExit {
@@ -46,6 +53,12 @@ export interface ZoneDefinition {
   mobSpawns: MobSpawnPoint[];
   nodeSpawns: NodeSpawnPoint[];
   npcSpawns: NpcSpawnPoint[];
+  /**
+   * Where the fixed crafting stations stand. A campfire is not one of these —
+   * that is lit by the player and burns out — so this is only what a zone comes
+   * with, which today is the town forge.
+   */
+  stationSpawns?: StationSpawnPoint[];
   exits: ZoneExit[];
   /**
    * The item that opens the way in, for a zone that is shut until it is found.
@@ -81,6 +94,10 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
       { dx: -96, dy: -96, npcId: 'banker' },
       { dx: -192, dy: 64, npcId: 'trainer' },
     ],
+    // Off the road east of the crossroads and clear of every counter and mob
+    // spawn, for the reason the three of them are: a station is tapped, and
+    // anything standing where a player taps to walk is a walk that stops short.
+    stationSpawns: [{ dx: 192, dy: 64, station: 'forge' }],
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },

@@ -8,6 +8,7 @@ import {
   NOTICE_EVENT,
 } from '../../src/ui/uiEvents';
 import { GatherSession } from '../../src/world/GatherSession';
+import type { WorldStation } from '../../src/world/zoneEntities';
 import { ResourceNode } from '../../src/world/ResourceNode';
 import { testContext } from './context';
 
@@ -22,11 +23,14 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-function session(options: { camping?: boolean } = {}) {
+function session(options: { camping?: boolean; stations?: WorldStation[] } = {}) {
   const kit = testContext();
   return {
     ...kit,
-    gathering: new GatherSession(kit.ctx, { isCamping: () => options.camping ?? false }),
+    gathering: new GatherSession(kit.ctx, {
+      stations: options.stations ?? [],
+      isCamping: () => options.camping ?? false,
+    }),
   };
 }
 

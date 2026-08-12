@@ -360,6 +360,7 @@ const SHOPKEEPER = "window.world.npcs.find((n) => n.npcId === 'shopkeeper')";
 // which counter a tap opens is the whole point of the section below.
 const BANKER = "window.world.npcs.find((n) => n.npcId === 'banker')";
 const TRAINER = "window.world.npcs.find((n) => n.npcId === 'trainer')";
+const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 
 /**
@@ -371,9 +372,22 @@ const standSouthOf = async (what) => {
   await page.evaluate(`(() => {
     const at = ${what};
     window.world.clearTarget();
+    // Stopped as well as moved. A walk left pending by an earlier section
+    // survives a teleport, and the player then drifts off the spot this put
+    // them on — which moves the camera between reading a screen point and
+    // clicking it, and reads as a tap that missed what it was aimed at.
+    window.world.player.stopMoving();
     window.world.teleport(at.x, at.y + 150);
   })()`);
   await step(2);
+  // Settled, not merely placed. Anything still driving the player — a camp
+  // re-issuing a pursuit, an approach part-way through — moves the camera
+  // between reading a screen point and clicking it, which reads as a tap that
+  // missed rather than as the walk it actually is.
+  await stepUntil(
+    () => page.evaluate(() => !window.world.player.hasMoveTarget()),
+    'the player to come to a stop',
+  );
   await draw();
 };
 /**
@@ -1212,6 +1226,100 @@ async function trainer() {
   await step(2);
 }
 
+async function forge() {
+  // --- The one crafting surface that needed a panel, and the only station in
+  // the game that came with the zone.
+  //
+  // What needs a browser: that walking *to* a thing in the world opens a panel
+  // with nothing owning whether it is open, that walking away closes it again,
+  // and that a real tap on a real row runs the channel. None of those is a
+  // state assertion — the panel is a DOM element whose whole lifecycle is a
+  // distance. ---
+  await page.evaluate(() => {
+    const w = window.world;
+    const forge = w.stations.find((s) => s.station === 'forge');
+    w.clearTarget();
+    w.character.state.inventory = { 'tin-ore': 8 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+    // Past the failure curve, so a swing is a bar rather than a coin toss.
+    // Set rather than awarded: `awardSkillXp` would level the skill nine times
+    // over and put nine toasts on screen, and a toast is HUD furniture that
+    // swallows whatever lands on it — which is how this section reached out and
+    // broke a finger tap three sections later.
+    w.character.state.skills.smithing = { level: 9, xp: 0 };
+    w.teleport((forge?.x ?? 0) + 400, forge?.y ?? 0);
+  });
+  await step(2);
+  const away = await page.evaluate(() => document.querySelector('.hud-modal__box--forge') === null);
+
+  // Standing next to it is deliberately *not* enough — a panel that opened on
+  // proximity would put itself in front of anyone walking past, which on this
+  // map is most of the reasons to be near one.
+  await page.evaluate(() => {
+    const w = window.world;
+    const forge = w.stations.find((s) => s.station === 'forge');
+    w.teleport(forge?.x ?? 0, (forge?.y ?? 0) + 40);
+  });
+  await step(2);
+  const standing = await page.evaluate(
+    () => document.querySelector('.hud-modal__box--forge') === null,
+  );
+
+  await draw();
+  await clickAt(await screenAt(FORGE));
+  await step(2);
+  const opened = await page.evaluate(() => ({
+    panel: document.querySelector('.hud-modal__box--forge') !== null,
+    rows: document.querySelectorAll('.hud-modal__box--forge [data-recipe]').length,
+    locked: document.querySelectorAll('.hud-modal__box--forge [data-locked]').length,
+  }));
+  check(
+    'a real click on the forge opens its list, where standing beside it does not',
+    away && standing && opened.panel && opened.rows > 0,
+    `${opened.rows} recipes, ${opened.locked} of them still shut`,
+  );
+
+  // A real tap on a real row, and the channel that follows it.
+  await page.click('.hud-modal__box--forge [data-recipe="tin-bar"]');
+  await step(2);
+  const casting = await page.evaluate(() => ({
+    bar: document.querySelector('.hud-channel') !== null,
+    label: document.querySelector('.hud-channel__label')?.textContent ?? '',
+  }));
+  // Long enough for several swings at 2200ms each, in game time rather than
+  // frames: the crank is what makes that a number rather than a wait.
+  await step(20, 200);
+  const smelted = await page.evaluate(() => ({
+    ore: window.world.character.state.inventory['tin-ore'] ?? 0,
+    bars: window.world.character.state.inventory['tin-bar'] ?? 0,
+  }));
+  check(
+    'a tap on a forge row smelts, on the same bar a gather and a cast use',
+    casting.bar && smelted.bars > 0 && smelted.ore + smelted.bars === 8,
+    `"${casting.label}" bar, ${smelted.ore} ore + ${smelted.bars} bars`,
+  );
+  await page.screenshot({ path: `${OUT}/11-forge.png` });
+
+  // Walking off it is the whole of closing it — there is no session to ask.
+  await page.evaluate(() => {
+    const w = window.world;
+    const forge = w.stations.find((s) => s.station === 'forge');
+    w.teleport((forge?.x ?? 0) + 400, forge?.y ?? 0);
+  });
+  await step(2);
+  check(
+    'walking away from the forge closes the list behind you',
+    (await page.evaluate(() => document.querySelector('.hud-modal__box--forge') === null)) === true,
+  );
+
+  // Put the bag back the way the sections after this one expect to find it.
+  await page.evaluate(() => {
+    window.world.character.state.inventory = {};
+    window.events.emit('inventory-changed', {});
+  });
+  await step(2);
+}
+
 async function orbit() {
   // --- The drag, which is the same stream of PointerEvents as the tap and has
   // to be told apart from it. The gesture arithmetic and the camera framing are
@@ -1424,8 +1532,15 @@ async function touchGestures() {
   );
 
   // And a real finger tap, which is the other reading of the same three events.
-  await standSouthOf(RAT);
-  const ratTouch = await screenAt(RAT);
+  //
+  // Pinned to one rat by index rather than re-asking for "the first living
+  // one" twice. Rats die and respawn while the run goes on, so between standing
+  // south of one and reading where it is on screen the answer can become a
+  // *different* rat — and the tap then lands where nothing is.
+  const ratIndex = await page.evaluate(() => window.world.mobs.findIndex((mob) => mob.isAlive()));
+  const theRat = `window.world.mobs[${ratIndex}]`;
+  await standSouthOf(theRat);
+  const ratTouch = await screenAt(theRat);
   await page.touchscreen.tap(Math.round(ratTouch.x), Math.round(ratTouch.y));
   await draw();
   check(
@@ -2881,6 +2996,7 @@ const SECTIONS = [
   ['feedback', feedback],
   ['bank', bank],
   ['trainer', trainer],
+  ['forge', forge],
   ['orbit', orbit],
   ['heading', heading],
   ['keyboard', keyboard],

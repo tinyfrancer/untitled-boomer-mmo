@@ -107,6 +107,8 @@ const ICON_COLOR = {
   burnt: 0x6d6257,
   wood: 0x8d6e63,
   iron: 0xb0a48c,
+  // A bar of it, which is the ore's colour cleaned up rather than a new one.
+  ironBar: 0xcfd8dc,
   // The two ores, which are one rock in two colours the way the fish are one
   // outline in three: pale grey tin against the warm rust of iron.
   tinOre: 0x9aa7ad,
@@ -417,6 +419,69 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'material',
     icon: { shape: 'ore', color: ICON_COLOR.ironOre },
+  },
+  // What the forge makes out of ore, and what it makes out of those. Bars are
+  // lighter than the ore they came from: two trips of rock become one of metal,
+  // which is the first thing smelting is actually worth.
+  'tin-bar': {
+    id: 'tin-bar',
+    name: 'Tin Bar',
+    value: 12,
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'bar', color: ICON_COLOR.tinOre },
+  },
+  'iron-bar': {
+    id: 'iron-bar',
+    name: 'Iron Bar',
+    value: 24,
+    weight: 3,
+    kind: 'material',
+    icon: { shape: 'bar', color: ICON_COLOR.ironBar },
+  },
+  // The plate tier, and the first armour in the game nothing drops. Every piece
+  // stops more than the leather it replaces and weighs more for it, which is
+  // what keeps the pack a decision rather than plate being strictly better.
+  'iron-helmet': {
+    id: 'iron-helmet',
+    name: 'Iron Helmet',
+    value: 60,
+    weight: 6,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: TIER_COLORS.iron,
+    tier: 'iron',
+    armorType: 'plate',
+    armorValue: 5,
+    healthBonus: 2,
+  },
+  'iron-chestplate': {
+    id: 'iron-chestplate',
+    name: 'Iron Chestplate',
+    value: 90,
+    weight: 9,
+    kind: 'equipment',
+    slot: 'chest',
+    color: TIER_COLORS.iron,
+    tier: 'iron',
+    armorType: 'plate',
+    armorValue: 9,
+    healthBonus: 3,
+    strengthBonus: 1,
+  },
+  'iron-legs': {
+    id: 'iron-legs',
+    name: 'Iron Legs',
+    value: 75,
+    weight: 8,
+    kind: 'equipment',
+    slot: 'pants',
+    color: TIER_COLORS.iron,
+    tier: 'iron',
+    armorType: 'plate',
+    armorValue: 7,
+    healthBonus: 2,
+    strengthBonus: 1,
   },
   'raw-fish': {
     id: 'raw-fish',

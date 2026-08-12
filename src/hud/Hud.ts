@@ -70,6 +70,7 @@ import {
   SET_TITLE_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   SHOP_OPENED_EVENT,
+  FORGE_OPENED_EVENT,
   TRAINER_OPENED_EVENT,
   TRAINER_CLOSED_EVENT,
   LEARNED_ABILITIES_CHANGED_EVENT,
@@ -220,7 +221,7 @@ class Hud {
       bank: character.bank,
       bankSlots: character.bankSlots,
       learnedAbilities: character.learnedAbilities,
-      actions: { nearFire: false },
+      actions: { nearFire: false, nearForge: false },
     };
 
     injectHudStyles();
@@ -244,6 +245,7 @@ class Hud {
         learnedAbilities: this.model.learnedAbilities,
         currency: this.model.currency,
       }),
+      forge: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
     });
     this.mapSheet = new MapSheet({
       onTravel: (zoneId) => events.emit(TRAVEL_REQUESTED_EVENT, zoneId),
@@ -657,6 +659,8 @@ class Hud {
         [progress.skillId]: { level: progress.level, xp: progress.xp },
       };
       this.refreshCharacterSheet();
+      // A smithing level opens rows on the list the player is stood in front of.
+      this.overlays.refreshForge();
       if (progress.leveledUp) {
         this.toast.show(
           `${SKILLS[progress.skillId].name} Level ${progress.level}!`,
@@ -709,6 +713,8 @@ class Hud {
       this.refreshEncumbrance();
       this.overlays.refreshShop();
       this.overlays.refreshBank();
+      // And the forge, whose rows are drawn against what the bag actually holds.
+      this.overlays.refreshForge();
       // Quest progress is counted off the bag, so every pickup can move it.
       this.tracker.update(this.model.quests, inventory);
       this.questSheet.update(this.model.quests, inventory);
@@ -726,6 +732,12 @@ class Hud {
       this.model.actions = actions;
       // Fire proximity changes which buttons a selected item shows.
       this.inventorySheet.refreshActions();
+      // Walking away is the whole of *closing* the forge's list — the same rule
+      // the channel at it lives by. Opening it is a tap, not a proximity, which
+      // is what keeps a panel out of the face of anyone walking past.
+      if (!actions.nearForge) {
+        this.overlays.closeForge();
+      }
     });
 
     listen(SHOP_OPENED_EVENT, () => {
@@ -749,6 +761,7 @@ class Hud {
       this.overlays.refreshBank();
     });
 
+    listen(FORGE_OPENED_EVENT, () => this.overlays.openForge());
     listen(TRAINER_OPENED_EVENT, () => this.overlays.openTrainer());
     listen(TRAINER_CLOSED_EVENT, () => this.overlays.closeTrainer());
     // A lesson lands on the bar and in the panel that sold it, in that order:

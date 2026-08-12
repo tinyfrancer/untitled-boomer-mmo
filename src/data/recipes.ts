@@ -79,6 +79,68 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     xpReward: 20,
     durationMs: 2500,
   },
+  // Smelting: one rock in, one bar out, and the only two recipes at the forge
+  // that a bag cell can start on its own. Tin at level 1 and iron at 4 is the
+  // town pond and the ocean wearing different clothes — a skill with one node
+  // to work has nothing to climb toward.
+  'tin-bar': {
+    id: 'tin-bar',
+    name: 'Tin Bar',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'tin-ore', quantity: 1 }],
+    outputItemId: 'tin-bar',
+    requiredLevel: 1,
+    xpReward: 10,
+    durationMs: 2200,
+  },
+  'iron-bar': {
+    id: 'iron-bar',
+    name: 'Iron Bar',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'iron-ore', quantity: 1 }],
+    outputItemId: 'iron-bar',
+    requiredLevel: 4,
+    xpReward: 18,
+    durationMs: 2800,
+  },
+  // The plate set, and the first armour in the game nothing drops. Each piece
+  // costs bars in proportion to what it covers, so the chest is the long pull
+  // and the helmet is what a first forge run can actually finish.
+  'iron-helmet': {
+    id: 'iron-helmet',
+    name: 'Iron Helmet',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'iron-bar', quantity: 2 }],
+    outputItemId: 'iron-helmet',
+    requiredLevel: 5,
+    xpReward: 40,
+    durationMs: 3500,
+  },
+  'iron-legs': {
+    id: 'iron-legs',
+    name: 'Iron Legs',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'iron-bar', quantity: 3 }],
+    outputItemId: 'iron-legs',
+    requiredLevel: 6,
+    xpReward: 60,
+    durationMs: 4000,
+  },
+  'iron-chestplate': {
+    id: 'iron-chestplate',
+    name: 'Iron Chestplate',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'iron-bar', quantity: 4 }],
+    outputItemId: 'iron-chestplate',
+    requiredLevel: 7,
+    xpReward: 80,
+    durationMs: 4500,
+  },
 };
 
 export const FIRE_INPUT_ITEM_ID: ItemId = 'logs';

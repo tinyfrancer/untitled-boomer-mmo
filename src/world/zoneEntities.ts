@@ -5,6 +5,7 @@ import { ZONES, type ZoneDefinition, type ZoneExit } from '../data/zones';
 import type { CollisionWorld } from '../systems/CollisionSystem';
 import type { Point } from '../systems/MovementSystem';
 import { signpostPoint } from '../systems/ZoneSystem';
+import type { StationId } from '../data/recipes';
 import type { NpcId } from '../types/ids';
 import { Mob } from './Mob';
 import { ResourceNode } from './ResourceNode';
@@ -14,6 +15,17 @@ export interface WorldNpc {
   x: number;
   y: number;
   npcId: NpcId;
+}
+
+/**
+ * A crafting station that came with the zone, which is the forge and nothing
+ * else so far. It is `Campfire`'s opposite half: fixed, always lit, and never
+ * disposed of, where a fire is placed by the player and burns out.
+ */
+export interface WorldStation {
+  x: number;
+  y: number;
+  station: StationId;
 }
 
 /** A tappable exit marker — the mobile counterpart to walking into the edge. */
@@ -31,6 +43,7 @@ export interface ZoneEntities {
   mobs: Mob[];
   nodes: ResourceNode[];
   npcs: WorldNpc[];
+  stations: WorldStation[];
   signposts: WorldSignpost[];
   collisionWorld: CollisionWorld;
 }
@@ -66,6 +79,12 @@ export function populateZone(
     npcId,
   }));
 
+  const stations = (zone.stationSpawns ?? []).map(({ dx, dy, station }) => ({
+    x: spawnPoint.x + dx,
+    y: spawnPoint.y + dy,
+    station,
+  }));
+
   // One tappable signpost per exit — the mobile way out of a zone.
   const signposts = zone.exits.map((exit) => {
     const point = signpostPoint(exit.edge, size.width, size.height);
@@ -77,6 +96,7 @@ export function populateZone(
     mobs,
     nodes,
     npcs,
+    stations,
     signposts,
     // Nothing walks into the pond. One description of the world, which the
     // player and every mob integrate themselves against.

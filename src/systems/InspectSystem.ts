@@ -163,6 +163,24 @@ export function describeNode(definition: ResourceNodeDefinition): InspectPanel {
   };
 }
 
+/**
+ * The forge, and what it is for. No level, no owner and nothing that ticks —
+ * the one card in here that is a pure function of nothing, since there is one
+ * station kind and it is the same for everyone standing at it.
+ */
+export function describeStation(): InspectPanel {
+  return {
+    title: 'Forge',
+    subtitle: 'Station',
+    lines: [
+      { label: 'Smelts', value: 'Ore into bars' },
+      { label: 'Smiths', value: 'Bars into plate armour' },
+      { label: 'Trains', value: SKILLS.smithing.name },
+    ],
+    note: 'A failed smith costs the time and keeps the metal.',
+  };
+}
+
 /** Where a signpost points, and what is over there. */
 export function describeSignpost(exit: ZoneExit): InspectPanel {
   const zone = ZONES[exit.to];

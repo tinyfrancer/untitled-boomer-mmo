@@ -19,6 +19,10 @@ import type { CreatureShapeId, EnemyId } from '../types/ids';
 export const PALETTE = {
   /** Shared by every creature that has one, which is every creature drawn. */
   eye: 0x14140f,
+  // The forge's block and the iron on top of it. Darker than the vein's
+  // `stone`, which is a boulder in daylight rather than worked and sooted.
+  forgeStone: 0x6d6a63,
+  anvil: 0x424852,
   wood: 0x5d4037,
   woodLight: 0x8d6e63,
   leafDark: 0x1b5e20,

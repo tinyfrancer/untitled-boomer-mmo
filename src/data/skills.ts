@@ -22,6 +22,7 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
   fishing: { id: 'fishing', name: 'Fishing', family: 'gathering', verb: 'fish' },
   mining: { id: 'mining', name: 'Mining', family: 'gathering', verb: 'mine ore' },
   cooking: { id: 'cooking', name: 'Cooking', family: 'gathering', verb: 'cook' },
+  smithing: { id: 'smithing', name: 'Smithing', family: 'gathering', verb: 'smith' },
   'one-handed': { id: 'one-handed', name: '1 Handed', family: 'combat', verb: 'fight' },
   unarmed: { id: 'unarmed', name: 'Fist', family: 'combat', verb: 'fight' },
   block: { id: 'block', name: 'Block', family: 'combat', verb: 'fight' },
@@ -29,15 +30,16 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
   destruction: { id: 'destruction', name: 'Destruction', family: 'combat', verb: 'fight' },
 };
 
-// Gather-then-cook order, so the character sheet reads in the order the loop is
-// actually played rather than alphabetically. Mining joins the gathering half
-// rather than the end of the list: cooking is what the others feed, and it stays
-// last however many ways there are to fill a pack.
+// Gather-then-make order, so the character sheet reads in the order the loop is
+// actually played rather than alphabetically. The three ways of filling a pack
+// come first and the two things done with a full one come last, which is why
+// mining sits with woodcutting and fishing rather than at the end.
 export const SKILL_ORDER = exhaustive<GatherSkillId>()([
   'woodcutting',
   'fishing',
   'mining',
   'cooking',
+  'smithing',
 ]);
 
 // Offense before defense before magic, which is the order they come up in a fight.

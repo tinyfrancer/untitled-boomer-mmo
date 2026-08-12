@@ -36,7 +36,7 @@ function cameraOn(player: Point, yaw = 0): PerspectiveCamera {
   return camera;
 }
 
-const EMPTY: PickScene = { nodes: [], signposts: [], npcs: [], mobs: [] };
+const EMPTY: PickScene = { nodes: [], signposts: [], npcs: [], stations: [], mobs: [] };
 
 /**
  * What a tap on the screen point a simulated thing is *drawn at* resolves to.
@@ -234,6 +234,7 @@ describe('pickTap', () => {
       nodes: [{ ...standing, node: nth(world.nodes) }],
       signposts: [{ ...standing, signpost: nth(world.signposts) }],
       npcs: [{ ...standing, npc: nth(world.npcs) }],
+      stations: [{ ...standing, station: nth(world.stations) }],
       mobs: [{ ...standing, mob: nth(world.mobs) }],
     };
 

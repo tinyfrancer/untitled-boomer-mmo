@@ -808,6 +808,13 @@ function hudCss(): string {
   font-size: ${THEME.font.xs}px;
   color: ${THEME.color.muted};
 }
+/* The forge's list, in the ember colour its coals are drawn in. Same width as
+   the trainer's for the same reason: every row carries a line under it. */
+.hud-modal__box--forge {
+  width: 320px;
+  border-color: ${THEME.color.forge};
+  gap: 4px;
+}
 /* Beside the purse in the head, and the one number that says why a deposit was
    refused — so it is the only thing in there that changes colour. */
 .hud-bank__slots {

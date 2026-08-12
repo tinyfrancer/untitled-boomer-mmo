@@ -15,13 +15,13 @@ import { Nameplate } from './nameplate';
 import { OCCLUDED_OPACITY, type Occluder } from './occlusion';
 import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
-import { buildCampfire, buildNode, buildSignpost } from './props';
+import { buildCampfire, buildForge, buildNode, buildSignpost } from './props';
 import type { CharacterState } from '../persistence/CharacterState';
 import type { TitleId } from '../types/ids';
 import type { Campfire } from '../world/Campfire';
 import type { Player } from '../world/Player';
 import type { ResourceNode } from '../world/ResourceNode';
-import type { WorldNpc, WorldSignpost } from '../world/ZoneWorld';
+import type { WorldNpc, WorldSignpost, WorldStation } from '../world/ZoneWorld';
 
 /** How far over a figure's head its nameplate floats. */
 const PLATE_CLEARANCE = 12;
@@ -362,6 +362,40 @@ export class NpcActor implements Actor, Pickable {
       width: FIGURE_FOOTPRINT,
       depth: FIGURE_FOOTPRINT,
       height: this.height,
+    });
+  }
+
+  dispose(): void {
+    disposeTree(this.object);
+  }
+}
+
+/**
+ * A forge, which is a thing that is simply there.
+ *
+ * Almost the least an actor can be: no plate and no sync, since nothing about it
+ * changes. It is `Pickable` because a station is **opened by tapping it**, the
+ * way a counter is — proximity alone would put a panel in the face of anyone
+ * who walked past on their way somewhere, which on a map this size is most of
+ * the reasons to be near one.
+ */
+export class StationActor implements Actor, Pickable {
+  readonly object = new Group();
+  readonly station: WorldStation;
+
+  constructor(station: WorldStation) {
+    this.station = station;
+    this.object.userData.kind = 'station';
+    this.object.position.copy(simToWorld(station.x, station.y));
+    this.object.add(buildForge());
+  }
+
+  /** A tile square, which is about what the block and its anvil occupy. */
+  pickBox(): Box3 | null {
+    return pickBox(this.station.x, this.station.y, {
+      width: TILE_SIZE,
+      depth: TILE_SIZE,
+      height: TILE_SIZE,
     });
   }
 

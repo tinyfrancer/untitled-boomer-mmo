@@ -142,7 +142,23 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
         circle(64, 58, BOX * 0.06, color),
         circle(38, 66, BOX * 0.05, color),
       ];
+    case 'bar':
+      return [
+        // An ingot seen from a corner: the rock is gone and what is left is a
+        // flat top and one shaded face, which is what says "refined" at 40px
+        // where any amount of texture would just be noise.
+        path(`M 22 58 L 38 42 L 84 42 L 68 58 Z`, color),
+        path(`M 22 58 L 68 58 L 68 74 L 22 74 Z`, shade(color)),
+      ];
   }
+}
+
+// The lit face and the one turned away from it. Multiplying every channel by
+// the same fraction keeps the metal the colour the item says it is rather than
+// mixing a second one in beside it.
+function shade(color: number): number {
+  const dim = (channel: number) => Math.round(channel * 0.72);
+  return (dim((color >> 16) & 0xff) << 16) | (dim((color >> 8) & 0xff) << 8) | dim(color & 0xff);
 }
 
 function blade(color: number): SVGElement {

@@ -2,7 +2,7 @@ export type ClassId = 'warrior' | 'wizard';
 
 export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 
-export type TierId = 'brown';
+export type TierId = 'brown' | 'iron';
 
 export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
@@ -27,6 +27,14 @@ export type ItemId =
   // is there to hold.
   | 'tin-ore'
   | 'iron-ore'
+  // What the forge turns those into, and what it turns those into. Plate is the
+  // one armour type that has sat in the data with nothing wearing it since
+  // armour types landed.
+  | 'tin-bar'
+  | 'iron-bar'
+  | 'iron-helmet'
+  | 'iron-chestplate'
+  | 'iron-legs'
   | 'raw-fish'
   | 'cooked-fish'
   | 'burnt-fish'
@@ -48,7 +56,14 @@ export type ItemId =
 // station: "what am I making?" rather than "what raw thing do I have?". It was
 // keyed by its input while cooking was the only kind and every recipe took one
 // of one thing — a list of inputs has no single item to key on.
-export type RecipeId = 'cooked-fish' | 'cooked-crab';
+export type RecipeId =
+  | 'cooked-fish'
+  | 'cooked-crab'
+  | 'tin-bar'
+  | 'iron-bar'
+  | 'iron-helmet'
+  | 'iron-chestplate'
+  | 'iron-legs';
 
 export type EnemyId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
 
@@ -94,9 +109,10 @@ export type ItemIconShape =
   | 'fish'
   | 'log'
   | 'ore'
+  | 'bar'
   | 'key';
 
-export type GatherSkillId = 'fishing' | 'woodcutting' | 'mining' | 'cooking';
+export type GatherSkillId = 'fishing' | 'woodcutting' | 'mining' | 'cooking' | 'smithing';
 
 // Skills that level by fighting rather than by gathering. Their cap rides the
 // character's level (see combatSkillCap), so they can't be ground ahead of it.

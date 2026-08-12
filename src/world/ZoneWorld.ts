@@ -7,7 +7,9 @@ import {
   AFK_TOGGLE_REQUESTED_EVENT,
   BANK_CLOSED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
+  FORGE_OPENED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
+  SMITH_REQUESTED_EVENT,
   TRAINER_CLOSED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
@@ -49,6 +51,7 @@ import { zoneAccess } from '../systems/ZoneAccessSystem';
 import { tileOf, toTile } from '../systems/MapSystem';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { NPC_INTERACT_RADIUS, npcRole, type NpcRoleId } from '../data/npcs';
+import { STATION_RADIUS } from '../data/recipes';
 import type { InteractionKind } from '../systems/InteractionSystem';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CraftState } from '../systems/CraftingSystem';
@@ -68,7 +71,7 @@ import {
 import { saveService } from '../persistence';
 import { Player } from './Player';
 import { Mob } from './Mob';
-import { populateZone, type WorldNpc, type WorldSignpost } from './zoneEntities';
+import { populateZone, type WorldNpc, type WorldSignpost, type WorldStation } from './zoneEntities';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
@@ -86,7 +89,15 @@ import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
 import type { EventBus, WorldEvent } from './worldEvents';
-import type { AbilityId, EnemyId, GearSlotId, ItemId, ZoneEdge, ZoneId } from '../types/ids';
+import type {
+  AbilityId,
+  EnemyId,
+  GearSlotId,
+  ItemId,
+  RecipeId,
+  ZoneEdge,
+  ZoneId,
+} from '../types/ids';
 
 // Far enough inside the new zone that the player doesn't stand on the return
 // exit and bounce straight back.
@@ -99,7 +110,7 @@ const GATHER_APPROACH_FRACTION = 0.9;
 
 // Re-exported so a view can ask what it is looking at without knowing which
 // module built it.
-export type { WorldNpc, WorldSignpost };
+export type { WorldNpc, WorldSignpost, WorldStation };
 
 // The offline payout's shape, re-exported for the host that has somewhere to
 // put it.
@@ -110,6 +121,7 @@ export type WorldTap =
   | { kind: 'node'; node: ResourceNode }
   | { kind: 'signpost'; signpost: WorldSignpost }
   | { kind: 'npc'; npc: WorldNpc }
+  | { kind: 'station'; station: WorldStation }
   | { kind: 'mob'; mob: Mob }
   | { kind: 'ground'; point: Point };
 
@@ -170,6 +182,7 @@ export class ZoneWorld implements Targeting {
   readonly mobs: Mob[];
   readonly nodes: ResourceNode[];
   readonly npcs: WorldNpc[];
+  readonly stations: WorldStation[];
   readonly signposts: WorldSignpost[];
   readonly collisionWorld: CollisionWorld;
   target: Mob | null = null;
@@ -223,6 +236,7 @@ export class ZoneWorld implements Targeting {
     this.mobs = entities.mobs;
     this.nodes = entities.nodes;
     this.npcs = entities.npcs;
+    this.stations = entities.stations;
     this.signposts = entities.signposts;
     this.collisionWorld = entities.collisionWorld;
 
@@ -279,8 +293,11 @@ export class ZoneWorld implements Targeting {
       '',
     );
     this.publishActions = publishOnChange(
-      () => ({ nearFire: this.gathering.isNearFire() }),
-      (actions) => String(actions.nearFire),
+      () => ({
+        nearFire: this.gathering.isNearFire(),
+        nearForge: this.gathering.isNearForge(),
+      }),
+      (actions) => `${actions.nearFire}/${actions.nearForge}`,
       (actions) => this.ctx.events.emit(ACTIONS_CHANGED_EVENT, actions),
       'false',
     );
@@ -319,7 +336,10 @@ export class ZoneWorld implements Targeting {
       // A hand on the keyboard is a hand on the controls, camp included.
       onKeyboardMove: () => this.afk.set(false),
     });
-    this.gathering = new GatherSession(this.ctx, { isCamping: () => this.afk.active });
+    this.gathering = new GatherSession(this.ctx, {
+      stations: this.stations,
+      isCamping: () => this.afk.active,
+    });
     this.shop = new ShopSession(this.ctx);
     this.bank = new BankSession(this.ctx);
     this.trainer = new TrainerSession(this.ctx, {
@@ -407,6 +427,7 @@ export class ZoneWorld implements Targeting {
     listen(BUY_BANK_SLOT_REQUESTED_EVENT, () => this.bank.buySlot());
     listen(BANK_CLOSED_EVENT, () => this.bank.closedByUi());
     listen(LEARN_ABILITY_REQUESTED_EVENT, (abilityId) => this.trainer.learn(abilityId));
+    listen(SMITH_REQUESTED_EVENT, (recipeId) => this.gathering.smith(recipeId));
     listen(TRAINER_CLOSED_EVENT, () => this.trainer.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
     listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
@@ -533,6 +554,9 @@ export class ZoneWorld implements Targeting {
       case 'npc':
         this.approachNpc(target.npc);
         return;
+      case 'station':
+        this.approachStation(target.station);
+        return;
       case 'ground':
         this.player.moveTo(target.point.x, target.point.y);
     }
@@ -605,6 +629,28 @@ export class ZoneWorld implements Targeting {
       return;
     }
     this.approach.walkTo({ kind, radius: NPC_INTERACT_RADIUS }, npc, serve);
+  }
+
+  /**
+   * Walk up to a station and open what is made there.
+   *
+   * A counter's shape with nobody behind it: the walk is the same, and what
+   * makes the panel legal afterwards is the same distance the channel is
+   * checked against. It is *opened by tapping* rather than by proximity, which
+   * is the whole difference — a panel that appeared whenever the player came
+   * within reach would put itself in the face of anyone walking past on their
+   * way somewhere, and on a map this size that is most of the reasons to be
+   * near one.
+   */
+  approachStation(station: WorldStation): void {
+    const open = (): void => {
+      this.ctx.events.emit(FORGE_OPENED_EVENT);
+    };
+    if (withinRadius(this.player, station, STATION_RADIUS)) {
+      open();
+      return;
+    }
+    this.approach.walkTo({ kind: 'forge', radius: STATION_RADIUS }, station, open);
   }
 
   // ---------------------------------------------------------------------------
@@ -769,6 +815,10 @@ export class ZoneWorld implements Targeting {
     this.shop.close();
     this.bank.close();
     this.trainer.close();
+  }
+
+  handleSmithRequested(recipeId: RecipeId): void {
+    this.gathering.smith(recipeId);
   }
 
   handleLearnRequested(abilityId: AbilityId): void {

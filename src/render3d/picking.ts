@@ -4,7 +4,7 @@ import { worldToSim } from './coords';
 import type { Point } from '../systems/MovementSystem';
 import type { Mob } from '../world/Mob';
 import type { ResourceNode } from '../world/ResourceNode';
-import type { WorldNpc, WorldSignpost, WorldTap } from '../world/ZoneWorld';
+import type { WorldNpc, WorldSignpost, WorldStation, WorldTap } from '../world/ZoneWorld';
 
 /**
  * The smallest a pick volume may be along any axis.
@@ -52,11 +52,12 @@ export interface Pickable {
   pickBox(): Box3 | null;
 }
 
-/** The four kinds of thing that can be tapped, in no particular order. */
+/** The kinds of thing that can be tapped, in no particular order. */
 export interface PickScene {
   readonly nodes: readonly (Pickable & { readonly node: ResourceNode })[];
   readonly signposts: readonly (Pickable & { readonly signpost: WorldSignpost })[];
   readonly npcs: readonly (Pickable & { readonly npc: WorldNpc })[];
+  readonly stations: readonly (Pickable & { readonly station: WorldStation })[];
   readonly mobs: readonly (Pickable & { readonly mob: Mob })[];
 }
 
@@ -154,6 +155,20 @@ export function pickTap(raycaster: Raycaster, scene: PickScene): WorldTap | null
 
   const mob = nearestUnder(raycaster, scene.mobs);
   if (mob) return { kind: 'mob', mob: mob.mob };
+
+  /**
+   * Below the creatures, unlike everything above it, and the reason is what a
+   * priority actually costs: the list is not depth-sorted, so a kind placed
+   * above mobs wins from *anywhere along the ray* — including well behind the
+   * thing being aimed at. A person or a signpost is small and stands at the
+   * edges of a map; a forge is a tile of solid furniture near the middle of
+   * town, and above mobs it silently ate every tap on a rat with the forge
+   * somewhere beyond it. It is also the kind that loses least by being last:
+   * nothing else stands on it, and a rat wandering over the anvil is a fight
+   * the player almost certainly does want.
+   */
+  const station = nearestUnder(raycaster, scene.stations);
+  if (station) return { kind: 'station', station: station.station };
 
   const point = groundUnder(raycaster);
   return point ? { kind: 'ground', point } : null;
