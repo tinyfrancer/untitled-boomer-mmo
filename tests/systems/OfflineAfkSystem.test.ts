@@ -248,6 +248,13 @@ describe('a parked gathering camp', () => {
     weapon: 'fishing-pole',
     offhand: null,
   };
+  const PICKAXE: Gear = {
+    helmet: null,
+    chest: null,
+    pants: null,
+    weapon: 'pickaxe',
+    offhand: null,
+  };
   const TREE = RESOURCE_NODES.tree;
 
   const gathering = (gear: Gear, overrides = {}) => context({ gear, ...overrides });
@@ -359,6 +366,33 @@ describe('a parked gathering camp', () => {
     const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), gathering(POLE));
     expect(report.skill).toBe('fishing');
     expect(report.drops['raw-fish']).toBeGreaterThan(0);
+  });
+
+  /**
+   * The quarry is the first zone holding a gated node and an ungated one for the
+   * same skill, which is the case `campNode` was written for and had never once
+   * been asked. The beach only ever narrowed to nothing: its spots are all
+   * ocean, so a novice fisher parked there is the "no work here" answer wearing
+   * a level requirement. Here a novice has somewhere to go and still must not be
+   * paid for the better rock.
+   */
+  it('works the best vein the miner has actually earned, not the best one there', () => {
+    const parked = sessionStartedAgo(HOUR_MS, 'quarry');
+    const novice = resolveOfflineAfk(parked, gathering(PICKAXE));
+    const veteran = resolveOfflineAfk(
+      parked,
+      gathering(PICKAXE, { skills: { ...createInitialSkills(), mining: { level: 5, xp: 0 } } }),
+    );
+
+    expect(novice.skill).toBe('mining');
+    expect(novice.gathers).toBeGreaterThan(0);
+    expect((novice.drops['tin-ore'] ?? 0) + (novice.missed['tin-ore'] ?? 0)).toBe(novice.gathers);
+    expect(novice.drops['iron-ore']).toBeUndefined();
+    expect(novice.missed['iron-ore']).toBeUndefined();
+
+    expect((veteran.drops['iron-ore'] ?? 0) + (veteran.missed['iron-ore'] ?? 0)).toBe(
+      veteran.gathers,
+    );
   });
 
   it('takes a gather as long as the skill says it does', () => {

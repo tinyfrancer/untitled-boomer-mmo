@@ -13,6 +13,10 @@ const BOX = 100;
 const OUTLINE = 0x11131a;
 const OUTLINE_WIDTH = BOX * 0.055;
 
+// The stone an ore is still stuck in, which is the same rock whichever metal is
+// in it — so it is the shape's own colour rather than the item's.
+const ROCK = 0x5b5852;
+
 /**
  * An item as inline SVG, from primitives, at the size of a thumbnail.
  *
@@ -59,6 +63,15 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
         // The line, which is what says "pole" rather than "staff".
         ...line(74, 22, 82, 62, BOX * 0.02, 0xeceff1),
         circle(82, 66, BOX * 0.045, 0xeceff1),
+      ];
+    case 'pick':
+      return [
+        ...line(30, 86, 50, 34, BOX * 0.06, 0x8d6e63),
+        // Two points off one head, curving down at both ends. A pickaxe drawn
+        // with the axe's single wedge is a felling axe in another colour, and
+        // which tool is in the bag is the whole of which camp a player is
+        // running.
+        path(`M 16 40 Q 50 16 84 40 L 78 48 Q 50 30 22 48 Z`, color),
       ];
     case 'helmet':
       return [
@@ -117,6 +130,17 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
         rect(18, 34, 64, 32, color),
         // The cut end, lighter, which is what gives it depth without a gradient.
         ellipse(18, 50, BOX * 0.07, BOX * 0.16, 0xbcaaa4),
+      ];
+    case 'ore':
+      return [
+        // A broken lump of stone rather than a smooth one, and the flecks of
+        // metal in it — which at this size is the whole of what says ore rather
+        // than rock. Both ores are this outline; the colour is what tells tin
+        // from iron, the way it tells a raw fish from a cooked one.
+        path(`M 24 62 L 34 30 L 62 22 L 82 44 L 74 74 L 40 80 Z`, ROCK),
+        circle(44, 44, BOX * 0.08, color),
+        circle(64, 58, BOX * 0.06, color),
+        circle(38, 66, BOX * 0.05, color),
       ];
   }
 }

@@ -25,6 +25,12 @@ export const PALETTE = {
   leafLight: 0x2e7d32,
   /** The ripple rings marking a fishing spot, drawn on the water's surface. */
   ripple: 0xe0f7fa,
+  /**
+   * The rock an ore vein is cut out of. Paler than the quarry floor it stands
+   * on (`TILE_COLORS[STONE_TILE]`) on purpose — a boulder the colour of the
+   * ground it sits on is a boulder nobody can see to tap.
+   */
+  stone: 0x9b968c,
   ember: 0xe65100,
   emberMid: 0xffb300,
   emberCore: 0xfff59d,

@@ -86,6 +86,19 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     ...state,
     learnedAbilities: state.classId === 'warrior' ? ['battle-fury'] : ['mana-shield'],
   }),
+  // v15 → v16: mining joins the sheet, so every stored skill set is a row short.
+  // Spread under rather than over, which is v6 → v7 exactly: what a character
+  // has already trained wins, and only the new key takes its default.
+  //
+  // Reading the live `createInitialSkills()` is safe here where v14 → v15 above
+  // had to name its ids outright, and the difference is what the two steps mean.
+  // A skill starting at level 1 with no xp is what every skill starts at, so a
+  // skill added later arriving in an old save costs that save nothing; an
+  // ability granted is something the trainer would otherwise have charged for.
+  15: (state) => ({
+    ...state,
+    skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
+  }),
 };
 
 /**

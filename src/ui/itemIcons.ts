@@ -6,8 +6,8 @@ import type { ItemId } from '../types/ids';
  *
  * Equipment answers this out of what it already carries — a weapon names its
  * `weaponShape` and armour fills a `slot`, and both name the `color` the
- * paperdoll paints them — so eleven of the nineteen items need no icon data of
- * their own and a new one gets a thumbnail by construction. Everything else
+ * paperdoll paints them — so most of the item list needs no icon data of its own
+ * and a new piece of gear gets a thumbnail by construction. Everything else
  * names an `icon` on its row.
  *
  * This is the vocabulary and `hud/itemIcon.ts` is the DOM that draws it, which

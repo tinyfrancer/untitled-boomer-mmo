@@ -37,10 +37,12 @@ export interface ShopStockEntry {
  * half of this list and always costs for being it.
  */
 export const SHOP_STOCK: ShopStockEntry[] = [
-  // The two tools stay ungated: a new character has to be able to walk in and
-  // buy the thing that makes a gathering skill playable at all.
+  // The tools stay ungated: a new character has to be able to walk in and buy
+  // the thing that makes a gathering skill playable at all. A gate on one of
+  // these would be a gate on the skill, which is not what the shelf is for.
   { itemId: 'felling-axe', price: 60 },
   { itemId: 'fishing-pole', price: 60 },
+  { itemId: 'pickaxe', price: 60 },
   // Fuel and something to put over it, for a player who would rather not walk
   // to a tree or a pond first. One log is one fire.
   { itemId: 'logs', price: 9 },

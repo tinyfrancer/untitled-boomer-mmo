@@ -513,7 +513,26 @@ async function teardown() {
     w.teleport(33, w.worldHeight / 2);
   });
   await stepUntilZone('town', 'the west exit to return to town');
-  check('zone travel round-trips town -> beach -> town -> bandit camp -> town', true);
+  // And the fourth, for the same reason one zone up but about props rather than
+  // creatures: an ore vein is the first new prop since the port, and the quarry
+  // is the only place one is drawn. A shape built and never uploaded to a real
+  // GPU is a shape whose only cover is jsdom counting its meshes.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('quarry', 'the north exit to load the quarry');
+  await checkZoneDrawn('quarry');
+  await page.screenshot({ path: `${OUT}/5-quarry.png` });
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('town', 'the south exit to return to town');
+  check(
+    'zone travel round-trips town -> beach -> town -> bandit camp -> town -> quarry -> town',
+    true,
+  );
 }
 
 async function walkCycle() {
@@ -2373,6 +2392,17 @@ async function lockedZone() {
   // unit-tested; what a browser adds is that a creature drawn at a size no
   // other one uses still gets exactly one nameplate, is still picked by a real
   // tap, and does not arrive wearing the same face as his own men. ---
+
+  // The map sheet has been open since the top of this section, and the checks
+  // below are real taps on the *world*. The HUD swallows anything that lands on
+  // it on purpose (the overlay is `pointer-events: none` and each piece of
+  // furniture opts back in), so the sheet has to be shut first. It was not, and
+  // the tap below passed anyway for as long as the world map happened to be
+  // short enough to leave the chief's corner of the screen uncovered — which
+  // stopped being true the moment a fifth zone added a row to it. A check that
+  // depends on how tall an unrelated panel is is not checking what it says.
+  if ((await showing()).map === false) await tapTab('map');
+
   await page.evaluate(() => {
     const w = window.world;
     const chief = w.mobs.find((mob) => mob.definition.id === 'bandit-chief');

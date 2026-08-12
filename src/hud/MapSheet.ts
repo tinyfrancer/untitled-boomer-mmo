@@ -70,12 +70,16 @@ function cellName(content: string, x: number, y: number): SVGElement {
  * A node is coloured by the skill that works it rather than by being a node:
  * at this size the colour is the only thing telling a tree from a fishing spot,
  * and each is a lighter shade of the ground its own kind sits on — a pale green
- * on the grass, a pale blue on the water. The gold pair are the two things that
- * are about a person rather than a resource, and they are told apart by shape.
+ * on the grass, a pale blue on the water. A vein breaks that rule because its
+ * ground cannot keep it: the quarry floor is grey, so the marker is the metal in
+ * the rock instead of a lighter version of the rock. The gold pair are the two
+ * things that are about a person rather than a resource, and they are told apart
+ * by shape.
  */
 const NODE_COLOR: Partial<Record<SkillId, string>> = {
   woodcutting: THEME.color.heal,
   fishing: THEME.color.skillUp,
+  mining: THEME.color.ore,
 };
 const MARKER_COLOR: Record<MapMarker['kind'], string> = {
   node: THEME.color.skillUp,

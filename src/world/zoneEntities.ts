@@ -85,7 +85,9 @@ export function populateZone(
       blockingTiles: new Set(BLOCKING_TILES),
       worldWidth: size.width,
       worldHeight: size.height,
-      blockers: nodes.filter((node) => node.definition.solid).map((node) => node.blockerRect()),
+      blockers: nodes
+        .filter((node) => node.definition.blocks !== null)
+        .map((node) => node.blockerRect()),
     },
   };
 }

@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { Box3, type CylinderGeometry, type Mesh } from 'three';
+import {
+  Box3,
+  type CylinderGeometry,
+  type Mesh,
+  type MeshLambertMaterial,
+  type SphereGeometry,
+} from 'three';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { WATER_DEPTH } from '../../src/render3d/ground';
 import { buildCampfire, buildNode, buildSignpost } from '../../src/render3d/props';
+import { itemIcon } from '../../src/ui/itemIcons';
 import { ResourceNode } from '../../src/world/ResourceNode';
 import { TILE_SIZE } from '../../src/config/constants';
 
@@ -63,6 +70,65 @@ describe('a fishing spot', () => {
     expect(prop.object.visible).toBe(false);
     prop.setAvailable(true);
     expect(prop.object.visible).toBe(true);
+  });
+});
+
+describe('an ore vein', () => {
+  const vein = (id: 'tin-vein' | 'iron-vein' = 'tin-vein'): ResourceNode =>
+    new ResourceNode(448, 320, RESOURCE_NODES[id]);
+
+  /**
+   * The same argument the trunk makes, and the reason the blocker fraction moved
+   * out of `ResourceNode` and onto the row: a vein wearing a tree's third of a
+   * tile would be drawn as a pebble on a footprint you cannot walk into.
+   */
+  it('draws its rock exactly as wide as the thing that stops you', () => {
+    const node = vein();
+    const rock = buildNode(node).object.getObjectByName('rock') as Mesh<SphereGeometry>;
+    const blocker = node.blockerRect();
+    expect(rock.geometry.parameters.radius * 2).toBeCloseTo(blocker.right - blocker.left, 6);
+  });
+
+  it('stands up out of the ground rather than lying on it', () => {
+    const box = new Box3().setFromObject(buildNode(vein()).object);
+    expect(box.min.y).toBeGreaterThanOrEqual(0);
+    expect(box.max.y).toBeGreaterThan(TILE_SIZE / 4);
+    // And stays under a tree, which is what keeps it from hiding the player
+    // behind it on a low camera.
+    expect(box.max.y).toBeLessThan(RESOURCE_NODES.tree.body.height);
+  });
+
+  // The rock is what a mined-out vein leaves to aim at while it comes back,
+  // which is the stump's job on a tree. Only the metal goes.
+  it('loses its seam when it is worked out and keeps its rock', () => {
+    const prop = buildNode(vein());
+    const rock = new Box3().setFromObject(prop.object.getObjectByName('rock')!);
+
+    prop.setAvailable(false);
+    expect(prop.object.getObjectByName('seam')?.visible).toBe(false);
+    expect(prop.object.visible).toBe(true);
+    expect(new Box3().setFromObject(prop.object.getObjectByName('rock')!)).toEqual(rock);
+
+    prop.setAvailable(true);
+    expect(prop.object.getObjectByName('seam')?.visible).toBe(true);
+  });
+
+  /**
+   * Which metal is in the rock is not the renderer's to decide. A lump of tin
+   * that is grey in the bag and rust-red in the ground is two answers to one
+   * question, so the seam reads its colour off the ore the vein yields.
+   */
+  it('paints its seam the colour the ore is drawn in the bag', () => {
+    const seamColor = (id: 'tin-vein' | 'iron-vein'): number => {
+      const seam = buildNode(vein(id)).object.getObjectByName('seam')!;
+      return (
+        seam.children[0] as Mesh<SphereGeometry, MeshLambertMaterial>
+      ).material.color.getHex();
+    };
+
+    expect(seamColor('tin-vein')).toBe(itemIcon('tin-ore').color);
+    expect(seamColor('iron-vein')).toBe(itemIcon('iron-ore').color);
+    expect(seamColor('tin-vein')).not.toBe(seamColor('iron-vein'));
   });
 });
 
