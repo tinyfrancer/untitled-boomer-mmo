@@ -1,3 +1,4 @@
+import type { StationId } from './recipes';
 import type { ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
@@ -23,6 +24,12 @@ export interface NpcSpawnPoint {
   npcId: NpcId;
 }
 
+export interface StationSpawnPoint {
+  dx: number;
+  dy: number;
+  station: StationId;
+}
+
 // Walking onto the matching edge of the map leaves for the target zone; the
 // player arrives on the opposite edge of that zone (see systems/ZoneSystem.ts).
 export interface ZoneExit {
@@ -46,6 +53,12 @@ export interface ZoneDefinition {
   mobSpawns: MobSpawnPoint[];
   nodeSpawns: NodeSpawnPoint[];
   npcSpawns: NpcSpawnPoint[];
+  /**
+   * Where the fixed crafting stations stand. A campfire is not one of these —
+   * that is lit by the player and burns out — so this is only what a zone comes
+   * with, which today is the town forge.
+   */
+  stationSpawns?: StationSpawnPoint[];
   exits: ZoneExit[];
   /**
    * The item that opens the way in, for a zone that is shut until it is found.
@@ -81,6 +94,25 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
       { dx: -96, dy: -96, npcId: 'banker' },
       { dx: -192, dy: 64, npcId: 'trainer' },
     ],
+    /**
+     * North-east of the crossroads, and the placement rule here is a third one
+     * beyond the two the counters follow.
+     *
+     * A station is a tile of solid furniture that can be tapped, so it must not
+     * sit **between the camera and anything else worth tapping**. The camera
+     * stands south of the player and looks north, so a ray aimed at a creature
+     * passes over the ground *south* of it — and a forge parked there quietly
+     * eats every tap on that creature. The first placement was at `192, 64`,
+     * which is directly south of the rat at `192, -128` and 42px from where a
+     * player stands to fight it; smoke caught it as a finger tap that selected
+     * nothing, one run in three.
+     *
+     * North of every mob spawn's approach, then, and clear of all three
+     * counters. Beyond a creature is safe where in front of it is not: the
+     * camera looks down, so past the ground it is aimed at the ray is
+     * underground and hits nothing standing on it.
+     */
+    stationSpawns: [{ dx: 288, dy: -256, station: 'forge' }],
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },

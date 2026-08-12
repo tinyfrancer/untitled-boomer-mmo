@@ -15,6 +15,7 @@ import {
   NpcActor,
   PlayerActor,
   SignpostActor,
+  StationActor,
   type Actor,
 } from './actors';
 import { createCamera, frameCamera, projectToScreen, resizeCamera } from './camera';
@@ -58,6 +59,7 @@ export class ZoneView3D {
   private nodeActors: NodeActor[] = [];
   private npcActors: NpcActor[] = [];
   private signpostActors: SignpostActor[] = [];
+  private stationActors: StationActor[] = [];
   private campfireActor: CampfireActor | null = null;
   // Both outlive a zone, like the camera and the lights: a target belongs to
   // the player and a damage number to the moment it was dealt, and neither is
@@ -115,6 +117,7 @@ export class ZoneView3D {
     this.nodeActors = world.nodes.map((node) => new NodeActor(node));
     this.npcActors = world.npcs.map((npc) => new NpcActor(npc));
     this.signpostActors = world.signposts.map((signpost) => new SignpostActor(signpost));
+    this.stationActors = world.stations.map((station) => new StationActor(station));
     this.actors().forEach((actor) => this.scene.add(actor.object));
 
     this.follow();
@@ -144,6 +147,7 @@ export class ZoneView3D {
     this.nodeActors = [];
     this.npcActors = [];
     this.signpostActors = [];
+    this.stationActors = [];
     this.campfireActor = null;
     this.world = null;
   }
@@ -263,6 +267,7 @@ export class ZoneView3D {
       ...this.nodeActors,
       ...this.npcActors,
       ...this.signpostActors,
+      ...this.stationActors,
       ...(this.campfireActor ? [this.campfireActor] : []),
     ];
   }
@@ -300,6 +305,7 @@ export class ZoneView3D {
       nodes: this.nodeActors,
       signposts: this.signpostActors,
       npcs: this.npcActors,
+      stations: this.stationActors,
       mobs: this.mobActors,
     });
   }

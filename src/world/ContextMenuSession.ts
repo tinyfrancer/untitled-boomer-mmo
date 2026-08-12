@@ -7,6 +7,7 @@ import {
   describeNode,
   describeNpc,
   describeSignpost,
+  describeStation,
 } from '../systems/InspectSystem';
 import type { ContextAction, ContextActionId, ContextSubject } from '../ui/uiEvents';
 import type { Mob } from './Mob';
@@ -23,6 +24,7 @@ const SUBJECT_ACTIONS = {
   mob: 'attack',
   node: 'gather',
   signpost: 'travel',
+  station: 'smith',
 } as const satisfies Record<Exclude<Subject['kind'], 'npc'>, ContextActionId>;
 
 /** What each counter is called, on the one line a menu gives it. */
@@ -100,7 +102,22 @@ export class ContextMenuSession {
         return this.signpostMenu(target.signpost);
       case 'npc':
         return this.npcMenu(target.npc);
+      case 'station':
+        return this.stationMenu();
     }
+  }
+
+  /**
+   * The forge, described. A pure function of nothing at all — there is one
+   * station kind and it is the same forge for everyone — which is what keeps
+   * this card, like every other, settled the moment it opens.
+   */
+  private stationMenu(): ContextSubject {
+    return {
+      title: 'Forge',
+      actions: [{ id: 'smith', label: 'Smith' }],
+      details: describeStation(),
+    };
   }
 
   /**

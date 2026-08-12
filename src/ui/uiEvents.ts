@@ -4,6 +4,7 @@ import type {
   AchievementId,
   GearSlotId,
   QuestId,
+  RecipeId,
   TitleId,
   ZoneId,
 } from '../types/ids';
@@ -66,6 +67,13 @@ export const LEARN_ABILITY_REQUESTED_EVENT = 'learn-ability-requested';
 // the HUD that listens exists — the HUD reads its opening set off the character
 // it is constructed with.
 export const LEARNED_ABILITIES_CHANGED_EVENT = 'learned-abilities-changed';
+// The forge. A station rather than a counter — nobody stands behind it — but
+// opened the same way one is, by tapping it and walking over: a panel that
+// appeared whenever the player came within reach would put itself in front of
+// anyone walking past. Closing it *is* proximity, off `actions-changed`, which
+// is the same rule the channel at it already lives by.
+export const FORGE_OPENED_EVENT = 'forge-opened';
+export const SMITH_REQUESTED_EVENT = 'smith-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 // Quests. Taken and handed in at the shopkeeper, so these ride the same
 // ask/decide split as buying: the HUD forwards the tap, ZoneWorld re-checks
@@ -156,6 +164,8 @@ export interface TargetInfo {
 // the HUD combines it with the selected item via ItemActionsSystem.
 export interface AvailableActions {
   nearFire: boolean;
+  /** Whether a forge is in reach, which is what opens the smithing list. */
+  nearForge: boolean;
 }
 
 // Payload for ABILITY_STATE_CHANGED_EVENT: everything the action bar needs to
@@ -208,7 +218,7 @@ export interface TilePoint {
  * reaches the simulation — which is also what keeps a card readable while the
  * thing it describes wanders off or dies.
  */
-export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train';
+export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'smith';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -295,6 +305,8 @@ export interface UiEventMap {
   [TRAINER_CLOSED_EVENT]: [];
   [LEARN_ABILITY_REQUESTED_EVENT]: [abilityId: AbilityId];
   [LEARNED_ABILITIES_CHANGED_EVENT]: [abilityIds: AbilityId[]];
+  [FORGE_OPENED_EVENT]: [];
+  [SMITH_REQUESTED_EVENT]: [recipeId: RecipeId];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
   [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
   [TURN_IN_QUEST_REQUESTED_EVENT]: [questId: QuestId];

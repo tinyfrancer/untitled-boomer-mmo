@@ -72,6 +72,8 @@ export const THEME = {
     // The third counter's border. The shop and the bank took the two above, and
     // which one is open has to be answerable without reading the title.
     trainer: '#ba68c8',
+    // The forge's, which is the colour of what is glowing in it.
+    forge: '#e65100',
     playerDamage: '#ff5252',
     heal: '#66bb6a',
     // Difficulty ("con") shades for an enemy's name, relative to the player.

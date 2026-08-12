@@ -6,6 +6,7 @@ import { MenuOverlay } from './MenuOverlay';
 import { OptionsModal } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
 import { TrainerModal, type TrainerState } from './TrainerModal';
+import { ForgeModal, type ForgePanelState } from './ForgeModal';
 import { SlotPicker } from './SlotPicker';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -19,6 +20,7 @@ import {
   SELL_ITEM_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
+  SMITH_REQUESTED_EVENT,
   TRAINER_CLOSED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
 } from '../ui/uiEvents';
@@ -40,6 +42,7 @@ export interface OverlayPanelState {
   shop: () => ShopState;
   bank: () => BankPanelState;
   trainer: () => TrainerState;
+  forge: () => ForgePanelState;
 }
 
 /** What a context menu is opened with, once the caller has named its lines. */
@@ -71,11 +74,13 @@ export class OverlayHost {
   private readonly shopState: () => ShopState;
   private readonly bankState: () => BankPanelState;
   private readonly trainerState: () => TrainerState;
+  private readonly forgeState: () => ForgePanelState;
 
   private options: OptionsModal | null = null;
   private shop: ShopModal | null = null;
   private bank: BankModal | null = null;
   private trainer: TrainerModal | null = null;
+  private forge: ForgeModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
   private menu: MenuOverlay | null = null;
@@ -88,6 +93,7 @@ export class OverlayHost {
     this.shopState = panels.shop;
     this.bankState = panels.bank;
     this.trainerState = panels.trainer;
+    this.forgeState = panels.forge;
   }
 
   openOptions(): void {
@@ -244,6 +250,38 @@ export class OverlayHost {
   }
 
   /**
+   * The forge's list, opened by standing at one rather than by a session: see
+   * `ForgeModal`. Idempotent, since what opens it is a flag that can be
+   * republished without having changed.
+   */
+  openForge(): void {
+    if (this.forge) {
+      this.refreshForge();
+      return;
+    }
+    this.forge = new ForgeModal(
+      {
+        onSmith: (recipeId) => this.events.emit(SMITH_REQUESTED_EVENT, recipeId),
+        onDismiss: () => this.closeForge(),
+      },
+      () => {
+        this.forge = null;
+      },
+    );
+    this.forge.update(this.forgeState());
+    this.root.append(this.forge.root);
+  }
+
+  closeForge(): void {
+    this.forge?.close();
+  }
+
+  /** The bag moves under it with every bar made, so every tick may redraw it. */
+  refreshForge(): void {
+    this.forge?.update(this.forgeState());
+  }
+
+  /**
    * The purse, the level and what is known all move while this is open — and
    * the last two move *because* of it, since a lesson bought is a row that has
    * to stop being for sale in the panel that just sold it.
@@ -297,6 +335,7 @@ export class OverlayHost {
     this.shop?.close();
     this.bank?.close();
     this.trainer?.close();
+    this.forge?.close();
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();

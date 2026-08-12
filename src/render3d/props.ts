@@ -257,6 +257,52 @@ export function buildSignpost(): Group {
   return group;
 }
 
+/**
+ * The forge: an anvil on a stone block, with the coals glowing beside it.
+ *
+ * Built rather than lit, and drawn to say so — a campfire is logs and a flame
+ * where this is a squat mass of stone and iron. It never flickers, because
+ * unlike a fire there is no clock on it: the zone came with it and it is still
+ * there when the player walks back.
+ */
+export function buildForge(): Group {
+  const size = TILE_SIZE;
+  const group = new Group();
+
+  const base = new Mesh(
+    new BoxGeometry(size * 0.9, size * 0.42, size * 0.7),
+    new MeshLambertMaterial({ color: PALETTE.forgeStone }),
+  );
+  base.position.y = size * 0.21;
+  group.add(base);
+
+  // The coals, sunk into the top of the block. Unlit-looking geometry would
+  // make this read as a rock, and a forge with no heat in it is a table.
+  const coals = new Mesh(
+    new BoxGeometry(size * 0.42, size * 0.06, size * 0.34),
+    new MeshBasicMaterial({ color: PALETTE.emberCore }),
+  );
+  coals.position.set(size * 0.2, size * 0.44, 0);
+  group.add(coals);
+
+  // The anvil: a block with a horn, which at this size is two boxes.
+  const anvil = new Mesh(
+    new BoxGeometry(size * 0.34, size * 0.16, size * 0.22),
+    new MeshLambertMaterial({ color: PALETTE.anvil }),
+  );
+  anvil.position.set(-size * 0.22, size * 0.5, 0);
+  group.add(anvil);
+
+  const stem = new Mesh(
+    new BoxGeometry(size * 0.14, size * 0.12, size * 0.14),
+    new MeshLambertMaterial({ color: PALETTE.anvil }),
+  );
+  stem.position.set(-size * 0.22, size * 0.4, 0);
+  group.add(stem);
+
+  return group;
+}
+
 /** Crossed logs under a flame. The flicker is decoration; the burn clock is the sim's. */
 export function buildCampfire(): { object: Group; flicker(elapsedMs: number): void } {
   const size = TILE_SIZE * 0.8;

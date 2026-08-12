@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness } from './harness';
 import { CHANNEL_PROGRESS_EVENT, CHANNEL_STARTED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
-import { COOKING_RECIPES, FIRE_COOK_RADIUS } from '../../src/data/recipes';
+import { RECIPES, STATION_RADIUS } from '../../src/data/recipes';
 
 /**
  * The chain the two gathering skills feed: logs to a fire, raw fish to food,
@@ -64,7 +64,7 @@ describe('cooking', () => {
     character.addItem('raw-fish', 1);
 
     world.handleCookRequested();
-    tick(1, COOKING_RECIPES['raw-fish'].cookMs - 100);
+    tick(1, RECIPES['cooked-fish'].durationMs - 100);
 
     expect(world.cookState).not.toBeNull();
     expect(character.itemCount('raw-fish')).toBe(1);
@@ -112,7 +112,7 @@ describe('cooking', () => {
     world.handleCookRequested();
     tick(1, 200);
 
-    world.teleport(world.player.x + FIRE_COOK_RADIUS * 4, world.player.y);
+    world.teleport(world.player.x + STATION_RADIUS * 4, world.player.y);
     tick(1, 200);
 
     expect(world.cookState).toBeNull();
@@ -147,7 +147,7 @@ describe('cooking', () => {
     const { world, character, tick } = atAFire();
     character.addItem('raw-fish', 1);
     world.handleCookRequested();
-    tick(1, COOKING_RECIPES['raw-fish'].cookMs - 200);
+    tick(1, RECIPES['cooked-fish'].durationMs - 200);
 
     world.handleCookRequested();
     tick(1, 200);
@@ -159,7 +159,7 @@ describe('cooking', () => {
     const { world, character, emitted } = atAFire();
     character.addItem('raw-fish', 1);
 
-    world.teleport(world.player.x + FIRE_COOK_RADIUS * 4, world.player.y);
+    world.teleport(world.player.x + STATION_RADIUS * 4, world.player.y);
     world.handleCookRequested();
 
     expect(character.itemCount('raw-fish')).toBe(1);

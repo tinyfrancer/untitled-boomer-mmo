@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
-import { COOKING_RECIPES, FIRE_BURN_MS, FIRE_COOK_RADIUS } from '../../src/data/recipes';
+import { RECIPES, FIRE_BURN_MS, STATION_RADIUS } from '../../src/data/recipes';
 import {
   CHANNEL_ENDED_EVENT,
   CHANNEL_STARTED_EVENT,
@@ -8,6 +8,7 @@ import {
   NOTICE_EVENT,
 } from '../../src/ui/uiEvents';
 import { GatherSession } from '../../src/world/GatherSession';
+import type { WorldStation } from '../../src/world/zoneEntities';
 import { ResourceNode } from '../../src/world/ResourceNode';
 import { testContext } from './context';
 
@@ -22,11 +23,14 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-function session(options: { camping?: boolean } = {}) {
+function session(options: { camping?: boolean; stations?: WorldStation[] } = {}) {
   const kit = testContext();
   return {
     ...kit,
-    gathering: new GatherSession(kit.ctx, { isCamping: () => options.camping ?? false }),
+    gathering: new GatherSession(kit.ctx, {
+      stations: options.stations ?? [],
+      isCamping: () => options.camping ?? false,
+    }),
   };
 }
 
@@ -120,7 +124,7 @@ describe('the fire', () => {
     gathering.lightFire();
 
     expect(gathering.isNearFire()).toBe(true);
-    player.setPosition(FIRE_COOK_RADIUS * 2, 0);
+    player.setPosition(STATION_RADIUS * 2, 0);
     expect(gathering.isNearFire()).toBe(false);
   });
 });
@@ -151,7 +155,7 @@ describe('the pan', () => {
     gathering.lightFire();
 
     gathering.cook('raw-fish');
-    gathering.update(COOKING_RECIPES['raw-fish'].cookMs);
+    gathering.update(RECIPES['cooked-fish'].durationMs);
 
     expect(character.itemCount('raw-fish')).toBe(0);
     expect(character.itemCount('cooked-fish') + character.itemCount('burnt-fish')).toBe(1);
