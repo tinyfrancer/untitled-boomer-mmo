@@ -1562,9 +1562,19 @@ async function touchGestures() {
   await touch('touchStart', ratPoint);
   await touch('touchEnd', /** @type {{x: number, y: number}[]} */ ([]));
   await draw();
+  // Reported in full rather than as a bare pass/fail. This check inherits the
+  // state of every section before it, and when it broke the useful question was
+  // never "did it hit" but "what was in the way" — a panel left open by a
+  // counter three sections back reads exactly like a tap that missed.
+  const tapped = await page.evaluate(() => ({
+    target: window.world.target?.name ?? null,
+    walking: window.world.player.hasMoveTarget(),
+    panel: document.querySelector('.hud-modal__box')?.className ?? 'none',
+  }));
   check(
     'and a finger tap still selects what it landed on',
-    (await page.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
+    tapped.target === 'Rat',
+    `target ${tapped.target}, walking ${tapped.walking}, panel ${tapped.panel}`,
   );
   await touchDrag({ x: 195, y: 400 }, -140);
 
