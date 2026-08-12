@@ -384,6 +384,12 @@ const standSouthOf = async (what) => {
     window.world.player.stopMoving();
     window.world.teleport(at.x, at.y + 150);
   })()`);
+  // Everything else the HUD may be holding up. `closeCounters` reaches the
+  // shop, the bank and the trainer, and Escape reaches the rest — an inspect
+  // card, a loot table, the away report, the options menu. All of them are
+  // `.hud-modal`, all of them swallow taps that land on them, and any of them
+  // can be left open by a section that ran ten sections ago.
+  await page.keyboard.press('Escape');
   await step(2);
   // Settled, not merely placed. Anything still driving the player — a camp
   // re-issuing a pursuit, an approach part-way through — moves the camera
