@@ -19,7 +19,7 @@ gathered materials that lead nowhere.
 | 6   | Stock worth coming back for                              | Economy           | merged 2026-08-11 |
 | 7   | The trainer                                              | Economy           | merged 2026-08-11 |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | merged 2026-08-11 |
-| 9   | Smithing, and the forge it happens at                    | Crafting web      | planned           |
+| 9   | Smithing, and the forge it happens at                    | Crafting web      | in review         |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | planned           |
 | 11  | A camp that can cook and craft                           | Crafting web      | planned           |
 | 12  | Quests that ask for something other than a bag           | Reasons to return | planned           |
@@ -333,6 +333,32 @@ itself on whatever is left in the bag so that twenty bars are one decision rathe
 The new tier fills `ARMOR_TYPE_CLASSES.plate`, which has been sitting in the data with no items since
 armour types landed, and `TIER_COLORS` says in its own comment that "new tiers (iron, steel) should
 be a row here plus item rows". The data was built for this.
+
+Shipped with two amendments, both about the forge being a _place_.
+
+**It is opened by tapping it, not by standing near it.** Proximity was the first cut and it is wrong
+on a map this size: a panel that appeared whenever the player came within reach put itself in front
+of anyone walking past on their way north. A station is picked and walked to exactly like a counter
+now, and proximity decides only when the panel _closes_ — which is the rule the channel at it
+already lived by.
+
+**It sits below mobs in the pick priority.** That list is a priority rather than a depth sort, so a
+kind above mobs wins from anywhere along the ray, including well behind what is being aimed at. A
+person is small and stands at the edge of a map; a forge is a tile of furniture near the middle of
+town.
+
+The claim that cooking's tests would not change at all was very nearly right: their assertions did
+not, but the file moved with the module and the identifiers in it did (`COOKING_RECIPES` → `RECIPES`,
+`cookMs` → `durationMs`, `burnt` → `failed` plus a new `consumed`). Two things had to be _worked_ for
+rather than falling out: the channel bar's label, which naming recipes after their output would have
+changed from "Raw Fish" to "Cooked Fish", and the missing-inputs message, which is keyed on the
+station so cooking still says "You have nothing to cook."
+
+A smoke check three sections downstream started failing about one run in three, and the forge was not
+the cause — see the commit. A counter is only closed by walking out of range, so a bank panel opened
+by an earlier section survived any teleport that landed near the banker and swallowed a later tap.
+Worth knowing when the next station lands: **a section that opens a panel owes the run its closing**,
+and `standSouthOf` now shuts the counters rather than trusting that.
 
 ## 10 — Nothing gathered is a dead end
 

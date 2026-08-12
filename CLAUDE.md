@@ -742,6 +742,32 @@ are the same shape — something you are in the middle of, with a duration and s
 break it — and no two of them can be running at once, since starting any one gives up whatever was
 already going and a hit breaks all three. One widget rather than three stacked in the same place.
 
+**A recipe is one shape for both making skills** (`CraftingRecipe` in `data/recipes.ts`, run by
+`systems/CraftingSystem.ts`). A cooking recipe was already input → output + failure output + level +
+xp + duration, so smithing widened it in place rather than putting a second table beside it: the
+inputs are a **list**, the failure output is **optional**, and each row names the station it is made
+at. **What a failure costs is decided by `failureItemId` alone** — naming one spends the inputs and
+hands that back, which is what makes levelling cooking worth anything, and leaving it unset spends
+nothing at all, which is right for a bar that took a pack-filling trip of ore to carry home.
+
+`RecipeId` is named for what a recipe _makes_. It was keyed by its input while cooking was the only
+kind and every recipe took one of one thing; a list of inputs has no single item to key on.
+`recipeFromItem` keeps the bag's Cook button working by finding the recipe whose **sole** input is
+the tapped item, and anything with a list is asked for by name at its station — a bag cell cannot say
+which of three things four bars were meant to become.
+
+**A station is a place, and the forge is `Campfire`'s opposite half**: fixed, always lit, and part of
+the zone (`ZoneDefinition.stationSpawns`), where a fire is placed by the player and burns out. Two
+rules about it were got wrong first and are worth not re-learning:
+
+- **It is opened by tapping it, not by standing near it.** Proximity puts a panel in front of anyone
+  walking past, which on a map this size is most of the reasons to be near one. A station is picked
+  and walked to exactly like a counter; proximity decides only when the panel _closes_, which is the
+  rule the channel at it already lived by.
+- **It sits below mobs in the pick priority.** That list is a priority rather than a depth sort, so a
+  kind above mobs wins from anywhere along the ray — including well behind what is being aimed at. A
+  person is small and stands at a map's edge; a forge is a tile of furniture near the middle of town.
+
 **Cooking is a channel too, and it works down the stack** (`beginCook`/`advanceCook` in
 `systems/CookingSystem.ts`, run by `GatherSession` beside the gather it is built as the twin of). A
 fish takes the recipe's `cookMs` over the fire, which is what makes a burn worth avoiding rather
