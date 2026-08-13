@@ -21,7 +21,7 @@ gathered materials that lead nowhere.
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | merged 2026-08-11 |
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | merged 2026-08-12 |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | merged 2026-08-13 |
-| 11  | A camp that can cook and craft                           | Crafting web      | planned           |
+| 11  | A camp that can cook and craft                           | Crafting web      | merged 2026-08-13 |
 | 12  | Quests that ask for something other than a bag           | Reasons to return | planned           |
 | 13  | Repeatable work                                          | Reasons to return | planned           |
 | 14  | Mastery                                                  | Reasons to return | planned           |
