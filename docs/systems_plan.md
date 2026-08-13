@@ -19,7 +19,7 @@ gathered materials that lead nowhere.
 | 6   | Stock worth coming back for                              | Economy           | merged 2026-08-11 |
 | 7   | The trainer                                              | Economy           | merged 2026-08-11 |
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | merged 2026-08-11 |
-| 9   | Smithing, and the forge it happens at                    | Crafting web      | in review         |
+| 9   | Smithing, and the forge it happens at                    | Crafting web      | merged 2026-08-12 |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | planned           |
 | 11  | A camp that can cook and craft                           | Crafting web      | planned           |
 | 12  | Quests that ask for something other than a bag           | Reasons to return | planned           |
@@ -377,6 +377,50 @@ that actually pays off the finding rather than merely enabling it.
 It also ships the rule as a test: **every material is an input to something or carries a `value`**,
 enforced over `ITEMS` and the recipe tables the way `uniqueLoot.test.ts` and the family-versus-loot-
 table rule are already enforced over hand-written data.
+
+Shipped with a fifth dead end the section did not list, and it is the widest of them: **the tin bar
+PR 9 had just taught the forge to make was consumed by no recipe at all**. The audit that produced
+this document predates the bar existing, so the finding it names is four items and the finding in
+the code was five — and the new one is worse than the four, since a whole vein, a whole ore and a
+whole smelt terminated in vendor trash. That is what decided the shape of the sweep: rather than
+four unrelated uses, the plate tier grew two secondaries, so the tier every gathering loop was
+already feeding becomes the place they all meet.
+
+Bones and logs are one recipe rather than two. Naming both on every armour row would have made a
+helmet cost bars, fittings, bones and wood, and a cost line nobody reads is a cost line that stops
+being weighed — so they burn down together into bone char and the armour names that. Tin is the
+tinning that keeps the iron from rusting, which is also what keeps the **soft** vein worth swinging
+at after the hard one opens: mining 5 would otherwise retire the tin vein the day it was reached.
+
+Rat meat landed where the section said and bought one thing it did not predict — it is the only food
+in the game that needs no tool, so the first rations now come before the sixty copper pole rather
+than after it.
+
+Two things about the surfaces turned out to matter, and both were free.
+
+**The fire's list is the bag and the forge's list is a panel, so a new recipe has to pick a side.**
+`recipeFromItem` only answers for a recipe taking one of one thing, which is what the bag's Cook
+button is driven off; anything with a list is asked for by name at a station. Rat meat is
+single-input and reached the bag by construction, and bone char has a list and reached the forge
+panel by construction. A multi-input _cooking_ recipe would have needed a panel over the campfire
+and is the reason there is no rat stew.
+
+**The dead-end rule wants three tests rather than one.** "An input or a value" is too weak on its
+own — a vendor price is enough for something that drops, but a gathering skill whose yield can only
+be sold is exactly the dead end this PR is named after. So what a _node_ yields is held to the
+stronger rule, everything else to the weaker one, and a third asks the same question from the far
+end: nothing is made that cannot be worn, eaten or built with. The middle one needs the key as a
+third answer beside a recipe and a price, which is the `unlockedZones` split showing up once more.
+
+A pre-existing bug surfaced while checking this and is fixed in its own commit, since it is nothing
+to do with materials. `pickTap` is a priority and not a depth sort, so an NPC wins over a mob from
+anywhere along the ray — and the ray in to a creature comes down low over the ground just short of
+it, because the camera stands south of the player. The two rats either side of the town square
+spawned with the banker and the shopkeeper **inside their wander disc**, so either of them was
+untappable whenever it drifted that way, and smoke's finger tap picked the counter about one run in
+three. `zones.ts` had already written this rule down over the forge's placement and moved the
+furniture for it; nothing held it over the people. It is a test now, swept over every mob's whole
+wander disc in every zone.
 
 ## 11 — A camp that can cook and craft
 

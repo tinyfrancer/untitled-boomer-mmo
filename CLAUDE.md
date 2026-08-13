@@ -467,6 +467,21 @@ road and turned "go north" into "open a counter", which smoke caught as three gr
 stopping an interact radius short of where they aimed. It is the same class of mistake as drawing a
 signpost under the tab bar, and `tests/world/trainer.test.ts` holds the spacing half of it.
 
+**A counter also needs an apron no creature can wander into**, which is the third half of that rule
+and the one nothing held. `pickTap` is a priority rather than a depth sort, so an NPC beats a mob
+from anywhere along the ray — and the ray in to a creature comes down low over the ground just short
+of it, since the camera stands south of the player. A person standing there is crossed first, so a
+rat at a counter's shoulder cannot be tapped at all. The order itself is right and is not what
+should give (a rat in front of the shopkeeper must not stop you shopping), so what gives is the
+spacing: the two town rats spawned with the banker and the shopkeeper _inside_ their wander disc,
+and were untappable whenever they drifted that way. `zones.ts` had already written this down over
+the forge's placement and moved the furniture for it, having learned it the same way — as a finger
+tap in smoke that selected nothing, one run in three. `tests/render3d/picking.test.ts` holds it now
+over every zone, swept across each mob's whole wander disc rather than checked at the spawn point,
+because a creature is only ever _at_ its spawn on the frame the zone was built. Nodes are left out
+of that rule on purpose: they are terrain, scattered by the hundred, and a tree between you and a
+rat is in the way visibly, where a counter swallowing the tap looks like nothing at all.
+
 **Abilities are learned, not granted** (`AbilityDefinition.training`, ruled on by
 `systems/TrainerSystem.ts` and sold by `world/TrainerSession.ts`). A row names a level to have
 reached and a price; **absent means the one ability the class opens with**, which is the shape
@@ -754,7 +769,25 @@ nothing at all, which is right for a bar that took a pack-filling trip of ore to
 kind and every recipe took one of one thing; a list of inputs has no single item to key on.
 `recipeFromItem` keeps the bag's Cook button working by finding the recipe whose **sole** input is
 the tapped item, and anything with a list is asked for by name at its station — a bag cell cannot say
-which of three things four bars were meant to become.
+which of three things four bars were meant to become. That is also what decides where a _new_ recipe
+can go: the fire's whole list is the bag, so a fire recipe has to take one of one thing, and anything
+with a list needs a panel — which the forge has and the campfire does not.
+
+**Nothing the game hands out may lead nowhere** (`tests/systems/deadEnds.test.ts`, held over the
+tables the way `uniqueLoot.test.ts` is). Three rules rather than one, because a vendor price is
+enough for something that _drops_ and nowhere near enough for something a skill produces:
+everything a `RESOURCE_NODES` row yields has to be an input to a recipe, every other material needs
+a use or a price or a door it opens, and nothing may be _made_ that cannot be worn, eaten or built
+with. Burnt food is the exception the first two are shaped around — worth less than either half of
+the trade it ruined, and deliberately not rescuable by any recipe, since a burnt fish that could be
+turned back into something would stop being a reason to level cooking.
+
+**The plate tier is where the loops meet, and its secondaries are what make that true.** A piece
+takes iron bars, a tin bar and bone char, so a finished helmet has both quarry veins, a tree and a
+rat behind it. Each of the three is a dead end that was: bone char is rat bones and a log burnt down
+together (one intermediate rather than two more names on an armour row nobody would read), and the
+tin is what the iron is tinned with — which is also the only thing keeping the **soft** vein worth
+swinging at, since mining 5 opens the hard one and would otherwise retire the first.
 
 **A station is a place, and the forge is `Campfire`'s opposite half**: fixed, always lit, and part of
 the zone (`ZoneDefinition.stationSpawns`), where a fire is placed by the player and burns out. Two

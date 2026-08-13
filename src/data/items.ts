@@ -101,6 +101,9 @@ const ICON_COLOR = {
   rawFish: 0x90a4ae,
   cookedFish: 0xc9944a,
   cookedCrab: 0xe0703c,
+  // Roasted rather than seared: the worst food in the game should not look like
+  // the best one, and beside the crab's orange this reads as the browner meat.
+  cookedRat: 0x8a5a2b,
   // Charcoal rather than near-black: burnt food should look worthless, but the
   // cells it sits in are almost black themselves and #424242 read as an empty
   // slot rather than as a dark item.
@@ -439,6 +442,27 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'material',
     icon: { shape: 'bar', color: ICON_COLOR.ironBar },
   },
+  /**
+   * Rat bones and a log burnt down together in the furnace, and what the plate
+   * tier is case-hardened with.
+   *
+   * One row standing in for two dead ends: bones were ten for a quest and trash
+   * forever after, and a log had exactly one use in the game. Making them into
+   * one intermediate rather than naming both on every armour row is what keeps
+   * a piece's cost line readable — a helmet takes bars, fittings and char, not
+   * bars, fittings, bones and wood.
+   *
+   * Lighter than what went into it, the way a bar is lighter than its ore: what
+   * comes off a fire is what is left after the water and the weight of it.
+   */
+  'bone-char': {
+    id: 'bone-char',
+    name: 'Bone Char',
+    value: 8,
+    weight: 1,
+    kind: 'material',
+    icon: { shape: 'bone', color: ICON_COLOR.burnt },
+  },
   // The plate tier, and the first armour in the game nothing drops. Every piece
   // stops more than the leather it replaces and weighs more for it, which is
   // what keeps the pack a decision rather than plate being strictly better.
@@ -526,6 +550,32 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
   'burnt-crab': {
     id: 'burnt-crab',
     name: 'Burnt Crab',
+    value: 1,
+    kind: 'material',
+    icon: { shape: 'meat', color: ICON_COLOR.burnt },
+  },
+  /**
+   * What the first thing anyone kills is worth once there is a fire to put it
+   * over.
+   *
+   * The weakest food in the game and the only one that costs no tool to come
+   * by: a fish needs a sixty copper pole and a crab needs the beach, where a
+   * rat needs a rat. That is what it is for — something to eat while earning
+   * the pole — so it heals less than the fish it sits under and is worth less
+   * than the fish's raw half.
+   */
+  'cooked-rat': {
+    id: 'cooked-rat',
+    name: 'Cooked Rat',
+    value: 6,
+    kind: 'consumable',
+    healAmount: 10,
+    healDurationMs: 10000,
+    icon: { shape: 'meat', color: ICON_COLOR.cookedRat },
+  },
+  'burnt-rat': {
+    id: 'burnt-rat',
+    name: 'Burnt Rat',
     value: 1,
     kind: 'material',
     icon: { shape: 'meat', color: ICON_COLOR.burnt },

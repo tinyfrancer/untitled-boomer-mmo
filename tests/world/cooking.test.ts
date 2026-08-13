@@ -95,6 +95,36 @@ describe('cooking', () => {
     expect(world.cookState).toBeNull();
   });
 
+  /**
+   * The finding this sweep is named for, at the fire: meat, in a game with a
+   * cooking skill, that could not be cooked. It is the one food in the game that
+   * needs no tool to come by — a fish wants a sixty copper pole first — so it is
+   * what a level 1 eats while earning one.
+   */
+  it('cooks the meat off a rat, which is food a character with no pole can have', () => {
+    const { world, character, until } = atAFire();
+    character.addItem('rat-meat', 4);
+
+    world.handleCookRequested('rat-meat');
+    until(() => character.itemCount('rat-meat') === 0, 'the meat to go through the pan', 30000);
+
+    expect(character.itemCount('cooked-rat') + character.itemCount('burnt-rat')).toBe(4);
+  });
+
+  // Two raw things in the pack and one pan: what was tapped is what goes in it,
+  // rather than whichever recipe the table happens to list first.
+  it('puts the thing that was tapped in the pan, not the first cookable in the bag', () => {
+    const { world, character, tick } = atAFire();
+    character.addItem('raw-fish', 1);
+    character.addItem('rat-meat', 1);
+
+    world.handleCookRequested('rat-meat');
+    tick(1, RECIPES['cooked-rat'].durationMs + 100);
+
+    expect(character.itemCount('raw-fish')).toBe(1);
+    expect(character.itemCount('rat-meat')).toBe(0);
+  });
+
   it('trains cooking on the ones that come off the fire whole', () => {
     const { world, character, state, until } = atAFire();
     character.addItem('raw-fish', 20);

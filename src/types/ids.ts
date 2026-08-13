@@ -32,6 +32,9 @@ export type ItemId =
   // armour types landed.
   | 'tin-bar'
   | 'iron-bar'
+  // Rat bones and logs burnt down together, and the only thing here made out of
+  // two materials that used to lead nowhere.
+  | 'bone-char'
   | 'iron-helmet'
   | 'iron-chestplate'
   | 'iron-legs'
@@ -41,6 +44,10 @@ export type ItemId =
   | 'crab-meat'
   | 'cooked-crab'
   | 'burnt-crab'
+  // The first food in the game that needs no tool to come by: a rat drops it
+  // and a fire finishes it.
+  | 'cooked-rat'
+  | 'burnt-rat'
   | 'hideout-key'
   // The three the chief carries, and the only things in the game that come off
   // one creature. Nothing sells them and nothing else drops them.
@@ -59,8 +66,10 @@ export type ItemId =
 export type RecipeId =
   | 'cooked-fish'
   | 'cooked-crab'
+  | 'cooked-rat'
   | 'tin-bar'
   | 'iron-bar'
+  | 'bone-char'
   | 'iron-helmet'
   | 'iron-chestplate'
   | 'iron-legs';
