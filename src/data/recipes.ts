@@ -1,3 +1,4 @@
+import { exhaustive } from '../types/exhaustive';
 import type { GatherSkillId, ItemId, RecipeId } from '../types/ids';
 
 /**
@@ -9,6 +10,25 @@ import type { GatherSkillId, ItemId, RecipeId } from '../types/ids';
  * letting crafting become a panel opened from the bag anywhere.
  */
 export type StationId = 'fire' | 'forge';
+
+// Every station there is, for the callers that have to ask about all of them
+// rather than about one — which is a camp reading what is in reach.
+export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge']);
+
+/**
+ * Whether a station is still standing when the tab is closed.
+ *
+ * A forge is a fact about the zone and is there in the morning; a campfire is a
+ * fact about the player, and `FIRE_BURN_MS` is ninety seconds — so an offline
+ * session paid out at one would be paying for eight hours at a fire that went
+ * out in the first two minutes. It is a table rather than a comparison so that
+ * the next station is a compile error until someone has decided which of the
+ * two it is.
+ */
+export const STATION_PERSISTS: Record<StationId, boolean> = {
+  fire: false,
+  forge: true,
+};
 
 export interface RecipeInput {
   itemId: ItemId;

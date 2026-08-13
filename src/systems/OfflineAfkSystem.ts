@@ -1,13 +1,20 @@
 import { ENEMIES } from '../data/enemies';
 import { RESOURCE_NODES } from '../data/resourceNodes';
+import { STATION_PERSISTS, type CraftingRecipe, type StationId } from '../data/recipes';
 import { ZONES } from '../data/zones';
 import { xpToReachLevel } from '../data/xpTable';
 import type { AfkSession } from '../persistence/CharacterState';
 import { AFK_XP_MULTIPLIER, afkGatherSkill } from './AfkSystem';
+import { hasInputs, recipesAt, rollCraft } from './CraftingSystem';
 import { canCarry } from './EncumbranceSystem';
 import { scaleEnemyStats } from './EnemySystem';
 import { gatherDurationMs } from './GatherSystem';
-import { addItemToInventory, type Gear, type Inventory } from './InventorySystem';
+import {
+  addItemToInventory,
+  removeItemFromInventory,
+  type Gear,
+  type Inventory,
+} from './InventorySystem';
 import { rollLootTable } from './LootSystem';
 import { skillLevel, skillXpToNextLevel, type Skills } from './SkillSystem';
 import type { EnemyId, SkillId } from '../types/ids';
@@ -69,11 +76,24 @@ export interface OfflineAfkReport {
    * a night away cost you fifteen fish.
    */
   missed: Inventory;
-  // What a gathering camp brought back instead. A session is one or the other,
-  // never both, so a fought session leaves these at zero and a worked one
+  /**
+   * What the session spent, itemised, and the one field here that runs the
+   * other way: every other branch only ever adds to the pack, where a making
+   * camp works through it. The caller has to take these back off the character
+   * as well as handing `drops` over — a payout that only did the second half
+   * would be minting bars out of ore that was never used.
+   */
+  consumed: Inventory;
+  // What a gathering camp brought back instead. A session is one of the three,
+  // never two, so a fought session leaves these at zero and a worked one
   // leaves the kills and the coin there. The haul itself rides in `drops`,
   // which is already what the away report lists.
   gathers: number;
+  // What a making camp finished, counted in things that actually came off the
+  // bench: a roll that failed cost the time and is not something to claim in
+  // the morning. `drops` names them, and `skill`/`skillXp` are shared with the
+  // gathering branch, since both are a gathering-family skill being trained.
+  crafts: number;
   skill: SkillId | null;
   skillXp: number;
 }
@@ -86,7 +106,9 @@ const NOTHING: OfflineAfkReport = {
   copper: 0,
   drops: {},
   missed: {},
+  consumed: {},
   gathers: 0,
+  crafts: 0,
   skill: null,
   skillXp: 0,
 };
@@ -147,20 +169,51 @@ function campNode(zoneId: keyof typeof ZONES, skill: SkillId, level: number) {
   return workable.reduce((best, node) => (node.xpReward > best.xpReward ? node : best));
 }
 
+// The recipe an unattended smith would have been running: the richest one the
+// skill opens that the bag can actually supply, which is `campNode`'s rule at
+// the other kind of station. Null when there is nothing on the bench, which is
+// what sends the session back to the tool in its hands.
+function campRecipe(
+  station: StationId,
+  skills: Skills,
+  inventory: Inventory,
+): CraftingRecipe | null {
+  const workable = recipesAt(station).filter(
+    (recipe) =>
+      skillLevel(skills, recipe.skill) >= recipe.requiredLevel && hasInputs(recipe, inventory),
+  );
+  if (workable.length === 0) {
+    return null;
+  }
+  return workable.reduce((best, recipe) => (recipe.xpReward > best.xpReward ? recipe : best));
+}
+
 /**
  * What a camp left running while the tab was closed earned. Pure, with `now`
  * and the rng injected, because the only interesting cases (a clock that moved
  * backwards, a week away, a pack that fills up) are ones a live run can't
  * reach.
  *
- * Which of the two branches it takes is read off the gear, exactly as the awake
- * camp reads it: a tool in the weapon slot means the session was gathering.
+ * Which of the three branches it takes is the awake camp's own precedence read
+ * back off the save: the station it settled at first, then the tool in its
+ * hands, then the fight. The one thing that is *not* the same is which stations
+ * count — see `STATION_PERSISTS`. A campfire is ninety seconds long and did not
+ * survive the tab closing, so a session parked at one is paid for whatever it
+ * would have been doing without it, which is what its gear says.
  */
 export function resolveOfflineAfk(
   session: AfkSession,
   context: OfflineAfkContext,
 ): OfflineAfkReport {
   const elapsedMs = elapsedOfflineMs(session.startedAt, context.now);
+  const station = session.station;
+  if (station && STATION_PERSISTS[station]) {
+    const crafted = resolveOfflineCraft(context, elapsedMs, station);
+    if (crafted) {
+      return crafted;
+    }
+  }
+
   const skill = afkGatherSkill(context.gear);
   if (skill !== null) {
     return resolveOfflineGather(session, context, elapsedMs, skill);
@@ -299,6 +352,92 @@ function resolveOfflineGather(
     // Floored rather than rounded, so a session can never come out ahead of the
     // same gathers made awake.
     skillXp: Math.floor(perGatherXp * gathers),
+  };
+}
+
+/**
+ * The same shape again for a session parked at a permanent station, and the one
+ * of the three that *spends* something: a smith works through the bag rather
+ * than filling it, so what stops this is running out of ore about as often as it
+ * is running out of night.
+ *
+ * Three things are deliberately not modelled, and they are the same three the
+ * gathering branch leaves out: the walk to the station, the level rising as the
+ * session runs (so the failure rate is the one it logged out with, which is the
+ * pessimistic direction), and picking a second recipe once the first runs dry.
+ * The skill-level cap is what makes all of that safe to skip.
+ *
+ * Nothing here checks the pack, because nothing awake does either: a craft
+ * consumes its inputs before it hands anything back, so a bench is the one place
+ * in the game a full pack cannot refuse. Returns null when there was nothing to
+ * make, which is what falls the session back to its tool.
+ */
+function resolveOfflineCraft(
+  context: OfflineAfkContext,
+  elapsedMs: number,
+  station: StationId,
+): OfflineAfkReport | null {
+  const recipe = campRecipe(station, context.skills, context.inventory);
+  if (!recipe) {
+    return null;
+  }
+
+  const level = skillLevel(context.skills, recipe.skill);
+  const attempts = Math.floor(elapsedMs / recipe.durationMs);
+  if (attempts <= 0) {
+    return { ...NOTHING, elapsedMs };
+  }
+
+  const perCraftXp = recipe.xpReward * AFK_XP_MULTIPLIER * OFFLINE_RATE_MULTIPLIER;
+  const xpToNext = skillXpToNextLevel(recipe.skill, level, context.characterLevel);
+  const rng = context.rng ?? Math.random;
+
+  let drops: Inventory = {};
+  let consumed: Inventory = {};
+  let carried = context.inventory;
+  let crafts = 0;
+  let skillXp = 0;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    // Checked before the roll rather than after it, so the ceiling is one a
+    // session reaches rather than one it steps over — the gathering branch gets
+    // the same guarantee out of flooring its count up front, which a run of
+    // failed rolls makes impossible here.
+    if (xpToNext > 0 && skillXp + perCraftXp > xpToNext) {
+      break;
+    }
+    if (!hasInputs(recipe, carried)) {
+      break;
+    }
+
+    const result = rollCraft(recipe, level, rng);
+    if (result.consumed) {
+      for (const input of recipe.inputs) {
+        carried = removeItemFromInventory(carried, input.itemId, input.quantity);
+        consumed = addItemToInventory(consumed, input.itemId, input.quantity);
+      }
+    }
+    if (result.itemId) {
+      carried = addItemToInventory(carried, result.itemId, 1);
+      drops = addItemToInventory(drops, result.itemId, 1);
+    }
+    if (result.failed) {
+      continue;
+    }
+    crafts += 1;
+    skillXp += perCraftXp;
+  }
+
+  return {
+    ...NOTHING,
+    elapsedMs,
+    drops,
+    consumed,
+    crafts,
+    skill: recipe.skill,
+    // Floored rather than rounded, so a session can never come out ahead of the
+    // same work done awake.
+    skillXp: Math.floor(skillXp),
   };
 }
 

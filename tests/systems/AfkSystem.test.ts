@@ -2,16 +2,21 @@ import { describe, expect, it } from 'vitest';
 import {
   AFK_ENGAGE_RADIUS,
   AFK_XP_MULTIPLIER,
+  afkCampJob,
   afkGatherSkill,
+  afkJobSkill,
   afkXpReward,
   chooseAfkFood,
   chooseAfkNode,
   decideAfkAction,
   shouldAfkEat,
+  type AfkCampSurroundings,
   type AfkCandidate,
   type AfkNodeCandidate,
 } from '../../src/systems/AfkSystem';
+import { RECIPES } from '../../src/data/recipes';
 import type { Gear } from '../../src/systems/InventorySystem';
+import { createInitialSkills } from '../../src/systems/SkillSystem';
 
 function mob(overrides: Partial<AfkCandidate> & { index: number }): AfkCandidate {
   return { distance: 100, alive: true, engaged: false, ...overrides };
@@ -214,6 +219,105 @@ describe('afkGatherSkill', () => {
     expect(afkGatherSkill(holding(null))).toBeNull();
     // An axe you fight with is not an axe you fell trees with.
     expect(afkGatherSkill(holding('brown-axe'))).toBeNull();
+  });
+});
+
+/**
+ * The half of a camp that is not in its hands.
+ *
+ * The tool rule alone left the two making skills campable by nobody — cooking
+ * has no tool at all, and smithing would have inherited the same hole — so what
+ * is worth holding here is the *order*: a station beats a tool, and the two
+ * cannot deadlock because the bag a craft eats out of runs dry.
+ */
+describe('afkCampJob', () => {
+  const holding = (weapon: Gear['weapon']): Gear => ({
+    helmet: null,
+    chest: null,
+    pants: null,
+    weapon,
+    offhand: null,
+  });
+
+  const surroundings = (overrides: Partial<AfkCampSurroundings> = {}): AfkCampSurroundings => ({
+    gear: holding(null),
+    skills: createInitialSkills(),
+    inventory: {},
+    stations: [],
+    ...overrides,
+  });
+
+  it('cooks what is in the bag when there is a fire to cook it on', () => {
+    const job = afkCampJob(surroundings({ stations: ['fire'], inventory: { 'raw-fish': 4 } }));
+
+    expect(job).toEqual({ kind: 'craft', recipe: RECIPES['cooked-fish'] });
+  });
+
+  // The station is what makes it a cooking camp. The same bag on the same
+  // beach with the fire gone out is a camp with nothing to do.
+  it('is not a cooking camp with no fire under the pan', () => {
+    const job = afkCampJob(surroundings({ inventory: { 'raw-fish': 4 } }));
+
+    expect(job.kind).toBe('fight');
+  });
+
+  it('smelts at a forge, and takes the richest row the skill opens', () => {
+    const skills = createInitialSkills();
+    skills.smithing = { level: 4, xp: 0 };
+
+    const job = afkCampJob(
+      surroundings({
+        skills,
+        stations: ['forge'],
+        inventory: { 'tin-ore': 10, 'iron-ore': 10 },
+      }),
+    );
+
+    // Iron pays 18 where tin pays 10, and level 4 is exactly what opens it.
+    expect(job).toEqual({ kind: 'craft', recipe: RECIPES['iron-bar'] });
+  });
+
+  it('leaves a row the skill has not reached alone', () => {
+    const job = afkCampJob(
+      surroundings({ stations: ['forge'], inventory: { 'tin-ore': 10, 'iron-ore': 10 } }),
+    );
+
+    // Iron needs smithing 4, so a level 1 smith works the tin in front of them
+    // rather than standing at a forge they cannot use.
+    expect(job).toEqual({ kind: 'craft', recipe: RECIPES['tin-bar'] });
+  });
+
+  // The precedence, stated directly: you had to walk to the forge, where the
+  // pickaxe is merely what you are holding.
+  it('puts the station ahead of the tool in hand', () => {
+    const job = afkCampJob(
+      surroundings({
+        gear: holding('pickaxe'),
+        stations: ['forge'],
+        inventory: { 'tin-ore': 2 },
+      }),
+    );
+
+    expect(job).toEqual({ kind: 'craft', recipe: RECIPES['tin-bar'] });
+  });
+
+  // And the reason that is safe: a craft eats out of the bag, so the bag runs
+  // out and the gatherer that filled it takes over again. Standing at a forge
+  // with nothing to smelt is a mining camp, not a camp stuck at a bench.
+  it('falls back to the tool once the bench is bare', () => {
+    const job = afkCampJob(surroundings({ gear: holding('pickaxe'), stations: ['forge'] }));
+
+    expect(job).toEqual({ kind: 'gather', skill: 'mining' });
+  });
+
+  it('is the fighting camp with no station, no tool and nothing to make', () => {
+    expect(afkCampJob(surroundings({ gear: holding('rusty-sword') })).kind).toBe('fight');
+  });
+
+  it('names the skill each job trains, for the line that has to read as English', () => {
+    expect(afkJobSkill({ kind: 'craft', recipe: RECIPES['tin-bar'] })).toBe('smithing');
+    expect(afkJobSkill({ kind: 'gather', skill: 'fishing' })).toBe('fishing');
+    expect(afkJobSkill({ kind: 'fight' })).toBeNull();
   });
 });
 

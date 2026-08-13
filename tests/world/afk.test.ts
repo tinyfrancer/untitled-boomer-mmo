@@ -162,6 +162,82 @@ describe('camping a gathering skill', () => {
   });
 });
 
+/**
+ * The camp with a station under it rather than a tool in it, driven in a real
+ * town. This is the hole PR 11 was named after: cooking has no tool at all, so
+ * the skill with the deepest active loop was the one skill nobody could camp,
+ * and smithing would have inherited the same problem the day the forge landed.
+ *
+ * What is worth holding here is that the station is enough on its own — nothing
+ * is equipped, nothing is stored, and no second button was pressed.
+ */
+describe('camping a making skill', () => {
+  /** Parked at the town forge with ore in the pack and no tool in hand. */
+  function smithing(): ReturnType<typeof harness> {
+    const kit = harness();
+    const forge = kit.world.stations.find((station) => station.station === 'forge');
+    if (!forge) throw new Error('town has no forge');
+    kit.character.addItem('tin-ore', 8);
+    kit.world.teleport(forge.x, forge.y + 40);
+    kit.tick(1);
+    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    return kit;
+  }
+
+  it('smelts with no input at all, and works down the pile', () => {
+    const { world, character, until } = smithing();
+
+    until(() => character.itemCount('tin-bar') > 0, 'the camp to pull its first bar', 120000);
+    expect(world.afkActive).toBe(true);
+    expect(character.itemCount('tin-ore')).toBeLessThan(8);
+  });
+
+  // A camp is a derivation and not a mode, so the thing that decides what it is
+  // doing keeps being asked. Ore runs out, the bench goes bare, and what is
+  // left is a character standing in a town full of rats.
+  it('goes back to fighting once the bench is bare', () => {
+    const { world, character, until } = smithing();
+
+    character.removeItem('tin-ore', character.itemCount('tin-ore'));
+
+    until(() => world.target !== null, 'the camp to pick a fight instead', 60000);
+  });
+
+  // Cooking is the same rule at the other station, and the one the tool rule
+  // could never have reached: there is no pan to equip.
+  it('cooks at a fire lit by the player, with nothing in hand', () => {
+    const kit = harness();
+    kit.character.addItem('logs', 1);
+    kit.character.addItem('raw-fish', 6);
+    kit.world.handleLightFireRequested();
+    kit.tick(1);
+    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+
+    kit.until(
+      () => kit.character.itemCount('cooked-fish') + kit.character.itemCount('burnt-fish') > 0,
+      'the camp to put a fish in the pan',
+      60000,
+    );
+  });
+
+  // What the save has to carry that the zone cannot: a forge is one tile of a
+  // town, so where the character stood is not something the morning could
+  // re-derive.
+  it('parks the station in the session, not just the zone', () => {
+    const { state } = smithing();
+    expect(state.afk).toMatchObject({ zoneId: 'town', station: 'forge' });
+  });
+
+  // And the other half of that: a camp that settled to gather or to fight
+  // records none, which is what keeps the offline precedence the same
+  // precedence the awake loop ran on.
+  it('records no station for a camp that settled to fight', () => {
+    const kit = harness();
+    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    expect(kit.state.afk).toMatchObject({ station: null });
+  });
+});
+
 describe('the keyboard', () => {
   it('clears the selected target on Escape, drained as an action', () => {
     const { world, input, tick } = harness();

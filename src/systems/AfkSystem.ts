@@ -1,5 +1,8 @@
 import { consumableFor, toolSkill } from '../data/items';
+import type { CraftingRecipe, StationId } from '../data/recipes';
+import { canCraft, recipesAt } from './CraftingSystem';
 import { inventoryEntries, type Gear, type Inventory } from './InventorySystem';
+import type { Skills } from './SkillSystem';
 import type { ItemId, SkillId } from '../types/ids';
 
 // AFK play has to stay behind active play, and two things hold it there: the
@@ -71,6 +74,82 @@ function nearest<T extends { distance: number }>(candidates: T[]): T {
  */
 export function afkGatherSkill(gear: Gear): SkillId | null {
   return toolSkill(gear.weapon);
+}
+
+/**
+ * What the camp is actually doing, which is the tool in hand *and* the station
+ * underfoot rather than the tool alone.
+ *
+ * `afkGatherSkill` above is the whole of what a camp used to read, and it left
+ * the two making skills campable by nobody: cooking has no tool, so the skill
+ * with the deepest active loop was the one skill that could never be parked, and
+ * smithing inherited the same hole the day the forge landed.
+ *
+ * This is the one place the "read it off the tool" rule bends, and the reason it
+ * is a bend rather than drift is that **a station is a tool you cannot carry**.
+ * Nothing is stored and nothing is chosen twice — the derivation stays a
+ * derivation, it just reads two inputs instead of one.
+ */
+export type AfkCampJob =
+  // Standing at a station with something on the bench worth making.
+  | { kind: 'craft'; recipe: CraftingRecipe }
+  // A gathering tool in hand. Whether this zone holds anything it works is the
+  // caller's question, not this one's — see `chooseAfkNode`.
+  | { kind: 'gather'; skill: SkillId }
+  // Empty hands, or hands full of things there is no work for here.
+  | { kind: 'fight' };
+
+export interface AfkCampSurroundings {
+  gear: Gear;
+  skills: Skills;
+  inventory: Inventory;
+  /** Which stations are within reach right now, in whatever order. */
+  stations: StationId[];
+}
+
+/**
+ * The best thing makeable at any station in reach, or null.
+ *
+ * The richest one the skill opens, which is `campNode`'s rule at the other kind
+ * of station: a smith who has earned the iron smelts iron rather than being held
+ * to the first row in the table.
+ */
+export function bestCraftInReach(surroundings: AfkCampSurroundings): CraftingRecipe | null {
+  let best: CraftingRecipe | null = null;
+  for (const station of surroundings.stations) {
+    for (const recipe of recipesAt(station)) {
+      const check = canCraft(recipe, surroundings.skills, surroundings.inventory, true);
+      if (check.ok && (best === null || recipe.xpReward > best.xpReward)) {
+        best = recipe;
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Which of the three a camp is, and the order is the whole of the rule.
+ *
+ * **A station beats a tool**, because standing at one is something the player
+ * went and did where a tool is merely what they happen to be holding. The two
+ * cannot deadlock: a craft job needs its inputs in the bag and the bag runs
+ * out, at which point the gatherer that filled it takes over again — which is
+ * what makes settling in at a fire on the beach a camp that fishes and cooks
+ * rather than one that does either.
+ */
+export function afkCampJob(surroundings: AfkCampSurroundings): AfkCampJob {
+  const recipe = bestCraftInReach(surroundings);
+  if (recipe) {
+    return { kind: 'craft', recipe };
+  }
+  const skill = afkGatherSkill(surroundings.gear);
+  return skill === null ? { kind: 'fight' } : { kind: 'gather', skill };
+}
+
+/** The skill a job trains, for the one line that has to read as English. */
+export function afkJobSkill(job: AfkCampJob): SkillId | null {
+  if (job.kind === 'craft') return job.recipe.skill;
+  return job.kind === 'gather' ? job.skill : null;
 }
 
 export interface AfkNodeCandidate {

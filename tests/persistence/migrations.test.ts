@@ -3,6 +3,7 @@ import { migrateCharacterState } from '../../src/persistence/migrations';
 import { CHARACTER_STATE_VERSION, createNewCharacter } from '../../src/persistence/CharacterState';
 import { knownAbilities } from '../../src/systems/AbilitySystem';
 import { STARTING_BANK_SLOTS } from '../../src/systems/BankSystem';
+import { createInitialSkills } from '../../src/systems/SkillSystem';
 
 // A save as v4 wrote it: no currency, optional zoneId, tools in the bag.
 function v4Save(): Record<string, unknown> {
@@ -312,6 +313,43 @@ describe('migrateCharacterState', () => {
     // The abilities the trainer was paid for are not re-granted or dropped on
     // the way past, which is the step before this one still meaning what it did.
     expect(migrated?.learnedAbilities).toEqual(['mana-shield']);
+  });
+
+  /**
+   * A parked camp gains the station it settled at. Null is not a default here
+   * standing in for information that was lost — a v16 save was written by a
+   * game where a camp only ever fought or gathered, so null is what that
+   * session actually was, and it pays out in the morning exactly as it would
+   * have before.
+   */
+  it('gives a v16 camp a station of none, and leaves an empty one empty', () => {
+    const base = {
+      ...v4Save(),
+      version: 16,
+      currency: 0,
+      zoneId: 'town',
+      quests: {},
+      kills: {},
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: ['mana-shield'],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      skills: createInitialSkills(),
+    };
+    const parked = migrateCharacterState({
+      ...base,
+      afk: { startedAt: '2026-08-13T00:00:00.000Z', zoneId: 'beach' },
+    });
+
+    expect(parked?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(parked?.afk).toEqual({
+      startedAt: '2026-08-13T00:00:00.000Z',
+      zoneId: 'beach',
+      station: null,
+    });
+    expect(migrateCharacterState({ ...base, afk: null })?.afk).toBeNull();
   });
 
   it('drops saves older than the migration chain', () => {

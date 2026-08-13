@@ -99,6 +99,15 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     ...state,
     skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
   }),
+  // v16 → v17: a camp can be settled at a station, so a parked session says
+  // which one. A session written by v16 was written by a game where a camp only
+  // ever fought or gathered, so null is not a default standing in for missing
+  // information — it is what that session actually was, and it pays out in the
+  // morning exactly as it would have before.
+  16: (state) => ({
+    ...state,
+    afk: state.afk ? { ...(state.afk as object), station: null } : null,
+  }),
 };
 
 /**
