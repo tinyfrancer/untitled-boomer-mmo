@@ -1,4 +1,5 @@
 import { CLASSES } from '../data/classes';
+import type { StationId } from '../data/recipes';
 import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
@@ -6,7 +7,7 @@ import type { QuestLog } from '../systems/QuestSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 16;
+export const CHARACTER_STATE_VERSION = 17;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -74,6 +75,17 @@ export interface CharacterState {
 export interface AfkSession {
   startedAt: string;
   zoneId: ZoneId;
+  /**
+   * The station the camp settled to work at, or null for one that settled to
+   * gather or to fight.
+   *
+   * The zone was always enough to say what a camp was *fighting*, and it is
+   * enough to say what one was gathering, because both of those are facts about
+   * the map. Where the character stood is not — a forge is one tile of a town —
+   * so a session that meant to smelt has to say so, and it is the one thing
+   * about a parked camp that could not be re-derived in the morning.
+   */
+  station: StationId | null;
 }
 
 export function createNewCharacter(name: string, classId: ClassId): CharacterState {

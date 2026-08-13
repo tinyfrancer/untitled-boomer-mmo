@@ -245,7 +245,11 @@ describe('notifications for a HUD that is not listening yet', () => {
     const state = createNewCharacter('Tester', 'warrior');
     // Long enough that the camp is worth reporting on; the payout itself is
     // OfflineAfkSystem's business and tested there.
-    state.afk = { startedAt: new Date(Date.now() - 3600_000).toISOString(), zoneId: 'town' };
+    state.afk = {
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+    };
     return state;
   }
 

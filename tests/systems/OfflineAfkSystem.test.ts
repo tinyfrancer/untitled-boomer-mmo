@@ -13,6 +13,7 @@ import { gatherDurationMs } from '../../src/systems/GatherSystem';
 import { createInitialSkills, skillXpToNextLevel } from '../../src/systems/SkillSystem';
 import type { Gear } from '../../src/systems/InventorySystem';
 import { ENEMIES } from '../../src/data/enemies';
+import { RECIPES } from '../../src/data/recipes';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { xpToReachLevel } from '../../src/data/xpTable';
 import type { AfkSession } from '../../src/persistence/CharacterState';
@@ -20,8 +21,12 @@ import type { AfkSession } from '../../src/persistence/CharacterState';
 const NOW = Date.parse('2026-07-24T12:00:00.000Z');
 const HOUR_MS = 60 * 60 * 1000;
 
-function sessionStartedAgo(ms: number, zoneId: AfkSession['zoneId'] = 'town'): AfkSession {
-  return { startedAt: new Date(NOW - ms).toISOString(), zoneId };
+function sessionStartedAgo(
+  ms: number,
+  zoneId: AfkSession['zoneId'] = 'town',
+  station: AfkSession['station'] = null,
+): AfkSession {
+  return { startedAt: new Date(NOW - ms).toISOString(), zoneId, station };
 }
 
 // A fighter by default: what is in the weapon slot is what decides whether a
@@ -399,5 +404,122 @@ describe('a parked gathering camp', () => {
     const oneGather = gatherDurationMs(TREE, 1);
     const report = resolveOfflineAfk(sessionStartedAgo(oneGather * 3 + 10), gathering(AXE));
     expect(report.gathers).toBe(3);
+  });
+});
+
+/**
+ * The third branch, and the only one that spends anything.
+ *
+ * Two rules carry it. A session parked at a station is paid for that station
+ * ahead of whatever is in its hands, which is the awake camp's own precedence
+ * read back off the save — and a campfire is not a station this can pay for at
+ * all, because ninety seconds of `FIRE_BURN_MS` did not survive the tab closing.
+ */
+describe('a parked making camp', () => {
+  // An axe rather than a pickaxe, and the reason is the map: the forge stands
+  // in town and the ore veins are a zone north, so a fallback to mining from
+  // this bench would be a camp with nothing to mine. Town has trees.
+  const AXE: Gear = {
+    helmet: null,
+    chest: null,
+    pants: null,
+    weapon: 'felling-axe',
+    offhand: null,
+  };
+  const TIN = RECIPES['tin-bar'];
+
+  // `context` rolls a 0, which is under the failure curve at every level a
+  // smith starts at — the arithmetic here is about time and inputs, not dice.
+  const making = (overrides = {}) =>
+    context({ inventory: { 'tin-ore': 40 }, rng: () => 1, ...overrides });
+
+  const atTheForge = (ms: number) => sessionStartedAgo(ms, 'town', 'forge');
+
+  it('smelts through the night and pays the skill for it', () => {
+    const report = resolveOfflineAfk(atTheForge(HOUR_MS), making());
+
+    expect(report.skill).toBe('smithing');
+    expect(report.crafts).toBeGreaterThan(0);
+    expect(report.skillXp).toBeGreaterThan(0);
+    expect(report.drops['tin-bar']).toBe(report.crafts);
+    // One of the three, never two.
+    expect(report.kills).toBe(0);
+    expect(report.gathers).toBe(0);
+  });
+
+  // The half that runs the other way, and the one a payout that only handed
+  // `drops` over would have got wrong: forty bars out of nothing.
+  it('says what it spent, one input per thing it made', () => {
+    const report = resolveOfflineAfk(atTheForge(HOUR_MS), making());
+
+    expect(report.consumed['tin-ore']).toBe(report.crafts);
+  });
+
+  it('stops when the ore runs out rather than when the night does', () => {
+    const report = resolveOfflineAfk(
+      atTheForge(OFFLINE_CAP_MS),
+      making({ inventory: { 'tin-ore': 3 } }),
+    );
+
+    expect(report.crafts).toBe(3);
+    expect(report.consumed['tin-ore']).toBe(3);
+  });
+
+  it('takes a craft as long as the recipe says it does', () => {
+    const report = resolveOfflineAfk(atTheForge(TIN.durationMs * 3 + 10), making());
+    expect(report.crafts).toBe(3);
+  });
+
+  // The same ceiling the gathering branch is held to, and for the same reason:
+  // it is what makes the rest of the arithmetic safe to keep simple.
+  it('never earns more than a single skill level, however long the tab was shut', () => {
+    const night = resolveOfflineAfk(
+      atTheForge(OFFLINE_CAP_MS),
+      making({ inventory: { 'tin-ore': 9999 } }),
+    );
+    const week = resolveOfflineAfk(
+      atTheForge(OFFLINE_CAP_MS * 20),
+      making({ inventory: { 'tin-ore': 9999 } }),
+    );
+
+    expect(week.skillXp).toBe(night.skillXp);
+    expect(skillXpToNextLevel('smithing', 1)).toBeGreaterThan(night.skillXp);
+  });
+
+  // A failure at the forge names no `failureItemId`, so it costs the time and
+  // nothing else — which is the one thing that would be wrong to charge for
+  // when nobody was there to watch the roll.
+  it('spends nothing on a roll that failed', () => {
+    const report = resolveOfflineAfk(atTheForge(HOUR_MS), making({ rng: () => 0 }));
+
+    expect(report.crafts).toBe(0);
+    expect(report.consumed).toEqual({});
+    expect(report.drops).toEqual({});
+  });
+
+  it('falls back to the tool in hand when there is nothing on the bench', () => {
+    const report = resolveOfflineAfk(atTheForge(HOUR_MS), making({ gear: AXE, inventory: {} }));
+
+    expect(report.crafts).toBe(0);
+    expect(report.skill).toBe('woodcutting');
+    expect(report.gathers).toBeGreaterThan(0);
+  });
+
+  /**
+   * The consequence the plan asked to be honoured rather than papered over: a
+   * fire is ninety seconds long and a session paid out at one would be paying
+   * for eight hours at a fire that went out in the first two minutes. So a camp
+   * parked at one is paid for whatever it would have been doing without it.
+   */
+  it('pays nothing for a campfire, and falls back to the tool', () => {
+    const fireside = sessionStartedAgo(HOUR_MS, 'town', 'fire');
+    const report = resolveOfflineAfk(
+      fireside,
+      making({ gear: AXE, inventory: { 'raw-fish': 40 } }),
+    );
+
+    expect(report.crafts).toBe(0);
+    expect(report.drops['cooked-fish']).toBeUndefined();
+    expect(report.skill).toBe('woodcutting');
   });
 });

@@ -84,7 +84,9 @@ const REPORT: OfflineAfkReport = {
   copper: 40,
   drops: { 'rat-bones': 3 },
   missed: {},
+  consumed: {},
   gathers: 0,
+  crafts: 0,
   skill: null,
   skillXp: 0,
 };

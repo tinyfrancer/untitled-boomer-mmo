@@ -8,6 +8,7 @@ import { AfkCamp } from '../../src/world/AfkCamp';
 import { Mob } from '../../src/world/Mob';
 import { ResourceNode } from '../../src/world/ResourceNode';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
+import { RECIPES, type CraftingRecipe, type StationId } from '../../src/data/recipes';
 import type { Targeting } from '../../src/world/targeting';
 import { testContext } from './context';
 
@@ -26,12 +27,13 @@ function ratAt(x: number, y: number): Mob {
   return new Mob(x, y, ENEMIES.rat, 1, () => 0.5);
 }
 
-function camped(mobs: Mob[] = [], nodes: ResourceNode[] = []) {
+function camped(mobs: Mob[] = [], nodes: ResourceNode[] = [], stations: StationId[] = []) {
   const kit = testContext();
   let target: Mob | null = null;
   let gathering = false;
   const pursued: Mob[] = [];
   const worked: ResourceNode[] = [];
+  const crafted: CraftingRecipe[] = [];
   const eaten: ItemId[] = [];
   const awarded: number[] = [];
   const credited: Array<{ enemyId: EnemyId; count: number }> = [];
@@ -64,6 +66,11 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = []) {
       worked.push(node);
       gathering = true;
     },
+    stationsInReach: () => stations,
+    craft: (recipe: CraftingRecipe) => {
+      crafted.push(recipe);
+      gathering = true;
+    },
     isChanneling: () => gathering,
     awardXp: (reward: number) => awarded.push(reward),
     creditKill: (enemyId: EnemyId, count: number) => {
@@ -77,6 +84,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = []) {
     targeting,
     pursued,
     worked,
+    crafted,
     eaten,
     awarded,
     credited,
@@ -200,7 +208,11 @@ describe('a camp that was left running when the tab closed', () => {
     const { camp, state, awarded, credited } = camped();
     // Long enough that the camp is worth reporting on; what it earns per hour
     // is OfflineAfkSystem's business and is tested there.
-    state.afk = { startedAt: new Date(Date.now() - 3600_000).toISOString(), zoneId: 'town' };
+    state.afk = {
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+    };
 
     const result = camp.resolveParked();
 
@@ -210,9 +222,36 @@ describe('a camp that was left running when the tab closed', () => {
     expect(state.afk).toBeNull();
   });
 
+  /**
+   * The half of a making camp's payout that runs the other way. Paying out the
+   * bars without taking the ore would mint metal, so `resolveParked` spends
+   * what the report says the night spent — and tin is one rock in, one bar out,
+   * with a failed roll costing nothing, so the two sides add up to what was in
+   * the pack whatever the dice did.
+   */
+  it('spends what a night at the forge worked through, not just hands the bars over', () => {
+    const { camp, character, state } = camped();
+    character.addItem('tin-ore', 8);
+    state.afk = {
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      zoneId: 'town',
+      station: 'forge',
+    };
+
+    const result = camp.resolveParked();
+
+    expect(result?.report.crafts).toBeGreaterThan(0);
+    expect(character.itemCount('tin-bar')).toBe(result?.report.crafts);
+    expect(character.itemCount('tin-ore') + character.itemCount('tin-bar')).toBe(8);
+  });
+
   it('cannot pay twice, however many times a load asks', () => {
     const { camp, state } = camped();
-    state.afk = { startedAt: new Date(Date.now() - 3600_000).toISOString(), zoneId: 'town' };
+    state.afk = {
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+    };
 
     camp.resolveParked();
 
@@ -377,6 +416,99 @@ describe('a gathering camp', () => {
   it('says nothing of the sort when there is room', () => {
     const kit = chopping([treeAt(40, 0)]);
     kit.camp.toggle();
+    expect(JSON.stringify(kit.emitted)).not.toContain('nothing you find will be kept');
+  });
+});
+
+/**
+ * The camp with a station under it rather than a tool in it.
+ *
+ * The turns worth holding cheaply are the ones about *order*: a station beats a
+ * tool, anything already chewing beats both, and a bench is the one job a full
+ * pack is no warning about. `afk.test.ts` drives a real forge to prove it
+ * actually smelts.
+ */
+describe('a making camp', () => {
+  const TIN = RECIPES['tin-bar'];
+
+  function smelting(mobs: Mob[] = [], nodes: ResourceNode[] = []) {
+    const kit = camped(mobs, nodes, ['forge']);
+    kit.character.addItem('tin-ore', 8);
+    return kit;
+  }
+
+  it('puts the first thing on the bench rather than picking a fight', () => {
+    const kit = smelting([ratAt(60, 0)]);
+
+    kit.camp.toggle();
+    kit.camp.update();
+
+    expect(kit.crafted).toEqual([TIN]);
+    expect(kit.selected()).toBeNull();
+  });
+
+  it('says which skill it settled in to', () => {
+    const kit = smelting();
+    kit.camp.toggle();
+
+    expect(kit.emitted.some((entry) => JSON.stringify(entry.args).includes('smith'))).toBe(true);
+  });
+
+  // The channel re-arms itself down the stack, so re-issuing it every frame
+  // would put the same ore back on a cold clock forever.
+  it('leaves the job running rather than restarting it every frame', () => {
+    const kit = smelting();
+    kit.camp.toggle();
+    kit.camp.update();
+    kit.camp.update();
+    kit.camp.update();
+
+    expect(kit.crafted).toHaveLength(1);
+  });
+
+  // The rule the whole loop is ordered around: being hit breaks the channel, so
+  // a smith that ignored the thing chewing on it would stand at the forge
+  // re-arming a job it could never finish until it died.
+  it('answers something already chasing before it touches the bench', () => {
+    const rat = ratAt(60, 0);
+    const kit = smelting([rat]);
+    kit.camp.toggle();
+    rat.engage();
+
+    kit.camp.update();
+
+    expect(kit.crafted).toEqual([]);
+    expect(kit.selected()).toBe(rat);
+  });
+
+  // The tool is still there and still read — it is simply second. Once the ore
+  // is gone the pickaxe is what is left, which is what stops the precedence
+  // from being a trap.
+  it('gives the tool in hand its turn back once the ore is gone', () => {
+    const kit = camped([], [new ResourceNode(40, 0, RESOURCE_NODES['tin-vein'])], ['forge']);
+    kit.character.addItem('pickaxe', 1);
+    kit.character.equip('pickaxe');
+    kit.character.addItem('tin-ore', 1);
+
+    kit.camp.toggle();
+    kit.camp.update();
+    expect(kit.crafted).toEqual([TIN]);
+
+    kit.character.removeItem('tin-ore', 1);
+    kit.stopGathering();
+    kit.camp.update();
+
+    expect(kit.worked).toHaveLength(1);
+  });
+
+  // A making camp spends what it is carrying to make what it makes, so a full
+  // pack is a bench getting lighter rather than a haul about to be lost.
+  it('says nothing about a full pack, which is not what a bench is', () => {
+    const kit = smelting();
+    kit.character.addItem('logs', kit.character.carryCapacity());
+
+    kit.camp.toggle();
+
     expect(JSON.stringify(kit.emitted)).not.toContain('nothing you find will be kept');
   });
 });

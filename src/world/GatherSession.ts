@@ -1,5 +1,6 @@
 import { consumableFor } from '../data/items';
 import {
+  STATION_IDS,
   STATION_RADIUS,
   FIRE_INPUT_ITEM_ID,
   type CraftingRecipe,
@@ -166,6 +167,16 @@ export class GatherSession {
   }
 
   /**
+   * Everything the player is standing at, which is the half of a camp's job that
+   * is not in their hands. A list rather than the two questions above, because
+   * what a camp asks is "what can be made here" and that is one loop over the
+   * stations rather than a branch per station.
+   */
+  stationsInReach(): StationId[] {
+    return STATION_IDS.filter((station) => this.atStation(station));
+  }
+
+  /**
    * Starts a named recipe, which is how anything with a list of inputs is
    * asked for: a bag cell cannot say which of three things four bars were meant
    * to become, so the forge's panel names the row and this runs it.
@@ -218,8 +229,12 @@ export class GatherSession {
    * the recipe's `durationMs` and standing there for it is what a failure is
    * worth avoiding. One path for both stations — a fish over a fire and a bar in
    * a forge are the same job with different data.
+   *
+   * Public because a camp starts one too, and it holds the recipe already: the
+   * job it derived names the row, so sending an id back through `recipeById`
+   * would be a round trip to arrive at what it was handed.
    */
-  private craft(recipe: CraftingRecipe): void {
+  craft(recipe: CraftingRecipe): void {
     const { character } = this.ctx;
     // Already running: pressing again is nothing rather than a restart, or a
     // double tap would keep putting the same fish back on a cold clock.

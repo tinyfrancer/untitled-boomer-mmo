@@ -367,6 +367,8 @@ export class ZoneWorld implements Targeting {
       closeCounters: () => this.closeCounters(),
       eat: (itemId) => this.gathering.eat(itemId),
       gatherAt: (node) => this.approachAndGather(node),
+      stationsInReach: () => this.gathering.stationsInReach(),
+      craft: (recipe) => this.gathering.craft(recipe),
       isChanneling: () => this.gathering.isChanneling(),
       awardXp: (reward) => this.awardXp(reward),
       creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),

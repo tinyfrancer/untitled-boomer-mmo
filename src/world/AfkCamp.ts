@@ -1,13 +1,16 @@
 import {
   AFK_ANCHOR_RADIUS,
-  afkGatherSkill,
+  afkCampJob,
+  afkJobSkill,
   chooseAfkFood,
   chooseAfkNode,
   decideAfkAction,
   shouldAfkEat,
+  type AfkCampJob,
   type AfkNodeCandidate,
 } from '../systems/AfkSystem';
 import { SKILLS } from '../data/skills';
+import type { CraftingRecipe, StationId } from '../data/recipes';
 import { logNotice } from '../systems/CombatLogSystem';
 import { canGather } from '../systems/GatherSystem';
 import { inventoryEntries } from '../systems/InventorySystem';
@@ -32,6 +35,10 @@ export interface AfkCampDeps {
   eat(itemId: ItemId): void;
   /** Walk over and start the channel — the same approach a tap on a node uses. */
   gatherAt(node: ResourceNode): void;
+  /** Which stations the player is standing at, which is half of what a camp is. */
+  stationsInReach(): StationId[];
+  /** Put something on the station being stood at — the pan, or the forge. */
+  craft(recipe: CraftingRecipe): void;
   /**
    * Whether a channel is already running — a gather, or something in the pan —
    * which is the loop's "leave it alone".
@@ -53,12 +60,12 @@ export interface ParkedAfkResult {
  * The unattended player: it works whatever is in its hands, stays where it was
  * left, and eats when it is hurt.
  *
- * **What it does is decided by the tool, not by a mode.** A fishing pole or an
- * axe in the weapon slot makes this a gathering camp; a sword, a wand or an
- * empty hand makes it the fighting one. Nothing is stored and nothing is chosen
- * twice — it is the same question `canGather` asks before letting anyone swing
- * at a tree, so a player who wants to camp a skill does what they would do
- * anyway.
+ * **What it does is decided by what is in hand and what is underfoot, not by a
+ * mode.** A fishing pole or an axe in the weapon slot makes this a gathering
+ * camp; a fire or a forge in reach with something on the bench makes it a making
+ * one; a sword, a wand or an empty hand makes it the fighting one. Nothing is
+ * stored and nothing is chosen twice — see `afkCampJob`, which is where the
+ * order between the three is argued.
  *
  * As a fighter it is deliberately a worse player than the person it stands in
  * for. It never uses an ability — the action bar is an advantage only a hand on
@@ -100,12 +107,14 @@ export class AfkCamp {
     this.active = active;
     this.recovering = false;
     this.packFull = false;
-    if (active) {
+    const job = active ? this.job() : null;
+    if (job) {
       this.deps.closeCounters();
       this.anchor = this.ctx.playerPoint();
-      const skill = this.gatherSkill();
-      // A gather already in flight is left running — settling in beside the
-      // tree you were chopping should not stop you chopping it.
+      const skill = afkJobSkill(job);
+      // A channel already in flight is left running — settling in beside the
+      // tree you were chopping, or over the pan you were watching, should not
+      // stop you doing it.
       if (skill === null) {
         this.deps.stopGathering();
       }
@@ -117,7 +126,7 @@ export class AfkCamp {
       // Settling in with a full pack is allowed — the XP is worth having on its
       // own — but it is not what anyone means to do, so it is said up front
       // rather than discovered on the away report in the morning.
-      this.packFull = !this.canKeepWhatItFinds();
+      this.packFull = !this.canKeepWhatItFinds(job);
       if (this.packFull) {
         this.ctx.log(logNotice('Your pack is full — nothing you find will be kept.'));
       }
@@ -126,8 +135,19 @@ export class AfkCamp {
     }
     // Written to the save, not just held here: it is the only record that
     // survives the tab closing, and the only thing offline progress is paid on.
-    this.ctx.character.state.afk = active
-      ? { startedAt: new Date().toISOString(), zoneId: this.ctx.zoneId }
+    //
+    // The station is what the camp *settled to work at* rather than whatever
+    // happened to be within reach, which is why a gathering or fighting camp
+    // records none: it is the same precedence the awake loop runs on, decided
+    // once at the toggle, so the morning's payout is the job the player walked
+    // away from. Whether a fire counts is `OfflineAfkSystem`'s ruling, not this
+    // one's — the save says where they stood either way.
+    this.ctx.character.state.afk = job
+      ? {
+          startedAt: new Date().toISOString(),
+          zoneId: this.ctx.zoneId,
+          station: job.kind === 'craft' ? job.recipe.station : null,
+        }
       : null;
     this.ctx.persistCharacter();
     this.ctx.events.emit(AFK_STATE_CHANGED_EVENT, this.active);
@@ -154,11 +174,17 @@ export class AfkCamp {
       gear: character.state.gear,
       skills: character.state.skills,
     });
-    if (report.kills <= 0 && report.gathers <= 0) {
+    if (report.kills <= 0 && report.gathers <= 0 && report.crafts <= 0) {
       this.ctx.persistCharacter();
       return null;
     }
 
+    // Spent before handed over, and in that order: a making camp works through
+    // the pack, so paying out the bars without taking the ore would be minting
+    // metal. Everything else leaves this empty.
+    for (const [itemId, quantity] of inventoryEntries(report.consumed)) {
+      character.removeItem(itemId, quantity);
+    }
     for (const [itemId, quantity] of inventoryEntries(report.drops)) {
       character.addItem(itemId, quantity);
     }
@@ -187,29 +213,34 @@ export class AfkCamp {
     // Anything already chasing is answered before anything else, whichever kind
     // of camp this is: being hit breaks a gather channel, so a woodcutter that
     // ignored the thing chewing on it would stand there re-arming a channel it
-    // could never finish until it died.
-    const skill = this.gatherSkill();
-    if (skill !== null && !this.hunted() && this.work(skill)) {
+    // could never finish until it died. A pan and a forge break the same way,
+    // which is why this is asked of the job rather than of the gather.
+    if (!this.hunted() && this.work(this.job())) {
       return;
     }
     this.fight();
   }
 
-  /** Which skill this camp is working, or null for the fighting one. */
-  private gatherSkill(): SkillId | null {
-    return afkGatherSkill(this.ctx.character.state.gear);
+  /**
+   * What this camp is working. Re-derived every frame rather than latched, so a
+   * gear swap, a fire going out or the last bar coming off the bench changes
+   * what the camp does without anything having to notice.
+   */
+  private job(): AfkCampJob {
+    const { character } = this.ctx;
+    return afkCampJob({
+      gear: character.state.gear,
+      skills: character.state.skills,
+      inventory: character.state.inventory,
+      stations: this.deps.stationsInReach(),
+    });
   }
 
   private hunted(): boolean {
     return this.deps.mobs.some((mob) => mob.isAlive() && mob.isEngaged());
   }
 
-  /**
-   * One frame of a gathering camp. Returns false when this tool has no work in
-   * this zone at all, which is the caller's cue to fall back to fighting — a
-   * fishing pole in the bandit camp is a camp with nothing to fish, not a camp
-   * that should stand still until the tab closes.
-   */
+  /** Every node in the zone, measured from the anchor rather than the player. */
   private nodeCandidates(): AfkNodeCandidate[] {
     const { character } = this.ctx;
     return this.deps.nodes.map((node, index) => ({
@@ -221,7 +252,42 @@ export class AfkCamp {
     }));
   }
 
-  private work(skill: SkillId): boolean {
+  /**
+   * One frame of a making or gathering camp. Returns false when there is no
+   * work of that kind here at all, which is the caller's cue to fall back to
+   * fighting.
+   */
+  private work(job: AfkCampJob): boolean {
+    if (job.kind === 'craft') return this.make(job.recipe);
+    if (job.kind === 'gather') return this.gather(job.skill);
+    return false;
+  }
+
+  /**
+   * One frame at a station. There is nothing to walk to and nothing to choose
+   * between — the job named the row and the player is already standing at it —
+   * so this is only ever "start it, or leave the one running alone". The channel
+   * re-arms itself down the stack, and when the inputs run out `canCraft`
+   * refuses, the channel stops, and next frame the job derives to something
+   * else.
+   */
+  private make(recipe: CraftingRecipe): boolean {
+    this.deps.targeting.clearTarget();
+    if (this.deps.isChanneling()) {
+      return true;
+    }
+    this.ctx.player.stopMoving();
+    this.deps.craft(recipe);
+    return true;
+  }
+
+  /**
+   * One frame of a gathering camp. Returns false when this tool has no work in
+   * this zone at all, which is the caller's cue to fall back to fighting — a
+   * fishing pole in the bandit camp is a camp with nothing to fish, not a camp
+   * that should stand still until the tab closes.
+   */
+  private gather(skill: SkillId): boolean {
     const { character } = this.ctx;
     const action = chooseAfkNode(this.nodeCandidates(), skill);
     if (action.kind === 'none') {
@@ -230,9 +296,9 @@ export class AfkCamp {
 
     this.deps.targeting.clearTarget();
     // The channel re-arms itself and the walk finishes on its own; re-issuing
-    // either every frame would restart it and it would never complete. A pan
-    // left on the fire counts: settling in beside one finishes the stack before
-    // the axe comes out, the same way a gather already under way is left alone.
+    // either every frame would restart it and it would never complete. Any
+    // channel counts, not only a gather — a pan the player left on the fire
+    // finishes its stack before the axe comes out.
     if (this.deps.isChanneling() || this.ctx.player.hasMoveTarget()) {
       return true;
     }
@@ -269,13 +335,18 @@ export class AfkCamp {
    * to pick up, where a fight could drop anything and only "no room at all"
    * answers for it.
    */
-  private canKeepWhatItFinds(): boolean {
+  private canKeepWhatItFinds(job: AfkCampJob): boolean {
     const { character } = this.ctx;
-    const skill = this.gatherSkill();
-    if (skill === null) {
+    // A making camp always can: it spends what it is carrying to make what it
+    // makes, so a bench full of ore is a pack getting lighter rather than one
+    // about to overflow. It is the one job a full pack is no warning about.
+    if (job.kind === 'craft') {
+      return true;
+    }
+    if (job.kind === 'fight') {
       return character.carriedWeight() < character.carryCapacity();
     }
-    const node = this.chosenNode(skill);
+    const node = this.chosenNode(job.skill);
     return node === null || character.canCarryItem(node.definition.yieldItemId);
   }
 

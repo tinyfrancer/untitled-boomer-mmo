@@ -16,9 +16,11 @@ export class AwayReportModal extends Overlay {
   constructor(report: OfflineAfkReport, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through', onClosed);
     const lines: string[] = [`Away for ${formatAwayDuration(report.elapsedMs)}`];
-    // A session is one or the other, never both — which is what the tool in the
-    // character's hands decided when they settled in.
-    if (report.skill) {
+    // A session is one of the three, never two — which is what the station
+    // underfoot and the tool in hand decided between them when they settled in.
+    if (report.skill && report.crafts > 0) {
+      lines.push(`${report.crafts} made, ${report.skillXp} ${SKILLS[report.skill].name} XP`);
+    } else if (report.skill) {
       lines.push(`${report.gathers} gathered, ${report.skillXp} ${SKILLS[report.skill].name} XP`);
     } else {
       lines.push(`${report.kills} kills, ${report.xp} XP`);
@@ -34,6 +36,20 @@ export class AwayReportModal extends Overlay {
     box.append(el('div', 'hud-modal__title', 'While you were away'));
     const body = el('div', 'hud-modal__body');
     body.append(...lines.map((line) => el('div', 'hud-modal__line', line)));
+
+    // What a making camp worked through, under its own heading for the same
+    // reason the drops are listed at all: coming back to a pack forty ore
+    // lighter with no line saying where it went reads as a bug, not a night's
+    // smithing. Every other kind of session leaves this empty.
+    const consumed = inventoryEntries(report.consumed);
+    if (consumed.length > 0) {
+      body.append(el('div', 'hud-modal__line', 'Used:'));
+      body.append(
+        ...consumed.map(([itemId, quantity]) =>
+          el('div', 'hud-modal__line', `${describeItemName(itemId)} x${quantity}`),
+        ),
+      );
+    }
 
     // What the pack had no room for, itemised under its own heading. A full
     // pack never stopped the session — it kept fighting or working and kept
