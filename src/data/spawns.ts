@@ -18,8 +18,20 @@ export interface NodeSpawnPoint {
 // (more level 1 than 2, more 2 than 3) is a property of the table itself.
 // Levels climb with distance from town center, so wandering out is the risk.
 export const TOWN_MOB_SPAWNS: MobSpawnPoint[] = [
-  { dx: -192, dy: -128, enemyId: 'rat', level: 1 },
-  { dx: 192, dy: -128, enemyId: 'rat', level: 1 },
+  /**
+   * The two either side of the square, kept a wander's length off the counters.
+   *
+   * They stood at ±192, which put the banker and the shopkeeper *inside* the
+   * 96-unit wander disc — and a creature standing at a counter's shoulder
+   * cannot be tapped at all: the camera is south of the player, so the ray in
+   * to a rat passes low over the ground just short of it, and a person standing
+   * there is crossed first. NPCs outrank mobs in `pickTap` deliberately (a rat
+   * in front of the shopkeeper must not stop you shopping), so what has to give
+   * is the spacing. `tests/render3d/picking.test.ts` sweeps the disc and holds
+   * it.
+   */
+  { dx: -288, dy: -96, enemyId: 'rat', level: 1 },
+  { dx: 288, dy: -96, enemyId: 'rat', level: 1 },
   { dx: -128, dy: 192, enemyId: 'rat', level: 1 },
   { dx: 128, dy: 192, enemyId: 'rat', level: 1 },
   { dx: 0, dy: 256, enemyId: 'rat', level: 1 },

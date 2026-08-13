@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { TILE_SIZE } from '../../src/config/constants';
-import { MobActor, NodeActor, NpcActor, SignpostActor } from '../../src/render3d/actors';
+import {
+  MobActor,
+  NodeActor,
+  NpcActor,
+  SignpostActor,
+  StationActor,
+} from '../../src/render3d/actors';
 import {
   createCamera,
   frameCamera,
@@ -16,12 +22,15 @@ import {
   pointerRay,
   type PickScene,
 } from '../../src/render3d/picking';
+import { ZONES } from '../../src/data/zones';
 import { Raycaster, Vector3 } from 'three';
 import { harness } from '../world/harness';
 import type { PerspectiveCamera } from 'three';
 import { stubCanvas } from './canvasStub';
 import type { Point } from '../../src/systems/MovementSystem';
 import type { WorldTap } from '../../src/world/ZoneWorld';
+import type { ZoneId } from '../../src/types/ids';
+import type { Mob } from '../../src/world/Mob';
 
 /**
  * A portrait phone, which is where picking is hardest: the camera sits furthest
@@ -265,4 +274,86 @@ describe('pickTap', () => {
       mob: inFront,
     });
   });
+});
+
+/**
+ * Where the furniture stands, which is a picking rule before it is a level
+ * design one.
+ *
+ * `pickTap` is a priority and not a depth sort, so anything ranked above a mob
+ * wins from *anywhere along the ray* — and the ray to a creature comes in over
+ * the ground to the south of it, because that is where the camera stands. A
+ * counter or a station parked on that approach silently swallows every tap on
+ * the creature beyond it, which reads to a player as a rat that cannot be
+ * attacked and to `npm run smoke` as a finger tap that selected nothing.
+ *
+ * `zones.ts` says this in prose over the forge's placement, having learned it
+ * the hard way. Nothing held it over the *people*, and the trainer had been
+ * standing on the approach to a town rat ever since — the same coordinates the
+ * forge was moved off, mirrored. This is what holds it now, over every zone and
+ * every spawn at once.
+ *
+ * Swept over the wander disc rather than checked at the spawn point, because a
+ * creature is only ever *at* its spawn on the frame the zone was built: what
+ * has to be tappable is the rat where it actually is, and the spot a player
+ * stands to fight it moves with it.
+ */
+describe('the approach to a creature', () => {
+  beforeEach(stubCanvas);
+
+  /** How far south of it a player ends up: melee reach, and a tap short of it. */
+  const STANDING = [80, 150];
+
+  /** Everywhere wandering can carry it, as a ring and a half-ring around spawn. */
+  function reachableSpots(mob: Mob): Point[] {
+    const { radius } = mob.definition.wander;
+    const spots: Point[] = [{ x: mob.spawnX, y: mob.spawnY }];
+    for (let step = 0; step < 8; step += 1) {
+      const angle = (step / 8) * Math.PI * 2;
+      for (const out of [radius / 2, radius]) {
+        spots.push({
+          x: mob.spawnX + Math.cos(angle) * out,
+          y: mob.spawnY + Math.sin(angle) * out,
+        });
+      }
+    }
+    return spots;
+  }
+
+  it.each(Object.keys(ZONES) as ZoneId[])(
+    'is clear of every counter and station in %s',
+    (zoneId) => {
+      const { world } = harness({ zoneId });
+      const scene = {
+        npcs: world.npcs.map((npc) => new NpcActor(npc)),
+        stations: world.stations.map((station) => new StationActor(station)),
+        mobs: world.mobs.map((mob) => new MobActor(mob, 1)),
+      };
+
+      // Every one of them, rather than the first: which counter is in the way of
+      // what is the whole of the fix, and stopping at one hides the rest.
+      const swallowed: string[] = [];
+      for (const mob of world.mobs) {
+        for (const spot of reachableSpots(mob)) {
+          mob.setPosition(spot.x, spot.y);
+          for (const back of STANDING) {
+            const tapped = tapAt(cameraOn({ x: mob.x, y: mob.y + back }), scene, spot);
+            if (tapped?.kind === 'mob') continue;
+            const by =
+              tapped?.kind === 'npc'
+                ? `the ${tapped.npc.npcId}`
+                : tapped?.kind === 'station'
+                  ? `the ${tapped.station.station}`
+                  : String(tapped?.kind);
+            swallowed.push(
+              `the ${mob.definition.name} at ${Math.round(spot.x)},${Math.round(spot.y)} tapped from ${back} back, by ${by}`,
+            );
+          }
+        }
+        mob.setPosition(mob.spawnX, mob.spawnY);
+      }
+
+      expect(swallowed, `taps ${zoneId} swallows`).toEqual([]);
+    },
+  );
 });
