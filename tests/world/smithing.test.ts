@@ -80,6 +80,45 @@ describe('the forge', () => {
     expect(String(kit.emissions(NOTICE_EVENT).at(-1))).toContain('Smithing');
   });
 
+  /**
+   * The forge's one recipe that makes nothing anybody wears, and the reason it
+   * is here: bones and logs were two of the four materials in the game that led
+   * nowhere, and this is where both of them go.
+   */
+  it('burns bones and a log down into the char the plate tier is hardened with', () => {
+    const kit = atTheForge();
+    kit.character.awardSkillXp('smithing', 10_000);
+    kit.state.inventory = { 'rat-bones': 2, logs: 1 };
+
+    kit.world.handleSmithRequested('bone-char');
+    kit.tick(Math.ceil(RECIPES['bone-char'].durationMs / 200) + 1);
+
+    expect(kit.state.inventory['bone-char'] ?? 0).toBe(1);
+    expect(kit.state.inventory['rat-bones'] ?? 0).toBe(0);
+    expect(kit.state.inventory['logs'] ?? 0).toBe(0);
+  });
+
+  // A piece of plate is where the quarry, the trees and the town rats meet, and
+  // the whole basket has to be on the bench before any of it is spent.
+  it('finishes a helmet only once the bars, the tin and the char are all there', () => {
+    const kit = atTheForge();
+    kit.character.awardSkillXp('smithing', 10_000);
+    kit.state.inventory = { 'iron-bar': 2, 'tin-bar': 1 };
+
+    kit.world.handleSmithRequested('iron-helmet');
+    kit.tick(Math.ceil(RECIPES['iron-helmet'].durationMs / 200) + 1);
+    expect(kit.state.inventory['iron-helmet'] ?? 0).toBe(0);
+    expect(kit.state.inventory['iron-bar']).toBe(2);
+
+    kit.character.addItem('bone-char', 1);
+    kit.world.handleSmithRequested('iron-helmet');
+    kit.tick(Math.ceil(RECIPES['iron-helmet'].durationMs / 200) + 1);
+
+    expect(kit.state.inventory['iron-helmet'] ?? 0).toBe(1);
+    expect(kit.state.inventory['tin-bar'] ?? 0).toBe(0);
+    expect(kit.state.inventory['bone-char'] ?? 0).toBe(0);
+  });
+
   it('refuses a recipe whose inputs are not all in the pack', () => {
     const kit = atTheForge();
     kit.character.awardSkillXp('smithing', 10_000);

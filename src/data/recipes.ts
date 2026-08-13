@@ -79,6 +79,21 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     xpReward: 20,
     durationMs: 2500,
   },
+  // Meat, in a game with a cooking skill, that could not be cooked. It pays the
+  // least of the three on purpose: the pond is still where cooking is levelled,
+  // and this is what a level 1 eats on the way to affording the pole.
+  'cooked-rat': {
+    id: 'cooked-rat',
+    name: 'Rat Meat',
+    skill: 'cooking',
+    station: 'fire',
+    inputs: [{ itemId: 'rat-meat', quantity: 1 }],
+    outputItemId: 'cooked-rat',
+    failureItemId: 'burnt-rat',
+    requiredLevel: 1,
+    xpReward: 8,
+    durationMs: 1800,
+  },
   // Smelting: one rock in, one bar out, and the only two recipes at the forge
   // that a bag cell can start on its own. Tin at level 1 and iron at 4 is the
   // town pond and the ocean wearing different clothes — a skill with one node
@@ -105,15 +120,51 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     xpReward: 18,
     durationMs: 2800,
   },
-  // The plate set, and the first armour in the game nothing drops. Each piece
-  // costs bars in proportion to what it covers, so the chest is the long pull
-  // and the helmet is what a first forge run can actually finish.
+  /**
+   * Bones off the rats and a log off the trees, burnt down together.
+   *
+   * The one recipe here that makes nothing anybody wears, and the reason it
+   * exists is what it is made of: two materials the game handed out and then had
+   * no use for. It sits between the two smelts rather than beside the armour it
+   * is for, because a smith with no iron yet still has something to climb with.
+   */
+  'bone-char': {
+    id: 'bone-char',
+    name: 'Bone Char',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'rat-bones', quantity: 2 },
+      { itemId: 'logs', quantity: 1 },
+    ],
+    outputItemId: 'bone-char',
+    requiredLevel: 2,
+    xpReward: 14,
+    durationMs: 2400,
+  },
+  /**
+   * The plate set, and the first armour in the game nothing drops. Each piece
+   * costs bars in proportion to what it covers, so the chest is the long pull
+   * and the helmet is what a first forge run can actually finish.
+   *
+   * The two secondaries are what make this tier the place the loops meet rather
+   * than a second thing to do with iron: the tin is what the plate is tinned
+   * with so it does not rust, which is the only reason the softer of the two
+   * veins is worth swinging at once the harder one is open, and the char is what
+   * it is hardened in. A finished piece has both quarry veins, a tree and a rat
+   * behind it, which is a claim `tests/systems/deadEnds.test.ts` holds by
+   * tracing every input back to where it came into the game.
+   */
   'iron-helmet': {
     id: 'iron-helmet',
     name: 'Iron Helmet',
     skill: 'smithing',
     station: 'forge',
-    inputs: [{ itemId: 'iron-bar', quantity: 2 }],
+    inputs: [
+      { itemId: 'iron-bar', quantity: 2 },
+      { itemId: 'tin-bar', quantity: 1 },
+      { itemId: 'bone-char', quantity: 1 },
+    ],
     outputItemId: 'iron-helmet',
     requiredLevel: 5,
     xpReward: 40,
@@ -124,7 +175,11 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     name: 'Iron Legs',
     skill: 'smithing',
     station: 'forge',
-    inputs: [{ itemId: 'iron-bar', quantity: 3 }],
+    inputs: [
+      { itemId: 'iron-bar', quantity: 3 },
+      { itemId: 'tin-bar', quantity: 1 },
+      { itemId: 'bone-char', quantity: 1 },
+    ],
     outputItemId: 'iron-legs',
     requiredLevel: 6,
     xpReward: 60,
@@ -135,7 +190,11 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     name: 'Iron Chestplate',
     skill: 'smithing',
     station: 'forge',
-    inputs: [{ itemId: 'iron-bar', quantity: 4 }],
+    inputs: [
+      { itemId: 'iron-bar', quantity: 4 },
+      { itemId: 'tin-bar', quantity: 2 },
+      { itemId: 'bone-char', quantity: 2 },
+    ],
     outputItemId: 'iron-chestplate',
     requiredLevel: 7,
     xpReward: 80,
