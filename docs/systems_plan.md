@@ -441,6 +441,37 @@ tab being closed, and an offline session that pretended otherwise would be payin
 at a fire that went out in the first two minutes. A forge standing in a zone is a fact about the
 zone; a campfire is not.
 
+Shipped as written, with four things the section did not say and that turned out to carry it.
+
+**The order between the two inputs is the whole rule, and it had to be argued rather than picked.** A
+station beats a tool: you walked to the forge, where the pickaxe is merely what you are holding. What
+makes that safe rather than a trap is that a craft eats out of the bag and the bag runs dry — so
+standing at a forge with the last ore in the pack is a smithing camp that becomes a mining camp, and
+settling in at a fire on the beach with a pole is a camp that fishes and cooks by turns. A tool-first
+order would have made the second of those impossible and the first pointless.
+
+**The camp does not light its own fire**, which was the first cut and is wrong for two reasons that
+only showed up written down. A log is not the camp's to spend, and a fire lit wherever the camp
+happened to be standing gets relit at every node a gathering camp walks to. Ninety seconds turns out
+to be the right length anyway: a stack of fish is well under a minute of cooking, so one fire is a
+whole cooking camp, and when it goes out the camp goes back to what it was doing instead of feeding
+logs to a fire all night.
+
+**Offline needed a save field, and it is the first thing here that could not be derived.** A zone
+says what a camp was fighting and what it was gathering, because both are facts about the map; where
+in the zone somebody stood is not, and a forge is one tile of a town. `AfkSession.station` records
+the station the camp _settled to work at_ — none for a gathering or fighting camp — so the morning's
+payout runs the same precedence the awake loop decided at the toggle. Whether a fire counts is
+`STATION_PERSISTS`'s ruling rather than something the toggle decides, which keeps the rule this
+section is named after in one testable place.
+
+**A making session is the only one that spends anything**, and that is the bug this would have
+shipped with. Every other branch of the offline report only ever adds to the pack, so `resolveParked`
+only ever handed `drops` over — which against a forge would have minted forty bars out of ore that
+was never taken. `OfflineAfkReport.consumed` runs the other way and is spent before the drops are
+given, and the away report grew a "Used:" heading to match, because coming back to a pack forty ore
+lighter with no line saying where it went reads as a bug rather than as a night's smithing.
+
 ---
 
 # Phase four — reasons to come back

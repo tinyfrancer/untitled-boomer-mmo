@@ -828,11 +828,11 @@ Kills are the exception to the penalty: an offline session credits its full coun
 chains, since a kill either happened or it didn't. It grinds a single spawn, which is what makes
 one `enemyId` on the report enough to credit them all.
 
-**What a camp does is read off the tool, not out of a mode** (`afkGatherSkill`). A gathering tool
-_is_ the weapon slot, so a fishing pole, a felling axe or a pickaxe makes the Camp tab a gathering
-camp and a
+**What a camp does is read off the tool and the station, not out of a mode** (`afkCampJob`). A
+gathering tool _is_ the weapon slot, so a fishing pole, a felling axe or a pickaxe makes the Camp tab
+a gathering camp and a
 sword, a wand or an empty hand makes it the fighting one — the same question `canGather` already
-asks, which is why this needed nothing stored, no migration and no second button. Mining is what
+asks, which is why this needed nothing stored and no second button. Mining is what
 collected on that: a whole third skill, awake and offline, cost the AFK code not one line. It
 re-derives
 every frame, so a gear swap changes what the camp is doing. A gathering camp works the nearest
@@ -842,6 +842,20 @@ camp does between respawns, `none` means the tool has no work in this zone and t
 back to fighting). Anything already chasing is answered first whichever camp it is — being hit
 breaks the channel, so a woodcutter that ignored it would re-arm a gather it could never finish
 until it died.
+
+**The station underfoot is the second half of that derivation, and it is where the rule bends.**
+Cooking has no tool at all, so the skill with the deepest active loop was the one skill nobody could
+camp, and smithing inherited the same hole the day the forge landed. What makes the bend principled
+rather than drift is that **a station is a tool you cannot carry**: nothing is stored and nothing is
+chosen twice, the derivation simply reads two inputs instead of one. Standing at a fire holding raw
+fish is a cooking camp; standing at a forge holding ore is a smithing one. **A station beats a
+tool** — you walked to the forge where the pickaxe is merely what you are holding — and the two
+cannot deadlock, because a craft eats out of the bag and the bag runs dry, at which point the
+gatherer that filled it takes over again. The camp never lights a fire: a log is not the camp's to
+spend, and 90 seconds of `FIRE_BURN_MS` is already long enough to cook out a pack of fish and short
+enough that it goes back to what it was doing rather than feeding a fire all night. A making camp is
+also the one job a full pack is _no_ warning about, since it spends what it carries to make what it
+makes.
 
 **A full pack never stops an unattended session; it only stops it keeping anything.** The camp keeps
 fighting or working and keeps earning, and everything it cannot pocket is counted into
@@ -859,6 +873,18 @@ where the penalty lives, and it is the same stack a fight gets plus a cap of **o
 session**, which is what makes it safe for `resolveOfflineGather` to model neither a tree's four
 charges, nor its fifteen-second regrow, nor the walk to the next one. A node's `requiredLevel` is
 honoured offline too — parking overnight is not a way past a gate.
+
+**Offline crafting works at permanent stations only** (`STATION_PERSISTS`, `resolveOfflineCraft`).
+A forge is a fact about the zone and is still standing in the morning; a campfire is a fact about the
+player and went out ninety seconds after the tab closed, so a session paid for one would be paying
+for eight hours at a fire nobody was tending. That is the one thing a parked session cannot re-derive
+— a zone says what a camp was fighting or gathering, but a forge is one tile of a town — so
+`AfkSession.station` records the station the camp _settled to work at_ and nothing else, which is the
+awake loop's own precedence decided once at the toggle. The offline branch takes the same order the
+awake camp runs: the station first, then the tool, then the fight. It is also the only branch that
+**spends** anything, so `OfflineAfkReport.consumed` runs the opposite way from `drops` and
+`resolveParked` has to take it back off the character — a payout that only did the second half would
+mint bars out of ore that was never used.
 
 **Levels scale both sides.** Enemies carry a `level` and derive HP/damage/XP from
 `base + perLevel` via `scaleEnemyStats()`; characters grow through `perLevel` on their class and
