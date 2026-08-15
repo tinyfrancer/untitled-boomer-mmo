@@ -26,8 +26,12 @@ const MATERIALS = Object.values(ITEMS).filter((item) => item.kind === 'material'
 const isRecipeInput = (itemId: ItemId): boolean =>
   RECIPE_LIST.some((recipe) => recipe.inputs.some((input) => input.itemId === itemId));
 
+// Only a collect objective is a use for an item; a quest that asks for kills or
+// for a walk is not a sink for anything in the bag.
 const questObjectives = (): ItemId[] =>
-  Object.values(QUESTS).map((quest) => quest.objective.itemId);
+  Object.values(QUESTS).flatMap((quest) =>
+    quest.objective.kind === 'collect' ? [quest.objective.itemId] : [],
+  );
 
 const zoneKeys = (): ItemId[] =>
   Object.values(ZONES).flatMap((zone) => (zone.requiresKey ? [zone.requiresKey] : []));

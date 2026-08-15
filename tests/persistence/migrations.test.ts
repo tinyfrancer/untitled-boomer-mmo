@@ -4,6 +4,8 @@ import { CHARACTER_STATE_VERSION, createNewCharacter } from '../../src/persisten
 import { knownAbilities } from '../../src/systems/AbilitySystem';
 import { STARTING_BANK_SLOTS } from '../../src/systems/BankSystem';
 import { createInitialSkills } from '../../src/systems/SkillSystem';
+import { questProgress } from '../../src/systems/QuestSystem';
+import { QUESTS } from '../../src/data/quests';
 
 // A save as v4 wrote it: no currency, optional zoneId, tools in the bag.
 function v4Save(): Record<string, unknown> {
@@ -350,6 +352,51 @@ describe('migrateCharacterState', () => {
       station: null,
     });
     expect(migrateCharacterState({ ...base, afk: null })?.afk).toBeNull();
+  });
+
+  /**
+   * A quest log of statuses becomes a log of entries, and the zone tally it can
+   * now be counted against arrives empty.
+   *
+   * Zero is the right baseline rather than a lost number: every quest a v17 save
+   * could hold was a "bring me N of X", whose baseline means nothing because a
+   * bag is not a tally. What was half-collected stays half-collected, because
+   * that was always read off the pack.
+   */
+  it('turns a v17 quest log into entries and starts the visit tally empty', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 17,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: { 'rat-bones': 'done', 'crab-feast': 'active' },
+      inventory: { 'cooked-crab': 12 },
+      kills: { rat: 30 },
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      skills: createInitialSkills(),
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.quests).toEqual({
+      'rat-bones': { status: 'done', baseline: 0 },
+      'crab-feast': { status: 'active', baseline: 0 },
+    });
+    expect(migrated?.visits).toEqual({});
+    // The half-done collect quest is still half done, because that was never in
+    // the log to begin with.
+    expect(
+      questProgress(QUESTS['crab-feast'], migrated?.quests ?? {}, {
+        inventory: migrated?.inventory ?? {},
+        kills: migrated?.kills ?? {},
+        visits: migrated?.visits ?? {},
+      }),
+    ).toEqual({ have: 12, need: 20, met: false });
   });
 
   it('drops saves older than the migration chain', () => {

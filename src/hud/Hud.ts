@@ -26,7 +26,12 @@ import { itemsForSlot, type Gear, type Inventory } from '../systems/InventorySys
 import { describeItem } from '../systems/InspectSystem';
 import { actionsForItem, type ItemAction, type ItemActionId } from '../systems/ItemActionsSystem';
 import { xpToNextLevel } from '../systems/LevelingSystem';
-import { activeQuests, type QuestLog } from '../systems/QuestSystem';
+import {
+  activeQuests,
+  type QuestCounters,
+  type QuestLog,
+  type ZoneVisits,
+} from '../systems/QuestSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
@@ -81,6 +86,7 @@ import {
   TITLE_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
+  VISITS_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
   type AvailableActions,
@@ -136,7 +142,11 @@ interface HudModel {
   skills: Skills;
   combatLog: CombatLogEntry[];
   quests: QuestLog;
+  // The two tallies beside the bag that a quest objective may be counted off.
+  // Both are seeded from the save and kept current by the world, because both
+  // move out in the zone rather than in a panel.
   kills: KillCounts;
+  visits: ZoneVisits;
   activeTitleId: TitleId | null;
   unlockedZones: ZoneId[];
   shopOpen: boolean;
@@ -215,6 +225,7 @@ class Hud {
       combatLog: [],
       quests: character.quests,
       kills: character.kills,
+      visits: character.visits,
       activeTitleId: character.activeTitleId,
       unlockedZones: character.unlockedZones,
       shopOpen: false,
@@ -228,7 +239,7 @@ class Hud {
     this.root = el('div', 'hud');
     this.overlays = new OverlayHost(this.root, events, {
       shop: () => ({
-        inventory: this.model.inventory,
+        ...this.questCounters(),
         currency: this.model.currency,
         quests: this.model.quests,
         level: this.model.level,
@@ -318,12 +329,11 @@ class Hud {
     this.playerColumn.setXp(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
     this.playerColumn.setMana(this.model.mana, this.model.maxMana);
     this.refreshHealth();
-    this.tracker.update(this.model.quests, this.model.inventory);
+    this.refreshQuests();
     this.refreshCharacterSheet();
     this.inventorySheet.update(this.model.inventory);
     this.inventorySheet.setCurrency(this.model.currency);
     this.refreshEncumbrance();
-    this.questSheet.update(this.model.quests, this.model.inventory);
     this.featsSheet.update(this.model.kills, this.model.activeTitleId);
     this.combatLogSheet.update(this.model.combatLog);
     this.setOpenSheet(this.narrow ? null : 'character');
@@ -547,6 +557,23 @@ class Hud {
     this.playerColumn.setHp(Math.min(this.model.hp, maxHp), maxHp);
   }
 
+  /** The three tallies a quest objective may be counted off, as the model holds them. */
+  private questCounters(): QuestCounters {
+    const { inventory, kills, visits } = this.model;
+    return { inventory, kills, visits };
+  }
+
+  /**
+   * The strip and the sheet together, because they read the same three counters
+   * and any of the three can move without the quest log changing at all — an
+   * item into the bag, a corpse, or a walk into a zone.
+   */
+  private refreshQuests(): void {
+    const counters = this.questCounters();
+    this.tracker.update(this.model.quests, counters);
+    this.questSheet.update(this.model.quests, counters);
+  }
+
   private refreshCharacterSheet(): void {
     const stats = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
     this.characterSheet.update({
@@ -674,6 +701,14 @@ class Hud {
     listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;
       this.featsSheet.update(kills, this.model.activeTitleId);
+      // A corpse is progress on a kill objective, and the counter behind the
+      // shopkeeper's row is the same one the feats sheet just redrew from.
+      this.refreshQuests();
+      this.overlays.refreshShop();
+    });
+    listen(VISITS_CHANGED_EVENT, (visits) => {
+      this.model.visits = visits;
+      this.refreshQuests();
     });
 
     listen(PLAYER_MANA_CHANGED_EVENT, ({ mana, maxMana }) => {
@@ -716,8 +751,7 @@ class Hud {
       // And the forge, whose rows are drawn against what the bag actually holds.
       this.overlays.refreshForge();
       // Quest progress is counted off the bag, so every pickup can move it.
-      this.tracker.update(this.model.quests, inventory);
-      this.questSheet.update(this.model.quests, inventory);
+      this.refreshQuests();
       // So is whether a key is in hand, which is what a shut zone's cell says.
       this.mapSheet.refreshAccess();
     });
@@ -789,8 +823,7 @@ class Hud {
 
     listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
       this.model.quests = quests;
-      this.tracker.update(quests, this.model.inventory);
-      this.questSheet.update(quests, this.model.inventory);
+      this.refreshQuests();
       this.overlays.refreshShop();
       // How many tracker lines there are is a layout input for everything
       // stacked above it.

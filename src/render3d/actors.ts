@@ -342,13 +342,14 @@ export class NpcActor implements Actor, Pickable {
    * Catches the quest marker up to the character.
    *
    * Read off the state each frame rather than driven by an event, the same
-   * bargain the con colours make: a quest's progress is *derived* from the bag
-   * (`QuestSystem`), so the thing that changes this glyph is a rat bone landing
-   * in the pack — and nothing publishes that. `setMarker` only rebuilds when the
-   * answer actually moves, so the frame cost is the two-quest walk and nothing.
+   * bargain the con colours make: a quest's progress is *derived* (`QuestSystem`)
+   * from the bag, the kills or the arrivals, so the thing that changes this glyph
+   * is a rat bone landing in the pack — and nothing publishes that. `setMarker`
+   * only rebuilds when the answer actually moves, so the frame cost is the walk
+   * down the quest list and nothing.
    */
   sync(state: CharacterState): void {
-    const marker = npcMarker(this.npc.npcId, state.quests, state.inventory);
+    const marker = npcMarker(this.npc.npcId, state.quests, state);
     const style = marker ? QUEST_MARKER_STYLE[marker] : null;
     this.plate.setMarker(style?.glyph ?? null, style?.color ?? '');
   }

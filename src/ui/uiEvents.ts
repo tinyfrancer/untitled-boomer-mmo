@@ -14,7 +14,7 @@ import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
 import type { InspectPanel } from '../systems/InspectSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
-import type { QuestLog } from '../systems/QuestSystem';
+import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -129,6 +129,10 @@ export const TRAVEL_REQUESTED_EVENT = 'travel-requested';
 // missing from the pack means either "never found one" or "already used it",
 // and the world map draws those two cells very differently.
 export const UNLOCKED_ZONES_CHANGED_EVENT = 'unlocked-zones-changed';
+// How many times each zone has been arrived in. On the wire for the reason the
+// kill counts are: a quest may ask the player to go somewhere, and the tally it
+// is counted off is not in the bag the HUD already holds.
+export const VISITS_CHANGED_EVENT = 'visits-changed';
 export const PLAYER_TILE_CHANGED_EVENT = 'player-tile-changed';
 // The context menu, which is the one thing on this channel that starts with a
 // press on the *world* rather than on the HUD. The host resolves what was under
@@ -323,6 +327,7 @@ export interface UiEventMap {
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
   [TRAVEL_REQUESTED_EVENT]: [zoneId: ZoneId];
   [UNLOCKED_ZONES_CHANGED_EVENT]: [zoneIds: ZoneId[]];
+  [VISITS_CHANGED_EVENT]: [visits: ZoneVisits];
   [PLAYER_TILE_CHANGED_EVENT]: [tile: TilePoint];
   [CONTEXT_MENU_REQUESTED_EVENT]: [request: ContextMenuRequest];
   [CONTEXT_ACTION_REQUESTED_EVENT]: [actionId: ContextActionId];

@@ -24,7 +24,11 @@ function everyOtherSource(): ItemId[] {
     .filter((table) => table.id !== 'bandit-chief')
     .flatMap((table) => table.entries.map((entry) => entry.itemId));
   const fromShop = SHOP_STOCK.map((entry) => entry.itemId);
-  const fromQuests = Object.values(QUESTS).flatMap((quest) => Object.values(quest.reward.gear));
+  // Most quests pay coin and XP alone; only the ones that name gear can put an
+  // item into the game.
+  const fromQuests = Object.values(QUESTS).flatMap((quest) =>
+    Object.values(quest.reward.gear ?? {}),
+  );
   return [...fromLoot, ...fromShop, ...fromQuests];
 }
 

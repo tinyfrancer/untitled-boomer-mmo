@@ -3,10 +3,10 @@ import {
   activeQuests,
   formatQuestProgress,
   questProgress,
+  type QuestCounters,
   type QuestLog,
 } from '../systems/QuestSystem';
 import { MAX_TRACKED_QUESTS, type Rect } from '../ui/layout';
-import type { Inventory } from '../systems/InventorySystem';
 
 /**
  * One line per quest in progress, pinned above the ability bar. No background
@@ -24,14 +24,14 @@ export class QuestTracker {
     place(this.root, rect, 'width');
   }
 
-  update(log: QuestLog, inventory: Inventory): void {
+  update(log: QuestLog, counters: QuestCounters): void {
     this.root.replaceChildren();
     for (const definition of activeQuests(log).slice(0, MAX_TRACKED_QUESTS)) {
-      const { met } = questProgress(definition, inventory);
+      const { met } = questProgress(definition, log, counters);
       const line = el(
         'div',
         'hud-tracker__line',
-        `◆ ${formatQuestProgress(definition, inventory)}`,
+        `◆ ${formatQuestProgress(definition, log, counters)}`,
       );
       // Complete reads as "go and hand this in", which is the only moment the
       // strip is asking for something.

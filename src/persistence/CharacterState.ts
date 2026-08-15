@@ -3,11 +3,11 @@ import type { StationId } from '../data/recipes';
 import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
-import type { QuestLog } from '../systems/QuestSystem';
+import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 17;
+export const CHARACTER_STATE_VERSION = 18;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -49,13 +49,18 @@ export interface CharacterState {
   // between an AFK toggle-on and the next load, which is what makes offline
   // progress something the player opted into rather than a background trickle.
   afk: AfkSession | null;
-  // Which quests are accepted or finished. Progress is not stored — it is
-  // counted off the inventory on read (see QuestSystem).
+  // Which quests are accepted or finished, and where the tally each one counts
+  // stood when it was taken. Progress itself is not stored — it is counted off
+  // the bag, the kills or the visits on read (see QuestSystem).
   quests: QuestLog;
   // Kills per creature. The one counter that has to be stored: a corpse leaves
   // nothing in the bag to count it off. Which achievements and titles it has
   // earned is derived from this on read (see AchievementSystem).
   kills: KillCounts;
+  // Arrivals per zone, stored for the same reason kills are: walking into a
+  // place leaves nothing behind, and `zoneId` says where the character is
+  // rather than where they have been.
+  visits: ZoneVisits;
   // Which earned title is worn, if any. Only the choice is state — the right to
   // wear it comes from kills.
   activeTitleId: TitleId | null;
@@ -111,6 +116,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     afk: null,
     quests: {},
     kills: {},
+    visits: {},
     activeTitleId: null,
     unlockedZones: [],
     createdAt: now,

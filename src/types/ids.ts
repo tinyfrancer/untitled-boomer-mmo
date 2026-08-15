@@ -152,7 +152,8 @@ export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 // stopped every NPC in the game opening a shop when tapped.
 export type NpcId = 'shopkeeper' | 'banker' | 'trainer';
 
-export type QuestId = 'rat-bones' | 'crab-feast';
+export type QuestId =
+  'rat-bones' | 'quarry-road' | 'crab-feast' | 'bandit-trouble' | 'the-cutthroat';
 
 export type AbilityId =
   // The two each class opens with, and the two it buys.
