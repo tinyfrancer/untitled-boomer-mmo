@@ -1,5 +1,6 @@
 import { Sheet } from './Sheet';
-import { el, emptyLine } from './dom';
+import { el, emptyLine, sectionHeader } from './dom';
+import { bountyById, bountyProgress, type ActiveBounty } from '../systems/BountySystem';
 import { QUESTS, QUEST_ORDER, type QuestReward } from '../data/quests';
 import { describeItemName } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -26,16 +27,27 @@ export class QuestSheet extends Sheet {
     this.classId = classId;
   }
 
-  update(log: QuestLog, counters: QuestCounters): void {
+  update(log: QuestLog, bounty: ActiveBounty | null, counters: QuestCounters): void {
     this.body.replaceChildren();
 
     const taken = QUEST_ORDER.map((id) => QUESTS[id]).filter((quest) => log[quest.id]);
-    if (taken.length === 0) {
+    if (taken.length === 0 && !bounty) {
       this.body.append(
         emptyLine('Nobody has asked you for anything yet.'),
-        emptyLine('Try the shopkeeper in town.'),
+        emptyLine('Try the shopkeeper or the quartermaster in town.'),
       );
       return;
+    }
+
+    // The contract first and under its own heading, because the two are not the
+    // same kind of thing: a quest is a story told once, and this is the work the
+    // player picked up this afternoon and can give back.
+    if (bounty) {
+      this.body.append(sectionHeader('Contract'));
+      this.body.append(this.contractBlock(bounty, counters));
+    }
+    if (taken.length > 0 && bounty) {
+      this.body.append(sectionHeader('Quests'));
     }
 
     for (const quest of taken) {
@@ -65,6 +77,32 @@ export class QuestSheet extends Sheet {
       }
       this.body.append(block);
     }
+  }
+
+  /** The one contract in hand, drawn as a quest block with no chain behind it. */
+  private contractBlock(bounty: ActiveBounty, counters: QuestCounters): HTMLElement {
+    const definition = bountyById(bounty.bountyId);
+    const { have, need, met } = bountyProgress(definition, bounty, counters);
+
+    const block = el('div', 'hud-quest');
+    block.append(el('div', 'hud-quest__name', definition.name));
+    const progress = el(
+      'div',
+      'hud-quest__line',
+      `${describeObjective(definition.objective)}  ${have}/${need}${
+        met ? '  — ready to hand in' : ''
+      }`,
+    );
+    progress.classList.toggle('is-ready', met);
+    block.append(
+      progress,
+      el(
+        'div',
+        'hud-quest__reward',
+        `Pays ${formatCurrency(definition.reward.copper)}, ${definition.reward.xp} XP`,
+      ),
+    );
+    return block;
   }
 
   // Most quests pay coin and XP alone, so the gear clause is written only when

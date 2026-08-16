@@ -118,6 +118,21 @@ export function logQuestCompleted(questName: string): CombatLogEntry {
   return { text: `Quest complete: ${questName}!`, color: THEME.color.levelUp };
 }
 
+// Named "contract" rather than "quest" throughout, so the log reads as two
+// kinds of work rather than as one kind said twice — the board's lines and the
+// shopkeeper's are otherwise indistinguishable a hundred lines later.
+export function logBountyAccepted(bountyName: string): CombatLogEntry {
+  return { text: `Contract taken: ${bountyName}.`, color: THEME.color.skillUp };
+}
+
+export function logBountyCompleted(bountyName: string): CombatLogEntry {
+  return { text: `Contract paid: ${bountyName}!`, color: THEME.color.levelUp };
+}
+
+export function logBountyAbandoned(bountyName: string): CombatLogEntry {
+  return { text: `Contract given back: ${bountyName}.`, color: THEME.color.dim };
+}
+
 export function logAchievement(achievementName: string): CombatLogEntry {
   return { text: `Achievement earned: ${achievementName}!`, color: THEME.color.levelUp };
 }

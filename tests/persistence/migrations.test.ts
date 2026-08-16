@@ -399,6 +399,40 @@ describe('migrateCharacterState', () => {
     ).toEqual({ have: 12, need: 20, met: false });
   });
 
+  /**
+   * The board opens, and nobody was holding a contract off it because there was
+   * none to hold. Null is what that character actually had rather than a stand-in
+   * for information the step lost — the v7 → v8 argument for `afk` exactly — and
+   * nothing is granted, since handing an upgraded save a contract would be paying
+   * for work nobody did.
+   */
+  it('opens the board with no contract in hand', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 18,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: { 'rat-bones': { status: 'done', baseline: 0 } },
+      kills: { rat: 30 },
+      visits: { town: 4 },
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      skills: createInitialSkills(),
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.bounty).toBeNull();
+    // The tallies a contract would be counted off are untouched: they are the
+    // same two a quest already used, and this step adds no third one.
+    expect(migrated?.kills).toEqual({ rat: 30 });
+    expect(migrated?.visits).toEqual({ town: 4 });
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();

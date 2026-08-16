@@ -280,9 +280,13 @@ const spawned = () =>
     nodes: window.world.nodes.length,
     npcs: window.world.npcs.length,
     // Not the same number as `npcs` since the banker arrived, which is exactly
-    // what the marker check below would otherwise have kept asserting. The
-    // shopkeeper is the game's only quest giver; the banker offers none.
-    questGivers: window.world.npcs.filter((npc) => npc.npcId === 'shopkeeper').length,
+    // what the marker check below would otherwise have kept asserting. Two of
+    // the four have something to say: the shopkeeper's quests and the
+    // quartermaster's contracts, both of which wear the same three glyphs off
+    // the same ranking. The banker and the trainer offer neither.
+    questGivers: window.world.npcs.filter(
+      (npc) => npc.npcId === 'shopkeeper' || npc.npcId === 'quartermaster',
+    ).length,
     signposts: window.world.signposts.length,
   }));
 
@@ -312,12 +316,12 @@ const checkZoneDrawn = async (zone) => {
     drawn.labels === spawn.mobs + spawn.npcs + spawn.signposts + 1,
     `${drawn.labels} labels`,
   );
-  // A quest marker is counted apart from the labels precisely so the total
-  // above stays one-per-drawn-thing. Every zone check runs before anything is
-  // taken on at the shopkeeper, so every quest giver is still calling — one
-  // marker each, and none over the NPCs who have nothing to offer.
+  // A marker is counted apart from the labels precisely so the total above
+  // stays one-per-drawn-thing. Every zone check runs before anything is taken
+  // on at either counter, so everybody with work is still calling — one marker
+  // each, and none over the NPCs who have nothing to offer.
   check(
-    `and marks the ${zone}'s quest givers without adding to that count`,
+    `and marks the ${zone}'s work givers without adding to that count`,
     drawn.markers === spawn.questGivers,
     `${drawn.markers} markers for ${spawn.questGivers} quest givers of ${spawn.npcs} npcs`,
   );
@@ -360,6 +364,7 @@ const SHOPKEEPER = "window.world.npcs.find((n) => n.npcId === 'shopkeeper')";
 // which counter a tap opens is the whole point of the section below.
 const BANKER = "window.world.npcs.find((n) => n.npcId === 'banker')";
 const TRAINER = "window.world.npcs.find((n) => n.npcId === 'trainer')";
+const QUARTERMASTER = "window.world.npcs.find((n) => n.npcId === 'quartermaster')";
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 
@@ -998,9 +1003,13 @@ async function feedback() {
   }, taken);
   await draw();
   const restored = (await drawnCounts()).markers;
+  // One marker stays up through both halves, and it is the quartermaster's: a
+  // board is standing work, so it has something to offer on every frame the
+  // game has ever drawn. That it does *not* move while the quest log is wiped
+  // and put back is the other half of what this check is worth.
   check(
     'the quest marker follows the character with no event to tell it to',
-    cleared === 0 && restored === 1,
+    cleared === 1 && restored === 2,
     `${cleared} markers with every quest done, ${restored} with one to take`,
   );
 
@@ -1261,6 +1270,165 @@ async function trainer() {
     w.character.state.currency = 0;
     window.events.emit('level-up', 1);
     window.events.emit('currency-changed', 0);
+  });
+  await step(2);
+}
+
+async function bountyBoard() {
+  // --- The fourth counter, and the only one that hands coin *out*.
+  //
+  // Three things need a browser and nothing else does: that a ray cast at this
+  // figure reaches this counter with three others standing a few steps away,
+  // that taking a contract grows a real line on the tracker strip over the
+  // action bar — which is a DOM element appearing and is the one thing no state
+  // assertion can see — and that handing one in leaves the row *takeable again*
+  // in the panel still on screen, which is the whole of what "repeatable"
+  // means. ---
+  await standSouthOf(QUARTERMASTER);
+  await clickAt(await screenAt(QUARTERMASTER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.bountyNpc !== null),
+    'the tapped quartermaster to open the board',
+  );
+  const opened = await page.evaluate(() => ({
+    board: window.world.bountyNpc?.npcId ?? null,
+    shop: window.world.shopNpc?.npcId ?? null,
+    bank: window.world.bankNpc?.npcId ?? null,
+    trainer: window.world.trainerNpc?.npcId ?? null,
+    panel: document.querySelector('.hud-modal__box--bounty') !== null,
+    // Every row carries what it asks for on the line under it.
+    rows: document.querySelectorAll('.hud-modal__box--bounty .hud-list-row[data-bounty]').length,
+    notes: document.querySelectorAll('.hud-modal__box--bounty .hud-list-row__note').length,
+    locked: [...document.querySelectorAll('.hud-modal__box--bounty [data-locked]')].map(
+      (r) => /** @type {HTMLElement} */ (r).dataset.locked ?? '',
+    ),
+  }));
+  check(
+    'a click on the quartermaster opens the board and none of the three counters beside it',
+    opened.board === 'quartermaster' &&
+      opened.shop === null &&
+      opened.bank === null &&
+      opened.trainer === null &&
+      opened.panel,
+    `board: ${opened.board}, shop: ${opened.shop}, bank: ${opened.bank}, trainer: ${opened.trainer}`,
+  );
+  check(
+    'the board draws what it is holding back as well as what it is posting',
+    opened.rows > 0 && opened.notes === opened.rows && opened.locked.length > 0,
+    `${opened.locked.length}/${opened.rows} shut, ${opened.notes} notes`,
+  );
+
+  // A contract posted above this character's level is drawn, tapped like any
+  // other row, and refused with the sentence — the version a phone with no
+  // tooltip to hover ever gets.
+  await page.click(`.hud-modal__box--bounty .hud-list-row[data-bounty="${opened.locked[0]}"]`);
+  await step(2);
+  const refused = await page.evaluate(() => ({
+    held: window.world.character.state.bounty,
+    toast: document.querySelector('.hud-toast')?.textContent ?? '',
+  }));
+  check(
+    'a contract posted above your level is refused rather than taken',
+    refused.held === null && refused.toast.length > 0,
+    `held: ${JSON.stringify(refused.held)}, toast: "${refused.toast}"`,
+  );
+
+  // Take the one that is open, which is what puts a line on the strip.
+  const trackedBefore = await page.evaluate(
+    () => document.querySelectorAll('.hud-tracker__line').length,
+  );
+  await page.click('.hud-modal__box--bounty .hud-list-row[data-bounty="rat-cull"]');
+  await step(2);
+  const taken = await page.evaluate(() => ({
+    held: window.world.character.state.bounty?.bountyId ?? null,
+    tracked: [...document.querySelectorAll('.hud-tracker__line')].map((n) => n.textContent ?? ''),
+    // The row it was taken from stops being an offer and grows a way to give
+    // it back, in the panel that is still open.
+    drop: document.querySelectorAll('.hud-modal__box--bounty [data-abandon-bounty]').length,
+    // And stops being a button at all, which is the one row here that is not
+    // one: the contract in hand is waiting on nothing the player can say to
+    // this counter, where a gated row and a blocked one both are.
+    heldIsButton:
+      document.querySelector(
+        '.hud-modal__box--bounty button.hud-list-row[data-bounty="rat-cull"]',
+      ) !== null,
+  }));
+  check(
+    'taking a contract puts a line on the tracker and a Drop button on its row',
+    taken.held === 'rat-cull' &&
+      taken.tracked.length === trackedBefore + 1 &&
+      taken.tracked.some((line) => line.includes('Rat Cull') && line.includes('0/15')) &&
+      taken.drop === 1 &&
+      !taken.heldIsButton,
+    `held ${taken.held}, tracker: ${taken.tracked.join(' | ')}, drop ${taken.drop}`,
+  );
+  await page.screenshot({ path: `${OUT}/10b-bounty.png` });
+
+  // Finish it out in the world. The board publishes no progress of its own —
+  // every row is derived from the tallies the HUD already holds — so a kill
+  // count landing is what has to redraw the panel and the strip together.
+  await page.evaluate(() => {
+    window.world.creditKill('rat', 15);
+  });
+  await step(2);
+  const ready = await page.evaluate(() => ({
+    tracked: [...document.querySelectorAll('.hud-tracker__line')].map((n) => n.textContent ?? ''),
+    values: [...document.querySelectorAll('.hud-modal__box--bounty .hud-list-row__value')].map(
+      (n) => n.textContent ?? '',
+    ),
+  }));
+  check(
+    'a kill made away from the counter redraws the row and the strip together',
+    ready.tracked.some((line) => line.includes('15/15')) && ready.values.includes('Hand in'),
+    `tracker: ${ready.tracked.join(' | ')}, values: ${ready.values.join(', ')}`,
+  );
+
+  const purseBefore = await page.evaluate(() => window.world.character.state.currency);
+  await page.click('.hud-modal__box--bounty .hud-list-row[data-bounty="rat-cull"]');
+  await step(2);
+  const paid = await page.evaluate(() => ({
+    held: window.world.character.state.bounty,
+    currency: window.world.character.state.currency,
+    tracked: document.querySelectorAll('.hud-tracker__line').length,
+    // The row is an offer again rather than a finished thing, which is the one
+    // way this counter differs from the shopkeeper's quest log.
+    offered: [
+      ...document.querySelectorAll(
+        '.hud-modal__box--bounty button.hud-list-row[data-bounty="rat-cull"]',
+      ),
+    ].length,
+    drop: document.querySelectorAll('.hud-modal__box--bounty [data-abandon-bounty]').length,
+  }));
+  check(
+    'handing a contract in pays it and posts it again in the panel still on screen',
+    paid.held === null &&
+      paid.currency > purseBefore &&
+      paid.tracked === trackedBefore &&
+      paid.offered === 1 &&
+      paid.drop === 0,
+    `purse ${purseBefore} → ${paid.currency}, ${paid.tracked} tracker line(s), ${paid.offered} offer`,
+  );
+
+  // Closing from the panel's own X, which asks the world rather than telling it.
+  await page.click('.hud-modal [data-action="close-bounty"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.bountyNpc === null),
+    'the board to close the counter it was opened by',
+  );
+  check(
+    'the board closes the counter it was opened by',
+    (await page.evaluate(() => document.querySelector('.hud-modal__box--bounty') === null)) ===
+      true,
+  );
+
+  // Put the character back where the rest of the run expects to find them: the
+  // sections after this one are written against a thin purse and no kills.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.currency = 0;
+    w.character.state.kills = {};
+    window.events.emit('currency-changed', 0);
+    window.events.emit('kills-changed', {});
   });
   await step(2);
 }
@@ -3059,6 +3227,7 @@ const SECTIONS = [
   ['feedback', feedback],
   ['bank', bank],
   ['trainer', trainer],
+  ['bounty-board', bountyBoard],
   ['forge', forge],
   ['orbit', orbit],
   ['heading', heading],

@@ -808,6 +808,26 @@ function hudCss(): string {
   font-size: ${THEME.font.xs}px;
   color: ${THEME.color.muted};
 }
+/* The board, in the quartermaster's green. Same width as the trainer's and the
+   forge's, and for the same reason: every row carries a line under it saying
+   what it asks for. */
+.hud-modal__box--bounty {
+  width: 320px;
+  border-color: ${THEME.color.quartermaster};
+  gap: 4px;
+}
+/* A contract is its row and the line describing what it wants, kept together the
+   way a lesson is — including when the row has grown a Drop button beside it,
+   which is why this wraps the stack rather than the row. */
+.hud-contract {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 6px;
+}
+.hud-contract > .hud-list-row,
+.hud-contract > .hud-stack {
+  margin-bottom: 0;
+}
 /* The forge's list, in the ember colour its coals are drawn in. Same width as
    the trainer's for the same reason: every row carries a line under it. */
 .hud-modal__box--forge {

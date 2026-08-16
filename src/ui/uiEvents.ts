@@ -1,5 +1,6 @@
 import type {
   AbilityId,
+  BountyId,
   ItemId,
   AchievementId,
   GearSlotId,
@@ -8,6 +9,7 @@ import type {
   TitleId,
   ZoneId,
 } from '../types/ids';
+import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
@@ -67,6 +69,21 @@ export const LEARN_ABILITY_REQUESTED_EVENT = 'learn-ability-requested';
 // the HUD that listens exists — the HUD reads its opening set off the character
 // it is constructed with.
 export const LEARNED_ABILITIES_CHANGED_EVENT = 'learned-abilities-changed';
+// The bounty board, which is the counter shape a fourth time. What is different
+// is on the wire rather than in the shape: the board's own contents are a pure
+// function of the tables and the level, so nothing publishes them — the only
+// thing that travels is the one contract in hand, and the panel derives every
+// row from that plus what the HUD already holds.
+export const BOUNTY_OPENED_EVENT = 'bounty-opened';
+export const BOUNTY_CLOSED_EVENT = 'bounty-closed';
+export const ACCEPT_BOUNTY_REQUESTED_EVENT = 'accept-bounty-requested';
+export const TURN_IN_BOUNTY_REQUESTED_EVENT = 'turn-in-bounty-requested';
+// Giving one back, which the one-at-a-time rule makes a real button rather than
+// a courtesy: without it, a contract taken and not finishable strands the board.
+export const ABANDON_BOUNTY_REQUESTED_EVENT = 'abandon-bounty-requested';
+// What is in hand, whole, each time it changes — including to null, which is
+// what a contract paid or given back looks like from here.
+export const BOUNTY_CHANGED_EVENT = 'bounty-changed';
 // The forge. A station rather than a counter — nobody stands behind it — but
 // opened the same way one is, by tapping it and walking over: a panel that
 // appeared whenever the player came within reach would put itself in front of
@@ -222,7 +239,8 @@ export interface TilePoint {
  * reaches the simulation — which is also what keeps a card readable while the
  * thing it describes wanders off or dies.
  */
-export type ContextActionId = 'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'smith';
+export type ContextActionId =
+  'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'bounty' | 'smith';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -309,6 +327,12 @@ export interface UiEventMap {
   [TRAINER_CLOSED_EVENT]: [];
   [LEARN_ABILITY_REQUESTED_EVENT]: [abilityId: AbilityId];
   [LEARNED_ABILITIES_CHANGED_EVENT]: [abilityIds: AbilityId[]];
+  [BOUNTY_OPENED_EVENT]: [];
+  [BOUNTY_CLOSED_EVENT]: [];
+  [ACCEPT_BOUNTY_REQUESTED_EVENT]: [bountyId: BountyId];
+  [TURN_IN_BOUNTY_REQUESTED_EVENT]: [bountyId: BountyId];
+  [ABANDON_BOUNTY_REQUESTED_EVENT]: [];
+  [BOUNTY_CHANGED_EVENT]: [bounty: ActiveBounty | null];
   [FORGE_OPENED_EVENT]: [];
   [SMITH_REQUESTED_EVENT]: [recipeId: RecipeId];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];

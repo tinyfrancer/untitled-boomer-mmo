@@ -12,6 +12,7 @@ import {
   weaponAttackRange,
 } from '../data/items';
 import { ABILITIES } from '../data/abilities';
+import { BOUNTIES, BOUNTY_ORDER } from '../data/bounties';
 import { CLASSES } from '../data/classes';
 import { LOOT_TABLES } from '../data/lootTables';
 import { npcName, npcRole } from '../data/npcs';
@@ -227,6 +228,21 @@ export function describeNpc(npcId: NpcId): InspectPanel {
         ],
         note: 'A lesson is bought once and never expires.',
       };
+    case 'quartermaster':
+      return {
+        title,
+        subtitle: 'Quartermaster',
+        lines: [
+          { label: 'Posts', value: 'Standing work, taken one at a time' },
+          { label: 'Asks', value: 'Creatures put down, or materials brought in' },
+          { label: 'Pays', value: `${formatCurrency(BOUNTY_FROM)} and up, every time` },
+          { label: 'Contracts', value: String(BOUNTY_ORDER.length) },
+        ],
+        // The one line on any of these cards that says a thing is *repeatable*,
+        // which is the whole of what separates this counter from the shopkeeper
+        // standing across the square with a quest log.
+        note: 'A contract handed in is posted again the moment it is paid.',
+      };
     case 'merchant': {
       const quests = Object.values(QUESTS).filter((quest) => quest.giverNpcId === npcId);
       return {
@@ -246,6 +262,11 @@ export function describeNpc(npcId: NpcId): InspectPanel {
     }
   }
 }
+
+// The thinnest contract on the board, for the reason the two below are written
+// the same way: a card is a pure function of an id and cannot read this
+// player's level, so it names the floor rather than promising what is posted.
+const BOUNTY_FROM = Math.min(...BOUNTY_ORDER.map((bountyId) => BOUNTIES[bountyId].reward.copper));
 
 // The cheapest lesson on any class's list, which is what makes the card's
 // "Charges" line mean something without reading a character.

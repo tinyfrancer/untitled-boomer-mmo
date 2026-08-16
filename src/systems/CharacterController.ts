@@ -31,6 +31,13 @@ import {
   type QuestProgress,
 } from './QuestSystem';
 import {
+  bountyById,
+  bountyProgress,
+  canAcceptBounty,
+  canTurnInBounty,
+  type BoardContext,
+} from './BountySystem';
+import {
   achievementProgress,
   crossedAchievements,
   earnedTitles,
@@ -45,6 +52,7 @@ import type { AchievementDefinition } from '../data/achievements';
 import type {
   AbilityId,
   AchievementId,
+  BountyId,
   CombatSkillId,
   EnemyId,
   GearSlotId,
@@ -82,6 +90,15 @@ export type BankSlotPurchase =
 
 export type AbilityTraining =
   { ok: false; reason: string } | { ok: true; abilityId: AbilityId; cost: number };
+
+/**
+ * One contract paid. No gear clause, unlike a quest's: the board pays coin and
+ * XP alone, so nothing here can be refused for want of room — handing a
+ * `collect` over only ever makes the pack lighter.
+ */
+export type BountyTurnIn =
+  | { ok: false; reason: string }
+  | { ok: true; bountyId: BountyId; copper: number; xp: CombatXpGain };
 
 export type QuestTurnIn =
   | { ok: false; reason: string }
@@ -375,6 +392,85 @@ export class CharacterController {
       ok: true,
       questId,
       rewardItemId,
+      copper: definition.reward.copper,
+      xp: this.awardXp(definition.reward.xp),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // The board
+  // ---------------------------------------------------------------------------
+
+  /** Everything the board rules on: the three tallies, the level, and what is in hand. */
+  boardContext(): BoardContext {
+    return {
+      ...this.questCounters(),
+      level: this.state.level,
+      bounty: this.state.bounty,
+    };
+  }
+
+  /** How far along the contract in hand is, or null when there is none. */
+  bountyProgress(): QuestProgress | null {
+    const held = this.state.bounty;
+    if (!held) return null;
+    return bountyProgress(bountyById(held.bountyId), held, this.questCounters());
+  }
+
+  /**
+   * Takes a contract on, remembering where its tally stood — the same baseline
+   * a quest stores, for the same reason. Refuses while another is in hand, and
+   * refuses one the level has not reached.
+   */
+  acceptBounty(bountyId: BountyId): boolean {
+    const definition = bountyById(bountyId);
+    if (!canAcceptBounty(definition, this.boardContext())) {
+      return false;
+    }
+    this.state.bounty = {
+      bountyId,
+      baseline: objectiveTally(definition.objective, this.questCounters()),
+    };
+    return true;
+  }
+
+  /**
+   * Gives a contract back, which the one-at-a-time rule makes necessary rather
+   * than merely kind: a board that hands out a level 4 ask and nothing else
+   * would otherwise strand anybody who took one they cannot finish.
+   *
+   * Nothing is refunded and nothing is kept — the progress was a tally the game
+   * already had, so there is nothing to give back and nothing to lose.
+   */
+  abandonBounty(): boolean {
+    if (!this.state.bounty) return false;
+    this.state.bounty = null;
+    return true;
+  }
+
+  /**
+   * Hands the work over for the pay, or changes nothing at all.
+   *
+   * The `collect` half is taken here the way a quest's is; a `kill` was paid for
+   * out in the world and the counter has nothing to take. The contract is
+   * cleared rather than marked finished, which is the whole of what makes it
+   * repeatable: the row is posted again the moment this returns.
+   */
+  turnInBounty(bountyId: BountyId): BountyTurnIn {
+    const definition = bountyById(bountyId);
+    if (!canTurnInBounty(definition, this.boardContext())) {
+      return { ok: false, reason: 'You do not have what was asked for.' };
+    }
+
+    const objective = definition.objective;
+    if (objective.kind === 'collect') {
+      this.removeItem(objective.itemId, objective.quantity);
+    }
+    this.state.bounty = null;
+    this.addCurrency(definition.reward.copper);
+    return {
+      ok: true,
+      bountyId,
       copper: definition.reward.copper,
       xp: this.awardXp(definition.reward.xp),
     };
