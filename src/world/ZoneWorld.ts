@@ -1,12 +1,16 @@
 import { EXIT_MARGIN, TILE_SIZE } from '../config/constants';
 import { ZONES, type ZoneDefinition, type ZoneExit } from '../data/zones';
 import {
+  ABANDON_BOUNTY_REQUESTED_EVENT,
   ABILITY_REQUESTED_EVENT,
+  ACCEPT_BOUNTY_REQUESTED_EVENT,
   ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   BANK_CLOSED_EVENT,
+  BOUNTY_CLOSED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
+  TURN_IN_BOUNTY_REQUESTED_EVENT,
   FORGE_OPENED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
   SMITH_REQUESTED_EVENT,
@@ -80,6 +84,7 @@ import { AbilityCaster } from './AbilityCaster';
 import { ApproachDriver } from './ApproachDriver';
 import { BankSession } from './BankSession';
 import { TrainerSession } from './TrainerSession';
+import { BountySession } from './BountySession';
 import { CombatDirector } from './CombatDirector';
 import { ContextMenuSession } from './ContextMenuSession';
 import { GatherSession } from './GatherSession';
@@ -92,6 +97,7 @@ import type { Targeting } from './targeting';
 import type { EventBus, WorldEvent } from './worldEvents';
 import type {
   AbilityId,
+  BountyId,
   EnemyId,
   GearSlotId,
   ItemId,
@@ -137,9 +143,10 @@ const COUNTERS = {
   merchant: { kind: 'shop', open: 'shop' },
   banker: { kind: 'bank', open: 'bank' },
   trainer: { kind: 'train', open: 'trainer' },
+  quartermaster: { kind: 'bounty', open: 'bounty' },
 } as const satisfies Record<
   NpcRoleId,
-  { kind: InteractionKind; open: 'shop' | 'bank' | 'trainer' }
+  { kind: InteractionKind; open: 'shop' | 'bank' | 'trainer' | 'bounty' }
 >;
 
 export interface ZoneWorldOptions {
@@ -195,6 +202,7 @@ export class ZoneWorld implements Targeting {
   private readonly shop: ShopSession;
   private readonly bank: BankSession;
   private readonly trainer: TrainerSession;
+  private readonly bounty: BountySession;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly combat: CombatDirector;
@@ -364,6 +372,9 @@ export class ZoneWorld implements Targeting {
     this.trainer = new TrainerSession(this.ctx, {
       publishAbilityState: () => this.publishAbilityState(),
     });
+    this.bounty = new BountySession(this.ctx, {
+      publishXpGain: (gain) => this.publishXpGain(gain),
+    });
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,
       targeting: this,
@@ -448,6 +459,10 @@ export class ZoneWorld implements Targeting {
     listen(BUY_BANK_SLOT_REQUESTED_EVENT, () => this.bank.buySlot());
     listen(BANK_CLOSED_EVENT, () => this.bank.closedByUi());
     listen(LEARN_ABILITY_REQUESTED_EVENT, (abilityId) => this.trainer.learn(abilityId));
+    listen(ACCEPT_BOUNTY_REQUESTED_EVENT, (bountyId) => this.bounty.accept(bountyId));
+    listen(TURN_IN_BOUNTY_REQUESTED_EVENT, (bountyId) => this.bounty.turnIn(bountyId));
+    listen(ABANDON_BOUNTY_REQUESTED_EVENT, () => this.bounty.abandon());
+    listen(BOUNTY_CLOSED_EVENT, () => this.bounty.closedByUi());
     listen(SMITH_REQUESTED_EVENT, (recipeId) => this.gathering.smith(recipeId));
     listen(TRAINER_CLOSED_EVENT, () => this.trainer.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
@@ -802,7 +817,7 @@ export class ZoneWorld implements Targeting {
   }
 
   // ---------------------------------------------------------------------------
-  // The three counters: vendoring, the bank and the trainer
+  // The four counters: vendoring, the bank, the trainer and the board
   // ---------------------------------------------------------------------------
 
   /** The shopkeeper the open shop belongs to; null when the shop is closed. */
@@ -820,6 +835,11 @@ export class ZoneWorld implements Targeting {
     return this.trainer.npc;
   }
 
+  /** The quartermaster the open board belongs to; null when it is shut. */
+  get bountyNpc(): WorldNpc | null {
+    return this.bounty.npc;
+  }
+
   /** Whether the character has been left camping. */
   get afkActive(): boolean {
     return this.afk.active;
@@ -830,6 +850,7 @@ export class ZoneWorld implements Targeting {
     this.shop.updateRange();
     this.bank.updateRange();
     this.trainer.updateRange();
+    this.bounty.updateRange();
   }
 
   /** Everything that stops a session at once shuts all of them, never one. */
@@ -837,6 +858,7 @@ export class ZoneWorld implements Targeting {
     this.shop.close();
     this.bank.close();
     this.trainer.close();
+    this.bounty.close();
   }
 
   handleSmithRequested(recipeId: RecipeId): void {
@@ -845,6 +867,18 @@ export class ZoneWorld implements Targeting {
 
   handleLearnRequested(abilityId: AbilityId): void {
     this.trainer.learn(abilityId);
+  }
+
+  handleAcceptBountyRequested(bountyId: BountyId): void {
+    this.bounty.accept(bountyId);
+  }
+
+  handleTurnInBountyRequested(bountyId: BountyId): void {
+    this.bounty.turnIn(bountyId);
+  }
+
+  handleAbandonBountyRequested(): void {
+    this.bounty.abandon();
   }
 
   handleBuyRequested(itemId: ItemId): void {

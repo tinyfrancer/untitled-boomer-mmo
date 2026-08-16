@@ -3,11 +3,12 @@ import type { StationId } from '../data/recipes';
 import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { ActiveBounty } from '../systems/BountySystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 18;
+export const CHARACTER_STATE_VERSION = 19;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -53,6 +54,16 @@ export interface CharacterState {
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
   quests: QuestLog;
+  /**
+   * The bounty in hand, or null.
+   *
+   * One rather than a log, and that is a rule rather than a limitation: five
+   * contracts taken at once are five contracts one afternoon of rats finishes
+   * together, which is one decision paid five times. Nothing about what has been
+   * *finished* is stored — a bounty is posted again the moment it is paid, so
+   * there is nothing left to remember.
+   */
+  bounty: ActiveBounty | null;
   // Kills per creature. The one counter that has to be stored: a corpse leaves
   // nothing in the bag to count it off. Which achievements and titles it has
   // earned is derived from this on read (see AchievementSystem).
@@ -115,6 +126,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     position: null,
     afk: null,
     quests: {},
+    bounty: null,
     kills: {},
     visits: {},
     activeTitleId: null,

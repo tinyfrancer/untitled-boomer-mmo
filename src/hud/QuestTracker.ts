@@ -6,6 +6,7 @@ import {
   type QuestCounters,
   type QuestLog,
 } from '../systems/QuestSystem';
+import { bountyById, bountyProgress, type ActiveBounty } from '../systems/BountySystem';
 import { MAX_TRACKED_QUESTS, type Rect } from '../ui/layout';
 
 /**
@@ -24,15 +25,30 @@ export class QuestTracker {
     place(this.root, rect, 'width');
   }
 
-  update(log: QuestLog, counters: QuestCounters): void {
+  /**
+   * The contract in hand goes *first*, above the quests.
+   *
+   * A quest is finished once and then stops moving; a bounty is what the player
+   * chose to be doing this afternoon, and it is the line they came back to the
+   * strip to read. There is only ever one, so it costs the quests at most one of
+   * their two seats.
+   */
+  update(log: QuestLog, bounty: ActiveBounty | null, counters: QuestCounters): void {
     this.root.replaceChildren();
-    for (const definition of activeQuests(log).slice(0, MAX_TRACKED_QUESTS)) {
+    const lines: { text: string; met: boolean }[] = [];
+
+    if (bounty) {
+      const definition = bountyById(bounty.bountyId);
+      const { have, need, met } = bountyProgress(definition, bounty, counters);
+      lines.push({ text: `${definition.name}  ${have}/${need}`, met });
+    }
+    for (const definition of activeQuests(log)) {
       const { met } = questProgress(definition, log, counters);
-      const line = el(
-        'div',
-        'hud-tracker__line',
-        `◆ ${formatQuestProgress(definition, log, counters)}`,
-      );
+      lines.push({ text: formatQuestProgress(definition, log, counters), met });
+    }
+
+    for (const { text, met } of lines.slice(0, MAX_TRACKED_QUESTS)) {
+      const line = el('div', 'hud-tracker__line', `◆ ${text}`);
       // Complete reads as "go and hand this in", which is the only moment the
       // strip is asking for something.
       line.classList.toggle('is-met', met);

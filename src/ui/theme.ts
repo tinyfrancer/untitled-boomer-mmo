@@ -72,6 +72,10 @@ export const THEME = {
     // The third counter's border. The shop and the bank took the two above, and
     // which one is open has to be answerable without reading the title.
     trainer: '#ba68c8',
+    // And the fourth counter's, in the quartermaster's own green: four panels
+    // open in the same corner of the same square, so the border is the only
+    // thing that says which one is up without reading a word.
+    quartermaster: '#7cb342',
     // The forge's, which is the colour of what is glowing in it.
     forge: '#e65100',
     playerDamage: '#ff5252',

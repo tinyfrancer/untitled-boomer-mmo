@@ -32,6 +32,7 @@ const ROLE_ACTIONS = {
   merchant: { id: 'shop', label: 'Shop' },
   banker: { id: 'bank', label: 'Bank' },
   trainer: { id: 'train', label: 'Train' },
+  quartermaster: { id: 'bounty', label: 'Bounties' },
 } as const satisfies Record<NpcRoleId, ContextAction>;
 
 /**

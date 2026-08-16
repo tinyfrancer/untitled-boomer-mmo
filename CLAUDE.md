@@ -12,7 +12,8 @@ a bandit camp with aggressive humanoids, and the bandit hideout behind a locked
 door); character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
-kills and sends you somewhere; slayer achievements and the
+kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
+work you were doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
 mobile-first HUD; and local save/load with versioned migrations. Every zone is level 1-3 starter
 content — what separates them is what they drop, not how hard they are, and the hideout is gated by
@@ -217,8 +218,8 @@ add to it:
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
-through), `AfkCamp`, `ShopSession`, `BankSession`, `QuestDesk`, `ContextMenuSession`
-(what a press held is about, and what was chosen from it), and `ApproachDriver`
+through), `AfkCamp`, `ShopSession`, `BankSession`, `TrainerSession`, `BountySession`, `QuestDesk`,
+`ContextMenuSession` (what a press held is about, and what was chosen from it), and `ApproachDriver`
 (the two click-to-move walks). Each owns its own state, is constructed by `ZoneWorld` and reaches
 the rest of the zone through two things and no others: the `WorldContext` they all share — the
 clock, the character, the player, both channels out of the simulation, and the handful of
@@ -453,7 +454,13 @@ the banker there was one NPC and five places assumed it: the tap, the context me
 plate over their head, the figure it hangs off, and the inspect card all opened, said or drew the
 shopkeeper. A second person standing in the same town would have sold felling axes from behind the
 bank's desk, and no state assertion would have caught it. All five read the role now, and the
-trainer collected on it: a third counter cost a row in `NPCS` plus a case in each of them.
+trainer collected on it: a third counter cost a row in `NPCS` plus a case in each of them. The
+quartermaster is the fourth and cost the same, which is also **why the bounty board is a person**:
+the plan asked for a board, and a board would have been a second kind of tappable furniture with its
+own pick priority, prop, map marker, inspect card and tap kind. The one furniture type that exists
+could not be borrowed — `StationId` means "where a recipe is made", and `STATION_PERSISTS`,
+`recipesForStation`, `stationsInReach` and `afkCampJob` all read it as one — so a board wearing it
+would have been dead data in four crafting tables. A role was a row and four cases.
 `ZoneWorld.approachNpc` keeps that honest with one `COUNTERS` table keyed by role rather than a pair
 of matching conditionals — which counter to open and what the walk toward it is called are the same
 fact, and the two drifting apart is how a walk ends at the wrong desk. `NPC_APPEARANCES` is keyed by
@@ -679,7 +686,13 @@ marker over a quest giver's head (`npcMarker`) is derived the same way, which is
 polls it**: what moves that glyph is an item landing in the bag, and nothing publishes that.
 `NpcActor.sync()` reads it off `character.state` each frame like `MobActor` reads the con colours,
 and the sprite is tagged `userData.kind = 'marker'` rather than `'label'` — smoke asserts one label
-per drawn creature in every zone, so a second label over a head would break that everywhere.
+per drawn creature in every zone, so a second label over a head would break that everywhere. The
+board's marker (`bountyMarker`) is the same three glyphs off the same ranking, because it answers the
+same question — is walking over there worth it — and a player reading one glyph should not have to
+learn a second alphabet for the person standing forty feet from the first. `strongerMarker` is what
+picks between them: nobody both gives quests and posts contracts today, so every call has one answer
+and one `null`, which is exactly when the rule is worth writing down rather than left to whichever
+was asked first.
 `turnInQuest` on `CharacterController` refuses as a whole rather than half-applying — taking the
 objective and finding no room for the reward is the one outcome that can't be undone.
 
@@ -705,6 +718,33 @@ character is rather than that they have just got there. The HUD holds all three 
 the tracker and the sheet off them together, which is why the two tallies ride events of their own
 (`kills-changed`, `visits-changed`): neither is in the bag it already has, and either can move a
 quest without the quest log changing at all.
+
+**Standing work is a bounty, and a bounty is a quest objective narrowed**
+(`data/bounties.ts`, ruled on by `systems/BountySystem.ts`, run by `world/BountySession.ts` at the
+quartermaster). `BountyObjective` is `Extract<QuestObjective, { kind: 'kill' | 'collect' }>` rather
+than a union of its own, and the narrowing **is** the rule: a `visit` is finished by walking
+somewhere, and something repeatable that is finished by walking somewhere is a currency faucet with
+no work in it. Reusing the union is what let the counting be written once — `objectiveProgress` came
+out of `questProgress` and both call it — so the baseline that stops "kill 15 rats" handing itself in
+to a veteran is one rule over two surfaces.
+
+**One contract is held at a time**, which is why `CharacterState.bounty` is a nullable field rather
+than a log: five contracts taken together are five finished together by one afternoon of rats, which
+is one decision paid five times. That is what makes giving one back a real button rather than a
+courtesy — the board posts a level 4 ask, and without it anyone who took one they cannot finish is
+stranded. `BountyOfferState` carries `busy` for what the rule costs every other row, since a row that
+cannot be taken and does not say why reads as a bug. Nothing about a contract _finished_ is stored:
+it is posted again the moment it is paid, which is the whole of what repeatable means here.
+
+**What the board pays is held by three rules, and the third is the one nothing else in the game
+needed** (`tests/systems/BountySystem.test.ts`). A kill contract pays less XP than the kills it names
+already pay, so it is a bonus on a grind rather than a reason to make a different one. A gather
+contract pays more than vendoring the same haul, or nobody would ever walk past the shopkeeper to
+hand it in. And it pays **less per item than the shop charges for the same thing** — the shelf sells
+logs, so a timber order above the shelf price is coin minted by walking between two people standing
+forty feet apart. It is the same vendor spread `SHOP_STOCK` was already built around, pointed the
+other way. Its XP goes through `ZoneWorld.publishXpGain` rather than `awardXp`, like a quest reward:
+a camp can _finish_ a kill contract unattended, but it cannot walk to town and hand one in.
 
 **A quest may be held back by another** (`QuestDefinition.requires`), the shape
 `ShopStockEntry.requires` and `ZoneDefinition.requiresKey` already use: the table reads as a list of

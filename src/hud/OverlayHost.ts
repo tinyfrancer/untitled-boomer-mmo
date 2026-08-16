@@ -6,11 +6,16 @@ import { MenuOverlay } from './MenuOverlay';
 import { OptionsModal } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
 import { TrainerModal, type TrainerState } from './TrainerModal';
+import { BountyModal, type BountyPanelState } from './BountyModal';
 import { ForgeModal, type ForgePanelState } from './ForgeModal';
 import { SlotPicker } from './SlotPicker';
 import {
+  ABANDON_BOUNTY_REQUESTED_EVENT,
+  ACCEPT_BOUNTY_REQUESTED_EVENT,
   ACCEPT_QUEST_REQUESTED_EVENT,
   BANK_CLOSED_EVENT,
+  BOUNTY_CLOSED_EVENT,
+  TURN_IN_BOUNTY_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   DEPOSIT_ITEM_REQUESTED_EVENT,
@@ -32,7 +37,7 @@ import type { GearSlotId, ItemId } from '../types/ids';
 import type { TabId } from '../ui/tabs';
 
 /**
- * How the three counters' panels read the HUD's model.
+ * How the four counters' panels read the HUD's model.
  *
  * Getters rather than copies handed over once: the bag, the purse, the quest
  * log, the shelves and what has been learned are the HUD's own state, and each
@@ -42,6 +47,7 @@ export interface OverlayPanelState {
   shop: () => ShopState;
   bank: () => BankPanelState;
   trainer: () => TrainerState;
+  bounty: () => BountyPanelState;
   forge: () => ForgePanelState;
 }
 
@@ -65,7 +71,7 @@ export interface ContextMenuSpec {
  *
  * It reads each panel's state through a getter rather than holding a copy: the
  * bag, the purse, the quest log, the shelves and what has been learned are the
- * HUD's model, and the three counters are views of them that happen to be open
+ * HUD's model, and the four counters are views of them that happen to be open
  * sometimes.
  */
 export class OverlayHost {
@@ -74,12 +80,14 @@ export class OverlayHost {
   private readonly shopState: () => ShopState;
   private readonly bankState: () => BankPanelState;
   private readonly trainerState: () => TrainerState;
+  private readonly bountyState: () => BountyPanelState;
   private readonly forgeState: () => ForgePanelState;
 
   private options: OptionsModal | null = null;
   private shop: ShopModal | null = null;
   private bank: BankModal | null = null;
   private trainer: TrainerModal | null = null;
+  private bounty: BountyModal | null = null;
   private forge: ForgeModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
@@ -93,6 +101,7 @@ export class OverlayHost {
     this.shopState = panels.shop;
     this.bankState = panels.bank;
     this.trainerState = panels.trainer;
+    this.bountyState = panels.bounty;
     this.forgeState = panels.forge;
   }
 
@@ -249,6 +258,37 @@ export class OverlayHost {
     this.trainer?.close();
   }
 
+  openBounty(): void {
+    this.bounty?.close();
+    this.bounty = new BountyModal(
+      {
+        onAccept: (bountyId) => this.events.emit(ACCEPT_BOUNTY_REQUESTED_EVENT, bountyId),
+        onTurnIn: (bountyId) => this.events.emit(TURN_IN_BOUNTY_REQUESTED_EVENT, bountyId),
+        onAbandon: () => this.events.emit(ABANDON_BOUNTY_REQUESTED_EVENT),
+        // Same ask as the other three X's: the world owns whether it is open.
+        onDismiss: () => this.events.emit(BOUNTY_CLOSED_EVENT),
+      },
+      () => {
+        this.bounty = null;
+      },
+    );
+    this.bounty.update(this.bountyState());
+    this.root.append(this.bounty.root);
+  }
+
+  closeBounty(): void {
+    this.bounty?.close();
+  }
+
+  /**
+   * The purse, the level, the bag and every tally move while this is open — and
+   * a kill contract's count moves *out in the world*, with the panel left up
+   * behind the player, which no other counter has to cope with.
+   */
+  refreshBounty(): void {
+    this.bounty?.update(this.bountyState());
+  }
+
   /**
    * The forge's list, opened by standing at one rather than by a session: see
    * `ForgeModal`. Idempotent, since what opens it is a flag that can be
@@ -335,6 +375,7 @@ export class OverlayHost {
     this.shop?.close();
     this.bank?.close();
     this.trainer?.close();
+    this.bounty?.close();
     this.forge?.close();
     this.picker?.close();
     this.awayReport?.close();

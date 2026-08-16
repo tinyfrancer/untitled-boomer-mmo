@@ -249,6 +249,15 @@ export const NPC_APPEARANCES = {
     weapon: { shape: 'sword', color: 0xd7ccc8 },
     offhand: null,
   },
+  // The fourth, and the second one holding something: the board's work is out
+  // in the zones, so they are drawn kitted for the road rather than for a desk.
+  quartermaster: {
+    headColor: SKIN_COLOR,
+    torsoColor: 0x33691e,
+    legColor: 0x1b5e20,
+    weapon: null,
+    offhand: { shape: 'shield', color: 0x795548 },
+  },
   bandit: {
     headColor: SKIN_COLOR,
     torsoColor: 0x757575,

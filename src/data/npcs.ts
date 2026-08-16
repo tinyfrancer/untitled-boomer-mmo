@@ -10,7 +10,7 @@ import type { NpcId } from '../types/ids';
  * to collect on it: a row here, a case in each of them, and no place left where
  * a person in a town is assumed to be selling something.
  */
-export type NpcRoleId = 'merchant' | 'banker' | 'trainer';
+export type NpcRoleId = 'merchant' | 'banker' | 'trainer' | 'quartermaster';
 
 export interface NpcDefinition {
   id: NpcId;
@@ -28,6 +28,17 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
   shopkeeper: { id: 'shopkeeper', name: 'Shopkeeper', role: 'merchant' },
   banker: { id: 'banker', name: 'Banker', role: 'banker' },
   trainer: { id: 'trainer', name: 'Trainer', role: 'trainer' },
+  // The fourth counter, and the one the plan called a board. A board would have
+  // been a second kind of tappable furniture — a pick priority, a prop, a map
+  // marker and an inspect card of its own — where `NpcRoleId` is the seam this
+  // codebase already built for a fourth counter, down to `COUNTERS` refusing to
+  // compile until somebody says what standing here does.
+  //
+  // A quartermaster rather than a bailiff or a guard because of what the board
+  // holds: it asks for raiders put down *and* for timber, ore and worked iron
+  // brought in, and a quartermaster is the one person in a town who plausibly
+  // wants both.
+  quartermaster: { id: 'quartermaster', name: 'Quartermaster', role: 'quartermaster' },
 };
 
 /** What an NPC is called, for the map's marker and for anyone examining them. */

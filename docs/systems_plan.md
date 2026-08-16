@@ -22,8 +22,8 @@ gathered materials that lead nowhere.
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | merged 2026-08-12 |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | merged 2026-08-13 |
 | 11  | A camp that can cook and craft                           | Crafting web      | merged 2026-08-13 |
-| 12  | Quests that ask for something other than a bag           | Reasons to return | planned           |
-| 13  | Repeatable work                                          | Reasons to return | planned           |
+| 12  | Quests that ask for something other than a bag           | Reasons to return | merged 2026-08-16 |
+| 13  | Repeatable work                                          | Reasons to return | merged 2026-08-16 |
 | 14  | Mastery                                                  | Reasons to return | planned           |
 
 ## The decision behind the order: the arithmetic before the content
@@ -546,6 +546,47 @@ demand; built after them it is the thing that makes those sinks worth having.
 The quest-reward XP path already exists and is the right one: a bounty pays through
 `ZoneWorld.publishXpGain` rather than `awardXp`, so it never takes the camping penalty. Handing in a
 contract is something the player did.
+
+Shipped with one amendment to the shape and four things the section did not say.
+
+**The board is a person.** A board would have been a second kind of tappable furniture — its own pick
+priority, prop, map marker, inspect card and tap kind — and the one piece of furniture the game
+already has could not be reused: `StationId` means "where a recipe is made", and every consumer of it
+(`STATION_PERSISTS`, `recipesForStation`, `stationsInReach`, `afkCampJob`) is about crafting, so a
+board wearing that type would be dead data in four crafting tables. `NpcRoleId` is the seam this
+codebase built for exactly this, down to `COUNTERS` refusing to compile until somebody says what
+standing at the fourth person does — and the map marker, the inspect card, the context menu, the
+nameplate, the figure and the picking all came free. A quartermaster rather than a bailiff or a guard
+because of what the board holds: it asks for raiders put down _and_ for timber, ore and worked iron
+brought in, and a quartermaster is the one person in a town who plausibly wants both. The panel is
+still called Bounties.
+
+**One contract at a time, which is a rule rather than a limitation.** Five taken together are five
+finished together by one afternoon of rats — one decision paid five times. It also makes the stored
+state a single nullable field rather than a log, and it is what makes giving one back a real button
+rather than a courtesy: a board that hands out a level 4 ask would otherwise strand anybody who took
+one they cannot finish. `BountyOfferState` gains `busy` for what that costs every other row, and
+saying so on the row is what stops it reading as a bug.
+
+**A bounty objective is `QuestObjective` narrowed rather than a union of its own**, and the narrowing
+_is_ the rule: `Extract<QuestObjective, { kind: 'kill' | 'collect' }>`. A `visit` is not work — it is
+finished by walking somewhere, and something repeatable finished by walking somewhere is a faucet
+with no work in it. What that reuse bought is the whole of the counting: `objectiveProgress` came out
+of `questProgress` and both call it now, so the baseline rule that stops "kill 15 rats" handing
+itself in to a veteran is written once rather than twice.
+
+**The tuning is three rules and the third is the one that is not obvious.** A kill contract pays less
+XP than the kills it names already pay, so the board is a bonus on a grind rather than a reason to
+make a different one. A gather contract pays more than vendoring the same haul, or the row may as
+well not be drawn. And it pays **less per item than the shopkeeper charges for the same thing** — the
+shop sells logs, so a timber order paying above the shelf price is coin printed by walking between
+two people standing forty feet apart. The spread that stops it is the vendor spread `SHOP_STOCK` was
+already built around, and `tests/systems/BountySystem.test.ts` holds all three.
+
+**Where the fourth counter stands is the tap rule for the third time.** The obvious mirror of the
+trainer, at `192, 64`, is the one spot it cannot have: it is directly south of where the east town rat
+wanders, and `pickTap` is a priority rather than a depth sort. The sweep added in PR 10 caught it
+before a browser did, which is exactly what it was written for.
 
 ## 14 — Mastery
 

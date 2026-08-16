@@ -150,10 +150,17 @@ export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.
-export type NpcId = 'shopkeeper' | 'banker' | 'trainer';
+export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster';
 
 export type QuestId =
   'rat-bones' | 'quarry-road' | 'crab-feast' | 'bandit-trouble' | 'the-cutthroat';
+
+// Standing work, as opposed to a quest, which is a story told once. Its own
+// union rather than a slice of QuestId for the reason `LootTableId` is its own:
+// the two lists are read by different counters and have no reason to grow
+// together — a quest is written to be finished, a bounty to be taken again.
+export type BountyId =
+  'rat-cull' | 'shore-patrol' | 'road-contract' | 'timber-order' | 'ore-order' | 'smith-order';
 
 export type AbilityId =
   // The two each class opens with, and the two it buys.

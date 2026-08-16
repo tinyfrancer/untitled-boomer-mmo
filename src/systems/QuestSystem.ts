@@ -96,19 +96,32 @@ export function describeObjective(objective: QuestObjective): string {
   }
 }
 
-// An offer that has not been taken previews from where taking it now would
-// start, which is none of whatever it counts: the same arithmetic one moment
-// earlier, rather than a case of its own.
-function counted(
+/**
+ * How far along an objective is, given where its tally stood when it was taken.
+ *
+ * The whole of the counting, and deliberately not a method on a quest: a bounty
+ * asks for the same two things a quest does and is counted off the same three
+ * tallies, so what the two share is this and what differs is who is asking.
+ *
+ * A `null` baseline is an offer nobody has taken, and it previews from where
+ * taking it now would start — which is none of whatever it counts, and so is
+ * the same arithmetic one moment earlier rather than a case of its own.
+ */
+export function objectiveProgress(
   objective: QuestObjective,
-  entry: QuestEntry | undefined,
+  baseline: number | null,
   counters: QuestCounters,
-): number {
+): QuestProgress {
+  const need = objectiveQuantity(objective);
+  let counted: number;
   if (objective.kind === 'collect') {
-    return counters.inventory[objective.itemId] ?? 0;
+    counted = counters.inventory[objective.itemId] ?? 0;
+  } else {
+    const tally = objectiveTally(objective, counters);
+    counted = tally - (baseline ?? tally);
   }
-  const tally = objectiveTally(objective, counters);
-  return tally - (entry?.baseline ?? tally);
+  const have = Math.max(0, Math.min(counted, need));
+  return { have, need, met: have >= need };
 }
 
 export function questProgress(
@@ -116,12 +129,7 @@ export function questProgress(
   log: QuestLog,
   counters: QuestCounters,
 ): QuestProgress {
-  const need = objectiveQuantity(definition.objective);
-  const have = Math.max(
-    0,
-    Math.min(counted(definition.objective, log[definition.id], counters), need),
-  );
-  return { have, need, met: have >= need };
+  return objectiveProgress(definition.objective, log[definition.id]?.baseline ?? null, counters);
 }
 
 export function questStatus(log: QuestLog, questId: QuestId): QuestStatus | undefined {
@@ -172,6 +180,28 @@ export function questsForNpc(npcId: NpcId, log: QuestLog, counters: QuestCounter
 
 /** What is worth drawing over a quest giver's head. `done` never is. */
 export type QuestMarker = Exclude<QuestOfferState, 'done' | 'locked'>;
+
+// How much each glyph is worth being told, which is what "most actionable"
+// means: something to take beats something to hand in beats something to work.
+const MARKER_RANK: Record<QuestMarker, number> = { available: 3, ready: 2, active: 1 };
+
+/**
+ * The more actionable of two markers, for a person with more than one kind of
+ * thing to say.
+ *
+ * Nobody stands in a town both giving quests and posting bounties today, so
+ * every call to this has one answer and one `null` — which is precisely when the
+ * rule is worth writing down rather than left to whichever of the two happened
+ * to be asked first.
+ */
+export function strongerMarker(
+  first: QuestMarker | null,
+  second: QuestMarker | null,
+): QuestMarker | null {
+  if (!first) return second;
+  if (!second) return first;
+  return MARKER_RANK[first] >= MARKER_RANK[second] ? first : second;
+}
 
 /**
  * The one marker an NPC wears, out of everything they currently have to say.

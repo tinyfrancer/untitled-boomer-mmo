@@ -93,6 +93,13 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
       { dx: 96, dy: -96, npcId: 'shopkeeper' },
       { dx: -96, dy: -96, npcId: 'banker' },
       { dx: -192, dy: 64, npcId: 'trainer' },
+      // Up the north road toward the quarry, and well off it: the fourth
+      // counter is the one whose work is out of town, so it stands facing the
+      // way most of it goes. The obvious mirror of the trainer at `192, 64` is
+      // the one spot it cannot have — that is directly south of where the east
+      // rat wanders to, and `tests/render3d/picking.test.ts` catches it as a
+      // creature nobody can tap.
+      { dx: -160, dy: -288, npcId: 'quartermaster' },
     ],
     /**
      * North-east of the crossroads, and the placement rule here is a third one

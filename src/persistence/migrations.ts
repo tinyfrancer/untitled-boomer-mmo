@@ -131,6 +131,13 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     ),
     visits: {},
   }),
+  // v18 → v19: the bounty board opens in town, and a character may be holding a
+  // contract off it. Nobody was, because there was nothing to hold — so null is
+  // what that character actually had rather than a default standing in for
+  // information this step has lost, which is the v7 → v8 argument for `afk`
+  // exactly. Nothing is granted: a bounty is work in progress, and handing an
+  // upgraded save one would be paying for work nobody did.
+  18: (state) => ({ ...state, bounty: null }),
 };
 
 /**

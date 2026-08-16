@@ -33,6 +33,7 @@ import {
   type ZoneVisits,
 } from '../systems/QuestSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
+import type { ActiveBounty } from '../systems/BountySystem';
 import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
@@ -49,6 +50,9 @@ import {
   BANK_CHANGED_EVENT,
   BANK_CLOSED_EVENT,
   BANK_OPENED_EVENT,
+  BOUNTY_CHANGED_EVENT,
+  BOUNTY_CLOSED_EVENT,
+  BOUNTY_OPENED_EVENT,
   COMBAT_LOG_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
   CONTEXT_MENU_REQUESTED_EVENT,
@@ -142,6 +146,11 @@ interface HudModel {
   skills: Skills;
   combatLog: CombatLogEntry[];
   quests: QuestLog;
+  // The contract in hand. Seeded from the save because the tracker draws it
+  // before the world has said anything, then kept current by the world — the
+  // same reason the bag is seeded and the map is not. Nothing about the *board*
+  // is here: what is posted is a pure function of the table and the level.
+  bounty: ActiveBounty | null;
   // The two tallies beside the bag that a quest objective may be counted off.
   // Both are seeded from the save and kept current by the world, because both
   // move out in the zone rather than in a panel.
@@ -224,6 +233,7 @@ class Hud {
       skills: character.skills ?? createInitialSkills(),
       combatLog: [],
       quests: character.quests,
+      bounty: character.bounty,
       kills: character.kills,
       visits: character.visits,
       activeTitleId: character.activeTitleId,
@@ -254,6 +264,12 @@ class Hud {
         classId: this.classId,
         level: this.model.level,
         learnedAbilities: this.model.learnedAbilities,
+        currency: this.model.currency,
+      }),
+      bounty: () => ({
+        ...this.questCounters(),
+        level: this.model.level,
+        bounty: this.model.bounty,
         currency: this.model.currency,
       }),
       forge: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
@@ -392,7 +408,7 @@ class Hud {
       hasTitle: this.model.activeTitleId !== null,
       hasEffects: this.playerColumn.hasEffects(),
       targetWinding: this.targetFrame.isWinding(),
-      trackedQuests: activeQuests(this.model.quests).length,
+      trackedQuests: this.trackedLines(),
     });
 
     this.targetFrame.layout(layout.targetFrame);
@@ -570,8 +586,17 @@ class Hud {
    */
   private refreshQuests(): void {
     const counters = this.questCounters();
-    this.tracker.update(this.model.quests, counters);
-    this.questSheet.update(this.model.quests, counters);
+    this.tracker.update(this.model.quests, this.model.bounty, counters);
+    this.questSheet.update(this.model.quests, this.model.bounty, counters);
+    // The board's rows are counted off the same three tallies, and a kill
+    // contract's count moves out in the world with the panel left up behind the
+    // player — which no other counter has to cope with.
+    this.overlays.refreshBounty();
+  }
+
+  /** How many lines the tracker will draw, which is what everything above it sits on. */
+  private trackedLines(): number {
+    return activeQuests(this.model.quests).length + (this.model.bounty ? 1 : 0);
   }
 
   private refreshCharacterSheet(): void {
@@ -649,6 +674,9 @@ class Hud {
       // The trainer's list is gated on a level in exactly the same way, and a
       // level is far likelier to land while standing at one.
       this.overlays.refreshTrainer();
+      // And so is the board's, which is the one of the three a level can land
+      // *from*: handing a contract in pays XP at the counter that posted it.
+      this.overlays.refreshBounty();
       this.toast.show(`Level Up! Level ${level}`, THEME.color.levelUp);
     });
     listen(PLAYER_HP_CHANGED_EVENT, (hp) => {
@@ -761,6 +789,7 @@ class Hud {
       this.overlays.refreshShop();
       this.overlays.refreshBank();
       this.overlays.refreshTrainer();
+      this.overlays.refreshBounty();
     });
     listen(ACTIONS_CHANGED_EVENT, (actions) => {
       this.model.actions = actions;
@@ -793,6 +822,16 @@ class Hud {
       this.model.bank = vault.contents;
       this.model.bankSlots = vault.slots;
       this.overlays.refreshBank();
+    });
+
+    listen(BOUNTY_OPENED_EVENT, () => this.overlays.openBounty());
+    listen(BOUNTY_CLOSED_EVENT, () => this.overlays.closeBounty());
+    listen(BOUNTY_CHANGED_EVENT, (bounty) => {
+      this.model.bounty = bounty;
+      this.refreshQuests();
+      // Whether a contract is in hand costs the tracker a line, which is a
+      // layout input for everything stacked above it.
+      this.applyLayout();
     });
 
     listen(FORGE_OPENED_EVENT, () => this.overlays.openForge());

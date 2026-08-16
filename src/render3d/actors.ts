@@ -4,7 +4,8 @@ import { npcName } from '../data/npcs';
 import { NPC_APPEARANCES, appearanceKey, computeAppearance } from '../systems/AppearanceSystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import { titleName } from '../systems/AchievementSystem';
-import { npcMarker } from '../systems/QuestSystem';
+import { npcMarker, strongerMarker } from '../systems/QuestSystem';
+import { bountyMarker } from '../systems/BountySystem';
 import { QUEST_MARKER_STYLE, THEME } from '../ui/theme';
 import { DEATH_FADE_MS, type Mob } from '../world/Mob';
 import { buildCreature } from './creatures';
@@ -339,17 +340,25 @@ export class NpcActor implements Actor, Pickable {
   }
 
   /**
-   * Catches the quest marker up to the character.
+   * Catches the marker up to the character.
    *
    * Read off the state each frame rather than driven by an event, the same
-   * bargain the con colours make: a quest's progress is *derived* (`QuestSystem`)
-   * from the bag, the kills or the arrivals, so the thing that changes this glyph
-   * is a rat bone landing in the pack — and nothing publishes that. `setMarker`
-   * only rebuilds when the answer actually moves, so the frame cost is the walk
-   * down the quest list and nothing.
+   * bargain the con colours make: what a quest or a contract has left to do is
+   * *derived* (`QuestSystem`, `BountySystem`) from the bag, the kills or the
+   * arrivals, so the thing that changes this glyph is a rat bone landing in the
+   * pack — and nothing publishes that. `setMarker` only rebuilds when the answer
+   * actually moves, so the frame cost is the walk down two short lists.
+   *
+   * Both lists rather than one, and the same three glyphs off each: a player
+   * reading a head at forty feet is asking whether walking over is worth it, and
+   * that question does not change because the person answering it deals in
+   * standing work instead of stories.
    */
   sync(state: CharacterState): void {
-    const marker = npcMarker(this.npc.npcId, state.quests, state);
+    const marker = strongerMarker(
+      npcMarker(this.npc.npcId, state.quests, state),
+      bountyMarker(this.npc.npcId, state),
+    );
     const style = marker ? QUEST_MARKER_STYLE[marker] : null;
     this.plate.setMarker(style?.glyph ?? null, style?.color ?? '');
   }
