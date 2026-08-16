@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
-import { harness } from './harness';
+import { harness, recordingBus } from './harness';
+import { GameContext } from '../../src/world/GameContext';
+import { createNewCharacter } from '../../src/persistence';
+import { zoneWorldSize } from '../../src/systems/ZoneSystem';
+import { questStatus } from '../../src/systems/QuestSystem';
+import type { QuestId } from '../../src/types/ids';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
@@ -42,7 +47,7 @@ describe('taking a quest', () => {
 
     bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'rat-bones');
 
-    expect(state.quests['rat-bones']).toBe('active');
+    expect(questStatus(state.quests, 'rat-bones')).toBe('active');
     expect(emissions(QUEST_LOG_CHANGED_EVENT)).not.toHaveLength(0);
   });
 
@@ -68,7 +73,7 @@ describe('handing one in', () => {
 
     bus.emit(TURN_IN_QUEST_REQUESTED_EVENT, 'rat-bones');
 
-    expect(state.quests['rat-bones']).toBe('active');
+    expect(questStatus(state.quests, 'rat-bones')).toBe('active');
     expect(character.itemCount('rat-bones')).toBe(9);
   });
 
@@ -79,7 +84,7 @@ describe('handing one in', () => {
 
     bus.emit(TURN_IN_QUEST_REQUESTED_EVENT, 'rat-bones');
 
-    expect(state.quests['rat-bones']).toBe('done');
+    expect(questStatus(state.quests, 'rat-bones')).toBe('done');
     expect(state.currency - copperBefore).toBe(120);
     expect(state.xp).toBeGreaterThan(0);
     expect(character.itemCount('brown-helmet')).toBe(1);
@@ -98,5 +103,79 @@ describe('handing one in', () => {
 
     expect(state.currency).toBe(copperAfterFirst);
     expect(character.itemCount('brown-helmet')).toBe(1);
+  });
+});
+
+/**
+ * The two objectives that count something other than the bag. What matters here
+ * rather than in the system tests is that the counters actually move: a kill is
+ * credited by the same funnel the slayer chains ride on, and an arrival is
+ * credited by the world being built at all.
+ */
+describe('an objective that is not a bag', () => {
+  /** The chain ahead of `questId`, handed in, so it can be accepted. */
+  function chainDone(kit: ReturnType<typeof harness>, ...questIds: QuestId[]): void {
+    questIds.forEach((questId) => {
+      kit.state.quests[questId] = { status: 'done', baseline: 0 };
+    });
+  }
+
+  it('counts kills made after the accept, and none of the ones before it', () => {
+    const kit = harness({ zoneId: 'bandit-camp', level: 3 });
+    chainDone(kit, 'rat-bones', 'crab-feast');
+    kit.character.recordKill('bandit', 40);
+    kit.character.acceptQuest('bandit-trouble');
+    expect(kit.character.questProgress('bandit-trouble').have).toBe(0);
+
+    const bandit = nth(kit.world.mobs, 0);
+    kit.world.teleport(bandit.x, bandit.y - 40);
+    kit.world.setTarget(bandit);
+    bandit.hp = 1;
+    kit.until(() => !bandit.isAlive(), 'the bandit to go down');
+
+    expect(kit.character.questProgress('bandit-trouble').have).toBe(1);
+  });
+
+  /**
+   * The arrival half, driven the way a player makes one: this needs a session
+   * rather than a world, because the thing that credits a visit is the *next*
+   * world being built and only the `GameContext` builds one.
+   */
+  it('is credited an arrival by the world the walk builds', () => {
+    const state = createNewCharacter('Walker', 'warrior');
+    const game = new GameContext({
+      character: state,
+      events: recordingBus([]),
+      rng: () => 0.5,
+    });
+    // The town this session opened in is already one arrival, which is exactly
+    // what a baseline is for: taking the quest here must not finish it.
+    expect(state.visits.town).toBe(1);
+    game.character.acceptQuest('quarry-road');
+    expect(game.character.questProgress('quarry-road').met).toBe(false);
+
+    const { width } = zoneWorldSize(game.currentWorld.zone);
+    game.currentWorld.player.setPosition(width / 2, 0);
+    game.update(200);
+    game.update(200);
+
+    expect(game.currentWorld.zone.id).toBe('quarry');
+    expect(game.character.questProgress('quarry-road').met).toBe(true);
+    game.destroy();
+  });
+
+  it('does not credit the zone the walk started in', () => {
+    const state = createNewCharacter('Walker', 'warrior');
+    const game = new GameContext({ character: state, events: recordingBus([]), rng: () => 0.5 });
+    game.character.acceptQuest('quarry-road');
+
+    const { height } = zoneWorldSize(game.currentWorld.zone);
+    game.currentWorld.player.setPosition(zoneWorldSize(game.currentWorld.zone).width / 2, height);
+    game.update(200);
+    game.update(200);
+
+    expect(game.currentWorld.zone.id).toBe('beach');
+    expect(game.character.questProgress('quarry-road').met).toBe(false);
+    game.destroy();
   });
 });

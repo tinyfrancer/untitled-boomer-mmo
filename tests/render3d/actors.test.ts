@@ -15,6 +15,7 @@ import { THEME } from '../../src/ui/theme';
 import { conColor, enemyDisplayName } from '../../src/systems/EnemySystem';
 import { computeAppearance } from '../../src/systems/AppearanceSystem';
 import { titleName } from '../../src/systems/AchievementSystem';
+import { QUEST_ORDER } from '../../src/data/quests';
 import { Campfire } from '../../src/world/Campfire';
 import { harness } from '../world/harness';
 import { lastPainted, stubCanvas } from './canvasStub';
@@ -363,8 +364,10 @@ describe('the rest of the zone', () => {
     actor.sync(character.state);
     expect(glyph()).toEqual({ text: '!', color: THEME.color.levelUp });
 
+    // Both openers, which is everything the shopkeeper is offering — the rest
+    // of the list is behind them, and a locked quest wears nothing.
     character.acceptQuest('rat-bones');
-    character.acceptQuest('crab-feast');
+    character.acceptQuest('quarry-road');
     actor.sync(character.state);
     expect(glyph()).toEqual({ text: '?', color: THEME.color.muted });
 
@@ -383,7 +386,9 @@ describe('the rest of the zone', () => {
     expect(countKind(actor.object, 'label')).toBe(1);
     expect(countKind(actor.object, 'marker')).toBe(1);
 
-    character.state.quests = { 'rat-bones': 'done', 'crab-feast': 'done' };
+    character.state.quests = Object.fromEntries(
+      QUEST_ORDER.map((questId) => [questId, { status: 'done', baseline: 0 }]),
+    );
     actor.sync(character.state);
     expect(countKind(actor.object, 'label')).toBe(1);
     expect(countKind(actor.object, 'marker')).toBe(0);

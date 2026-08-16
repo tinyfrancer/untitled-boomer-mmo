@@ -7,6 +7,7 @@ import {
   TITLE_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
 import { testContext } from './context';
+import { questStatus } from '../../src/systems/QuestSystem';
 
 /**
  * The desk on its own, with no shopkeeper standing at it. What the whole-zone
@@ -37,7 +38,7 @@ describe('taking a quest', () => {
 
     desk.accept('rat-bones');
 
-    expect(state.quests['rat-bones']).toBe('active');
+    expect(questStatus(state.quests, 'rat-bones')).toBe('active');
     expect(emissions(QUEST_LOG_CHANGED_EVENT)).toHaveLength(1);
     expect(emissions(COMBAT_LOG_EVENT)).toHaveLength(1);
     expect(localStorage.length).toBeGreaterThan(0);
@@ -70,7 +71,7 @@ describe('handing one in', () => {
 
     desk.turnIn('rat-bones');
 
-    expect(state.quests['rat-bones']).toBe('done');
+    expect(questStatus(state.quests, 'rat-bones')).toBe('done');
     expect(character.itemCount('rat-bones')).toBe(0);
     expect(character.itemCount('brown-helmet')).toBe(1);
     expect(publishXpGain).toHaveBeenCalledTimes(1);

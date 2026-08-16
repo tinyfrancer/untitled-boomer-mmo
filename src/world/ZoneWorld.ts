@@ -35,6 +35,7 @@ import {
   TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
+  VISITS_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
@@ -202,7 +203,7 @@ export class ZoneWorld implements Targeting {
   private readonly contextMenu: ContextMenuSession;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  // The seven HUD publishers that only speak when what they publish moves; the
+  // The nine HUD publishers that only speak when what they publish moves; the
   // constructor says what each one counts as a change.
   private readonly publishPlayerHp: () => void;
   private readonly publishPlayerMana: () => void;
@@ -210,6 +211,7 @@ export class ZoneWorld implements Targeting {
   private readonly publishAbilityState: () => void;
   private readonly publishActions: () => void;
   private readonly publishZone: () => void;
+  private readonly publishVisits: () => void;
   private readonly publishUnlockedZones: () => void;
   private readonly publishPlayerTile: () => void;
   /**
@@ -254,6 +256,12 @@ export class ZoneWorld implements Targeting {
       this.player.setHp(hp);
     }
     this.ctx = new WorldContext(character, events, this.player, zone.id);
+    // A world built for a zone *is* an arrival in it, which is what makes this
+    // the one place a visit is credited: the walk, the travel and the session
+    // resumed all end here, and a fourth route in would too. It is deliberately
+    // not `recordLocation`, which is called on every save and says where the
+    // character is rather than that they have just got there.
+    character.recordVisit(zone.id);
 
     // What each publisher counts as a change. HP and mana are their own
     // signature; the action bar compares only what it draws, and the item
@@ -310,6 +318,17 @@ export class ZoneWorld implements Targeting {
       () => this.zone.id,
       String,
       (zoneId) => this.ctx.events.emit(ZONE_ENTERED_EVENT, zoneId),
+    );
+    // The arrival this world was built by, told to the HUD on the same first
+    // frame and for the same reason: a visit objective's progress lives in this
+    // tally, and the counter that moved it did so before the HUD existed.
+    this.publishVisits = publishOnChange(
+      () => ({ ...this.character.state.visits }),
+      (visits) =>
+        Object.entries(visits)
+          .map(([zoneId, count]) => `${zoneId}:${count}`)
+          .join('|'),
+      (visits) => this.ctx.events.emit(VISITS_CHANGED_EVENT, visits),
     );
     // Unseeded for the same reason, and it needs no more than that: a key is
     // spent on the way through a door, so the world that opens one is a world
@@ -483,6 +502,7 @@ export class ZoneWorld implements Targeting {
     this.publishAbilityState();
     this.publishActions();
     this.publishZone();
+    this.publishVisits();
     this.publishUnlockedZones();
     this.publishPlayerTile();
     this.updateNpcRange();

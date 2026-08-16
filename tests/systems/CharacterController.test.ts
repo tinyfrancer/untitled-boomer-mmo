@@ -4,6 +4,7 @@ import { CharacterController } from '../../src/systems/CharacterController';
 import { STARTING_COPPER, createNewCharacter } from '../../src/persistence/CharacterState';
 import { QUESTS } from '../../src/data/quests';
 import { itemWeight } from '../../src/data/items';
+import { questStatus } from '../../src/systems/QuestSystem';
 import type { QuestId } from '../../src/types/ids';
 import { xpToNextLevel } from '../../src/systems/LevelingSystem';
 import { xpToReachLevel } from '../../src/data/xpTable';
@@ -157,7 +158,7 @@ describe('CharacterController quests', () => {
     const character = makeController();
     expect(character.acceptQuest('rat-bones')).toBe(true);
     expect(character.acceptQuest('rat-bones')).toBe(false);
-    expect(character.state.quests['rat-bones']).toBe('active');
+    expect(character.state.quests['rat-bones']).toEqual({ status: 'active', baseline: 0 });
   });
 
   it('reads progress off the bag', () => {
@@ -185,7 +186,7 @@ describe('CharacterController quests', () => {
     // Exactly the objective is consumed; the surplus stays in the bag.
     expect(character.itemCount('rat-bones')).toBe(2);
     expect(character.itemCount('brown-helmet')).toBe(1);
-    expect(character.state.quests['rat-bones']).toBe('done');
+    expect(questStatus(character.state.quests, 'rat-bones')).toBe('done');
   });
 
   it('hands a wizard cloth where a warrior gets leather', () => {
@@ -203,7 +204,7 @@ describe('CharacterController quests', () => {
     const result = character.turnInQuest('rat-bones');
     expect(result.ok).toBe(false);
     expect(character.itemCount('rat-bones')).toBe(9);
-    expect(character.state.quests['rat-bones']).toBe('active');
+    expect(questStatus(character.state.quests, 'rat-bones')).toBe('active');
   });
 
   it('refuses a quest that was never accepted', () => {
@@ -212,13 +213,63 @@ describe('CharacterController quests', () => {
     expect(character.turnInQuest('rat-bones').ok).toBe(false);
   });
 
+  // The baseline is read off the character at the accept and nowhere else, so
+  // the kills that are already on the sheet are the ones this quest is not
+  // about.
+  it('baselines a kill objective against the kills already made', () => {
+    const character = makeController();
+    character.recordKill('bandit', 40);
+    character.state.quests = { 'rat-bones': { status: 'done', baseline: 0 } };
+    character.state.quests['crab-feast'] = { status: 'done', baseline: 0 };
+
+    expect(character.acceptQuest('bandit-trouble')).toBe(true);
+
+    expect(character.state.quests['bandit-trouble']).toEqual({ status: 'active', baseline: 40 });
+    expect(character.questProgress('bandit-trouble').have).toBe(0);
+    character.recordKill('bandit', 12);
+    expect(character.questProgress('bandit-trouble').met).toBe(true);
+  });
+
+  // A visit and a kill are paid for out in the world, so the counter has
+  // nothing to take: the hand-in is coin and XP alone, and the pack is
+  // untouched by it.
+  it('takes nothing at the counter for a quest that asks for no items', () => {
+    const character = makeController();
+    character.addItem('logs', 4);
+    expect(character.acceptQuest('quarry-road')).toBe(true);
+    character.recordVisit('quarry');
+    const before = character.state.currency;
+
+    const result = character.turnInQuest('quarry-road');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.rewardItemId).toBe(null);
+    expect(character.state.currency).toBe(before + QUESTS['quarry-road'].reward.copper);
+    expect(character.itemCount('logs')).toBe(4);
+    expect(questStatus(character.state.quests, 'quarry-road')).toBe('done');
+  });
+
+  it('counts an arrival per world walked into, not per zone ever seen', () => {
+    const character = makeController();
+    expect(character.state.visits).toEqual({});
+    character.recordVisit('quarry');
+    character.recordVisit('quarry');
+    character.recordVisit('beach');
+    expect(character.state.visits).toEqual({ quarry: 2, beach: 1 });
+  });
+
   // Neither shipped quest can strand a player, because both hand over more
   // weight than they give back. Worth asserting rather than assuming: it is the
   // reason a full pack never blocks the starter arc.
   it('keeps every quest reward lighter than the objective it consumes', () => {
     Object.values(QUESTS).forEach((quest) => {
-      const handedOver = itemWeight(quest.objective.itemId) * quest.objective.quantity;
-      Object.values(quest.reward.gear).forEach((rewardItemId) => {
+      const objective = quest.objective;
+      // Only a collect objective is handed over at the counter; the other two
+      // free no weight, so a reward on one has to fit the pack as it stands.
+      const handedOver =
+        objective.kind === 'collect' ? itemWeight(objective.itemId) * objective.quantity : 0;
+      Object.values(quest.reward.gear ?? {}).forEach((rewardItemId) => {
         expect(itemWeight(rewardItemId)).toBeLessThanOrEqual(handedOver);
       });
     });
@@ -234,7 +285,7 @@ describe('CharacterController quests', () => {
       name: 'Test',
       giverNpcId: 'shopkeeper',
       description: '',
-      objective: { itemId: 'raw-fish', quantity: 1 },
+      objective: { kind: 'collect', itemId: 'raw-fish', quantity: 1 },
       reward: { copper: 50, xp: 10, gear: { warrior: 'brown-chestplate', wizard: 'brown-robe' } },
     };
     try {
@@ -252,7 +303,7 @@ describe('CharacterController quests', () => {
       expect(result.ok ? '' : result.reason).toContain('pack');
       expect(character.itemCount('raw-fish')).toBe(1);
       expect(character.itemCount('brown-chestplate')).toBe(0);
-      expect(character.state.quests[heavyReward]).toBe('active');
+      expect(questStatus(character.state.quests, heavyReward)).toBe('active');
       expect(character.state.currency).toBe(STARTING_COPPER);
     } finally {
       delete QUESTS[heavyReward];

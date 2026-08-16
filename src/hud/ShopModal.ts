@@ -3,15 +3,21 @@ import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName, itemValue } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
-import { questsForNpc, type QuestLog, type QuestOffer } from '../systems/QuestSystem';
+import {
+  questsForNpc,
+  type QuestCounters,
+  type QuestLog,
+  type QuestOffer,
+} from '../systems/QuestSystem';
 import { shopOffers, type StockOffer } from '../systems/ShopSystem';
 import { THEME } from '../ui/theme';
 import type { QuestId } from '../types/ids';
-import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
+import { inventoryEntries } from '../systems/InventorySystem';
 import type { ItemId } from '../types/ids';
 
-export interface ShopState {
-  inventory: Inventory;
+// The counters come in whole rather than as a bag, because a quest row shows
+// progress and a quest may now count kills or arrivals instead of items.
+export interface ShopState extends QuestCounters {
   currency: number;
   quests: QuestLog;
   // The other half of what the shelf is gated on, beside the quest log.
@@ -64,7 +70,7 @@ export class ShopModal extends Overlay {
     this.coin.textContent = formatCurrency(state.currency);
     this.body.replaceChildren();
 
-    const offers = questsForNpc('shopkeeper', state.quests, state.inventory).filter(
+    const offers = questsForNpc('shopkeeper', state.quests, state).filter(
       (offer) => offer.state !== 'done',
     );
     if (offers.length > 0) {
@@ -147,16 +153,29 @@ export class ShopModal extends Overlay {
     return pair.root;
   }
 
-  // A quest row says what it wants and how far along it is, so the player never
-  // has to open a second panel to decide whether it is worth walking back here.
+  /**
+   * A quest row says what it wants and how far along it is, so the player never
+   * has to open a second panel to decide whether it is worth walking back here.
+   *
+   * One still behind its chain is drawn rather than left out, carrying the quest
+   * it is waiting on where its progress would sit — the same call the shelf
+   * makes for a gated row and the world map for a shut zone. What is not offered
+   * yet is the reason to come back, and hiding it says nothing at all.
+   */
   private questRow(offer: QuestOffer): HTMLElement {
-    const { definition, state, progress } = offer;
+    const { definition, state, progress, requirement } = offer;
     const ready = state === 'ready';
     const actionable = ready || state === 'available';
-    return listRow({
+    const row = listRow({
       label: definition.name,
       value:
-        state === 'available' ? 'Accept' : ready ? 'Hand in' : `${progress.have}/${progress.need}`,
+        state === 'locked'
+          ? (requirement ?? '')
+          : state === 'available'
+            ? 'Accept'
+            : ready
+              ? 'Hand in'
+              : `${progress.have}/${progress.need}`,
       labelColor: actionable ? THEME.color.levelUp : THEME.color.muted,
       valueColor: actionable ? THEME.color.levelUp : THEME.color.dim,
       onClick: () => {
@@ -168,6 +187,10 @@ export class ShopModal extends Overlay {
       },
       questId: definition.id,
     });
+    if (state === 'locked') {
+      row.dataset.locked = definition.id;
+    }
+    return row;
   }
 }
 

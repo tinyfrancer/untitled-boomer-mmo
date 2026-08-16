@@ -25,7 +25,9 @@ import {
   canAccept,
   canTurnIn,
   completeQuest,
+  objectiveTally,
   questProgress,
+  type QuestCounters,
   type QuestProgress,
 } from './QuestSystem';
 import {
@@ -86,7 +88,8 @@ export type QuestTurnIn =
   | {
       ok: true;
       questId: QuestId;
-      rewardItemId: ItemId;
+      // Null when the quest pays coin and XP alone, which most of them do.
+      rewardItemId: ItemId | null;
       copper: number;
       xp: CombatXpGain;
     };
@@ -312,15 +315,29 @@ export class CharacterController {
     return skillLevel(this.state.skills, skillId);
   }
 
+  /** The three tallies a quest objective is read off. */
+  questCounters(): QuestCounters {
+    const { inventory, kills, visits } = this.state;
+    return { inventory, kills, visits };
+  }
+
   questProgress(questId: QuestId): QuestProgress {
-    return questProgress(QUESTS[questId], this.state.inventory);
+    return questProgress(QUESTS[questId], this.state.quests, this.questCounters());
   }
 
   acceptQuest(questId: QuestId): boolean {
-    if (!canAccept(QUESTS[questId], this.state.quests)) {
+    const definition = QUESTS[questId];
+    if (!canAccept(definition, this.state.quests)) {
       return false;
     }
-    this.state.quests = acceptQuest(this.state.quests, questId);
+    // The baseline is taken here and nowhere else: it is what the objective's
+    // lifetime tally stood at the moment the player said yes, and reading it a
+    // frame later would credit a kill they made while the panel was open.
+    this.state.quests = acceptQuest(
+      this.state.quests,
+      questId,
+      objectiveTally(definition.objective, this.questCounters()),
+    );
     return true;
   }
 
@@ -329,23 +346,29 @@ export class CharacterController {
    * pack can refuse the reward gear, and a turn-in that took the items and
    * dropped the reward on the floor is the one outcome that can't be undone —
    * so a full pack fails the whole thing rather than half of it.
+   *
+   * Only a `collect` objective is handed over: a kill and a visit were paid for
+   * out in the world, and the counter has nothing to take.
    */
   turnInQuest(questId: QuestId): QuestTurnIn {
     const definition = QUESTS[questId];
-    if (!canTurnIn(definition, this.state.quests, this.state.inventory)) {
+    if (!canTurnIn(definition, this.state.quests, this.questCounters())) {
       return { ok: false, reason: 'You do not have what was asked for.' };
     }
 
-    const rewardItemId = definition.reward.gear[this.state.classId];
-    const { itemId, quantity } = definition.objective;
+    const rewardItemId = definition.reward.gear?.[this.state.classId] ?? null;
+    const objective = definition.objective;
     // Weight only frees up once the objective is handed over, so check the
     // reward against the pack as it will be, not as it is.
-    const after = removeItemFromInventory(this.state.inventory, itemId, quantity);
-    if (!canCarry(after, rewardItemId, 1, this.carryCapacity())) {
+    const after =
+      objective.kind === 'collect'
+        ? removeItemFromInventory(this.state.inventory, objective.itemId, objective.quantity)
+        : this.state.inventory;
+    if (rewardItemId && !canCarry(after, rewardItemId, 1, this.carryCapacity())) {
       return { ok: false, reason: 'Your pack is too full for the reward.' };
     }
 
-    this.state.inventory = addItemToInventory(after, rewardItemId, 1);
+    this.state.inventory = rewardItemId ? addItemToInventory(after, rewardItemId, 1) : after;
     this.state.quests = completeQuest(this.state.quests, questId);
     this.addCurrency(definition.reward.copper);
     return {
@@ -397,6 +420,22 @@ export class CharacterController {
 
   displayName(): string {
     return formatDisplayName(this.state.name, this.state.activeTitleId);
+  }
+
+  /**
+   * Credits an arrival in a zone, which is the second tally in the game that
+   * has to be stored — `zoneId` says where the character is, and a zone walked
+   * out of again leaves nothing behind to count.
+   *
+   * Called once per world built rather than once per frame spent there, so
+   * every route in (a walk through an exit, a travel off the map, and a session
+   * resumed) credits exactly one arrival without knowing the others exist.
+   */
+  recordVisit(zoneId: ZoneId): void {
+    this.state.visits = {
+      ...this.state.visits,
+      [zoneId]: (this.state.visits[zoneId] ?? 0) + 1,
+    };
   }
 
   /**

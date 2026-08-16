@@ -3,6 +3,7 @@ import { ENEMIES } from '../../src/data/enemies';
 import { describeItemName } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
+import { QUEST_ORDER } from '../../src/data/quests';
 import { SHOP_STOCK } from '../../src/data/shop';
 import { ZONES } from '../../src/data/zones';
 import { STARTING_BANK_SLOTS, bankSlotPrice } from '../../src/systems/BankSystem';
@@ -139,7 +140,7 @@ describe('describing the rest of the world', () => {
     expect(panel.title).toBe('Shopkeeper');
     expect(valueOf(panel, 'Sells')).toBe('Tools, food and supplies');
     expect(valueOf(panel, 'Stocks')).toBe(`${stocked} to start, up to ${SHOP_STOCK.length}`);
-    expect(valueOf(panel, 'Quests')).toBe('2');
+    expect(valueOf(panel, 'Quests')).toBe(String(QUEST_ORDER.length));
     expect(panel.note).toContain('the work you finish');
     // No item name appears anywhere on it, gated or not.
     const said = [...panel.lines.map((line) => line.value), panel.note ?? ''].join(' ');

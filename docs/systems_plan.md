@@ -21,7 +21,7 @@ gathered materials that lead nowhere.
 | 8   | Mining, and the first thing worth carrying home          | Crafting web      | merged 2026-08-11 |
 | 9   | Smithing, and the forge it happens at                    | Crafting web      | merged 2026-08-12 |
 | 10  | Nothing gathered is a dead end                           | Crafting web      | merged 2026-08-13 |
-| 11  | A camp that can cook and craft                           | Crafting web      | planned           |
+| 11  | A camp that can cook and craft                           | Crafting web      | merged 2026-08-13 |
 | 12  | Quests that ask for something other than a bag           | Reasons to return | planned           |
 | 13  | Repeatable work                                          | Reasons to return | planned           |
 | 14  | Mastery                                                  | Reasons to return | planned           |
@@ -490,6 +490,49 @@ read naively is already complete for anyone who has been playing: accept "kill 2
 kills and it hands itself in. The fix keeps the principle intact — store the **baseline** at accept
 time, not the progress, so `have` is still derived (`kills[id] − baseline`) and there is still no
 counter that any of the five paths that award a kill could forget to bump.
+
+Shipped as written, with five things the section did not say and that turned out to decide it.
+
+**The baseline is one rule over two counters, and that is what a visit had to be bent to fit.** The
+obvious shape for `visit` is a set of places seen, and it is wrong twice: it needs a second "since
+when" question that the baseline already answers for kills, and a zone already visited can never
+satisfy it again, so the quest is either instantly done or permanently impossible depending on where
+the player has been. Counting **arrivals** instead makes a visit exactly a kill with a different
+tally behind it — one derivation, one stored number, and "go there" means the same thing to a veteran
+as to a newcomer. `CharacterState.visits` is the second counter in the game that has to be stored,
+for the same reason `kills` was the first: `zoneId` says where somebody is, not where they have been.
+
+**A world built for a zone _is_ an arrival in it**, which is what settled where the tally is credited.
+`ZoneWorld`'s constructor, not `recordLocation` — that one is called on every autosave and answers a
+different question — so the walk, the travel off the map and the session resumed into a zone all
+credit exactly one arrival without any of them knowing the others exist.
+
+**A locked quest is drawn, not hidden.** `QuestOfferState` gained `locked`, and the row is still
+tapped like any other, carrying the quest it waits on where its progress would sit. That is the third
+time this codebase has made the same call — the gated shelf row and the shut zone cell are the other
+two — and the argument transfers whole: what is not offered yet _is_ the reason to come back. The one
+place it is not treated as an offer is the marker over the giver's head, which would otherwise send
+somebody across town to a counter with nothing to say.
+
+**The chain had to be laid over the quests that were already a sequence**, or `requires` would have
+been a field only new content used. The feast now needs the bones handed in, which is the order the
+progression test already walked and the order the reward gear tiers in. From there the line runs
+bones → feast → the bandit contract → the chief, with the quarry errand off to one side as the only
+quest in the game that asks for nothing but the walk.
+
+**Gear had to become an optional reward, and a kill objective had to ride an existing grind.** Every
+quest paying a piece of armour would have out-dropped the bandit camp that armour is supposed to come
+from, so three of the five pay coin and XP alone. And the bandit contract asks for **twelve** where a
+full set costs seventeen kills: a kill objective that asked for more than the grind already makes
+would be a second grind wearing a quest's clothes. `tests/systems/progression.test.ts` holds both the
+arc it lands in — still level 3, now with four quests in it rather than two — and that twelve-under-
+seventeen relationship, and the chief's quest is deliberately outside the arc, being the capstone the
+last two levels are for.
+
+One thing the content does that the mechanism does not: the hideout is now **findable**. Its key is a
+3% drop off bandits, so before this the door at the back of the camp was discovered by accident or
+not at all — a quest that names Hollis and says where his men keep the key is the only thing in the
+game pointing at it.
 
 ## 13 — Repeatable work
 

@@ -61,8 +61,18 @@ describe('the gate', () => {
     const { entry, requires } = gatedBy('quest');
 
     expect(isStocked(entry, { level: 99, quests: NO_QUESTS })).toBe(false);
-    expect(isStocked(entry, { level: 1, quests: { [requires.questId]: 'active' } })).toBe(false);
-    expect(isStocked(entry, { level: 1, quests: { [requires.questId]: 'done' } })).toBe(true);
+    expect(
+      isStocked(entry, {
+        level: 1,
+        quests: { [requires.questId]: { status: 'active', baseline: 0 } },
+      }),
+    ).toBe(false);
+    expect(
+      isStocked(entry, {
+        level: 1,
+        quests: { [requires.questId]: { status: 'done', baseline: 0 } },
+      }),
+    ).toBe(true);
   });
 
   /**

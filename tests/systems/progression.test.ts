@@ -16,10 +16,10 @@ import { scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { xpToReachLevel } from '../../src/data/xpTable';
 import { ZONES } from '../../src/data/zones';
-import type { EnemyId, ItemId, LootTableId } from '../../src/types/ids';
+import type { EnemyId, ItemId, LootTableId, QuestId } from '../../src/types/ids';
 
 // The pacing contract for the starter arc, simulated rather than played: a
-// character who does the two quests and gears up should arrive at level 3 and
+// character who does the arc's quests and gears up should arrive at level 3 and
 // stop there. The duel tests hold how hard a fight is; this holds how long the
 // whole thing takes, which is the number the XP curve is actually tuned to.
 //
@@ -29,6 +29,15 @@ import type { EnemyId, ItemId, LootTableId } from '../../src/types/ids';
 
 const chanceOf = (tableId: LootTableId, itemId: ItemId): number =>
   LOOT_TABLES[tableId].entries.find((entry) => entry.itemId === itemId)?.chance ?? 0;
+
+/** The objective of a quest that asks for a bag, narrowed to say so. */
+function collectObjective(questId: QuestId): { itemId: ItemId; quantity: number } {
+  const objective = QUESTS[questId].objective;
+  if (objective.kind !== 'collect') {
+    throw new Error(`${questId} no longer asks for items`);
+  }
+  return objective;
+}
 
 /** Average XP for a kill in a zone, weighted by how many spawns sit at each level. */
 function averageKillXp(spawns: MobSpawnPoint[], enemyId: EnemyId): number {
@@ -48,12 +57,21 @@ interface Arc {
   banditKills: number;
   fishCooked: number;
   crabCooked: number;
+  /** Which quests get handed in along the way, since each one pays XP. */
+  quests: QuestId[];
 }
 
-/** The path the two quests and a full gear set actually push a player down. */
+/**
+ * The quests the starter arc actually finishes. The chief is deliberately not
+ * one of them: it is the capstone behind a 3% key and a level 4 fight, which is
+ * what the climb *past* the arc is for.
+ */
+const ARC_QUESTS: QuestId[] = ['rat-bones', 'quarry-road', 'crab-feast', 'bandit-trouble'];
+
+/** The path the arc's quests and a full gear set actually push a player down. */
 function intendedArc(): Arc {
-  const bones = QUESTS['rat-bones'].objective;
-  const feast = QUESTS['crab-feast'].objective;
+  const bones = collectObjective('rat-bones');
+  const feast = collectObjective('crab-feast');
 
   const ratKills = killsFor(bones.quantity, chanceOf('rat', bones.itemId));
 
@@ -86,7 +104,7 @@ function intendedArc(): Arc {
     chanceOf('bandit', 'brown-legs');
   const banditKills = killsFor(3, armourPerKill);
 
-  return { ratKills, crabKills, banditKills, fishCooked, crabCooked };
+  return { ratKills, crabKills, banditKills, fishCooked, crabCooked, quests: ARC_QUESTS };
 }
 
 /** Total character XP the arc pays out, quest rewards included. */
@@ -95,8 +113,7 @@ function arcXp(arc: Arc): number {
     arc.ratKills * averageKillXp(TOWN_MOB_SPAWNS, 'rat') +
     arc.crabKills * averageKillXp(BEACH_MOB_SPAWNS, 'crab') +
     arc.banditKills * averageKillXp(BANDIT_CAMP_MOB_SPAWNS, 'bandit') +
-    QUESTS['rat-bones'].reward.xp +
-    QUESTS['crab-feast'].reward.xp
+    arc.quests.reduce((xp, questId) => xp + QUESTS[questId].reward.xp, 0)
   );
 }
 
@@ -137,17 +154,34 @@ const highestSpawnLevel = (): number =>
 describe('the starter arc', () => {
   const arc = intendedArc();
 
-  it('lands the player at level 3 once both quests and a gear set are done', () => {
+  it("lands the player at level 3 once the arc's quests and a gear set are done", () => {
     const finished = levelAfter(arcXp(arc));
     expect(finished.level).toBe(3);
   });
 
   // The failure this guards against is a curve so slow that the quests are done
   // long before the level is: level 3 should arrive at the end of the arc, not
-  // well after it.
+  // well after it. The bandit contract comes off with the bandit kills, since
+  // nobody hands in twelve of them without making them.
   it('leaves the player most of the way to 3 on the quests alone', () => {
-    const withoutGearGrind = arcXp({ ...arc, banditKills: 0 });
+    const withoutGearGrind = arcXp({
+      ...arc,
+      banditKills: 0,
+      quests: arc.quests.filter((questId) => questId !== 'bandit-trouble'),
+    });
     expect(levelAfter(withoutGearGrind).level).toBeGreaterThanOrEqual(2);
+  });
+
+  /**
+   * What keeps a kill objective from being a second grind bolted onto the
+   * first: it asks for fewer bandits than a full armour set already costs, so
+   * the contract is something the player finishes on the way rather than a
+   * reason to stand in the camp twice as long.
+   */
+  it('asks for no kills the gear grind was not already making', () => {
+    const objective = QUESTS['bandit-trouble'].objective;
+    expect(objective.kind).toBe('kill');
+    expect(objective.kind === 'kill' && objective.quantity).toBeLessThanOrEqual(arc.banditKills);
   });
 
   it('does not let a single zone carry the whole arc', () => {

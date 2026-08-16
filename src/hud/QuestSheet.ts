@@ -1,12 +1,17 @@
 import { Sheet } from './Sheet';
 import { el, emptyLine } from './dom';
-import { QUESTS, QUEST_ORDER } from '../data/quests';
+import { QUESTS, QUEST_ORDER, type QuestReward } from '../data/quests';
 import { describeItemName } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
-import { questProgress, questState, type QuestLog } from '../systems/QuestSystem';
+import {
+  describeObjective,
+  questProgress,
+  questState,
+  type QuestCounters,
+  type QuestLog,
+} from '../systems/QuestSystem';
 import { THEME } from '../ui/theme';
 import type { ClassId } from '../types/ids';
-import type { Inventory } from '../systems/InventorySystem';
 
 /**
  * The quest log: what has been taken on, how far along it is, and what it pays.
@@ -21,7 +26,7 @@ export class QuestSheet extends Sheet {
     this.classId = classId;
   }
 
-  update(log: QuestLog, inventory: Inventory): void {
+  update(log: QuestLog, counters: QuestCounters): void {
     this.body.replaceChildren();
 
     const taken = QUEST_ORDER.map((id) => QUESTS[id]).filter((quest) => log[quest.id]);
@@ -34,8 +39,8 @@ export class QuestSheet extends Sheet {
     }
 
     for (const quest of taken) {
-      const state = questState(quest, log, inventory);
-      const { have, need } = questProgress(quest, inventory);
+      const state = questState(quest, log, counters);
+      const { have, need } = questProgress(quest, log, counters);
       const done = state === 'done';
 
       const block = el('div', 'hud-quest');
@@ -47,7 +52,7 @@ export class QuestSheet extends Sheet {
         'hud-quest__line',
         done
           ? 'Handed in.'
-          : `${describeItemName(quest.objective.itemId)}  ${have}/${need}${
+          : `${describeObjective(quest.objective)}  ${have}/${need}${
               state === 'ready' ? '  — ready to hand in' : ''
             }`,
       );
@@ -56,18 +61,17 @@ export class QuestSheet extends Sheet {
       block.append(name, progress);
 
       if (!done) {
-        const reward = quest.reward;
-        block.append(
-          el(
-            'div',
-            'hud-quest__reward',
-            `Pays ${formatCurrency(reward.copper)}, ${reward.xp} XP and ${describeItemName(
-              reward.gear[this.classId],
-            )}`,
-          ),
-        );
+        block.append(el('div', 'hud-quest__reward', `Pays ${this.describeReward(quest.reward)}`));
       }
       this.body.append(block);
     }
+  }
+
+  // Most quests pay coin and XP alone, so the gear clause is written only when
+  // there is a piece to name rather than left as an empty tail.
+  private describeReward(reward: QuestReward): string {
+    const gear = reward.gear?.[this.classId];
+    const paid = `${formatCurrency(reward.copper)}, ${reward.xp} XP`;
+    return gear ? `${paid} and ${describeItemName(gear)}` : paid;
   }
 }

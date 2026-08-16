@@ -1,6 +1,6 @@
 import { QUESTS } from '../data/quests';
 import { SHOP_STOCK, type ShopStockEntry } from '../data/shop';
-import type { QuestLog } from './QuestSystem';
+import { isQuestDone, type QuestLog } from './QuestSystem';
 
 /**
  * Whether something is on the shelf yet, and what to say when it is not.
@@ -48,7 +48,7 @@ export function stockAccess(entry: ShopStockEntry, context: StockContext): Stock
     };
   }
 
-  if (context.quests[requires.questId] === 'done') {
+  if (isQuestDone(context.quests, requires.questId)) {
     return { kind: 'stocked' };
   }
   const questName = QUESTS[requires.questId].name;

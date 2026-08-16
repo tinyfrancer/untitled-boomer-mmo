@@ -867,13 +867,32 @@ async function feedback() {
   await page.click('.hud-modal .hud-list-row[data-quest="rat-bones"]');
   await page.waitForTimeout(150);
   const questHeard = await page.evaluate(() => ({
-    world: { ...window.world.character.state.quests },
+    status: window.world.character.state.quests['rat-bones']?.status,
     tracker: [...document.querySelectorAll('.hud-tracker__line')].map((n) => n.textContent),
   }));
   check(
     'a quest taken at the shopkeeper reaches the world and the tracker',
-    questHeard.world['rat-bones'] === 'active' && questHeard.tracker.length === 1,
+    questHeard.status === 'active' && questHeard.tracker.length === 1,
     questHeard.tracker.join(' | '),
+  );
+  // A quest still behind its chain is drawn like a gated shelf row, carrying
+  // what it waits on where its progress would sit — and, being neither
+  // available nor ready, doing nothing when it is tapped.
+  const lockedQuest = await page.evaluate(async () => {
+    const row = document.querySelector('.hud-modal .hud-list-row[data-quest="crab-feast"]');
+    /** @type {HTMLElement | null} */ (row)?.click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return {
+      drawn: row !== null,
+      locked: /** @type {HTMLElement | null} */ (row)?.dataset.locked === 'crab-feast',
+      says: row?.textContent ?? '',
+      taken: window.world.character.state.quests['crab-feast'] !== undefined,
+    };
+  });
+  check(
+    'a locked quest is drawn with what it waits on, and a tap on it takes nothing on',
+    lockedQuest.drawn && lockedQuest.locked && !lockedQuest.taken,
+    lockedQuest.says,
   );
   // The shop's stock and its sell list get the bag's icons; its quest rows
   // deliberately do not, since a quest is not an item.
@@ -900,11 +919,14 @@ async function feedback() {
   // like any other — what needs a browser is the same round trip the locked zone
   // cell gets: a real tap on the panel, the world refusing, and the reason
   // arriving on the toast, which on a phone is the only place it can.
+  // `data-locked` marks any row drawn shut, and a quest still behind its chain
+  // wears it too — so this asks for the shut rows *of the shelf* rather than
+  // taking the first one in the panel, which is a quest id and not an item.
   const shelf = await page.evaluate(() => ({
     rows: document.querySelectorAll('.hud-modal__box--shop .hud-list-row[data-item]').length,
-    locked: [...document.querySelectorAll('.hud-modal__box--shop [data-locked]')].map(
-      (r) => /** @type {HTMLElement} */ (r).dataset.locked ?? '',
-    ),
+    locked: [
+      ...document.querySelectorAll('.hud-modal__box--shop .hud-list-row[data-item][data-locked]'),
+    ].map((r) => /** @type {HTMLElement} */ (r).dataset.locked ?? ''),
   }));
   const shut = /** @type {import('../src/types/ids').ItemId} */ (shelf.locked[0] ?? '');
   const purseBefore = await page.evaluate(() => window.world.character.state.currency);
@@ -961,7 +983,13 @@ async function feedback() {
   // the glyph noticed. Nothing else in the run can tell a poll from a listener.
   const taken = await page.evaluate(() => ({ ...window.world.character.state.quests }));
   await page.evaluate(() => {
-    window.world.character.state.quests = { 'rat-bones': 'done', 'crab-feast': 'done' };
+    window.world.character.state.quests = {
+      'rat-bones': { status: 'done', baseline: 0 },
+      'quarry-road': { status: 'done', baseline: 0 },
+      'crab-feast': { status: 'done', baseline: 0 },
+      'bandit-trouble': { status: 'done', baseline: 0 },
+      'the-cutthroat': { status: 'done', baseline: 0 },
+    };
   });
   await draw();
   const cleared = (await drawnCounts()).markers;

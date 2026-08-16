@@ -11,7 +11,8 @@ with crabs and ocean fishing, a quarry cut into the hills north of town with tin
 a bandit camp with aggressive humanoids, and the bandit hideout behind a locked
 door); character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
-to keep a haul in; a weight-limited pack; two collection quests from the shopkeeper; slayer achievements and the
+to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
+kills and sends you somewhere; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
 mobile-first HUD; and local save/load with versioned migrations. Every zone is level 1-3 starter
 content — what separates them is what they drop, not how hard they are, and the hideout is gated by
@@ -671,21 +672,55 @@ it is cloth so it fits either class, while the two weapons behind it are the cha
 so the run is worth making whoever you rolled.
 
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
-only `active | done` per quest; how far along a "bring me N of X" objective is gets counted off the
-inventory on read. Items reach the bag from loot, gathering, cooking, buying and offline camping,
-and counting on read means none of those paths can forget to bump a counter. The marker over a quest
-giver's head (`npcMarker`) is derived the same way, which is **why the view polls it**: what moves
-that glyph is an item landing in the bag, and nothing publishes that. `NpcActor.sync()` reads it off
-`character.state` each frame like `MobActor` reads the con colours, and the sprite is tagged
-`userData.kind = 'marker'` rather than `'label'` — smoke asserts one label per drawn creature in
-every zone, so a second label over a head would break that everywhere. `turnInQuest` on
-`CharacterController` refuses as a whole rather than half-applying — taking the objective and
-finding no room for the reward is the one outcome that can't be undone.
+a status per quest and one number beside it; how far along an objective is gets counted on read.
+A `collect` objective counts the bag, and items reach it from loot, gathering, cooking, buying and
+offline camping — counting on read means none of those paths can forget to bump a counter. The
+marker over a quest giver's head (`npcMarker`) is derived the same way, which is **why the view
+polls it**: what moves that glyph is an item landing in the bag, and nothing publishes that.
+`NpcActor.sync()` reads it off `character.state` each frame like `MobActor` reads the con colours,
+and the sprite is tagged `userData.kind = 'marker'` rather than `'label'` — smoke asserts one label
+per drawn creature in every zone, so a second label over a head would break that everywhere.
+`turnInQuest` on `CharacterController` refuses as a whole rather than half-applying — taking the
+objective and finding no room for the reward is the one outcome that can't be undone.
 
-**Kills are the one counter that is stored** (`systems/AchievementSystem.ts`). Everything else
-derives its progress from state that already exists — a quest counts the bag — but a corpse leaves
-nothing behind, so `CharacterState.kills` holds a real per-creature tally. What comes _off_ it
-still derives: which achievements are unlocked and which titles are earned are computed on read,
+**An objective is a tagged union, and what splits the three is what each one _counts_**
+(`QuestObjective` in `data/quests.ts`). `collect` counts the bag, which goes down as well as up and
+is handed over at the counter; `kill` and `visit` count lifetime tallies that only ever climb and
+have already been paid by the time they are reported — so a turn-in takes items from the first and
+nothing at all from the other two. That is also the whole reason a quest entry stores a **baseline**:
+read straight off `CharacterState.kills`, "kill 12 bandits" is already finished for anyone who has
+been playing and hands itself in the moment it is taken. Remembering where the tally stood at the
+accept keeps `have` derived (`tally − baseline`) rather than counting a second copy of a number the
+game already has, and it means nothing for a `collect` — which is why the same field is left at
+zero there, and why a quest taken with the goods already in the pack is complete on the spot.
+
+**A visit counts arrivals rather than remembering places**, and that is what makes it the kill rule
+with a different tally behind it instead of a third mechanism. A visited _set_ would need its own
+"since when" question and could never be re-satisfied by someone who had already been; a count minus
+a baseline says "go there" once, to a veteran and a newcomer alike. The tally is credited in
+`ZoneWorld`'s constructor, because **a world built for a zone _is_ an arrival in it** — the walk, the
+travel and the session resumed all end there, so every route in counts by construction and a fourth
+would too. It is deliberately not `recordLocation`, which is called on every save and says where the
+character is rather than that they have just got there. The HUD holds all three counters and redraws
+the tracker and the sheet off them together, which is why the two tallies ride events of their own
+(`kills-changed`, `visits-changed`): neither is in the bag it already has, and either can move a
+quest without the quest log changing at all.
+
+**A quest may be held back by another** (`QuestDefinition.requires`), the shape
+`ShopStockEntry.requires` and `ZoneDefinition.requiresKey` already use: the table reads as a list of
+what is _withheld_ rather than of what is open, and finishing is what opens the next link — accepting
+the one before is not enough. `QuestOfferState` gains `locked` beside the four it had, and a locked
+row is **drawn** at the counter carrying the quest it waits on where its progress would sit. Same
+call as a gated shelf row and a shut zone's cell, for the same reason: what is not offered yet is the
+reason to come back. The one place `locked` is not treated as an offer is the marker over the giver's
+head, which would otherwise send a player across town to a counter with nothing to say.
+
+**Kills are no longer the only counter that is stored** (`systems/AchievementSystem.ts`,
+`ZoneVisits` in `systems/QuestSystem.ts`). Everything else derives its progress from state that
+already exists — a quest counts the bag — but a corpse leaves nothing behind, so
+`CharacterState.kills` holds a real per-creature tally, and a zone walked out of again leaves nothing
+either, so `CharacterState.visits` holds a per-zone one. What comes _off_ both still derives: which
+achievements are unlocked, which titles are earned and how far along a quest is are computed on read,
 and only the player's choice of worn title is stored alongside. Keep that split when adding to it.
 
 Because the count is stored, every path that kills something has to credit it — which is why

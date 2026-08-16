@@ -108,6 +108,29 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     ...state,
     afk: state.afk ? { ...(state.afk as object), station: null } : null,
   }),
+  // v17 → v18: a quest may ask for something other than a bag, so the log holds
+  // an entry rather than a status and the zone tally it can count against
+  // arrives empty.
+  //
+  // Every quest a v17 save could have taken was a `collect`, whose baseline is
+  // meaningless — a bag is not a tally — so zero is not a default standing in
+  // for information this step has lost. It is the number that objective would
+  // have been written with had it been taken today.
+  //
+  // The empty `visits` is the honest answer for the same reason `kills` started
+  // empty at v9: nothing was counting arrivals, so nothing can be reconstructed,
+  // and a visit quest taken after the upgrade baselines itself at zero and asks
+  // for one arrival — which is what it would ask of a new character too.
+  17: (state) => ({
+    ...state,
+    quests: Object.fromEntries(
+      Object.entries((state.quests ?? {}) as Record<string, unknown>).map(([id, status]) => [
+        id,
+        { status, baseline: 0 },
+      ]),
+    ),
+    visits: {},
+  }),
 };
 
 /**
