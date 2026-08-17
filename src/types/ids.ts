@@ -5,7 +5,7 @@ export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 // `studded` is the first tier the world drops that nothing in town sells and no
 // forge makes: it is what the goblins on the Old Mill Road are wearing, and the
 // step a character takes who has not gone near a quarry.
-export type TierId = 'brown' | 'studded' | 'iron';
+export type TierId = 'brown' | 'studded' | 'iron' | 'fenweave';
 
 export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
@@ -65,7 +65,17 @@ export type ItemId =
   // the cloth half of the world's supply is what the fen is for.
   | 'studded-helmet'
   | 'studded-jerkin'
-  | 'studded-legs';
+  | 'studded-legs'
+  // The fen's three, and the cloth half the line above was waiting on: the first
+  // armour a caster has ever been able to walk out and earn.
+  | 'fenweave-hood'
+  | 'fenweave-robe'
+  | 'fenweave-leggings'
+  // What the deep pools hold, and the best heal in the game once it is cooked.
+  | 'raw-eel'
+  | 'cooked-eel'
+  | 'burnt-eel'
+  | 'lurker-hide';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -80,9 +90,11 @@ export type RecipeId =
   | 'bone-char'
   | 'iron-helmet'
   | 'iron-chestplate'
-  | 'iron-legs';
+  | 'iron-legs'
+  | 'cooked-eel';
 
-export type EnemyId = 'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger';
+export type EnemyId =
+  'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'bog-lurker' | 'fen-raider';
 
 // What an enemy is, which is what decides what it can carry: humanoids have
 // pockets and wear gear, beasts drop the parts they are made of.
@@ -97,7 +109,8 @@ export type CreatureShapeId = 'quadruped' | 'crustacean' | 'humanoid';
 // One per creature that drops anything. Its own union rather than EnemyId: what
 // a table is called is a fact about the table, and two creatures sharing one is
 // a decision LOOT_TABLES should be free to make.
-export type LootTableId = 'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger';
+export type LootTableId =
+  'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'bog-lurker' | 'fen-raider';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick';
 
@@ -138,7 +151,7 @@ export type CombatSkillId = 'one-handed' | 'unarmed' | 'block' | 'parry' | 'dest
 export type SkillId = GatherSkillId | CombatSkillId;
 
 export type ResourceNodeId =
-  'tree' | 'fishing-spot' | 'ocean-fishing-spot' | 'tin-vein' | 'iron-vein';
+  'tree' | 'fishing-spot' | 'ocean-fishing-spot' | 'deep-fishing-spot' | 'tin-vein' | 'iron-vein';
 
 /**
  * Which body a renderer draws a node with, and the same bargain `CreatureShapeId`
@@ -162,7 +175,13 @@ export type NodeShapeId = 'tree' | 'ripple' | 'vein';
 export type MasteryTargetId = ResourceNodeId | RecipeId;
 
 export type ZoneId =
-  'town' | 'beach' | 'quarry' | 'bandit-camp' | 'bandit-hideout' | 'old-mill-road';
+  | 'town'
+  | 'beach'
+  | 'quarry'
+  | 'bandit-camp'
+  | 'bandit-hideout'
+  | 'old-mill-road'
+  | 'blackwater-fen';
 
 // What is built on a zone rather than spawned in it: solid, permanent, and the
 // thing a counter stands at the door of. Its own union rather than a slice of

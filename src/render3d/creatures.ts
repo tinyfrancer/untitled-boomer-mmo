@@ -9,7 +9,7 @@ import {
 import { TILE_SIZE } from '../config/constants';
 import { stickFigure } from '../systems/AppearanceSystem';
 import { FIGURE_HEIGHT, buildFigure, type Figure } from './figure';
-import { CREATURE_LOOKS, PALETTE, humanoidLook, type BeastLook, type PersonLook } from './palette';
+import { PALETTE, beastLook, humanoidLook, type BeastLook, type PersonLook } from './palette';
 import type { EnemyDefinition } from '../data/enemies';
 
 /**
@@ -28,9 +28,9 @@ import type { EnemyDefinition } from '../data/enemies';
 export function buildCreature(definition: EnemyDefinition): Figure {
   switch (definition.shape) {
     case 'quadruped':
-      return buildQuadruped(definition, CREATURE_LOOKS.quadruped);
+      return buildQuadruped(definition, beastLook(definition.id, 'quadruped'));
     case 'crustacean':
-      return buildCrustacean(definition, CREATURE_LOOKS.crustacean);
+      return buildCrustacean(definition, beastLook(definition.id, 'crustacean'));
     case 'humanoid':
       return buildHumanoid(definition, humanoidLook(definition.id));
   }

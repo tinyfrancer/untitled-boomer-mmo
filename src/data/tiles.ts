@@ -7,6 +7,11 @@ export const SAND_TILE = 3;
 // BLOCKING_TILES is a list rather than a check for one id.
 export const STONE_TILE = 4;
 export const WALL_TILE = 5;
+// The fen's ground: wet underfoot and walkable, which is the whole reason it is
+// its own tile rather than the water it sits between. A fen drawn as grass with
+// ponds in it reads as a park, and the difference between ground you may cross
+// and water you may not is the one thing a player has to see here at a glance.
+export const MARSH_TILE = 6;
 
 // Tiles nothing can walk over. CollisionSystem blocks exactly these,
 // so adding a walkable tile needs no change there — only a blocking one does.
@@ -32,6 +37,9 @@ export const TILE_COLORS: Record<number, number> = {
   // Darker than the floor by enough to read as solid at a glance, which is all
   // a wall has to do when the collision grid is what actually stops anyone.
   [WALL_TILE]: 0x35322e,
+  // Olive and desaturated, so it sits between the grass it is not and the water
+  // it is next to without being mistaken for either.
+  [MARSH_TILE]: 0x4d5b3c,
 };
 
 /** A tile's colour; anything nobody has coloured yet reads as ground. */

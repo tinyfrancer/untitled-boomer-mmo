@@ -11,4 +11,8 @@ export const TIER_COLORS: Record<TierId, number> = {
   // Cold and pale against the leather, so a smithed set reads as a step up at a
   // glance rather than only in the numbers.
   iron: 0x9aa5b1,
+  // The fen's own colour, and the only one here that is not a metal or a hide:
+  // a dark brackish teal, far enough from the two leathers that a robed figure
+  // is never mistaken for an armoured one at a glance.
+  fenweave: 0x2f5d5a,
 };

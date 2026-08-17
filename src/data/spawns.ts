@@ -172,3 +172,55 @@ export const BANDIT_HIDEOUT_MOB_SPAWNS: MobSpawnPoint[] = [
   { dx: 288, dy: 96, enemyId: 'bandit', level: 3 },
   { dx: 448, dy: 0, enemyId: 'bandit-chief', level: 4 },
 ];
+
+/**
+ * The fen's eleven, and the one thing about this zone a later edit could delete
+ * without any other test noticing: **the level climbs the further south you
+ * go.**
+ *
+ * The road in is along the north edge, so depth is the difficulty dial — a
+ * character who has walked down from the beach meets fives, and the sevens are
+ * as far from the way out as the map allows. It is the quarry's idea pointed
+ * along a different axis, and it is what makes retreating north mean something.
+ *
+ * Raiders and lurkers are interleaved rather than zoned, because the two are
+ * different questions: the raider is what stops you walking through, the lurker
+ * is what stops you standing still. Sorting them into halves would let a player
+ * answer one at a time.
+ */
+export const BLACKWATER_FEN_MOB_SPAWNS: MobSpawnPoint[] = [
+  { dx: -320, dy: -160, enemyId: 'bog-lurker', level: 5 },
+  { dx: 352, dy: -96, enemyId: 'bog-lurker', level: 5 },
+  { dx: -64, dy: -32, enemyId: 'fen-raider', level: 5 },
+  { dx: 448, dy: 32, enemyId: 'fen-raider', level: 5 },
+  { dx: -96, dy: 96, enemyId: 'bog-lurker', level: 6 },
+  { dx: 416, dy: 288, enemyId: 'bog-lurker', level: 6 },
+  { dx: -448, dy: 256, enemyId: 'fen-raider', level: 6 },
+  { dx: 96, dy: 288, enemyId: 'fen-raider', level: 6 },
+  { dx: -160, dy: 448, enemyId: 'bog-lurker', level: 7 },
+  { dx: -352, dy: 416, enemyId: 'fen-raider', level: 7 },
+  { dx: 288, dy: 480, enemyId: 'fen-raider', level: 7 },
+];
+
+/**
+ * The three deep pools, and the second thing here nothing else holds: **every
+ * one of them is inside a raider's aggro radius.**
+ *
+ * The fen exists to supply the food that makes the levels above the starter
+ * band survivable, and the whole design of it is that the food is behind the
+ * fight rather than beside it — you cannot stand and fish the best heal in the
+ * game without first clearing the man standing over the pool. Spread these out
+ * into open marsh and the zone becomes a quiet fishing hole with some raiders
+ * elsewhere in it, which is a different and much worse zone.
+ *
+ * Each sits on its pool's *edge* rather than in the middle of it. A fishing spot
+ * stands on blocking water by design, so what has to be true is that there is
+ * somewhere to stand within its interact radius — and the middle of a four-tile
+ * pool is two tiles from the nearest bank, which is a spot drawn in the water
+ * that nobody can ever work.
+ */
+export const BLACKWATER_FEN_NODE_SPAWNS: NodeSpawnPoint[] = [
+  { dx: -576, dy: 320, nodeId: 'deep-fishing-spot' },
+  { dx: 0, dy: 384, nodeId: 'deep-fishing-spot' },
+  { dx: 256, dy: 384, nodeId: 'deep-fishing-spot' },
+];

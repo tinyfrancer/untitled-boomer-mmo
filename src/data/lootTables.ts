@@ -97,4 +97,30 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     // A chief's purse: several times what the men outside are carrying.
     currency: { min: 60, max: 120, chance: 1 },
   },
+
+  // A beast, so parts and nothing else. One entry, at a rate that makes a hide
+  // the reason to bother rather than a consolation: a lurker is a long fight.
+  'bog-lurker': {
+    id: 'bog-lurker',
+    entries: [{ itemId: 'lurker-hide', chance: 0.55 }],
+  },
+  /**
+   * Where cloth comes from, and the whole reason a caster walks out here.
+   *
+   * The three pieces are rarer than the goblins' studded set is, because they
+   * are the only source of their armour type in the world where studded sits
+   * above a leather tier a warrior already has. Coin is a shade over the
+   * goblins', which is what keeps the walk south worth making for either class.
+   */
+  'fen-raider': {
+    id: 'fen-raider',
+    entries: [
+      { itemId: 'fenweave-hood', chance: 0.05 },
+      { itemId: 'fenweave-robe', chance: 0.04 },
+      { itemId: 'fenweave-leggings', chance: 0.045 },
+      // What they eat out of the pools they are standing in.
+      { itemId: 'raw-eel', chance: 0.18 },
+    ],
+    currency: { min: 22, max: 54, chance: 0.92 },
+  },
 };

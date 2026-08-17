@@ -3,6 +3,7 @@ import {
   CHIEF_MASK_COLOR,
   GOBLIN_MASK_COLOR,
   NPC_APPEARANCES,
+  RAIDER_MASK_COLOR,
   type Appearance,
 } from '../systems/AppearanceSystem';
 import type { BuildingShapeId, CreatureShapeId, EnemyId } from '../types/ids';
@@ -86,8 +87,9 @@ export interface PersonLook {
 /**
  * What each creature shape is made of. Keyed by the shape rather than by the
  * enemy, which is what lets a new `ENEMIES` row name a body and be drawn
- * without a line of view code written for it — colour of its own is a change to
- * make when a second quadruped that isn't brown actually exists.
+ * without a line of view code written for it. The default stays the rule; what
+ * a creature may do instead is name itself in `CREATURE_OVERRIDES` below, which
+ * is what the bog lurker does — the second quadruped, and not a brown one.
  *
  * The one humanoid enemy is an outlaw, and it reads its look off the shared
  * `NPC_APPEARANCES` rather than out of this file, so the bandit is the same
@@ -118,9 +120,28 @@ const CREATURE_OVERRIDES: Partial<Record<EnemyId, PersonLook>> = {
     appearance: NPC_APPEARANCES['goblin-scavenger'],
     mask: GOBLIN_MASK_COLOR,
   },
+  'fen-raider': { appearance: NPC_APPEARANCES['fen-raider'], mask: RAIDER_MASK_COLOR },
+};
+
+/**
+ * The same exception on the beast side, and the one the shape table said would
+ * come: a second quadruped that is not brown.
+ *
+ * A bog lurker drawn in the rat's fur is a rat the size of a dog standing in a
+ * marsh, which is the same failure a goblin drawn as a bandit would have been —
+ * the colour is the whole of how a player knows what they are looking at, there
+ * being no art behind any of this.
+ */
+const BEAST_OVERRIDES: Partial<Record<EnemyId, BeastLook>> = {
+  'bog-lurker': { body: 0x3f5d4a, limb: 0x2c4033 },
 };
 
 /** What to draw a person-shaped creature in: its own look, or its shape's. */
 export function humanoidLook(enemyId: EnemyId): PersonLook {
   return CREATURE_OVERRIDES[enemyId] ?? CREATURE_LOOKS.humanoid;
+}
+
+/** The same question for something made of fur or shell. */
+export function beastLook(enemyId: EnemyId, shape: 'quadruped' | 'crustacean'): BeastLook {
+  return BEAST_OVERRIDES[enemyId] ?? CREATURE_LOOKS[shape];
 }
