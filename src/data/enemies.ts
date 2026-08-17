@@ -173,6 +173,53 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
       speed: 90,
     },
   },
+  /**
+   * The first thing in the game above the starter band, and the first fight that
+   * is about the *spawn table* rather than about the stat block.
+   *
+   * One goblin is a bandit with a little more of everything. Three are a
+   * different question, and three is how they stand — see
+   * `OLD_MILL_ROAD_MOB_SPAWNS`, which puts them in loose knots rather than
+   * spread evenly across the road. The whole difficulty of the zone is not
+   * pulling the second one, which is a thing a player learns by doing rather
+   * than by reading a number, and it costs the arithmetic nothing.
+   *
+   * No ability, deliberately. The bandit already throws a knife when it cannot
+   * reach you and the chief already cleaves; what this zone is teaching is
+   * positioning against a group, and a telegraph on top of that would be two
+   * lessons in the same fight.
+   */
+  'goblin-scavenger': {
+    id: 'goblin-scavenger',
+    name: 'Goblin Scavenger',
+    family: 'humanoid',
+    shape: 'humanoid',
+    // Smaller than the men it robs, and drawn from this the way the chief's
+    // bulk is: `render3d/creatures.ts` scales the rig by how wide the body is.
+    body: { width: TILE_SIZE * 0.85, height: TILE_SIZE * 0.85 },
+    aggressive: true,
+    // A shade wider than a bandit's 180, which is what makes a knot of three a
+    // question about where you stand rather than about who you hit first.
+    aggroRadius: 200,
+    base: { maxHp: 24, attackPower: 4, xpReward: 16 },
+    perLevel: { maxHp: 16, attackPower: 3, xpReward: 11 },
+    attackRange: 68,
+    attackCooldownMs: 1500,
+    respawnDelayMs: 11000,
+    leashRadius: 340,
+    // Below every class's 320, like everything else that chases: running out of
+    // a bad pull has to stay the answer, and it is the answer this zone wants.
+    chaseSpeed: 175,
+    lootTableId: 'goblin-scavenger',
+    // Tighter than a bandit's 112, so a knot stays a knot: three discs that
+    // overlapped would wander into one another and read as a single blob.
+    wander: {
+      radius: 96,
+      minPauseMs: 1200,
+      maxPauseMs: 3000,
+      speed: 90,
+    },
+  },
   'bandit-chief': {
     id: 'bandit-chief',
     name: 'Hollis the Cutthroat',

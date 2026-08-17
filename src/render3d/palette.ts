@@ -1,6 +1,7 @@
 import {
   BANDIT_MASK_COLOR,
   CHIEF_MASK_COLOR,
+  GOBLIN_MASK_COLOR,
   NPC_APPEARANCES,
   type Appearance,
 } from '../systems/AppearanceSystem';
@@ -109,6 +110,14 @@ export const CREATURE_LOOKS = {
  */
 const CREATURE_OVERRIDES: Partial<Record<EnemyId, PersonLook>> = {
   'bandit-chief': { appearance: NPC_APPEARANCES['bandit-chief'], mask: CHIEF_MASK_COLOR },
+  // The second entry, and the one that shows what the table is actually for: a
+  // creature that is not a variant of the humanoid default at all. Left to the
+  // shape's colour a goblin would be drawn as a bandit, and a whole zone would
+  // look like the one next door.
+  'goblin-scavenger': {
+    appearance: NPC_APPEARANCES['goblin-scavenger'],
+    mask: GOBLIN_MASK_COLOR,
+  },
 };
 
 /** What to draw a person-shaped creature in: its own look, or its shape's. */

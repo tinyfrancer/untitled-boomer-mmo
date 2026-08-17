@@ -70,15 +70,23 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
     shape: 'cottage',
     door: 'south',
   },
-  // Shallower than it is wide and open at the front, because the anvil it is
-  // named for stands *outside* it: a station is tapped, and a tile of furniture
-  // parked indoors would be a station nobody can reach.
+  /**
+   * Shallower than it is wide and open at the front, because the anvil it is
+   * named for stands *outside* it: a station is tapped, and a tile of furniture
+   * parked indoors would be a station nobody can reach.
+   *
+   * The one door in town that does not face south, and the road west is what
+   * did it. Opening that road reserved a strip of town's west edge for arrivals,
+   * which is where this stood — so the smithy moved up into the north-west block
+   * and the only open ground left beside it is to the west. A south door there
+   * would put the forge on the training hall's roof.
+   */
   smithy: {
     id: 'smithy',
     name: 'Smithy',
     body: { width: BAY, height: HUT },
     shape: 'workshop',
-    door: 'south',
+    door: 'west',
   },
   // Narrow and deep where the shopfronts are square, and that is a layout rule
   // rather than a look: it stands on the south side of the street, between two
@@ -98,6 +106,27 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
     name: 'Cottage',
     body: { width: HUT, height: HUT },
     shape: 'cottage',
+    door: 'south',
+  },
+  /**
+   * What the road west is named after, and the first building outside a town.
+   *
+   * The widest footprint in the table, because it is the one thing here that is
+   * meant to be seen from across a zone rather than walked up to — there is
+   * nobody behind the door and nothing to tap it for. That makes it the first
+   * piece of pure scenery in the game, which is a thing a zone could not have
+   * until a zone could have buildings at all.
+   *
+   * The door still faces south like every shopfront's, and for the reason that
+   * is a rule rather than a habit: the camera stands south, so the wall a player
+   * sees is the south one, and a door drawn on the far side is a door nobody
+   * ever sees.
+   */
+  mill: {
+    id: 'mill',
+    name: 'The Old Mill',
+    body: { width: BAY, height: BAY },
+    shape: 'workshop',
     door: 'south',
   },
 };

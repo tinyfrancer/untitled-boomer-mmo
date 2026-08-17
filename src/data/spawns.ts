@@ -39,7 +39,9 @@ export const TOWN_MOB_SPAWNS: MobSpawnPoint[] = [
   { dx: 0, dy: 224, enemyId: 'rat', level: 1 },
   { dx: -160, dy: 384, enemyId: 'rat', level: 1 },
   { dx: -736, dy: 128, enemyId: 'rat', level: 1 },
-  { dx: -256, dy: -448, enemyId: 'rat', level: 1 },
+  // A notch east of where it stood, which is what the smithy cost it when the
+  // road west opened and the forge moved up into this corner.
+  { dx: -192, dy: -448, enemyId: 'rat', level: 1 },
   { dx: 256, dy: -448, enemyId: 'rat', level: 1 },
   { dx: -608, dy: 480, enemyId: 'rat', level: 2 },
   { dx: 640, dy: -320, enemyId: 'rat', level: 2 },
@@ -111,6 +113,38 @@ export const QUARRY_NODE_SPAWNS: NodeSpawnPoint[] = [
   { dx: 448, dy: -128, nodeId: 'tin-vein' },
   { dx: -64, dy: -384, nodeId: 'iron-vein' },
   { dx: 320, dy: -384, nodeId: 'iron-vein' },
+];
+
+/**
+ * Three knots of three, and the knots are the whole design of the zone.
+ *
+ * Everywhere else in the game a spawn list is a spread: rats and crabs and
+ * bandits stand far enough apart that a fight is a fight. These stand close
+ * enough that a careless pull is two goblins and a bad one is three, which is
+ * the first time the *table* rather than the stat block is what makes something
+ * hard. `ENEMIES` says a goblin is a bandit with a little more of everything;
+ * this says there are three of them.
+ *
+ * They climb westward rather than outward from the middle, because the road
+ * from town arrives on the east edge — so the first knot is met at level 4 with
+ * a way back one screen behind, and the level 5 knot is the far end of the walk.
+ * The east half is left deliberately empty for the same reason the bandit camp's
+ * is: arriving must never land inside an aggro radius, and a goblin's is wider
+ * than anything else in the game.
+ */
+export const OLD_MILL_ROAD_MOB_SPAWNS: MobSpawnPoint[] = [
+  // The near knot, south of the road, met on the way in.
+  { dx: 192, dy: 96, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 288, dy: 224, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 160, dy: 288, enemyId: 'goblin-scavenger', level: 4 },
+  // The middle knot, north of the road and east of the mill yard.
+  { dx: -128, dy: -288, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 0, dy: -352, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: -96, dy: -160, enemyId: 'goblin-scavenger', level: 4 },
+  // The far knot, past the mill, and the only level 5s in the world.
+  { dx: -640, dy: 192, enemyId: 'goblin-scavenger', level: 5 },
+  { dx: -512, dy: 288, enemyId: 'goblin-scavenger', level: 5 },
+  { dx: -608, dy: 384, enemyId: 'goblin-scavenger', level: 5 },
 ];
 
 // All inside the dirt clearing (see banditCampMap.ts), far enough east that

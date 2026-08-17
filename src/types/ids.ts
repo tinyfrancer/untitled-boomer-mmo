@@ -2,7 +2,10 @@ export type ClassId = 'warrior' | 'wizard';
 
 export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 
-export type TierId = 'brown' | 'iron';
+// `studded` is the first tier the world drops that nothing in town sells and no
+// forge makes: it is what the goblins on the Old Mill Road are wearing, and the
+// step a character takes who has not gone near a quarry.
+export type TierId = 'brown' | 'studded' | 'iron';
 
 export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
@@ -57,7 +60,12 @@ export type ItemId =
   // The offhand, which is the slot the game had a Block skill for and nothing
   // to put in.
   | 'brown-shield'
-  | 'apprentice-orb';
+  | 'apprentice-orb'
+  // The studded set, off the goblins west of town. Leather, so a warrior's:
+  // the cloth half of the world's supply is what the fen is for.
+  | 'studded-helmet'
+  | 'studded-jerkin'
+  | 'studded-legs';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -74,7 +82,7 @@ export type RecipeId =
   | 'iron-chestplate'
   | 'iron-legs';
 
-export type EnemyId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
+export type EnemyId = 'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger';
 
 // What an enemy is, which is what decides what it can carry: humanoids have
 // pockets and wear gear, beasts drop the parts they are made of.
@@ -89,7 +97,7 @@ export type CreatureShapeId = 'quadruped' | 'crustacean' | 'humanoid';
 // One per creature that drops anything. Its own union rather than EnemyId: what
 // a table is called is a fact about the table, and two creatures sharing one is
 // a decision LOOT_TABLES should be free to make.
-export type LootTableId = 'rat' | 'crab' | 'bandit' | 'bandit-chief';
+export type LootTableId = 'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick';
 
@@ -153,7 +161,8 @@ export type NodeShapeId = 'tree' | 'ripple' | 'vein';
  */
 export type MasteryTargetId = ResourceNodeId | RecipeId;
 
-export type ZoneId = 'town' | 'beach' | 'quarry' | 'bandit-camp' | 'bandit-hideout';
+export type ZoneId =
+  'town' | 'beach' | 'quarry' | 'bandit-camp' | 'bandit-hideout' | 'old-mill-road';
 
 // What is built on a zone rather than spawned in it: solid, permanent, and the
 // thing a counter stands at the door of. Its own union rather than a slice of
@@ -166,13 +175,19 @@ export type BuildingId =
   | 'quartermasters-post'
   | 'smithy'
   | 'inn'
-  | 'cottage';
+  | 'cottage'
+  // The first building in the game standing outside a town, and the first with
+  // no door worth walking to: it is scenery, which is a thing a zone can have
+  // now that a zone can have buildings at all.
+  | 'mill';
 
 // Which body a renderer draws a building with, and the same bargain
 // `CreatureShapeId` and `NodeShapeId` make: a new BUILDINGS row names a shape it
 // is drawn as rather than waiting for view code written for its id. Coarser than
-// the building list on purpose — four of the seven are one roof over a different
+// the building list on purpose — four of the eight are one roof over a different
 // sized floor, and what tells them apart at a distance is the sign over the door.
+// The mill is what that bought: a building in a zone with no town in it, drawn
+// with the smithy's roof and costing the renderer nothing.
 export type BuildingShapeId = 'hall' | 'workshop' | 'cottage';
 
 // Which side of a map an exit sits on. See EDGE_TABLE in systems/ZoneSystem.ts

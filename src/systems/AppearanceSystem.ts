@@ -274,9 +274,21 @@ export const NPC_APPEARANCES = {
     weapon: { shape: 'sword', color: 0xeceff1 },
     offhand: null,
   },
+  // Nothing like either outlaw, and it has to be: a goblin knot and a bandit
+  // knot are the same rig at the same size on the same grass, so the colour is
+  // the whole of how a player knows which zone they are looking at.
+  'goblin-scavenger': {
+    headColor: 0x7cb342,
+    torsoColor: 0x55632f,
+    legColor: 0x3e4a23,
+    // Scavenged and re-hafted, which is what a goblin is carrying rather than a
+    // dagger it was issued.
+    weapon: { shape: 'axe', color: 0x9e9e9e },
+    offhand: null,
+  },
   // Keyed by `NpcId` rather than by a hand-written list of names, so a new
   // person standing in a town is a compile error here until they have a look.
-} as const satisfies Record<NpcId | 'bandit' | 'bandit-chief', Appearance>;
+} as const satisfies Record<NpcId | 'bandit' | 'bandit-chief' | 'goblin-scavenger', Appearance>;
 
 /** The bandana over the bandit's face, which is not part of the rig. */
 export const BANDIT_MASK_COLOR = 0xc62828;
@@ -284,6 +296,11 @@ export const BANDIT_MASK_COLOR = 0xc62828;
 // The chief's, which is the thing he drops: dark where the men outside wear
 // red, so a glance at the room says which one he is.
 export const CHIEF_MASK_COLOR = 0x8e1c1c;
+
+// The rag a goblin has tied over its face. Filthy where both bandits wear a
+// colour, which is what stops a knot on the mill road reading as a knot in the
+// camp from the distance the camera actually sits at.
+export const GOBLIN_MASK_COLOR = 0x4a4a2e;
 
 // A pure function of everything the figure draws, so two looks share a key
 // exactly when they draw the same. That is what lets a view detect a gear

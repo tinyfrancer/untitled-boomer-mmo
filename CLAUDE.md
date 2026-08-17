@@ -6,20 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; five zones (town with leveled rats, a shop, a bank and a trainer, a beach
+v1: single-player only; six zones (town with leveled rats, a shop, a bank and a trainer, a beach
 with crabs and ocean fishing, a quarry cut into the hills north of town with tin and iron to mine,
-a bandit camp with aggressive humanoids, and the bandit hideout behind a locked
-door); character creation, leveling, gear,
+a bandit camp with aggressive humanoids, the bandit hideout behind a locked
+door, and the Old Mill Road west of town where the goblins are);
+character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
 kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
 work you were doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
-mobile-first HUD; and local save/load with versioned migrations. Every zone is level 1-3 starter
-content — what separates them is what they drop, not how hard they are, and the hideout is gated by
-a rare key rather than by a level. The one exception is the named mob at the back of it, who is
-level 4, carries the only loot in the game that comes off a single creature, and is the fight
-everything else is the run-up to.
+mobile-first HUD; and local save/load with versioned migrations. Five of the six zones are level 1-3
+starter content — what separates those is what they drop, not how hard they are, and the hideout is
+gated by a rare key rather than by a level. Two things sit above that band. The named mob at the
+back of the hideout is level 4, carries the only loot in the game that comes off a single creature,
+and is the fight the starter content is the run-up to. The **Old Mill Road** is the band itself: the
+first zone that is harder rather than merely different, level 4-5, reached by walking west out of
+town with no key and no gate, because the starter band ended by walking and the one above it should
+begin the same way.
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
@@ -319,9 +323,26 @@ can see any of them:
   door**. See the pick priority below; a tap on a solid wall can only sensibly mean "walk over
   there", and the useful ending is the doorstep rather than the grass behind it.
 
+**An exit reserves a strip of its own edge, and that is a claim on the town's layout made from
+another zone.** A traveller materialises anywhere along the arriving edge — at whatever fraction of it
+they crossed the other zone's edge at — so opening a road makes a lane of the receiving zone
+unbuildable along its whole length, not just where the signpost stands. The mill road is what taught
+this: town had a smithy built across its west edge from back when nothing was over there, and adding
+the road west put arrivals inside it. The smithy and its forge moved up into the north-west block, a
+cottage moved across town to make room, and one rat moved a notch east — none of which is visible in
+the `ZONES` row that caused it, which is the whole reason the sweep exists. Expect a new exit to cost
+a layout change at the far end, and reach for `BuildingSystem.test.ts` to find out what.
+
+The smithy is also the one door in town that does not face south, and for a reason worth keeping: a
+door faces the open ground its station or counter is approached across, and in that corner the only
+open ground left is west. A south-facing door there would have put the forge on the training hall's
+roof.
+
 It is also the first thing tall enough to hide the player outright, so it is an `Occluder` beside the
 trees — and the only one whose three boxes are one box, since it has no canopy to walk under and no
-trunk to be stopped by. The name over the door is tagged `sign` rather than `label` for the reason a
+trunk to be stopped by. A building need not have anyone behind it or anything to tap: `mill` on the
+Old Mill Road is pure scenery, which is the thing a zone could not have until it could have buildings
+at all. The name over the door is tagged `sign` rather than `label` for the reason a
 quest marker is tagged `marker`: `drawnCounts` counts one label per drawn _creature_ and
 `scripts/smoke.mjs` asserts that total in every zone. With no art assets, that sign is the whole of
 how a player tells the bank from the store, which is why `BUILDING_LOOKS` is keyed by shape and gives
@@ -712,6 +733,24 @@ idea: the trophy always drops because a fight that long has to be worth somethin
 it is cloth so it fits either class, while the two weapons behind it are the chase — one per class,
 so the run is worth making whoever you rolled.
 
+**The goblin table is the step above that, and it ships with a known hole.** It pays roughly double a
+bandit's coin — which is most of why anyone walks out west, since three armour rows drop long before
+the purse stops being a reason to come back — and it carries the **studded** tier, sitting between the
+brown leather the camp drops and the plate a forge makes. It is leather throughout, so it is a
+warrior's upgrade and a wizard's payday only: until something drops cloth above brown, a caster walks
+the mill road for coin and the bandit table is still the whole of how they are dressed. That is a
+deliberate consequence of `docs/zones_act_two.md` assigning cloth to the fen rather than an oversight,
+and `tests/systems/oldMillRoad.test.ts` asserts the armour type so that closing the gap is a decision
+somebody comes back and makes rather than a thing that drifts. The one rule the table cannot bend is
+the humanoid one: `EnemySystem.test.ts` requires **every** humanoid to carry both currency and at
+least one piece of equipment, so a new person-shaped creature with an empty table fails the build.
+
+**The mill road ships with no resource nodes, and that is `deadEnds.test.ts` doing its job.** The
+brainstorm gives it hardwood at woodcutting 6, but hardwood exists to feed the charcoal the steel tier
+needs, and steel is the Deep Cut's job — so a hardwood row today would be a gathering skill yielding
+something no recipe consumes, which is the strictest of the three dead-end rules. It lands with the
+zone that gives it a use, the same call the brainstorm already makes about willow.
+
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
 a status per quest and one number beside it; how far along an objective is gets counted on read.
 A `collect` objective counts the bag, and items reach it from loot, gathering, cooking, buying and
@@ -1035,24 +1074,36 @@ mint bars out of ore that was never used.
 `computeEffectiveStats(classId, gear, level)`. Keep those in step — making enemies tougher
 without giving characters growth (or vice versa) silently breaks the difficulty curve. Enemy
 name colors come from `conColor()` in `systems/EnemySystem.ts`: gray/green below the player,
-white even, yellow +1, red +2 and up. Every zone sits in the 1-3 band except the chief at the back
-of the hideout, who is level 4 and is what makes the top of that scale reachable at all.
+white even, yellow +1, red +2 and up. Every zone sat in the 1-3 band until the mill road; the chief
+at the back of the hideout is level 4, and the goblins on the road west are 4-5 and the only thing
+above the band that can actually be ground.
 
-**`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 5 because
-that is where the content reaches: the hardest thing in the world is the level 4 chief, and the ten
-it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to be
-an achievement rather than an asymptote, so **content that reaches higher raises the cap** — and
+**Difficulty is allowed to come from the spawn table rather than the stat block**, and the mill road
+is where that is cashed. A goblin is a bandit with a little more of everything — the interesting part
+is that they stand in **three knots of three** rather than spread across the zone, so the fight is
+about not pulling the second one. That is a property of `OLD_MILL_ROAD_MOB_SPAWNS` and of nothing
+else, which means it is exactly the kind of design a later edit can silently delete: spread the nine
+of them out and every other test still passes while the zone quietly becomes the bandit camp with
+bigger numbers. `tests/systems/oldMillRoad.test.ts` is what holds the knots — three groups of three,
+each goblin with two companions inside a pull, and no two knots within aggro reach of each other, so
+taking one on is never accidentally taking two.
+
+**`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 6 because
+that is where the content reaches: the richest thing anyone can grind is the level 5 goblin, and the
+ten it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to
+be an achievement rather than an asymptote, so **content that reaches higher raises the cap** — and
 `tests/systems/progression.test.ts` is what holds the two together, asserting that the cap sits one
 level past the highest thing that spawns and that the climb from the end of the starter arc is
 another session or two of the best kill there is rather than another game.
 
-It is what a zone _holds_ rather than a zone arriving that moves it, which the quarry is the worked
-example of: a fifth zone that spawns nothing above level 3 left the cap exactly where it was, because
-the hardest fight in the world is still the chief. A zone whose mobs out-level him is what raises it
-next, and the test will say so before anyone has to remember.
+It is what a zone _holds_ rather than a zone arriving that moves it, and the two zones since that
+rule was written are both worked examples of it. The quarry spawned nothing above level 3 and left
+the cap exactly where it was. The mill road spawns level 5 goblins and moved it to 6 — nobody chose
+that number, `progression.test.ts` did: the cap is asserted against `spawns.ts`, so raising the
+content is what raises the ceiling and the test says the new number before anyone has to remember it.
 
 Two things ride the cap and have to move with it, which is exactly what neither did before: the
-combat skill ceiling is `combatSkillCap` (`level × 10`, so 50 now), and **what a trained combat
+combat skill ceiling is `combatSkillCap` (`level × 10`, so 60 now), and **what a trained combat
 skill is worth is written as the ceiling and divided down by that cap** rather than as a rate
 (`MAX_WEAPON_SKILL_DAMAGE_BONUS` and `MAX_AVOIDANCE` in `systems/CombatSystem.ts`). A rate is the
 thing that silently stops meaning what it says when the cap moves: `MAX_AVOIDANCE` claimed 25%

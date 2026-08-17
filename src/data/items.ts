@@ -507,6 +507,55 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     healthBonus: 2,
     strengthBonus: 1,
   },
+  /**
+   * The studded set, and the only armour in the game that is neither smithed nor
+   * sold: it comes off the goblins on the road west and nowhere else.
+   *
+   * It sits between the brown leather it replaces and the plate a forge makes,
+   * which is the point of it — the quarry is a long way from a character who has
+   * just walked out of the starter band, and this is what that character wears
+   * instead. Heavier than brown and lighter than iron, on the same bargain every
+   * armour row makes: what stops more weighs more.
+   */
+  'studded-helmet': {
+    id: 'studded-helmet',
+    name: 'Studded Helmet',
+    value: 45,
+    weight: 5,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: TIER_COLORS.studded,
+    tier: 'studded',
+    armorType: 'leather',
+    armorValue: 3,
+    healthBonus: 1,
+  },
+  'studded-jerkin': {
+    id: 'studded-jerkin',
+    name: 'Studded Jerkin',
+    value: 65,
+    weight: 7,
+    kind: 'equipment',
+    slot: 'chest',
+    color: TIER_COLORS.studded,
+    tier: 'studded',
+    armorType: 'leather',
+    armorValue: 6,
+    healthBonus: 2,
+  },
+  'studded-legs': {
+    id: 'studded-legs',
+    name: 'Studded Legs',
+    value: 55,
+    weight: 6,
+    kind: 'equipment',
+    slot: 'pants',
+    color: TIER_COLORS.studded,
+    tier: 'studded',
+    armorType: 'leather',
+    armorValue: 5,
+    healthBonus: 1,
+  },
   'raw-fish': {
     id: 'raw-fish',
     name: 'Raw Fish',
