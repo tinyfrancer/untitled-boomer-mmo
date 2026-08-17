@@ -19,20 +19,24 @@ export const PLAYER_HALF_EXTENT = TILE_SIZE / 2;
 export const EXIT_MARGIN = TILE_SIZE * 0.6;
 
 /**
- * Where levelling stops. Five is where the content reaches rather than where a
- * curve runs out: the hardest thing in the game is the level 4 chief, and the
- * ten this was is 30,720 XP against a world whose richest repeatable kill pays
- * 31 — seven levels with nothing built for them. Max level is meant to be an
- * achievement rather than an asymptote, and it is the most reversible number
- * here: each zone added past this raises it again.
+ * Where levelling stops. Six is where the content reaches rather than where a
+ * curve runs out: the hardest thing anyone can grind is the level 5 goblin on
+ * the Old Mill Road, and the ten this once was is 30,720 XP against a world
+ * whose richest repeatable kill then paid 31 — seven levels with nothing built
+ * for them. Max level is meant to be an achievement rather than an asymptote,
+ * and it is the most reversible number here: each zone added past this raises it
+ * again, which is exactly what the mill road just did to the five it was.
  * `tests/systems/progression.test.ts` holds it against what actually spawns.
  */
-export const MAX_CHARACTER_LEVEL = 5;
+export const MAX_CHARACTER_LEVEL = 6;
 export const MAX_GATHER_SKILL_LEVEL = 10;
 
 // Combat skills cap at ten times the character's level, so levelling is what
 // raises the ceiling — a level 1 character tops out at 1 Handed 10, a capped
-// one at 50.
+// one at 60. That ceiling rides MAX_CHARACTER_LEVEL on purpose, which is why
+// what a trained skill is *worth* is written as the value at the cap and
+// divided down by it (see MAX_AVOIDANCE in systems/CombatSystem.ts) rather than
+// as a rate that would quietly stop meaning what it says when the cap moves.
 const COMBAT_SKILL_LEVELS_PER_LEVEL = 10;
 
 export function combatSkillCap(characterLevel: number): number {

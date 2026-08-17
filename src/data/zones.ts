@@ -5,11 +5,13 @@ import { BEACH_MAP } from './beachMap';
 import { QUARRY_MAP } from './quarryMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
 import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
+import { OLD_MILL_ROAD_MAP } from './oldMillRoadMap';
 import {
   BANDIT_CAMP_MOB_SPAWNS,
   BANDIT_HIDEOUT_MOB_SPAWNS,
   BEACH_MOB_SPAWNS,
   BEACH_NODE_SPAWNS,
+  OLD_MILL_ROAD_MOB_SPAWNS,
   QUARRY_MOB_SPAWNS,
   QUARRY_NODE_SPAWNS,
   TOWN_MOB_SPAWNS,
@@ -139,7 +141,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
      * It is also why the smithy is the one building with its anvil outdoors: a
      * station is *tapped*, and a solid building has no inside to tap into.
      */
-    stationSpawns: [{ dx: -704, dy: -64, station: 'forge' }],
+    stationSpawns: [{ dx: -576, dy: -384, station: 'forge' }],
     /**
      * The town, as a place rather than as four people standing in a field.
      *
@@ -150,19 +152,31 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
      * what makes the counters part of somewhere.
      */
     buildingSpawns: [
-      { dx: -704, dy: -160, buildingId: 'smithy' },
+      { dx: -448, dy: -384, buildingId: 'smithy' },
       { dx: -448, dy: -192, buildingId: 'training-hall' },
       { dx: -192, dy: -192, buildingId: 'bank-house' },
       { dx: 192, dy: -192, buildingId: 'general-store' },
       { dx: 448, dy: -160, buildingId: 'quartermasters-post' },
       { dx: -320, dy: 192, buildingId: 'inn' },
       { dx: -576, dy: 224, buildingId: 'cottage' },
-      { dx: -480, dy: -416, buildingId: 'cottage' },
+      { dx: 448, dy: -384, buildingId: 'cottage' },
     ],
+    /**
+     * The fourth road, and the one that cost the town a re-layout.
+     *
+     * An exit reserves a strip of its own edge for arrivals — a traveller
+     * materialises anywhere along it, at whatever fraction they crossed the
+     * other zone's edge at — and the smithy was built across the west one back
+     * when there was no road there. So the smithy and its forge moved up into
+     * the north-west block, a cottage moved across town to make room, and one
+     * rat moved a notch east. Nothing about that is visible in this list, which
+     * is exactly why `tests/systems/BuildingSystem.test.ts` sweeps it.
+     */
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },
       { edge: 'north', to: 'quarry' },
+      { edge: 'west', to: 'old-mill-road' },
     ],
   },
   beach: {
@@ -197,6 +211,29 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
       { edge: 'west', to: 'town' },
       { edge: 'east', to: 'bandit-hideout' },
     ],
+  },
+  /**
+   * The road west, and the first zone in the game that is not starter content.
+   *
+   * Everywhere else sits in the 1-3 band and is told apart by what it drops;
+   * this is the first place that is told apart by being *harder*. It is reached
+   * by walking out of town with no key, no quest and no gate behind it, which is
+   * deliberate: the starter band ended by walking, so the band above it should
+   * begin the same way.
+   *
+   * The mill is scenery and the only building outside a town — nobody works
+   * there, nothing is sold there, and it is what the road is named after.
+   */
+  'old-mill-road': {
+    id: 'old-mill-road',
+    name: 'Old Mill Road',
+    description: 'Goblins on the west road, three to a knot. Harder than anything in town.',
+    map: OLD_MILL_ROAD_MAP,
+    mobSpawns: OLD_MILL_ROAD_MOB_SPAWNS,
+    nodeSpawns: [],
+    npcSpawns: [],
+    buildingSpawns: [{ dx: -384, dy: -192, buildingId: 'mill' }],
+    exits: [{ edge: 'east', to: 'town' }],
   },
   'bandit-hideout': {
     id: 'bandit-hideout',

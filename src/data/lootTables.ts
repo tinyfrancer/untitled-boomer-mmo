@@ -57,6 +57,29 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     currency: { min: 8, max: 25, chance: 0.9 },
   },
   /**
+   * What the road west pays, and it pays in the two things the camp already
+   * does — coin and a wearable set — at the next step up of each.
+   *
+   * The coin is roughly double a bandit's, which is most of why anyone walks out
+   * here: the studded set is three rows on a table and will be finished long
+   * before the purse stops being the reason to come back. The set itself is
+   * leather alone, so this is a warrior's upgrade and a wizard's payday — the
+   * cloth half of the world's supply is what the fen is for, and until it exists
+   * the bandit table is still the only place a caster is dressed from.
+   */
+  'goblin-scavenger': {
+    id: 'goblin-scavenger',
+    entries: [
+      { itemId: 'studded-helmet', chance: 0.06 },
+      { itemId: 'studded-jerkin', chance: 0.05 },
+      { itemId: 'studded-legs', chance: 0.055 },
+      // Scavengers, so what they have eaten off is what they carry: the one
+      // thing on the table nothing here made.
+      { itemId: 'cooked-fish', chance: 0.12 },
+    ],
+    currency: { min: 18, max: 46, chance: 0.92 },
+  },
+  /**
    * The only table in the game whose contents come off nothing else.
    *
    * The bandana always drops, because a fight this long has to be worth
