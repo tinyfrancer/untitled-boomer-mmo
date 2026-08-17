@@ -116,6 +116,11 @@ const ICON_COLOR = {
   // outline in three: pale grey tin against the warm rust of iron.
   tinOre: 0x9aa7ad,
   ironOre: 0xa0562f,
+  // Darker and greener than the fish, which is the whole of how an eel is told
+  // from one at thumbnail size — the same trick the two ores play.
+  rawEel: 0x4e6b52,
+  cookedEel: 0xb07840,
+  hide: 0x6b5140,
 } as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
@@ -555,6 +560,108 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     armorType: 'leather',
     armorValue: 5,
     healthBonus: 1,
+  },
+  /**
+   * The fen's three, and the first armour a caster can go out and earn.
+   *
+   * Cloth has been the gap in the world since armour types landed: the shop
+   * sells tools, the forge makes plate, and the bandits drop leather — so a
+   * wizard's entire supply was two quest rewards, a bandana off a boss, and the
+   * brown cloth they started in. This is what the studded set is for a warrior,
+   * pointed at the other half of the roster.
+   *
+   * It stops less than the studded leather it sits beside and carries intellect
+   * instead, which is the same bargain the brown sets already make: armour that
+   * fed every stat was why nobody could tell which one mattered.
+   */
+  'fenweave-hood': {
+    id: 'fenweave-hood',
+    name: 'Fenweave Hood',
+    value: 55,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: TIER_COLORS.fenweave,
+    tier: 'fenweave',
+    armorType: 'cloth',
+    armorValue: 3,
+    healthBonus: 1,
+    intellectBonus: 1,
+  },
+  'fenweave-robe': {
+    id: 'fenweave-robe',
+    name: 'Fenweave Robe',
+    value: 80,
+    weight: 4,
+    kind: 'equipment',
+    slot: 'chest',
+    color: TIER_COLORS.fenweave,
+    tier: 'fenweave',
+    armorType: 'cloth',
+    armorValue: 5,
+    healthBonus: 2,
+    intellectBonus: 2,
+  },
+  'fenweave-leggings': {
+    id: 'fenweave-leggings',
+    name: 'Fenweave Leggings',
+    value: 65,
+    weight: 3,
+    kind: 'equipment',
+    slot: 'pants',
+    color: TIER_COLORS.fenweave,
+    tier: 'fenweave',
+    armorType: 'cloth',
+    armorValue: 4,
+    healthBonus: 1,
+    intellectBonus: 1,
+  },
+  /**
+   * What the deep pools hold, and what the fen is actually for.
+   *
+   * Cooked, it is the best heal in the game by a distance, which is the whole
+   * reason to walk down here: every fight above the starter band lasts longer
+   * than a cooked crab can carry anyone. Raw it is worth more than a fish for
+   * the same reason the ocean spot is gated above the pond — what is behind a
+   * level should be worth the level.
+   */
+  'raw-eel': {
+    id: 'raw-eel',
+    name: 'Raw Eel',
+    value: 14,
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'fish', color: ICON_COLOR.rawEel },
+  },
+  'cooked-eel': {
+    id: 'cooked-eel',
+    name: 'Cooked Eel',
+    value: 26,
+    kind: 'consumable',
+    healAmount: 45,
+    healDurationMs: 10000,
+    icon: { shape: 'fish', color: ICON_COLOR.cookedEel },
+  },
+  'burnt-eel': {
+    id: 'burnt-eel',
+    name: 'Burnt Eel',
+    value: 1,
+    kind: 'material',
+    icon: { shape: 'fish', color: ICON_COLOR.burnt },
+  },
+  // What a lurker is made of, which is all a beast may drop. It is worth real
+  // coin and nothing else — the fen's crafting is the eel, and a hide that fed
+  // a recipe would be a second production chain nobody asked for.
+  'lurker-hide': {
+    id: 'lurker-hide',
+    name: 'Lurker Hide',
+    value: 22,
+    weight: 3,
+    kind: 'material',
+    // The meat outline in a leather colour, rather than a shape of its own: the
+    // icon vocabulary is deliberately coarser than the item list, and at
+    // thumbnail size a pelt and a cut are one blob in two colours.
+    icon: { shape: 'meat', color: ICON_COLOR.hide },
   },
   'raw-fish': {
     id: 'raw-fish',

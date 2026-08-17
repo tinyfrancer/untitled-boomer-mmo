@@ -220,6 +220,28 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     xpReward: 80,
     durationMs: 4500,
   },
+
+  /**
+   * The best heal in the game, and the reason the fen is worth the walk twice.
+   *
+   * Gated at cooking 6, which is above the crab and below the plate tier's
+   * smithing: an eel is what a cook levels *toward* once the crab has stopped
+   * being a reason to stand at a fire. It burns like everything else and hands
+   * back a burnt eel for it, since a failure that cost nothing would make
+   * levelling cooking worth nothing.
+   */
+  'cooked-eel': {
+    id: 'cooked-eel',
+    name: 'Raw Eel',
+    skill: 'cooking',
+    station: 'fire',
+    inputs: [{ itemId: 'raw-eel', quantity: 1 }],
+    outputItemId: 'cooked-eel',
+    failureItemId: 'burnt-eel',
+    requiredLevel: 6,
+    xpReward: 34,
+    durationMs: 3200,
+  },
 };
 
 export const FIRE_INPUT_ITEM_ID: ItemId = 'logs';

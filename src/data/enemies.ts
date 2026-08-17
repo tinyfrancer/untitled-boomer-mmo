@@ -273,4 +273,73 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
       speed: 70,
     },
   },
+
+  /**
+   * The fen's beast, and the slowest thing in the game.
+   *
+   * Amphibian and heavy: more HP than a crab of the same level and a swing that
+   * lands hard, on legs that cannot keep up with anyone walking away. That is
+   * the whole of it — the danger is standing still, and standing still is what
+   * fishing the deep pools means. It is what turns a gather down here into a
+   * decision rather than a chore.
+   *
+   * Passive, deliberately. The raiders are what makes this zone dangerous to
+   * walk through; a lurker is what makes it dangerous to *stop* in, and a beast
+   * that opened on sight would collapse the two into one lesson.
+   */
+  'bog-lurker': {
+    id: 'bog-lurker',
+    name: 'Bog Lurker',
+    family: 'beast',
+    shape: 'quadruped',
+    body: { width: TILE_SIZE * 0.9, height: TILE_SIZE * 0.7 },
+    aggressive: false,
+    base: { maxHp: 44, attackPower: 6, xpReward: 14 },
+    perLevel: { maxHp: 24, attackPower: 3, xpReward: 9 },
+    attackRange: 68,
+    attackCooldownMs: 2200,
+    respawnDelayMs: 12000,
+    leashRadius: 300,
+    // The slowest chase in the game, under even the crab's: walking away from
+    // one is never in doubt, which is what lets it hit as hard as it does.
+    chaseSpeed: 110,
+    lootTableId: 'bog-lurker',
+    wander: {
+      radius: 88,
+      minPauseMs: 2400,
+      maxPauseMs: 5000,
+      speed: 55,
+    },
+  },
+  /**
+   * The men who work the fen, and where cloth comes from.
+   *
+   * A goblin's build with a little more of everything and a wider reach on the
+   * aggro, because out here the ground itself slows a retreat. They stand alone
+   * rather than in knots: the mill road already taught pulling one at a time,
+   * and what this zone teaches is that the thing worth having is behind them.
+   */
+  'fen-raider': {
+    id: 'fen-raider',
+    name: 'Fen Raider',
+    family: 'humanoid',
+    shape: 'humanoid',
+    body: { width: TILE_SIZE, height: TILE_SIZE },
+    aggressive: true,
+    aggroRadius: 210,
+    base: { maxHp: 30, attackPower: 5, xpReward: 18 },
+    perLevel: { maxHp: 19, attackPower: 4, xpReward: 14 },
+    attackRange: 68,
+    attackCooldownMs: 1500,
+    respawnDelayMs: 12000,
+    leashRadius: 340,
+    chaseSpeed: 180,
+    lootTableId: 'fen-raider',
+    wander: {
+      radius: 104,
+      minPauseMs: 1200,
+      maxPauseMs: 3000,
+      speed: 90,
+    },
+  },
 };

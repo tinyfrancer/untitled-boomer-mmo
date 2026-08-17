@@ -2,6 +2,7 @@ import type { StationId } from './recipes';
 import type { BuildingId, ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
+import { BLACKWATER_FEN_MAP } from './blackwaterFenMap';
 import { QUARRY_MAP } from './quarryMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
 import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
@@ -11,6 +12,8 @@ import {
   BANDIT_HIDEOUT_MOB_SPAWNS,
   BEACH_MOB_SPAWNS,
   BEACH_NODE_SPAWNS,
+  BLACKWATER_FEN_MOB_SPAWNS,
+  BLACKWATER_FEN_NODE_SPAWNS,
   OLD_MILL_ROAD_MOB_SPAWNS,
   QUARRY_MOB_SPAWNS,
   QUARRY_NODE_SPAWNS,
@@ -187,7 +190,10 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     mobSpawns: BEACH_MOB_SPAWNS,
     nodeSpawns: BEACH_NODE_SPAWNS,
     npcSpawns: [],
-    exits: [{ edge: 'north', to: 'town' }],
+    exits: [
+      { edge: 'north', to: 'town' },
+      { edge: 'south', to: 'blackwater-fen' },
+    ],
   },
   quarry: {
     id: 'quarry',
@@ -234,6 +240,30 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     npcSpawns: [],
     buildingSpawns: [{ dx: -384, dy: -192, buildingId: 'mill' }],
     exits: [{ edge: 'east', to: 'town' }],
+  },
+  /**
+   * The marsh below the beach, and the second zone above the starter band.
+   *
+   * What it is for is the food. Every fight from here up lasts longer than a
+   * cooked crab can carry anyone, and the eel in the deep pools is the answer —
+   * which is why the pools are the furthest thing from the way in and every one
+   * of them has a raider standing over it. The other half of it is cloth: the
+   * shop sells tools, the forge makes plate and the bandits drop leather, so
+   * until this zone a caster's whole armour supply was two quest rewards and a
+   * bandana off a boss.
+   *
+   * Reached by walking south off the beach, which cost the beach its wall of
+   * ocean — see `beachMap.ts` for what an exit charges the zone it arrives in.
+   */
+  'blackwater-fen': {
+    id: 'blackwater-fen',
+    name: 'Blackwater Fen',
+    description: 'Eels in the deep pools and raiders standing over them. Bring a pole.',
+    map: BLACKWATER_FEN_MAP,
+    mobSpawns: BLACKWATER_FEN_MOB_SPAWNS,
+    nodeSpawns: BLACKWATER_FEN_NODE_SPAWNS,
+    npcSpawns: [],
+    exits: [{ edge: 'north', to: 'beach' }],
   },
   'bandit-hideout': {
     id: 'bandit-hideout',

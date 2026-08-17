@@ -16,7 +16,7 @@ What the five below are for, in one line each:
 | --- | ----------------- | ------ | ---- | --------------------------------------------------------- |
 | 1   | Old Mill Road ✅  | -1, 0  | 4-5  | The first fight above the starter band, and the coin      |
 | 2   | The Deep Cut      | 0, -2  | 5-6  | Coal, and with it the whole steel tier                    |
-| 3   | Blackwater Fen    | 0, 2   | 5-7  | The food that makes levels 6-7 survivable                 |
+| 3   | Blackwater Fen ✅ | 0, 2   | 5-7  | The food that makes levels 6-7 survivable                 |
 | 4   | Greyford Outpost  | -2, 0  | —    | A second set of counters, out where the work is           |
 | 5   | The Sunken Barrow | -2, -1 | 7-8  | The capstone: locked, and the only place two uniques drop |
 
@@ -25,7 +25,9 @@ one square in the direction each edge points. Town is `0,0`; beach is `0,1`, qua
 `1,0`, hideout `2,0`. The five above collide with none of those and none of each other, which is the
 one thing about a new zone the layout code cannot fix for you.
 
-Built in that order, the cap climbs 5 → 6 → 7 → 7 → 9. It is never a number anyone edits: add the
+Built in that order, the cap climbs 5 → 6 → 7 → 7 → 9. (In practice zones 1 and 3 were built
+first, and the cap went 5 → 6 → 8: the fen spawns to level 7 where this table guessed 5-7 would
+top out lower.) It is never a number anyone edits: add the
 row, and `progression.test.ts` says what the cap now has to be.
 
 ---
@@ -92,7 +94,15 @@ leaves two levels of headroom for everything after it. Act two probably wants th
 also moves what Master mastery means, since the thresholds are tuned to sit just under capping a
 skill outright.
 
-## 3. Blackwater Fen — south of the beach, level 5-7
+**Settled while building zone 3: leave it at 10 for now.** Act two's deepest gate is mining 8 and
+the fen's own fishing 8, both of which fit with two levels spare — so the cap is not blocking
+anything yet. Raising it to 20 costs 68,856 XP to cap a skill against today's 9,216, which is 7.5×
+the grind and about 6,900 gathers, and it strands the mastery thresholds, which are deliberately
+tuned to sit just under a capped skill. Do it when content actually asks for level 11, on the same
+rule `MAX_CHARACTER_LEVEL` already follows: the content moves the cap, nobody edits it because a
+later zone might want the room.
+
+## 3. Blackwater Fen — south of the beach, level 5-7 — **BUILT**
 
 **The food.** The reason levels 6 and 7 are survivable at all: every fight from here up is longer
 than a cooked crab can carry you.
@@ -108,6 +118,45 @@ than a cooked crab can carry you.
   `deadEnds.test.ts` is what will say so.
 
 **Cost**: tables, plus one colour for the lurker.
+
+**What it actually cost**, against the line above. Built out of order — zone 2 was next by the
+build order, and the cloth gap was the stronger argument, exactly as this doc's own zone-1
+postmortem predicted it would be.
+
+Right: it is almost all tables. Eleven spawns, two `ENEMIES` rows, two loot tables, one node, one
+recipe, seven items, a tier, a map and a `ZONES` row. The eel and the cloth both landed as written,
+the cap moved 6 → 8 on its own through `progression.test.ts`, and the slayer chains, both maps,
+travel, camping and the mastery pools all appeared with nothing written down — the "what gets built
+for free" list held completely.
+
+Wrong in four places, three of them cheap:
+
+1. **It cost the beach its ocean.** This doc placed the fen at 0,2 without noticing that the beach's
+   south edge is solid water and its map comment says so in as many words. An exit needs its whole
+   shared edge walkable one arrival-inset in — a tile and a half, so the _second row up_ — which
+   meant re-cutting the beach: the ocean now stops two rows short and runs off the east edge, leaving
+   a spit down the west side and a strand along the south. The zone-1 postmortem said to expect a
+   layout change at the far end and it was right; what it did not say is that terrain can charge it
+   as easily as a building can, and terrain has no `BuildingSystem.test.ts` to tell you in advance.
+2. **Two colours, not one.** The lurker needed one as predicted, but it needed a mechanism too:
+   `CREATURE_OVERRIDES` was humanoid-only, so a `BEAST_OVERRIDES` and a `beastLook` accessor came
+   with it — the change `palette.ts`'s own comment said to make when a second non-brown quadruped
+   arrived. The raider needed a colour as well, or it is drawn as a bandit.
+3. **A tile.** `MARSH_TILE`, because a fen drawn as grass with ponds in it reads as a park. One
+   constant and one colour, since `BLOCKING_TILES` is a list and a walkable tile touches nothing.
+4. **The raider had to be priced deliberately.** The XP curve is quadratic and a creature's reward is
+   linear in its level, so a zone that adds two levels at the previous zone's rate walks into the
+   ceiling `progression.test.ts` holds. At the goblin's 11 XP a level the climb to cap 8 would have
+   been 174 kills against a limit of 213; at 14 it is 146. Zone 5 will have to make the same decision
+   again rather than inherit this one — see the tuning note below, which is now measured rather than
+   predicted.
+
+Two things this doc asked for were deliberately left out. **Willow** stays out, on the same
+`deadEnds.test.ts` argument the hardwood was left out under — it has no use until a bow exists. And
+the fen's design idea turned out to be one this doc did not name: the deep pools are all inside a
+raider's aggro radius, so the food that makes the levels survivable is _behind_ the fight rather than
+beside it. That plus the level climbing with depth is what `tests/systems/blackwaterFen.test.ts`
+holds, since both are properties of a spawn list and nothing else would notice them going.
 
 ## 4. Greyford Outpost — west of the Old Mill Road, no spawns
 
@@ -170,6 +219,15 @@ Almost all of it is data. The things that are **not**, in rough order of size:
    pay much better, or `XP_PER_LEVEL` comes down. `progression.test.ts` will not let this be
    guessed at: it asserts the climb from the end of the starter arc is another session or two of the
    best kill in the world, and it will fail loudly at 9 with today's numbers.
+
+   **Measured, now that the fen is in.** The answer is the first branch, and it is a per-zone
+   decision rather than a global retune: a new zone raises its own `perLevel.xpReward` and the
+   constant never moves. The margin at each rung, against a limit of 3× the starter arc's 71 kills:
+   cap 6 was 87 kills, cap 8 with the raider priced at 14/level is 146, and cap 9 at a goblin's
+   11/level would have been 223 — over. Lowering `XP_PER_LEVEL` instead would re-tune the whole
+   existing game, including the arc assertions that hold "lands on level 3", to fix something a
+   table row fixes when it lands. So: **price the new creature against the ceiling it raises.**
+
 3. **The offline cap.** Half a level per session is a share of the curve, and the curve is about to
    get much steeper at the top. The existing note in `AfkSystem` says to move it with the curve; this
    is when.

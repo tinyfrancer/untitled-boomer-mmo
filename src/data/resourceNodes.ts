@@ -85,6 +85,30 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
     interactRadius: 96,
   },
   /**
+   * The fen's deep pools, and the third rung of a ladder that used to have two.
+   *
+   * The pond teaches fishing, the ocean is what that level buys, and this is
+   * what the ocean's levels buy — gated at 8, which is two short of the cap and
+   * so is reachable without capping the skill outright. It is slower than either
+   * of them and pays accordingly: an eel is worth three fish and cooks into the
+   * best heal in the game.
+   */
+  'deep-fishing-spot': {
+    id: 'deep-fishing-spot',
+    name: 'Deep Pool',
+    body: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
+    shape: 'ripple',
+    blocks: null,
+    skill: 'fishing',
+    requiredLevel: 8,
+    yieldItemId: 'raw-eel',
+    xpReward: 30,
+    baseGatherMs: 3000,
+    charges: null,
+    respawnDelayMs: 0,
+    interactRadius: 96,
+  },
+  /**
    * The quarry's two, and the same shape the two fishing spots make: one that a
    * new character can work, and one behind the level the first one earns.
    *

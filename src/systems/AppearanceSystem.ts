@@ -286,9 +286,24 @@ export const NPC_APPEARANCES = {
     weapon: { shape: 'axe', color: 0x9e9e9e },
     offhand: null,
   },
+  // The men who work the fen. Drab and waterlogged beside the goblins' green
+  // and the bandits' red, which is the same job every one of these does: two
+  // knots of the same rig at the same size are told apart by colour and by
+  // nothing else.
+  'fen-raider': {
+    headColor: 0x8d7f6a,
+    torsoColor: 0x3f4a3a,
+    legColor: 0x2f3830,
+    // A gaff off a boat, which is what a man robbing a marsh is carrying.
+    weapon: { shape: 'axe', color: 0x7a6a53 },
+    offhand: null,
+  },
   // Keyed by `NpcId` rather than by a hand-written list of names, so a new
   // person standing in a town is a compile error here until they have a look.
-} as const satisfies Record<NpcId | 'bandit' | 'bandit-chief' | 'goblin-scavenger', Appearance>;
+} as const satisfies Record<
+  NpcId | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'fen-raider',
+  Appearance
+>;
 
 /** The bandana over the bandit's face, which is not part of the rig. */
 export const BANDIT_MASK_COLOR = 0xc62828;
@@ -301,6 +316,9 @@ export const CHIEF_MASK_COLOR = 0x8e1c1c;
 // colour, which is what stops a knot on the mill road reading as a knot in the
 // camp from the distance the camera actually sits at.
 export const GOBLIN_MASK_COLOR = 0x4a4a2e;
+
+/** Oilskin pulled up over the mouth, against the water rather than the law. */
+export const RAIDER_MASK_COLOR = 0x5a5f4a;
 
 // A pure function of everything the figure draws, so two looks share a key
 // exactly when they draw the same. That is what lets a view detect a gear

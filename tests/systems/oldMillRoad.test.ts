@@ -67,13 +67,28 @@ describe('the road west', () => {
     expect(new Set(cells).size).toBe(cells.length);
   });
 
-  it('is the only place in the world that spawns above the starter band', () => {
-    const above = Object.values(ZONES).flatMap((zone) =>
-      zone.mobSpawns
-        .filter((spawn) => spawn.level > 3 && ENEMIES[spawn.enemyId].boss !== true)
-        .map(() => zone.id),
-    );
-    expect(new Set(above)).toEqual(new Set(['old-mill-road']));
+  /**
+   * This asked to be the *only* zone above the starter band until the fen was
+   * built, which was a claim about how much world there was rather than about
+   * this road. What survives it is the thing the road was actually for: it is
+   * the first rung above the band, so nothing above the band is shallower.
+   */
+  it('is the shallowest of the zones above the starter band', () => {
+    const topLevel = (zoneId: keyof typeof ZONES): number =>
+      Math.max(
+        0,
+        ...ZONES[zoneId].mobSpawns
+          .filter((spawn) => ENEMIES[spawn.enemyId].boss !== true)
+          .map((spawn) => spawn.level),
+      );
+    const above = Object.values(ZONES)
+      .filter((zone) => topLevel(zone.id) > 3)
+      .map((zone) => zone.id);
+
+    expect(above).toContain('old-mill-road');
+    for (const zoneId of above) {
+      expect(topLevel('old-mill-road')).toBeLessThanOrEqual(topLevel(zoneId));
+    }
   });
 });
 

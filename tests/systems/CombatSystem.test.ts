@@ -270,10 +270,15 @@ describe('a shield in the off hand', () => {
   // It helps Block rather than being required by it: requiring one would strand
   // every point of Block every existing character has already trained.
   it('makes a block likelier without being needed for one', () => {
-    // A roll between the two chances: at skill 20 the bare skill blocks one hit
-    // in ten and a shielded one blocks one in five.
-    const roll = (): number => 0.15;
-    const bare = { blockLevel: 20, parryLevel: 0, hasWeapon: false };
+    // Half-trained, and the roll derived from what that is actually worth
+    // rather than written down: avoidance is sloped against the combat skill
+    // cap, so the cap moving for a new zone moves every chance under it. This
+    // asked about skill 20 against a roll of 0.15, which stopped sitting
+    // between the two the day the fen raised the character cap to 8.
+    const blockLevel = TOP_SKILL / 2;
+    const bareChance = avoidanceChance(blockLevel);
+    const roll = (): number => bareChance * 1.5;
+    const bare = { blockLevel, parryLevel: 0, hasWeapon: false };
 
     expect(rollDefense(bare, roll).avoided).toBe(false);
     expect(rollDefense({ ...bare, hasShield: true }, roll)).toEqual({
