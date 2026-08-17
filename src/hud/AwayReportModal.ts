@@ -4,6 +4,7 @@ import { describeItemName } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { inventoryEntries } from '../systems/InventorySystem';
+import { masteryTarget } from '../systems/MasterySystem';
 import { formatAwayDuration, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 
 /**
@@ -24,6 +25,13 @@ export class AwayReportModal extends Overlay {
       lines.push(`${report.gathers} gathered, ${report.skillXp} ${SKILLS[report.skill].name} XP`);
     } else {
       lines.push(`${report.kills} kills, ${report.xp} XP`);
+    }
+    // Which pool the night filled, named because it is the one thing a session
+    // earns that the sheet behind this report does not say out loud: a skill XP
+    // total is on the character sheet either way, where a pool that moved is
+    // invisible until somebody goes looking for it.
+    if (report.masteryTargetId && report.skillXp > 0) {
+      lines.push(`${masteryTarget(report.masteryTargetId).name} mastery +${report.skillXp}`);
     }
     if (report.copper > 0) {
       lines.push(formatCurrency(report.copper));

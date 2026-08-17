@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ItemId } from '../../src/types/ids';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import {
+  BONUS_YIELD_PER_LEVEL,
   advanceGather,
   beginGather,
   canGather,
@@ -131,12 +132,31 @@ describe('advanceGather', () => {
 
 describe('rollGatherQuantity', () => {
   it('always yields one at level 1, whatever the roll', () => {
-    expect(rollGatherQuantity(1, () => 0)).toBe(1);
-    expect(rollGatherQuantity(1, () => 0.99)).toBe(1);
+    expect(rollGatherQuantity(1, 0, () => 0)).toBe(1);
+    expect(rollGatherQuantity(1, 0, () => 0.99)).toBe(1);
   });
 
   it('can yield a bonus at higher levels', () => {
-    expect(rollGatherQuantity(10, () => 0)).toBe(2);
-    expect(rollGatherQuantity(10, () => 0.99)).toBe(1);
+    expect(rollGatherQuantity(10, 0, () => 0)).toBe(2);
+    expect(rollGatherQuantity(10, 0, () => 0.99)).toBe(1);
+  });
+
+  it('pays a mastery pool at level 1, where the skill term is worth nothing', () => {
+    expect(rollGatherQuantity(1, 0.3, () => 0.2)).toBe(2);
+    expect(rollGatherQuantity(1, 0.3, () => 0.4)).toBe(1);
+  });
+
+  it('adds the two terms into one roll rather than rolling twice', () => {
+    // 9 levels of skill bonus plus a 0.1 pool, against a roll that sits between
+    // either term alone and their sum: two rolls could never produce this.
+    const skillOnly = BONUS_YIELD_PER_LEVEL * 9;
+    const between = skillOnly + 0.05;
+    expect(rollGatherQuantity(10, 0, () => between)).toBe(1);
+    expect(rollGatherQuantity(1, 0.1, () => between)).toBe(1);
+    expect(rollGatherQuantity(10, 0.1, () => between)).toBe(2);
+  });
+
+  it('never yields three, however deep both terms are', () => {
+    expect(rollGatherQuantity(50, 1, () => 0)).toBe(2);
   });
 });

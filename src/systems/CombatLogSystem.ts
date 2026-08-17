@@ -101,6 +101,10 @@ export function logSkillLevelUp(skillName: string, level: number): CombatLogEntr
   return { text: `${skillName} is now level ${level}.`, color: THEME.color.skillUp };
 }
 
+export function logMasteryTier(targetName: string, tierName: string): CombatLogEntry {
+  return { text: `${targetName} mastery: ${tierName}.`, color: THEME.color.skillUp };
+}
+
 export function logLoot(itemName: string, quantity: number): CombatLogEntry {
   const suffix = quantity > 1 ? ` (${quantity})` : '';
   return { text: `You receive ${itemName}${suffix}.`, color: THEME.color.equippable };

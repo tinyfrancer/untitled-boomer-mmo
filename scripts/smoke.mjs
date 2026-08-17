@@ -253,8 +253,8 @@ const tabBarTop = () =>
 
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
 const BAR_TABS = ['character', 'inventory', 'quests', 'camp', 'menu'];
-/** How many the Menu opens: Map, Feats, Combat Log, Options. */
-const MENU_TAB_COUNT = 4;
+/** How many the Menu opens: Map, Feats, Mastery, Combat Log, Options. */
+const MENU_TAB_COUNT = 5;
 
 /**
  * Opens a surface the way a thumb reaches it — off the bar when it is there,
@@ -2233,6 +2233,43 @@ async function achievements() {
     `${withTitle.titles} -> ${withoutTitle.titles} titles, labels steady at ${withTitle.labels}`,
   );
   await page.screenshot({ path: `${OUT}/12-title-worn.png` });
+
+  // --- Mastery: the other sheet behind the menu that is drawn from a stored
+  // counter. What the pools *pay* is arithmetic and lives in
+  // tests/systems/MasterySystem.test.ts; what needs a browser is that the sheet
+  // is reachable behind the menu and redraws off the event rather than off a
+  // copy taken when it was built. ---
+  await page.evaluate(() => {
+    const w = window.world;
+    // Set and then published on the HUD channel, which is the pair the world
+    // does on a swing. Six hundred is one rung up, so the row has something to
+    // say beyond the free first one everybody starts on.
+    w.character.state.mastery = { tree: 600 };
+    window.events.emit('mastery-changed', w.character.state.mastery);
+  });
+  await tapTab('mastery');
+  const pools = await page.evaluate(() => {
+    const sheet = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-sheet[data-sheet="mastery"]')
+    );
+    const rows = [...sheet.querySelectorAll('.hud-skill__line')].map((n) => n.textContent ?? '');
+    return {
+      visible: getComputedStyle(sheet).display !== 'none',
+      count: rows.length,
+      tree: rows.find((row) => row.startsWith('Tree')) ?? '',
+    };
+  });
+  check(
+    'the Mastery tab opens a sheet with a pool per node and recipe',
+    pools.visible && pools.count >= 13,
+    `${pools.count} pool(s) drawn`,
+  );
+  check(
+    'and a pool that crossed a rung says which one it stands on',
+    pools.tree.includes('Apprentice') && pools.tree.includes('2/5'),
+    `tree row: "${pools.tree}"`,
+  );
+  await page.screenshot({ path: `${OUT}/13-mastery.png` });
 }
 
 async function bagSheet() {

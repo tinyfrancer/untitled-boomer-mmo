@@ -1,13 +1,16 @@
 import { SKILLS } from '../data/skills';
 import { saveService } from '../persistence';
-import { logSkillLevelUp, type CombatLogEntry } from '../systems/CombatLogSystem';
+import { logMasteryTier, logSkillLevelUp, type CombatLogEntry } from '../systems/CombatLogSystem';
 import type { CharacterController } from '../systems/CharacterController';
 import type { Point } from '../systems/MovementSystem';
-import type { SkillId, ZoneId } from '../types/ids';
+import { masteryTarget } from '../systems/MasterySystem';
+import type { MasteryTargetId, SkillId, ZoneId } from '../types/ids';
 import {
   COMBAT_LOG_EVENT,
   CURRENCY_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
+  MASTERY_CHANGED_EVENT,
+  MASTERY_TIER_REACHED_EVENT,
   NOTICE_EVENT,
   SKILL_XP_GAINED_EVENT,
 } from '../ui/uiEvents';
@@ -104,6 +107,35 @@ export class WorldContext {
       this.log(logSkillLevelUp(SKILLS[skill].name, gain.level));
       this.persistCharacter();
     }
+  }
+
+  /**
+   * Credits what an action taught about the thing it was done to, and says so
+   * when that crossed a rung.
+   *
+   * Deliberately quieter than `awardSkillXp`: nothing floats, because a gather
+   * already floats its skill XP and a second number off the same swing is two
+   * ways of saying one thing happened. What is worth interrupting for is the
+   * rung, which is rare and changes what the next swing pays.
+   *
+   * Persisted on a crossing for the reason a skill level is — it is the one
+   * moment here a player would be sore about losing to a closed tab.
+   */
+  awardMastery(targetId: MasteryTargetId, amount: number): void {
+    const crossed = this.character.awardMastery(targetId, amount);
+    this.events.emit(MASTERY_CHANGED_EVENT, this.character.state.mastery);
+    const reached = crossed.at(-1);
+    if (!reached) return;
+
+    const target = masteryTarget(targetId);
+    this.events.emit(MASTERY_TIER_REACHED_EVENT, {
+      targetId,
+      targetName: target.name,
+      tierName: reached.name,
+      rank: reached.rank,
+    });
+    this.log(logMasteryTier(target.name, reached.name));
+    this.persistCharacter();
   }
 
   persistCharacter(): void {

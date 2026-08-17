@@ -433,6 +433,40 @@ describe('migrateCharacterState', () => {
     expect(migrated?.visits).toEqual({ town: 4 });
   });
 
+  /**
+   * v19 -> v20: every node and recipe keeps a mastery pool, and an upgraded save
+   * starts every one of them empty. Nothing is reconstructible and nothing
+   * should be: a woodcutting level says nothing about *which* trees earned it.
+   */
+  it('opens every mastery pool empty, crediting nothing for a lifetime of chopping', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 19,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+      kills: { rat: 30 },
+      visits: { town: 4 },
+      bounty: null,
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      // A capped woodcutter, which is exactly the save that would tempt a step
+      // into handing back a share of what the skill was trained on.
+      skills: { ...createInitialSkills(), woodcutting: { level: 10, xp: 0 } },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.mastery).toEqual({});
+    // The skill behind it is untouched: the pools are a new counter beside it,
+    // not a re-slicing of the one that was already there.
+    expect(migrated?.skills.woodcutting).toEqual({ level: 10, xp: 0 });
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();

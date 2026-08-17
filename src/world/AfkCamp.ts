@@ -200,6 +200,14 @@ export class AfkCamp {
       // report is where the player is told, and it says the total.
       this.ctx.awardSkillXp(report.skill, report.skillXp, { silent: true });
     }
+    // The same number into the pool it was worked out of: a target is taught by
+    // the XP its action paid, so a session that trained the skill by half taught
+    // the tree by half too. Nothing floats and nothing toasts for the reason the
+    // line above is silent — the away report is the one thing anybody reads on
+    // this boot, and it says which pool moved.
+    if (report.masteryTargetId && report.skillXp > 0) {
+      character.awardMastery(report.masteryTargetId, report.skillXp);
+    }
     const unlocks = report.enemyId ? this.deps.creditKill(report.enemyId, report.kills) : [];
     this.ctx.publishInventory();
     this.ctx.publishCurrency();

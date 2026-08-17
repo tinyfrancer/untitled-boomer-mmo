@@ -3,6 +3,7 @@ import type {
   BountyId,
   ItemId,
   AchievementId,
+  MasteryTargetId,
   GearSlotId,
   QuestId,
   RecipeId,
@@ -11,6 +12,7 @@ import type {
 } from '../types/ids';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { MasteryXp } from '../systems/MasterySystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
@@ -160,6 +162,13 @@ export const PLAYER_TILE_CHANGED_EVENT = 'player-tile-changed';
 export const CONTEXT_MENU_REQUESTED_EVENT = 'context-menu-requested';
 export const CONTEXT_ACTION_REQUESTED_EVENT = 'context-action-requested';
 export const KILLS_CHANGED_EVENT = 'kills-changed';
+// Mastery. The pools themselves (MASTERY_CHANGED) and the moment one crosses a
+// rung (MASTERY_TIER_REACHED), which is the same pairing the kill counts make
+// with an achievement — and for the same reason: the totals are what a sheet
+// redraws from, where crossing is a moment that has to be said out loud on the
+// frame it happens or not at all.
+export const MASTERY_CHANGED_EVENT = 'mastery-changed';
+export const MASTERY_TIER_REACHED_EVENT = 'mastery-tier-reached';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
 export const TITLE_CHANGED_EVENT = 'title-changed';
@@ -272,6 +281,19 @@ export interface ContextMenuRequest extends ContextSubject {
   at: ScreenPoint;
 }
 
+/**
+ * Payload for MASTERY_TIER_REACHED_EVENT. Carries the names rather than the ids
+ * because the only thing that reads it is a toast, and resolving a target id
+ * back to what it is called would make the HUD import both data tables to say
+ * one sentence.
+ */
+export interface MasteryTierReached {
+  targetId: MasteryTargetId;
+  targetName: string;
+  tierName: string;
+  rank: number;
+}
+
 // Payload for ACHIEVEMENT_UNLOCKED_EVENT. Carries the title separately from the
 // achievement because only the top tier grants one, and because the HUD shows a
 // title being worn differently from a tier merely being completed.
@@ -356,6 +378,8 @@ export interface UiEventMap {
   [CONTEXT_MENU_REQUESTED_EVENT]: [request: ContextMenuRequest];
   [CONTEXT_ACTION_REQUESTED_EVENT]: [actionId: ContextActionId];
   [KILLS_CHANGED_EVENT]: [kills: KillCounts];
+  [MASTERY_CHANGED_EVENT]: [mastery: MasteryXp];
+  [MASTERY_TIER_REACHED_EVENT]: [reached: MasteryTierReached];
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
   [TITLE_CHANGED_EVENT]: [titleId: TitleId | null];

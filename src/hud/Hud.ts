@@ -5,6 +5,7 @@ import { FeatsSheet } from './FeatsSheet';
 import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
+import { MasterySheet } from './MasterySheet';
 import { OverlayHost } from './OverlayHost';
 import { PlayerColumn } from './PlayerColumn';
 import { QuestSheet } from './QuestSheet';
@@ -37,6 +38,7 @@ import type { ActiveBounty } from '../systems/BountySystem';
 import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { MasteryXp } from '../systems/MasterySystem';
 import { hudLayout } from '../ui/layout';
 import { THEME } from '../ui/theme';
 import type { TabId } from '../ui/tabs';
@@ -68,6 +70,8 @@ import {
   KILLS_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
+  MASTERY_CHANGED_EVENT,
+  MASTERY_TIER_REACHED_EVENT,
   NOTICE_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_EFFECTS_CHANGED_EVENT,
@@ -156,6 +160,10 @@ interface HudModel {
   // move out in the zone rather than in a panel.
   kills: KillCounts;
   visits: ZoneVisits;
+  // Every pool, seeded from the save for the reason the bag is: the sheet can
+  // be opened before a single swing has been taken in this session, and a pool
+  // filled last night has to be there when it is.
+  mastery: MasteryXp;
   activeTitleId: TitleId | null;
   unlockedZones: ZoneId[];
   shopOpen: boolean;
@@ -204,6 +212,7 @@ class Hud {
   private readonly featsSheet: FeatsSheet;
   private readonly combatLogSheet: CombatLogSheet;
   private readonly mapSheet: MapSheet;
+  private readonly masterySheet: MasterySheet;
   private readonly sheets: Partial<Record<TabId, Sheet>>;
 
   private readonly overlays: OverlayHost;
@@ -235,6 +244,7 @@ class Hud {
       quests: character.quests,
       bounty: character.bounty,
       kills: character.kills,
+      mastery: character.mastery,
       visits: character.visits,
       activeTitleId: character.activeTitleId,
       unlockedZones: character.unlockedZones,
@@ -309,6 +319,7 @@ class Hud {
       this.events.emit(SET_TITLE_REQUESTED_EVENT, titleId),
     );
     this.combatLogSheet = new CombatLogSheet();
+    this.masterySheet = new MasterySheet();
     this.sheets = {
       character: this.characterSheet,
       inventory: this.inventorySheet,
@@ -316,6 +327,7 @@ class Hud {
       feats: this.featsSheet,
       log: this.combatLogSheet,
       map: this.mapSheet,
+      mastery: this.masterySheet,
     };
     for (const [id, sheet] of Object.entries(this.sheets)) {
       sheet.root.dataset.sheet = id;
@@ -334,6 +346,7 @@ class Hud {
       this.featsSheet.root,
       this.combatLogSheet.root,
       this.mapSheet.root,
+      this.masterySheet.root,
       this.tabBar.root,
     );
     parent.append(this.root);
@@ -352,6 +365,7 @@ class Hud {
     this.refreshEncumbrance();
     this.featsSheet.update(this.model.kills, this.model.activeTitleId);
     this.combatLogSheet.update(this.model.combatLog);
+    this.masterySheet.update(this.model.mastery);
     this.setOpenSheet(this.narrow ? null : 'character');
     this.applyLayout();
 
@@ -738,6 +752,16 @@ class Hud {
       this.model.visits = visits;
       this.refreshQuests();
     });
+    listen(MASTERY_CHANGED_EVENT, (mastery) => {
+      this.model.mastery = mastery;
+      this.masterySheet.update(mastery);
+    });
+    // The rung rather than the XP, which is the pair the kill counts make with
+    // an achievement: the totals redraw a sheet quietly, and crossing is the
+    // moment worth interrupting for — it changes what the next swing pays.
+    listen(MASTERY_TIER_REACHED_EVENT, (reached) =>
+      this.toast.show(`${reached.targetName}: ${reached.tierName}`, THEME.color.skillUp),
+    );
 
     listen(PLAYER_MANA_CHANGED_EVENT, ({ mana, maxMana }) => {
       const gainedPool = maxMana > 0 !== this.model.maxMana > 0;

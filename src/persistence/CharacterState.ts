@@ -4,11 +4,12 @@ import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
+import type { MasteryXp } from '../systems/MasterySystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 19;
+export const CHARACTER_STATE_VERSION = 20;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -72,6 +73,11 @@ export interface CharacterState {
   // place leaves nothing behind, and `zoneId` says where the character is
   // rather than where they have been.
   visits: ZoneVisits;
+  // XP per thing worked or made, and the third counter stored for the reason
+  // the two above are: a chopped tree leaves nothing in the bag to count it
+  // off. Which rung each pool stands on and what that rung pays is derived from
+  // this on read (see MasterySystem).
+  mastery: MasteryXp;
   // Which earned title is worn, if any. Only the choice is state — the right to
   // wear it comes from kills.
   activeTitleId: TitleId | null;
@@ -129,6 +135,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     bounty: null,
     kills: {},
     visits: {},
+    mastery: {},
     activeTitleId: null,
     unlockedZones: [],
     createdAt: now,
