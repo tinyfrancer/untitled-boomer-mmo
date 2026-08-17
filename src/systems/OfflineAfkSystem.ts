@@ -17,7 +17,7 @@ import {
 } from './InventorySystem';
 import { rollLootTable } from './LootSystem';
 import { skillLevel, skillXpToNextLevel, type Skills } from './SkillSystem';
-import type { EnemyId, SkillId } from '../types/ids';
+import type { EnemyId, MasteryTargetId, SkillId } from '../types/ids';
 
 // Nothing accrues past this. A tab closed over a long weekend hands back a
 // night's play, not a finished character.
@@ -96,6 +96,16 @@ export interface OfflineAfkReport {
   crafts: number;
   skill: SkillId | null;
   skillXp: number;
+  /**
+   * The pool the session filled, or null for one that fought.
+   *
+   * Only the id is here because the amount is already on this report:
+   * `skillXp` *is* what the session taught that target, since a target is
+   * taught by the same XP the action pays its skill (see `MasteryTarget`).
+   * Carrying it twice would be two numbers that must agree and one place to
+   * make them disagree.
+   */
+  masteryTargetId: MasteryTargetId | null;
 }
 
 const NOTHING: OfflineAfkReport = {
@@ -111,6 +121,7 @@ const NOTHING: OfflineAfkReport = {
   crafts: 0,
   skill: null,
   skillXp: 0,
+  masteryTargetId: null,
 };
 
 /**
@@ -332,8 +343,8 @@ function resolveOfflineGather(
   let carried = context.inventory;
 
   for (let gather = 0; gather < gathers; gather += 1) {
-    // One per gather: the bonus-yield roll is a perk for an attended player,
-    // the way the action bar is.
+    // One per gather: both bonus-yield rolls — the skill's and the node's
+    // mastery — are perks for an attended player, the way the action bar is.
     if (canCarry(carried, node.yieldItemId, 1, context.capacity)) {
       carried = addItemToInventory(carried, node.yieldItemId, 1);
       drops = addItemToInventory(drops, node.yieldItemId, 1);
@@ -352,6 +363,7 @@ function resolveOfflineGather(
     // Floored rather than rounded, so a session can never come out ahead of the
     // same gathers made awake.
     skillXp: Math.floor(perGatherXp * gathers),
+    masteryTargetId: node.id,
   };
 }
 
@@ -410,7 +422,12 @@ function resolveOfflineCraft(
       break;
     }
 
-    const result = rollCraft(recipe, level, rng);
+    // No mastery bonus, matching the one the gathering branch withholds above:
+    // a second thing off the same action is a perk for an attended player, the
+    // way the action bar and the skill's own bonus yield are. The pool still
+    // *fills* — see `masteryTargetId` on the report — so a night away teaches
+    // the recipe without paying what knowing it is worth.
+    const result = rollCraft(recipe, level, 0, rng);
     if (result.consumed) {
       for (const input of recipe.inputs) {
         carried = removeItemFromInventory(carried, input.itemId, input.quantity);
@@ -438,6 +455,7 @@ function resolveOfflineCraft(
     // Floored rather than rounded, so a session can never come out ahead of the
     // same work done awake.
     skillXp: Math.floor(skillXp),
+    masteryTargetId: recipe.id,
   };
 }
 

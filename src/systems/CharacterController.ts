@@ -46,9 +46,11 @@ import {
   recordKill,
   type AchievementProgress,
 } from './AchievementSystem';
+import { bonusYieldChance, crossedMasteryTiers, masteryXp, recordMastery } from './MasterySystem';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
 import type { AchievementDefinition } from '../data/achievements';
+import type { MasteryTierDefinition } from '../data/mastery';
 import type {
   AbilityId,
   AchievementId,
@@ -57,6 +59,7 @@ import type {
   EnemyId,
   GearSlotId,
   ItemId,
+  MasteryTargetId,
   QuestId,
   SkillId,
   TitleId,
@@ -330,6 +333,27 @@ export class CharacterController {
 
   skillLevelOf(skillId: SkillId): number {
     return skillLevel(this.state.skills, skillId);
+  }
+
+  /**
+   * Credits what one action taught about the thing it was done to, and reports
+   * the rungs it crossed — the shape `recordKill` uses, and for the same reason:
+   * an offline camp pays out a whole session at once and can clear two at a time.
+   *
+   * The amount is always the XP that action paid its skill, which is what makes
+   * this one number rather than a rate per row (see `MasteryTarget.xpReward`).
+   * Unlike `awardSkillXp` it has no cap to refuse at: a pool goes on filling
+   * after the top rung, and after the skill behind it has stopped.
+   */
+  awardMastery(targetId: MasteryTargetId, amount: number): MasteryTierDefinition[] {
+    const before = masteryXp(this.state.mastery, targetId);
+    this.state.mastery = recordMastery(this.state.mastery, targetId, amount);
+    return crossedMasteryTiers(before, masteryXp(this.state.mastery, targetId));
+  }
+
+  /** What this target's pool pays: the chance of a second one off the action. */
+  masteryChanceFor(targetId: MasteryTargetId): number {
+    return bonusYieldChance(this.state.mastery, targetId);
   }
 
   /** The three tallies a quest objective is read off. */

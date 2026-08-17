@@ -138,6 +138,17 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // exactly. Nothing is granted: a bounty is work in progress, and handing an
   // upgraded save one would be paying for work nobody did.
   18: (state) => ({ ...state, bounty: null }),
+  // v19 → v20: every node and recipe keeps a mastery pool, and an upgraded save
+  // starts every one of them empty.
+  //
+  // Nothing is reconstructible here and nothing should be: mastery is XP per
+  // *target*, and a v19 save recorded only the skill totals those actions rolled
+  // up into — a woodcutting level says nothing about which of the trees earned
+  // it. Handing back a share of it would be inventing a number, and handing back
+  // all of it would pay a lifetime of chopping into a pool that did not exist.
+  // Empty is what a v19 character had, which is the v9 `kills` argument exactly:
+  // nothing was counting, so nothing is owed.
+  19: (state) => ({ ...state, mastery: {} }),
 };
 
 /**

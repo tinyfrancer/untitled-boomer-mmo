@@ -16,6 +16,12 @@ export type CraftCheck = { ok: true } | { ok: false; reason: string };
 
 export interface CraftResult {
   itemId: ItemId | null;
+  /**
+   * How many came off the bench: one, or two where the recipe's mastery paid
+   * out. A failure is always one — a pool that doubled a burnt fish would be a
+   * curve that pays worse the further along it you are.
+   */
+  quantity: number;
   xp: number;
   failed: boolean;
   /** Whether the inputs were spent. A failure with nothing to show keeps them. */
@@ -165,16 +171,29 @@ export function advanceCraft(state: CraftState, deltaMs: number, atStation: bool
  * levelling. A recipe naming none spends nothing on a failure: the time is the
  * only thing lost, which is what keeps a bad roll from eating ore that took a
  * pack-filling trip to carry home.
+ *
+ * `masteryChance` is the recipe's own pool paying out, and it is rolled only
+ * behind a success: the two questions are "did this work" and then "did it work
+ * twice", which is what keeps a doubled result from ever being a doubled
+ * failure. It is the gather's second term at the other kind of station — see
+ * `rollGatherQuantity`.
  */
 export function rollCraft(
   recipe: CraftingRecipe,
   level: number,
+  masteryChance = 0,
   rng: () => number = Math.random,
 ): CraftResult {
   if (rng() < failureChance(level)) {
     return recipe.failureItemId
-      ? { itemId: recipe.failureItemId, xp: 0, failed: true, consumed: true }
-      : { itemId: null, xp: 0, failed: true, consumed: false };
+      ? { itemId: recipe.failureItemId, quantity: 1, xp: 0, failed: true, consumed: true }
+      : { itemId: null, quantity: 0, xp: 0, failed: true, consumed: false };
   }
-  return { itemId: recipe.outputItemId, xp: recipe.xpReward, failed: false, consumed: true };
+  return {
+    itemId: recipe.outputItemId,
+    quantity: rng() < masteryChance ? 2 : 1,
+    xp: recipe.xpReward,
+    failed: false,
+    consumed: true,
+  };
 }

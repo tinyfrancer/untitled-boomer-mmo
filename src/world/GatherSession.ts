@@ -298,7 +298,11 @@ export class GatherSession {
   private completeCook(recipe: CraftingRecipe): void {
     const { character } = this.ctx;
 
-    const result = rollCraft(recipe, character.skillLevelOf(recipe.skill));
+    const result = rollCraft(
+      recipe,
+      character.skillLevelOf(recipe.skill),
+      character.masteryChanceFor(recipe.id),
+    );
     // A failure with nothing to show for it spends nothing: see `rollCraft`.
     if (result.consumed) {
       for (const input of recipe.inputs) {
@@ -306,7 +310,7 @@ export class GatherSession {
       }
     }
     if (result.itemId) {
-      character.addItem(result.itemId, 1);
+      character.addItem(result.itemId, result.quantity);
     }
     this.ctx.publishInventory();
     if (result.failed) {
@@ -314,7 +318,14 @@ export class GatherSession {
       // botched bar is still on the bench and only the time is lost.
       this.ctx.notice(result.consumed ? 'You burn it.' : `You ruin the ${recipe.name}.`);
     } else {
+      if (result.quantity > 1) {
+        this.ctx.notice(`Your skill yields a second ${recipe.name}.`);
+      }
       this.ctx.awardSkillXp(recipe.skill, result.xp);
+      // Credited only behind a success, so the pool is fed by what came off the
+      // bench rather than by time spent at it — a botched bar teaches nothing
+      // about the bar, which is the same line `result.xp` already draws.
+      this.ctx.awardMastery(recipe.id, result.xp);
     }
 
     // Auto-repeat down the stack, the way the gather channel re-arms itself: a
@@ -339,7 +350,10 @@ export class GatherSession {
     const { character } = this.ctx;
     const { definition } = node;
 
-    const quantity = rollGatherQuantity(character.skillLevelOf(definition.skill));
+    const quantity = rollGatherQuantity(
+      character.skillLevelOf(definition.skill),
+      character.masteryChanceFor(definition.id),
+    );
     /**
      * What a full pack means depends on who is watching.
      *
@@ -360,6 +374,10 @@ export class GatherSession {
       this.ctx.publishInventory();
     }
     this.ctx.awardSkillXp(definition.skill, definition.xpReward);
+    // The swing is what teaches the node, so this is credited whether or not
+    // the haul fitted in the pack — the same argument the skill XP above makes,
+    // one line down.
+    this.ctx.awardMastery(definition.id, definition.xpReward);
 
     if (node.consumeCharge()) {
       this.stop();

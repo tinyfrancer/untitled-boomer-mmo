@@ -8,7 +8,10 @@ import { skillLevel, type Skills } from './SkillSystem';
 // cap a gather takes 55% of what it did at level 1.
 const SPEED_PER_LEVEL = 0.05;
 // Chance per skill level above 1 of pulling a second resource from one gather.
-const BONUS_YIELD_PER_LEVEL = 0.03;
+// Exported because it is one of the two terms `rollGatherQuantity` adds, and the
+// test that holds them to being *added* rather than rolled separately has to
+// know where one ends and the other begins.
+export const BONUS_YIELD_PER_LEVEL = 0.03;
 
 export interface GatherState {
   node: ResourceNodeDefinition;
@@ -85,6 +88,20 @@ export function advanceGather(
   };
 }
 
-export function rollGatherQuantity(level: number, rng: () => number = Math.random): number {
-  return rng() < BONUS_YIELD_PER_LEVEL * (level - 1) ? 2 : 1;
+/**
+ * One swing's haul, which is one or two and never three.
+ *
+ * The skill's own bonus and the node's mastery are two terms in one roll rather
+ * than two rolls: what a player is owed is "sometimes a second log", and rolling
+ * twice would make a third one possible at exactly the point both curves are
+ * paying out. The mastery term is a chance the *node* bought and the level term
+ * is one the skill bought — see `MASTERY_TIERS` for why the two are allowed to
+ * sell the same thing.
+ */
+export function rollGatherQuantity(
+  level: number,
+  masteryChance = 0,
+  rng: () => number = Math.random,
+): number {
+  return rng() < BONUS_YIELD_PER_LEVEL * (level - 1) + masteryChance ? 2 : 1;
 }

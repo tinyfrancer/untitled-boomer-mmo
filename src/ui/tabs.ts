@@ -1,5 +1,14 @@
 export type TabId =
-  'character' | 'inventory' | 'quests' | 'camp' | 'menu' | 'feats' | 'log' | 'map' | 'options';
+  | 'character'
+  | 'inventory'
+  | 'quests'
+  | 'camp'
+  | 'menu'
+  | 'feats'
+  | 'log'
+  | 'map'
+  | 'mastery'
+  | 'options';
 
 export interface TabDefinition {
   id: TabId;
@@ -40,6 +49,7 @@ export const TABS: TabDefinition[] = [
 export const MENU_TABS: TabDefinition[] = [
   { id: 'map', label: 'Map', kind: 'sheet', key: 'm' },
   { id: 'feats', label: 'Feats', kind: 'sheet', key: 'v' },
+  { id: 'mastery', label: 'Mastery', kind: 'sheet', key: 'y' },
   { id: 'log', label: 'Combat Log', kind: 'sheet', key: 'l' },
   { id: 'options', label: 'Options', kind: 'action' },
 ];

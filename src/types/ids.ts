@@ -141,6 +141,18 @@ export type ResourceNodeId =
  */
 export type NodeShapeId = 'tree' | 'ripple' | 'vein';
 
+/**
+ * Something a mastery pool can be kept for: one thing worked, or one thing made.
+ *
+ * The union of the two id sets rather than a third set of names, because what is
+ * being mastered is the *target* a skill was pointed at — and both tables
+ * already name every one of those exactly once. It is what lets one flat record
+ * hold both halves, which is only safe while the two unions stay disjoint;
+ * `tests/systems/MasterySystem.test.ts` is what holds that, since a recipe named
+ * for a node would otherwise silently share its pool.
+ */
+export type MasteryTargetId = ResourceNodeId | RecipeId;
+
 export type ZoneId = 'town' | 'beach' | 'quarry' | 'bandit-camp' | 'bandit-hideout';
 
 // Which side of a map an exit sits on. See EDGE_TABLE in systems/ZoneSystem.ts

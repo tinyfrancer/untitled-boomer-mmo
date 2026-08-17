@@ -116,14 +116,21 @@ describe('the pan', () => {
 
 describe('rollCraft', () => {
   it('burns on an unlucky roll, awarding no xp', () => {
-    const result = rollCraft(FISH, 1, () => 0);
-    expect(result).toEqual({ itemId: 'burnt-fish', xp: 0, failed: true, consumed: true });
+    const result = rollCraft(FISH, 1, 0, () => 0);
+    expect(result).toEqual({
+      itemId: 'burnt-fish',
+      quantity: 1,
+      xp: 0,
+      failed: true,
+      consumed: true,
+    });
   });
 
   it('succeeds on a lucky roll, awarding the recipe xp', () => {
-    const result = rollCraft(FISH, 1, () => 0.99);
+    const result = rollCraft(FISH, 1, 0, () => 0.99);
     expect(result).toEqual({
       itemId: 'cooked-fish',
+      quantity: 1,
       xp: FISH.xpReward,
       failed: false,
       consumed: true,
@@ -131,6 +138,24 @@ describe('rollCraft', () => {
   });
 
   it('cannot burn at the level where burn chance hits zero', () => {
-    expect(rollCraft(FISH, 9, () => 0).failed).toBe(false);
+    expect(rollCraft(FISH, 9, 0, () => 0).failed).toBe(false);
+  });
+
+  it('pays a second one off the bench when the mastery roll lands', () => {
+    // The first roll clears the burn check, the second is the mastery one.
+    const rolls = [0.99, 0.1];
+    const result = rollCraft(FISH, 9, 0.2, () => rolls.shift() ?? 1);
+    expect(result).toMatchObject({ itemId: 'cooked-fish', quantity: 2, failed: false });
+  });
+
+  it('pays one when the mastery roll misses, at the same tier', () => {
+    const rolls = [0.99, 0.9];
+    expect(rollCraft(FISH, 9, 0.2, () => rolls.shift() ?? 1).quantity).toBe(1);
+  });
+
+  it('never doubles a failure, however deep the pool', () => {
+    // A pool that doubled a burnt fish would pay worse the further along it is.
+    const result = rollCraft(FISH, 1, 1, () => 0);
+    expect(result).toMatchObject({ itemId: 'burnt-fish', quantity: 1, failed: true });
   });
 });

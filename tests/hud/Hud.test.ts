@@ -89,6 +89,7 @@ const REPORT: OfflineAfkReport = {
   crafts: 0,
   skill: null,
   skillXp: 0,
+  masteryTargetId: null,
 };
 
 let parent: HTMLElement;
