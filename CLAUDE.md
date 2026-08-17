@@ -6,27 +6,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; seven zones (town with leveled rats, a shop, a bank and a trainer, a beach
+v1: single-player only; eight zones (town with leveled rats, a shop, a bank and a trainer, a beach
 with crabs and ocean fishing, a quarry cut into the hills north of town with tin and iron to mine,
 a bandit camp with aggressive humanoids, the bandit hideout behind a locked
-door, the Old Mill Road west of town where the goblins are, and Blackwater Fen south of the beach
-where the eels and the cloth are);
+door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
+where the eels and the cloth are, and the Deep Cut under the quarry where the coal is);
 character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
 kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
 work you were doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
-mobile-first HUD; and local save/load with versioned migrations. Five of the seven zones are level
+mobile-first HUD; and local save/load with versioned migrations. Five of the eight zones are level
 1-3 starter content — what separates those is what they drop, not how hard they are, and the hideout
-is gated by a rare key rather than by a level. Three things sit above that band. The named mob at the
+is gated by a rare key rather than by a level. Four things sit above that band. The named mob at the
 back of the hideout is level 4, carries the only loot in the game that comes off a single creature,
 and is the fight the starter content is the run-up to. The **Old Mill Road** is the band itself: the
 first zone that is harder rather than merely different, level 4-5, reached by walking west out of
 town with no key and no gate, because the starter band ended by walking and the one above it should
 begin the same way. **Blackwater Fen** is the rung above it, level 5-7 and reached the same way, by
 walking south off the beach: it is where the food that makes those levels survivable comes from, and
-where a caster finally gets armour of their own.
+where a caster finally gets armour of their own. **The Deep Cut** is the third, level 5-6 and reached
+by walking north out of the quarry, and it is the one of the three that is about a skill rather than
+a fight: the coal and the rich iron down there are what the steel tier is made of, and what holds
+anybody back from them is the pick in their hands rather than anything standing in the way.
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
@@ -346,6 +349,13 @@ the south. Nothing about the east edge being water matters, because an edge no e
 nobody arrives on and `ZoneSystem.test.ts` does not ask about it. The rule to carry forward: **an
 exit needs its whole shared edge walkable on both sides, one arrival-inset in**, so a zone whose
 border is water or rock is a zone that has to be re-cut before it can have a neighbour there.
+
+The quarry paid the same bill in rock the moment the Deep Cut opened, which is what makes it a rule
+rather than a story about the beach: the face ran across the whole north edge and its comment said
+that was why the zone had no north exit — the same sentence the beach's map had, about a different
+material. It now sits at rows 2-4 with a shelf along the top of it and a break through the middle
+where the shaft was driven, and every existing spawn stayed put. **Expect the sentence explaining why
+a zone has no exit somewhere to be the thing that has to go when it gets one.**
 
 The smithy is also the one door in town that does not face south, and for a reason worth keeping: a
 door faces the open ground its station or counter is approached across, and in that corner the only
@@ -722,10 +732,13 @@ new row picks a body it is drawn with rather than waiting for a builder written 
 stays the renderer's, keyed by the same shape in `render3d/palette.ts` — with the exceptions the
 table always said would come. `CREATURE_OVERRIDES` there keys a look to an `EnemyId`, for a humanoid
 who is not the same man as the first: a named mob standing in a room full of its own men is precisely
-the case where sharing a shape's colour is wrong, and so is a goblin, and so is a fen raider.
+the case where sharing a shape's colour is wrong, and so is a goblin, and so is a fen raider, and so
+is the same goblin underground.
 `BEAST_OVERRIDES` beside it is the same escape hatch for fur and shell, added when the bog lurker
 became the second quadruped and the first one that is not brown — which is exactly the change the
-shape table's own comment said to make when it arrived. The default stays the rule and both are read
+shape table's own comment said to make when it arrived, and the cave crawler is that argument again
+for the second crustacean: the crab's boiled orange is a thing that lives in the sun. The default
+stays the rule and both are read
 through one accessor each (`humanoidLook`, `beastLook`), so a new `ENEMIES` row is still drawn with
 no view code written for it unless it asks to be. **How big a person is drawn comes
 off the body too**: `buildHumanoid` scales the rig by `body.width / TILE_SIZE`, so the chief takes
@@ -767,11 +780,21 @@ carries — which is the same guard pointed the other way. The one rule the tabl
 the humanoid one: `EnemySystem.test.ts` requires **every** humanoid to carry both currency and at
 least one piece of equipment, so a new person-shaped creature with an empty table fails the build.
 
-**The mill road ships with no resource nodes, and that is `deadEnds.test.ts` doing its job.** The
-brainstorm gives it hardwood at woodcutting 6, but hardwood exists to feed the charcoal the steel tier
-needs, and steel is the Deep Cut's job — so a hardwood row today would be a gathering skill yielding
-something no recipe consumes, which is the strictest of the three dead-end rules. It lands with the
-zone that gives it a use, the same call the brainstorm already makes about willow.
+**The mill road shipped with no resource nodes, and its hardwood arriving later is what that rule
+looks like paid off.** `deadEnds.test.ts` would have failed a hardwood row on the day the zone
+landed — the brainstorm asked for one at woodcutting 6, but hardwood exists to be burnt into the
+charcoal the steel tier is worked over, and a gathering skill yielding something no recipe consumes
+is the strictest of the three dead-end rules. So it waited for the Deep Cut, which is the zone that
+gives it a use, and arrived as a `nodeSpawns` list on a `ZONES` row that already existed. Willow is
+the same call still outstanding: it lands with the bow, or it does not land.
+
+**What the Deep Cut's own table pays is coin, a tool and a weapon, and deliberately no ore at all.**
+The zone's whole claim is that everything worth having down there is behind the pick rather than
+behind a door, so a goblin miner dropping coal would be the way round the only gate it has — and iron
+ore is no better, since the plate tier is traceable to both veins and a rat precisely because nothing
+else in the game hands out either rock. The **goblin maul** on it is the first weapon upgrade in the
+game that comes off something repeatable; everything above a brown axe until then was one boss behind
+a 3% key.
 
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
 a status per quest and one number beside it; how far along an objective is gets counted on read.
@@ -994,6 +1017,19 @@ together (one intermediate rather than two more names on an armour row nobody wo
 tin is what the iron is tinned with — which is also the only thing keeping the **soft** vein worth
 swinging at, since mining 5 opens the hard one and would otherwise retire the first.
 
+**The steel tier is the same argument one rung up, and it reaches across three zones.** A piece takes
+steel bars, charcoal and a crawler shell, so behind every one of them is the quarry's iron, the Deep
+Cut's coal, the hardwood on the road west and the thing living in the way of the seam — which is what
+keeps the quarry worth walking to after the Deep Cut opens, since a steel bar is two iron bars as well
+as the coal that marries them. The two fuels do different jobs on purpose: coal is what a furnace
+melts iron into steel with, and charcoal is what the finished piece is drawn over, hot and clean where
+coal is hot and filthy. It is also the first tier with **four** pieces — both offhands in the world
+drop off bandits in the starter band, so the slot filled once and then never again, and a top tier
+that stopped at three would have left the best set in the game wearing a starter shield.
+`tests/systems/deepCut.test.ts` traces every piece back to the zones behind it rather than asserting
+the recipe rows, so padding one with a fourth bar and dropping a secondary shows up as the web coming
+apart.
+
 **A station is a place, and the forge is `Campfire`'s opposite half**: fixed, always lit, and part of
 the zone (`ZoneDefinition.stationSpawns`), where a fire is placed by the player and burns out. Two
 rules about it were got wrong first and are worth not re-learning:
@@ -1118,12 +1154,14 @@ be an achievement rather than an asymptote, so **content that reaches higher rai
 level past the highest thing that spawns and that the climb from the end of the starter arc is
 another session or two of the best kill there is rather than another game.
 
-It is what a zone _holds_ rather than a zone arriving that moves it, and the three zones since that
+It is what a zone _holds_ rather than a zone arriving that moves it, and the four zones since that
 rule was written are all worked examples of it. The quarry spawned nothing above level 3 and left
 the cap exactly where it was. The mill road spawns level 5 goblins and moved it to 6; the fen spawns
-level 7 raiders and moved it to 8. Nobody chose either number — `progression.test.ts` did: the cap is
-asserted against `spawns.ts`, so raising the content is what raises the ceiling and the test says the
-new number before anyone has to remember it.
+level 7 raiders and moved it to 8. The Deep Cut is the clearest case of all, because it is a whole
+zone above the starter band that moved the cap **not at all** — it tops out at 6 under a fen that
+already spawns 7, so `progression.test.ts` had nothing to say about it. Nobody chose any of those
+numbers: the cap is asserted against `spawns.ts`, so raising the content is what raises the ceiling
+and the test says the new number before anyone has to remember it.
 
 **What that test will not let a zone get away with is paying too little for the room it added.** The
 climb to the cap is held to a small multiple of the starter arc measured in the best repeatable kill
@@ -1169,10 +1207,12 @@ and only the _shape_ of it moves. The skill used to buy 0.4% damage a level, whi
 by design; a crit is a moment where a multiplier is not, which is what makes training felt. Retuning
 the chance or the multiplier re-slopes the flat part instead of quietly moving the total.
 
-Avoidance is `EnemyDefinition.avoidChance` and the **crab is its only user** — a scuttling armoured
-thing already designed as a long fight rather than a dangerous one is what a dodge is for, and every
-other row leaving it at zero is what keeps it from being a tax on every fight. It is rolled before
-the damage is, so a slipped swing costs the weapon skill its rep too.
+Avoidance is `EnemyDefinition.avoidChance` and it belongs to the **armoured scuttling things** — the
+crab, and the cave crawler that is the crab's idea one band deeper. A long fight rather than a
+dangerous one is what a dodge is for, and every other row leaving it at zero is what keeps it from
+being a tax on every fight; `CombatSystem.test.ts` holds that as the rule rather than as a list of
+names, so a dodging thing has to be a crustacean and has to be passive. It is rolled before the damage
+is, so a slipped swing costs the weapon skill its rep too.
 
 Neither needed a new channel: a crit is a `crit` flag on the `hit` event the view already draws,
 coloured from `FLOAT_TONE_COLORS` and marked with a bang so it reads on a screen being looked at
