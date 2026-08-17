@@ -1582,7 +1582,29 @@ async function orbit() {
   // see because a wall is in front of it was never what the finger meant) and
   // is not what this check is about. The open country south of the crossroads is
   // walkable ground with nothing built on it from any angle.
-  const turnedDestination = { x: stood.x, y: stood.y + 200 };
+  //
+  // *Which* lane of it is asked at the last moment rather than written down, and
+  // that is this check being precise rather than being propped up. `pickTap` is
+  // a priority and not a depth sort, so a mob is picked over the ground from
+  // anywhere along the ray — and there is a rat spawned 24 units from where this
+  // used to aim, wandering a 96-unit disc across it. A tap that lands on it
+  // selects it and walks to melee range instead, which is correct behaviour and
+  // is what the tap-to-attack checks are for; here it was a one-run-in-four
+  // failure about something else entirely. Screen distance is the honest measure
+  // of "on the ray", since two things the ray crosses are two things at the same
+  // point on screen.
+  const turnedDestination = await page.evaluate((from) => {
+    const lanes = [0, -160, 160, -80, 80].map((dx) => ({ x: from.x + dx, y: from.y + 200 }));
+    const mobs = window.world.mobs
+      .filter((mob) => mob.isAlive())
+      .map((mob) => window.view.worldToScreen(mob.x, mob.y));
+    const scored = lanes.map((to) => {
+      const at = window.view.worldToScreen(to.x, to.y);
+      const gaps = mobs.map((spot) => Math.hypot(spot.x - at.x, spot.y - at.y));
+      return { to, clearance: gaps.length === 0 ? Infinity : Math.min(...gaps) };
+    });
+    return scored.reduce((best, lane) => (lane.clearance > best.clearance ? lane : best)).to;
+  }, stood);
   await clickAt(
     await page.evaluate((to) => window.view.worldToScreen(to.x, to.y), turnedDestination),
   );
