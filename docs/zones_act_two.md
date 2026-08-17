@@ -1,6 +1,6 @@
 # Act Two: five zones past the starter band
 
-A brainstorm, not a spec. Nothing here is built.
+A brainstorm, not a spec. **Zone 1 is built** (see below); the other four are not.
 
 ## Where the game currently stops
 
@@ -14,7 +14,7 @@ What the five below are for, in one line each:
 
 | #   | Zone              | Cell   | Band | Why you go                                                |
 | --- | ----------------- | ------ | ---- | --------------------------------------------------------- |
-| 1   | Old Mill Road     | -1, 0  | 4-5  | The first fight above the starter band, and the coin      |
+| 1   | Old Mill Road ✅  | -1, 0  | 4-5  | The first fight above the starter band, and the coin      |
 | 2   | The Deep Cut      | 0, -2  | 5-6  | Coal, and with it the whole steel tier                    |
 | 3   | Blackwater Fen    | 0, 2   | 5-7  | The food that makes levels 6-7 survivable                 |
 | 4   | Greyford Outpost  | -2, 0  | —    | A second set of counters, out where the work is           |
@@ -30,7 +30,23 @@ row, and `progression.test.ts` says what the cap now has to be.
 
 ---
 
-## 1. Old Mill Road — west of town, level 4-5
+## 1. Old Mill Road — west of town, level 4-5 — **BUILT**
+
+What actually shipped, against what is written below: goblin scavengers in three knots of three at
+levels 4-5, coin at roughly double the bandit rate, the studded leather tier, the mill as scenery,
+and one `CREATURE_OVERRIDES` entry. The cap moved 5 → 6 on its own, as predicted.
+
+Two departures worth recording. **The hardwood node was left out** — it exists to feed the charcoal
+the steel tier needs, and steel is zone 2, so a hardwood row today fails `deadEnds.test.ts` for
+yielding something no recipe consumes. It lands with the Deep Cut. And **the studded tier is leather
+only**, so a wizard gets coin and nothing wearable out here; that follows this doc assigning cloth to
+the fen, and is the strongest argument for building zone 3 before zone 2.
+
+One cost this doc did not predict at all: **opening the road west forced a town re-layout.** An exit
+reserves a strip of the receiving zone's edge for arrivals along its whole length, and town's smithy
+was built across the west one. The smithy and forge moved to the north-west block, a cottage moved
+across town, and a rat moved a notch east. Expect the same at Greyford — zone 1's own west edge is
+now the strip that zone 4's road will claim.
 
 **The bridge.** The road west, gone to seed since the bandits made the east road the interesting
 one. It exists to be the first place where a level 3 character in a full brown set is not
