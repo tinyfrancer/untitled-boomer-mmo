@@ -6,24 +6,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; six zones (town with leveled rats, a shop, a bank and a trainer, a beach
+v1: single-player only; seven zones (town with leveled rats, a shop, a bank and a trainer, a beach
 with crabs and ocean fishing, a quarry cut into the hills north of town with tin and iron to mine,
 a bandit camp with aggressive humanoids, the bandit hideout behind a locked
-door, and the Old Mill Road west of town where the goblins are);
+door, the Old Mill Road west of town where the goblins are, and Blackwater Fen south of the beach
+where the eels and the cloth are);
 character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
 kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
 work you were doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
-mobile-first HUD; and local save/load with versioned migrations. Five of the six zones are level 1-3
-starter content — what separates those is what they drop, not how hard they are, and the hideout is
-gated by a rare key rather than by a level. Two things sit above that band. The named mob at the
+mobile-first HUD; and local save/load with versioned migrations. Five of the seven zones are level
+1-3 starter content — what separates those is what they drop, not how hard they are, and the hideout
+is gated by a rare key rather than by a level. Three things sit above that band. The named mob at the
 back of the hideout is level 4, carries the only loot in the game that comes off a single creature,
 and is the fight the starter content is the run-up to. The **Old Mill Road** is the band itself: the
 first zone that is harder rather than merely different, level 4-5, reached by walking west out of
 town with no key and no gate, because the starter band ended by walking and the one above it should
-begin the same way.
+begin the same way. **Blackwater Fen** is the rung above it, level 5-7 and reached the same way, by
+walking south off the beach: it is where the food that makes those levels survivable comes from, and
+where a caster finally gets armour of their own.
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
@@ -332,6 +335,17 @@ the road west put arrivals inside it. The smithy and its forge moved up into the
 cottage moved across town to make room, and one rat moved a notch east — none of which is visible in
 the `ZONES` row that caused it, which is the whole reason the sweep exists. Expect a new exit to cost
 a layout change at the far end, and reach for `BuildingSystem.test.ts` to find out what.
+
+**The fen charged the same bill against terrain rather than against buildings, which is the harder
+half of it.** The beach was an ocean spanning its whole south edge — the map said so, and its comment
+said that was why the zone had no south exit. Opening the road to Blackwater Fen meant every arrival
+along that edge had to land on walkable ground, and `ARRIVAL_INSET` is a tile and a half, so it was
+the _second row up_ that had to be clear rather than the edge itself. The ocean now stops two rows
+short and runs off the east edge instead, leaving a sand spit down the west side and a strand along
+the south. Nothing about the east edge being water matters, because an edge no exit leads to is one
+nobody arrives on and `ZoneSystem.test.ts` does not ask about it. The rule to carry forward: **an
+exit needs its whole shared edge walkable on both sides, one arrival-inset in**, so a zone whose
+border is water or rock is a zone that has to be re-cut before it can have a neighbour there.
 
 The smithy is also the one door in town that does not face south, and for a reason worth keeping: a
 door faces the open ground its station or counter is approached across, and in that corner the only
@@ -705,10 +719,15 @@ should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numb
 **The renderer is on the far side of that too**: an `EnemyDefinition` names a
 `shape` (`quadruped | crustacean | humanoid`) and `render3d/creatures.ts` switches on _that_, so a
 new row picks a body it is drawn with rather than waiting for a builder written for its id. Colour
-stays the renderer's, keyed by the same shape in `render3d/palette.ts` — with one exception the
-table always said would come: `CREATURE_OVERRIDES` there keys a look to an `EnemyId`, for a second
-humanoid who is not the same man as the first. A named mob standing in a room full of its own men
-is precisely the case where sharing a shape's colour is wrong. **How big a person is drawn comes
+stays the renderer's, keyed by the same shape in `render3d/palette.ts` — with the exceptions the
+table always said would come. `CREATURE_OVERRIDES` there keys a look to an `EnemyId`, for a humanoid
+who is not the same man as the first: a named mob standing in a room full of its own men is precisely
+the case where sharing a shape's colour is wrong, and so is a goblin, and so is a fen raider.
+`BEAST_OVERRIDES` beside it is the same escape hatch for fur and shell, added when the bog lurker
+became the second quadruped and the first one that is not brown — which is exactly the change the
+shape table's own comment said to make when it arrived. The default stays the rule and both are read
+through one accessor each (`humanoidLook`, `beastLook`), so a new `ENEMIES` row is still drawn with
+no view code written for it unless it asks to be. **How big a person is drawn comes
 off the body too**: `buildHumanoid` scales the rig by `body.width / TILE_SIZE`, so the chief takes
 up half again the room a bandit does and looks it, in the same direction everything else here runs
 — what it _is_ decides what it looks like, never the other way round.
@@ -733,15 +752,18 @@ idea: the trophy always drops because a fight that long has to be worth somethin
 it is cloth so it fits either class, while the two weapons behind it are the chase — one per class,
 so the run is worth making whoever you rolled.
 
-**The goblin table is the step above that, and it ships with a known hole.** It pays roughly double a
-bandit's coin — which is most of why anyone walks out west, since three armour rows drop long before
-the purse stops being a reason to come back — and it carries the **studded** tier, sitting between the
-brown leather the camp drops and the plate a forge makes. It is leather throughout, so it is a
-warrior's upgrade and a wizard's payday only: until something drops cloth above brown, a caster walks
-the mill road for coin and the bandit table is still the whole of how they are dressed. That is a
-deliberate consequence of `docs/zones_act_two.md` assigning cloth to the fen rather than an oversight,
-and `tests/systems/oldMillRoad.test.ts` asserts the armour type so that closing the gap is a decision
-somebody comes back and makes rather than a thing that drifts. The one rule the table cannot bend is
+**The goblin table is the step above that, and the hole it shipped with is closed now.** It pays
+roughly double a bandit's coin — which is most of why anyone walks out west, since three armour rows
+drop long before the purse stops being a reason to come back — and it carries the **studded** tier,
+sitting between the brown leather the camp drops and the plate a forge makes. It is leather
+throughout, so it is a warrior's upgrade and a wizard's payday only, and for one zone that meant a
+caster walked the road west for coin alone with the bandit table still the whole of how they were
+dressed. `docs/zones_act_two.md` had assigned cloth to the fen, so the gap was a deliberate
+consequence rather than an oversight, and `tests/systems/oldMillRoad.test.ts` asserted the armour type
+so that closing it would be a decision somebody came back and made rather than a thing that drifted.
+The fen is that decision: **fenweave** is the cloth line above brown, it drops off fen raiders and
+nothing else, and `tests/systems/blackwaterFen.test.ts` holds it as the best cloth any repeatable kill
+carries — which is the same guard pointed the other way. The one rule the table cannot bend is
 the humanoid one: `EnemySystem.test.ts` requires **every** humanoid to carry both currency and at
 least one piece of equipment, so a new person-shaped creature with an empty table fails the build.
 
@@ -1088,22 +1110,31 @@ bigger numbers. `tests/systems/oldMillRoad.test.ts` is what holds the knots — 
 each goblin with two companions inside a pull, and no two knots within aggro reach of each other, so
 taking one on is never accidentally taking two.
 
-**`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 6 because
-that is where the content reaches: the richest thing anyone can grind is the level 5 goblin, and the
-ten it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to
+**`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 8 because
+that is where the content reaches: the richest thing anyone can grind is the level 7 fen raider, and
+the ten it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to
 be an achievement rather than an asymptote, so **content that reaches higher raises the cap** — and
 `tests/systems/progression.test.ts` is what holds the two together, asserting that the cap sits one
 level past the highest thing that spawns and that the climb from the end of the starter arc is
 another session or two of the best kill there is rather than another game.
 
-It is what a zone _holds_ rather than a zone arriving that moves it, and the two zones since that
-rule was written are both worked examples of it. The quarry spawned nothing above level 3 and left
-the cap exactly where it was. The mill road spawns level 5 goblins and moved it to 6 — nobody chose
-that number, `progression.test.ts` did: the cap is asserted against `spawns.ts`, so raising the
-content is what raises the ceiling and the test says the new number before anyone has to remember it.
+It is what a zone _holds_ rather than a zone arriving that moves it, and the three zones since that
+rule was written are all worked examples of it. The quarry spawned nothing above level 3 and left
+the cap exactly where it was. The mill road spawns level 5 goblins and moved it to 6; the fen spawns
+level 7 raiders and moved it to 8. Nobody chose either number — `progression.test.ts` did: the cap is
+asserted against `spawns.ts`, so raising the content is what raises the ceiling and the test says the
+new number before anyone has to remember it.
+
+**What that test will not let a zone get away with is paying too little for the room it added.** The
+climb to the cap is held to a small multiple of the starter arc measured in the best repeatable kill
+there is, and the curve is quadratic where a creature's XP is linear in its level — so a zone that
+adds two levels while paying a goblin's rate walks straight into the ceiling. The fen's raider is
+what that looks like when it is priced deliberately: 14 XP a level against the goblin's 11, which
+lands the climb at 146 kills against a limit of 213. A zone above this one has to make the same
+decision rather than inherit the last one's rate.
 
 Two things ride the cap and have to move with it, which is exactly what neither did before: the
-combat skill ceiling is `combatSkillCap` (`level × 10`, so 60 now), and **what a trained combat
+combat skill ceiling is `combatSkillCap` (`level × 10`, so 80 now), and **what a trained combat
 skill is worth is written as the ceiling and divided down by that cap** rather than as a rate
 (`MAX_WEAPON_SKILL_DAMAGE_BONUS` and `MAX_AVOIDANCE` in `systems/CombatSystem.ts`). A rate is the
 thing that silently stops meaning what it says when the cap moves: `MAX_AVOIDANCE` claimed 25%
@@ -1223,7 +1254,10 @@ the "no art skills" constraint in `docs/initial_design.txt`). Terrain is one ver
 `creatures.ts`, `props.ts`). The only textures uploaded are text baked onto a canvas by
 `render3d/text.ts` — a nameplate's name and a floating damage number — which is also the reason
 `disposeTree` names `material.map` explicitly, and the reason the unit suite stubs a 2D context
-(jsdom has none). Tile colours live in `TILE_COLORS` in `data/tiles.ts` rather than in the renderer,
+(jsdom has none). The tile vocabulary is small and grows by a constant plus a colour — `MARSH_TILE`
+is the fen's brackish ground and cost exactly that, since `BLOCKING_TILES` is a list and a walkable
+tile needs no change to collision at all. Tile colours live in `TILE_COLORS` in `data/tiles.ts` rather
+than in the renderer,
 for the same reason the stick-figure rig behind the paperdoll does: the ground the simulation calls
 water is a decision the whole game makes. Creature colour is not — `render3d/palette.ts` is the
 renderer's own, and nothing outside it asks what colour a rat is.
