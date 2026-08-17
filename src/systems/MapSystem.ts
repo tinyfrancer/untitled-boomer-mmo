@@ -1,4 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
+import { BUILDINGS } from '../data/buildings';
 import { npcName } from '../data/npcs';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
@@ -36,12 +37,30 @@ export interface TerrainBand {
   tile: number;
 }
 
+/**
+ * A building's footprint, in tiles, for the one thing on the map that is an area
+ * rather than a point.
+ *
+ * It is not a `MapMarker` because a marker is a dot with a name, and the useful
+ * fact about a building is the room it takes up: the shape of the town is what
+ * makes a map of it worth opening at all. Drawn under the markers, so the
+ * counter standing at a door is never lost inside the shopfront behind it.
+ */
+export interface MapBuilding {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+}
+
 export interface ZoneMap {
   zoneId: ZoneId;
   name: string;
   columns: number;
   rows: number;
   terrain: TerrainBand[];
+  buildings: MapBuilding[];
   markers: MapMarker[];
 }
 
@@ -115,12 +134,24 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
     });
   }
 
+  const buildings = (zone.buildingSpawns ?? []).map(({ dx, dy, buildingId }) => {
+    const { body, name } = BUILDINGS[buildingId];
+    const topLeft = toTile(centre.x + dx - body.width / 2, centre.y + dy - body.height / 2);
+    return {
+      ...topLeft,
+      width: body.width / TILE_SIZE,
+      height: body.height / TILE_SIZE,
+      label: name,
+    };
+  });
+
   return {
     zoneId,
     name: zone.name,
     columns: zone.map[0]?.length ?? 0,
     rows: zone.map.length,
     terrain: terrainBands(zone.map),
+    buildings,
     markers,
   };
 }

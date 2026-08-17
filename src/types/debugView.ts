@@ -48,7 +48,14 @@ export interface DrawnCounts {
   nodes: number;
   signposts: number;
   npcs: number;
+  buildings: number;
   labels: number;
+  /**
+   * The name over a building's door. Counted apart from `labels` for the reason
+   * `markers` and `titles` are: the label total is one-per-creature and a check
+   * leans on that, where a sign belongs to a thing no creature ever stood in.
+   */
+  signs: number;
   /**
    * Quest markers over an NPC's head. Counted apart from `labels` because the
    * label total is one-per-creature and a check leans on that; this one moves

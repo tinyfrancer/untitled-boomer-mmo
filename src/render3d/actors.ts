@@ -17,12 +17,15 @@ import { OCCLUDED_OPACITY, type Occluder } from './occlusion';
 import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildForge, buildNode, buildSignpost } from './props';
+import { buildBuilding } from './buildings';
+import { buildText } from './text';
+import { buildingRect } from '../data/buildings';
 import type { CharacterState } from '../persistence/CharacterState';
 import type { TitleId } from '../types/ids';
 import type { Campfire } from '../world/Campfire';
 import type { Player } from '../world/Player';
 import type { ResourceNode } from '../world/ResourceNode';
-import type { WorldNpc, WorldSignpost, WorldStation } from '../world/ZoneWorld';
+import type { WorldBuilding, WorldNpc, WorldSignpost, WorldStation } from '../world/ZoneWorld';
 
 /** How far over a figure's head its nameplate floats. */
 const PLATE_CLEARANCE = 12;
@@ -41,6 +44,15 @@ const PLAYER_PLATE = { width: 54, height: 7, labelHeight: 10 };
 
 /** Just clear of the signpost's board, which stands a tile tall. */
 const SIGNPOST_LABEL_HEIGHT = 76;
+
+/**
+ * The name over a building's door, and how far above its ridge it floats.
+ *
+ * Bigger than a nameplate's, because it is read from across town rather than
+ * from the tile you are standing on — which is the whole job of a shop sign.
+ */
+const SIGN_HEIGHT = 18;
+const SIGN_CLEARANCE = 14;
 
 /**
  * How much ground a person covers, for a tap.
@@ -407,6 +419,81 @@ export class StationActor implements Actor, Pickable {
       depth: TILE_SIZE,
       height: TILE_SIZE,
     });
+  }
+
+  dispose(): void {
+    disposeTree(this.object);
+  }
+}
+
+/**
+ * A building: the largest thing in the world and the least eventful.
+ *
+ * No sync, like the forge — nothing about it changes — but it is the one actor
+ * that is both `Occluder` and `Pickable`, and for opposite reasons.
+ *
+ * It **must** fade, because it is the only thing tall and wide enough to hide
+ * the player outright: a shopfront the camera has been dragged behind would
+ * otherwise leave nothing on screen to tap. And it is picked *last of all*,
+ * below even the forge, because the priority in `pickTap` is not a depth sort —
+ * anything ranked above mobs wins from anywhere along the ray, and a building is
+ * three tiles of it. What a tap on one resolves to is a walk to its **door**,
+ * which is the only part of a solid building worth standing at.
+ */
+export class BuildingActor implements Actor, Pickable, Occluder {
+  readonly object = new Group();
+  readonly building: WorldBuilding;
+  private readonly prop: ReturnType<typeof buildBuilding>;
+  private readonly box: Box3;
+  private occluded = false;
+
+  constructor(building: WorldBuilding) {
+    this.building = building;
+    this.object.userData.kind = 'building';
+    this.object.position.copy(simToWorld(building.x, building.y));
+    this.prop = buildBuilding(building.definition);
+    this.object.add(this.prop.object);
+
+    const rect = buildingRect(building);
+    this.box = new Box3(
+      new Vector3(rect.left, 0, rect.top),
+      new Vector3(rect.right, this.prop.height, rect.bottom),
+    );
+
+    // The name over the door, which is the whole of how a player tells the bank
+    // from the store: there are no art assets, so four shopfronts are one box in
+    // one colour until something says which is which. A sprite faces the camera
+    // by construction, so unlike a nameplate it needs no billboarding of its own.
+    //
+    // Tagged `sign` rather than `label` on purpose. `drawnCounts` counts one
+    // label per drawn creature and `scripts/smoke.mjs` asserts that total in
+    // every zone; a building calling its name a label would break the invariant
+    // everywhere it holds.
+    const sign = buildText(building.definition.name, THEME.color.text, SIGN_HEIGHT);
+    if (sign) {
+      sign.userData.kind = 'sign';
+      sign.position.y = this.prop.height + SIGN_CLEARANCE;
+      this.object.add(sign);
+    }
+  }
+
+  /**
+   * The footprint standing as tall as it is drawn — the same box that stops the
+   * player, which is what keeps what you cannot walk through and what you cannot
+   * see past the same building.
+   */
+  occluderBox(): Box3 {
+    return this.box;
+  }
+
+  setOccluded(occluded: boolean): void {
+    if (occluded === this.occluded) return;
+    this.occluded = occluded;
+    setOpacity(this.prop.object, occluded ? OCCLUDED_OPACITY : 1);
+  }
+
+  pickBox(): Box3 {
+    return this.box;
   }
 
   dispose(): void {

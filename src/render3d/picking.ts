@@ -1,10 +1,17 @@
 import { Box3, Plane, Raycaster, Vector2, Vector3, type PerspectiveCamera } from 'three';
 import { TILE_SIZE } from '../config/constants';
+import { doorPoint } from '../data/buildings';
 import { worldToSim } from './coords';
 import type { Point } from '../systems/MovementSystem';
 import type { Mob } from '../world/Mob';
 import type { ResourceNode } from '../world/ResourceNode';
-import type { WorldNpc, WorldSignpost, WorldStation, WorldTap } from '../world/ZoneWorld';
+import type {
+  WorldBuilding,
+  WorldNpc,
+  WorldSignpost,
+  WorldStation,
+  WorldTap,
+} from '../world/ZoneWorld';
 
 /**
  * The smallest a pick volume may be along any axis.
@@ -59,6 +66,7 @@ export interface PickScene {
   readonly npcs: readonly (Pickable & { readonly npc: WorldNpc })[];
   readonly stations: readonly (Pickable & { readonly station: WorldStation })[];
   readonly mobs: readonly (Pickable & { readonly mob: Mob })[];
+  readonly buildings: readonly (Pickable & { readonly building: WorldBuilding })[];
 }
 
 /**
@@ -169,6 +177,25 @@ export function pickTap(raycaster: Raycaster, scene: PickScene): WorldTap | null
    */
   const station = nearestUnder(raycaster, scene.stations);
   if (station) return { kind: 'station', station: station.station };
+
+  /**
+   * Last of all, and it answers with **ground** rather than with a kind of its
+   * own.
+   *
+   * Last for the reason the forge is below the creatures, only more so: the list
+   * is a priority and not a depth sort, so a kind placed above mobs wins from
+   * anywhere along the ray — and a building is three tiles of solid geometry
+   * near the middle of town, where a person is a figure at the map's edge.
+   *
+   * Ground because there is no third thing a tap on a solid building could
+   * sensibly mean. Left to fall through, the ray would carry on over the roof
+   * and land on the grass *behind* it, which walks the player into the back
+   * wall; the door is the same walk with the useful ending, and it needs no new
+   * `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the context menu
+   * to say so.
+   */
+  const building = nearestUnder(raycaster, scene.buildings);
+  if (building) return { kind: 'ground', point: doorPoint(building.building) };
 
   const point = groundUnder(raycaster);
   return point ? { kind: 'ground', point } : null;

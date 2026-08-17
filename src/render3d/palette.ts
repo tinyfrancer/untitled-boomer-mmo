@@ -4,7 +4,7 @@ import {
   NPC_APPEARANCES,
   type Appearance,
 } from '../systems/AppearanceSystem';
-import type { CreatureShapeId, EnemyId } from '../types/ids';
+import type { BuildingShapeId, CreatureShapeId, EnemyId } from '../types/ids';
 
 /**
  * The colours the placeholder primitives are made of.
@@ -48,6 +48,25 @@ export const PALETTE = {
   /** The ring under the current target. */
   selection: 0xffee58,
 } as const;
+
+/**
+ * What each kind of building is made of.
+ *
+ * Keyed by the shape rather than by the building, the same bargain
+ * `CREATURE_LOOKS` makes: a new `BUILDINGS` row names a shape and is drawn
+ * without a line of view code written for it. What tells the bank from the
+ * store is the sign over the door, not a colour of its own — this is the palette
+ * of a town, and four shopfronts in four colours would read as a fairground.
+ */
+export const BUILDING_LOOKS = {
+  hall: { wall: 0xc8b28c, roof: 0x6b3f2a, trim: 0x5d4037 },
+  // Soot and iron, and a roof it does not mind burning: the one building on the
+  // row that is a place of work rather than a place of business.
+  workshop: { wall: 0x8c8378, roof: 0x4a4a4a, trim: 0x424852 },
+  // Whitewash and thatch, which is what makes a house read as a house at a
+  // glance beside a shopfront it is otherwise the same box as.
+  cottage: { wall: 0xd8cdb6, roof: 0xa07d3e, trim: 0x6d4c41 },
+} satisfies Record<BuildingShapeId, { wall: number; roof: number; trim: number }>;
 
 /** A creature made of itself: fur or shell, and whatever comes off it. */
 export interface BeastLook {
