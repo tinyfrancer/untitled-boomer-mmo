@@ -268,7 +268,8 @@ node spawns, exits), each built into one `ZoneWorld` by the `GameContext` and dr
 tappable signpost (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not new
-view code. Travel from the world map is the third route in and goes through the same tables;
+view code — and that row is what says what is spawned in it, what is built on it, and what stations
+stand there. Travel from the world map is the third route in and goes through the same tables;
 `ZoneWorld` refuses it mid-fight, which is the one thing it can do that a walk cannot.
 
 The quarry is what that claim looks like when it is cashed: a map file, a spawn list, a row and one
@@ -292,6 +293,39 @@ map draws those two cells very differently. The bandit hideout is the only locke
 map (`data/banditHideoutMap.ts`) is the inverse of every other one, solid `WALL_TILE` with rooms
 painted back out of it, which is why `tests/systems/ZoneSystem.test.ts` checks that an arrival
 _anywhere_ along an exit edge lands on walkable ground rather than only where the signpost stands.
+
+**A town has walls in it, and a building is solid all the way through**
+(`ZoneDefinition.buildingSpawns` into `data/buildings.ts`, drawn by `render3d/buildings.ts`). It is
+placed by a centre offset like every other spawn and blocks as a `CollisionSystem` blocker beside
+the tree trunks rather than as painted-in `WALL_TILE`, because a zone's contents are offsets from the
+middle of the map and the tile grid is written out in absolute rows — one of those two has to be the
+map's own. Being solid is the load-bearing decision and not a shortcut: click-to-move is a straight
+line with collision sliding and **no pathfinding anywhere**, so a counter behind a doorway is a
+counter a tap walks into a wall trying to reach, from three sides of its own shop. What a building is
+for here is the outside of it — `doorPoint` is where the person who works there stands, and walking
+up to them is what walking into a shop means.
+
+Three rules follow, and `tests/systems/BuildingSystem.test.ts` holds all three because nothing else
+can see any of them:
+
+- **Nothing else in a zone may stand inside one** — not a mob spawn's whole wander disc, not a node,
+  a counter, a station, a signpost, or the band a traveller arrives on. A rat inside a wall is drawn
+  inside it and never wanders out to prove it, the way a misplaced vein never does.
+- **Every counter's door faces the open ground it is approached across**, and the lane between the
+  two is clear of everything solid. That decides where a shopfront may be built rather than the other
+  way about, and it is why the town is one high street with the counters along the north side of it:
+  the camera stands to the south, so due south is where a tap comes from.
+- **A building is picked last of all** — below even the forge — and answers with the **ground at its
+  door**. See the pick priority below; a tap on a solid wall can only sensibly mean "walk over
+  there", and the useful ending is the doorstep rather than the grass behind it.
+
+It is also the first thing tall enough to hide the player outright, so it is an `Occluder` beside the
+trees — and the only one whose three boxes are one box, since it has no canopy to walk under and no
+trunk to be stopped by. The name over the door is tagged `sign` rather than `label` for the reason a
+quest marker is tagged `marker`: `drawnCounts` counts one label per drawn _creature_ and
+`scripts/smoke.mjs` asserts that total in every zone. With no art assets, that sign is the whole of
+how a player tells the bank from the store, which is why `BUILDING_LOOKS` is keyed by shape and gives
+four shopfronts one colour — four in four colours would read as a fairground.
 
 **The HUD is an HTML overlay over the canvas** (`src/hud/`, engine-free). `mountHud()` builds one
 `<div class="hud">` inside `#app` and it outlives every zone, like the session does. The only thing
@@ -1186,10 +1220,19 @@ it is drawn, and never smaller than `MIN_PICK_SPAN`. Raycasting the real geometr
 and is wrong twice over: a ray aimed at a figure's feet — which is what `view.worldToScreen(x, y)`
 answers, and roughly where a player aims — passes between its legs and out the other side, and a
 crab is 18 screen pixels wide on a phone. `pickTap` then tries node → signpost → NPC → mob →
-ground, which is a **priority, not a depth sort**: a rat in
+station → building → ground, which is a **priority, not a depth sort**: a rat in
 front of the shopkeeper does not stop you shopping. Only within one kind does the nearest win. The
 ground is the mathematical `y = 0` plane rather than the terrain mesh, because the mesh stops at
 the map edge and the simulation does not.
+
+**The last two are below the creatures for the same reason, and the building is the extreme case of
+it.** A kind ranked above mobs wins from _anywhere along the ray_, including well behind what is
+being aimed at — a forge is a tile of furniture near the middle of town and a shopfront is three
+tiles of it, so either one above the mobs silently eats every tap on the rat beyond it. The building
+is also the only kind that answers as something else: it resolves to `{kind: 'ground'}` at its
+`doorPoint`, which needs no new `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the
+context menu. Left to fall through instead, the ray would carry on over the roof and land on the
+grass _behind_ the building, walking the player into the back wall.
 
 **A tap and a drag are the same three events, and `render3d/orbit.ts` is what tells them apart.**
 A drag turns the camera's yaw around the player; a tap asks the world for something. The rule is a
@@ -1235,7 +1278,11 @@ Two things follow from the camera being movable at all:
   tap what you cannot see and tapping is the whole game. One ray from the camera to the player's
   feet — the lowest point on them, so it fades a fraction early — against a box per prop. The box is
   the **drawn** canopy, not the collision trunk it stops you with and not the thumb-sized volume it
-  is picked by: three different questions about the same tree. Fishing spots are excluded on
+  is picked by: three different questions about the same tree. A **building** is the same rule where
+  all three answers coincide — it has no canopy and no trunk, so what stops you, what hides you and
+  what a thumb aims at are one footprint — and it is the thing the fade exists for most, being the
+  only object big enough to leave nothing on screen to tap. Its sign is deliberately left solid: a
+  shopfront the camera is behind still has to say which shop it is. Fishing spots are excluded on
   purpose, being the one prop drawn transparent already.
 
 ## Conventions
