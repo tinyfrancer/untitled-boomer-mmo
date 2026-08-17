@@ -1,3 +1,4 @@
+import { BUILDINGS, buildingRect, type BuildingDefinition } from '../data/buildings';
 import { ENEMIES } from '../data/enemies';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { BLOCKING_TILES } from '../data/tiles';
@@ -28,6 +29,21 @@ export interface WorldStation {
   station: StationId;
 }
 
+/**
+ * A building standing in a zone. Solid, permanent, and the only thing here that
+ * takes up an area rather than a point.
+ *
+ * It carries its definition the way a `ResourceNode` does rather than an id the
+ * way a `WorldNpc` does, because everything that meets one asks about its
+ * footprint: what stops the player, what hides them, and what a tap on the roof
+ * means are all questions about how much room it takes up.
+ */
+export interface WorldBuilding {
+  x: number;
+  y: number;
+  definition: BuildingDefinition;
+}
+
 /** A tappable exit marker — the mobile counterpart to walking into the edge. */
 export interface WorldSignpost {
   x: number;
@@ -44,6 +60,7 @@ export interface ZoneEntities {
   nodes: ResourceNode[];
   npcs: WorldNpc[];
   stations: WorldStation[];
+  buildings: WorldBuilding[];
   signposts: WorldSignpost[];
   collisionWorld: CollisionWorld;
 }
@@ -85,6 +102,12 @@ export function populateZone(
     station,
   }));
 
+  const buildings = (zone.buildingSpawns ?? []).map(({ dx, dy, buildingId }) => ({
+    x: spawnPoint.x + dx,
+    y: spawnPoint.y + dy,
+    definition: BUILDINGS[buildingId],
+  }));
+
   // One tappable signpost per exit — the mobile way out of a zone.
   const signposts = zone.exits.map((exit) => {
     const point = signpostPoint(exit.edge, size.width, size.height);
@@ -97,17 +120,27 @@ export function populateZone(
     nodes,
     npcs,
     stations,
+    buildings,
     signposts,
-    // Nothing walks into the pond. One description of the world, which the
-    // player and every mob integrate themselves against.
+    // Nothing walks into the pond, a tree trunk or a wall. One description of
+    // the world, which the player and every mob integrate themselves against.
+    //
+    // A building is a blocker rather than a painted-in run of `WALL_TILE`
+    // because it is placed by offset from the middle of the map like everything
+    // else in a zone, where the tile grid is written out in absolute rows — and
+    // one of those two has to be the map's own. Blocking it here also keeps the
+    // footprint that stops you the same number the prop is drawn from.
     collisionWorld: {
       grid: zone.map,
       blockingTiles: new Set(BLOCKING_TILES),
       worldWidth: size.width,
       worldHeight: size.height,
-      blockers: nodes
-        .filter((node) => node.definition.blocks !== null)
-        .map((node) => node.blockerRect()),
+      blockers: [
+        ...nodes
+          .filter((node) => node.definition.blocks !== null)
+          .map((node) => node.blockerRect()),
+        ...buildings.map(buildingRect),
+      ],
     },
   };
 }

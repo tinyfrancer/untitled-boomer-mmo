@@ -288,6 +288,7 @@ const spawned = () =>
       (npc) => npc.npcId === 'shopkeeper' || npc.npcId === 'quartermaster',
     ).length,
     signposts: window.world.signposts.length,
+    buildings: window.world.buildings.length,
   }));
 
 /**
@@ -303,13 +304,23 @@ const checkZoneDrawn = async (zone) => {
   const drawn = await drawnCounts();
   const spawn = await spawned();
   check(
-    `every mob, node, npc and signpost in the ${zone} is drawn`,
+    `every mob, node, npc, signpost and building in the ${zone} is drawn`,
     drawn.ground === 1 &&
       drawn.mobs === spawn.mobs &&
       drawn.nodes === spawn.nodes &&
       drawn.npcs === spawn.npcs &&
-      drawn.signposts === spawn.signposts,
+      drawn.signposts === spawn.signposts &&
+      drawn.buildings === spawn.buildings,
     `drew ${JSON.stringify(drawn)} for ${JSON.stringify(spawn)}`,
+  );
+  // A sign is counted apart from the labels for the reason a marker is: the
+  // label total above is one per drawn *creature*, and a shopfront is not one.
+  // It is also the only text in the game jsdom cannot bake, so a browser is the
+  // only place the name over a door can be seen to exist at all.
+  check(
+    `and writes the ${zone}'s buildings' names over their doors`,
+    drawn.signs === spawn.buildings,
+    `${drawn.signs} signs over ${spawn.buildings} buildings`,
   );
   check(
     `and gives each of them in the ${zone} its floating name`,
@@ -1562,9 +1573,16 @@ async function orbit() {
 
   // And the gesture has to hand back: a tap straight after a drag is still a
   // tap, and it has to come back out of the *turned* camera in the coordinates
-  // the simulation walks in. The same spot the tap check above used, which is
-  // known to be walkable ground.
-  const turnedDestination = { x: stood.x, y: stood.y - 200 };
+  // the simulation walks in.
+  //
+  // South of the spawn point rather than north of it, which is where the other
+  // tap checks aim. North is the high street, and once the camera is turned a
+  // shopfront stands between it and that patch of road — so the ray meets the
+  // general store and answers with its door, which is right (a point you cannot
+  // see because a wall is in front of it was never what the finger meant) and
+  // is not what this check is about. The open country south of the crossroads is
+  // walkable ground with nothing built on it from any angle.
+  const turnedDestination = { x: stood.x, y: stood.y + 200 };
   await clickAt(
     await page.evaluate((to) => window.view.worldToScreen(to.x, to.y), turnedDestination),
   );
@@ -2524,6 +2542,9 @@ async function zoneMapSheet() {
         nodes: document.querySelectorAll('.hud-map__svg [data-marker="node"]').length,
         exits: document.querySelectorAll('.hud-map__svg [data-marker="exit"]').length,
         npcs: document.querySelectorAll('.hud-map__svg [data-marker="npc"]').length,
+        buildings: [...document.querySelectorAll('.hud-map__svg [data-building]')].map((n) =>
+          n.getAttribute('data-building'),
+        ),
         labels: [...document.querySelectorAll('.hud-map__label')].map((n) => n.textContent),
         dot: dot ? { x: Number(dot.getAttribute('cx')), y: Number(dot.getAttribute('cy')) } : null,
         shown: dot?.getAttribute('visibility') ?? 'hidden',
@@ -2540,6 +2561,7 @@ async function zoneMapSheet() {
     nodes: window.world.nodes.length,
     npcs: window.world.npcs.length,
     exits: window.world.signposts.map((post) => post.label),
+    buildings: window.world.buildings.map((building) => building.definition.name),
   }));
   const here = await drawn();
   check(
@@ -2552,6 +2574,14 @@ async function zoneMapSheet() {
       world.exits.every((label) => here.labels.includes(label)),
     `${here.title}: ${here.terrain} terrain, ${here.nodes}/${world.nodes} nodes, ` +
       `${here.npcs}/${world.npcs} npcs, exits to ${here.labels.join(', ')}`,
+  );
+  // The one thing on the sheet that is an area rather than a dot, and the whole
+  // reason a map of a town is worth opening: where the walls are.
+  check(
+    'and draws every building in it, named',
+    here.buildings.length === world.buildings.length &&
+      world.buildings.every((name) => here.buildings.includes(name)),
+    `${here.buildings.length}/${world.buildings.length} footprints: ${here.buildings.join(', ')}`,
   );
   check(
     'and lays it out inside the sheet rather than at zero size',

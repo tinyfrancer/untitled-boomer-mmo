@@ -76,7 +76,13 @@ import {
 import { saveService } from '../persistence';
 import { Player } from './Player';
 import { Mob } from './Mob';
-import { populateZone, type WorldNpc, type WorldSignpost, type WorldStation } from './zoneEntities';
+import {
+  populateZone,
+  type WorldBuilding,
+  type WorldNpc,
+  type WorldSignpost,
+  type WorldStation,
+} from './zoneEntities';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
 import { createSubscriptions, type Subscriptions } from './eventBus';
@@ -117,7 +123,7 @@ const GATHER_APPROACH_FRACTION = 0.9;
 
 // Re-exported so a view can ask what it is looking at without knowing which
 // module built it.
-export type { WorldNpc, WorldSignpost, WorldStation };
+export type { WorldBuilding, WorldNpc, WorldSignpost, WorldStation };
 
 // The offline payout's shape, re-exported for the host that has somewhere to
 // put it.
@@ -191,6 +197,7 @@ export class ZoneWorld implements Targeting {
   readonly nodes: ResourceNode[];
   readonly npcs: WorldNpc[];
   readonly stations: WorldStation[];
+  readonly buildings: WorldBuilding[];
   readonly signposts: WorldSignpost[];
   readonly collisionWorld: CollisionWorld;
   target: Mob | null = null;
@@ -247,6 +254,7 @@ export class ZoneWorld implements Targeting {
     this.nodes = entities.nodes;
     this.npcs = entities.npcs;
     this.stations = entities.stations;
+    this.buildings = entities.buildings;
     this.signposts = entities.signposts;
     this.collisionWorld = entities.collisionWorld;
 

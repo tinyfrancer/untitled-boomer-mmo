@@ -9,6 +9,7 @@ import {
   type Mesh,
 } from 'three';
 import {
+  BuildingActor,
   CampfireActor,
   MobActor,
   NodeActor,
@@ -23,7 +24,7 @@ import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { FxLayer } from './fx';
 import { buildGround } from './ground';
-import { applyOcclusion } from './occlusion';
+import { applyOcclusion, type Occluder } from './occlusion';
 import { normalizeYaw } from './orbit';
 import { pickTap, pointerRay } from './picking';
 import { SelectionRing } from './selection';
@@ -60,6 +61,11 @@ export class ZoneView3D {
   private npcActors: NpcActor[] = [];
   private signpostActors: SignpostActor[] = [];
   private stationActors: StationActor[] = [];
+  private buildingActors: BuildingActor[] = [];
+  // Everything the fade is measured against, gathered once per zone rather than
+  // spread each frame: `applyOcclusion` runs from `sync`, and a fresh array
+  // there would be one allocation per frame for a list that cannot change.
+  private occluders: Occluder[] = [];
   private campfireActor: CampfireActor | null = null;
   // Both outlive a zone, like the camera and the lights: a target belongs to
   // the player and a damage number to the moment it was dealt, and neither is
@@ -118,6 +124,8 @@ export class ZoneView3D {
     this.npcActors = world.npcs.map((npc) => new NpcActor(npc));
     this.signpostActors = world.signposts.map((signpost) => new SignpostActor(signpost));
     this.stationActors = world.stations.map((station) => new StationActor(station));
+    this.buildingActors = world.buildings.map((building) => new BuildingActor(building));
+    this.occluders = [...this.nodeActors, ...this.buildingActors];
     this.actors().forEach((actor) => this.scene.add(actor.object));
 
     this.follow();
@@ -148,6 +156,8 @@ export class ZoneView3D {
     this.npcActors = [];
     this.signpostActors = [];
     this.stationActors = [];
+    this.buildingActors = [];
+    this.occluders = [];
     this.campfireActor = null;
     this.world = null;
   }
@@ -235,10 +245,11 @@ export class ZoneView3D {
     this.selection.follow(world.target);
     this.fx.update(elapsedMs);
 
-    // Whatever the camera has ended up behind. Only the props are asked: a rat
-    // standing in front of the player is not something they need to see past,
-    // and fading creatures would fight the death fade for the same materials.
-    applyOcclusion(this.camera.position, world.player, this.nodeActors);
+    // Whatever the camera has ended up behind — the trees and the buildings.
+    // Only the props are asked: a rat standing in front of the player is not
+    // something they need to see past, and fading creatures would fight the
+    // death fade for the same materials.
+    applyOcclusion(this.camera.position, world.player, this.occluders);
 
     // Billboards last, against the camera this frame is about to be drawn with.
     this.player?.faceCamera(this.camera);
@@ -268,6 +279,7 @@ export class ZoneView3D {
       ...this.npcActors,
       ...this.signpostActors,
       ...this.stationActors,
+      ...this.buildingActors,
       ...(this.campfireActor ? [this.campfireActor] : []),
     ];
   }
@@ -307,6 +319,7 @@ export class ZoneView3D {
       npcs: this.npcActors,
       stations: this.stationActors,
       mobs: this.mobActors,
+      buildings: this.buildingActors,
     });
   }
 
@@ -337,7 +350,9 @@ export class ZoneView3D {
       nodes: byKind.get('node') ?? 0,
       signposts: byKind.get('signpost') ?? 0,
       npcs: byKind.get('npc') ?? 0,
+      buildings: byKind.get('building') ?? 0,
       labels: byKind.get('label') ?? 0,
+      signs: byKind.get('sign') ?? 0,
       markers: byKind.get('marker') ?? 0,
       titles: byKind.get('title') ?? 0,
       fx: this.fx.count(),

@@ -1,5 +1,5 @@
 import type { StationId } from './recipes';
-import type { ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
+import type { BuildingId, ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
 import { QUARRY_MAP } from './quarryMap';
@@ -28,6 +28,21 @@ export interface StationSpawnPoint {
   dx: number;
   dy: number;
   station: StationId;
+}
+
+/**
+ * Where a building stands, as the middle of its footprint.
+ *
+ * The centre rather than a corner, so it reads like every other spawn offset in
+ * the table and so `buildingRect` is the one place the footprint is turned into
+ * edges. A building is the only thing here placed by *size* as well as by
+ * position, which is why nothing else in a zone may stand inside one — see
+ * `tests/systems/BuildingSystem.test.ts`, which sweeps that over every zone.
+ */
+export interface BuildingSpawnPoint {
+  dx: number;
+  dy: number;
+  buildingId: BuildingId;
 }
 
 // Walking onto the matching edge of the map leaves for the target zone; the
@@ -59,6 +74,15 @@ export interface ZoneDefinition {
    * with, which today is the town forge.
    */
   stationSpawns?: StationSpawnPoint[];
+  /**
+   * What is built here. Solid, permanent, and the only thing in a zone that is
+   * placed by how much room it takes up rather than by a point alone.
+   *
+   * Absent for everywhere but the town today, which is the same shape
+   * `stationSpawns` uses: the table reads as a list of what a zone *has* rather
+   * than of what every zone must say something about.
+   */
+  buildingSpawns?: BuildingSpawnPoint[];
   exits: ZoneExit[];
   /**
    * The item that opens the way in, for a zone that is shut until it is found.
@@ -78,32 +102,30 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     map: TOWN_MAP,
     mobSpawns: TOWN_MOB_SPAWNS,
     nodeSpawns: TOWN_NODE_SPAWNS,
-    // All three just off the crossroads and clear of every mob spawn point: the
-    // counters a player walks between are a few steps apart rather than a trip
-    // across town.
-    //
-    // Two rules put each of them where they are, and both are about taps. Every
-    // pair is more than `NPC_INTERACT_RADIUS` apart, so which counter a tap
-    // opens is never a question about pixels. And none of them stands on the
-    // crossroads itself — a person on the road a few tiles ahead of the spawn
-    // point is standing exactly where a player taps to walk forward, which turns
-    // "go north" into "open a shop" and is the same class of mistake as drawing
-    // a signpost under the tab bar.
+    /**
+     * Each of the four at the door of the building they work out of, which is
+     * `doorPoint` of the matching row below rather than a coordinate written
+     * down twice — move a shopfront and the shopkeeper moves with it.
+     *
+     * Two rules still put the buildings where they are, and both are about taps.
+     * Every pair of counters is more than `NPC_INTERACT_RADIUS` apart, so which
+     * one a tap opens is never a question about pixels. And none of them stands
+     * in the middle of a road — a person on the road a few tiles ahead of the
+     * spawn point is standing exactly where a player taps to walk forward, which
+     * turns "go north" into "open a shop" and is the same class of mistake as
+     * drawing a signpost under the tab bar. The high street is three tiles wide
+     * for exactly that reason: the middle lane is the one a player walks and the
+     * shoulders are where the counters stand.
+     */
     npcSpawns: [
-      { dx: 96, dy: -96, npcId: 'shopkeeper' },
-      { dx: -96, dy: -96, npcId: 'banker' },
-      { dx: -192, dy: 64, npcId: 'trainer' },
-      // Up the north road toward the quarry, and well off it: the fourth
-      // counter is the one whose work is out of town, so it stands facing the
-      // way most of it goes. The obvious mirror of the trainer at `192, 64` is
-      // the one spot it cannot have — that is directly south of where the east
-      // rat wanders to, and `tests/render3d/picking.test.ts` catches it as a
-      // creature nobody can tap.
-      { dx: -160, dy: -288, npcId: 'quartermaster' },
+      { dx: 192, dy: -64, npcId: 'shopkeeper' },
+      { dx: -192, dy: -64, npcId: 'banker' },
+      { dx: -448, dy: -64, npcId: 'trainer' },
+      { dx: 448, dy: -64, npcId: 'quartermaster' },
     ],
     /**
-     * North-east of the crossroads, and the placement rule here is a third one
-     * beyond the two the counters follow.
+     * At the smithy's door rather than inside it, and the placement rule here is
+     * a third one beyond the two the counters follow.
      *
      * A station is a tile of solid furniture that can be tapped, so it must not
      * sit **between the camera and anything else worth tapping**. The camera
@@ -114,12 +136,29 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
      * player stands to fight it; smoke caught it as a finger tap that selected
      * nothing, one run in three.
      *
-     * North of every mob spawn's approach, then, and clear of all three
-     * counters. Beyond a creature is safe where in front of it is not: the
-     * camera looks down, so past the ground it is aimed at the ray is
-     * underground and hits nothing standing on it.
+     * It is also why the smithy is the one building with its anvil outdoors: a
+     * station is *tapped*, and a solid building has no inside to tap into.
      */
-    stationSpawns: [{ dx: 288, dy: -256, station: 'forge' }],
+    stationSpawns: [{ dx: -704, dy: -64, station: 'forge' }],
+    /**
+     * The town, as a place rather than as four people standing in a field.
+     *
+     * Laid out against the two roads: the shops front the high street from the
+     * north side, the hall and the inn from the south, and the two counters
+     * whose work is out of town sit up the north lane with the forge between
+     * them. The cottages have nobody behind them and are the point — they are
+     * what makes the counters part of somewhere.
+     */
+    buildingSpawns: [
+      { dx: -704, dy: -160, buildingId: 'smithy' },
+      { dx: -448, dy: -192, buildingId: 'training-hall' },
+      { dx: -192, dy: -192, buildingId: 'bank-house' },
+      { dx: 192, dy: -192, buildingId: 'general-store' },
+      { dx: 448, dy: -160, buildingId: 'quartermasters-post' },
+      { dx: -320, dy: 192, buildingId: 'inn' },
+      { dx: -576, dy: 224, buildingId: 'cottage' },
+      { dx: -480, dy: -416, buildingId: 'cottage' },
+    ],
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },

@@ -155,6 +155,26 @@ export type MasteryTargetId = ResourceNodeId | RecipeId;
 
 export type ZoneId = 'town' | 'beach' | 'quarry' | 'bandit-camp' | 'bandit-hideout';
 
+// What is built on a zone rather than spawned in it: solid, permanent, and the
+// thing a counter stands at the door of. Its own union rather than a slice of
+// NpcId because the two lists do not line up in either direction — a smithy has
+// nobody behind it and a cottage is nobody's counter at all.
+export type BuildingId =
+  | 'general-store'
+  | 'bank-house'
+  | 'training-hall'
+  | 'quartermasters-post'
+  | 'smithy'
+  | 'inn'
+  | 'cottage';
+
+// Which body a renderer draws a building with, and the same bargain
+// `CreatureShapeId` and `NodeShapeId` make: a new BUILDINGS row names a shape it
+// is drawn as rather than waiting for view code written for its id. Coarser than
+// the building list on purpose — four of the seven are one roof over a different
+// sized floor, and what tells them apart at a distance is the sign over the door.
+export type BuildingShapeId = 'hall' | 'workshop' | 'cottage';
+
 // Which side of a map an exit sits on. See EDGE_TABLE in systems/ZoneSystem.ts
 // for the geometry each one implies.
 export type ZoneEdge = 'north' | 'south' | 'east' | 'west';

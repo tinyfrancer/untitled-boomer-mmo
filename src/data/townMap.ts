@@ -7,6 +7,19 @@ import { GRASS_TILE, PATH_TILE, WATER_TILE, paintRect } from './tiles';
 // north would sit behind the character sheet in the top-right of the screen.
 const POND = { left: 17, right: 21, top: 12, bottom: 15 };
 
+/**
+ * How wide the two roads are, in tiles.
+ *
+ * Three rather than one, and it is the buildings that made it worth widening.
+ * A counter now stands at its own door with the shopfront behind it, which puts
+ * every person in town one tile off the road they front — on a one-tile lane
+ * that is a person standing in the hedge. Three tiles is a street with room to
+ * walk down the middle of it *and* a shoulder to stand a shopkeeper on, and the
+ * middle lane is still exactly where it was, so nothing about walking out of
+ * town moved.
+ */
+const ROAD_HALF_WIDTH = 1;
+
 function buildTownMap(): number[][] {
   const map: number[][] = [];
   for (let row = 0; row < WORLD_HEIGHT_TILES; row++) {
@@ -16,10 +29,24 @@ function buildTownMap(): number[][] {
   const midRow = Math.floor(WORLD_HEIGHT_TILES / 2);
   const midCol = Math.floor(WORLD_WIDTH_TILES / 2);
 
-  paintRect(map, { left: 0, right: WORLD_WIDTH_TILES - 1, top: midRow, bottom: midRow }, PATH_TILE);
   paintRect(
     map,
-    { left: midCol, right: midCol, top: 0, bottom: WORLD_HEIGHT_TILES - 1 },
+    {
+      left: 0,
+      right: WORLD_WIDTH_TILES - 1,
+      top: midRow - ROAD_HALF_WIDTH,
+      bottom: midRow + ROAD_HALF_WIDTH,
+    },
+    PATH_TILE,
+  );
+  paintRect(
+    map,
+    {
+      left: midCol - ROAD_HALF_WIDTH,
+      right: midCol + ROAD_HALF_WIDTH,
+      top: 0,
+      bottom: WORLD_HEIGHT_TILES - 1,
+    },
     PATH_TILE,
   );
   paintRect(map, POND, WATER_TILE);

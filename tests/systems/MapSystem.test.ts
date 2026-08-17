@@ -10,6 +10,7 @@ import {
 import { TILE_SIZE, WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../../src/config/constants';
 import { ZONES } from '../../src/data/zones';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
+import { BUILDINGS } from '../../src/data/buildings';
 import { zoneWorldSize } from '../../src/systems/ZoneSystem';
 import type { ZoneId } from '../../src/types/ids';
 
@@ -97,6 +98,39 @@ describe('zoneMap', () => {
     );
 
     expect(marker).toMatchObject(toTile(size.width / 2 + spawn.dx, size.height / 2 + spawn.dy));
+  });
+
+  /**
+   * A building is the one thing on the map that is an area rather than a point,
+   * and the useful fact about it is the room it takes up: the *shape* of a town
+   * is what makes a map of one worth opening. Read off the same table
+   * `populateZone` reads, so the map cannot disagree with where the walls are.
+   */
+  it('draws a footprint where the world puts each building', () => {
+    const zone = ZONES.town;
+    const size = zoneWorldSize(zone);
+    const spawn = zone.buildingSpawns?.[0];
+    if (!spawn) throw new Error('town has no buildings');
+    const { body, name } = BUILDINGS[spawn.buildingId];
+
+    const drawn = zoneMap('town').buildings;
+    expect(drawn).toHaveLength(zone.buildingSpawns?.length ?? 0);
+    expect(drawn[0]).toEqual({
+      ...toTile(
+        size.width / 2 + spawn.dx - body.width / 2,
+        size.height / 2 + spawn.dy - body.height / 2,
+      ),
+      width: body.width / TILE_SIZE,
+      height: body.height / TILE_SIZE,
+      label: name,
+    });
+  });
+
+  // A zone with nothing built on it says so with an empty list rather than with
+  // an absent field, so the sheet needs no case for the four zones out of five
+  // that have no walls in them.
+  it('draws no footprints in a zone nobody has built in', () => {
+    expect(zoneMap('beach').buildings).toEqual([]);
   });
 
   it('marks everyone standing in the zone and every node it holds', () => {

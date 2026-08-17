@@ -19,26 +19,32 @@ export interface NodeSpawnPoint {
 // Levels climb with distance from town center, so wandering out is the risk.
 export const TOWN_MOB_SPAWNS: MobSpawnPoint[] = [
   /**
-   * The two either side of the square, kept a wander's length off the counters.
+   * Out along the roads and into the corners, which is what the buildings left.
    *
-   * They stood at ±192, which put the banker and the shopkeeper *inside* the
-   * 96-unit wander disc — and a creature standing at a counter's shoulder
-   * cannot be tapped at all: the camera is south of the player, so the ray in
-   * to a rat passes low over the ground just short of it, and a person standing
-   * there is crossed first. NPCs outrank mobs in `pickTap` deliberately (a rat
-   * in front of the shopkeeper must not stop you shopping), so what has to give
-   * is the spacing. `tests/render3d/picking.test.ts` sweeps the disc and holds
-   * it.
+   * Two rules put them where they are, and the second one arrived with the
+   * shopfronts. A rat's whole 96-unit wander disc has to stay off the counters —
+   * they stood at ±192 once, which put the banker and the shopkeeper *inside*
+   * it, and a creature at a counter's shoulder cannot be tapped at all: the
+   * camera is south of the player, so the ray in to a rat passes low over the
+   * ground just short of it, and a person standing there is crossed first. NPCs
+   * outrank mobs in `pickTap` deliberately (a rat in front of the shopkeeper
+   * must not stop you shopping), so what has to give is the spacing.
+   *
+   * The disc has to stay out of the **buildings** too, and that one is about
+   * seeing rather than tapping: a rat behind the general store is a rat drawn
+   * inside a wall, and nothing fades a building the player is not standing
+   * behind. `tests/render3d/picking.test.ts` sweeps the first and
+   * `tests/systems/BuildingSystem.test.ts` the second.
    */
-  { dx: -288, dy: -96, enemyId: 'rat', level: 1 },
-  { dx: 288, dy: -96, enemyId: 'rat', level: 1 },
-  { dx: -128, dy: 192, enemyId: 'rat', level: 1 },
-  { dx: 128, dy: 192, enemyId: 'rat', level: 1 },
-  { dx: 0, dy: 256, enemyId: 'rat', level: 1 },
-  { dx: -416, dy: 64, enemyId: 'rat', level: 2 },
-  { dx: 416, dy: 64, enemyId: 'rat', level: 2 },
-  { dx: 32, dy: -352, enemyId: 'rat', level: 2 },
-  { dx: -480, dy: -352, enemyId: 'rat', level: 3 },
+  { dx: 0, dy: 224, enemyId: 'rat', level: 1 },
+  { dx: -160, dy: 384, enemyId: 'rat', level: 1 },
+  { dx: -736, dy: 128, enemyId: 'rat', level: 1 },
+  { dx: -256, dy: -448, enemyId: 'rat', level: 1 },
+  { dx: 256, dy: -448, enemyId: 'rat', level: 1 },
+  { dx: -608, dy: 480, enemyId: 'rat', level: 2 },
+  { dx: 640, dy: -320, enemyId: 'rat', level: 2 },
+  { dx: 448, dy: 448, enemyId: 'rat', level: 2 },
+  { dx: -704, dy: -448, enemyId: 'rat', level: 3 },
 ];
 
 // Same offsets-from-center convention as the mob spawns. Trees cluster into a
@@ -47,9 +53,12 @@ export const TOWN_MOB_SPAWNS: MobSpawnPoint[] = [
 // water, so they are fished from the shore — which is what the node's
 // interactRadius, wider than a tile, is sized for.
 export const TOWN_NODE_SPAWNS: NodeSpawnPoint[] = [
-  { dx: -576, dy: 224, nodeId: 'tree' },
+  // Pushed a row south of where they stood, which is what the cottage on the
+  // south side of the street cost them: a tree inside a wall is drawn inside it
+  // and chopped through it.
+  { dx: -608, dy: 352, nodeId: 'tree' },
   { dx: -480, dy: 320, nodeId: 'tree' },
-  { dx: -384, dy: 256, nodeId: 'tree' },
+  { dx: -352, dy: 384, nodeId: 'tree' },
   { dx: -544, dy: 384, nodeId: 'tree' },
   { dx: 384, dy: 192, nodeId: 'fishing-spot' },
   { dx: 544, dy: 192, nodeId: 'fishing-spot' },

@@ -5,6 +5,7 @@ import { GRASS_TILE, PATH_TILE, WALL_TILE, tileColor } from '../data/tiles';
 import {
   worldMap,
   zoneMap,
+  type MapBuilding,
   type MapMarker,
   type WorldMapZone,
   type ZoneMap,
@@ -23,6 +24,12 @@ const NPC_RADIUS = 0.6;
 const PLAYER_RADIUS = 0.7;
 const EXIT_SIZE = 1.2;
 const LABEL_HEIGHT = 1.4;
+
+// A building's name, and how deep a footprint has to be to carry one. Two tiles
+// is the shallowest thing in BUILDINGS, and a name across it still clears the
+// walls either side of it.
+const BUILDING_NAME_SIZE = 0.85;
+const BUILDING_NAME_MIN_TILES = 2;
 
 /**
  * One zone's square on the zoomed-out view, in its own units. The whole view is
@@ -159,6 +166,43 @@ function buildMarker(marker: MapMarker, columns: number): SVGElement[] {
   title.textContent = marker.label;
   dot.append(title);
   return [dot];
+}
+
+/**
+ * A building, as the ground it covers with its name across it.
+ *
+ * The name is set to the width of the footprint rather than to a font size, for
+ * the reason a zone's cell name is on the world view: SVG knows the glyph widths
+ * and this does not, and "Quartermaster's Post" over a three-tile shed is the
+ * one that proves it. A footprint too small for a name at all is left unnamed —
+ * the hover title still answers, and an illegible smear is worse than a shape.
+ */
+function buildFootprint(building: MapBuilding): SVGElement[] {
+  const rect = svgEl('rect', {
+    x: building.x,
+    y: building.y,
+    width: building.width,
+    height: building.height,
+    fill: cssColor(tileColor(WALL_TILE)),
+    stroke: THEME.color.muted,
+    'stroke-width': 0.12,
+    'data-building': building.label,
+  });
+  const title = svgEl('title', {});
+  title.textContent = building.label;
+  rect.append(title);
+  if (building.height < BUILDING_NAME_MIN_TILES) return [rect];
+
+  const label = text(
+    building.label,
+    building.x + building.width / 2,
+    building.y + building.height / 2 + BUILDING_NAME_SIZE / 3,
+    BUILDING_NAME_SIZE,
+    THEME.color.text,
+  );
+  label.setAttribute('textLength', String(building.width * 0.86));
+  label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+  return [rect, label];
 }
 
 function svgEl<K extends keyof SVGElementTagNameMap>(
@@ -401,6 +445,13 @@ export class MapSheet extends Sheet {
           fill: cssColor(tileColor(band.tile)),
         }),
       );
+    }
+
+    // Between the terrain and the markers: a building sits on the ground and a
+    // counter stands at its door, so drawing it over the bands and under the
+    // dots is the only order in which both stay visible.
+    for (const building of map.buildings) {
+      svg.append(...buildFootprint(building));
     }
 
     for (const marker of map.markers) {

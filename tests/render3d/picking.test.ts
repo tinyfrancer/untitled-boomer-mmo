@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { TILE_SIZE } from '../../src/config/constants';
 import {
+  BuildingActor,
   MobActor,
   NodeActor,
   NpcActor,
   SignpostActor,
   StationActor,
 } from '../../src/render3d/actors';
+import { doorPoint } from '../../src/data/buildings';
 import {
   createCamera,
   frameCamera,
@@ -45,7 +47,14 @@ function cameraOn(player: Point, yaw = 0): PerspectiveCamera {
   return camera;
 }
 
-const EMPTY: PickScene = { nodes: [], signposts: [], npcs: [], stations: [], mobs: [] };
+const EMPTY: PickScene = {
+  nodes: [],
+  signposts: [],
+  npcs: [],
+  stations: [],
+  mobs: [],
+  buildings: [],
+};
 
 /**
  * What a tap on the screen point a simulated thing is *drawn at* resolves to.
@@ -245,12 +254,54 @@ describe('pickTap', () => {
       npcs: [{ ...standing, npc: nth(world.npcs) }],
       stations: [{ ...standing, station: nth(world.stations) }],
       mobs: [{ ...standing, mob: nth(world.mobs) }],
+      buildings: [{ ...standing, building: nth(world.buildings) }],
     };
 
     expect(tapAt(camera, scene, spot)?.kind).toBe('node');
     expect(tapAt(camera, { ...scene, nodes: [] }, spot)?.kind).toBe('signpost');
     expect(tapAt(camera, { ...scene, nodes: [], signposts: [] }, spot)?.kind).toBe('npc');
     expect(tapAt(camera, { mobs: scene.mobs }, spot)?.kind).toBe('mob');
+  });
+
+  /**
+   * A building is picked *below* everything, the forge included, and it answers
+   * with **ground**.
+   *
+   * Both halves matter. Last, because the list is a priority and not a depth
+   * sort — three tiles of solid shopfront ranked any higher would eat every tap
+   * on whatever stood beyond it, which is the mistake the forge was moved for,
+   * only bigger. And ground, because a tap on a solid building can only sensibly
+   * mean "walk over there": the useful place to end up is the **door**, which is
+   * where the counter is standing.
+   */
+  it("walks to a building's door rather than through it", () => {
+    const { world } = harness();
+    const building = nth(world.buildings);
+    const actor = new BuildingActor(building);
+    const roof = { x: building.x, y: building.y };
+    const camera = cameraOn({ x: roof.x, y: roof.y + 400 });
+
+    const tapped = tapAt(camera, { buildings: [actor] }, roof);
+
+    expect(tapped).toEqual({ kind: 'ground', point: doorPoint(building) });
+  });
+
+  it('lets a rat standing in front of a shopfront still be attacked', () => {
+    const { world } = harness();
+    const building = nth(world.buildings);
+    const mob = nth(world.mobs, 0);
+    // On the building's own doorstep, which is where the ray to it crosses the
+    // walls behind — the case a depth sort would get wrong.
+    const door = doorPoint(building);
+    mob.setPosition(door.x, door.y);
+    const camera = cameraOn({ x: mob.x, y: mob.y + 150 });
+
+    const tapped = tapAt(
+      camera,
+      { mobs: [new MobActor(mob, 1)], buildings: [new BuildingActor(building)] },
+      { x: mob.x, y: mob.y },
+    );
+    expect(tapped).toEqual({ kind: 'mob', mob });
   });
 
   // Within a kind the answer *is* depth: you tapped a pixel, and what is drawn
@@ -328,6 +379,10 @@ describe('the approach to a creature', () => {
         npcs: world.npcs.map((npc) => new NpcActor(npc)),
         stations: world.stations.map((station) => new StationActor(station)),
         mobs: world.mobs.map((mob) => new MobActor(mob, 1)),
+        // In the scene rather than left out of it: a shopfront is the largest
+        // thing that can stand between the camera and a creature, so the sweep
+        // is only worth anything with them in.
+        buildings: world.buildings.map((building) => new BuildingActor(building)),
       };
 
       // Every one of them, rather than the first: which counter is in the way of
