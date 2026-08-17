@@ -319,6 +319,79 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
    * rather than in knots: the mill road already taught pulling one at a time,
    * and what this zone teaches is that the thing worth having is behind them.
    */
+  /**
+   * What lives in the dark under the quarry, and the crab's idea taken one band
+   * up: a long fight rather than a dangerous one.
+   *
+   * More HP than anything its level and a swing slower than a bog lurker's, plus
+   * the only `avoidChance` in the game outside the crab — an armoured thing that
+   * scuttles is exactly what a dodge is for, and it is what makes clearing a
+   * working a decision about time rather than about survival.
+   *
+   * Passive, so the zone can be walked through by anyone. What actually stops a
+   * character down here is that the seams are behind mining levels, not that the
+   * things in the way will kill them — which is the whole gate the Deep Cut has.
+   */
+  'cave-crawler': {
+    id: 'cave-crawler',
+    name: 'Cave Crawler',
+    family: 'beast',
+    shape: 'crustacean',
+    // Bigger than the crab it shares a body with, and drawn from this: a shape
+    // is sized off what the creature *is* rather than the other way round.
+    body: { width: TILE_SIZE, height: TILE_SIZE * 0.7 },
+    aggressive: false,
+    avoidChance: 0.2,
+    base: { maxHp: 46, attackPower: 4, xpReward: 13 },
+    perLevel: { maxHp: 26, attackPower: 2, xpReward: 8 },
+    attackRange: 64,
+    attackCooldownMs: 2300,
+    respawnDelayMs: 9000,
+    leashRadius: 300,
+    chaseSpeed: 125,
+    lootTableId: 'cave-crawler',
+    wander: {
+      radius: 72,
+      minPauseMs: 2200,
+      maxPauseMs: 4800,
+      speed: 55,
+    },
+  },
+  /**
+   * The goblins that followed the seam down, and a scavenger with a real job.
+   *
+   * Harder than the one on the road west and softer than the man in the fen,
+   * which is where this zone sits between the two. They stand alone rather than
+   * in knots — the mill road already taught pulling one at a time, and what is
+   * being taught here is that the ground itself is the gate.
+   *
+   * A tighter aggro than either goblin or raider, because a working is a room
+   * rather than a road: a radius that reads as generous in open marsh is a
+   * radius nobody can walk past underground.
+   */
+  'goblin-miner': {
+    id: 'goblin-miner',
+    name: 'Goblin Miner',
+    family: 'humanoid',
+    shape: 'humanoid',
+    body: { width: TILE_SIZE * 0.85, height: TILE_SIZE * 0.85 },
+    aggressive: true,
+    aggroRadius: 190,
+    base: { maxHp: 26, attackPower: 5, xpReward: 17 },
+    perLevel: { maxHp: 16, attackPower: 3, xpReward: 12 },
+    attackRange: 68,
+    attackCooldownMs: 1500,
+    respawnDelayMs: 11000,
+    leashRadius: 340,
+    chaseSpeed: 178,
+    lootTableId: 'goblin-miner',
+    wander: {
+      radius: 88,
+      minPauseMs: 1400,
+      maxPauseMs: 3200,
+      speed: 85,
+    },
+  },
   'fen-raider': {
     id: 'fen-raider',
     name: 'Fen Raider',

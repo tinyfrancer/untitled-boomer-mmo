@@ -147,6 +147,74 @@ export const OLD_MILL_ROAD_MOB_SPAWNS: MobSpawnPoint[] = [
   { dx: -608, dy: 384, enemyId: 'goblin-scavenger', level: 5 },
 ];
 
+/**
+ * The stand of old timber the road west finally has a reason to grow.
+ *
+ * Off in the north-east and south-east corners, clear of all three goblin knots
+ * and of the mill: what a woodcutter walks out here for should not be standing
+ * inside the fight the zone is otherwise about, since a channel is broken by
+ * being hit and a tree inside a knot is a tree nobody finishes.
+ */
+export const OLD_MILL_ROAD_NODE_SPAWNS: NodeSpawnPoint[] = [
+  { dx: 448, dy: -320, nodeId: 'hardwood' },
+  { dx: 576, dy: -224, nodeId: 'hardwood' },
+  { dx: 352, dy: -416, nodeId: 'hardwood' },
+  { dx: 512, dy: 320, nodeId: 'hardwood' },
+  { dx: 640, dy: 224, nodeId: 'hardwood' },
+];
+
+/**
+ * The Deep Cut's eleven, and the thing about this zone that is *not* the fen's
+ * idea again: nothing aggressive stands between the way in and the hall.
+ *
+ * The gallery is the whole south edge, which is where a traveller materialises —
+ * anywhere along it, at whatever fraction they crossed the quarry's north edge
+ * at. Everything that opens a fight on its own is up in the workings, so walking
+ * in is walking in. What is down here instead is a crawler or two, which is the
+ * zone introducing itself: passive, armoured and slow, and the first thing a
+ * player learns about the Deep Cut is that its residents are a way to spend time
+ * rather than a way to die.
+ *
+ * The levels climb with depth for the same reason the quarry's do — the road in
+ * is the south edge, so distance from it is the dial — and the miners hold the
+ * far ends of both workings, standing over the rich seams they are cutting.
+ */
+export const DEEP_CUT_MOB_SPAWNS: MobSpawnPoint[] = [
+  // The gallery, where the road up comes in.
+  { dx: -448, dy: 448, enemyId: 'cave-crawler', level: 5 },
+  { dx: 448, dy: 448, enemyId: 'cave-crawler', level: 5 },
+  // The hall.
+  { dx: -64, dy: 128, enemyId: 'cave-crawler', level: 5 },
+  { dx: 128, dy: 0, enemyId: 'cave-crawler', level: 5 },
+  // The near ends of the two workings.
+  { dx: -448, dy: 0, enemyId: 'goblin-miner', level: 5 },
+  { dx: 448, dy: -64, enemyId: 'goblin-miner', level: 5 },
+  { dx: 320, dy: -128, enemyId: 'goblin-miner', level: 6 },
+  { dx: -320, dy: -192, enemyId: 'cave-crawler', level: 6 },
+  { dx: 256, dy: -320, enemyId: 'cave-crawler', level: 6 },
+  // The faces themselves, each with a goblin standing over the rich seam.
+  { dx: -448, dy: -320, enemyId: 'goblin-miner', level: 6 },
+  { dx: 576, dy: -384, enemyId: 'goblin-miner', level: 6 },
+];
+
+/**
+ * The seams, and the whole of what the zone is gated by.
+ *
+ * The coal is in the hall and at the near end of each working, and the rich iron
+ * is at the back of both — so the deeper a seam is, the higher the level that
+ * opens it, which is the quarry's own arrangement one zone down. Nothing here
+ * needs a key: what stops a character at the mouth of a working is the pick in
+ * their hands, and `tests/systems/deepCut.test.ts` is what holds that.
+ */
+export const DEEP_CUT_NODE_SPAWNS: NodeSpawnPoint[] = [
+  { dx: -128, dy: 192, nodeId: 'coal-vein' },
+  { dx: 128, dy: 64, nodeId: 'coal-vein' },
+  { dx: -576, dy: 0, nodeId: 'coal-vein' },
+  { dx: 512, dy: -64, nodeId: 'coal-vein' },
+  { dx: -576, dy: -320, nodeId: 'rich-iron-vein' },
+  { dx: 448, dy: -384, nodeId: 'rich-iron-vein' },
+];
+
 // All inside the dirt clearing (see banditCampMap.ts), far enough east that
 // arriving from town never lands inside an aggro radius.
 export const BANDIT_CAMP_MOB_SPAWNS: MobSpawnPoint[] = [

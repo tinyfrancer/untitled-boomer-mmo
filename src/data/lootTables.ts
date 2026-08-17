@@ -98,6 +98,48 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     currency: { min: 60, max: 120, chance: 1 },
   },
 
+  /**
+   * A beast, so parts and nothing else — but the one beast table in the game
+   * whose part is not vendor trash.
+   *
+   * A shell is an input to every steel piece, which is what makes the thing in
+   * the way of the coal worth killing rather than worth walking around. It drops
+   * often, because a crawler is a long fight and the steel set needs five of
+   * them.
+   */
+  'cave-crawler': {
+    id: 'cave-crawler',
+    entries: [{ itemId: 'crawler-shell', chance: 0.6 }],
+  },
+  /**
+   * Coin, what they were digging with, and what they were eating — and **no ore
+   * at all**, which is the one thing about this table that was decided rather
+   * than filled in.
+   *
+   * The Deep Cut's whole claim is that everything worth having down here is
+   * behind the pick rather than behind a door. A table that dropped coal would
+   * be the way round the only gate the zone has, and iron ore is no better: the
+   * plate tier is traceable to both veins and a rat precisely because nothing
+   * else in the game hands out either rock, and a creature that did would quietly
+   * make a smith out of somebody who never learned to mine.
+   *
+   * So what is on it is a tool and a weapon. The maul is the first weapon
+   * upgrade in the game that comes off something repeatable — everything above a
+   * brown axe until now was one boss behind a 3% key — and the pick is the joke
+   * that pays for itself: a miner who came down here without one can take a
+   * goblin's.
+   */
+  'goblin-miner': {
+    id: 'goblin-miner',
+    entries: [
+      { itemId: 'goblin-maul', chance: 0.05 },
+      { itemId: 'pickaxe', chance: 0.08 },
+      // Rats in a mine, and a goblin with a fire.
+      { itemId: 'cooked-rat', chance: 0.12 },
+    ],
+    currency: { min: 20, max: 50, chance: 0.92 },
+  },
+
   // A beast, so parts and nothing else. One entry, at a rate that makes a hide
   // the reason to bother rather than a consolation: a lurker is a long fight.
   'bog-lurker': {

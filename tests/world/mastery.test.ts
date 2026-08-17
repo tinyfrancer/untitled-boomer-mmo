@@ -153,7 +153,12 @@ describe('crossing a rung', () => {
 describe('a craft', () => {
   function cooking(): ReturnType<typeof harness> {
     const kit = harness();
-    kit.character.addItem('raw-fish', 5);
+    // Twelve rather than five, which is the whole of a flake worth fixing: the
+    // burn rate at cooking 1 is 40%, so a stack of five is burnt through
+    // entirely about one run in a hundred and the pool below never opens. The
+    // roll is deliberately left alone — the test beneath this one holds the
+    // relationship however the rolls fall — so what changes is the stack.
+    kit.character.addItem('raw-fish', 12);
     kit.character.addItem('logs', 1);
     kit.world.handleLightFireRequested();
     kit.world.handleCookRequested('raw-fish');

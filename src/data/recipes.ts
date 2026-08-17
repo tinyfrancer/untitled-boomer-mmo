@@ -222,6 +222,123 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
   },
 
   /**
+   * Hardwood burnt down, and bone char's opposite number one tier up.
+   *
+   * It sits below the steel it is for, the way bone char sits between the two
+   * smelts: a smith who has walked the road west but not yet the Deep Cut still
+   * has something here to climb with. It takes the sole-input shape, so a stack
+   * of hardwood in the pack is one tap at the forge.
+   */
+  charcoal: {
+    id: 'charcoal',
+    name: 'Charcoal',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'hardwood', quantity: 2 }],
+    outputItemId: 'charcoal',
+    requiredLevel: 5,
+    xpReward: 26,
+    durationMs: 2600,
+  },
+  /**
+   * The third smelt, and the only one that takes a metal rather than a rock.
+   *
+   * Two iron bars and the coal hot enough to marry them — which is why the
+   * quarry does not stop mattering when the Deep Cut opens: every steel bar is
+   * two trips up the shaft as well as one down it.
+   */
+  'steel-bar': {
+    id: 'steel-bar',
+    name: 'Steel Bar',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'iron-bar', quantity: 2 },
+      { itemId: 'coal', quantity: 2 },
+    ],
+    outputItemId: 'steel-bar',
+    requiredLevel: 7,
+    xpReward: 45,
+    durationMs: 3200,
+  },
+  /**
+   * The steel set, and the deepest thing anyone can make.
+   *
+   * Three inputs like the plate below it, and the two secondaries are again what
+   * make the tier the place the loops meet rather than a second thing to do with
+   * one vein: the charcoal is a stand of hardwood on the road west, and the
+   * shell comes off the thing living in the dark beside the coal. A finished
+   * piece has three zones and four gathers behind it — the quarry's iron, the
+   * Deep Cut's coal, the mill road's timber, and a crawler — which is a claim
+   * `tests/systems/deepCut.test.ts` holds by tracing every input back to where
+   * it came into the game.
+   */
+  'steel-helmet': {
+    id: 'steel-helmet',
+    name: 'Steel Helmet',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'steel-bar', quantity: 2 },
+      { itemId: 'charcoal', quantity: 1 },
+      { itemId: 'crawler-shell', quantity: 1 },
+    ],
+    outputItemId: 'steel-helmet',
+    requiredLevel: 8,
+    xpReward: 110,
+    durationMs: 4200,
+  },
+  // The offhand, at the legs' level rather than the chest's: it is the slot a
+  // warrior has been filling with starter leather since the camp, and holding
+  // the fix behind the longest craft in the game would be a joke at their
+  // expense.
+  'steel-shield': {
+    id: 'steel-shield',
+    name: 'Steel Shield',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'steel-bar', quantity: 2 },
+      { itemId: 'charcoal', quantity: 1 },
+      { itemId: 'crawler-shell', quantity: 1 },
+    ],
+    outputItemId: 'steel-shield',
+    requiredLevel: 8,
+    xpReward: 120,
+    durationMs: 4400,
+  },
+  'steel-legs': {
+    id: 'steel-legs',
+    name: 'Steel Legs',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'steel-bar', quantity: 3 },
+      { itemId: 'charcoal', quantity: 1 },
+      { itemId: 'crawler-shell', quantity: 1 },
+    ],
+    outputItemId: 'steel-legs',
+    requiredLevel: 9,
+    xpReward: 150,
+    durationMs: 4600,
+  },
+  'steel-chestplate': {
+    id: 'steel-chestplate',
+    name: 'Steel Chestplate',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'steel-bar', quantity: 4 },
+      { itemId: 'charcoal', quantity: 2 },
+      { itemId: 'crawler-shell', quantity: 2 },
+    ],
+    outputItemId: 'steel-chestplate',
+    requiredLevel: 9,
+    xpReward: 200,
+    durationMs: 5000,
+  },
+
+  /**
    * The best heal in the game, and the reason the fen is worth the walk twice.
    *
    * Gated at cooking 6, which is above the crab and below the plate tier's

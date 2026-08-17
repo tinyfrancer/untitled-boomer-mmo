@@ -327,13 +327,22 @@ describe('enemyAvoids', () => {
   });
 
   /**
-   * One user the day it exists, and only one: a scuttling armoured thing already
-   * designed as a long fight rather than a dangerous one is what a dodge is for,
-   * and every other row leaving it at zero is what keeps this from being a tax
-   * on every fight in the game.
+   * The crab's alone until the Deep Cut, and what that asked was whether the
+   * rule was "one creature" or "this kind of creature". It is the second: a
+   * scuttling armoured thing already designed as a long fight rather than a
+   * dangerous one is what a dodge is for, and the cave crawler is the crab's
+   * idea one band deeper.
+   *
+   * What still has to hold is the half that was load-bearing — every *other*
+   * row leaving it at zero, so avoidance never becomes a tax on every fight in
+   * the game. Nothing that chases anyone down may have one.
    */
-  it("is the crab's alone", () => {
+  it('belongs to the armoured scuttling things and to nothing else', () => {
     const dodgers = Object.values(ENEMIES).filter((enemy) => (enemy.avoidChance ?? 0) > 0);
-    expect(dodgers.map((enemy) => enemy.id)).toEqual(['crab']);
+    expect(dodgers.map((enemy) => enemy.id)).toEqual(['crab', 'cave-crawler']);
+    dodgers.forEach((enemy) => {
+      expect(enemy.shape, `${enemy.id} dodges without being built to`).toBe('crustacean');
+      expect(enemy.aggressive, `${enemy.id} dodges and opens fights`).toBe(false);
+    });
   });
 });
