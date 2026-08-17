@@ -770,6 +770,41 @@ a kill there, not at a call site. Achievement ids are a template literal over `E
 `SlayerTier` and the rows are generated from `ENEMIES`, so a new enemy gets its whole 25/50/100
 chain by construction; a test still asserts the grid is complete.
 
+**Mastery is the third stored counter, and it is stored for the reason the other two are**
+(`data/mastery.ts`, `systems/MasterySystem.ts`): a chopped tree leaves nothing in the bag to count
+it off. `CharacterState.mastery` holds XP per _target_ — one flat `Partial<Record<MasteryTargetId,
+number>>` over both halves of `ResourceNodeId | RecipeId` — and everything that comes off it derives
+on read: which of the five rungs a pool stands on, what that rung pays, how far the next one is. The
+two id sets have to stay **disjoint** for one record to be safe, which is what
+`tests/systems/MasterySystem.test.ts` holds rather than the type system: a recipe named for a node
+would silently share its pool.
+
+Four things about it were decided against alternatives and are worth not re-litigating:
+
+- **A target is taught by the same XP the action pays its skill**, which is why there is no second
+  rate table beside every node and recipe row — and it is what carries the AFK and offline penalties
+  across for free, since a camp earning half the skill XP has learned half as much about the tree.
+- **The first rung pays nothing**, which is what made this safe to add to a tuned game. Every pool
+  starts empty, so the duels, the starter arc in `progression.test.ts` and the vendor spreads all
+  run at Novice and are untouched; what mastery changes is what happens after those simulations end.
+- **The payout is a chance at a second one off the same action**, not speed. `gatherDurationMs`
+  already sells gathering speed by the level and `beginCraft` deliberately refuses to sell making
+  speed at all, so speed would be either bought twice or bought against a written rule. The gather's
+  two bonus terms are **added into one roll** rather than rolled separately, because rolling twice
+  would make a third log possible exactly where both curves pay out.
+- **Only a success feeds a pool, and a failure is never doubled.** A botched bar teaches nothing
+  about the bar, and a pool that doubled a burnt fish would be a curve that pays worse the further
+  along it you are.
+
+The thresholds are in XP rather than in actions, which is what makes a rung cost the same _work_
+whatever is being mastered — an iron chestplate is eight trees of work and reaches Expert in an
+eighth of the actions. Master sits just under the XP it takes to cap a gathering skill outright, so
+a pool is the thing still climbing once the skill behind it has stopped; `MASTERY_TARGETS` is
+generated from `RESOURCE_NODES` and `RECIPES` the way `ACHIEVEMENTS` is generated from `ENEMIES`, so
+a node or recipe added later gets its pool by construction. `hud/MasterySheet.ts` draws them grouped
+by skill, which is the only comparison a player makes — which tree to chop, never a tree against a
+bar.
+
 **Acquiring an item can fail.** The pack has a weight limit (`systems/EncumbranceSystem.ts`,
 capacity from strength), so gathering, loot and buying all go through
 `CharacterController.tryAddItem`, which adds nothing and returns false when the pack is full.

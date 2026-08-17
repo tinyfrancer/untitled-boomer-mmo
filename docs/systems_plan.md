@@ -24,7 +24,7 @@ gathered materials that lead nowhere.
 | 11  | A camp that can cook and craft                           | Crafting web      | merged 2026-08-13 |
 | 12  | Quests that ask for something other than a bag           | Reasons to return | merged 2026-08-16 |
 | 13  | Repeatable work                                          | Reasons to return | merged 2026-08-16 |
-| 14  | Mastery                                                  | Reasons to return | planned           |
+| 14  | Mastery                                                  | Reasons to return | merged 2026-08-16 |
 
 ## The decision behind the order: the arithmetic before the content
 
@@ -600,6 +600,49 @@ and worth nothing before then.
 
 The derivation rule points at storing a per-target XP total and computing the tier and its bonuses on
 read, the way `AchievementSystem` already treats the one counter it stores.
+
+Shipped as written — the derivation rule was the right one and needed no amendment — with five
+things the section did not say and that turned out to decide it.
+
+**The first rung pays nothing, and that is the whole reason this was safe to add last.** Mastery
+lands on a game whose arithmetic is held by simulations: the duels in `EnemySystem.test.ts`, the
+starter arc in `progression.test.ts`, the vendor spreads in `ShopSystem.test.ts` and
+`BountySystem.test.ts`. A payout at the bottom rung would have moved every one of them at once, and
+the retune would have been indistinguishable from a regression. Every pool starts empty, so all four
+contracts still run at Novice and are untouched by construction. What mastery changes is what happens
+_after_ those simulations end, which is exactly the retention axis the section asked for.
+
+**A target is taught by the XP its action already pays the skill.** That is one number rather than a
+second rate table beside every node and recipe row — and it is what carries the AFK and offline
+penalties across for free, since a camp that earns half the skill XP has learned half as much about
+the tree. It is also what let `OfflineAfkReport` widen by a single nullable id: the amount is already
+on the report, and carrying it twice would be two numbers that must agree with one place to make them
+disagree.
+
+**Yield rather than speed, settled by what the skill levels already sell.** `gatherDurationMs` sells
+gathering speed by the level, and `beginCraft` deliberately refuses to sell making speed at all —
+so a mastery that paid in speed would be either buying the same thing twice or buying against a
+written rule. A second item off the same action is the one axis neither level owns. The two gather
+terms are then **added into one roll** rather than rolled separately, because two rolls make a third
+log possible at exactly the point both curves are paying out, and "sometimes a second log" is what
+was promised.
+
+**One flat record over both halves of `MasteryTargetId`.** A node and a recipe ask the same question
+of it, and splitting them would be two records, two migrations and two lookups to say one thing. That
+is only safe while `ResourceNodeId` and `RecipeId` stay disjoint, which the type system cannot check
+and a test now does — a recipe named for a node would otherwise silently share its pool.
+
+**The thresholds are in XP, which is what makes a rung cost the same work whatever is being
+mastered.** An iron chestplate is 80 XP a craft against a tree's 10, so it reaches Expert in an
+eighth of the actions — and that is right, because a chestplate _is_ eight trees of work. Master at
+7,500 is about 750 trees, which is the thousandth-tree curve the section asked for, and it sits just
+under the XP it takes to cap a gathering skill outright: the skill stops first, and the pool is what
+is left to climb.
+
+One thing the surface does that the mechanism does not: `MASTERY_TIERS.length` is what the sheet
+counts a pool out of, so the rungs are drawn as "Apprentice · 2/5" rather than as a raw XP total.
+Thirteen pools whose totals differ by an order of magnitude compare to nothing; a rank out of five
+compares to its siblings at a glance, which is the only comparison anybody makes.
 
 ---
 
