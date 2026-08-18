@@ -676,9 +676,28 @@ host for nothing. What dying costs is the walk back plus the fee in `systems/Dea
 first thing in the game currency is spent on, and deliberately coin rather than XP, since on a
 quadratic curve a penalty big enough to be felt is big enough to erase an evening. A purse too thin
 pays what it has: a respawn is never blocked on affordability. Arriving at full is still the point
-of dying, which is why the spawn point is safe by construction — it is the middle of the map, where
-travelling from the world map already puts someone, and no zone's centre sits inside an aggro
-radius.
+of dying, which is why the spawn point has to be safe — it is the middle of the map, where
+travelling from the world map already puts someone.
+
+**That safety is held by a sweep now rather than by this paragraph**
+(`tests/systems/spawnSafety.test.ts`), because for a long time the paragraph was simply wrong. Three
+zones shipped with the centre or an arrival strip inside an aggro radius, each found by hand and one
+at a time after the fact: Blackwater Fen put a level 5 raider 71 units from its own centre against a
+radius of 210, the Old Mill Road had a goblin at 187 against 200, and the bandit camp's east edge —
+the way back out of the hideout — passed 128 from a level 3 bandit.
+
+The sweep holds **two rules of different strength, and the difference is the whole of it.** The
+centre is clear of an aggressive creature's _whole wander disc_, because a respawn is not a choice:
+dying already costs the walk and the fee, and what stops that being a spiral is a moment to gather
+yourself. Measuring at the spawn offset would guarantee nothing, since a creature is only ever _at_
+its spawn on the frame the zone was built — the same argument `render3d/picking.test.ts` makes about
+tapping one. An arrival strip is held to the weaker rule of not landing anyone _already_ inside an
+aggro radius, because walking through a door is a choice and something wandering over to meet you on
+the far side is the zone working. What that refuses is a trap: no frame in which to walk back out.
+
+Expect a new zone to cost a spawn or two moved. A 300-unit disc around the middle of the map is not
+a small claim on a 25x19 grid, and the mill road's knots had to move as whole knots to keep being
+knots.
 
 **There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate
 themselves each frame against `systems/CollisionSystem.ts`, which is the only thing that decides
