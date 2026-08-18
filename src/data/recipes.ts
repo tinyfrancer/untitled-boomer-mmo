@@ -333,7 +333,7 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
       { itemId: 'crawler-shell', quantity: 2 },
     ],
     outputItemId: 'steel-chestplate',
-    requiredLevel: 9,
+    requiredLevel: 10,
     xpReward: 200,
     durationMs: 5000,
   },

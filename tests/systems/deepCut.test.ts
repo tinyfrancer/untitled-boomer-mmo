@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TILE_SIZE } from '../../src/config/constants';
+import { MAX_GATHER_SKILL_LEVEL, TILE_SIZE } from '../../src/config/constants';
 import { DEEP_CUT_MOB_SPAWNS, DEEP_CUT_NODE_SPAWNS } from '../../src/data/spawns';
 import { ENEMIES } from '../../src/data/enemies';
 import { ITEMS } from '../../src/data/items';
@@ -199,6 +199,85 @@ describe('what the Deep Cut is', () => {
     });
 
     expect(width).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Four claims carried over from a second implementation of this zone built in
+ * parallel. Everything else here is the first one's, which held up better on
+ * every axis the two were measured on — but these were the things it did not
+ * say, and each is a way the zone could keep passing while stopping being what
+ * it is.
+ */
+describe('what keeps the gate a gate', () => {
+  /**
+   * The sharpest statement of what this zone is: **nothing living down here may
+   * drop what the seams yield.**
+   *
+   * The gate above is a claim about levels, and a level gate is only a gate
+   * while there is no way around it. A miner carrying coal is that way around —
+   * and iron ore is no better, since the plate tier is traceable to the quarry's
+   * veins and a rat precisely because nothing else in the game hands either out.
+   * Pad these tables with the rock and every other test here still passes.
+   */
+  it('drops no ore at all, so the seams are the only way to what they yield', () => {
+    const yields = new Set<ItemId>(
+      Object.values(RESOURCE_NODES)
+        .filter((node) => node.skill === 'mining')
+        .map((node) => node.yieldItemId),
+    );
+    expect(yields.size).toBeGreaterThan(0);
+
+    const residents = new Set(DEEP_CUT_MOB_SPAWNS.map((spawn) => spawn.enemyId));
+    for (const enemyId of residents) {
+      const tableId = ENEMIES[enemyId].lootTableId;
+      if (!tableId) continue;
+      for (const entry of LOOT_TABLES[tableId].entries) {
+        expect(
+          yields.has(entry.itemId),
+          `${enemyId} drops ${entry.itemId}, which is a seam's job`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  /**
+   * Two irons to a steel bar, which is what keeps the quarry worth walking to
+   * after the deeper mine opens. One would have retired it the day this shipped.
+   */
+  it('spends more quarry iron per bar than the iron tier did', () => {
+    const iron = RECIPES['steel-bar'].inputs.find((input) => input.itemId === 'iron-bar');
+    expect(iron?.quantity ?? 0).toBeGreaterThan(1);
+  });
+
+  /**
+   * The zone that raised no ceiling. It is the cleanest case in the project of
+   * the rule that content moves the cap rather than a zone arriving — and if a
+   * later edit pushes a spawn here past the fen's, `progression.test.ts` will
+   * demand a new cap without anyone noticing which zone asked for it.
+   */
+  it('spawns below the top of the world, so it raises no ceiling', () => {
+    const here = Math.max(...DEEP_CUT_MOB_SPAWNS.map((spawn) => spawn.level));
+    const anywhere = Math.max(
+      ...Object.values(ZONES).flatMap((zone) =>
+        zone.mobSpawns
+          .filter((spawn) => ENEMIES[spawn.enemyId].boss !== true)
+          .map((spawn) => spawn.level),
+      ),
+    );
+    expect(here).toBeLessThan(anywhere);
+  });
+
+  /**
+   * And the deepest thing anyone can make sits exactly at the ceiling of the
+   * skill that makes it. Capping smithing has to buy something, or the last
+   * level of the deepest crafting skill in the game unlocks nothing at all.
+   */
+  it('puts the capstone recipe at the top of the skill', () => {
+    const smithing = Object.values(RECIPES).filter((recipe) => recipe.skill === 'smithing');
+    expect(Math.max(...smithing.map((recipe) => recipe.requiredLevel))).toBe(
+      MAX_GATHER_SKILL_LEVEL,
+    );
   });
 });
 
