@@ -19,8 +19,14 @@ const ROAD_HALF_WIDTH = 1;
  * deliberately in the corner furthest from where a traveller arrives: water is
  * a wall you can see over, and a wall between the road and the fighting would
  * make the zone read as two rooms.
+ *
+ * It sat two rows higher until the road north to Greyford opened. An arrival
+ * lands anywhere along the edge it crosses, `ARRIVAL_INSET` in — a tile and a
+ * half, so the second row down — and the pond was sitting in it. The beach paid
+ * this bill in ocean and the quarry in rock; this is the same one again, in a
+ * millpond.
  */
-const MILLPOND = { left: 1, right: 4, top: 1, bottom: 4 };
+const MILLPOND = { left: 1, right: 4, top: 3, bottom: 6 };
 
 /** The worked ground around the mill, which is what says somebody used to be here. */
 const MILL_YARD = { left: 4, right: 9, top: 4, bottom: 8 };

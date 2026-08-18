@@ -12,6 +12,8 @@ const SPEED_PER_LEVEL = 0.05;
 // test that holds them to being *added* rather than rolled separately has to
 // know where one ends and the other begins.
 export const BONUS_YIELD_PER_LEVEL = 0.03;
+// The fastest a swing can ever get, however much skill and tool are stacked.
+const MIN_GATHER_FRACTION = 0.35;
 
 export interface GatherState {
   node: ResourceNodeDefinition;
@@ -48,16 +50,32 @@ export function canGather(node: ResourceNodeDefinition, skills: Skills, gear: Ge
   return { ok: true };
 }
 
-export function gatherDurationMs(node: ResourceNodeDefinition, level: number): number {
-  const speedup = 1 - SPEED_PER_LEVEL * (level - 1);
-  return Math.round(node.baseGatherMs * speedup);
+/**
+ * How long one swing takes: the base, shaved by the skill and again by the tool.
+ *
+ * Floored at `MIN_GATHER_FRACTION` of the base rather than left to run down to
+ * nothing, because the two terms are bought separately and a capped skill
+ * holding a steel tool would otherwise gather instantly — which is not a reward,
+ * it is the channel disappearing.
+ */
+export function gatherDurationMs(
+  node: ResourceNodeDefinition,
+  level: number,
+  toolSpeedBonus = 0,
+): number {
+  const speedup = 1 - SPEED_PER_LEVEL * (level - 1) - Math.max(0, toolSpeedBonus);
+  return Math.round(node.baseGatherMs * Math.max(MIN_GATHER_FRACTION, speedup));
 }
 
-export function beginGather(node: ResourceNodeDefinition, level: number): GatherState {
+export function beginGather(
+  node: ResourceNodeDefinition,
+  level: number,
+  toolSpeedBonus = 0,
+): GatherState {
   return {
     node,
     elapsedMs: 0,
-    durationMs: gatherDurationMs(node, level),
+    durationMs: gatherDurationMs(node, level, toolSpeedBonus),
     maxRange: node.interactRadius,
   };
 }

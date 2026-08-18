@@ -129,6 +129,27 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
     shape: 'workshop',
     door: 'south',
   },
+  /**
+   * Greyford's counter, and a bay like the town's shopfronts because it does the
+   * same job: a person stands at the door of it and you walk up to them.
+   */
+  'trading-post': {
+    id: 'trading-post',
+    name: 'Trading Post',
+    body: { width: BAY, height: BAY },
+    shape: 'hall',
+    door: 'south',
+  },
+  // Scenery, the way the mill is: nobody works here and nothing is tapped. It is
+  // what makes the outpost read as a place somebody lives rather than one
+  // building standing in a field.
+  longhouse: {
+    id: 'longhouse',
+    name: 'Longhouse',
+    body: { width: BAY * 2, height: HUT },
+    shape: 'cottage',
+    door: 'south',
+  },
 };
 
 /** A building where a zone put it. What everything below asks about. */

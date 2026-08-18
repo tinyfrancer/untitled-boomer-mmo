@@ -10,7 +10,7 @@ import type { NpcId } from '../types/ids';
  * to collect on it: a row here, a case in each of them, and no place left where
  * a person in a town is assumed to be selling something.
  */
-export type NpcRoleId = 'merchant' | 'banker' | 'trainer' | 'quartermaster';
+export type NpcRoleId = 'merchant' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter';
 
 export interface NpcDefinition {
   id: NpcId;
@@ -39,6 +39,16 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
   // brought in, and a quartermaster is the one person in a town who plausibly
   // wants both.
   quartermaster: { id: 'quartermaster', name: 'Quartermaster', role: 'quartermaster' },
+  /**
+   * The fifth counter, out at Greyford, and the first that does not want money.
+   *
+   * Town trades in coin: the shopkeeper sells, the banker stores, the trainer
+   * charges and the quartermaster pays. Everything here is priced in the things
+   * a gathering skill produces, which is what makes the outpost worth the walk
+   * rather than town in a different colour — and what makes the ore and timber
+   * already in the pack worth something other than a vendor line.
+   */
+  outfitter: { id: 'outfitter', name: 'Outfitter', role: 'outfitter' },
 };
 
 /** What an NPC is called, for the map's marker and for anyone examining them. */

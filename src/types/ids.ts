@@ -105,7 +105,13 @@ export type ItemId =
   // one creature. Nothing sells them and nothing else drops them.
   | 'barrow-crown'
   | 'barrow-blade'
-  | 'barrow-scepter';
+  | 'barrow-scepter'
+  // The steel tools, and the first things in the game bought with materials
+  // rather than coin. What the quarry and the road west are *for*, handed back
+  // as the means of working them faster.
+  | 'steel-pickaxe'
+  | 'steel-axe'
+  | 'steel-pole';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -247,7 +253,10 @@ export type ZoneId =
   | 'old-mill-road'
   | 'blackwater-fen'
   | 'deep-cut'
-  | 'sunken-barrow';
+  | 'sunken-barrow'
+  // The second place with counters in it, and the zone that makes the world a
+  // loop rather than a star: the mill road to the south, the quarry to the east.
+  | 'greyford';
 
 // What is built on a zone rather than spawned in it: solid, permanent, and the
 // thing a counter stands at the door of. Its own union rather than a slice of
@@ -264,7 +273,11 @@ export type BuildingId =
   // The first building in the game standing outside a town, and the first with
   // no door worth walking to: it is scenery, which is a thing a zone can have
   // now that a zone can have buildings at all.
-  | 'mill';
+  | 'mill'
+  // Greyford's two: the counter that trades in materials, and the long hall
+  // beside it that is scenery.
+  | 'trading-post'
+  | 'longhouse';
 
 // Which body a renderer draws a building with, and the same bargain
 // `CreatureShapeId` and `NodeShapeId` make: a new BUILDINGS row names a shape it
@@ -282,7 +295,7 @@ export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.
-export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster';
+export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter';
 
 export type QuestId =
   'rat-bones' | 'quarry-road' | 'crab-feast' | 'bandit-trouble' | 'the-cutthroat';

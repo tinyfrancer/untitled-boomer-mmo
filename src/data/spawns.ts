@@ -138,9 +138,22 @@ export const OLD_MILL_ROAD_MOB_SPAWNS: MobSpawnPoint[] = [
   { dx: 352, dy: 288, enemyId: 'goblin-scavenger', level: 4 },
   { dx: 224, dy: 352, enemyId: 'goblin-scavenger', level: 4 },
   // The middle knot, north of the road and east of the mill yard.
-  { dx: -128, dy: -416, enemyId: 'goblin-scavenger', level: 4 },
-  { dx: 0, dy: -480, enemyId: 'goblin-scavenger', level: 4 },
-  { dx: -96, dy: -288, enemyId: 'goblin-scavenger', level: 4 },
+  /**
+   * The north-east knot, which used to be the north-west one.
+   *
+   * It has moved twice for two different rules and the second undid the first.
+   * Clearing the middle of the map for a respawn pushed it north; opening the
+   * road to Greyford then made that north edge a strip anybody can arrive on,
+   * and two of the three were standing in it. West was no good either — the mill
+   * and its pond take that corner, and the far knot is close enough that a third
+   * one in between would read as six.
+   *
+   * A knot moves as a knot or it stops being one, which is the whole reason all
+   * three offsets change together rather than the two that broke.
+   */
+  { dx: 256, dy: -288, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 480, dy: -288, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 416, dy: -96, enemyId: 'goblin-scavenger', level: 4 },
   // The far knot, past the mill, and the only level 5s in the world.
   { dx: -640, dy: 192, enemyId: 'goblin-scavenger', level: 5 },
   { dx: -512, dy: 288, enemyId: 'goblin-scavenger', level: 5 },

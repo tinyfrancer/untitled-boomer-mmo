@@ -5,6 +5,7 @@ import { BEACH_MAP } from './beachMap';
 import { BLACKWATER_FEN_MAP } from './blackwaterFenMap';
 import { QUARRY_MAP } from './quarryMap';
 import { DEEP_CUT_MAP } from './deepCutMap';
+import { GREYFORD_MAP } from './greyfordMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
 import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
 import { OLD_MILL_ROAD_MAP } from './oldMillRoadMap';
@@ -215,6 +216,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     exits: [
       { edge: 'south', to: 'town' },
       { edge: 'north', to: 'deep-cut' },
+      { edge: 'west', to: 'greyford' },
     ],
   },
   /**
@@ -276,7 +278,10 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     nodeSpawns: OLD_MILL_ROAD_NODE_SPAWNS,
     npcSpawns: [],
     buildingSpawns: [{ dx: -384, dy: -192, buildingId: 'mill' }],
-    exits: [{ edge: 'east', to: 'town' }],
+    exits: [
+      { edge: 'east', to: 'town' },
+      { edge: 'north', to: 'greyford' },
+    ],
   },
   /**
    * The marsh below the beach, and the second zone above the starter band.
@@ -335,6 +340,37 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     npcSpawns: [],
     exits: [{ edge: 'north', to: 'blackwater-fen' }],
     requiresKey: 'barrow-key',
+  },
+  /**
+   * Greyford Outpost, and the zone that makes the world a loop.
+   *
+   * Every road until this one ran through town — out to a thing and back the
+   * same way, with the shopkeeper's door passed twice a trip. This joins the
+   * Old Mill Road to the quarry, so the timber and the ore are a walk apart
+   * rather than two walks from home.
+   *
+   * What it is for is the counter in it. Town trades in coin and Greyford
+   * trades in the things a gathering skill produces: the outfitter takes ore,
+   * timber and what comes off a kill, and hands back the tools for getting more
+   * of them. Nothing here wants money, which is the whole of why it is not town
+   * in a different colour.
+   */
+  greyford: {
+    id: 'greyford',
+    name: 'Greyford Outpost',
+    description: 'A trading post out where the work is. Bring what you dug up.',
+    map: GREYFORD_MAP,
+    mobSpawns: [],
+    nodeSpawns: [],
+    npcSpawns: [{ dx: -64, dy: -160, npcId: 'outfitter' }],
+    buildingSpawns: [
+      { dx: -64, dy: -320, buildingId: 'trading-post' },
+      { dx: 320, dy: -288, buildingId: 'longhouse' },
+    ],
+    exits: [
+      { edge: 'south', to: 'old-mill-road' },
+      { edge: 'east', to: 'quarry' },
+    ],
   },
   'bandit-hideout': {
     id: 'bandit-hideout',
