@@ -36,7 +36,7 @@ describe('the forge', () => {
     kit.character.awardSkillXp('smithing', 10_000);
     kit.state.inventory = { 'tin-ore': 2 };
 
-    kit.world.handleSmithRequested('tin-bar');
+    kit.world.handleCraftRequested('tin-bar');
     kit.tick(Math.ceil(TIN.durationMs / 200) + 1);
 
     expect(kit.state.inventory['tin-bar'] ?? 0).toBeGreaterThan(0);
@@ -48,7 +48,7 @@ describe('the forge', () => {
     kit.world.teleport(kit.forge.x + STATION_RADIUS * 4, kit.forge.y);
     kit.tick(1);
 
-    kit.world.handleSmithRequested('tin-bar');
+    kit.world.handleCraftRequested('tin-bar');
 
     expect(kit.state.inventory['tin-bar'] ?? 0).toBe(0);
     expect(String(kit.emissions(NOTICE_EVENT).at(-1))).toContain('forge');
@@ -60,7 +60,7 @@ describe('the forge', () => {
     const kit = atTheForge();
     kit.state.inventory = { 'tin-ore': 2 };
 
-    kit.world.handleSmithRequested('tin-bar');
+    kit.world.handleCraftRequested('tin-bar');
     kit.tick(1);
     kit.world.teleport(kit.forge.x + STATION_RADIUS * 4, kit.forge.y);
     kit.tick(Math.ceil(TIN.durationMs / 200) + 2);
@@ -73,7 +73,7 @@ describe('the forge', () => {
     const kit = atTheForge();
     kit.state.inventory = { 'iron-ore': 4 };
 
-    kit.world.handleSmithRequested('iron-bar');
+    kit.world.handleCraftRequested('iron-bar');
     kit.tick(20);
 
     expect(kit.state.inventory['iron-bar'] ?? 0).toBe(0);
@@ -90,7 +90,7 @@ describe('the forge', () => {
     kit.character.awardSkillXp('smithing', 10_000);
     kit.state.inventory = { 'rat-bones': 2, logs: 1 };
 
-    kit.world.handleSmithRequested('bone-char');
+    kit.world.handleCraftRequested('bone-char');
     kit.tick(Math.ceil(RECIPES['bone-char'].durationMs / 200) + 1);
 
     expect(kit.state.inventory['bone-char'] ?? 0).toBe(1);
@@ -105,13 +105,13 @@ describe('the forge', () => {
     kit.character.awardSkillXp('smithing', 10_000);
     kit.state.inventory = { 'iron-bar': 2, 'tin-bar': 1 };
 
-    kit.world.handleSmithRequested('iron-helmet');
+    kit.world.handleCraftRequested('iron-helmet');
     kit.tick(Math.ceil(RECIPES['iron-helmet'].durationMs / 200) + 1);
     expect(kit.state.inventory['iron-helmet'] ?? 0).toBe(0);
     expect(kit.state.inventory['iron-bar']).toBe(2);
 
     kit.character.addItem('bone-char', 1);
-    kit.world.handleSmithRequested('iron-helmet');
+    kit.world.handleCraftRequested('iron-helmet');
     kit.tick(Math.ceil(RECIPES['iron-helmet'].durationMs / 200) + 1);
 
     expect(kit.state.inventory['iron-helmet'] ?? 0).toBe(1);
@@ -124,7 +124,7 @@ describe('the forge', () => {
     kit.character.awardSkillXp('smithing', 10_000);
     kit.state.inventory = { 'iron-bar': 1 };
 
-    kit.world.handleSmithRequested('iron-helmet');
+    kit.world.handleCraftRequested('iron-helmet');
     kit.tick(30);
 
     expect(kit.state.inventory['iron-helmet'] ?? 0).toBe(0);
@@ -146,7 +146,7 @@ describe('what a failed smith costs', () => {
     const kit = atTheForge();
     kit.state.inventory = { 'tin-ore': 20 };
 
-    kit.world.handleSmithRequested('tin-bar');
+    kit.world.handleCraftRequested('tin-bar');
     // Long enough for the channel to re-arm down the stack many times over, and
     // at a level where roughly half of those swings fail.
     kit.tick(200);

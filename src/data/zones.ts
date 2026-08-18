@@ -354,6 +354,12 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
    * timber and what comes off a kill, and hands back the tools for getting more
    * of them. Nothing here wants money, which is the whole of why it is not town
    * in a different colour.
+   *
+   * The tannery in the yard is the other half of that claim. Town has the one
+   * forge and every made thing in the game came off it, which made "production"
+   * and "smithing" the same word; the vat out here is the second vertical, and
+   * it is at the outpost rather than in town for the reason the counter is —
+   * what it works is what the zones around here produce.
    */
   greyford: {
     id: 'greyford',
@@ -367,6 +373,10 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
       { dx: -64, dy: -320, buildingId: 'trading-post' },
       { dx: 320, dy: -288, buildingId: 'longhouse' },
     ],
+    // West end of the yard, well clear of both roads and of the counter: a
+    // station is tapped rather than stood at, and a vat on the crossroads would
+    // be the mistake the trainer taught in town three tiles up the north road.
+    stationSpawns: [{ dx: -448, dy: -224, station: 'tannery' }],
     exits: [
       { edge: 'south', to: 'old-mill-road' },
       { edge: 'east', to: 'quarry' },

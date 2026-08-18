@@ -147,30 +147,31 @@ export class GatherSession {
   }
 
   /**
-   * Whether a forge is in reach.
+   * Whether a built station of this kind is in reach.
    *
    * The fire's twin, and deliberately the same shape: a station is a thing in
    * the world with a radius round it, so what "at the forge" means is the same
-   * question asked of a different object. What differs is only that a forge came
-   * with the zone and cannot go out.
+   * question asked of a different object. What differs is only that a built one
+   * came with the zone and cannot go out.
    */
-  isNearForge(): boolean {
+  isNearBuiltStation(station: StationId): boolean {
     return this.deps.stations.some(
-      (station) =>
-        station.station === 'forge' && withinRadius(this.ctx.player, station, STATION_RADIUS),
+      (built) => built.station === station && withinRadius(this.ctx.player, built, STATION_RADIUS),
     );
   }
 
   /** Whether the station a recipe names is in reach right now. */
   private atStation(station: StationId): boolean {
-    return station === 'fire' ? this.isNearFire() : this.isNearForge();
+    return station === 'fire' ? this.isNearFire() : this.isNearBuiltStation(station);
   }
 
   /**
    * Everything the player is standing at, which is the half of a camp's job that
-   * is not in their hands. A list rather than the two questions above, because
-   * what a camp asks is "what can be made here" and that is one loop over the
-   * stations rather than a branch per station.
+   * is not in their hands — and, since the panel stopped being the forge's
+   * alone, what keeps an open one open. A list rather than a question per
+   * station, because what both callers ask is about the set rather than about a
+   * named member of it, and a branch per station is the thing a second vat turns
+   * into a second place to forget.
    */
   stationsInReach(): StationId[] {
     return STATION_IDS.filter((station) => this.atStation(station));
@@ -179,9 +180,9 @@ export class GatherSession {
   /**
    * Starts a named recipe, which is how anything with a list of inputs is
    * asked for: a bag cell cannot say which of three things four bars were meant
-   * to become, so the forge's panel names the row and this runs it.
+   * to become, so a station's panel names the row and this runs it.
    */
-  smith(recipeId: RecipeId): void {
+  makeRecipe(recipeId: RecipeId): void {
     this.craft(recipeById(recipeId));
   }
 

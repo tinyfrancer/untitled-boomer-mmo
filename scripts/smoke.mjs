@@ -1468,7 +1468,9 @@ async function forge() {
     w.teleport((forge?.x ?? 0) + 400, forge?.y ?? 0);
   });
   await step(2);
-  const away = await page.evaluate(() => document.querySelector('.hud-modal__box--forge') === null);
+  const away = await page.evaluate(
+    () => document.querySelector('.hud-modal__box--station') === null,
+  );
 
   // Standing next to it is deliberately *not* enough — a panel that opened on
   // proximity would put itself in front of anyone walking past, which on this
@@ -1480,16 +1482,16 @@ async function forge() {
   });
   await step(2);
   const standing = await page.evaluate(
-    () => document.querySelector('.hud-modal__box--forge') === null,
+    () => document.querySelector('.hud-modal__box--station') === null,
   );
 
   await draw();
   await clickAt(await screenAt(FORGE));
   await step(2);
   const opened = await page.evaluate(() => ({
-    panel: document.querySelector('.hud-modal__box--forge') !== null,
-    rows: document.querySelectorAll('.hud-modal__box--forge [data-recipe]').length,
-    locked: document.querySelectorAll('.hud-modal__box--forge [data-locked]').length,
+    panel: document.querySelector('.hud-modal__box--station') !== null,
+    rows: document.querySelectorAll('.hud-modal__box--station [data-recipe]').length,
+    locked: document.querySelectorAll('.hud-modal__box--station [data-locked]').length,
   }));
   check(
     'a real click on the forge opens its list, where standing beside it does not',
@@ -1498,7 +1500,7 @@ async function forge() {
   );
 
   // A real tap on a real row, and the channel that follows it.
-  await page.click('.hud-modal__box--forge [data-recipe="tin-bar"]');
+  await page.click('.hud-modal__box--station [data-recipe="tin-bar"]');
   await step(2);
   const casting = await page.evaluate(() => ({
     bar: document.querySelector('.hud-channel') !== null,
@@ -1527,7 +1529,8 @@ async function forge() {
   await step(2);
   check(
     'walking away from the forge closes the list behind you',
-    (await page.evaluate(() => document.querySelector('.hud-modal__box--forge') === null)) === true,
+    (await page.evaluate(() => document.querySelector('.hud-modal__box--station') === null)) ===
+      true,
   );
 
   // Put the bag back the way the sections after this one expect to find it.

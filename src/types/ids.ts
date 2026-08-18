@@ -6,8 +6,11 @@ export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 // forge makes: it is what the goblins on the Old Mill Road are wearing, and the
 // step a character takes who has not gone near a quarry. `steel` is the other
 // end of that: the deepest thing a forge makes and the only tier with four
-// pieces, the offhand included.
-export type TierId = 'brown' | 'studded' | 'iron' | 'fenweave' | 'steel';
+// pieces, the offhand included. `fenhide` is what `steel` is for the other half
+// of the roster: the same marsh as `fenweave` answered again, made rather than
+// dropped, and the first armour in the game a wizard can build instead of
+// hoping for.
+export type TierId = 'brown' | 'studded' | 'iron' | 'fenweave' | 'fenhide' | 'steel';
 
 export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
@@ -78,6 +81,14 @@ export type ItemId =
   | 'cooked-eel'
   | 'burnt-eel'
   | 'lurker-hide'
+  // A hide with the rot taken out of it, and the three pieces stitched from it.
+  // The tannery's whole line: cloth-class armour above what the raiders drop,
+  // which is the half of the caster's supply killing things was never going to
+  // reach.
+  | 'cured-leather'
+  | 'fenhide-cowl'
+  | 'fenhide-vest'
+  | 'fenhide-leggings'
   // What the Deep Cut holds, and the three places the steel tier reaches back
   // into: the coal under the quarry, the hardwood on the road west, and the
   // shell off the thing that lives in the dark down there.
@@ -133,7 +144,11 @@ export type RecipeId =
   | 'steel-helmet'
   | 'steel-chestplate'
   | 'steel-legs'
-  | 'steel-shield';
+  | 'steel-shield'
+  | 'cured-leather'
+  | 'fenhide-cowl'
+  | 'fenhide-vest'
+  | 'fenhide-leggings';
 
 export type EnemyId =
   | 'rat'
@@ -204,7 +219,8 @@ export type ItemIconShape =
   | 'bar'
   | 'key';
 
-export type GatherSkillId = 'fishing' | 'woodcutting' | 'mining' | 'cooking' | 'smithing';
+export type GatherSkillId =
+  'fishing' | 'woodcutting' | 'mining' | 'cooking' | 'smithing' | 'leatherworking';
 
 // Skills that level by fighting rather than by gathering. Their cap rides the
 // character's level (see combatSkillCap), so they can't be ground ahead of it.

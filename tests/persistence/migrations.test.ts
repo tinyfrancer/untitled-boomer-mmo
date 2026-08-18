@@ -467,6 +467,50 @@ describe('migrateCharacterState', () => {
     expect(migrated?.skills.woodcutting).toEqual({ level: 10, xp: 0 });
   });
 
+  /** Every skill a v20 game had: the live set less the one v21 adds. */
+  function fiveSkillSave(): Record<string, { level: number; xp: number }> {
+    const skills: Record<string, { level: number; xp: number }> = {
+      ...createInitialSkills(),
+      smithing: { level: 9, xp: 42 },
+    };
+    delete skills.leatherworking;
+    return skills;
+  }
+
+  /**
+   * v20 -> v21: leatherworking joins the sheet, which is the v15 -> v16 step over
+   * again — a skill added later arrives at level 1 with no xp, which is what
+   * every skill starts at, so it costs an old save nothing.
+   */
+  it('opens leatherworking at level 1 without disturbing what was trained', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 20,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+      kills: {},
+      visits: {},
+      bounty: null,
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      mastery: {},
+      // A save from a game that had five gathering skills and no sixth, which is
+      // the one shape this step exists for — spreading the live initial set here
+      // would hand the test the very key it is meant to be missing.
+      skills: fiveSkillSave(),
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.skills.leatherworking).toEqual({ level: 1, xp: 0 });
+    expect(migrated?.skills.smithing).toEqual({ level: 9, xp: 42 });
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();

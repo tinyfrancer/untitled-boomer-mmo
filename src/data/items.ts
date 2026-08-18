@@ -136,6 +136,10 @@ const ICON_COLOR = {
   rawEel: 0x4e6b52,
   cookedEel: 0xb07840,
   hide: 0x6b5140,
+  // The same pelt with the rot taken out of it. Lighter and warmer than the raw
+  // one, since the two sit in the bag together for as long as a tanning run
+  // lasts and one blob in two browns is the whole of how they are told apart.
+  curedHide: 0xb08457,
   // The Deep Cut's four. Coal is the darkest thing in the bag and stops short of
   // black, for the reason burnt food does: a cell is nearly black itself, and a
   // near-black item in it reads as an empty slot.
@@ -959,6 +963,68 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     intellectBonus: 1,
   },
   /**
+   * The fenhide set, and the first armour a caster can *make*.
+   *
+   * The fen closed the dropped half of the cloth gap and this is the other one:
+   * two making skills existed and both of them belonged to a warrior or to
+   * nobody — smithing turns out plate, which a wizard cannot wear at all, and
+   * cooking turns out dinner. A caster could level every skill in the game and
+   * own nothing they had built.
+   *
+   * `cloth` rather than an armour type of its own, which is worth being clear
+   * about: a cured hide is not a robe, but the type here decides *who may wear
+   * it* rather than what it is woven from — a lantern and an orb are both cloth
+   * — and inventing a fourth type to hold three rows would be a class
+   * restriction wearing a costume.
+   *
+   * It stops less than the iron plate a smith of the same standing makes and
+   * takes a higher level to reach, deliberately. A warrior can wear cloth and
+   * always could; what stops this being a warrior's shortcut is that walking it
+   * ends up behind where their own skill already had them.
+   */
+  'fenhide-cowl': {
+    id: 'fenhide-cowl',
+    name: 'Fenhide Cowl',
+    value: 95,
+    weight: 3,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: TIER_COLORS.fenhide,
+    tier: 'fenhide',
+    armorType: 'cloth',
+    armorValue: 4,
+    healthBonus: 1,
+    intellectBonus: 2,
+  },
+  'fenhide-vest': {
+    id: 'fenhide-vest',
+    name: 'Fenhide Vest',
+    value: 195,
+    weight: 5,
+    kind: 'equipment',
+    slot: 'chest',
+    color: TIER_COLORS.fenhide,
+    tier: 'fenhide',
+    armorType: 'cloth',
+    armorValue: 7,
+    healthBonus: 2,
+    intellectBonus: 3,
+  },
+  'fenhide-leggings': {
+    id: 'fenhide-leggings',
+    name: 'Fenhide Leggings',
+    value: 140,
+    weight: 4,
+    kind: 'equipment',
+    slot: 'pants',
+    color: TIER_COLORS.fenhide,
+    tier: 'fenhide',
+    armorType: 'cloth',
+    armorValue: 6,
+    healthBonus: 1,
+    intellectBonus: 2,
+  },
+  /**
    * What the deep pools hold, and what the fen is actually for.
    *
    * Cooked, it is the best heal in the game by a distance, which is the whole
@@ -991,9 +1057,15 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'material',
     icon: { shape: 'fish', color: ICON_COLOR.burnt },
   },
-  // What a lurker is made of, which is all a beast may drop. It is worth real
-  // coin and nothing else — the fen's crafting is the eel, and a hide that fed
-  // a recipe would be a second production chain nobody asked for.
+  /**
+   * What a lurker is made of, which is all a beast may drop.
+   *
+   * It shipped as coin and nothing else, and was the last material in the game
+   * passing `deadEnds.test.ts` on a vendor price alone. What it waited for was
+   * somewhere to be worked: a hide is no use at the forge and none at a fire,
+   * so closing it needed the second production vertical rather than a row on an
+   * existing table.
+   */
   'lurker-hide': {
     id: 'lurker-hide',
     name: 'Lurker Hide',
@@ -1006,13 +1078,32 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     icon: { shape: 'meat', color: ICON_COLOR.hide },
   },
   /**
-   * What a crawler is made of, and the one beast part in the game that is not
+   * The hide with the rot taken out of it, and the tannery's only intermediate.
+   *
+   * It is `bone-char`'s and `charcoal`'s opposite number in the other vertical:
+   * the cheap early row a new skill is climbed on, and the place the whole line
+   * reaches out of its own zone from. A piece of fenhide names it and a tin
+   * buckle and nothing else, and yet traces back to the fen, the woods and the
+   * quarry — because the bark that cures it is a log, which is the same trick
+   * bone char plays with a rat and a tree.
+   */
+  'cured-leather': {
+    id: 'cured-leather',
+    name: 'Cured Leather',
+    value: 32,
+    // Lighter than the pelt it came off: what a tanning run takes away is the
+    // water and the parts of it nobody wants.
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'meat', color: ICON_COLOR.curedHide },
+  },
+  /**
+   * What a crawler is made of, and the one beast part in the game that was not
    * vendor trash: ground down, it is what a steel piece is case-hardened in.
    *
-   * That is what makes the thing living in the Deep Cut worth killing rather
-   * than worth walking around. A hide pays coin; a shell is a row on an armour
-   * recipe, which is the difference between a beast that is scenery and a beast
-   * that is part of the loop.
+   * It was the first, and the argument it made — a beast whose parts feed a
+   * recipe is part of the loop where one that pays coin is scenery — is what the
+   * tannery finally paid the lurker as well.
    */
   'crawler-shell': {
     id: 'crawler-shell',

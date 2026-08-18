@@ -303,6 +303,62 @@ export function buildForge(): Group {
   return group;
 }
 
+/**
+ * The tannery: a vat with a hide stretched on a frame behind it.
+ *
+ * Built to read as the forge's opposite number at a glance, which is most of
+ * what a station's look is for on a map with no art on it — the forge is a squat
+ * hot mass of stone and iron, and this is a wooden thing full of liquid with
+ * something soft hanging off it. The frame stands at the back so the vat is what
+ * the camera sees first from the south, where the camera always is.
+ */
+export function buildTannery(): Group {
+  const size = TILE_SIZE;
+  const group = new Group();
+
+  const vat = new Mesh(
+    new BoxGeometry(size * 0.7, size * 0.34, size * 0.55),
+    new MeshLambertMaterial({ color: PALETTE.tanVat }),
+  );
+  vat.position.set(0, size * 0.17, size * 0.16);
+  group.add(vat);
+
+  // The liquor, sitting just proud of the rim: a vat drawn as a closed box is a
+  // crate, and what makes this one read as full is seeing into it.
+  const liquor = new Mesh(
+    new BoxGeometry(size * 0.58, size * 0.04, size * 0.43),
+    new MeshLambertMaterial({ color: PALETTE.tanLiquor }),
+  );
+  liquor.position.set(0, size * 0.35, size * 0.16);
+  group.add(liquor);
+
+  // The frame: two posts and a rail, with a hide laced across them.
+  [-1, 1].forEach((side) => {
+    const post = new Mesh(
+      new BoxGeometry(size * 0.08, size * 0.8, size * 0.08),
+      new MeshLambertMaterial({ color: PALETTE.wood }),
+    );
+    post.position.set(side * size * 0.3, size * 0.4, -size * 0.28);
+    group.add(post);
+  });
+
+  const rail = new Mesh(
+    new BoxGeometry(size * 0.68, size * 0.07, size * 0.08),
+    new MeshLambertMaterial({ color: PALETTE.wood }),
+  );
+  rail.position.set(0, size * 0.76, -size * 0.28);
+  group.add(rail);
+
+  const hide = new Mesh(
+    new BoxGeometry(size * 0.5, size * 0.46, size * 0.03),
+    new MeshLambertMaterial({ color: PALETTE.stretchedHide }),
+  );
+  hide.position.set(0, size * 0.48, -size * 0.26);
+  group.add(hide);
+
+  return group;
+}
+
 /** Crossed logs under a flame. The flicker is decoration; the burn clock is the sim's. */
 export function buildCampfire(): { object: Group; flicker(elapsedMs: number): void } {
   const size = TILE_SIZE * 0.8;

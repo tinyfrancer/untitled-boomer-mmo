@@ -1,4 +1,5 @@
 import { npcRole, type NpcRoleId } from '../data/npcs';
+import { STATION_ACTION_LABELS, STATION_LABELS } from '../data/recipes';
 import { SKILLS } from '../data/skills';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import {
@@ -14,7 +15,7 @@ import type { Mob } from './Mob';
 import type { ResourceNode } from './ResourceNode';
 import type { WorldContext } from './WorldContext';
 import type { WorldTap } from './ZoneWorld';
-import type { WorldNpc, WorldSignpost } from './zoneEntities';
+import type { WorldNpc, WorldSignpost, WorldStation } from './zoneEntities';
 
 /** Everything a context menu can be about: a tap's subject, less the ground. */
 type Subject = Exclude<WorldTap, { kind: 'ground' }>;
@@ -24,7 +25,7 @@ const SUBJECT_ACTIONS = {
   mob: 'attack',
   node: 'gather',
   signpost: 'travel',
-  station: 'smith',
+  station: 'work',
 } as const satisfies Record<Exclude<Subject['kind'], 'npc'>, ContextActionId>;
 
 /** What each counter is called, on the one line a menu gives it. */
@@ -107,20 +108,24 @@ export class ContextMenuSession {
       case 'npc':
         return this.npcMenu(target.npc);
       case 'station':
-        return this.stationMenu();
+        return this.stationMenu(target.station);
     }
   }
 
   /**
-   * The forge, described. A pure function of nothing at all — there is one
-   * station kind and it is the same forge for everyone — which is what keeps
-   * this card, like every other, settled the moment it opens.
+   * A station, described. A pure function of which one it is — a forge is the
+   * same forge for everyone standing at it — which is what keeps this card, like
+   * every other, settled the moment it opens.
+   *
+   * The line is named for the skill rather than for the station, because that is
+   * the word a player is choosing by: "Smith" and "Tan" say what the press is
+   * about where "Use" says nothing twice.
    */
-  private stationMenu(): ContextSubject {
+  private stationMenu(station: WorldStation): ContextSubject {
     return {
-      title: 'Forge',
-      actions: [{ id: 'smith', label: 'Smith' }],
-      details: describeStation(),
+      title: STATION_LABELS[station.station],
+      actions: [{ id: 'work', label: STATION_ACTION_LABELS[station.station] }],
+      details: describeStation(station.station),
     };
   }
 

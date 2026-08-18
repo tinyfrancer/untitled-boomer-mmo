@@ -28,6 +28,12 @@ export const PALETTE = {
   // `stone`, which is a boulder in daylight rather than worked and sooted.
   forgeStone: 0x6d6a63,
   anvil: 0x424852,
+  // The tannery: a vat of tanning liquor with a hide stretched on a frame beside
+  // it. The liquor is the darkest thing here on purpose — it has to read as a
+  // full vat rather than an empty trough from a camera standing this far back.
+  tanLiquor: 0x4a3520,
+  tanVat: 0x6b4f2f,
+  stretchedHide: 0xb08457,
   wood: 0x5d4037,
   woodLight: 0x8d6e63,
   leafDark: 0x1b5e20,

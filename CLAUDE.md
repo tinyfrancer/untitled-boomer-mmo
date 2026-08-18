@@ -12,9 +12,10 @@ a bandit camp with aggressive humanoids, the bandit hideout behind a locked
 door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
 where the eels and the cloth are, the Deep Cut under the quarry where the coal is, the Sunken
 Barrow under the bottom of the fen where the dead are, and Greyford Outpost between the road west and
-the quarry, where a counter trades in materials rather than coin);
+the quarry, where a counter trades in materials rather than coin and a tannery works what the fen
+drops);
 character creation, leveling, gear,
-two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
+two-way combat with death and respawn; three gathering skills and three making ones; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
 kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
 work you were doing anyway; slayer achievements and the
@@ -336,6 +337,12 @@ at home deal in currency: the shop sells, the bank stores, the trainer charges, 
 is no price in copper anywhere on it. Every offer wants something from each of the three zones around
 the outpost, so a tool is a circuit of the loop rather than a thing bought on the way past — and it
 is worth more than the materials it swallows, which is the shop's vendor spread pointed at a barter.
+
+The **tannery** in the yard is the other half of that claim, and the more load-bearing half. Town had
+the one forge and every made thing in the game came off it, which quietly made "production" and
+"smithing" the same word; the vat is the second vertical, and it is out here rather than in town for
+the reason the counter is — what it works is what the zones around it produce. See the fenhide tier
+below for what it makes and why.
 
 **A tool does something now, which it never used to.** `gatherSpeedBonus` on an equipment row is the
 first thing a tool has ever done beyond permitting the swing: before the steel three there was one of
@@ -1047,11 +1054,12 @@ are the same shape — something you are in the middle of, with a duration and s
 break it — and no two of them can be running at once, since starting any one gives up whatever was
 already going and a hit breaks all three. One widget rather than three stacked in the same place.
 
-**A recipe is one shape for both making skills** (`CraftingRecipe` in `data/recipes.ts`, run by
+**A recipe is one shape for all three making skills** (`CraftingRecipe` in `data/recipes.ts`, run by
 `systems/CraftingSystem.ts`). A cooking recipe was already input → output + failure output + level +
 xp + duration, so smithing widened it in place rather than putting a second table beside it: the
 inputs are a **list**, the failure output is **optional**, and each row names the station it is made
-at. **What a failure costs is decided by `failureItemId` alone** — naming one spends the inputs and
+at. Leatherworking arrived third and widened nothing at all, which is what a shape being right looks
+like — a `SKILLS` row, a `StationId`, four `RECIPES` rows and no new mechanism anywhere. **What a failure costs is decided by `failureItemId` alone** — naming one spends the inputs and
 hands that back, which is what makes levelling cooking worth anything, and leaving it unset spends
 nothing at all, which is right for a bar that took a pack-filling trip of ore to carry home.
 
@@ -1061,7 +1069,16 @@ kind and every recipe took one of one thing; a list of inputs has no single item
 the tapped item, and anything with a list is asked for by name at its station — a bag cell cannot say
 which of three things four bars were meant to become. That is also what decides where a _new_ recipe
 can go: the fire's whole list is the bag, so a fire recipe has to take one of one thing, and anything
-with a list needs a panel — which the forge has and the campfire does not.
+with a list needs a panel — which the forge and the tannery have and the campfire does not.
+
+**A station's panel is keyed by the station, not written for one** (`hud/StationModal.ts`). It was
+`ForgeModal` while there was one built station in the game, and what that hid is that the title, the
+rows and — the dangerous one — **the skill a row's level gate is drawn against** were four separate
+places each holding the same answer. A second station is where that stops being one answer: a panel
+headed "Forge" listing tanning rows gated on Smithing does not throw, it just quietly lies about what
+a row takes. All of it is a lookup now (`STATION_LABELS`, `STATION_SKILLS`, `recipesAt`), and the
+claim behind the last one — that every recipe standing at a station shares that station's skill — is
+held by `tests/systems/CraftingSystem.test.ts` rather than by the type system, which cannot say it.
 
 **Nothing the game hands out may lead nowhere** (`tests/systems/deadEnds.test.ts`, held over the
 tables the way `uniqueLoot.test.ts` is). Three rules rather than one, because a vendor price is
@@ -1092,9 +1109,41 @@ that stopped at three would have left the best set in the game wearing a starter
 the recipe rows, so padding one with a fourth bar and dropping a secondary shows up as the web coming
 apart.
 
-**A station is a place, and the forge is `Campfire`'s opposite half**: fixed, always lit, and part of
-the zone (`ZoneDefinition.stationSpawns`), where a fire is placed by the player and burns out. Two
-rules about it were got wrong first and are worth not re-learning:
+**The fenhide tier is that argument pointed at the other half of the roster, and it is the second
+production vertical.** Both making skills made a warrior's things or nobody's — the forge turns out
+plate, which a wizard may not wear at all, and the fire turns out dinner — so a caster could level
+every skill in the game and own nothing they had built. The fen closed the _dropped_ half of that gap
+with fenweave; **leatherworking** at Greyford's tannery closes the made half. A hide is cured into
+`cured-leather` and three cloth-class pieces are stitched from it, and the two secondaries are again
+what make it a place the world meets rather than a second thing to do with a hide: the tin is the
+buckles and the bone char is what the leather is dressed with, so a finished piece reaches the fen,
+the quarry, a town rat and a tree — four sources, the widest web on anything in the game.
+
+Four things about it were decided against alternatives:
+
+- **Both secondaries come off the forge**, which is why it is at Greyford. The outpost's claim is that
+  it trades in what other places produce, and a second vertical owing the first one nothing would be
+  two games played beside each other.
+- **`cloth` rather than a fourth armour type.** A cured hide is not a robe, but `ArmorTypeId` decides
+  _who may wear a thing_ rather than what it is woven from — a lantern and an orb are both cloth —
+  and a fourth type holding three rows would be a class restriction wearing a costume.
+- **It stops less than the iron plate a smith of the same standing makes, and takes a deeper level.**
+  A warrior may wear cloth and always could, so nothing stops one walking this road; what keeps it
+  from being their shortcut is that it ends up behind where their own skill already had them.
+- **The tanning row takes one of one thing**, which is load-bearing rather than tidy: that shape is
+  what `findCraftableFrom` looks for, so it is what makes tanning a job an unattended camp can settle
+  to. A two-input tanning row would have left the tannery a station nobody could ever camp — and
+  `STATION_PERSISTS` saying something about it that nothing read.
+
+`tests/systems/greyfordTannery.test.ts` traces it the way `deepCut.test.ts` traces steel, and
+`tests/world/tannery.test.ts` drives the vat as a place.
+
+**A station is a place, and a built one is `Campfire`'s opposite half**: fixed, always there, and part
+of the zone (`ZoneDefinition.stationSpawns`), where a fire is placed by the player and burns out.
+There are two of them — the forge in town and the tannery in Greyford's yard — and which prop is
+drawn is keyed off the id in `actors.ts`, the same bargain `creatures.ts` makes about a `shape`: the
+world says what stands there and the renderer says what that looks like. Two rules about a station
+were got wrong first and are worth not re-learning:
 
 - **It is opened by tapping it, not by standing near it.** Proximity puts a panel in front of anyone
   walking past, which on a map this size is most of the reasons to be near one. A station is picked
@@ -1151,7 +1200,9 @@ Cooking has no tool at all, so the skill with the deepest active loop was the on
 camp, and smithing inherited the same hole the day the forge landed. What makes the bend principled
 rather than drift is that **a station is a tool you cannot carry**: nothing is stored and nothing is
 chosen twice, the derivation simply reads two inputs instead of one. Standing at a fire holding raw
-fish is a cooking camp; standing at a forge holding ore is a smithing one. **A station beats a
+fish is a cooking camp; at a forge holding ore, a smithing one; at the vat holding hides, a tanning
+one — the third of those cost the AFK code nothing at all, which is the derivation paying off the
+same way mining did. **A station beats a
 tool** — you walked to the forge where the pickaxe is merely what you are holding — and the two
 cannot deadlock, because a craft eats out of the bag and the bag runs dry, at which point the
 gatherer that filled it takes over again. The camp never lights a fire: a log is not the camp's to

@@ -828,9 +828,11 @@ function hudCss(): string {
 .hud-contract > .hud-stack {
   margin-bottom: 0;
 }
-/* The forge's list, in the ember colour its coals are drawn in. Same width as
-   the trainer's for the same reason: every row carries a line under it. */
-.hud-modal__box--forge {
+/* A station's list, in the ember colour the forge's coals are drawn in — one
+   look for both, since what tells a vat from an anvil is the name over it and
+   the rows under it rather than a second border colour. Same width as the
+   trainer's for the same reason: every row carries a line under it. */
+.hud-modal__box--station {
   width: 320px;
   border-color: ${THEME.color.forge};
   gap: 4px;
