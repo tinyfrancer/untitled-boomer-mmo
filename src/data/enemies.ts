@@ -392,6 +392,109 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
       speed: 85,
     },
   },
+  /**
+   * What was buried in the barrow, still holding what it was buried with.
+   *
+   * `humanoid` on both counts, and the second one took deciding: a wight is dead,
+   * and `family` is what decides whether a table may hold coin and gear. It can,
+   * because a barrow is full of grave goods — the dead here were laid out with
+   * their arms and their silver, which is the whole reason anybody digs one open.
+   * A beast would have made this the one zone above the starter band that pays in
+   * parts.
+   *
+   * Harder than the raider it steps up from in the way the raider was harder than
+   * the goblin, and one thing besides: it is the first common creature in the
+   * game carrying a telegraphed ability. The Grave Chill reaches half again as
+   * far as the chief's Cleave, which is what makes two of them a question about
+   * the room rather than about the arithmetic.
+   */
+  'barrow-wight': {
+    id: 'barrow-wight',
+    name: 'Barrow Wight',
+    family: 'humanoid',
+    shape: 'humanoid',
+    body: { width: TILE_SIZE, height: TILE_SIZE },
+    aggressive: true,
+    // A shade under the raider's 210, and it buys the zone its whole layout:
+    // every chamber in the barrow is sized so the mouth, the spine and the
+    // respawn all sit outside one of these.
+    aggroRadius: 200,
+    /**
+     * Priced against the ceiling it raises, which is the rule the fen wrote down
+     * and this is the second zone to pay. The curve is quadratic and a creature's
+     * reward is linear in its level, so a zone that adds a level at the previous
+     * zone's rate walks straight into the limit `progression.test.ts` holds. At
+     * the raider's 14 a level the climb to cap 9 would be well over it; at 18 it
+     * is another session or two, which is what the cap is supposed to be.
+     */
+    base: { maxHp: 50, attackPower: 5, xpReward: 20 },
+    perLevel: { maxHp: 18, attackPower: 4, xpReward: 18 },
+    attackRange: 68,
+    attackCooldownMs: 1500,
+    respawnDelayMs: 13000,
+    leashRadius: 340,
+    chaseSpeed: 185,
+    lootTableId: 'barrow-wight',
+    abilities: ['grave-chill'],
+    wander: {
+      radius: 88,
+      minPauseMs: 1600,
+      maxPauseMs: 3600,
+      speed: 80,
+    },
+  },
+  /**
+   * The thing at the back of the barrow, and the second named mob in the game.
+   *
+   * Built to the chief's shape one band up rather than to a new one, because that
+   * shape worked: enormous HP on a slow swing, so the fight is long enough to
+   * hold a cooldown, a meal or a retreat in, and a telegraph that decides it. What
+   * is different is the reach of the telegraph. The chief's Cleave is a step back;
+   * the Wail crosses most of his chamber, so the answer to it is to leave and come
+   * back — which is a thing a player has to be *willing* to do, having walked
+   * through four wights to get here.
+   *
+   * Slower to swing than the chief and far heavier, and worth more XP than
+   * anything else in the world by a distance. Nothing about that matters to the
+   * pacing, because a boss behind a 3% key is not something anybody grinds:
+   * `progression.test.ts` measures the climb in the richest *repeatable* kill and
+   * leaves him out for exactly that reason.
+   */
+  'barrow-king': {
+    id: 'barrow-king',
+    name: 'Orlath the Barrow King',
+    family: 'humanoid',
+    shape: 'humanoid',
+    // Half again a wight, and drawn from it: `render3d/creatures.ts` scales the
+    // rig by how wide the body is, the same as the chief.
+    body: { width: TILE_SIZE * 1.5, height: TILE_SIZE * 1.5 },
+    aggressive: true,
+    // Wider than the chief's, and the chamber he stands in is wider still:
+    // walking into the room is not walking into him.
+    aggroRadius: 240,
+    boss: true,
+    base: { maxHp: 130, attackPower: 11, xpReward: 90 },
+    perLevel: { maxHp: 30, attackPower: 3, xpReward: 30 },
+    attackRange: 88,
+    // Slower than the chief's 2200, which is what makes room for a Wail that
+    // reaches this far without the fight becoming unsurvivable between them.
+    attackCooldownMs: 2400,
+    // Long enough that killing him is an occasion, and short enough to try again
+    // after a wipe without walking back out through the fen for a second key.
+    respawnDelayMs: 60000,
+    leashRadius: 440,
+    chaseSpeed: 195,
+    lootTableId: 'barrow-king',
+    abilities: ['barrow-wail'],
+    // Barely moves, like the chief. He is what the chamber is for, and a boss
+    // that wandered up the spine would be pulled a wight at a time from it.
+    wander: {
+      radius: 64,
+      minPauseMs: 2500,
+      maxPauseMs: 5000,
+      speed: 70,
+    },
+  },
   'fen-raider': {
     id: 'fen-raider',
     name: 'Fen Raider',

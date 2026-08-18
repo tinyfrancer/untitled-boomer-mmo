@@ -92,7 +92,20 @@ export type ItemId =
   | 'steel-legs'
   | 'steel-shield'
   // A pick head re-hafted as a weapon, which is why it is not a mining tool.
-  | 'goblin-maul';
+  | 'goblin-maul'
+  // The way into the barrow, and the fen's rarest thing: the hideout key's own
+  // rate, one band up.
+  | 'barrow-key'
+  // What the dead were buried holding. Both are off hands, which is the slot
+  // nothing has filled since the starter band for anyone who has not smithed —
+  // and the lantern is the first thing a caster has ever had to put in one.
+  | 'grave-shield'
+  | 'grave-lantern'
+  // The king's own three, and the second set of things in the game that come off
+  // one creature. Nothing sells them and nothing else drops them.
+  | 'barrow-crown'
+  | 'barrow-blade'
+  | 'barrow-scepter';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -125,7 +138,9 @@ export type EnemyId =
   | 'bog-lurker'
   | 'fen-raider'
   | 'cave-crawler'
-  | 'goblin-miner';
+  | 'goblin-miner'
+  | 'barrow-wight'
+  | 'barrow-king';
 
 // What an enemy is, which is what decides what it can carry: humanoids have
 // pockets and wear gear, beasts drop the parts they are made of.
@@ -149,7 +164,9 @@ export type LootTableId =
   | 'bog-lurker'
   | 'fen-raider'
   | 'cave-crawler'
-  | 'goblin-miner';
+  | 'goblin-miner'
+  | 'barrow-wight'
+  | 'barrow-king';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick';
 
@@ -229,7 +246,8 @@ export type ZoneId =
   | 'bandit-hideout'
   | 'old-mill-road'
   | 'blackwater-fen'
-  | 'deep-cut';
+  | 'deep-cut'
+  | 'sunken-barrow';
 
 // What is built on a zone rather than spawned in it: solid, permanent, and the
 // thing a counter stands at the door of. Its own union rather than a slice of
@@ -290,7 +308,7 @@ export type AbilityId =
 // What an enemy does instead of a swing. Its own union rather than a slice of
 // AbilityId: nothing a creature does is on the player's action bar, and the two
 // lists have no reason to grow together.
-export type EnemyAbilityId = 'cleave' | 'throw-knife';
+export type EnemyAbilityId = 'cleave' | 'throw-knife' | 'grave-chill' | 'barrow-wail';
 
 // What the player is carrying right now, as opposed to what applied it: eating
 // is not an ability and two abilities could one day leave the same mark, so

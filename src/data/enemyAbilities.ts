@@ -62,4 +62,41 @@ export const ENEMY_ABILITIES: Record<EnemyAbilityId, EnemyAbilityDefinition> = {
     cooldownMs: 8000,
     thrown: true,
   },
+  /**
+   * The wight's, and the first ability in the game that is about the *room*
+   * rather than about the swing.
+   *
+   * Wider than a Cleave and softer than one: what the chief teaches is to step
+   * back out of his reach, and what a barrow teaches is that stepping back is
+   * not far enough. The barrow's chambers are wide on purpose, so leaving one of
+   * these is a walk rather than a shuffle — which is also what makes fighting two
+   * wights at once a different problem from fighting two of anything else.
+   */
+  'grave-chill': {
+    id: 'grave-chill',
+    name: 'Grave Chill',
+    windUpMs: 1000,
+    range: 150,
+    powerMultiplier: 1.7,
+    cooldownMs: 9000,
+  },
+  /**
+   * The king's, and the longest tell in the game because it is the furthest
+   * thing anyone has to get out of.
+   *
+   * At 240 it reaches most of the way across his own chamber, so the answer is
+   * not a step or two but leaving — and the wind-up is a second and a half so
+   * that leaving is actually possible at a walk. Like every one of these it
+   * spends the swing it interrupts, which is what stops it being simply a bigger
+   * fight: a king nobody walks away from swings a good deal less than one
+   * standing toe to toe.
+   */
+  'barrow-wail': {
+    id: 'barrow-wail',
+    name: 'Barrow Wail',
+    windUpMs: 1500,
+    range: 240,
+    powerMultiplier: 2.6,
+    cooldownMs: 9000,
+  },
 };

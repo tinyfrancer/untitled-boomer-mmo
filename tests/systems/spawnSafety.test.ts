@@ -4,6 +4,7 @@ import { ENEMIES } from '../../src/data/enemies';
 import { ZONES } from '../../src/data/zones';
 import { arrivalPoint } from '../../src/systems/ZoneSystem';
 import type { Point } from '../../src/systems/MovementSystem';
+import type { ZoneEdge } from '../../src/types/ids';
 
 /**
  * Where the game puts a player down, and what is allowed to be standing there.
@@ -22,13 +23,6 @@ import type { Point } from '../../src/systems/MovementSystem';
 
 // The same inset `ZoneWorld` puts an arriving traveller at.
 const ARRIVAL_INSET = TILE_SIZE * 1.5;
-
-/**
- * Where a crossing can actually report, matching `ZoneSystem.test.ts`: the
- * world-bounds clamp holds the player's centre off the ends, so the extremes are
- * points nobody ever lands on.
- */
-const FRACTIONS = [0.03, 0.25, 0.5, 0.75, 0.97];
 
 interface Threat {
   enemyId: string;
@@ -116,16 +110,33 @@ describe('an arrival strip', () => {
       // A zone is arrived on the edges its own exits sit on: walking out
       // through one and coming back lands on the same edge.
       for (const exit of zone.exits) {
-        for (const fraction of FRACTIONS) {
-          const at = arrivalPoint(exit.edge, fraction, width, height, ARRIVAL_INSET);
-          for (const threat of threats) {
-            expect(
-              gap(at, threat.at),
-              `${zone.id}: arriving on the ${exit.edge} edge lands inside a ${threat.enemyId} (L${threat.level})`,
-            ).toBeGreaterThan(threat.aggro);
-          }
+        for (const threat of threats) {
+          expect(
+            gapToStrip(exit.edge, threat.at, width, height),
+            `${zone.id}: arriving on the ${exit.edge} edge lands inside a ${threat.enemyId} (L${threat.level})`,
+          ).toBeGreaterThan(threat.aggro);
         }
       }
     }
   });
 });
+
+/**
+ * The closest a creature stands to **any** point on an arrival strip, which is
+ * the whole of why this is not five sampled fractions any more.
+ *
+ * It used to probe 0.03, 0.25, 0.5, 0.75 and 0.97 of the edge, and a spawn that
+ * sat between two of those passed a check it should have failed — Blackwater Fen
+ * shipped a level 5 raider 192 from its north strip against an aggro radius of
+ * 210, and it passed because the nearest sampled arrival was 214 away. A strip
+ * spans the whole edge, so the only thing that can hold a creature clear of it is
+ * distance *across* the edge: the point on the strip nearest anything is always
+ * the one directly opposite it. Measuring that is exact and cheaper than
+ * sampling, which is what `deepCut.test.ts` had already worked out for one zone.
+ */
+function gapToStrip(edge: ZoneEdge, at: Point, width: number, height: number): number {
+  const anywhere = arrivalPoint(edge, 0.5, width, height, ARRIVAL_INSET);
+  return edge === 'east' || edge === 'west'
+    ? Math.abs(at.x - anywhere.x)
+    : Math.abs(at.y - anywhere.y);
+}

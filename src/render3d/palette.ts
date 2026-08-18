@@ -1,10 +1,12 @@
 import {
   BANDIT_MASK_COLOR,
+  BARROW_KING_WRAP_COLOR,
   CHIEF_MASK_COLOR,
   GOBLIN_MASK_COLOR,
   MINER_MASK_COLOR,
   NPC_APPEARANCES,
   RAIDER_MASK_COLOR,
+  WIGHT_WRAP_COLOR,
   type Appearance,
 } from '../systems/AppearanceSystem';
 import type { BuildingShapeId, CreatureShapeId, EnemyId } from '../types/ids';
@@ -123,6 +125,13 @@ const CREATURE_OVERRIDES: Partial<Record<EnemyId, PersonLook>> = {
   },
   'fen-raider': { appearance: NPC_APPEARANCES['fen-raider'], mask: RAIDER_MASK_COLOR },
   'goblin-miner': { appearance: NPC_APPEARANCES['goblin-miner'], mask: MINER_MASK_COLOR },
+  // The only two rows here that are not a living person in different clothes.
+  // Everything else in this table is told from its neighbours by colour; these
+  // are told from all of them by *value* — bone against grass, dirt, marsh and
+  // rock alike, which is the one thing a barrow drawn in placeholder primitives
+  // has to get right.
+  'barrow-wight': { appearance: NPC_APPEARANCES['barrow-wight'], mask: WIGHT_WRAP_COLOR },
+  'barrow-king': { appearance: NPC_APPEARANCES['barrow-king'], mask: BARROW_KING_WRAP_COLOR },
 };
 
 /**

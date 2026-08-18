@@ -308,10 +308,37 @@ export const NPC_APPEARANCES = {
     weapon: { shape: 'pick', color: 0x8d8d8d },
     offhand: null,
   },
+  // Bone-pale, and the only figure in the game with no skin colour on it at all:
+  // there being no art behind any of this, a face the colour of everyone else's
+  // is a face, and what a player has to see here is that this one is not alive.
+  'barrow-wight': {
+    headColor: 0xd9d4c2,
+    torsoColor: 0x5b5a4e,
+    legColor: 0x403f38,
+    // The blade it was buried holding, gone the colour of the barrow.
+    weapon: { shape: 'sword', color: 0x8a8f86 },
+    offhand: { shape: 'shield', color: 0x6b6a5e },
+  },
+  // The same dead, in what he was buried in. Gold against the wights' grey, which
+  // is how a room full of one rig at one size says which of them is the king.
+  'barrow-king': {
+    headColor: 0xe6e0c8,
+    torsoColor: 0x4a4636,
+    legColor: 0x33302a,
+    weapon: { shape: 'sword', color: 0xc9b458 },
+    offhand: null,
+  },
   // Keyed by `NpcId` rather than by a hand-written list of names, so a new
   // person standing in a town is a compile error here until they have a look.
 } as const satisfies Record<
-  NpcId | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'fen-raider' | 'goblin-miner',
+  | NpcId
+  | 'bandit'
+  | 'bandit-chief'
+  | 'goblin-scavenger'
+  | 'fen-raider'
+  | 'goblin-miner'
+  | 'barrow-wight'
+  | 'barrow-king',
   Appearance
 >;
 
@@ -332,6 +359,17 @@ export const RAIDER_MASK_COLOR = 0x5a5f4a;
 
 /** A rag against the dust, which is the one thing down there worth covering for. */
 export const MINER_MASK_COLOR = 0x6b5f4a;
+
+/**
+ * The grave-wrapping across the wight's face, and the one entry here that is not
+ * a mask in the sense the others are — nobody tied it on to hide behind it. It
+ * is the same slot on the rig, which is the point: the wights are drawn with the
+ * machinery the outlaws already needed rather than with a bandage of their own.
+ */
+export const WIGHT_WRAP_COLOR = 0xb9b3a0;
+
+/** His, in the gold he was laid out in. */
+export const BARROW_KING_WRAP_COLOR = 0xc9b458;
 
 // A pure function of everything the figure draws, so two looks share a key
 // exactly when they draw the same. That is what lets a view detect a gear

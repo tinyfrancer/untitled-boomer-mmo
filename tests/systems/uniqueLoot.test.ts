@@ -4,24 +4,49 @@ import { ENEMIES } from '../../src/data/enemies';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { SHOP_STOCK } from '../../src/data/shop';
 import { QUESTS } from '../../src/data/quests';
+import { ZONES } from '../../src/data/zones';
 import { rollLootTable } from '../../src/systems/LootSystem';
-import type { ItemId } from '../../src/types/ids';
+import type { ItemId, LootTableId } from '../../src/types/ids';
 
 /**
- * What makes the chief's drops unique, held over the data rather than trusted.
+ * What makes a boss's drops unique, held over the data rather than trusted.
  *
- * "Unique" is not a field on anything — it is a property of every other table
- * in the game *not* naming these three, which is exactly the sort of thing that
- * stops being true the day somebody pads a loot table. There is nothing to
- * catch it at the type level, so it is caught here.
+ * "Unique" is not a field on anything — it is a property of every other table in
+ * the game *not* naming these, which is exactly the sort of thing that stops
+ * being true the day somebody pads a loot table. There is nothing to catch it at
+ * the type level, so it is caught here.
+ *
+ * It was written over the chief alone and is now over **every** boss, which is
+ * the shape the barrow asked for: a second named mob at the back of a second
+ * locked zone is either the same rules again or it is a special case, and the
+ * rules were the interesting half. What is genuinely new down here is the
+ * ordering between the two hoards — see "the ladder" below.
  */
 
-const CHIEF_DROPS = LOOT_TABLES['bandit-chief'].entries.map((entry) => entry.itemId);
+/** Every named mob's table, deepest first: the order the two are earned in. */
+const BOSS_TABLES: LootTableId[] = Object.values(ENEMIES)
+  .filter((enemy) => enemy.boss === true && enemy.lootTableId)
+  .map((enemy) => enemy.lootTableId as LootTableId)
+  .sort((a, b) => bossLevel(b) - bossLevel(a));
 
-/** Everything the game will hand a player that is not off the chief. */
+/** The level a boss actually stands at, which is the only place the depth is said. */
+function bossLevel(tableId: LootTableId): number {
+  const carrier = Object.values(ENEMIES).find((enemy) => enemy.lootTableId === tableId);
+  const spawn = Object.values(ZONES)
+    .flatMap((zone) => zone.mobSpawns)
+    .find((point) => point.enemyId === carrier?.id);
+  return spawn?.level ?? 0;
+}
+
+const dropsOf = (tableId: LootTableId): ItemId[] =>
+  LOOT_TABLES[tableId].entries.map((entry) => entry.itemId);
+
+const UNIQUES = new Set(BOSS_TABLES.flatMap(dropsOf));
+
+/** Everything the game will hand a player that is off no boss at all. */
 function everyOtherSource(): ItemId[] {
   const fromLoot = Object.values(LOOT_TABLES)
-    .filter((table) => table.id !== 'bandit-chief')
+    .filter((table) => !BOSS_TABLES.includes(table.id))
     .flatMap((table) => table.entries.map((entry) => entry.itemId));
   const fromShop = SHOP_STOCK.map((entry) => entry.itemId);
   // Most quests pay coin and XP alone; only the ones that name gear can put an
@@ -32,18 +57,46 @@ function everyOtherSource(): ItemId[] {
   return [...fromLoot, ...fromShop, ...fromQuests];
 }
 
-describe("the chief's table", () => {
-  it('carries the three things nothing else in the game does', () => {
-    expect(CHIEF_DROPS).toEqual(['cutthroats-bandana', 'cutthroats-blade', 'stolen-wand']);
-    const elsewhere = everyOtherSource();
-    CHIEF_DROPS.forEach((itemId) => expect(elsewhere).not.toContain(itemId));
+const slotOf = (itemId: ItemId): string | null => {
+  const item = ITEMS[itemId];
+  return item.kind === 'equipment' ? item.slot : null;
+};
+
+/**
+ * What a piece is worth, as one number. Deliberately blunt — it is the same sum
+ * for a wand and a helmet — because what it is asked is only ever "is this the
+ * best thing in its slot", and a metric that weighted armour against intellect
+ * would be answering a different question badly.
+ */
+const power = (itemId: ItemId): number => {
+  const item = ITEMS[itemId];
+  if (item.kind !== 'equipment') return 0;
+  return (
+    (item.attackPowerBonus ?? 0) +
+    (item.strengthBonus ?? 0) +
+    (item.intellectBonus ?? 0) +
+    (item.healthBonus ?? 0)
+  );
+};
+
+describe('the tables behind a locked door', () => {
+  // Two of them, and the count is asserted so that a third boss arriving is a
+  // decision somebody makes here rather than a row that slips in.
+  it('hang off the two named mobs and nobody else', () => {
+    expect(BOSS_TABLES).toEqual(['barrow-king', 'bandit-chief']);
   });
 
-  // It hangs off exactly one creature, so killing him is the only way to see any
-  // of it — there is no second table quietly sharing the id.
-  it('is reachable through one creature and no other', () => {
-    const carriers = Object.values(ENEMIES).filter((enemy) => enemy.lootTableId === 'bandit-chief');
-    expect(carriers.map((enemy) => enemy.id)).toEqual(['bandit-chief']);
+  it.each(BOSS_TABLES)('%s carries what nothing else in the game does', (tableId) => {
+    const elsewhere = everyOtherSource();
+    dropsOf(tableId).forEach((itemId) => expect(elsewhere).not.toContain(itemId));
+  });
+
+  // Each hangs off exactly one creature, so killing it is the only way to see
+  // any of it — there is no second table quietly sharing the id.
+  it.each(BOSS_TABLES)('%s is reachable through one creature and no other', (tableId) => {
+    const carriers = Object.values(ENEMIES).filter((enemy) => enemy.lootTableId === tableId);
+    expect(carriers).toHaveLength(1);
+    expect(carriers[0]?.boss).toBe(true);
   });
 
   /**
@@ -51,63 +104,102 @@ describe("the chief's table", () => {
    * drop is the one piece both classes can wear — so the trophy is the same
    * trophy whoever took it. The two weapons are the chase, one per class.
    */
-  it('always pays out the trophy, and it fits either class', () => {
-    const loot = rollLootTable('bandit-chief', () => 0.99);
-    expect(loot.drops.map((drop) => drop.itemId)).toEqual(['cutthroats-bandana']);
+  it.each(BOSS_TABLES)('%s always pays out a trophy that fits either class', (tableId) => {
+    const loot = rollLootTable(tableId, () => 0.99);
+    expect(loot.drops).toHaveLength(1);
 
-    const armorType = armorTypeOf('cutthroats-bandana');
+    const trophy = loot.drops[0]?.itemId as ItemId;
+    const armorType = armorTypeOf(trophy);
     expect(armorType).not.toBeNull();
     expect(armorType && ARMOR_TYPE_CLASSES[armorType]).toEqual(['warrior', 'wizard']);
   });
 
-  it('offers a weapon to each class as the thing worth coming back for', () => {
-    const weapons = CHIEF_DROPS.map((itemId) => ITEMS[itemId]).filter(
-      (item) => item.kind === 'equipment' && item.slot === 'weapon',
-    );
-    expect(weapons.map((item) => item.id).sort()).toEqual(['cutthroats-blade', 'stolen-wand']);
-    weapons.forEach((weapon) => {
-      const chance = LOOT_TABLES['bandit-chief'].entries.find(
-        (entry) => entry.itemId === weapon.id,
-      )?.chance;
-      expect(chance).toBeLessThan(1);
-      expect(chance).toBeGreaterThan(0);
-    });
-  });
+  it.each(BOSS_TABLES)(
+    '%s offers a weapon to each class as the thing worth coming back for',
+    (tableId) => {
+      const weapons = dropsOf(tableId)
+        .map((itemId) => ITEMS[itemId])
+        .filter((item) => item.kind === 'equipment' && item.slot === 'weapon');
+      expect(weapons).toHaveLength(2);
 
-  // Best in slot, or there is no reason to open the door. Compared against
-  // everything else that fills the same slot rather than against the two names
-  // it beats today.
-  it('beats everything else that fills the same slot', () => {
-    const power = (itemId: ItemId): number => {
-      const item = ITEMS[itemId];
-      if (item.kind !== 'equipment') return 0;
-      return (
-        (item.attackPowerBonus ?? 0) +
-        (item.strengthBonus ?? 0) +
-        (item.intellectBonus ?? 0) +
-        (item.healthBonus ?? 0)
-      );
-    };
-    const slotOf = (itemId: ItemId): string | null => {
-      const item = ITEMS[itemId];
-      return item.kind === 'equipment' ? item.slot : null;
-    };
+      const shapes = weapons.map((item) => (item.kind === 'equipment' ? item.weaponShape : null));
+      expect(shapes).toContain('sword');
+      expect(shapes).toContain('wand');
 
-    CHIEF_DROPS.forEach((itemId) => {
-      const slot = slotOf(itemId);
-      const rivals = Object.values(ITEMS)
-        .filter((item) => item.kind === 'equipment' && item.slot === slot)
-        .filter((item) => !CHIEF_DROPS.includes(item.id))
-        .map((item) => item.id);
-      rivals.forEach((rival) => {
-        expect(power(itemId), `${itemId} against ${rival}`).toBeGreaterThan(power(rival));
+      weapons.forEach((weapon) => {
+        const chance = LOOT_TABLES[tableId].entries.find(
+          (entry) => entry.itemId === weapon.id,
+        )?.chance;
+        expect(chance).toBeLessThan(1);
+        expect(chance).toBeGreaterThan(0);
       });
-    });
-  });
+    },
+  );
 
   // A duplicate of a guaranteed drop would otherwise be dead weight in a pack
   // with a limit on it: every one of these is worth carrying out to sell.
-  it('leaves nothing that cannot be sold', () => {
-    CHIEF_DROPS.forEach((itemId) => expect(ITEMS[itemId].value ?? 0).toBeGreaterThan(0));
+  it.each(BOSS_TABLES)('%s leaves nothing that cannot be sold', (tableId) => {
+    dropsOf(tableId).forEach((itemId) => expect(ITEMS[itemId].value ?? 0).toBeGreaterThan(0));
+  });
+});
+
+/**
+ * The ladder, which is the thing a second boss added and the first one could not
+ * have.
+ *
+ * Best in slot is why anybody opens a door, so it has to keep meaning something
+ * once there are two doors: everything a boss drops beats everything in its slot
+ * that no boss drops, and between two bosses the deeper one wins. Compared
+ * against whatever else fills the slot rather than against the names it happens
+ * to beat today, so a fifth armour tier or a smithed weapon shows up here rather
+ * than quietly retiring a hoard.
+ */
+describe('the ladder', () => {
+  it('puts every unique above everything in its slot that is not one', () => {
+    UNIQUES.forEach((itemId) => {
+      const slot = slotOf(itemId);
+      Object.values(ITEMS)
+        .filter((item) => item.kind === 'equipment' && item.slot === slot)
+        .filter((item) => !UNIQUES.has(item.id))
+        .forEach((rival) => {
+          expect(power(itemId), `${itemId} against ${rival.id}`).toBeGreaterThan(power(rival.id));
+        });
+    });
+  });
+
+  it('puts the deeper boss above the shallower one, slot for slot', () => {
+    const [deeper, shallower] = BOSS_TABLES;
+    expect(deeper && shallower).toBeTruthy();
+    expect(bossLevel(deeper as LootTableId)).toBeGreaterThan(bossLevel(shallower as LootTableId));
+
+    dropsOf(shallower as LootTableId).forEach((below) => {
+      const above = dropsOf(deeper as LootTableId).find(
+        (itemId) => slotOf(itemId) === slotOf(below),
+      );
+      expect(above, `nothing off the deeper boss fills ${below}'s slot`).toBeDefined();
+      expect(power(above as ItemId), `${above} against ${below}`).toBeGreaterThan(power(below));
+    });
+  });
+
+  /**
+   * And the deeper hoard is behind the deeper door. The barrow's key drops in the
+   * fen at level 5-7 where the hideout's drops in the camp at 1-3, so a ladder of
+   * loot that was not also a ladder of doors would be a capstone anyone could
+   * walk to first.
+   */
+  it('locks the deeper hoard behind the zone with the higher band', () => {
+    const zoneOf = (tableId: LootTableId) => {
+      const carrier = Object.values(ENEMIES).find((enemy) => enemy.lootTableId === tableId);
+      return Object.values(ZONES).find((zone) =>
+        zone.mobSpawns.some((spawn) => spawn.enemyId === carrier?.id),
+      );
+    };
+    const bandOf = (tableId: LootTableId) =>
+      Math.max(...(zoneOf(tableId)?.mobSpawns ?? []).map((spawn) => spawn.level));
+
+    const [deeper, shallower] = BOSS_TABLES as [LootTableId, LootTableId];
+    expect(zoneOf(deeper)?.requiresKey).toBeDefined();
+    expect(zoneOf(shallower)?.requiresKey).toBeDefined();
+    expect(bandOf(deeper)).toBeGreaterThan(bandOf(shallower));
   });
 });

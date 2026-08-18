@@ -8,6 +8,7 @@ import { DEEP_CUT_MAP } from './deepCutMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
 import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
 import { OLD_MILL_ROAD_MAP } from './oldMillRoadMap';
+import { SUNKEN_BARROW_MAP } from './sunkenBarrowMap';
 import {
   BANDIT_CAMP_MOB_SPAWNS,
   BANDIT_HIDEOUT_MOB_SPAWNS,
@@ -21,6 +22,7 @@ import {
   OLD_MILL_ROAD_NODE_SPAWNS,
   QUARRY_MOB_SPAWNS,
   QUARRY_NODE_SPAWNS,
+  SUNKEN_BARROW_MOB_SPAWNS,
   TOWN_MOB_SPAWNS,
   TOWN_NODE_SPAWNS,
   type MobSpawnPoint,
@@ -98,7 +100,8 @@ export interface ZoneDefinition {
    *
    * Spent on the first entry and never needed again — `CharacterState.unlocked`
    * remembers, so the grind is one key rather than one per visit. A zone with
-   * no lock leaves this unset, which is every zone but the hideout.
+   * no lock leaves this unset, which is every zone but the hideout and the
+   * barrow — the two ends of the game, gated the same way on purpose.
    */
   requiresKey?: ItemId;
 }
@@ -288,6 +291,9 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
    *
    * Reached by walking south off the beach, which cost the beach its wall of
    * ocean — see `beachMap.ts` for what an exit charges the zone it arrives in.
+   * It has since paid the same bill itself, one edge further on: the road to the
+   * barrow made its own south edge an arrival strip, and the deep pools and the
+   * men over them were standing on it.
    */
   'blackwater-fen': {
     id: 'blackwater-fen',
@@ -297,7 +303,38 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     mobSpawns: BLACKWATER_FEN_MOB_SPAWNS,
     nodeSpawns: BLACKWATER_FEN_NODE_SPAWNS,
     npcSpawns: [],
-    exits: [{ edge: 'north', to: 'beach' }],
+    exits: [
+      { edge: 'north', to: 'beach' },
+      { edge: 'south', to: 'sunken-barrow' },
+    ],
+  },
+  /**
+   * The capstone, and deliberately the hideout's shape one band up because that
+   * shape worked: a rare key off the zone in front of it, a map cut out of solid
+   * rock rather than painted onto open ground, a passage, and a named thing at
+   * the back of it.
+   *
+   * What is different is which way round the two halves sit. The hideout is
+   * starter content behind a door — the key gates the *table*, not the
+   * difficulty — where everything in here is above anything else that spawns, and
+   * the door is the second gate rather than the only one. It is also the first
+   * zone whose key comes off the zone it is reached through: the raiders in the
+   * fen carry it, and the mouth is at the bottom of their marsh, so the grind and
+   * the door are in the same place.
+   *
+   * Its cost to the fen is written up in `blackwaterFenMap.ts`: an exit needs its
+   * whole shared edge clear on both sides, and the deep pools were on that edge.
+   */
+  'sunken-barrow': {
+    id: 'sunken-barrow',
+    name: 'The Sunken Barrow',
+    description: 'Locked, and what is buried in there was buried holding it. Come at eight.',
+    map: SUNKEN_BARROW_MAP,
+    mobSpawns: SUNKEN_BARROW_MOB_SPAWNS,
+    nodeSpawns: [],
+    npcSpawns: [],
+    exits: [{ edge: 'north', to: 'blackwater-fen' }],
+    requiresKey: 'barrow-key',
   },
   'bandit-hideout': {
     id: 'bandit-hideout',

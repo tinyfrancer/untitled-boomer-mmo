@@ -22,6 +22,20 @@ export interface ZoneAccessContext {
 }
 
 /**
+ * A zone's name with the article taken off the front of it, because both
+ * sentences below put one there themselves.
+ *
+ * Half the table is named without one ("Bandit Hideout", "Blackwater Fen") and
+ * half with ("The Deep Cut", "The Sunken Barrow"), and the two reasons here read
+ * as "the {name}" and "The {name} is locked" — so the second half came out as
+ * "You unlock the The Sunken Barrow". Stripping it here rather than renaming the
+ * zone keeps the article a fact about the sentence, which is what it is: the
+ * signpost, the world map and the travel line all want the name as the table
+ * writes it.
+ */
+const named = (zoneId: ZoneId): string => ZONES[zoneId].name.replace(/^The /, '');
+
+/**
  * A zone with no `requiresKey` is open, and so is one already unlocked — the
  * key is spent on the way in, so the lock is answered by what has been opened
  * rather than by what is still being carried.
@@ -37,13 +51,13 @@ export function zoneAccess(zoneId: ZoneId, context: ZoneAccessContext): ZoneAcce
     return {
       kind: 'unlockable',
       keyItemId,
-      reason: `You unlock the ${ZONES[zoneId].name} with the ${keyName}.`,
+      reason: `You unlock the ${named(zoneId)} with the ${keyName}.`,
     };
   }
   return {
     kind: 'locked',
     keyItemId,
-    reason: `The ${ZONES[zoneId].name} is locked. You need a ${keyName}.`,
+    reason: `The ${named(zoneId)} is locked. You need a ${keyName}.`,
   };
 }
 

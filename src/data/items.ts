@@ -254,6 +254,106 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'material',
     icon: { shape: 'key', color: ICON_COLOR.iron },
   },
+  // The second, on the same terms and at the same 3%: no price, because it is
+  // spent on the barrow's door and `unlockedZones` remembers afterwards.
+  'barrow-key': {
+    id: 'barrow-key',
+    name: 'Barrow Key',
+    weight: 1,
+    kind: 'material',
+    icon: { shape: 'key', color: ICON_COLOR.bone },
+  },
+  /**
+   * What the dead were buried holding, and the answer to the oldest dead slot in
+   * the game.
+   *
+   * Both offhands in the world drop off bandits in the starter band and the only
+   * thing above them is smithed, so a character who has not taken up a hammer has
+   * been carrying level 1 gear in that hand for the whole climb — and a *caster*
+   * has, whether they smithed or not, since the steel shield is plate. These are
+   * the pair the bandits' two are, one band up: a shield for the hand that holds
+   * one and a lantern for the hand that does not.
+   *
+   * Both sit under the steel shield on armour, deliberately. The forge is where
+   * the best plate comes from and a drop that beat it would undo the zone the
+   * whole steel tier was built for; what these beat is the starter band, which is
+   * what anybody who walked here without a hammer is still wearing.
+   */
+  'grave-shield': {
+    id: 'grave-shield',
+    name: 'Grave Shield',
+    value: 110,
+    weight: 7,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: 0x6b6a5e,
+    armorType: 'leather',
+    offhandShape: 'shield',
+    armorValue: 6,
+    healthBonus: 3,
+  },
+  'grave-lantern': {
+    id: 'grave-lantern',
+    name: 'Grave Lantern',
+    value: 110,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: 0x8ea89b,
+    armorType: 'cloth',
+    offhandShape: 'orb',
+    armorValue: 3,
+    intellectBonus: 4,
+  },
+  /**
+   * The king's three, and the second set of things in the game that come off one
+   * creature — held unique by every other table not naming them, which is what
+   * `tests/systems/uniqueLoot.test.ts` sweeps.
+   *
+   * Built to the chief's own shape a band up, because that shape was right: the
+   * crown always drops, since a fight this long has to be worth something every
+   * time, and it is cloth so the trophy is the same trophy whoever took it. The
+   * two weapons behind it are the chase, one per class — a warrior who rolls the
+   * scepter is still carrying 260 copper out.
+   */
+  'barrow-crown': {
+    id: 'barrow-crown',
+    name: 'Barrow Crown',
+    value: 220,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: 0xc9b458,
+    armorType: 'cloth',
+    armorValue: 5,
+    healthBonus: 8,
+    intellectBonus: 2,
+  },
+  'barrow-blade': {
+    id: 'barrow-blade',
+    name: 'Barrow Blade',
+    value: 260,
+    weight: 5,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0xb9c6cf,
+    weaponShape: 'sword',
+    attackPowerBonus: 9,
+    strengthBonus: 2,
+  },
+  'barrow-scepter': {
+    id: 'barrow-scepter',
+    name: 'Barrow Scepter',
+    value: 260,
+    weight: 3,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0x9575cd,
+    weaponShape: 'wand',
+    attackRange: 240,
+    attackPowerBonus: 7,
+    intellectBonus: 3,
+  },
   'rat-bones': {
     id: 'rat-bones',
     name: 'Rat Bones',

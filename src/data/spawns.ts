@@ -257,23 +257,61 @@ export const BANDIT_HIDEOUT_MOB_SPAWNS: MobSpawnPoint[] = [
  * answer one at a time.
  */
 export const BLACKWATER_FEN_MOB_SPAWNS: MobSpawnPoint[] = [
-  { dx: -320, dy: -160, enemyId: 'bog-lurker', level: 5 },
-  { dx: 352, dy: -96, enemyId: 'bog-lurker', level: 5 },
-  // Moved out to 233 units from the middle of the map, which is past its own
-  // aggro radius. At dy -32 it stood 71 from the centre — and the centre is
-  // where a death respawns you and where travelling by map puts you down, so
-  // dying in the fen dropped you straight back into melee with a level 5. The
-  // rule it broke is one `CLAUDE.md` states about every zone: the spawn point
-  // is safe by construction. It was not.
-  { dx: -96, dy: -320, enemyId: 'fen-raider', level: 5 },
-  { dx: 448, dy: 32, enemyId: 'fen-raider', level: 5 },
+  // Moved out to 365 units from the middle of the map, which is past its own
+  // aggro radius and its wander disc together. At dy -32 it stood 71 from the
+  // centre — and the centre is where a death respawns you and where travelling
+  // by map puts you down, so dying in the fen dropped you straight back into
+  // melee with a level 5. The rule it broke is one `CLAUDE.md` states about
+  // every zone: the spawn point is safe by construction. It was not.
+  { dx: -224, dy: -288, enemyId: 'fen-raider', level: 5 },
+  { dx: -320, dy: -224, enemyId: 'bog-lurker', level: 5 },
+  { dx: 352, dy: -160, enemyId: 'bog-lurker', level: 5 },
+  { dx: 448, dy: -64, enemyId: 'fen-raider', level: 5 },
+  // Every raider stands north of dy 302 now, and that number is the whole of
+  // what the road on to the barrow cost this zone. An arrival lands 1.5 tiles
+  // inside the south edge at whatever fraction of it was crossed — so it lands
+  // at *every* x, and the only thing that can hold a creature clear of a strip
+  // spanning the map is distance up the map. The lurkers stay deep because they
+  // are passive: what the rule refuses is materialising already inside a fight.
+  { dx: -544, dy: 64, enemyId: 'fen-raider', level: 6 },
   { dx: -96, dy: 96, enemyId: 'bog-lurker', level: 6 },
-  { dx: 416, dy: 288, enemyId: 'bog-lurker', level: 6 },
-  { dx: -448, dy: 256, enemyId: 'fen-raider', level: 6 },
-  { dx: 96, dy: 320, enemyId: 'fen-raider', level: 6 },
-  { dx: -160, dy: 448, enemyId: 'bog-lurker', level: 7 },
-  { dx: -352, dy: 416, enemyId: 'fen-raider', level: 7 },
-  { dx: 288, dy: 480, enemyId: 'fen-raider', level: 7 },
+  { dx: 416, dy: 128, enemyId: 'bog-lurker', level: 6 },
+  { dx: -160, dy: 288, enemyId: 'fen-raider', level: 7 },
+  { dx: 352, dy: 288, enemyId: 'fen-raider', level: 7 },
+  { dx: -192, dy: 416, enemyId: 'bog-lurker', level: 7 },
+  { dx: 96, dy: 448, enemyId: 'bog-lurker', level: 7 },
+];
+
+/**
+ * The barrow's nine, and the hideout's shape read one band up: trash in front,
+ * the named thing at the back, and nothing at all standing on the way in.
+ *
+ * Depth is the dial, the same as the fen above it — the mouth is the north edge,
+ * so the sevens hold the antechamber and the transept and the eights are down in
+ * the king's chamber with him. The mouth itself is empty, which is the rule the
+ * hideout's entrance hall set and the Deep Cut's gallery kept: a traveller
+ * materialises anywhere along that edge, and a locked door with an ambush behind
+ * it is a trap rather than a zone.
+ *
+ * Nothing stands in the transept's own arms either. They are the flooded corners
+ * of the map (see `sunkenBarrowMap.ts`), and a wight pinned against standing
+ * water in a game with no pathfinding is a wight nobody can pull.
+ */
+export const SUNKEN_BARROW_MOB_SPAWNS: MobSpawnPoint[] = [
+  // The antechamber, met on the way down and deliberately not at its middle:
+  // the stair comes in there, and the stair is where anyone who wants out goes.
+  { dx: -288, dy: -224, enemyId: 'barrow-wight', level: 7 },
+  { dx: 288, dy: -224, enemyId: 'barrow-wight', level: 7 },
+  // The transept, one either side of the spine.
+  { dx: -384, dy: 32, enemyId: 'barrow-wight', level: 7 },
+  { dx: 384, dy: 32, enemyId: 'barrow-wight', level: 7 },
+  // The king's chamber. Four of them between the way in and him, which is what
+  // the room is for — he is fought last or he is fought with company.
+  { dx: -256, dy: 256, enemyId: 'barrow-wight', level: 8 },
+  { dx: 256, dy: 256, enemyId: 'barrow-wight', level: 8 },
+  { dx: -192, dy: 384, enemyId: 'barrow-wight', level: 8 },
+  { dx: 192, dy: 384, enemyId: 'barrow-wight', level: 8 },
+  { dx: 0, dy: 448, enemyId: 'barrow-king', level: 8 },
 ];
 
 /**
@@ -287,6 +325,11 @@ export const BLACKWATER_FEN_MOB_SPAWNS: MobSpawnPoint[] = [
  * into open marsh and the zone becomes a quiet fishing hole with some raiders
  * elsewhere in it, which is a different and much worse zone.
  *
+ * They sit two rows further north than they shipped, and the guard is what moved
+ * them rather than the water: opening the road on to the barrow made the south
+ * edge an arrival strip, which no raider may stand within its aggro radius of.
+ * A pool the raiders had to leave is a pool nobody is standing over.
+ *
  * Each sits on its pool's *edge* rather than in the middle of it. A fishing spot
  * stands on blocking water by design, so what has to be true is that there is
  * somewhere to stand within its interact radius — and the middle of a four-tile
@@ -294,7 +337,7 @@ export const BLACKWATER_FEN_MOB_SPAWNS: MobSpawnPoint[] = [
  * that nobody can ever work.
  */
 export const BLACKWATER_FEN_NODE_SPAWNS: NodeSpawnPoint[] = [
-  { dx: -576, dy: 320, nodeId: 'deep-fishing-spot' },
-  { dx: 0, dy: 384, nodeId: 'deep-fishing-spot' },
-  { dx: 256, dy: 384, nodeId: 'deep-fishing-spot' },
+  { dx: -576, dy: 192, nodeId: 'deep-fishing-spot' },
+  { dx: 0, dy: 192, nodeId: 'deep-fishing-spot' },
+  { dx: 256, dy: 192, nodeId: 'deep-fishing-spot' },
 ];
