@@ -42,6 +42,11 @@ export const ACTIONS_CHANGED_EVENT = 'actions-changed';
 // the HUD renders the panel and forwards buy/sell taps back as requests.
 export const SHOP_OPENED_EVENT = 'shop-opened';
 export const SHOP_CLOSED_EVENT = 'shop-closed';
+// Greyford's counter, and the same three the shop has: the world says it opened
+// and shut, and the panel sends back the one row that was tapped.
+export const OUTFITTER_OPENED_EVENT = 'outfitter-opened';
+export const OUTFITTER_CLOSED_EVENT = 'outfitter-closed';
+export const TRADE_REQUESTED_EVENT = 'trade-requested';
 export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
 // Carries how many, so emptying a stack is the same request as parting with one
 // of it rather than a second rule about vendoring.
@@ -248,7 +253,7 @@ export interface TilePoint {
  * thing it describes wanders off or dies.
  */
 export type ContextActionId =
-  'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'bounty' | 'smith';
+  'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'bounty' | 'smith' | 'outfit';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -336,6 +341,9 @@ export interface UiEventMap {
   [ACTIONS_CHANGED_EVENT]: [actions: AvailableActions];
   [SHOP_OPENED_EVENT]: [];
   [SHOP_CLOSED_EVENT]: [];
+  [OUTFITTER_OPENED_EVENT]: [];
+  [OUTFITTER_CLOSED_EVENT]: [];
+  [TRADE_REQUESTED_EVENT]: [itemId: ItemId];
   [BUY_ITEM_REQUESTED_EVENT]: [itemId: ItemId];
   [SELL_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [BANK_OPENED_EVENT]: [];

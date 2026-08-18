@@ -6,12 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; nine zones (town with leveled rats, a shop, a bank and a trainer, a beach
+v1: single-player only; ten zones (town with leveled rats, a shop, a bank and a trainer, a beach
 with crabs and ocean fishing, a quarry cut into the hills north of town with tin and iron to mine,
 a bandit camp with aggressive humanoids, the bandit hideout behind a locked
 door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
-where the eels and the cloth are, the Deep Cut under the quarry where the coal is, and the Sunken
-Barrow under the bottom of the fen where the dead are);
+where the eels and the cloth are, the Deep Cut under the quarry where the coal is, the Sunken
+Barrow under the bottom of the fen where the dead are, and Greyford Outpost between the road west and
+the quarry, where a counter trades in materials rather than coin);
 character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
@@ -318,6 +319,32 @@ outside its own door and the barrow's on the fen raiders whose marsh it is at th
 grind and the lock are one place rather than two. And the sentence a refusal is written in puts an
 article in front of the zone's name, so `zoneAccess` strips the one half the table already carries —
 "the The Sunken Barrow" is what that costs when nobody does.
+
+**The world is a loop now rather than a star, and that is Greyford's doing.** Every road until it ran
+through town: out to a thing and back the same way, past the shopkeeper's door twice a trip. Greyford
+sits at `-1,-1`, joined south to the Old Mill Road and east to the quarry, so town, the road west, the
+outpost and the quarry make a circuit — the first two spokes in the game tied to each other. What it
+cost was the two edges it joins: the millpond came two rows south off the mill road's north edge, and
+the quarry's face left a ledge along its west one. **Expect a zone that ties two others together to
+charge both of them**, which is the same bill a spoke charges once.
+
+**Town trades in coin and Greyford trades in stuff**, which is the whole of why the outpost is not
+town in a different colour — the thing `docs/zones_act_two.md` warned it would be. All four counters
+at home deal in currency: the shop sells, the bank stores, the trainer charges, the board pays. The
+`outfitter` role (`data/outfitter.ts`, ruled on by `systems/OutfitterSystem.ts`, run by
+`world/OutfitterSession.ts`) takes ore, coal and hardwood and hands back the steel tools, and there
+is no price in copper anywhere on it. Every offer wants something from each of the three zones around
+the outpost, so a tool is a circuit of the loop rather than a thing bought on the way past — and it
+is worth more than the materials it swallows, which is the shop's vendor spread pointed at a barter.
+
+**A tool does something now, which it never used to.** `gatherSpeedBonus` on an equipment row is the
+first thing a tool has ever done beyond permitting the swing: before the steel three there was one of
+each and nothing to choose between, so a second tier would have been a reskin with nothing behind it.
+It is speed rather than yield, which is the opposite call `MASTERY_TIERS` makes — a pool pays a second
+log because the _level_ already sells speed, where a tool is a discrete thing you go and get rather
+than a curve laid over the same action. `gatherDurationMs` floors the two terms together at
+`MIN_GATHER_FRACTION`, because a capped skill holding a steel tool would otherwise gather instantly,
+which is the channel disappearing rather than a reward.
 
 **A town has walls in it, and a building is solid all the way through**
 (`ZoneDefinition.buildingSpawns` into `data/buildings.ts`, drawn by `render3d/buildings.ts`). It is

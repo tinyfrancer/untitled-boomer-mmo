@@ -23,6 +23,14 @@ const FACE_BOTTOM_ROW = 4;
 // it (see QUARRY_NODE_SPAWNS).
 const CUT_LEFT_COL = 7;
 const CUT_RIGHT_COL = 17;
+/**
+ * How much of the face is left standing at the west end — none of it, past this
+ * column. The road to Greyford leaves along the western edge, and an arrival
+ * lands anywhere down it, so the face had to stop short of the map's own side
+ * the way it already stops short of the top. What is left is a ledge running
+ * north under the rock, which is the road.
+ */
+const LEDGE_COLS = 2;
 const GRASS_TOP_ROW = 15;
 
 function buildQuarryMap(): number[][] {
@@ -34,7 +42,7 @@ function buildQuarryMap(): number[][] {
   }
 
   const face = { top: FACE_TOP_ROW, bottom: FACE_BOTTOM_ROW };
-  paintRect(map, { ...face, left: 0, right: CUT_LEFT_COL - 1 }, WALL_TILE);
+  paintRect(map, { ...face, left: LEDGE_COLS, right: CUT_LEFT_COL - 1 }, WALL_TILE);
   paintRect(map, { ...face, left: CUT_RIGHT_COL + 1, right: WORLD_WIDTH_TILES - 1 }, WALL_TILE);
 
   return map;

@@ -206,6 +206,19 @@ export function describeSignpost(exit: ZoneExit): InspectPanel {
 export function describeNpc(npcId: NpcId): InspectPanel {
   const title = npcName(npcId);
   switch (npcRole(npcId)) {
+    case 'outfitter':
+      return {
+        title,
+        subtitle: 'Outfitter',
+        lines: [
+          { label: 'Trades', value: 'Tools, for the makings of them' },
+          { label: 'Takes', value: 'Ore, timber and what comes off a kill' },
+          // Said plainly because it is the whole difference between this
+          // counter and the four in town, and a card is where somebody who
+          // walked all this way finds out.
+          { label: 'Coin', value: 'Not accepted' },
+        ],
+      };
     case 'banker':
       return {
         title,

@@ -258,6 +258,15 @@ export const NPC_APPEARANCES = {
     weapon: null,
     offhand: { shape: 'shield', color: 0x795548 },
   },
+  // The fifth, out at Greyford. Leather and canvas rather than a shopkeeper's
+  // apron: everything they deal in arrives on somebody's back.
+  outfitter: {
+    headColor: SKIN_COLOR,
+    torsoColor: 0x6d4c41,
+    legColor: 0x4e342e,
+    weapon: null,
+    offhand: null,
+  },
   bandit: {
     headColor: SKIN_COLOR,
     torsoColor: 0x757575,

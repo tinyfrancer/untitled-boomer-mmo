@@ -17,7 +17,7 @@ What the five below are for, in one line each:
 | 1   | Old Mill Road ✅     | -1, 0 | 4-5  | The first fight above the starter band, and the coin      |
 | 2   | The Deep Cut ✅      | 0, -2 | 5-6  | Coal, and with it the whole steel tier                    |
 | 3   | Blackwater Fen ✅    | 0, 2  | 5-7  | The food that makes levels 6-7 survivable                 |
-| 4   | Greyford Outpost     | -2, 0 | —    | A second set of counters, out where the work is           |
+| 4   | Greyford Outpost ✅  | -1,-1 | —    | A second set of counters, out where the work is           |
 | 5   | The Sunken Barrow ✅ | 0, 3  | 7-8  | The capstone: locked, and the only place two uniques drop |
 
 Zone 5 shipped at **0,3** rather than the -2,-1 above, because -2,-1 is only reachable through a
@@ -236,7 +236,7 @@ raider's aggro radius, so the food that makes the levels survivable is _behind_ 
 beside it. That plus the level climbing with depth is what `tests/systems/blackwaterFen.test.ts`
 holds, since both are properties of a spawn list and nothing else would notice them going.
 
-## 4. Greyford Outpost — west of the Old Mill Road, no spawns
+## 4. Greyford Outpost — between the road west and the quarry, no spawns — **BUILT**
 
 **A second town, and the zone that the buildings just landed for.** Half a day's walk from home, out
 where the work is.
@@ -261,6 +261,32 @@ seam and not an obstacle.
 Greyford is mechanically the town again in a different colour. If it is to be worth walking to it
 probably wants one thing town does not have — the obvious candidate being a role that trades in
 something other than coin.
+
+**Answered, and it is the whole zone.** Town trades in coin — the shop sells, the bank stores, the
+trainer charges, the board pays — so Greyford trades in stuff. The `outfitter` is a fifth
+`NpcRoleId` that takes ore, coal and hardwood and hands back the steel tools, with no price in copper
+anywhere on the counter. Everything else this section asked for (a banker, a quartermaster, a second
+forge) was dropped: each would have been the town's own counter at a distance, which is exactly the
+failure the paragraph above predicted.
+
+**Two things came out differently from the plan.**
+
+The **cell** moved from `-2,0` to `-1,-1`. West of the mill road is a fourth spoke off a world that
+was already a star, and the note about feeling boxed in by the layout was the right instinct: every
+road ran through town, so every trip out was the same trip back. At `-1,-1` the outpost joins the
+mill road to the quarry and closes the first **loop** in the game. It also puts the materials town
+between the timber and the ore, which is where it belongs.
+
+The **tools had to be given a reason to exist**. `gatherDurationMs` reads the skill level and nothing
+else, so a tool was a key: it permitted the swing and did nothing. A steel tier of them would have
+been a reskin, which is the dead-end rule in everything but name — so `gatherSpeedBonus` is a new
+field and 15% off a swing is what a trade buys. That is the one genuinely new mechanic in this zone,
+and it is the answer to the question this section could not have known to ask.
+
+The bill fell on **both** edges the loop joins, which a spoke never does: the millpond came two rows
+south off the mill road's north edge, and the quarry's face left a ledge along its west. A goblin
+knot moved twice in one PR for it — north to clear the map's middle in the sweep before this, then
+east again when that north edge became a road anybody arrives along.
 
 ## 5. The Sunken Barrow — south of Blackwater Fen, level 7-8, locked — **BUILT**
 

@@ -9,6 +9,8 @@ import {
   AFK_TOGGLE_REQUESTED_EVENT,
   BANK_CLOSED_EVENT,
   BOUNTY_CLOSED_EVENT,
+  OUTFITTER_CLOSED_EVENT,
+  TRADE_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
   TURN_IN_BOUNTY_REQUESTED_EVENT,
   FORGE_OPENED_EVENT,
@@ -90,6 +92,7 @@ import { ApproachDriver } from './ApproachDriver';
 import { BankSession } from './BankSession';
 import { TrainerSession } from './TrainerSession';
 import { BountySession } from './BountySession';
+import { OutfitterSession } from './OutfitterSession';
 import { CombatDirector } from './CombatDirector';
 import { ContextMenuSession } from './ContextMenuSession';
 import { GatherSession } from './GatherSession';
@@ -149,9 +152,10 @@ const COUNTERS = {
   banker: { kind: 'bank', open: 'bank' },
   trainer: { kind: 'train', open: 'trainer' },
   quartermaster: { kind: 'bounty', open: 'bounty' },
+  outfitter: { kind: 'outfit', open: 'outfitter' },
 } as const satisfies Record<
   NpcRoleId,
-  { kind: InteractionKind; open: 'shop' | 'bank' | 'trainer' | 'bounty' }
+  { kind: InteractionKind; open: 'shop' | 'bank' | 'trainer' | 'bounty' | 'outfitter' }
 >;
 
 export interface ZoneWorldOptions {
@@ -209,6 +213,7 @@ export class ZoneWorld implements Targeting {
   private readonly bank: BankSession;
   private readonly trainer: TrainerSession;
   private readonly bounty: BountySession;
+  private readonly outfitter: OutfitterSession;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly combat: CombatDirector;
@@ -382,6 +387,10 @@ export class ZoneWorld implements Targeting {
     this.bounty = new BountySession(this.ctx, {
       publishXpGain: (gain) => this.publishXpGain(gain),
     });
+    // No `Deps` of its own: a trade reads the bag and writes the bag, and the
+    // shared context already carries both. The other four each needed a hook
+    // into something only the world knows.
+    this.outfitter = new OutfitterSession(this.ctx);
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,
       targeting: this,
@@ -470,6 +479,8 @@ export class ZoneWorld implements Targeting {
     listen(TURN_IN_BOUNTY_REQUESTED_EVENT, (bountyId) => this.bounty.turnIn(bountyId));
     listen(ABANDON_BOUNTY_REQUESTED_EVENT, () => this.bounty.abandon());
     listen(BOUNTY_CLOSED_EVENT, () => this.bounty.closedByUi());
+    listen(OUTFITTER_CLOSED_EVENT, () => this.outfitter.closedByUi());
+    listen(TRADE_REQUESTED_EVENT, (itemId) => this.outfitter.trade(itemId));
     listen(SMITH_REQUESTED_EVENT, (recipeId) => this.gathering.smith(recipeId));
     listen(TRAINER_CLOSED_EVENT, () => this.trainer.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
@@ -804,6 +815,11 @@ export class ZoneWorld implements Targeting {
     return this.bounty.npc;
   }
 
+  /** The outfitter the open counter belongs to; null when it is shut. */
+  get outfitterNpc(): WorldNpc | null {
+    return this.outfitter.npc;
+  }
+
   /** Whether the character has been left camping. */
   get afkActive(): boolean {
     return this.afk.active;
@@ -815,6 +831,7 @@ export class ZoneWorld implements Targeting {
     this.bank.updateRange();
     this.trainer.updateRange();
     this.bounty.updateRange();
+    this.outfitter.updateRange();
   }
 
   /** Everything that stops a session at once shuts all of them, never one. */
@@ -823,6 +840,7 @@ export class ZoneWorld implements Targeting {
     this.bank.close();
     this.trainer.close();
     this.bounty.close();
+    this.outfitter.close();
   }
 
   handleSmithRequested(recipeId: RecipeId): void {

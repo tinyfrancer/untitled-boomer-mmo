@@ -32,6 +32,9 @@ const ROLE_ACTIONS = {
   merchant: { id: 'shop', label: 'Shop' },
   banker: { id: 'bank', label: 'Bank' },
   trainer: { id: 'train', label: 'Train' },
+  // Trade rather than Shop: the word the other counter uses means coin, and
+  // this one does not take any.
+  outfitter: { id: 'outfit', label: 'Trade' },
   quartermaster: { id: 'bounty', label: 'Bounties' },
 } as const satisfies Record<NpcRoleId, ContextAction>;
 

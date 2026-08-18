@@ -6,6 +6,8 @@ import { MenuOverlay } from './MenuOverlay';
 import { OptionsModal } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
 import { TrainerModal, type TrainerState } from './TrainerModal';
+import { OutfitterModal } from './OutfitterModal';
+import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
 import { ForgeModal, type ForgePanelState } from './ForgeModal';
 import { SlotPicker } from './SlotPicker';
@@ -15,6 +17,8 @@ import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   BANK_CLOSED_EVENT,
   BOUNTY_CLOSED_EVENT,
+  OUTFITTER_CLOSED_EVENT,
+  TRADE_REQUESTED_EVENT,
   TURN_IN_BOUNTY_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
@@ -48,6 +52,8 @@ export interface OverlayPanelState {
   bank: () => BankPanelState;
   trainer: () => TrainerState;
   bounty: () => BountyPanelState;
+  /** The bag, which is the outfitter's whole price list. */
+  outfitter: () => Inventory;
   forge: () => ForgePanelState;
 }
 
@@ -81,6 +87,7 @@ export class OverlayHost {
   private readonly bankState: () => BankPanelState;
   private readonly trainerState: () => TrainerState;
   private readonly bountyState: () => BountyPanelState;
+  private readonly outfitterState: () => Inventory;
   private readonly forgeState: () => ForgePanelState;
 
   private options: OptionsModal | null = null;
@@ -88,6 +95,7 @@ export class OverlayHost {
   private bank: BankModal | null = null;
   private trainer: TrainerModal | null = null;
   private bounty: BountyModal | null = null;
+  private outfitter: OutfitterModal | null = null;
   private forge: ForgeModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
@@ -102,6 +110,7 @@ export class OverlayHost {
     this.bankState = panels.bank;
     this.trainerState = panels.trainer;
     this.bountyState = panels.bounty;
+    this.outfitterState = panels.outfitter;
     this.forgeState = panels.forge;
   }
 
@@ -280,6 +289,31 @@ export class OverlayHost {
     this.bounty?.close();
   }
 
+  openOutfitter(): void {
+    this.outfitter?.close();
+    this.outfitter = new OutfitterModal(
+      this.outfitterState(),
+      {
+        onTrade: (itemId) => this.events.emit(TRADE_REQUESTED_EVENT, itemId),
+        // Same ask as the other four X's: the world owns whether it is open.
+        onDismiss: () => this.events.emit(OUTFITTER_CLOSED_EVENT),
+      },
+      () => {
+        this.outfitter = null;
+      },
+    );
+    this.root.append(this.outfitter.root);
+  }
+
+  closeOutfitter(): void {
+    this.outfitter?.close();
+  }
+
+  /** Every row is priced in the bag, so a trade redraws the whole counter. */
+  refreshOutfitter(): void {
+    this.outfitter?.update(this.outfitterState());
+  }
+
   /**
    * The purse, the level, the bag and every tally move while this is open — and
    * a kill contract's count moves *out in the world*, with the panel left up
@@ -376,6 +410,7 @@ export class OverlayHost {
     this.bank?.close();
     this.trainer?.close();
     this.bounty?.close();
+    this.outfitter?.close();
     this.forge?.close();
     this.picker?.close();
     this.awayReport?.close();

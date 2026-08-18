@@ -64,6 +64,21 @@ interface EquipmentItemDefinition extends BaseItemDefinition {
   // Gathering tools occupy the weapon slot, so holding one means putting your
   // sword away. This is what a resource node checks before letting you gather.
   toolFor?: SkillId;
+  /**
+   * How much of a gather this tool takes off, as a fraction.
+   *
+   * The first thing a tool has ever done beyond permitting the swing. Until the
+   * steel tier there was one of each and nothing to choose between, so a tool
+   * was a key rather than a piece of equipment — which made a second tier of
+   * them a reskin with nothing behind it.
+   *
+   * Speed rather than yield, and that is the opposite call to the one
+   * `MASTERY_TIERS` makes. A pool pays a second log because the *level* already
+   * sells speed and selling it twice would be buying one thing twice; a tool is
+   * not a curve laid over the same action but a discrete thing you go and get,
+   * and what a better pick plainly does is cut rock faster.
+   */
+  gatherSpeedBonus?: number;
 }
 
 /**
@@ -504,6 +519,68 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weaponShape: 'pick',
     attackPowerBonus: 1,
     toolFor: 'mining',
+  },
+  /**
+   * The steel tools, and the first things in the game bought with materials
+   * rather than coin.
+   *
+   * What they do that the shop's three do not is `gatherSpeedBonus` — until
+   * these existed a tool was a key, permitting the swing and nothing more, so a
+   * second tier of them would have been a reskin. Fifteen percent off a swing is
+   * felt without being a different game: at the skill cap it takes a tree from
+   * 55% of base to 40%, which is a run of ore that is one trip rather than two.
+   *
+   * Each is worth more than the materials it swallows, which is a rule the shop
+   * already follows pointed at a barter: a counter that handed back less than
+   * the ore was worth to a vendor would be a way of destroying what you carried
+   * in.
+   *
+   * They stay below the starting weapons on attack power, like the three they
+   * replace. That rule is what keeps gathering gear from ever being a stealth
+   * combat upgrade, and a tool bought with a pack of ore is exactly the thing
+   * that would break it.
+   */
+  'steel-pickaxe': {
+    id: 'steel-pickaxe',
+    name: 'Steel Pickaxe',
+    value: 210,
+    weight: 6,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: TIER_COLORS.steel,
+    tier: 'steel',
+    weaponShape: 'pick',
+    attackPowerBonus: 1,
+    toolFor: 'mining',
+    gatherSpeedBonus: 0.15,
+  },
+  'steel-axe': {
+    id: 'steel-axe',
+    name: 'Steel Axe',
+    value: 190,
+    weight: 5,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: TIER_COLORS.steel,
+    tier: 'steel',
+    weaponShape: 'axe',
+    attackPowerBonus: 1,
+    toolFor: 'woodcutting',
+    gatherSpeedBonus: 0.15,
+  },
+  'steel-pole': {
+    id: 'steel-pole',
+    name: 'Steel Pole',
+    value: 170,
+    weight: 4,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: TIER_COLORS.steel,
+    tier: 'steel',
+    weaponShape: 'pole',
+    attackPowerBonus: 0,
+    toolFor: 'fishing',
+    gatherSpeedBonus: 0.15,
   },
   logs: {
     id: 'logs',

@@ -55,6 +55,8 @@ import {
   BOUNTY_CHANGED_EVENT,
   BOUNTY_CLOSED_EVENT,
   BOUNTY_OPENED_EVENT,
+  OUTFITTER_OPENED_EVENT,
+  OUTFITTER_CLOSED_EVENT,
   COMBAT_LOG_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
   CONTEXT_MENU_REQUESTED_EVENT,
@@ -275,6 +277,7 @@ class Hud {
         learnedAbilities: this.model.learnedAbilities,
         currency: this.model.currency,
       }),
+      outfitter: () => this.model.inventory,
       bounty: () => ({
         ...this.questCounters(),
         level: this.model.level,
@@ -800,6 +803,9 @@ class Hud {
       this.overlays.refreshBank();
       // And the forge, whose rows are drawn against what the bag actually holds.
       this.overlays.refreshForge();
+      // And the outfitter, whose every row is a price in the bag: a trade
+      // spends three materials at once and each one is a line on the panel.
+      this.overlays.refreshOutfitter();
       // Quest progress is counted off the bag, so every pickup can move it.
       this.refreshQuests();
       // So is whether a key is in hand, which is what a shut zone's cell says.
@@ -846,6 +852,8 @@ class Hud {
       this.overlays.refreshBank();
     });
 
+    listen(OUTFITTER_OPENED_EVENT, () => this.overlays.openOutfitter());
+    listen(OUTFITTER_CLOSED_EVENT, () => this.overlays.closeOutfitter());
     listen(BOUNTY_OPENED_EVENT, () => this.overlays.openBounty());
     listen(BOUNTY_CLOSED_EVENT, () => this.overlays.closeBounty());
     listen(BOUNTY_CHANGED_EVENT, (bounty) => {
