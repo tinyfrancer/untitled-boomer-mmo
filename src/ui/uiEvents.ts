@@ -142,7 +142,6 @@ export const ZONE_ENTERED_EVENT = 'zone-entered';
 // Asked for from the world map's zoomed-out view. An ask, not an order: only
 // the world knows whether the player is in the middle of a fight, so it decides
 // and the map is told by the zone it ends up in.
-export const TRAVEL_REQUESTED_EVENT = 'travel-requested';
 // Which locked doors have been opened. On the wire because the key is *spent*
 // opening one, so the bag the HUD already holds cannot answer it: a hideout key
 // missing from the pack means either "never found one" or "already used it",
@@ -371,7 +370,6 @@ export interface UiEventMap {
   [AFK_TOGGLE_REQUESTED_EVENT]: [];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
-  [TRAVEL_REQUESTED_EVENT]: [zoneId: ZoneId];
   [UNLOCKED_ZONES_CHANGED_EVENT]: [zoneIds: ZoneId[]];
   [VISITS_CHANGED_EVENT]: [visits: ZoneVisits];
   [PLAYER_TILE_CHANGED_EVENT]: [tile: TilePoint];

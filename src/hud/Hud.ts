@@ -90,7 +90,6 @@ import {
   SKILL_XP_GAINED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
-  TRAVEL_REQUESTED_EVENT,
   TITLE_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
@@ -285,7 +284,6 @@ class Hud {
       forge: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
     });
     this.mapSheet = new MapSheet({
-      onTravel: (zoneId) => events.emit(TRAVEL_REQUESTED_EVENT, zoneId),
       access: () => ({
         inventory: this.model.inventory,
         unlockedZones: this.model.unlockedZones,

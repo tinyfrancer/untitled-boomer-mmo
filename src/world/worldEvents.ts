@@ -56,15 +56,13 @@ export type WorldEvent =
    */
   | { kind: 'bolt-cast'; abilityId: AbilityId | EnemyAbilityId; from: Point; to: Point }
   | { kind: 'gather-tick'; at: Point; nodeId: ResourceNodeId; progress: number }
-  /** The player walked onto an exit. The host loads the zone — the world does not. */
-  | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number }
   /**
-   * The player travelled from the world map. The same handover as `zone-exit`
-   * and deliberately not the same event: nobody walked through anything, so
-   * there is no edge to arrive on the far side of and the arrival is wherever
-   * that zone puts someone with no particular spot.
+   * The player walked onto an exit. The host loads the zone — the world does
+   * not, and this is the only way a zone changes: there was a second one, from
+   * tapping a cell on the world map, and it was removed because a world you can
+   * step across for nothing is a world with no distance in it.
    */
-  | { kind: 'travel'; to: ZoneId };
+  | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number };
 
 /**
  * The HUD channel, as much of an emitter as ZoneWorld needs. `createEventBus`

@@ -17,7 +17,7 @@ export interface ZoneLoadRequest {
   zoneId: ZoneId;
   /** Which edge they walked in through, when they walked. */
   entry?: { edge: ZoneEdge; fraction: number };
-  /** HP carried across a zone walk or a travel; absent on a session's first world. */
+  /** HP carried across a zone walk; absent on a session's first world. */
   hp?: number;
 }
 
@@ -136,12 +136,6 @@ export class GameContext {
   // Death is deliberately not one of them any more — a respawn happens in the
   // zone it happened in, so it changes no worlds and asks nothing of the host.
   private zoneLoadFor(event: WorldEvent): ZoneLoadRequest | null {
-    if (event.kind === 'travel') {
-      // No entry: nobody walked through anything, so they arrive wherever that
-      // zone puts someone with no particular spot. HP rides across, the way it
-      // does through an exit — travelling is not a way to heal.
-      return { zoneId: event.to, hp: this.world.player.hp };
-    }
     if (event.kind === 'zone-exit') {
       return {
         zoneId: event.to,

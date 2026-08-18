@@ -217,7 +217,6 @@ function svgEl<K extends keyof SVGElementTagNameMap>(
 }
 
 export interface MapSheetOptions {
-  onTravel: (zoneId: ZoneId) => void;
   /**
    * What the world view needs to tell a shut door from an open one, read fresh
    * each time it draws. A getter rather than a value because the answer moves
@@ -258,7 +257,6 @@ export interface MapSheetOptions {
 export class MapSheet extends Sheet {
   private readonly figure: HTMLElement;
   private readonly zoomButton: HTMLButtonElement;
-  private readonly onTravel: (zoneId: ZoneId) => void;
   private readonly access: () => ZoneAccessContext;
   private svg: SVGSVGElement | null = null;
   private dot: SVGCircleElement | null = null;
@@ -269,7 +267,6 @@ export class MapSheet extends Sheet {
 
   constructor(options: MapSheetOptions) {
     super('Map', THEME.panelWidth.map, 'hud-sheet--map');
-    this.onTravel = options.onTravel;
     this.access = options.access;
     this.figure = el('div', 'hud-map');
     this.zoomButton = el('button', 'hud-button hud-map__zoom', 'World');
@@ -292,7 +289,7 @@ export class MapSheet extends Sheet {
     this.moveDot();
   }
 
-  /** Which view is showing. The zoomed-out one is where travel is asked for. */
+  /** Which view is showing: this zone, or the world the roads join up. */
   setZoomedOut(zoomedOut: boolean): void {
     if (zoomedOut === this.zoomedOut) return;
     this.zoomedOut = zoomedOut;
@@ -325,10 +322,12 @@ export class MapSheet extends Sheet {
    * The zoomed-out view: a cell per zone, laid out by `worldMap()` from the
    * exits themselves, with a road drawn along each pair that connects.
    *
-   * Tapping one asks to travel there — asks, because only the world knows
-   * whether the player is in the middle of a fight. Tapping the one they are
-   * already standing in zooms back in to it instead, which is what a player
-   * pressing their own square means by it.
+   * Nothing here is a way of going anywhere. Tapping a cell used to ask to
+   * travel to it, and that is gone: a world you can step across for nothing is
+   * a world with no distance in it, and every zone is reachable by walking the
+   * roads this view draws. The one cell that still answers a press is the one
+   * the player is standing in, which zooms back in to it — that is a request
+   * about the panel rather than about the world.
    */
   private buildWorld(): void {
     const map = worldMap();
@@ -409,15 +408,11 @@ export class MapSheet extends Sheet {
         : `${zone.description} Opened with a ${describeItemName(access.keyItemId)}.`;
     group.append(title);
 
-    // The whole cell is the target rather than the label inside it: this is
-    // tapped with a thumb.
-    group.addEventListener('click', () => {
-      if (here) {
-        this.setZoomedOut(false);
-        return;
-      }
-      this.onTravel(zone.zoneId);
-    });
+    // Only the cell being stood in is tappable, and the whole cell is the
+    // target rather than the label inside it: this is pressed with a thumb.
+    if (here) {
+      group.addEventListener('click', () => this.setZoomedOut(false));
+    }
     return group;
   }
 

@@ -254,13 +254,13 @@ describe('progress made away from the counter', () => {
   /**
    * Everything that stops a session at once shuts every counter, never one, and
    * the board is the newest of the four to have to be remembered in that list.
-   * Travelling off the world map is the cheapest of the three to reach here.
    */
   it('is shut by leaving the zone, and the contract is not', () => {
     const kit = atTheBoard();
     kit.world.handleAcceptBountyRequested('rat-cull');
 
-    kit.world.handleTravelRequested('beach');
+    kit.world.teleport(kit.world.worldWidth / 2, kit.world.worldHeight - 10);
+    kit.tick(1);
 
     expect(kit.world.bountyNpc).toBeNull();
     expect(kit.emissions(BOUNTY_CLOSED_EVENT)).toHaveLength(1);

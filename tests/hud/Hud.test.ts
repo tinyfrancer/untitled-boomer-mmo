@@ -1109,27 +1109,31 @@ describe('the world map', () => {
     expect(cell('beach')?.dataset.here).toBeUndefined();
   });
 
-  // The map asks; the world decides. Only it knows whether the player is in the
-  // middle of a fight, so nothing here may move them.
-  it('asks to travel rather than travelling', () => {
+  /**
+   * A map you read, not a control. Tapping a cell used to ask the world to
+   * travel there; that went when fast travel did, and nothing replaced it —
+   * a cell that still looked pressable and did nothing would be the dead
+   * button this HUD does not keep.
+   */
+  it('asks the world for nothing when a cell is pressed', () => {
     openMap();
     zoom()?.click();
 
     cell('beach')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-    expect(emitted.filter((entry) => entry.event === 'travel-requested')).toEqual([
-      { event: 'travel-requested', args: ['beach'] },
-    ]);
+    expect(emitted.filter((entry) => entry.event.startsWith('travel'))).toEqual([]);
+    // Still the world view: pressing another zone's square did nothing at all.
+    expect(cells()).not.toEqual([]);
   });
 
-  // Pressing your own square is not a request to go where you already are.
-  it('zooms in on the zone the player is already in rather than asking', () => {
+  // The one press that still means something, and it is about the panel rather
+  // than about the world: your own square zooms back in to it.
+  it('zooms in on the zone the player is already in', () => {
     openMap();
     zoom()?.click();
 
     cell('town')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-    expect(emitted.filter((entry) => entry.event === 'travel-requested')).toEqual([]);
     expect(cells()).toEqual([]);
   });
 
@@ -1178,17 +1182,21 @@ describe('the world map', () => {
       expect(cell('bandit-hideout')?.dataset.access).toBeUndefined();
     });
 
-    // Still a tap like any other: whether a door opens is the world's answer,
-    // and it says so with the same toast walking into it earns.
-    it('is still asked about, so the world can say why not', () => {
+    /**
+     * Drawn shut and nothing more. The map used to be a way through a locked
+     * door — it cost the key, the same as pushing it open in person — and now
+     * that it is a map, the only thing that opens the hideout is walking to it.
+     * What the cell still does is *say* it is shut, which is what a player
+     * reads a map for.
+     */
+    it('shows the lock without offering a way through it', () => {
       openMap();
       zoom()?.click();
 
       cell('bandit-hideout')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(emitted.filter((entry) => entry.event === 'travel-requested')).toEqual([
-        { event: 'travel-requested', args: ['bandit-hideout'] },
-      ]);
+      expect(emitted.filter((entry) => entry.event.startsWith('travel'))).toEqual([]);
+      expect(cell('bandit-hideout')?.dataset.access).toBe('locked');
     });
   });
 });

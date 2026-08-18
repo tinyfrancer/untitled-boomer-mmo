@@ -285,12 +285,15 @@ tappable signpost (the mobile path — the invisible edge-walk band is untappabl
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not new
 view code — and that row is what says what is spawned in it, what is built on it, and what stations
-stand there. Travel from the world map is the third route in and goes through the same tables;
-`ZoneWorld` refuses it mid-fight, which is the one thing it can do that a walk cannot.
+stand there. **Walking is the only way into a zone.** There was a second — tapping a cell on the
+world map travelled there — and it was removed, because a world you can step across for nothing is a
+world with no distance in it: a forward base saves nothing, a full pack is never a decision, and the
+walk home is never a cost. What replaced it is nothing. If travel comes back it should be a thing
+with a price on it rather than a free line on a panel.
 
 The quarry is what that claim looks like when it is cashed: a map file, a spawn list, a row and one
-exit each way, and it appeared on the world map, in the zone map, in the offline camp and in travel
-with nothing else written down. Two things a `ZONES` row still cannot promise on its own, both held
+exit each way, and it appeared on the world map, in the zone map and in the offline camp with
+nothing else written down. Two things a `ZONES` row still cannot promise on its own, both held
 by `tests/systems/ZoneSystem.test.ts`: that an arrival _anywhere_ along an exit edge lands on
 walkable ground, and that every spawn offset is somewhere something can actually reach — a vein one
 row too far north is a vein inside the rock face, and unlike a misplaced rat it never wanders out to
@@ -405,21 +408,22 @@ Max HP is not on the wire — `player-hp-changed` carries the current value alon
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
 
-**The map zooms out, and the zoomed-out view is how you travel** (`worldMap()` in
+**The map zooms out, and the zoomed-out view is a map you read** (`worldMap()` in
 `systems/MapSystem.ts`). Its whole layout is **derived from the exits already in `ZONES`** — walked
 breadth-first from town, placing each zone one step from its neighbour in the direction the edge
 that reaches it points — so a coordinate cannot drift out of step with where walking actually takes
 you, and a zone added to the table with its exits wired appears on the map with nothing else written
-down. A zone's level band is derived the same way, off its own `mobSpawns`. Tapping a cell asks to
-travel; the world decides, and refuses while **anything is engaged on the player** — deliberately
-not `player.isInCombat()`, which is a regen lockout a freshly built world starts inside, so using it
-would leave someone unable to leave a zone for seconds after arriving in it. Travel records no
-position in the zone it is sending them to, which is what puts them on its spawn point rather than
-wherever they last stood there.
+down. A zone's level band is derived the same way, off its own `mobSpawns`. **Nothing on it is a way
+of going anywhere.** Tapping a cell used to ask the world to travel there, and that went with fast
+travel; the only press it still answers is on the cell being stood in, which zooms back in to it —
+a request about the panel rather than about the world. A cell that still looked pressable and did
+nothing would be the dead button this HUD does not keep, so the handler is gone rather than
+disabled.
 
-A locked zone is drawn shut on that view and is **still tapped like any other cell** — whether a
-door opens is the world's answer, and the toast it refuses with is what a phone reads the reason off,
-there being no tooltip to hover. The cell is drawn from `zoneAccess`'s three answers, so holding the
+A locked zone is drawn shut on that view and that is the whole of what the map does about it: the
+door is met at the edge, where walking into it earns the toast naming the key. The map used to be a
+third way through one — it spent the key, the same as pushing it open in person — which left `Travel`
+and the walk as two routes to keep in step. The cell is drawn from `zoneAccess`'s three answers, so holding the
 key looks different from not holding it; the sheet reads the bag through a **getter** rather than
 being handed it once, because the key can be looted with that very panel open. Which doors have been
 opened is the one thing about this the HUD cannot derive, so it rides its own event
@@ -675,8 +679,9 @@ modules. An event carrying more than two or three values should pass one object 
 
 **`ZoneWorld` does not load zones, and that is on purpose.** Walking onto an exit emits
 `{kind: 'zone-exit', to, edge, fraction}` and stops the world; the `GameContext` acts on it,
-because tearing this world down is its job too. Travelling from the world map is the same handover
-under a different event. HP rides across both, so crossing a line is never a free heal. A frame
+because tearing this world down is its job too. It is the only handover there is: travelling from the
+world map was a second one under its own event, and both it and that event are gone. HP rides across,
+so crossing a line is never a free heal. A frame
 that changed zone hands its events back with `zoneChanged: true`; they belong to a world that no
 longer exists, so a view rebuilds instead of drawing them.
 
@@ -689,7 +694,7 @@ first thing in the game currency is spent on, and deliberately coin rather than 
 quadratic curve a penalty big enough to be felt is big enough to erase an evening. A purse too thin
 pays what it has: a respawn is never blocked on affordability. Arriving at full is still the point
 of dying, which is why the spawn point has to be safe — it is the middle of the map, where
-travelling from the world map already puts someone.
+a respawn puts someone with no particular spot.
 
 **That safety is held by a sweep now rather than by this paragraph**
 (`tests/systems/spawnSafety.test.ts`), because for a long time the paragraph was simply wrong. Three
@@ -860,9 +865,8 @@ zero there, and why a quest taken with the goods already in the pack is complete
 with a different tally behind it instead of a third mechanism. A visited _set_ would need its own
 "since when" question and could never be re-satisfied by someone who had already been; a count minus
 a baseline says "go there" once, to a veteran and a newcomer alike. The tally is credited in
-`ZoneWorld`'s constructor, because **a world built for a zone _is_ an arrival in it** — the walk, the
-travel and the session resumed all end there, so every route in counts by construction and a fourth
-would too. It is deliberately not `recordLocation`, which is called on every save and says where the
+`ZoneWorld`'s constructor, because **a world built for a zone _is_ an arrival in it** — the walk and
+the session resumed both end there, so every route in counts by construction and a third would too. It is deliberately not `recordLocation`, which is called on every save and says where the
 character is rather than that they have just got there. The HUD holds all three counters and redraws
 the tracker and the sheet off them together, which is why the two tallies ride events of their own
 (`kills-changed`, `visits-changed`): neither is in the bag it already has, and either can move a

@@ -2644,8 +2644,9 @@ async function zoneMapSheet() {
     const boxes = cells.map((cell) => cell.getBoundingClientRect());
     return {
       zones: cells.map((cell) => cell.getAttribute('data-zone')),
-      // Which of them can actually be walked into right now. A shut door is
-      // drawn shut, and travelling to one is refused rather than obeyed.
+      // Which of them are drawn open. A shut door is drawn shut, which since
+      // the map stopped being a way of going anywhere is the whole of what it
+      // has to say about one.
       open: cells
         .filter((cell) => cell.getAttribute('data-access') === null)
         .map((cell) => cell.getAttribute('data-zone')),
@@ -2667,30 +2668,30 @@ async function zoneMapSheet() {
     `${overview.zones.join(', ')} — here: ${overview.here}, ${overview.roads} roads`,
   );
   check(
-    'and gives each one a cell a thumb can hit',
+    'and gives each one a cell big enough to read, and to press where it is pressable',
     overview.smallest >= 44,
     `smallest cell ${Math.round(overview.smallest)}px`,
   );
   await page.screenshot({ path: `${OUT}/22-world-map.png` });
 
-  // The whole point of it. Travel is refused mid-fight, so park first, and
-  // somewhere open — a locked door refuses this the same way it refuses a walk.
-  await park();
-  const goingTo = overview.open.find((zone) => zone !== overview.current);
-  await page.click(`.hud-map__zone[data-zone="${goingTo}"]`);
-  await stepUntil(async () => (await zoneId()) === goingTo, `travel to ${goingTo}`);
-  await step(2);
-  const travelled = await page.evaluate(() => ({
-    zone: window.world.zone.id,
-    title:
-      document.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent ?? '',
-    mobs: window.world.mobs.length,
-  }));
+  /**
+   * A map you read, not a control.
+   *
+   * Tapping a cell used to travel there; that went with fast travel, and what
+   * is worth checking in a browser is that the element still in the DOM does
+   * nothing when a real click lands on it. The zone below is reached by walking
+   * into the edge, which is the only way there is now.
+   */
+  const elsewhere = overview.open.find((zone) => zone !== overview.current);
+  await page.click(`.hud-map__zone[data-zone="${elsewhere}"]`);
+  await step(4);
   check(
-    'and tapping a zone on it actually takes the player there',
-    travelled.zone === goingTo && travelled.mobs > 0,
-    `${overview.current} -> ${travelled.zone}, ${travelled.mobs} mobs in the rebuilt world`,
+    'and pressing another zone on it goes nowhere at all',
+    (await zoneId()) === overview.current,
+    `pressed ${elsewhere}, still in ${await zoneId()}`,
   );
+  await page.screenshot({ path: `${OUT}/22b-map-inert.png` });
+
   // Back to the zone view, which is what the checks below are about.
   await page.click('[data-action="toggle-map-zoom"]');
   await page.waitForTimeout(120);
@@ -2698,9 +2699,6 @@ async function zoneMapSheet() {
   // A zone walk rebuilds the world, and the map has to follow it across. Which
   // exit is taken is read off the zone too, so this works from wherever it ran.
   const leaving = await zoneId();
-  // Read here rather than from the top of the section: the travel check above
-  // has moved the player since, so the zone being left is not the one that was
-  // measured then.
   const before = await page.evaluate(() => window.world.zone.name);
   await page.evaluate(() => {
     const w = window.world;
@@ -2757,25 +2755,40 @@ async function lockedZone() {
   // hideout can be walked into from.
   if ((await zoneId()) !== 'bandit-camp') {
     await park();
-    await page.click('.hud-map__zone[data-zone="bandit-camp"]');
-    await stepUntilZone('bandit-camp', 'travel to the bandit camp');
+    // Walked, because the map stopped being a way of going anywhere. The
+    // section above leaves the player in town and the camp is one road east.
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth - 33, w.worldHeight / 2);
+    });
+    await stepUntilZone('bandit-camp', 'the east road into the bandit camp');
   }
   await park();
 
   check('a zone behind a lock is drawn shut on the world map', (await cellAccess()) === 'locked');
 
-  // Tapped like any other cell: whether a door opens is the world's answer, and
-  // it is the toast that a phone with nothing to hover reads it off.
+  /**
+   * The map says a door is shut; it is not a way through one.
+   *
+   * Pressing this cell used to ask the world to travel and earn the refusal
+   * toast back. With the map read-only the lock is something a player reads
+   * here and meets at the edge, so what a browser is needed for is that the
+   * element is genuinely inert — still drawn, still labelled shut, and doing
+   * nothing at all when a real click lands on it.
+   */
   await page.click('.hud-map__zone[data-zone="bandit-hideout"]');
   await step(2);
-  const refused = await page.evaluate(() => ({
+  const pressed = await page.evaluate(() => ({
     zone: window.world.zone.id,
-    toast: document.querySelector('.hud-toast')?.textContent ?? '',
+    access:
+      document
+        .querySelector('.hud-map__zone[data-zone="bandit-hideout"]')
+        ?.getAttribute('data-access') ?? 'open',
   }));
   check(
-    'and tapping it is refused with the reason rather than obeyed',
-    refused.zone === 'bandit-camp' && refused.toast.includes('Hideout Key'),
-    `still in ${refused.zone}, toast: "${refused.toast}"`,
+    'and pressing it neither opens the door nor pretends to',
+    pressed.zone === 'bandit-camp' && pressed.access === 'locked',
+    `still in ${pressed.zone}, cell drawn ${pressed.access}`,
   );
   await page.screenshot({ path: `${OUT}/23-locked-zone.png` });
 
