@@ -140,6 +140,24 @@ Four things this section did not predict:
    maul — which is how the game's first repeatable weapon upgrade above a brown axe ended up here
    rather than in a zone that set out to add one.
 
+**Built twice, in parallel, and merged on evidence.** The same session running on two devices built
+this zone independently. The comparison is worth recording because it was settled by measurement
+rather than by taste: the second implementation laid the mine out as open floor with scattered
+pillars, chosen specifically to stop mobs pinning against geometry, there being no pathfinding
+anywhere in this game. Simulating a chase out of every spawn to every point inside its own leash
+radius said the opposite — **the carved rooms pin on 13% of reachable spots and the open floor on
+17%.** Scattered pillars put an obstacle beside every spawn where a few large rooms leave clear
+lines. The rooms stayed, and so did everything else that version had settled: the wide quarry cut
+that left both iron veins standing, seam timings a step beyond the quarry's own, and the test file
+that traces every seam and kill behind a steel piece.
+
+Four claims came across from the other one, each a way this zone could keep passing while ceasing to
+be what it is: that nothing living here drops what the seams yield (a level gate is only a gate while
+there is no way round it), that a steel bar spends two quarry irons, that this zone raises no
+ceiling, and that the capstone recipe sits at the top of the skill that makes it. The last closed a
+real gap rather than restating one — the steel chestplate was at smithing 9 against a cap of 10, so
+capping the deepest crafting skill in the game bought nothing at all.
+
 The one thing this section asked for that came out differently is the **shield**. It is listed above
 as a fourth armour row and it is really the point of the tier: both offhands in the world drop off
 bandits in the starter band, so the slot filled once and never again, and a top tier stopping at three
