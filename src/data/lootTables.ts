@@ -162,7 +162,54 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'fenweave-leggings', chance: 0.045 },
       // What they eat out of the pools they are standing in.
       { itemId: 'raw-eel', chance: 0.18 },
+      // The way into the barrow, at the hideout key's own 3%: the rarest thing
+      // on any table in the game, and meant to be a run of raiders rather than
+      // an errand. It is on the zone *before* the door for the reason the
+      // hideout's is on the camp outside it — a key found somewhere unrelated to
+      // what it opens is a key nobody connects to a place.
+      { itemId: 'barrow-key', chance: 0.03 },
     ],
     currency: { min: 22, max: 54, chance: 0.92 },
+  },
+  /**
+   * Grave goods: the arm the man was buried holding, and the silver on his eyes.
+   *
+   * Two entries and the best purse in the game, which is the table saying what
+   * the zone is. There is no armour set on it on purpose — the fen already
+   * carries the best cloth anything repeatable drops and the forge the best
+   * plate, and a fourth set here would undo one of those two rather than add
+   * anything. What the barrow has that neither of them does is the **off hand**:
+   * the slot that filled once in the starter band and then never again for
+   * anybody who did not take up a hammer, and never at all for a caster.
+   */
+  'barrow-wight': {
+    id: 'barrow-wight',
+    entries: [
+      { itemId: 'grave-shield', chance: 0.05 },
+      { itemId: 'grave-lantern', chance: 0.05 },
+    ],
+    // Half again the raider's, and the deepest purse anything repeatable
+    // carries. Coin is most of why the wights are worth clearing rather than
+    // walking past: the bank's shelf price climbs, and this is what pays it.
+    currency: { min: 34, max: 78, chance: 0.95 },
+  },
+  /**
+   * The second table in the game whose contents come off nothing else, and it is
+   * the chief's argument one band up.
+   *
+   * The crown always drops, because a fight this long has to be worth something
+   * every time and it is the one piece both classes can wear. The two weapons are
+   * the chase, and there are two of them so the run is worth making whoever you
+   * rolled.
+   */
+  'barrow-king': {
+    id: 'barrow-king',
+    entries: [
+      { itemId: 'barrow-crown', chance: 1 },
+      { itemId: 'barrow-blade', chance: 0.2 },
+      { itemId: 'barrow-scepter', chance: 0.2 },
+    ],
+    // A king's hoard, and several times what the men in his chamber carry.
+    currency: { min: 180, max: 320, chance: 1 },
   },
 };

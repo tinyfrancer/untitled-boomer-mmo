@@ -1,6 +1,6 @@
 # Act Two: five zones past the starter band
 
-A brainstorm, not a spec. **Zones 1, 2 and 3 are built** (see below); the other two are not.
+A brainstorm, not a spec. **Zones 1, 2, 3 and 5 are built** (see below); zone 4 is not.
 
 ## Where the game currently stops
 
@@ -12,24 +12,29 @@ ever had that could not be described as "the starter area".
 
 What the five below are for, in one line each:
 
-| #   | Zone              | Cell   | Band | Why you go                                                |
-| --- | ----------------- | ------ | ---- | --------------------------------------------------------- |
-| 1   | Old Mill Road ✅  | -1, 0  | 4-5  | The first fight above the starter band, and the coin      |
-| 2   | The Deep Cut ✅   | 0, -2  | 5-6  | Coal, and with it the whole steel tier                    |
-| 3   | Blackwater Fen ✅ | 0, 2   | 5-7  | The food that makes levels 6-7 survivable                 |
-| 4   | Greyford Outpost  | -2, 0  | —    | A second set of counters, out where the work is           |
-| 5   | The Sunken Barrow | -2, -1 | 7-8  | The capstone: locked, and the only place two uniques drop |
+| #   | Zone                 | Cell  | Band | Why you go                                                |
+| --- | -------------------- | ----- | ---- | --------------------------------------------------------- |
+| 1   | Old Mill Road ✅     | -1, 0 | 4-5  | The first fight above the starter band, and the coin      |
+| 2   | The Deep Cut ✅      | 0, -2 | 5-6  | Coal, and with it the whole steel tier                    |
+| 3   | Blackwater Fen ✅    | 0, 2  | 5-7  | The food that makes levels 6-7 survivable                 |
+| 4   | Greyford Outpost     | -2, 0 | —    | A second set of counters, out where the work is           |
+| 5   | The Sunken Barrow ✅ | 0, 3  | 7-8  | The capstone: locked, and the only place two uniques drop |
+
+Zone 5 shipped at **0,3** rather than the -2,-1 above, because -2,-1 is only reachable through a
+Greyford that does not exist — see its own section for why the fen turned out to be the better door
+anyway.
 
 The cells are what `worldMap()` derives from the exits, walking breadth-first from town and stepping
 one square in the direction each edge points. Town is `0,0`; beach is `0,1`, quarry `0,-1`, camp
 `1,0`, hideout `2,0`. The five above collide with none of those and none of each other, which is the
 one thing about a new zone the layout code cannot fix for you.
 
-Built in that order, the cap climbs 5 → 6 → 7 → 7 → 9. (In practice zones 1 and 3 were built
-first, and the cap went 5 → 6 → 8: the fen spawns to level 7 where this table guessed 5-7 would
-top out lower. Zone 2 then moved it not at all, sitting under a ceiling the fen had already
-raised past it.) It is never a number anyone edits: add the
-row, and `progression.test.ts` says what the cap now has to be.
+Built in that order, the cap climbs 5 → 6 → 7 → 7 → 9. (In practice zones 1, 3, 2 and 5 were built
+in that order, and the cap went 5 → 6 → 8 → 8 → 9: the fen spawns to level 7 where this table
+guessed 5-7 would top out lower, zone 2 moved it not at all by sitting under a ceiling the fen had
+already raised past it, and zone 5 landed on the 9 this table predicted from a different direction.)
+It is never a number anyone edits: add the row, and `progression.test.ts` says what the cap now has
+to be.
 
 ---
 
@@ -257,7 +262,7 @@ Greyford is mechanically the town again in a different colour. If it is to be wo
 probably wants one thing town does not have — the obvious candidate being a role that trades in
 something other than coin.
 
-## 5. The Sunken Barrow — north of Greyford, level 7-8, locked
+## 5. The Sunken Barrow — south of Blackwater Fen, level 7-8, locked — **BUILT**
 
 **The capstone, and deliberately the same shape as the hideout** because that shape worked: a rare
 key off the zone before it, a map cut out of solid rock rather than painted onto grass, a corridor,
@@ -277,6 +282,71 @@ and a named thing at the back of it.
 **Cost**: a map (the hideout's inverted-`WALL_TILE` trick, which
 `tests/systems/ZoneSystem.test.ts` already sweeps for arrivals anywhere along an edge), spawns, two
 enemy rows, one key item, three unique items, and one `requiresKey`.
+
+**Built fourth, out of the plan's order and off a different zone entirely.** The doc put the mouth
+north of Greyford at -2,-1, which is reachable only through a Greyford nobody has built — so the
+choice was to build two zones or to find another door. The fen turned out to be the better one on
+this doc's own argument rather than in spite of it: **the key drops on fen raiders**, and the whole
+reason the hideout's shape works is that its key drops on the men standing outside its own door. At
+-2,-1 the grind would have been in the far south-east and the lock in the far north-west. South off
+the fen puts them in the same place, points the fen's own north-to-south difficulty dial straight at
+the door, and makes the run-up 5-7 into 7-8 instead of a level 4-5 road into a level 8 boss. The cell
+is 0,3, which collides with nothing.
+
+**What it actually cost**, against the paragraph above. The cost line was right about the shape and
+wrong about the size in four places, three of which are the same lesson this doc has now learned
+three times.
+
+1. **It cost the fen its deep pools**, which is the beach's bill charged a third time and the second
+   time terrain rather than a building paid it. An arrival strip spans the **whole** shared edge, so
+   opening the road south meant no aggressive creature could sit within its aggro radius of _any_
+   point along the fen's bottom row — and the fen's design is that a raider stands over every deep
+   pool, with the pools as far from the way in as the map allows. Distance in x cannot help against a
+   strip that reaches every x, so the only fix was distance up the map: both deep pools moved two
+   rows north, the raiders guarding them came with them, and the bottom of the marsh is now the empty
+   causeway the barrow's mouth is reached across. The fen's own tests still hold — the levels climb
+   south, every pool has its raider — which is what made the move safe to make at all.
+2. **Two new enemy abilities, not one.** The section above asks for "one telegraphed ability from
+   `data/enemyAbilities.ts`", and reusing the chief's Cleave for the capstone boss would have made
+   the last fight in the game a restatement of the fifth. So the wights got `grave-chill` (150,
+   half again a Cleave's reach — the answer is a walk rather than a step) and the king got
+   `barrow-wail` (240, the longest tell in the game — the answer is to leave the room). Both are one
+   row of data. What is genuinely new is that the chill hangs off something that **respawns**: every
+   telegraph before this belonged to a boss or to a bandit's thrown knife, so the cadence had only
+   ever been driven on a fight a player has once.
+3. **No armour tier, and that took deciding rather than filling in.** The wights are `humanoid`
+   family, so `EnemySystem.test.ts` requires coin and equipment on their table — and the obvious
+   fill was a fourth set. It would have had to beat either the fen's cloth or the forge's plate, both
+   of which are claims other zones' tests hold on purpose, so a barrow set would have undone one of
+   them rather than added anything. What the barrow pays instead is the **off hand**: both offhands
+   in the world drop off bandits in the starter band, the only thing above them is smithed and plate,
+   and a caster has therefore carried a level 1 orb for the entire climb. The `grave-shield` and the
+   `grave-lantern` are the bandits' pair one band up, both under the steel shield so the forge keeps
+   the slot's ceiling.
+4. **A second boss broke two tests, and generalising them was most of the work that was not data.**
+   `uniqueLoot.test.ts` asserted the chief's three beat everything in their slot, which a better hoard
+   makes false — it is a **ladder** now: every unique beats everything in its slot that is not one,
+   the deeper boss beats the shallower one slot for slot, and the deeper hoard is behind the zone with
+   the higher band. `EnemySystem.test.ts` asserted the chief was the only boss anywhere; it now holds
+   the rule that was behind that — every boss is one of a kind, carries a table of its own, and stands
+   in exactly one zone that is locked.
+
+**And one thing it turned up somewhere else, fixed rather than left.** `spawnSafety.test.ts` — the
+sweep the Deep Cut's postmortem asked for — probed five sampled fractions of each arrival edge, and a
+spawn that sat between two of them passed a check it should have failed. It is continuous now (the
+nearest point on a strip to anything is always the one directly across from it, which is exact and
+cheaper than sampling), and it immediately found a shipped bug: Blackwater Fen had a level 5 raider
+192 from its **north** strip against an aggro radius of 210, passing only because the nearest sampled
+arrival was 214 away. Walking down from the beach could land you in melee. That raider moved with the
+rest of them.
+
+Two smaller things. The cap moved 8 → 9 through `progression.test.ts` with nobody editing it, and the
+wight was priced against the ceiling it was raising exactly as the fen's postmortem said the next zone
+would have to be — 18 XP a level against the raider's 14, which lands the climb at 147 kills against a
+limit of 213. And a screenshot caught `ZoneAccessSystem` saying "You unlock the **The** Sunken Barrow
+with the Barrow Key": both of its sentences put an article in front of a name half the table already
+carries one on. That is fixed and held over every locked zone, since what brings it back is a third
+zone named the way the Deep Cut is.
 
 ---
 
@@ -304,6 +374,17 @@ Almost all of it is data. The things that are **not**, in rough order of size:
 3. **The offline cap.** Half a level per session is a share of the curve, and the curve is about to
    get much steeper at the top. The existing note in `AfkSystem` says to move it with the curve; this
    is when.
+
+   **Measured, now that the barrow has taken the cap to 9, and the answer is: leave it alone.** The
+   ceiling is `xpToReachLevel(level + 1) × 0.5`, which is a fraction of the player's _next_ level
+   rather than a fixed number — so it moves with the curve on its own, and the thing worth checking
+   was which direction. A session is worth 1,000 of the 4,320 the game contained at cap 5 (23%),
+   2,560 of 16,240 at cap 8 (16%), and 3,240 of 22,720 at cap 9 (14%). The total grows faster than
+   any one level does, so every cap raise has quietly made a night parked worth a smaller share of
+   the game, which is the direction this was ever worried about. The note in `AfkSystem` stays, but
+   what it is watching for is a cap raise that does _not_ come with content — and those do not
+   happen here, because `progression.test.ts` derives the cap from what spawns.
+
 4. **Armour tuning.** `mitigatedDamage` is `armor / (armor + 80)`, so an 80 in the denominator tuned
    against brown and iron will not hold a third tier without being re-checked. The duels in
    `EnemySystem.test.ts` are where that gets settled, and they only model auto-attacks — which stays
@@ -316,9 +397,11 @@ Almost all of it is data. The things that are **not**, in rough order of size:
    are biggest, so a barrow set much above this one buys less than it looks like it does.
 
 5. **Two new creature colours and no new creature shapes**, if goblins and wights are humanoids and
-   crawlers are crustaceans. That is the `shape` seam paying for itself. Four colours so far and still
-   no shapes, which is the seam holding: the lurker, the raider, the miner and the crawler are all a
-   row in `palette.ts` and nothing else.
+   crawlers are crustaceans. That is the `shape` seam paying for itself. Six colours now and still no
+   shapes, which is the seam holding all the way to the end: the lurker, the raider, the miner, the
+   crawler, the wight and the king are each a row in `palette.ts` and nothing else. The two dead ones
+   are the only entries in that table told apart from their neighbours by **value** rather than by
+   hue — bone has to read against grass, dirt, marsh and rock alike.
 
 ## What gets built for free
 
@@ -338,9 +421,14 @@ Worth saying, because it is most of a zone:
 
 ## The order to build them in
 
-In practice: 1 → 3 → 2, and the two departures were both right. Zone 3 jumped the queue because the
-cloth gap was the stronger argument, and zone 2 landing third meant the steel tier could be priced
-against a cap the fen had already moved rather than against one it would have moved itself.
+In practice: 1 → 3 → 2 → 5, and all three departures were right. Zone 3 jumped the queue because the
+cloth gap was the stronger argument, zone 2 landing third meant the steel tier could be priced
+against a cap the fen had already moved rather than against one it would have moved itself, and zone
+5 skipped zone 4 because the capstone's run-up turned out to be zones 1-3 rather than a second town:
+Greyford is a convenience, and a convenience is not what a boss is gated on. What that departure cost
+is a walk — the bank and the shelf are still in town, so a haul out of the barrow is the whole way
+home. Zone 4 is now the thing that fixes a problem the game actually has rather than the thing the
+plan says comes next, which is a better position for it to be in.
 
 The plan as written was 1 → 2 → 3 → 4 → 5, and the argument for it is that each one is playable
 alone. Zone 1 needs nothing

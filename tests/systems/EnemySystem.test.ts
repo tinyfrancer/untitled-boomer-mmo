@@ -144,10 +144,32 @@ function combatant(gear: Gear, level: number): Combatant {
   };
 }
 
+/**
+ * What a warrior actually owns at the barrow's door, which is the same idea
+ * `BROWN_SET` is for the hideout: everything the content in front of it gives.
+ *
+ * Steel throughout, because the fen's cloth is not a warrior's and the studded
+ * leather on the road west is three zones back — so the best armour anyone can
+ * walk in here wearing is smithed rather than dropped. The blade is the chief's,
+ * which is the best weapon in the world until the king drops his.
+ */
+const BARROW_SET: Gear = {
+  helmet: 'steel-helmet',
+  chest: 'steel-chestplate',
+  pants: 'steel-legs',
+  weapon: 'cutthroats-blade',
+  offhand: 'steel-shield',
+};
+
 // A warrior in everything the previous zone drops, shield included, which is
 // what "expected level" means for the next one.
 function gearedWarrior(level: number): Combatant {
   return combatant(BROWN_SET, level);
+}
+
+/** The same claim four zones on: everything the run-up to the barrow gives. */
+function barrowWarrior(level: number): Combatant {
+  return combatant(BARROW_SET, level);
 }
 
 function freshWarrior(): Combatant {
@@ -250,6 +272,92 @@ describe('difficulty curve', () => {
     expect(duel(after, dodging)).toBe('player');
   });
 
+  /**
+   * The barrow's trash, and the first common creature in the game whose ability
+   * decides the fight rather than merely colouring it.
+   *
+   * The chief's contract stated over something that respawns in thirteen seconds:
+   * a level 8 in everything the run-up gives beats one wight by stepping out of
+   * each Grave Chill, and loses to the same wight standing in every one. That is
+   * what makes a chamber of them a place to fight carefully rather than a place
+   * to hold a mouse button down — and it is stated on the *trash* deliberately,
+   * since a player meets four of these before they meet him.
+   */
+  it('makes one wight a fight about moving, at the level the zone asks for', () => {
+    const chill = ENEMY_ABILITIES['grave-chill'];
+    const standing = withAbility(enemyAt('barrow-wight', 8), chill, 'lands');
+    const dodging = withAbility(enemyAt('barrow-wight', 8), chill, 'dodged');
+
+    expect(duel(barrowWarrior(8), dodging)).toBe('player');
+    expect(duel(barrowWarrior(8), standing)).toBe('enemy');
+    // And the chamber they stand in is a level above the antechamber above it.
+    expect(duel(barrowWarrior(7), dodging)).toBe('enemy');
+    expect(duel(barrowWarrior(7), withAbility(enemyAt('barrow-wight', 7), chill, 'dodged'))).toBe(
+      'player',
+    );
+  });
+
+  /**
+   * And two at once is not two fights, which is the whole reason the barrow's
+   * chambers are laid out the way they are: the mill road taught pulling one at a
+   * time with no ability in play, and this is that lesson with a telegraph on top
+   * of it. Modelled as one creature carrying both healths on half the cooldown,
+   * which is what fighting a pair actually is.
+   */
+  it('makes a second wight the thing that kills you, not the first', () => {
+    const one = enemyAt('barrow-wight', 8);
+    const pair: Combatant = { ...one, hp: one.hp * 2, cooldownMs: one.cooldownMs / 2 };
+    expect(duel(barrowWarrior(8), one)).toBe('player');
+    expect(duel(barrowWarrior(8), pair)).toBe('enemy');
+  });
+
+  /**
+   * The capstone, and the chief's own contract read one band up: **moving** and
+   * **level**, in that order.
+   *
+   * The Wail reaches 240 where a Cleave reaches 110, so the answer to it is to
+   * leave his chamber rather than to take a step back — and it spends the swing
+   * it interrupts, so a king nobody walks away from is a king swinging a good
+   * deal less. A level 8 who does that wins; the same character who stands in
+   * every one loses; and a level 7 in the same gear loses however well they move.
+   */
+  it('gates the king on level 8, and on leaving', () => {
+    const wail = ENEMY_ABILITIES['barrow-wail'];
+    const standing = withAbility(enemyAt('barrow-king', 8), wail, 'lands');
+    const dodging = withAbility(enemyAt('barrow-king', 8), wail, 'dodged');
+
+    expect(duel(barrowWarrior(8), standing)).toBe('enemy');
+    expect(duel(barrowWarrior(8), dodging)).toBe('player');
+    expect(duel(barrowWarrior(7), dodging)).toBe('enemy');
+    expect(duel(freshWarrior(), dodging)).toBe('enemy');
+  });
+
+  // What the fight pays for itself, the same way the chief's blade does: his own
+  // weapon turns a fight won by a hair into one won with room to spare.
+  it('makes his own blade the reward for beating him', () => {
+    const dodging = withAbility(
+      enemyAt('barrow-king', 8),
+      ENEMY_ABILITIES['barrow-wail'],
+      'dodged',
+    );
+    const before = barrowWarrior(8);
+    const after = combatant({ ...BARROW_SET, weapon: 'barrow-blade' }, 8);
+
+    expect(after.attackPower).toBeGreaterThan(before.attackPower);
+    expect(duel(after, dodging)).toBe('player');
+  });
+
+  it('keeps the king the hardest thing in the game, level for level', () => {
+    [4, 6, 8].forEach((level) => {
+      const king = scaleEnemyStats(ENEMIES['barrow-king'], level);
+      const chief = scaleEnemyStats(ENEMIES['bandit-chief'], level);
+      const wight = scaleEnemyStats(ENEMIES['barrow-wight'], level);
+      expect(king.maxHp).toBeGreaterThan(chief.maxHp);
+      expect(king.maxHp).toBeGreaterThan(wight.maxHp);
+      expect(king.xpReward).toBeGreaterThan(chief.xpReward);
+    });
+  });
+
   it('keeps the chief the hardest thing in the game, level for level', () => {
     [1, 2, 3, 4].forEach((level) => {
       const chief = scaleEnemyStats(ENEMIES['bandit-chief'], level);
@@ -259,11 +367,31 @@ describe('difficulty curve', () => {
     });
   });
 
-  // He is the only one of his kind, which is what "named" means here and what
-  // the AFK rules key off.
-  it('leaves the chief the only boss in the tables', () => {
+  /**
+   * A boss is one of a kind, which is what "named" means here and what the AFK
+   * rules key off — an unattended camp never picks a fight with one, because a
+   * night parked beside it would mint sixty of the only loot that comes off one
+   * creature.
+   *
+   * Two of them now, and each is behind a locked door. That pairing is the rule
+   * rather than a coincidence of the two we have: a boss standing somewhere
+   * anybody can walk to is a unique table anybody can farm.
+   */
+  it('keeps every boss named, one of a kind, and behind a door', () => {
     const bosses = Object.values(ENEMIES).filter((enemy) => enemy.boss === true);
-    expect(bosses.map((enemy) => enemy.id)).toEqual(['bandit-chief']);
+    expect(bosses.map((enemy) => enemy.id).sort()).toEqual(['bandit-chief', 'barrow-king']);
+
+    bosses.forEach((boss) => {
+      expect(boss.lootTableId, `${boss.id} carries nothing of its own`).toBeDefined();
+      const home = Object.values(ZONES).filter((zone) =>
+        zone.mobSpawns.some((spawn) => spawn.enemyId === boss.id),
+      );
+      expect(
+        home.map((zone) => zone.id),
+        `${boss.id} stands in more than one zone`,
+      ).toHaveLength(1);
+      expect(home[0]?.requiresKey, `${boss.id} is not behind a locked door`).toBeDefined();
+    });
   });
 
   it('keeps the bandit the hardest of the three that fill a zone', () => {
@@ -339,7 +467,13 @@ describe('zone spawn tables', () => {
     const bossSpawns = Object.values(ZONES).flatMap((zone) =>
       zone.mobSpawns.filter((spawn) => ENEMIES[spawn.enemyId].boss === true),
     );
-    expect(bossSpawns).toHaveLength(1);
+    const perBoss = new Map<EnemyId, number>();
+    bossSpawns.forEach((spawn) =>
+      perBoss.set(spawn.enemyId, (perBoss.get(spawn.enemyId) ?? 0) + 1),
+    );
+
+    expect(perBoss.size).toBe(Object.values(ENEMIES).filter((enemy) => enemy.boss === true).length);
+    perBoss.forEach((count, enemyId) => expect(count, `${enemyId} stands twice`).toBe(1));
   });
 });
 

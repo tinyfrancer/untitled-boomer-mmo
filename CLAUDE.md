@@ -6,22 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; eight zones (town with leveled rats, a shop, a bank and a trainer, a beach
+v1: single-player only; nine zones (town with leveled rats, a shop, a bank and a trainer, a beach
 with crabs and ocean fishing, a quarry cut into the hills north of town with tin and iron to mine,
 a bandit camp with aggressive humanoids, the bandit hideout behind a locked
 door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
-where the eels and the cloth are, and the Deep Cut under the quarry where the coal is);
+where the eels and the cloth are, the Deep Cut under the quarry where the coal is, and the Sunken
+Barrow under the bottom of the fen where the dead are);
 character creation, leveling, gear,
 two-way combat with death and respawn; gathering/cooking skills; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
 kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
 work you were doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
-mobile-first HUD; and local save/load with versioned migrations. Five of the eight zones are level
+mobile-first HUD; and local save/load with versioned migrations. Five of the nine zones are level
 1-3 starter content — what separates those is what they drop, not how hard they are, and the hideout
-is gated by a rare key rather than by a level. Four things sit above that band. The named mob at the
-back of the hideout is level 4, carries the only loot in the game that comes off a single creature,
-and is the fight the starter content is the run-up to. The **Old Mill Road** is the band itself: the
+is gated by a rare key rather than by a level. Five things sit above that band. The named mob at the
+back of the hideout is level 4, carries loot that comes off a single creature, and is the fight the
+starter content is the run-up to. The **Old Mill Road** is the band itself: the
 first zone that is harder rather than merely different, level 4-5, reached by walking west out of
 town with no key and no gate, because the starter band ended by walking and the one above it should
 begin the same way. **Blackwater Fen** is the rung above it, level 5-7 and reached the same way, by
@@ -29,7 +30,12 @@ walking south off the beach: it is where the food that makes those levels surviv
 where a caster finally gets armour of their own. **The Deep Cut** is the third, level 5-6 and reached
 by walking north out of the quarry, and it is the one of the three that is about a skill rather than
 a fight: the coal and the rich iron down there are what the steel tier is made of, and what holds
-anybody back from them is the pick in their hands rather than anything standing in the way.
+anybody back from them is the pick in their hands rather than anything standing in the way. The
+**Sunken Barrow** is the capstone and the top of the game, level 7-8: it is the hideout's shape one
+band up — a rare key off the zone in front of it, a map cut out of solid rock, a passage, and a named
+thing at the back — reached by walking off the bottom of the fen, where the raiders that carry the key
+already are. What it pays is the off hand nothing has filled since the starter band, and the second
+hoard in the game that comes off one creature.
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
@@ -299,10 +305,16 @@ once, open for good" is one rule rather than three; leaning on a shut edge is la
 (`blockedAtEdge`) so the refusal is one toast rather than one a frame. What the key opened is stored
 on `CharacterState.unlockedZones` and is the one thing here that could not be derived — the key is
 gone afterwards, so an empty pack means either "never found one" or "already been", and the world
-map draws those two cells very differently. The bandit hideout is the only locked zone today; its
-map (`data/banditHideoutMap.ts`) is the inverse of every other one, solid `WALL_TILE` with rooms
-painted back out of it, which is why `tests/systems/ZoneSystem.test.ts` checks that an arrival
-_anywhere_ along an exit edge lands on walkable ground rather than only where the signpost stands.
+map draws those two cells very differently. Two zones are locked — the bandit hideout and the Sunken
+Barrow, which are the bottom and the top of the game and are deliberately the same shape — and both
+maps (`data/banditHideoutMap.ts`, `data/sunkenBarrowMap.ts`) are the inverse of every other one,
+solid `WALL_TILE` with rooms painted back out of it, which is why `tests/systems/ZoneSystem.test.ts`
+checks that an arrival _anywhere_ along an exit edge lands on walkable ground rather than only where
+the signpost stands. **A key belongs to the zone the door is in**: the hideout's drops on the bandits
+outside its own door and the barrow's on the fen raiders whose marsh it is at the bottom of, so the
+grind and the lock are one place rather than two. And the sentence a refusal is written in puts an
+article in front of the zone's name, so `zoneAccess` strips the one half the table already carries —
+"the The Sunken Barrow" is what that costs when nobody does.
 
 **A town has walls in it, and a building is solid all the way through**
 (`ZoneDefinition.buildingSpawns` into `data/buildings.ts`, drawn by `render3d/buildings.ts`). It is
@@ -1165,30 +1177,32 @@ bigger numbers. `tests/systems/oldMillRoad.test.ts` is what holds the knots — 
 each goblin with two companions inside a pull, and no two knots within aggro reach of each other, so
 taking one on is never accidentally taking two.
 
-**`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 8 because
-that is where the content reaches: the richest thing anyone can grind is the level 7 fen raider, and
+**`MAX_CHARACTER_LEVEL` is a claim about the content, not about the curve**, and it is 9 because
+that is where the content reaches: the richest thing anyone can grind is the level 8 barrow wight, and
 the ten it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to
 be an achievement rather than an asymptote, so **content that reaches higher raises the cap** — and
 `tests/systems/progression.test.ts` is what holds the two together, asserting that the cap sits one
 level past the highest thing that spawns and that the climb from the end of the starter arc is
 another session or two of the best kill there is rather than another game.
 
-It is what a zone _holds_ rather than a zone arriving that moves it, and the four zones since that
+It is what a zone _holds_ rather than a zone arriving that moves it, and the five zones since that
 rule was written are all worked examples of it. The quarry spawned nothing above level 3 and left
 the cap exactly where it was. The mill road spawns level 5 goblins and moved it to 6; the fen spawns
-level 7 raiders and moved it to 8. The Deep Cut is the clearest case of all, because it is a whole
-zone above the starter band that moved the cap **not at all** — it tops out at 6 under a fen that
-already spawns 7, so `progression.test.ts` had nothing to say about it. Nobody chose any of those
-numbers: the cap is asserted against `spawns.ts`, so raising the content is what raises the ceiling
-and the test says the new number before anyone has to remember it.
+level 7 raiders and moved it to 8; the barrow spawns level 8 wights and moved it to 9. The Deep Cut
+is the clearest case of all, because it is a whole zone above the starter band that moved the cap
+**not at all** — it tops out at 6 under a fen that already spawns 7, so `progression.test.ts` had
+nothing to say about it. Nobody chose any of those numbers: the cap is asserted against `spawns.ts`,
+so raising the content is what raises the ceiling and the test says the new number before anyone has
+to remember it.
 
 **What that test will not let a zone get away with is paying too little for the room it added.** The
 climb to the cap is held to a small multiple of the starter arc measured in the best repeatable kill
 there is, and the curve is quadratic where a creature's XP is linear in its level — so a zone that
 adds two levels while paying a goblin's rate walks straight into the ceiling. The fen's raider is
 what that looks like when it is priced deliberately: 14 XP a level against the goblin's 11, which
-lands the climb at 146 kills against a limit of 213. A zone above this one has to make the same
-decision rather than inherit the last one's rate.
+lands the climb at 146 kills against a limit of 213. The barrow's wight is the same decision made
+again rather than inherited — 18 a level, landing the climb at 147 against the same limit — which is
+what a zone above the last one has to do every time.
 
 Two things ride the cap and have to move with it, which is exactly what neither did before: the
 combat skill ceiling is `combatSkillCap` (`level × 10`, so 80 now), and **what a trained combat

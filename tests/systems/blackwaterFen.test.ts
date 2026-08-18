@@ -7,6 +7,8 @@ import { RECIPES } from '../../src/data/recipes';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { ZONES } from '../../src/data/zones';
 import { worldMap } from '../../src/systems/MapSystem';
+import { zoneWorldSize } from '../../src/systems/ZoneSystem';
+import { TILE_SIZE } from '../../src/config/constants';
 import type { ItemId } from '../../src/types/ids';
 
 /**
@@ -43,6 +45,33 @@ describe('the way in', () => {
 
     expect(outbound?.edge).toBe('south');
     expect(back?.edge).toBe('north');
+  });
+
+  /**
+   * And the way on, which is what this zone's south edge cost it.
+   *
+   * The barrow's mouth is at the bottom of the marsh, so the fen is now a zone
+   * with a door at either end — and an arrival strip spans the *whole* of the
+   * edge it lands on. That is what moved the deep pools two rows north and the
+   * raiders standing over them with them: no aggressive creature may sit within
+   * its own aggro radius of a strip that reaches every x, and the only thing that
+   * can hold one clear of it is distance up the map. `spawnSafety.test.ts` holds
+   * the arithmetic; this holds the claim that the road exists at all.
+   */
+  it('carries the road on to the barrow off its south edge', () => {
+    const onward = ZONE.exits.find((exit) => exit.to === 'sunken-barrow');
+    expect(onward?.edge).toBe('south');
+
+    const strip = zoneWorldSize(ZONE).height - TILE_SIZE * 1.5;
+    const centre = zoneWorldSize(ZONE).height / 2;
+    BLACKWATER_FEN_MOB_SPAWNS.filter((spawn) => ENEMIES[spawn.enemyId].aggressive).forEach(
+      (spawn) => {
+        expect(
+          strip - (centre + spawn.dy),
+          `${spawn.enemyId} at dy ${spawn.dy} is standing on the causeway`,
+        ).toBeGreaterThan(ENEMIES[spawn.enemyId].aggroRadius ?? 0);
+      },
+    );
   });
 
   it('lands two south of town on the world map, on a cell of its own', () => {

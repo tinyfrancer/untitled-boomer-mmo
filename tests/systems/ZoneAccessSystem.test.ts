@@ -52,6 +52,29 @@ describe('zoneAccess', () => {
   });
 
   /**
+   * Both reasons put an article in front of the zone's name, and half the table
+   * is named with one already — so the barrow shipped its first draft saying
+   * "You unlock the The Sunken Barrow with the Barrow Key." Held over every
+   * locked zone rather than over the two names we have, since what would bring it
+   * back is a third zone named the way the Deep Cut is.
+   */
+  it('never says the article twice, whatever the zone is called', () => {
+    for (const zone of Object.values(ZONES)) {
+      if (!zone.requiresKey) continue;
+      const shut = zoneAccess(zone.id, NOTHING);
+      const open = zoneAccess(zone.id, { ...NOTHING, inventory: { [zone.requiresKey]: 1 } });
+
+      [shut, open].forEach((access) => {
+        const reason = access.kind === 'open' ? '' : access.reason;
+        expect(reason, `${zone.name}: "${reason}"`).not.toMatch(/\bthe The\b/i);
+        // And it still names the place, rather than dodging the problem by
+        // dropping the name along with the article.
+        expect(reason).toContain(zone.name.replace(/^The /, ''));
+      });
+    }
+  });
+
+  /**
    * A key nothing drops is a zone nobody can reach, which no state assertion
    * anywhere else would notice — the zone would simply sit on the map being
    * refused forever. Held over `ZONES` rather than over the hideout alone, so
