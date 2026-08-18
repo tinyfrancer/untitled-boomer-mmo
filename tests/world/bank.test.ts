@@ -115,7 +115,12 @@ describe('the bank', () => {
     const { world } = atTheBank();
     expect(world.bankNpc).not.toBeNull();
 
-    world.handleTravelRequested('beach');
+    // Walked out, which is the only way a zone changes now. Weaker than the
+    // travel this replaced — walking off the counter would have closed it on
+    // proximity anyway — but the invariant it holds is the one that matters: a
+    // counter never survives into the next zone.
+    world.teleport(world.worldWidth / 2, world.worldHeight - 10);
+    world.update(16);
 
     expect(world.bankNpc).toBeNull();
   });

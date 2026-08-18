@@ -35,7 +35,6 @@ import {
   SHOP_CLOSED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
-  TRAVEL_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
@@ -478,7 +477,6 @@ export class ZoneWorld implements Targeting {
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
     listen(TURN_IN_QUEST_REQUESTED_EVENT, (questId) => this.quests.turnIn(questId));
     listen(SET_TITLE_REQUESTED_EVENT, (titleId) => this.quests.wearTitle(titleId));
-    listen(TRAVEL_REQUESTED_EVENT, (zoneId) => this.handleTravelRequested(zoneId));
     listen(CONTEXT_ACTION_REQUESTED_EVENT, (actionId) => this.contextMenu.run(actionId));
   }
 
@@ -780,48 +778,6 @@ export class ZoneWorld implements Targeting {
     );
     saveService.save(this.character.state);
     this.ctx.push({ kind: 'zone-exit', to: exit.to, edge: entryEdge, fraction });
-  }
-
-  /**
-   * Travel to a zone chosen off the world map, which is the mobile answer to
-   * "which edge was the beach again". The world decides whether it is allowed —
-   * the map only asks — for the same reason the shop and the quest desk work
-   * that way: only the world knows what the player is in the middle of.
-   *
-   * Refused mid-fight, and that is the only rule. Without it the map is an
-   * escape hatch out of any fight that is going badly, which would make dying
-   * something only the careless do.
-   */
-  handleTravelRequested(to: ZoneId): void {
-    if (this.changingZone) return;
-    if (to === this.zone.id) {
-      this.ctx.notice(`You are already in ${ZONES[to].name}.`);
-      return;
-    }
-    // Anything actually chasing, rather than `player.isInCombat()` — that is a
-    // regen lockout which a freshly built world starts inside, so a player who
-    // had just arrived anywhere could not leave for several seconds.
-    if (this.mobs.some((mob) => mob.isAlive() && mob.isEngaged())) {
-      this.ctx.notice('You cannot travel while something is fighting you.');
-      return;
-    }
-    // A locked door is locked from the map too: travel is a shortcut past the
-    // walk, not past the key.
-    if (!this.openWayInto(to)) return;
-
-    this.changingZone = true;
-    this.afk.set(false);
-    this.stopGathering();
-    this.clearTarget();
-    this.closeCounters();
-    this.contextMenu.clear();
-    // No spot recorded: arriving with no particular place to stand is what puts
-    // the player on the zone's own spawn point, which is where travel should
-    // land them rather than wherever they last stood there.
-    this.character.recordLocation(to, null);
-    saveService.save(this.character.state);
-    this.ctx.log(logNotice(`You travel to ${ZONES[to].name}.`));
-    this.ctx.push({ kind: 'travel', to });
   }
 
   // ---------------------------------------------------------------------------

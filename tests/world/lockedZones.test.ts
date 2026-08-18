@@ -85,6 +85,11 @@ describe('walking into a locked zone', () => {
     });
     expect(kit.character.itemCount('hideout-key')).toBe(0);
     expect(kit.state.unlockedZones).toEqual([HIDEOUT]);
+    // The bag the HUD is holding has to lose it too, or a cell for a key
+    // nobody owns is left sitting on the bag sheet. This was held against
+    // travelling here until the world map stopped being a way of going
+    // anywhere; walking through is the only door there is now.
+    expect(kit.emissions(INVENTORY_CHANGED_EVENT).at(-1)).toEqual([{}]);
   });
 
   // The key is gone by the second visit, which is the whole point of storing
@@ -128,34 +133,6 @@ describe('the signpost to a locked zone', () => {
     kit.until(() => kit.emissions(NOTICE_EVENT).length > 0, 'the signpost to refuse');
 
     expect(kit.world.changingZone).toBe(false);
-  });
-});
-
-describe('travelling to a locked zone from the world map', () => {
-  it('is refused like every other way in', () => {
-    const kit = camp();
-
-    kit.world.handleTravelRequested(HIDEOUT);
-
-    expect(kit.world.changingZone).toBe(false);
-    expect(kit.emissions(NOTICE_EVENT).at(-1)).toEqual([
-      'The Bandit Hideout is locked. You need a Hideout Key.',
-    ]);
-  });
-
-  // Travel is a shortcut past the walk, not past the key: it costs one, the
-  // same as pushing the door open in person.
-  it('spends the key when the map is what opens the door', () => {
-    const kit = camp();
-    kit.character.addItem('hideout-key', 1);
-
-    kit.world.handleTravelRequested(HIDEOUT);
-
-    expect(kit.world.changingZone).toBe(true);
-    expect(kit.state.unlockedZones).toEqual([HIDEOUT]);
-    // The bag the HUD is holding has to lose the key too, or a cell for one
-    // nobody owns is left on the bag sheet.
-    expect(kit.emissions(INVENTORY_CHANGED_EVENT).at(-1)).toEqual([{}]);
   });
 });
 
