@@ -149,6 +149,15 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // Empty is what a v19 character had, which is the v9 `kills` argument exactly:
   // nothing was counting, so nothing is owed.
   19: (state) => ({ ...state, mastery: {} }),
+  // v20 → v21: leatherworking joins the sheet, which is the v15 → v16 step over
+  // again and safe for the same reason — a skill at level 1 with no xp is what
+  // every skill starts at, so one added later costs an old save nothing. Spread
+  // under rather than over, so five trained skills survive and only the sixth
+  // takes its default.
+  20: (state) => ({
+    ...state,
+    skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
+  }),
 };
 
 /**

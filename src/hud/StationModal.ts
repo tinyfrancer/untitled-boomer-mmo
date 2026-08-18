@@ -3,6 +3,7 @@ import { el, row, sectionHeader } from './dom';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName } from '../data/items';
 import { recipesAt } from '../systems/CraftingSystem';
+import { STATION_LABELS, STATION_SKILLS, type StationId } from '../data/recipes';
 import { SKILLS } from '../data/skills';
 import { skillLevel, type Skills } from '../systems/SkillSystem';
 import type { Inventory } from '../systems/InventorySystem';
@@ -10,18 +11,18 @@ import { THEME } from '../ui/theme';
 import type { RecipeId } from '../types/ids';
 
 /** Everything the panel draws, all of it a copy the world still owns. */
-export interface ForgePanelState {
+export interface StationPanelState {
   inventory: Inventory;
   skills: Skills;
 }
 
-export interface ForgeHandlers {
-  onSmith: (recipeId: RecipeId) => void;
+export interface StationHandlers {
+  onMake: (recipeId: RecipeId) => void;
   onDismiss: () => void;
 }
 
 /**
- * What can be made at a forge, and what each of it takes.
+ * What can be made at a station, and what each of it takes.
  *
  * This is the one crafting surface that needed a panel rather than a button in
  * the bag, and the reason is arithmetic rather than taste: cooking has one
@@ -33,21 +34,29 @@ export interface ForgeHandlers {
  * but how far away the player is standing, so it opens and closes off
  * `actions-changed` with no world session behind it — walking away is the whole
  * of closing it, which is the same rule the pan over a fire already lives by.
+ *
+ * It was the *forge's* panel until there was a second station, and everything
+ * that made it the forge's is a lookup now: the title, the rows and the skill
+ * the rows are levelled against all come off the station it was opened at.
+ * Nothing here knows a forge from a tannery, which is what stops the next one
+ * being a third copy of this file.
  */
-export class ForgeModal extends Overlay {
+export class StationModal extends Overlay {
+  readonly station: StationId;
   private readonly body: HTMLElement;
-  private readonly handlers: ForgeHandlers;
+  private readonly handlers: StationHandlers;
 
-  constructor(handlers: ForgeHandlers, onClosed: () => void) {
+  constructor(station: StationId, handlers: StationHandlers, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through hud-modal--top', onClosed);
+    this.station = station;
     this.handlers = handlers;
-    const box = el('div', 'hud-modal__box hud-modal__box--forge');
+    const box = el('div', 'hud-modal__box hud-modal__box--station');
 
     const head = el('div', 'hud-modal__head');
-    head.append(el('div', 'hud-modal__title', 'Forge'));
+    head.append(el('div', 'hud-modal__title', STATION_LABELS[station]));
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
-    close.dataset.action = 'close-forge';
+    close.dataset.action = 'close-station';
     close.addEventListener('click', () => handlers.onDismiss());
     head.append(close);
 
@@ -56,11 +65,12 @@ export class ForgeModal extends Overlay {
     this.root.append(box);
   }
 
-  update(state: ForgePanelState): void {
+  update(state: StationPanelState): void {
+    const skill = STATION_SKILLS[this.station];
     this.body.replaceChildren();
-    this.body.append(sectionHeader('At the forge'));
-    const level = skillLevel(state.skills, 'smithing');
-    for (const recipe of recipesAt('forge')) {
+    this.body.append(sectionHeader(`At the ${STATION_LABELS[this.station].toLowerCase()}`));
+    const level = skillLevel(state.skills, skill);
+    for (const recipe of recipesAt(this.station)) {
       this.body.append(this.recipeRow(recipe.id, recipe.name, recipe, state, level));
     }
   }
@@ -77,7 +87,7 @@ export class ForgeModal extends Overlay {
     id: RecipeId,
     name: string,
     recipe: ReturnType<typeof recipesAt>[number],
-    state: ForgePanelState,
+    state: StationPanelState,
     level: number,
   ): HTMLElement {
     const locked = level < recipe.requiredLevel;
@@ -88,10 +98,10 @@ export class ForgeModal extends Overlay {
     const entry = row({
       className: 'hud-list-row',
       label: name,
-      value: locked ? `${SKILLS.smithing.name} ${recipe.requiredLevel}` : 'Make',
+      value: locked ? `${SKILLS[recipe.skill].name} ${recipe.requiredLevel}` : 'Make',
       valueClass: 'hud-list-row__value',
       icon: itemIconSvg(recipe.outputItemId),
-      onClick: () => this.handlers.onSmith(id),
+      onClick: () => this.handlers.onMake(id),
     });
     entry.root.dataset.recipe = id;
     entry.label.style.color = !locked && !short ? THEME.color.equippable : THEME.color.dim;

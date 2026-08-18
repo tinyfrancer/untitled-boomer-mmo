@@ -9,7 +9,7 @@ import { TrainerModal, type TrainerState } from './TrainerModal';
 import { OutfitterModal } from './OutfitterModal';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
-import { ForgeModal, type ForgePanelState } from './ForgeModal';
+import { StationModal, type StationPanelState } from './StationModal';
 import { SlotPicker } from './SlotPicker';
 import {
   ABANDON_BOUNTY_REQUESTED_EVENT,
@@ -29,10 +29,11 @@ import {
   SELL_ITEM_REQUESTED_EVENT,
   SHOP_CLOSED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
-  SMITH_REQUESTED_EVENT,
+  CRAFT_REQUESTED_EVENT,
   TRAINER_CLOSED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
 } from '../ui/uiEvents';
+import type { StationId } from '../data/recipes';
 import type { InspectPanel } from '../systems/InspectSystem';
 import type { ScreenPoint } from '../ui/uiEvents';
 import type { PendingNotification } from '../world/GameContext';
@@ -54,7 +55,7 @@ export interface OverlayPanelState {
   bounty: () => BountyPanelState;
   /** The bag, which is the outfitter's whole price list. */
   outfitter: () => Inventory;
-  forge: () => ForgePanelState;
+  station: () => StationPanelState;
 }
 
 /** What a context menu is opened with, once the caller has named its lines. */
@@ -88,7 +89,7 @@ export class OverlayHost {
   private readonly trainerState: () => TrainerState;
   private readonly bountyState: () => BountyPanelState;
   private readonly outfitterState: () => Inventory;
-  private readonly forgeState: () => ForgePanelState;
+  private readonly stationState: () => StationPanelState;
 
   private options: OptionsModal | null = null;
   private shop: ShopModal | null = null;
@@ -96,7 +97,7 @@ export class OverlayHost {
   private trainer: TrainerModal | null = null;
   private bounty: BountyModal | null = null;
   private outfitter: OutfitterModal | null = null;
-  private forge: ForgeModal | null = null;
+  private station: StationModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
   private menu: MenuOverlay | null = null;
@@ -111,7 +112,7 @@ export class OverlayHost {
     this.trainerState = panels.trainer;
     this.bountyState = panels.bounty;
     this.outfitterState = panels.outfitter;
-    this.forgeState = panels.forge;
+    this.stationState = panels.station;
   }
 
   openOptions(): void {
@@ -324,35 +325,46 @@ export class OverlayHost {
   }
 
   /**
-   * The forge's list, opened by standing at one rather than by a session: see
-   * `ForgeModal`. Idempotent, since what opens it is a flag that can be
-   * republished without having changed.
+   * A station's list, opened by tapping one rather than by a session: see
+   * `StationModal`. Idempotent for the station already up, since what opens it
+   * is an event that can be republished without having changed — but a *second*
+   * station replaces the first rather than sitting behind it, which is the only
+   * shape that stays right now there is more than one. Two are never in reach
+   * at once today; a panel that would have to be closed twice is not a thing to
+   * find out about later.
    */
-  openForge(): void {
-    if (this.forge) {
-      this.refreshForge();
+  openStation(stationId: StationId): void {
+    if (this.station?.station === stationId) {
+      this.refreshStation();
       return;
     }
-    this.forge = new ForgeModal(
+    this.station?.close();
+    this.station = new StationModal(
+      stationId,
       {
-        onSmith: (recipeId) => this.events.emit(SMITH_REQUESTED_EVENT, recipeId),
-        onDismiss: () => this.closeForge(),
+        onMake: (recipeId) => this.events.emit(CRAFT_REQUESTED_EVENT, recipeId),
+        onDismiss: () => this.closeStation(),
       },
       () => {
-        this.forge = null;
+        this.station = null;
       },
     );
-    this.forge.update(this.forgeState());
-    this.root.append(this.forge.root);
+    this.station.update(this.stationState());
+    this.root.append(this.station.root);
   }
 
-  closeForge(): void {
-    this.forge?.close();
+  closeStation(): void {
+    this.station?.close();
+  }
+
+  /** Which station's list is up, or null: what proximity is checked against. */
+  openStationId(): StationId | null {
+    return this.station?.station ?? null;
   }
 
   /** The bag moves under it with every bar made, so every tick may redraw it. */
-  refreshForge(): void {
-    this.forge?.update(this.forgeState());
+  refreshStation(): void {
+    this.station?.update(this.stationState());
   }
 
   /**
@@ -411,7 +423,7 @@ export class OverlayHost {
     this.trainer?.close();
     this.bounty?.close();
     this.outfitter?.close();
-    this.forge?.close();
+    this.station?.close();
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();

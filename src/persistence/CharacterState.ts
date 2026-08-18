@@ -9,7 +9,7 @@ import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 20;
+export const CHARACTER_STATE_VERSION = 21;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.

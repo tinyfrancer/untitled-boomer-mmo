@@ -13,9 +13,9 @@ import {
   TRADE_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
   TURN_IN_BOUNTY_REQUESTED_EVENT,
-  FORGE_OPENED_EVENT,
+  STATION_OPENED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
-  SMITH_REQUESTED_EVENT,
+  CRAFT_REQUESTED_EVENT,
   TRAINER_CLOSED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
@@ -323,9 +323,9 @@ export class ZoneWorld implements Targeting {
     this.publishActions = publishOnChange(
       () => ({
         nearFire: this.gathering.isNearFire(),
-        nearForge: this.gathering.isNearForge(),
+        nearStations: this.gathering.stationsInReach(),
       }),
-      (actions) => `${actions.nearFire}/${actions.nearForge}`,
+      (actions) => `${actions.nearFire}/${actions.nearStations.join(',')}`,
       (actions) => this.ctx.events.emit(ACTIONS_CHANGED_EVENT, actions),
       'false',
     );
@@ -481,7 +481,7 @@ export class ZoneWorld implements Targeting {
     listen(BOUNTY_CLOSED_EVENT, () => this.bounty.closedByUi());
     listen(OUTFITTER_CLOSED_EVENT, () => this.outfitter.closedByUi());
     listen(TRADE_REQUESTED_EVENT, (itemId) => this.outfitter.trade(itemId));
-    listen(SMITH_REQUESTED_EVENT, (recipeId) => this.gathering.smith(recipeId));
+    listen(CRAFT_REQUESTED_EVENT, (recipeId) => this.gathering.makeRecipe(recipeId));
     listen(TRAINER_CLOSED_EVENT, () => this.trainer.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
     listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
@@ -698,13 +698,13 @@ export class ZoneWorld implements Targeting {
    */
   approachStation(station: WorldStation): void {
     const open = (): void => {
-      this.ctx.events.emit(FORGE_OPENED_EVENT);
+      this.ctx.events.emit(STATION_OPENED_EVENT, station.station);
     };
     if (withinRadius(this.player, station, STATION_RADIUS)) {
       open();
       return;
     }
-    this.approach.walkTo({ kind: 'forge', radius: STATION_RADIUS }, station, open);
+    this.approach.walkTo({ kind: 'station', radius: STATION_RADIUS }, station, open);
   }
 
   // ---------------------------------------------------------------------------
@@ -843,8 +843,8 @@ export class ZoneWorld implements Targeting {
     this.outfitter.close();
   }
 
-  handleSmithRequested(recipeId: RecipeId): void {
-    this.gathering.smith(recipeId);
+  handleCraftRequested(recipeId: RecipeId): void {
+    this.gathering.makeRecipe(recipeId);
   }
 
   handleLearnRequested(abilityId: AbilityId): void {

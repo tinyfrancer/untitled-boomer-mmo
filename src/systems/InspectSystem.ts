@@ -16,6 +16,7 @@ import { BOUNTIES, BOUNTY_ORDER } from '../data/bounties';
 import { CLASSES } from '../data/classes';
 import { LOOT_TABLES } from '../data/lootTables';
 import { npcName, npcRole } from '../data/npcs';
+import { STATION_LABELS, STATION_SKILLS, type StationId } from '../data/recipes';
 import { SHOP_STOCK } from '../data/shop';
 import { SKILLS } from '../data/skills';
 import { ZONES, type ZoneExit } from '../data/zones';
@@ -165,22 +166,50 @@ export function describeNode(definition: ResourceNodeDefinition): InspectPanel {
 }
 
 /**
- * The forge, and what it is for. No level, no owner and nothing that ticks —
- * the one card in here that is a pure function of nothing, since there is one
- * station kind and it is the same for everyone standing at it.
+ * What a station is for. No level, no owner and nothing that ticks — the one
+ * card in here that reads nothing but its own id, since a forge is the same
+ * forge for everyone standing at it.
+ *
+ * The two lines above the skill are hand-written per station rather than rolled
+ * up out of `recipesAt`. What a player wants here is what the place is *for*,
+ * and a list of every row on the panel behind it is both longer and less use
+ * than the sentence somebody wrote.
  */
-export function describeStation(): InspectPanel {
+export function describeStation(station: StationId): InspectPanel {
+  const card = STATION_CARDS[station];
   return {
-    title: 'Forge',
+    title: STATION_LABELS[station],
     subtitle: 'Station',
+    lines: [...card.lines, { label: 'Trains', value: SKILLS[STATION_SKILLS[station]].name }],
+    note: card.note,
+  };
+}
+
+interface StationCard {
+  lines: { label: string; value: string }[];
+  note: string;
+}
+
+const STATION_CARDS: Record<StationId, StationCard> = {
+  fire: {
+    lines: [{ label: 'Cooks', value: 'Anything caught or butchered' }],
+    note: 'It burns out, and takes a log to light again.',
+  },
+  forge: {
     lines: [
       { label: 'Smelts', value: 'Ore into bars' },
       { label: 'Smiths', value: 'Bars into plate armour' },
-      { label: 'Trains', value: SKILLS.smithing.name },
     ],
     note: 'A failed smith costs the time and keeps the metal.',
-  };
-}
+  },
+  tannery: {
+    lines: [
+      { label: 'Cures', value: 'Hides into leather' },
+      { label: 'Stitches', value: 'Leather into fenhide' },
+    ],
+    note: 'A failed job costs the time and keeps the hide.',
+  },
+};
 
 /** Where a signpost points, and what is over there. */
 export function describeSignpost(exit: ZoneExit): InspectPanel {

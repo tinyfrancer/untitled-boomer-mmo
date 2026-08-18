@@ -9,11 +9,46 @@ import type { GatherSkillId, ItemId, RecipeId } from '../types/ids';
  * keeps "go somewhere and do something" the shape of the game rather than
  * letting crafting become a panel opened from the bag anywhere.
  */
-export type StationId = 'fire' | 'forge';
+export type StationId = 'fire' | 'forge' | 'tannery';
 
 // Every station there is, for the callers that have to ask about all of them
 // rather than about one — which is a camp reading what is in reach.
-export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge']);
+export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge', 'tannery']);
+
+/** What a station is called, wherever one has to be named to the player. */
+export const STATION_LABELS: Record<StationId, string> = {
+  fire: 'Campfire',
+  forge: 'Forge',
+  tannery: 'Tannery',
+};
+
+/**
+ * The one word a menu offers for working at it.
+ *
+ * Not the skill's `verb`, which is a sentence's worth — "You settle in to work
+ * leather" reads and `Work leather` on a menu line does not, beside an `Attack`
+ * and a `Gather`. Every other line in that menu is one word, so these are too.
+ */
+export const STATION_ACTION_LABELS: Record<StationId, string> = {
+  fire: 'Cook',
+  forge: 'Smith',
+  tannery: 'Tan',
+};
+
+/**
+ * Which skill a station is worked with.
+ *
+ * Derivable from the recipes standing at it — and it was, while there was one
+ * panel hard-wired to smithing. A table instead, because the derivation is only
+ * sound while every recipe at a station shares one skill, and nothing says it
+ * has to: this is the place that claim is written down, and a station whose list
+ * disagrees with it is what `tests/systems/CraftingSystem.test.ts` sweeps for.
+ */
+export const STATION_SKILLS: Record<StationId, GatherSkillId> = {
+  fire: 'cooking',
+  forge: 'smithing',
+  tannery: 'leatherworking',
+};
 
 /**
  * Whether a station is still standing when the tab is closed.
@@ -28,6 +63,9 @@ export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge']);
 export const STATION_PERSISTS: Record<StationId, boolean> = {
   fire: false,
   forge: true,
+  // Built into the yard at Greyford, like the forge is built into the town: a
+  // hide left in the vat overnight is still in it in the morning.
+  tannery: true,
 };
 
 export interface RecipeInput {
@@ -358,6 +396,99 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     requiredLevel: 6,
     xpReward: 34,
     durationMs: 3200,
+  },
+
+  /**
+   * The tannery's first row, and the whole of what a hide is for.
+   *
+   * Sole input, which is not a flavour decision: that shape is what makes a
+   * thing tappable from a bag cell and what makes it a job an unattended camp
+   * can pick up (`findCraftableFrom` looks for exactly it), and a station that
+   * could be stood at but never camped would leave `STATION_PERSISTS` saying
+   * something about the tannery that nothing ever read.
+   *
+   * It pays far more per action than a smelt does, because what it takes is not
+   * a swing at a rock. A hide comes off a long fight in a level 5-7 marsh at
+   * better than one kill in two, so the pace of the skill is set by the fen
+   * rather than by the vat — and an XP rate tuned as though it were an ore would
+   * have made this the longest grind in the game by a distance. At this rate the
+   * vest sits about fifty hides out, which is ninety-odd lurkers: longer than
+   * the fen's own set is lucky, which is the trade a made tier is supposed to
+   * be against a dropped one.
+   */
+  'cured-leather': {
+    id: 'cured-leather',
+    name: 'Cured Leather',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [{ itemId: 'lurker-hide', quantity: 1 }],
+    outputItemId: 'cured-leather',
+    requiredLevel: 1,
+    xpReward: 90,
+    durationMs: 2600,
+  },
+  /**
+   * The fenhide set: cloth-class armour above what the raiders drop, and the
+   * only armour a wizard can build rather than hope for.
+   *
+   * Three inputs like the two tiers at the forge, and the two secondaries do the
+   * same job here that the tin and the char do there — they are what make this
+   * a place the world meets rather than a second thing to do with a hide. The
+   * tin is the buckles and rivets and the char is what the leather is dressed
+   * and blacked with, so a finished piece reaches the fen, the quarry, a town
+   * rat and a tree: the widest web on anything in the game, which
+   * `tests/systems/greyfordTannery.test.ts` holds by tracing rather than by
+   * reading the rows back.
+   *
+   * That both secondaries come off the *forge* is the point of putting this at
+   * Greyford. The outpost's whole claim is that it trades in what other places
+   * produce, and a second production vertical that owed the first one nothing
+   * would be two games played beside each other.
+   */
+  'fenhide-cowl': {
+    id: 'fenhide-cowl',
+    name: 'Fenhide Cowl',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [
+      { itemId: 'cured-leather', quantity: 2 },
+      { itemId: 'tin-bar', quantity: 1 },
+      { itemId: 'bone-char', quantity: 1 },
+    ],
+    outputItemId: 'fenhide-cowl',
+    requiredLevel: 3,
+    xpReward: 150,
+    durationMs: 3600,
+  },
+  'fenhide-leggings': {
+    id: 'fenhide-leggings',
+    name: 'Fenhide Leggings',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [
+      { itemId: 'cured-leather', quantity: 3 },
+      { itemId: 'tin-bar', quantity: 1 },
+      { itemId: 'bone-char', quantity: 1 },
+    ],
+    outputItemId: 'fenhide-leggings',
+    requiredLevel: 5,
+    xpReward: 240,
+    durationMs: 4100,
+  },
+  'fenhide-vest': {
+    id: 'fenhide-vest',
+    name: 'Fenhide Vest',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [
+      { itemId: 'cured-leather', quantity: 4 },
+      { itemId: 'tin-bar', quantity: 2 },
+      { itemId: 'bone-char', quantity: 2 },
+    ],
+    outputItemId: 'fenhide-vest',
+    requiredLevel: 8,
+    xpReward: 340,
+    durationMs: 4600,
   },
 };
 

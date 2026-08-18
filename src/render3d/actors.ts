@@ -1,6 +1,7 @@
 import { Box3, Group, Vector3, type Camera } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import { npcName } from '../data/npcs';
+import type { StationId } from '../data/recipes';
 import { NPC_APPEARANCES, appearanceKey, computeAppearance } from '../systems/AppearanceSystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import { titleName } from '../systems/AchievementSystem';
@@ -16,7 +17,7 @@ import { Nameplate } from './nameplate';
 import { OCCLUDED_OPACITY, type Occluder } from './occlusion';
 import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
-import { buildCampfire, buildForge, buildNode, buildSignpost } from './props';
+import { buildCampfire, buildForge, buildNode, buildSignpost, buildTannery } from './props';
 import { buildBuilding } from './buildings';
 import { buildText } from './text';
 import { buildingRect } from '../data/buildings';
@@ -393,14 +394,24 @@ export class NpcActor implements Actor, Pickable {
 }
 
 /**
- * A forge, which is a thing that is simply there.
+ * A station, which is a thing that is simply there.
  *
  * Almost the least an actor can be: no plate and no sync, since nothing about it
  * changes. It is `Pickable` because a station is **opened by tapping it**, the
  * way a counter is — proximity alone would put a panel in the face of anyone
  * who walked past on their way somewhere, which on a map this size is most of
  * the reasons to be near one.
+ *
+ * Which one it is picks the builder, the same bargain `creatures.ts` makes about
+ * an enemy's `shape`: the world says what stands there and the renderer says
+ * what that looks like. `fire` is not here — a campfire is placed by the player
+ * and burns out, so it is `CampfireActor`'s and has a clock on it.
  */
+const STATION_PROPS: Record<Exclude<StationId, 'fire'>, () => Group> = {
+  forge: buildForge,
+  tannery: buildTannery,
+};
+
 export class StationActor implements Actor, Pickable {
   readonly object = new Group();
   readonly station: WorldStation;
@@ -409,7 +420,9 @@ export class StationActor implements Actor, Pickable {
     this.station = station;
     this.object.userData.kind = 'station';
     this.object.position.copy(simToWorld(station.x, station.y));
-    this.object.add(buildForge());
+    if (station.station !== 'fire') {
+      this.object.add(STATION_PROPS[station.station]());
+    }
   }
 
   /** A tile square, which is about what the block and its anvil occupy. */

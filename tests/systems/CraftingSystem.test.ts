@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RECIPES } from '../../src/data/recipes';
+import { RECIPES, STATION_IDS, STATION_SKILLS } from '../../src/data/recipes';
 import {
   advanceCraft,
   beginCraft,
@@ -7,6 +7,7 @@ import {
   canCraft,
   findCraftableFrom,
   recipeFromItem,
+  recipesAt,
   rollCraft,
 } from '../../src/systems/CraftingSystem';
 import { addSkillXp, createInitialSkills, type Skills } from '../../src/systems/SkillSystem';
@@ -157,5 +158,34 @@ describe('rollCraft', () => {
     // A pool that doubled a burnt fish would pay worse the further along it is.
     const result = rollCraft(FISH, 1, 1, () => 0);
     expect(result).toMatchObject({ itemId: 'burnt-fish', quantity: 1, failed: true });
+  });
+});
+
+/**
+ * The claim `STATION_SKILLS` makes, held over the table rather than by
+ * construction.
+ *
+ * A station's panel levels every row on it against one skill, which is only
+ * sound while every recipe standing there shares that skill. Nothing in the type
+ * system says it has to — `CraftingRecipe` names its own skill and its own
+ * station independently — so the day somebody puts a smithing row at the vat,
+ * its level gate would be drawn against a leatherworking level and the panel
+ * would lie about what it takes.
+ */
+describe('a station and the skill it is worked with', () => {
+  it('has every recipe at a station sharing that station’s skill', () => {
+    for (const station of STATION_IDS) {
+      for (const recipe of recipesAt(station)) {
+        expect(recipe.skill, `${recipe.id} stands at the ${station}`).toBe(STATION_SKILLS[station]);
+      }
+    }
+  });
+
+  // And every station has something to do, which is what stops a panel opening
+  // on an empty list.
+  it('leaves no station with nothing to make at it', () => {
+    for (const station of STATION_IDS) {
+      expect(recipesAt(station).length, station).toBeGreaterThan(0);
+    }
   });
 });

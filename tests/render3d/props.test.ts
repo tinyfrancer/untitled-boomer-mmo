@@ -8,7 +8,13 @@ import {
 } from 'three';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { WATER_DEPTH } from '../../src/render3d/ground';
-import { buildCampfire, buildNode, buildSignpost } from '../../src/render3d/props';
+import {
+  buildCampfire,
+  buildForge,
+  buildNode,
+  buildSignpost,
+  buildTannery,
+} from '../../src/render3d/props';
 import { itemIcon } from '../../src/ui/itemIcons';
 import { ResourceNode } from '../../src/world/ResourceNode';
 import { TILE_SIZE } from '../../src/config/constants';
@@ -138,6 +144,38 @@ describe('a signpost', () => {
     expect(box.min.y).toBeGreaterThanOrEqual(0);
     expect(box.max.y).toBeGreaterThan(TILE_SIZE * 0.7);
     expect(box.max.y).toBeLessThanOrEqual(TILE_SIZE);
+  });
+});
+
+describe('a station', () => {
+  /**
+   * Both props have to fit the box a tap is picked against, which is a tile cube
+   * standing where the station does (`StationActor.pickBox`). A prop that grew
+   * past it would have corners a thumb aimed at cleanly and missed — the same
+   * disagreement between what is drawn and what answers as `PLAYER_HALF_EXTENT`
+   * exists to prevent, one object down.
+   */
+  it.each([
+    ['forge', buildForge],
+    ['tannery', buildTannery],
+  ])('draws %s inside the box a tap is picked against', (_name, build) => {
+    // A hair of slack, because a leg whose foot lands exactly on the ground
+    // computes its own bound a float's width either side of zero.
+    const slack = 0.001;
+    const box = new Box3().setFromObject(build());
+    expect(box.min.y).toBeGreaterThan(-slack);
+    expect(box.max.y).toBeLessThan(TILE_SIZE + slack);
+    for (const axis of ['x', 'z'] as const) {
+      expect(Math.abs(box.min[axis])).toBeLessThan(TILE_SIZE / 2 + slack);
+      expect(Math.abs(box.max[axis])).toBeLessThan(TILE_SIZE / 2 + slack);
+    }
+  });
+
+  // The vat has to read as full from a camera standing well back and to the
+  // south, which it only does if the liquor is visible over the rim.
+  it('shows the tanning liquor above the walls of its vat', () => {
+    const [vat, liquor] = buildTannery().children.map((child) => new Box3().setFromObject(child));
+    expect(liquor?.max.y ?? 0).toBeGreaterThan(vat?.max.y ?? Infinity);
   });
 });
 

@@ -10,6 +10,7 @@ import type {
   TitleId,
   ZoneId,
 } from '../types/ids';
+import type { StationId } from '../data/recipes';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
@@ -91,13 +92,21 @@ export const ABANDON_BOUNTY_REQUESTED_EVENT = 'abandon-bounty-requested';
 // What is in hand, whole, each time it changes — including to null, which is
 // what a contract paid or given back looks like from here.
 export const BOUNTY_CHANGED_EVENT = 'bounty-changed';
-// The forge. A station rather than a counter — nobody stands behind it — but
-// opened the same way one is, by tapping it and walking over: a panel that
-// appeared whenever the player came within reach would put itself in front of
-// anyone walking past. Closing it *is* proximity, off `actions-changed`, which
-// is the same rule the channel at it already lives by.
-export const FORGE_OPENED_EVENT = 'forge-opened';
-export const SMITH_REQUESTED_EVENT = 'smith-requested';
+// A station. Not a counter — nobody stands behind one — but opened the same way
+// one is, by tapping it and walking over: a panel that appeared whenever the
+// player came within reach would put itself in front of anyone walking past.
+// Closing it *is* proximity, off `actions-changed`, which is the same rule the
+// channel at it already lives by.
+//
+// It carries which station, where it used to carry nothing at all. There was one
+// panel and it was the forge's, so the event, the modal's title, the skill its
+// rows were levelled against and the sentence a refusal was written in were four
+// separate places that each knew the answer — which is exactly what a second
+// station turns into four ways of being wrong.
+export const STATION_OPENED_EVENT = 'station-opened';
+// What is being made. The recipe names its own station, so this needs no second
+// argument saying where the player is standing.
+export const CRAFT_REQUESTED_EVENT = 'craft-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
 // Quests. Taken and handed in at the shopkeeper, so these ride the same
 // ask/decide split as buying: the HUD forwards the tap, ZoneWorld re-checks
@@ -198,8 +207,14 @@ export interface TargetInfo {
 // the HUD combines it with the selected item via ItemActionsSystem.
 export interface AvailableActions {
   nearFire: boolean;
-  /** Whether a forge is in reach, which is what opens the smithing list. */
-  nearForge: boolean;
+  /**
+   * Every built station in reach, which is what keeps an open panel open.
+   *
+   * A list rather than a flag per station: what the HUD asks is "is the one I
+   * have up still in reach", and that is a lookup rather than a branch that has
+   * to grow a case each time a vat or a loom is added somewhere.
+   */
+  nearStations: StationId[];
 }
 
 // Payload for ABILITY_STATE_CHANGED_EVENT: everything the action bar needs to
@@ -253,7 +268,7 @@ export interface TilePoint {
  * thing it describes wanders off or dies.
  */
 export type ContextActionId =
-  'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'bounty' | 'smith' | 'outfit';
+  'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'bounty' | 'work' | 'outfit';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -362,8 +377,8 @@ export interface UiEventMap {
   [TURN_IN_BOUNTY_REQUESTED_EVENT]: [bountyId: BountyId];
   [ABANDON_BOUNTY_REQUESTED_EVENT]: [];
   [BOUNTY_CHANGED_EVENT]: [bounty: ActiveBounty | null];
-  [FORGE_OPENED_EVENT]: [];
-  [SMITH_REQUESTED_EVENT]: [recipeId: RecipeId];
+  [STATION_OPENED_EVENT]: [stationId: StationId];
+  [CRAFT_REQUESTED_EVENT]: [recipeId: RecipeId];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
   [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
   [TURN_IN_QUEST_REQUESTED_EVENT]: [questId: QuestId];

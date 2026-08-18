@@ -23,6 +23,12 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
   mining: { id: 'mining', name: 'Mining', family: 'gathering', verb: 'mine ore' },
   cooking: { id: 'cooking', name: 'Cooking', family: 'gathering', verb: 'cook' },
   smithing: { id: 'smithing', name: 'Smithing', family: 'gathering', verb: 'smith' },
+  leatherworking: {
+    id: 'leatherworking',
+    name: 'Leatherwork',
+    family: 'gathering',
+    verb: 'work leather',
+  },
   'one-handed': { id: 'one-handed', name: '1 Handed', family: 'combat', verb: 'fight' },
   unarmed: { id: 'unarmed', name: 'Fist', family: 'combat', verb: 'fight' },
   block: { id: 'block', name: 'Block', family: 'combat', verb: 'fight' },
@@ -40,6 +46,7 @@ export const SKILL_ORDER = exhaustive<GatherSkillId>()([
   'mining',
   'cooking',
   'smithing',
+  'leatherworking',
 ]);
 
 // Offense before defense before magic, which is the order they come up in a fight.

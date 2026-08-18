@@ -699,7 +699,7 @@ describe('the inventory panel forwards its buttons', () => {
 
   // The two that need the world to allow them first.
   it('asks to cook once there is a fire, and to sell once the shop is open', () => {
-    events.emit(ACTIONS_CHANGED_EVENT, { nearFire: true, nearForge: false });
+    events.emit(ACTIONS_CHANGED_EVENT, { nearFire: true, nearStations: [] });
     pressAction('raw-fish', 'cook');
     expect(emitted.at(-1)).toEqual({ event: COOK_REQUESTED_EVENT, args: ['raw-fish'] });
 

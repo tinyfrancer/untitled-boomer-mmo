@@ -1,4 +1,4 @@
-import { RECIPES, type CraftingRecipe, type StationId } from '../data/recipes';
+import { RECIPES, STATION_LABELS, type CraftingRecipe, type StationId } from '../data/recipes';
 import { SKILLS } from '../data/skills';
 import type { ItemId, RecipeId } from '../types/ids';
 import type { Inventory } from './InventorySystem';
@@ -104,9 +104,15 @@ export function canCraft(
   atStation: boolean,
 ): CraftCheck {
   if (!atStation) {
+    // The fire is the one a player carries the makings of, so it is the one
+    // whose refusal is about standing somewhere rather than about a place: "you
+    // need a forge" names a thing in a town, "stand by a fire" names an act.
     return {
       ok: false,
-      reason: recipe.station === 'fire' ? 'You need to stand by a fire.' : 'You need a forge.',
+      reason:
+        recipe.station === 'fire'
+          ? 'You need to stand by a fire.'
+          : `You need a ${STATION_LABELS[recipe.station].toLowerCase()}.`,
     };
   }
   if (!hasInputs(recipe, inventory)) {
