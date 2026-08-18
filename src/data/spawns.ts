@@ -134,13 +134,13 @@ export const QUARRY_NODE_SPAWNS: NodeSpawnPoint[] = [
  */
 export const OLD_MILL_ROAD_MOB_SPAWNS: MobSpawnPoint[] = [
   // The near knot, south of the road, met on the way in.
-  { dx: 192, dy: 96, enemyId: 'goblin-scavenger', level: 4 },
-  { dx: 288, dy: 224, enemyId: 'goblin-scavenger', level: 4 },
-  { dx: 160, dy: 288, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 256, dy: 160, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 352, dy: 288, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 224, dy: 352, enemyId: 'goblin-scavenger', level: 4 },
   // The middle knot, north of the road and east of the mill yard.
-  { dx: -128, dy: -288, enemyId: 'goblin-scavenger', level: 4 },
-  { dx: 0, dy: -352, enemyId: 'goblin-scavenger', level: 4 },
-  { dx: -96, dy: -160, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: -128, dy: -416, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: 0, dy: -480, enemyId: 'goblin-scavenger', level: 4 },
+  { dx: -96, dy: -288, enemyId: 'goblin-scavenger', level: 4 },
   // The far knot, past the mill, and the only level 5s in the world.
   { dx: -640, dy: 192, enemyId: 'goblin-scavenger', level: 5 },
   { dx: -512, dy: 288, enemyId: 'goblin-scavenger', level: 5 },
@@ -218,12 +218,12 @@ export const DEEP_CUT_NODE_SPAWNS: NodeSpawnPoint[] = [
 // All inside the dirt clearing (see banditCampMap.ts), far enough east that
 // arriving from town never lands inside an aggro radius.
 export const BANDIT_CAMP_MOB_SPAWNS: MobSpawnPoint[] = [
-  { dx: 160, dy: -160, enemyId: 'bandit', level: 1 },
-  { dx: 192, dy: 160, enemyId: 'bandit', level: 1 },
+  { dx: 224, dy: -224, enemyId: 'bandit', level: 1 },
+  { dx: 256, dy: 192, enemyId: 'bandit', level: 1 },
   { dx: 384, dy: 0, enemyId: 'bandit', level: 1 },
   { dx: 480, dy: -224, enemyId: 'bandit', level: 2 },
   { dx: 512, dy: 224, enemyId: 'bandit', level: 2 },
-  { dx: 576, dy: 0, enemyId: 'bandit', level: 3 },
+  { dx: 512, dy: 0, enemyId: 'bandit', level: 3 },
 ];
 
 // Inside the hideout: the entrance hall is left clear so arriving is not an
@@ -234,9 +234,9 @@ export const BANDIT_CAMP_MOB_SPAWNS: MobSpawnPoint[] = [
 // anywhere above the starter band, and he stands at the back of the chamber so
 // the men in front of him are fought first.
 export const BANDIT_HIDEOUT_MOB_SPAWNS: MobSpawnPoint[] = [
-  { dx: 160, dy: -224, enemyId: 'bandit', level: 2 },
+  { dx: 192, dy: -256, enemyId: 'bandit', level: 2 },
   { dx: 288, dy: -64, enemyId: 'bandit', level: 2 },
-  { dx: 160, dy: 224, enemyId: 'bandit', level: 3 },
+  { dx: 192, dy: 256, enemyId: 'bandit', level: 3 },
   { dx: 288, dy: 96, enemyId: 'bandit', level: 3 },
   { dx: 448, dy: 0, enemyId: 'bandit-chief', level: 4 },
 ];
@@ -265,12 +265,12 @@ export const BLACKWATER_FEN_MOB_SPAWNS: MobSpawnPoint[] = [
   // dying in the fen dropped you straight back into melee with a level 5. The
   // rule it broke is one `CLAUDE.md` states about every zone: the spawn point
   // is safe by construction. It was not.
-  { dx: -64, dy: -224, enemyId: 'fen-raider', level: 5 },
+  { dx: -96, dy: -320, enemyId: 'fen-raider', level: 5 },
   { dx: 448, dy: 32, enemyId: 'fen-raider', level: 5 },
   { dx: -96, dy: 96, enemyId: 'bog-lurker', level: 6 },
   { dx: 416, dy: 288, enemyId: 'bog-lurker', level: 6 },
   { dx: -448, dy: 256, enemyId: 'fen-raider', level: 6 },
-  { dx: 96, dy: 288, enemyId: 'fen-raider', level: 6 },
+  { dx: 96, dy: 320, enemyId: 'fen-raider', level: 6 },
   { dx: -160, dy: 448, enemyId: 'bog-lurker', level: 7 },
   { dx: -352, dy: 416, enemyId: 'fen-raider', level: 7 },
   { dx: 288, dy: 480, enemyId: 'fen-raider', level: 7 },
