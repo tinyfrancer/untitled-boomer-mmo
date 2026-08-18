@@ -4,6 +4,7 @@ import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
 import { BLACKWATER_FEN_MAP } from './blackwaterFenMap';
 import { QUARRY_MAP } from './quarryMap';
+import { DEEP_CUT_MAP } from './deepCutMap';
 import { BANDIT_CAMP_MAP } from './banditCampMap';
 import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
 import { OLD_MILL_ROAD_MAP } from './oldMillRoadMap';
@@ -14,7 +15,10 @@ import {
   BEACH_NODE_SPAWNS,
   BLACKWATER_FEN_MOB_SPAWNS,
   BLACKWATER_FEN_NODE_SPAWNS,
+  DEEP_CUT_MOB_SPAWNS,
+  DEEP_CUT_NODE_SPAWNS,
   OLD_MILL_ROAD_MOB_SPAWNS,
+  OLD_MILL_ROAD_NODE_SPAWNS,
   QUARRY_MOB_SPAWNS,
   QUARRY_NODE_SPAWNS,
   TOWN_MOB_SPAWNS,
@@ -203,7 +207,37 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     mobSpawns: QUARRY_MOB_SPAWNS,
     nodeSpawns: QUARRY_NODE_SPAWNS,
     npcSpawns: [],
-    exits: [{ edge: 'south', to: 'town' }],
+    // The road north, and the second exit in the game to cost the zone it leaves
+    // a re-cut: the face ran across the whole of that edge. See `quarryMap.ts`.
+    exits: [
+      { edge: 'south', to: 'town' },
+      { edge: 'north', to: 'deep-cut' },
+    ],
+  },
+  /**
+   * The shaft at the back of the quarry, followed until it stopped being one.
+   *
+   * The third zone above the starter band, and the only one of the three that is
+   * about a *skill* rather than about a fight. What is down here is coal and the
+   * rich iron beside it, which together are the whole of the steel tier — and
+   * the way it is gated is the thing worth keeping: no key, no level on the door
+   * and nothing at the mouth that will stop anybody. What stops them is the pick.
+   * Every seam sits above every gate the quarry has, so the walk in is free and
+   * the reason to be here is not.
+   *
+   * It is also where the road west finally pays off: the hardwood in the mill
+   * road's timber stand was left out when that zone shipped, because charcoal had
+   * nothing to be burnt for until this tier existed.
+   */
+  'deep-cut': {
+    id: 'deep-cut',
+    name: 'The Deep Cut',
+    description: 'Coal and rich iron under the quarry, and goblins already working them.',
+    map: DEEP_CUT_MAP,
+    mobSpawns: DEEP_CUT_MOB_SPAWNS,
+    nodeSpawns: DEEP_CUT_NODE_SPAWNS,
+    npcSpawns: [],
+    exits: [{ edge: 'south', to: 'quarry' }],
   },
   'bandit-camp': {
     id: 'bandit-camp',
@@ -236,7 +270,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     description: 'Goblins on the west road, three to a knot. Harder than anything in town.',
     map: OLD_MILL_ROAD_MAP,
     mobSpawns: OLD_MILL_ROAD_MOB_SPAWNS,
-    nodeSpawns: [],
+    nodeSpawns: OLD_MILL_ROAD_NODE_SPAWNS,
     npcSpawns: [],
     buildingSpawns: [{ dx: -384, dy: -192, buildingId: 'mill' }],
     exits: [{ edge: 'east', to: 'town' }],

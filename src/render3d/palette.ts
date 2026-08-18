@@ -2,6 +2,7 @@ import {
   BANDIT_MASK_COLOR,
   CHIEF_MASK_COLOR,
   GOBLIN_MASK_COLOR,
+  MINER_MASK_COLOR,
   NPC_APPEARANCES,
   RAIDER_MASK_COLOR,
   type Appearance,
@@ -121,6 +122,7 @@ const CREATURE_OVERRIDES: Partial<Record<EnemyId, PersonLook>> = {
     mask: GOBLIN_MASK_COLOR,
   },
   'fen-raider': { appearance: NPC_APPEARANCES['fen-raider'], mask: RAIDER_MASK_COLOR },
+  'goblin-miner': { appearance: NPC_APPEARANCES['goblin-miner'], mask: MINER_MASK_COLOR },
 };
 
 /**
@@ -134,6 +136,11 @@ const CREATURE_OVERRIDES: Partial<Record<EnemyId, PersonLook>> = {
  */
 const BEAST_OVERRIDES: Partial<Record<EnemyId, BeastLook>> = {
   'bog-lurker': { body: 0x3f5d4a, limb: 0x2c4033 },
+  // The second crustacean, and the same argument as the lurker's: the crab's
+  // boiled orange is a thing that lives in the sun, and a cave crawler drawn in
+  // it is a crab that has wandered a long way inland. Chalk and cave water
+  // instead, which is also what its shell is drawn as in the bag.
+  'cave-crawler': { body: 0x9aa6b0, limb: 0x6f7b85 },
 };
 
 /** What to draw a person-shaped creature in: its own look, or its shape's. */

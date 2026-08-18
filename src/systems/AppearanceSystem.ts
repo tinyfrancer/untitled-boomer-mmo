@@ -298,10 +298,20 @@ export const NPC_APPEARANCES = {
     weapon: { shape: 'axe', color: 0x7a6a53 },
     offhand: null,
   },
+  // The same goblin underground, and told from the one on the road west by what
+  // the dark has done to it: paler, sootier, and carrying the pick it works with
+  // rather than something it found.
+  'goblin-miner': {
+    headColor: 0x9ccc65,
+    torsoColor: 0x4e463a,
+    legColor: 0x33302a,
+    weapon: { shape: 'pick', color: 0x8d8d8d },
+    offhand: null,
+  },
   // Keyed by `NpcId` rather than by a hand-written list of names, so a new
   // person standing in a town is a compile error here until they have a look.
 } as const satisfies Record<
-  NpcId | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'fen-raider',
+  NpcId | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'fen-raider' | 'goblin-miner',
   Appearance
 >;
 
@@ -319,6 +329,9 @@ export const GOBLIN_MASK_COLOR = 0x4a4a2e;
 
 /** Oilskin pulled up over the mouth, against the water rather than the law. */
 export const RAIDER_MASK_COLOR = 0x5a5f4a;
+
+/** A rag against the dust, which is the one thing down there worth covering for. */
+export const MINER_MASK_COLOR = 0x6b5f4a;
 
 // A pure function of everything the figure draws, so two looks share a key
 // exactly when they draw the same. That is what lets a view detect a gear

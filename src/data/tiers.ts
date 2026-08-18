@@ -15,4 +15,8 @@ export const TIER_COLORS: Record<TierId, number> = {
   // a dark brackish teal, far enough from the two leathers that a robed figure
   // is never mistaken for an armoured one at a glance.
   fenweave: 0x2f5d5a,
+  // Blued rather than bright: iron is what a pale grey set looks like, and steel
+  // has to read as the tier above it at a glance on a figure the size of a
+  // thumbnail. Darker and cooler is the direction every real one of these went.
+  steel: 0x5d6b7a,
 };

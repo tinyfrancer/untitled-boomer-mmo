@@ -4,8 +4,10 @@ export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 
 // `studded` is the first tier the world drops that nothing in town sells and no
 // forge makes: it is what the goblins on the Old Mill Road are wearing, and the
-// step a character takes who has not gone near a quarry.
-export type TierId = 'brown' | 'studded' | 'iron' | 'fenweave';
+// step a character takes who has not gone near a quarry. `steel` is the other
+// end of that: the deepest thing a forge makes and the only tier with four
+// pieces, the offhand included.
+export type TierId = 'brown' | 'studded' | 'iron' | 'fenweave' | 'steel';
 
 export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
@@ -75,7 +77,22 @@ export type ItemId =
   | 'raw-eel'
   | 'cooked-eel'
   | 'burnt-eel'
-  | 'lurker-hide';
+  | 'lurker-hide'
+  // What the Deep Cut holds, and the three places the steel tier reaches back
+  // into: the coal under the quarry, the hardwood on the road west, and the
+  // shell off the thing that lives in the dark down there.
+  | 'coal'
+  | 'hardwood'
+  | 'charcoal'
+  | 'crawler-shell'
+  | 'steel-bar'
+  // The deepest thing a forge makes, and the first tier with an offhand in it.
+  | 'steel-helmet'
+  | 'steel-chestplate'
+  | 'steel-legs'
+  | 'steel-shield'
+  // A pick head re-hafted as a weapon, which is why it is not a mining tool.
+  | 'goblin-maul';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -91,10 +108,24 @@ export type RecipeId =
   | 'iron-helmet'
   | 'iron-chestplate'
   | 'iron-legs'
-  | 'cooked-eel';
+  | 'cooked-eel'
+  | 'charcoal'
+  | 'steel-bar'
+  | 'steel-helmet'
+  | 'steel-chestplate'
+  | 'steel-legs'
+  | 'steel-shield';
 
 export type EnemyId =
-  'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'bog-lurker' | 'fen-raider';
+  | 'rat'
+  | 'crab'
+  | 'bandit'
+  | 'bandit-chief'
+  | 'goblin-scavenger'
+  | 'bog-lurker'
+  | 'fen-raider'
+  | 'cave-crawler'
+  | 'goblin-miner';
 
 // What an enemy is, which is what decides what it can carry: humanoids have
 // pockets and wear gear, beasts drop the parts they are made of.
@@ -110,7 +141,15 @@ export type CreatureShapeId = 'quadruped' | 'crustacean' | 'humanoid';
 // a table is called is a fact about the table, and two creatures sharing one is
 // a decision LOOT_TABLES should be free to make.
 export type LootTableId =
-  'rat' | 'crab' | 'bandit' | 'bandit-chief' | 'goblin-scavenger' | 'bog-lurker' | 'fen-raider';
+  | 'rat'
+  | 'crab'
+  | 'bandit'
+  | 'bandit-chief'
+  | 'goblin-scavenger'
+  | 'bog-lurker'
+  | 'fen-raider'
+  | 'cave-crawler'
+  | 'goblin-miner';
 
 export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick';
 
@@ -151,7 +190,15 @@ export type CombatSkillId = 'one-handed' | 'unarmed' | 'block' | 'parry' | 'dest
 export type SkillId = GatherSkillId | CombatSkillId;
 
 export type ResourceNodeId =
-  'tree' | 'fishing-spot' | 'ocean-fishing-spot' | 'deep-fishing-spot' | 'tin-vein' | 'iron-vein';
+  | 'tree'
+  | 'hardwood'
+  | 'fishing-spot'
+  | 'ocean-fishing-spot'
+  | 'deep-fishing-spot'
+  | 'tin-vein'
+  | 'iron-vein'
+  | 'coal-vein'
+  | 'rich-iron-vein';
 
 /**
  * Which body a renderer draws a node with, and the same bargain `CreatureShapeId`
@@ -181,7 +228,8 @@ export type ZoneId =
   | 'bandit-camp'
   | 'bandit-hideout'
   | 'old-mill-road'
-  | 'blackwater-fen';
+  | 'blackwater-fen'
+  | 'deep-cut';
 
 // What is built on a zone rather than spawned in it: solid, permanent, and the
 // thing a counter stands at the door of. Its own union rather than a slice of

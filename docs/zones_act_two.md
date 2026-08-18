@@ -1,6 +1,6 @@
 # Act Two: five zones past the starter band
 
-A brainstorm, not a spec. **Zone 1 is built** (see below); the other four are not.
+A brainstorm, not a spec. **Zones 1, 2 and 3 are built** (see below); the other two are not.
 
 ## Where the game currently stops
 
@@ -15,7 +15,7 @@ What the five below are for, in one line each:
 | #   | Zone              | Cell   | Band | Why you go                                                |
 | --- | ----------------- | ------ | ---- | --------------------------------------------------------- |
 | 1   | Old Mill Road ✅  | -1, 0  | 4-5  | The first fight above the starter band, and the coin      |
-| 2   | The Deep Cut      | 0, -2  | 5-6  | Coal, and with it the whole steel tier                    |
+| 2   | The Deep Cut ✅   | 0, -2  | 5-6  | Coal, and with it the whole steel tier                    |
 | 3   | Blackwater Fen ✅ | 0, 2   | 5-7  | The food that makes levels 6-7 survivable                 |
 | 4   | Greyford Outpost  | -2, 0  | —    | A second set of counters, out where the work is           |
 | 5   | The Sunken Barrow | -2, -1 | 7-8  | The capstone: locked, and the only place two uniques drop |
@@ -27,7 +27,8 @@ one thing about a new zone the layout code cannot fix for you.
 
 Built in that order, the cap climbs 5 → 6 → 7 → 7 → 9. (In practice zones 1 and 3 were built
 first, and the cap went 5 → 6 → 8: the fen spawns to level 7 where this table guessed 5-7 would
-top out lower.) It is never a number anyone edits: add the
+top out lower. Zone 2 then moved it not at all, sitting under a ceiling the fen had already
+raised past it.) It is never a number anyone edits: add the
 row, and `progression.test.ts` says what the cap now has to be.
 
 ---
@@ -70,7 +71,7 @@ row, a handful of `ITEMS`, and a `ZONES` row with exits both ways. The goblin wa
 `CREATURE_OVERRIDES` so it is not drawn as a bandit; that is one line in `render3d/palette.ts` and is
 the only view code in the whole zone.
 
-## 2. The Deep Cut — north of the quarry, level 5-6
+## 2. The Deep Cut — north of the quarry, level 5-6 — **BUILT**
 
 **The smithing spine, and the zone the other four hang off.** The quarry's shaft, followed down.
 
@@ -101,6 +102,78 @@ the grind and about 6,900 gathers, and it strands the mastery thresholds, which 
 tuned to sit just under a capped skill. Do it when content actually asks for level 11, on the same
 rule `MAX_CHARACTER_LEVEL` already follows: the content moves the cap, nobody edits it because a
 later zone might want the room.
+
+**Held after building it, and the margin is now measured rather than guessed.** The zone shipped with
+mining 8 on the rich seam as predicted and smithing 9 on the steel chestplate, which is the deepest
+gate anything in the game has. One level of headroom on both, which is the same room the ocean's
+fishing gate leaves — so 10 still is not blocking anything, and the first thing that asks for 11
+should be what moves it.
+
+**What it actually cost.** Almost exactly what the section above says: a map, eleven spawns, two
+`ENEMIES` rows, two loot tables, three nodes, six recipes, ten items, a tier colour and a `ZONES` row.
+The whole of the view is two lines — one `CREATURE_OVERRIDES` entry for the miner and one
+`BEAST_OVERRIDES` for the crawler — and the slayer chains, both maps, travel, camping, the offline
+payout and the mastery pools all appeared with nothing written down, so the "what gets built for
+free" list held a second time.
+
+Four things this section did not predict:
+
+1. **The quarry had to be re-cut**, exactly the way the fen re-cut the beach and for exactly the same
+   reason one material over: the rock face ran across the whole north edge and the map's own comment
+   said that was why the zone had no north exit — the same sentence the beach's map had about water.
+   The rule that has now been paid twice is worth stating as a rule: **the sentence explaining why a
+   zone has no exit somewhere is the thing that has to go when it gets one.** Every existing spawn
+   survived, because the two iron veins already stood where the break through the face went.
+2. **Hardwood came back to zone 1.** This doc's zone-1 postmortem said the timber stand would land
+   with the zone that gave it a use, and it did — `nodeSpawns` on a `ZONES` row that already existed,
+   plus a charcoal recipe. That is the `deadEnds.test.ts` deferral paying off rather than being
+   worked around, which is the outcome the rule was written for.
+3. **The crawler's dodge made `avoidChance` a rule instead of an exception.** It was the crab's
+   alone and a test said so by name; a second armoured scuttling thing meant deciding whether the
+   rule was "one creature" or "this kind of creature". It is the second, and the test now says
+   crustacean-and-passive rather than a list of names — so the half that was load-bearing, that
+   nothing which chases anyone has one, is what is actually held.
+4. **The miners drop no ore at all**, which took deciding rather than filling in. Coal on that table
+   would be the way round the only gate the zone has, and iron ore is no better: `deadEnds.test.ts`
+   can trace the plate tier to both veins and a rat precisely because nothing else in the game hands
+   out either rock, and it failed the moment a goblin did. What they carry instead is a pick and a
+   maul — which is how the game's first repeatable weapon upgrade above a brown axe ended up here
+   rather than in a zone that set out to add one.
+
+**Built twice, in parallel, and merged on evidence.** The same session running on two devices built
+this zone independently. The comparison is worth recording because it was settled by measurement
+rather than by taste: the second implementation laid the mine out as open floor with scattered
+pillars, chosen specifically to stop mobs pinning against geometry, there being no pathfinding
+anywhere in this game. Simulating a chase out of every spawn to every point inside its own leash
+radius said the opposite — **the carved rooms pin on 13% of reachable spots and the open floor on
+17%.** Scattered pillars put an obstacle beside every spawn where a few large rooms leave clear
+lines. The rooms stayed, and so did everything else that version had settled: the wide quarry cut
+that left both iron veins standing, seam timings a step beyond the quarry's own, and the test file
+that traces every seam and kill behind a steel piece.
+
+Four claims came across from the other one, each a way this zone could keep passing while ceasing to
+be what it is: that nothing living here drops what the seams yield (a level gate is only a gate while
+there is no way round it), that a steel bar spends two quarry irons, that this zone raises no
+ceiling, and that the capstone recipe sits at the top of the skill that makes it. The last closed a
+real gap rather than restating one — the steel chestplate was at smithing 9 against a cap of 10, so
+capping the deepest crafting skill in the game bought nothing at all.
+
+The one thing this section asked for that came out differently is the **shield**. It is listed above
+as a fourth armour row and it is really the point of the tier: both offhands in the world drop off
+bandits in the starter band, so the slot filled once and never again, and a top tier stopping at three
+pieces would have left the best set in the game wearing starter leather.
+
+**And one thing it turned up somewhere else, left unfixed on purpose.** Writing the Deep Cut's test
+that the gallery is arrived in rather than fought for meant checking a claim `CLAUDE.md` makes about
+every zone — "the spawn point is safe by construction … no zone's centre sits inside an aggro radius"
+— and it is not true of three already-built zones. Blackwater Fen has a raider 71 units from its
+centre against an aggro radius of 210, so travelling there by map or respawning after a death lands
+in melee with a level 5; the Old Mill Road has a goblin at 186 against 200; and the bandit camp's
+_east_ arrival strip, which is how anyone walks back out of the hideout, passes 128 from a level 3
+bandit whose radius is 180. All three predate this zone and each is a spawn offset, but the third one
+is a layout question rather than a nudge, and retuning three shipped zones is not what building this
+one was for. The Deep Cut holds the rule for itself in `deepCut.test.ts`; making it a sweep over every
+zone is the follow-up, and it wants those three moved first.
 
 ## 3. Blackwater Fen — south of the beach, level 5-7 — **BUILT**
 
@@ -235,8 +308,17 @@ Almost all of it is data. The things that are **not**, in rough order of size:
    against brown and iron will not hold a third tier without being re-checked. The duels in
    `EnemySystem.test.ts` are where that gets settled, and they only model auto-attacks — which stays
    right, and stays the reason a bought ability moves what a spender can do rather than the baseline.
+
+   **Measured, now that steel is in.** A full steel set with its shield is 37 armour, which the curve
+   turns into 31.6% against the brown set's 14.9% and iron-plus-a-brown-shield's 24.5% — a real step
+   that is nowhere near immunity, which is what the shape of the curve was chosen for. The 80 holds.
+   What the fourth tier would want watching is the _fifth_: the curve is flattest where the numbers
+   are biggest, so a barrow set much above this one buys less than it looks like it does.
+
 5. **Two new creature colours and no new creature shapes**, if goblins and wights are humanoids and
-   crawlers are crustaceans. That is the `shape` seam paying for itself.
+   crawlers are crustaceans. That is the `shape` seam paying for itself. Four colours so far and still
+   no shapes, which is the seam holding: the lurker, the raider, the miner and the crawler are all a
+   row in `palette.ts` and nothing else.
 
 ## What gets built for free
 
@@ -256,7 +338,12 @@ Worth saying, because it is most of a zone:
 
 ## The order to build them in
 
-1 → 2 → 3 → 4 → 5, and the argument for it is that each one is playable alone. Zone 1 needs nothing
+In practice: 1 → 3 → 2, and the two departures were both right. Zone 3 jumped the queue because the
+cloth gap was the stronger argument, and zone 2 landing third meant the steel tier could be priced
+against a cap the fen had already moved rather than against one it would have moved itself.
+
+The plan as written was 1 → 2 → 3 → 4 → 5, and the argument for it is that each one is playable
+alone. Zone 1 needs nothing
 but itself. Zone 2 gives the gear that makes zone 3 comfortable and zone 3 gives the food that makes
 zone 2's depths survivable, so either order works between those two, but both want to exist before
 the walk to Greyford is long enough to be worth shortening. The barrow is last because a capstone

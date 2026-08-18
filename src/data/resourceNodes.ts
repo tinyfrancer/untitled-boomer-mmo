@@ -52,6 +52,29 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
     respawnDelayMs: 15000,
     interactRadius: 88,
   },
+  /**
+   * The stand of old timber on the road west, and the third rung woodcutting
+   * never had: a skill with one node to work has nothing to climb toward.
+   *
+   * Gated at 6, which is what a run of ordinary trees earns, and slower and
+   * shorter-lived than one for what it yields — the same bargain a vein makes
+   * against a tree.
+   */
+  hardwood: {
+    id: 'hardwood',
+    name: 'Hardwood',
+    body: { width: TILE_SIZE, height: TILE_SIZE * 1.5 },
+    shape: 'tree',
+    blocks: 0.3,
+    skill: 'woodcutting',
+    requiredLevel: 6,
+    yieldItemId: 'hardwood',
+    xpReward: 22,
+    baseGatherMs: 4200,
+    charges: 3,
+    respawnDelayMs: 20000,
+    interactRadius: 88,
+  },
   'fishing-spot': {
     id: 'fishing-spot',
     name: 'Fishing Spot',
@@ -145,6 +168,51 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
     baseGatherMs: 3800,
     charges: 3,
     respawnDelayMs: 22000,
+    interactRadius: 88,
+  },
+  /**
+   * The Deep Cut's two, and what that zone is gated by instead of a door.
+   *
+   * Both sit above every gate in the quarry, which is the whole claim the zone
+   * makes: the walk in is free and the reason to be down there is not. Coal at 6
+   * is what the quarry's own iron earns, and the rich seam at 8 is two short of
+   * the cap — reachable without capping mining outright, the same room the fen's
+   * deep pools leave.
+   */
+  'coal-vein': {
+    id: 'coal-vein',
+    name: 'Coal Seam',
+    body: { width: TILE_SIZE, height: TILE_SIZE * 0.8 },
+    shape: 'vein',
+    blocks: 0.9,
+    skill: 'mining',
+    requiredLevel: 6,
+    yieldItemId: 'coal',
+    xpReward: 26,
+    baseGatherMs: 4000,
+    charges: 3,
+    respawnDelayMs: 24000,
+    interactRadius: 88,
+  },
+  /**
+   * The same rock as the quarry's iron and more of it, which is what "rich"
+   * buys: a fourth charge and better xp off a seam that takes longer to work.
+   * A new ore would have been a second name for a thing the forge already
+   * knows what to do with.
+   */
+  'rich-iron-vein': {
+    id: 'rich-iron-vein',
+    name: 'Rich Iron Vein',
+    body: { width: TILE_SIZE, height: TILE_SIZE * 0.8 },
+    shape: 'vein',
+    blocks: 0.9,
+    skill: 'mining',
+    requiredLevel: 8,
+    yieldItemId: 'iron-ore',
+    xpReward: 34,
+    baseGatherMs: 4200,
+    charges: 4,
+    respawnDelayMs: 26000,
     interactRadius: 88,
   },
 };

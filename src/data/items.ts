@@ -121,6 +121,17 @@ const ICON_COLOR = {
   rawEel: 0x4e6b52,
   cookedEel: 0xb07840,
   hide: 0x6b5140,
+  // The Deep Cut's four. Coal is the darkest thing in the bag and stops short of
+  // black, for the reason burnt food does: a cell is nearly black itself, and a
+  // near-black item in it reads as an empty slot.
+  coal: 0x3b3a38,
+  hardwood: 0x5d4037,
+  // Cooler and brighter than the iron bar it is made of, which is the whole of
+  // how the two are told apart at the size a bar is drawn.
+  steelBar: 0xe7eff5,
+  // Chalk and cave water, and nothing like the crab's orange: what a shell looks
+  // like on something that has never seen the sun.
+  shell: 0x9aa6b0,
 } as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
@@ -403,6 +414,23 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     icon: { shape: 'log', color: ICON_COLOR.wood },
   },
   /**
+   * What the road west finally has a tree worth chopping for.
+   *
+   * It was left out when that zone was built and the reason was written down at
+   * the time: hardwood exists to be burnt into the charcoal the steel tier is
+   * worked over, and a gathering skill yielding something no recipe consumes is
+   * the strictest of the three rules `deadEnds.test.ts` holds. It lands with the
+   * zone that gives it a use, which is what that note said would happen.
+   */
+  hardwood: {
+    id: 'hardwood',
+    name: 'Hardwood',
+    value: 7,
+    weight: 3,
+    kind: 'material',
+    icon: { shape: 'log', color: ICON_COLOR.hardwood },
+  },
+  /**
    * What comes out of the quarry, and the heaviest thing in the game that is
    * gathered by the armful.
    *
@@ -427,6 +455,22 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'material',
     icon: { shape: 'ore', color: ICON_COLOR.ironOre },
+  },
+  /**
+   * What the Deep Cut is for, and the thing that turns iron into steel.
+   *
+   * Behind mining 6, which is a level the quarry's own two veins are what earns
+   * — the same ladder the ocean makes over the pond. Lighter than the iron it is
+   * smelted with and worth more, because what is behind a level should be worth
+   * the level.
+   */
+  coal: {
+    id: 'coal',
+    name: 'Coal',
+    value: 13,
+    weight: 3,
+    kind: 'material',
+    icon: { shape: 'ore', color: ICON_COLOR.coal },
   },
   // What the forge makes out of ore, and what it makes out of those. Bars are
   // lighter than the ore they came from: two trips of rock become one of metal,
@@ -467,6 +511,36 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 1,
     kind: 'material',
     icon: { shape: 'bone', color: ICON_COLOR.burnt },
+  },
+  /**
+   * Hardwood burnt down, and what a steel piece is worked over.
+   *
+   * The two fuels do different jobs and that is what keeps both of them worth
+   * carrying: coal is what a furnace melts iron into steel with, and charcoal is
+   * what the finished piece is drawn and hardened over, hot and clean where coal
+   * is hot and filthy. It is bone char's opposite number one tier up — the same
+   * trick of turning something that was only ever vendor trash into the thing an
+   * armour row is impossible without.
+   *
+   * A log burnt down weighs a third of what went in, the way a bar does.
+   */
+  charcoal: {
+    id: 'charcoal',
+    name: 'Charcoal',
+    value: 18,
+    weight: 1,
+    kind: 'material',
+    icon: { shape: 'log', color: ICON_COLOR.burnt },
+  },
+  // Two iron bars married in a coal fire. Worth more than what went into it,
+  // like every smelt here, and heavier than one bar and lighter than two.
+  'steel-bar': {
+    id: 'steel-bar',
+    name: 'Steel Bar',
+    value: 80,
+    weight: 4,
+    kind: 'material',
+    icon: { shape: 'bar', color: ICON_COLOR.steelBar },
   },
   // The plate tier, and the first armour in the game nothing drops. Every piece
   // stops more than the leather it replaces and weighs more for it, which is
@@ -510,6 +584,75 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     armorType: 'plate',
     armorValue: 7,
     healthBonus: 2,
+    strengthBonus: 1,
+  },
+  /**
+   * The steel tier: the deepest thing a forge makes, and the first set in the
+   * game with four pieces in it.
+   *
+   * The shield is why. Both offhands in the world drop off bandits in the
+   * starter band, so the slot filled once and then never again — and it is the
+   * slot most of a warrior's armour comes from. A tier that stopped at three
+   * pieces would have left the best set in the game wearing a starter shield.
+   *
+   * Plate, so a warrior's, and heavier again than the iron it replaces: what
+   * stops more weighs more is the bargain every armour row here makes, and it is
+   * what keeps a full set a decision about the pack rather than a free upgrade.
+   */
+  'steel-helmet': {
+    id: 'steel-helmet',
+    name: 'Steel Helmet',
+    value: 130,
+    weight: 7,
+    kind: 'equipment',
+    slot: 'helmet',
+    color: TIER_COLORS.steel,
+    tier: 'steel',
+    armorType: 'plate',
+    armorValue: 7,
+    healthBonus: 3,
+  },
+  'steel-chestplate': {
+    id: 'steel-chestplate',
+    name: 'Steel Chestplate',
+    value: 200,
+    weight: 11,
+    kind: 'equipment',
+    slot: 'chest',
+    color: TIER_COLORS.steel,
+    tier: 'steel',
+    armorType: 'plate',
+    armorValue: 12,
+    healthBonus: 4,
+    strengthBonus: 2,
+  },
+  'steel-legs': {
+    id: 'steel-legs',
+    name: 'Steel Legs',
+    value: 165,
+    weight: 10,
+    kind: 'equipment',
+    slot: 'pants',
+    color: TIER_COLORS.steel,
+    tier: 'steel',
+    armorType: 'plate',
+    armorValue: 10,
+    healthBonus: 3,
+    strengthBonus: 1,
+  },
+  'steel-shield': {
+    id: 'steel-shield',
+    name: 'Steel Shield',
+    value: 145,
+    weight: 9,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: TIER_COLORS.steel,
+    tier: 'steel',
+    armorType: 'plate',
+    offhandShape: 'shield',
+    armorValue: 8,
+    healthBonus: 3,
     strengthBonus: 1,
   },
   /**
@@ -560,6 +703,28 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     armorType: 'leather',
     armorValue: 5,
     healthBonus: 1,
+  },
+  /**
+   * A pick head off a broken haft, re-hung on a longer one. What the goblins in
+   * the Deep Cut swing, and the first weapon upgrade in the game that comes off
+   * something you can go and kill again.
+   *
+   * Deliberately **not** a mining tool. A tool sits below the starting weapons on
+   * attack power so gathering gear can never double as a stealth combat upgrade,
+   * and this is the other side of that line: it is what a pick becomes once
+   * somebody stops digging with it.
+   */
+  'goblin-maul': {
+    id: 'goblin-maul',
+    name: 'Goblin Maul',
+    value: 85,
+    weight: 8,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0x6d6a63,
+    weaponShape: 'pick',
+    attackPowerBonus: 4,
+    strengthBonus: 1,
   },
   /**
    * The fen's three, and the first armour a caster can go out and earn.
@@ -662,6 +827,23 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     // icon vocabulary is deliberately coarser than the item list, and at
     // thumbnail size a pelt and a cut are one blob in two colours.
     icon: { shape: 'meat', color: ICON_COLOR.hide },
+  },
+  /**
+   * What a crawler is made of, and the one beast part in the game that is not
+   * vendor trash: ground down, it is what a steel piece is case-hardened in.
+   *
+   * That is what makes the thing living in the Deep Cut worth killing rather
+   * than worth walking around. A hide pays coin; a shell is a row on an armour
+   * recipe, which is the difference between a beast that is scenery and a beast
+   * that is part of the loop.
+   */
+  'crawler-shell': {
+    id: 'crawler-shell',
+    name: 'Crawler Shell',
+    value: 20,
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'bone', color: ICON_COLOR.shell },
   },
   'raw-fish': {
     id: 'raw-fish',
