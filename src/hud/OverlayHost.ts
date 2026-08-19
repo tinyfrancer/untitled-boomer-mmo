@@ -7,6 +7,7 @@ import { OptionsModal } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
 import { TrainerModal, type TrainerState } from './TrainerModal';
 import { OutfitterModal } from './OutfitterModal';
+import { ReforgeModal, type ReforgePanelState } from './ReforgeModal';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
 import { StationModal, type StationPanelState } from './StationModal';
@@ -19,6 +20,8 @@ import {
   BOUNTY_CLOSED_EVENT,
   OUTFITTER_CLOSED_EVENT,
   TRADE_REQUESTED_EVENT,
+  REFORGE_CLOSED_EVENT,
+  REFORGE_REQUESTED_EVENT,
   TURN_IN_BOUNTY_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
@@ -55,6 +58,8 @@ export interface OverlayPanelState {
   bounty: () => BountyPanelState;
   /** The bag, which is the outfitter's whole price list. */
   outfitter: () => Inventory;
+  /** The gear, the pack and what has been worked, which is the fettler's whole list. */
+  reforge: () => ReforgePanelState;
   station: () => StationPanelState;
 }
 
@@ -89,6 +94,7 @@ export class OverlayHost {
   private readonly trainerState: () => TrainerState;
   private readonly bountyState: () => BountyPanelState;
   private readonly outfitterState: () => Inventory;
+  private readonly reforgeState: () => ReforgePanelState;
   private readonly stationState: () => StationPanelState;
 
   private options: OptionsModal | null = null;
@@ -97,6 +103,7 @@ export class OverlayHost {
   private trainer: TrainerModal | null = null;
   private bounty: BountyModal | null = null;
   private outfitter: OutfitterModal | null = null;
+  private reforge: ReforgeModal | null = null;
   private station: StationModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
@@ -112,6 +119,7 @@ export class OverlayHost {
     this.trainerState = panels.trainer;
     this.bountyState = panels.bounty;
     this.outfitterState = panels.outfitter;
+    this.reforgeState = panels.reforge;
     this.stationState = panels.station;
   }
 
@@ -315,6 +323,36 @@ export class OverlayHost {
     this.outfitter?.update(this.outfitterState());
   }
 
+  openReforge(): void {
+    this.reforge?.close();
+    this.reforge = new ReforgeModal(
+      this.reforgeState(),
+      {
+        onReforge: (itemId) => this.events.emit(REFORGE_REQUESTED_EVENT, itemId),
+        // Same ask as the other five X's: the world owns whether it is open.
+        onDismiss: () => this.events.emit(REFORGE_CLOSED_EVENT),
+      },
+      () => {
+        this.reforge = null;
+      },
+    );
+    this.root.append(this.reforge.root);
+  }
+
+  closeReforge(): void {
+    this.reforge?.close();
+  }
+
+  /**
+   * Redrawn on the gear, the bag *and* what has been worked — three inputs where
+   * every other counter has one, because a reforge moves all three at once: a
+   * stone and a piece leave the pack, and the piece being worn becomes something
+   * with a different name on it.
+   */
+  refreshReforge(): void {
+    this.reforge?.update(this.reforgeState());
+  }
+
   /**
    * The purse, the level, the bag and every tally move while this is open — and
    * a kill contract's count moves *out in the world*, with the panel left up
@@ -423,6 +461,7 @@ export class OverlayHost {
     this.trainer?.close();
     this.bounty?.close();
     this.outfitter?.close();
+    this.reforge?.close();
     this.station?.close();
     this.picker?.close();
     this.awayReport?.close();

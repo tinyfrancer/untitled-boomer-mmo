@@ -182,6 +182,18 @@ describe('the outfitter', () => {
     expect(NPCS.outfitter.role).toBe('outfitter');
     const roles = Object.values(NPCS).filter((npc) => npc.role === 'outfitter');
     expect(roles).toHaveLength(1);
-    expect(ZONE.npcSpawns.map((spawn) => spawn.npcId)).toEqual(['outfitter']);
+    expect(ZONE.npcSpawns.map((spawn) => spawn.npcId)).toContain('outfitter');
+  });
+
+  /**
+   * And they are the only person here who takes materials for goods. The fettler
+   * standing in the same yard takes a stone and hands the same piece back, which
+   * is a service rather than a trade — so the claim above stays about this
+   * counter rather than quietly becoming about the zone.
+   */
+  it('is the only counter at Greyford that hands anything over', () => {
+    const here = ZONE.npcSpawns.map((spawn) => NPCS[spawn.npcId].role);
+    expect(here).toContain('outfitter');
+    expect(here.filter((role) => role === 'outfitter')).toHaveLength(1);
   });
 });

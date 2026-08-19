@@ -12,8 +12,8 @@ a bandit camp with aggressive humanoids, the bandit hideout behind a locked
 door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
 where the eels and the cloth are, the Deep Cut under the quarry where the coal is, the Sunken
 Barrow under the bottom of the fen where the dead are, and Greyford Outpost between the road west and
-the quarry, where a counter trades in materials rather than coin and a tannery works what the fen
-drops);
+the quarry, where a counter trades in materials rather than coin, a tannery works what the fen
+drops, and a fettler reworks gear into what you would rather it was);
 character creation, leveling, gear,
 two-way combat with death and respawn; three gathering skills and three making ones; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
@@ -338,6 +338,42 @@ is no price in copper anywhere on it. Every offer wants something from each of t
 the outpost, so a tool is a circuit of the loop rather than a thing bought on the way past — and it
 is worth more than the materials it swallows, which is the shop's vendor spread pointed at a barter.
 
+**Reforging is where the endgame's coin goes, and it is paid at one end of the loop and spent at the
+other** (`data/reforges.ts`, ruled on by `systems/ReforgeSystem.ts`, run by `world/ReforgeSession.ts`
+at the fettler). Copper had two sinks — the death fee and the bank's shelves — and the vault _caps_,
+so past the last slot bought a purse had nowhere left to go while a barrow king was paying three
+hundred. The **reforging stone** is what it goes on now: sold in town, spent at Greyford. That split
+is the whole trick — the outpost's claim is that nothing out there wants money, so the shop takes the
+copper and the counter takes the stone, and what it costs the player is the walk every offer on the
+outfitter's board already asks for.
+
+Five things about it were decided against alternatives:
+
+- **A reforge moves power and never adds it.** Every duel in `EnemySystem.test.ts` is measured
+  against gear as the table wrote it, and a reforge that could raise a piece's total would put every
+  one of those fights out of date without failing any of them. `STAT_WEIGHTS` is what makes that
+  checkable rather than promised: each row is weighed in both directions, and every piece in the game
+  is put through every reforge it can take and has to come out weighing what it went in weighing.
+- **It is keyed by item id, not by an instance**, because there are no instances — an inventory is a
+  count per id, and there is no such thing as _this particular_ chestplate. So a reforge is a fact
+  about your steel chestplates, which reads as a compromise and behaves as the right answer: it
+  survives being unequipped, banked and withdrawn with nothing tracking it, where one keyed by gear
+  slot would jump onto whatever was equipped next.
+- **One roll, and permanent.** Livable only because of the first rule: there is no outcome that
+  leaves a piece worse than it was, only a direction somebody would not have picked. Permanence with
+  an upgrade on the table is the version where a bad roll on a 20% drop costs an evening.
+- **The fuel is a second piece for the same slot**, which is one sentence rather than a table of what
+  may be melted into what — and it does both of the jobs this exists for at once: the crown that
+  drops every time and was pure vendor fodder, and the brown set nobody has worn since the camp.
+  Which one gets burnt is the counter's choice rather than the player's, and it is the cheapest that
+  fits: a panel asking which of four helmets to melt is a second decision on top of the one that
+  matters.
+- **The fettler is a person, not a station**, for the reason the bounty board is one. `StationId`
+  means "where a recipe is made" and `recipesAt`, `STATION_SKILLS`, `STATION_PERSISTS` and
+  `afkCampJob` all read it as one; a reforge is not a recipe, has no skill behind it and is nothing an
+  unattended camp could settle to, so wearing a station's clothes it would have been dead data in four
+  crafting tables. A role was a row and four compile errors.
+
 The **tannery** in the yard is the other half of that claim, and the more load-bearing half. Town had
 the one forge and every made thing in the game came off it, which quietly made "production" and
 "smithing" the same word; the vat is the second vertical, and it is out here rather than in town for
@@ -568,7 +604,8 @@ putting a gathering run's haul away is a decision made once and the _first_ of s
 paid for. A second weight limit behind the counter would only have made the pack's decision twice;
 what the vault costs instead is `bankSlotPrice`, a rising price that is the **second coin sink**
 after the death fee, and the reason the pack stays small and awkward while the depth goes on the
-shelves.
+shelves. It _caps_ at `MAX_BANK_SLOTS`, which is what left the endgame with a purse and nowhere to
+spend it until the reforging stone went on the shelf above it — see reforging, below.
 
 The counter is the shop's twin down to the shape: opened at `NPC_INTERACT_RADIUS`, shut by walking
 past `NPC_CLOSE_RADIUS`, a HUD overlay handed a _copy_ of the contents on `bank-changed`, and bare
@@ -589,7 +626,9 @@ the plan asked for a board, and a board would have been a second kind of tappabl
 own pick priority, prop, map marker, inspect card and tap kind. The one furniture type that exists
 could not be borrowed — `StationId` means "where a recipe is made", and `STATION_PERSISTS`,
 `recipesForStation`, `stationsInReach` and `afkCampJob` all read it as one — so a board wearing it
-would have been dead data in four crafting tables. A role was a row and four cases.
+would have been dead data in four crafting tables. A role was a row and four cases. The **fettler** at Greyford is the sixth and cost the same
+four, which is the seam still paying: a reforge is not a recipe, so a station would have been dead
+data in four crafting tables.
 `ZoneWorld.approachNpc` keeps that honest with one `COUNTERS` table keyed by role rather than a pair
 of matching conditionals — which counter to open and what the walk toward it is called are the same
 fact, and the two drifting apart is how a walk ends at the wrong desk. `NPC_APPEARANCES` is keyed by

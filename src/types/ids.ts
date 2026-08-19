@@ -14,6 +14,15 @@ export type TierId = 'brown' | 'studded' | 'iron' | 'fenweave' | 'fenhide' | 'st
 
 export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
+/**
+ * What a piece can be reworked into being better at.
+ *
+ * A reforge moves power between two stats and never adds any, so this is a list
+ * of *directions* rather than of upgrades — which is what makes a rolled one
+ * something to live with rather than something to reroll.
+ */
+export type ReforgeId = 'keen' | 'bulwark' | 'arcane' | 'hale' | 'brawn';
+
 export type ItemId =
   | 'rusty-sword'
   | 'apprentice-wand'
@@ -122,7 +131,11 @@ export type ItemId =
   // as the means of working them faster.
   | 'steel-pickaxe'
   | 'steel-axe'
-  | 'steel-pole';
+  | 'steel-pole'
+  // What a reforge is paid for with. Bought in town and spent at Greyford,
+  // which is how the coin sink sits at one end of the loop and the work at the
+  // other without the outpost starting to want money.
+  | 'reforging-stone';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -311,7 +324,7 @@ export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.
-export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter';
+export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'fettler';
 
 export type QuestId =
   'rat-bones' | 'quarry-road' | 'crab-feast' | 'bandit-trouble' | 'the-cutthroat';

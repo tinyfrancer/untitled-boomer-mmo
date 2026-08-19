@@ -4,6 +4,7 @@ import { CHARACTER_STATE_VERSION, createNewCharacter } from '../../src/persisten
 import { knownAbilities } from '../../src/systems/AbilitySystem';
 import { STARTING_BANK_SLOTS } from '../../src/systems/BankSystem';
 import { createInitialSkills } from '../../src/systems/SkillSystem';
+import { NO_GEAR } from '../../src/systems/InventorySystem';
 import { questProgress } from '../../src/systems/QuestSystem';
 import { QUESTS } from '../../src/data/quests';
 
@@ -509,6 +510,41 @@ describe('migrateCharacterState', () => {
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
     expect(migrated?.skills.leatherworking).toEqual({ level: 1, xp: 0 });
     expect(migrated?.skills.smithing).toEqual({ level: 9, xp: 42 });
+  });
+
+  /**
+   * v21 -> v22: gear can be reforged, and an upgraded save has none. Nothing is
+   * granted, which is the v18 -> v19 bounty argument: a reforge costs a stone
+   * and a second piece, and handing one over would be paying a bill nobody ran
+   * up.
+   */
+  it('opens with nothing reforged, and grants none', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 21,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+      kills: {},
+      visits: {},
+      bounty: null,
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      mastery: {},
+      skills: createInitialSkills(),
+      // Wearing the deepest thing a forge makes, which is exactly the save that
+      // would tempt a step into crediting a reforge for the work behind it.
+      gear: { ...NO_GEAR, chest: 'steel-chestplate' },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.reforges).toEqual({});
+    expect(migrated?.gear.chest).toBe('steel-chestplate');
   });
 
   it('drops saves older than the migration chain', () => {

@@ -2,7 +2,8 @@ import { Sheet } from './Sheet';
 import { el, fillPercent, row, sectionHeader } from './dom';
 import { barFill } from '../systems/math';
 import { paperdollSvg } from './paperdoll';
-import { describeItemBonuses, describeItemName } from '../data/items';
+import { describeBonuses, describeItemName } from '../data/items';
+import { reforgedBonuses, reforgedName, type Reforges } from '../systems/ReforgeSystem';
 import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
 import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
 import { THEME } from '../ui/theme';
@@ -33,6 +34,10 @@ export interface DisplayedStats {
 
 export interface CharacterSheetState {
   gear: Gear;
+  // What the fettler did to any of it, which changes both the name a slot row
+  // shows and the numbers under it. The sheet is where somebody checks what a
+  // reforge actually bought them.
+  reforges: Reforges;
   stats: DisplayedStats;
   skills: Skills;
   // Combat skill caps ride the character's level, so the sheet needs it to know
@@ -134,9 +139,10 @@ export class CharacterSheet extends Sheet {
     for (const slot of SLOT_ORDER) {
       const itemId = state.gear[slot];
       const row = this.slots[slot];
-      row.item.textContent = describeItemName(itemId);
+      const reforgeId = itemId ? (state.reforges[itemId] ?? null) : null;
+      row.item.textContent = itemId ? reforgedName(itemId, reforgeId) : describeItemName(itemId);
       row.item.classList.toggle('is-filled', itemId !== null);
-      row.bonuses.textContent = describeItemBonuses(itemId);
+      row.bonuses.textContent = describeBonuses(reforgedBonuses(itemId, reforgeId), itemId);
     }
 
     for (const skillId of [...SKILL_ORDER, ...COMBAT_SKILL_ORDER]) {

@@ -11,6 +11,7 @@ import type {
   ZoneId,
 } from '../types/ids';
 import type { StationId } from '../data/recipes';
+import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
@@ -108,6 +109,22 @@ export const STATION_OPENED_EVENT = 'station-opened';
 // argument saying where the player is standing.
 export const CRAFT_REQUESTED_EVENT = 'craft-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
+// The reforger's counter at Greyford, which is the shop's twin down to the
+// ask/decide split: the panel is handed a description and sends back a bare item
+// id, so a list left open after the piece was banked resolves to nothing.
+export const REFORGE_OPENED_EVENT = 'reforge-opened';
+export const REFORGE_CLOSED_EVENT = 'reforge-closed';
+export const REFORGE_REQUESTED_EVENT = 'reforge-requested';
+/**
+ * What has been reworked, whole, each time it changes.
+ *
+ * Its own event rather than a field on `gear-changed`, for the reason
+ * `unlocked-zones-changed` is its own: what a reforge did is not derivable from
+ * anything the HUD already holds, and it moves without the gear moving — a piece
+ * sitting in the pack can be reforged, and the character sheet's numbers have to
+ * follow it when it is next put on.
+ */
+export const REFORGES_CHANGED_EVENT = 'reforges-changed';
 // Quests. Taken and handed in at the shopkeeper, so these ride the same
 // ask/decide split as buying: the HUD forwards the tap, ZoneWorld re-checks
 // that the player is still standing at the NPC, and answers with the new log.
@@ -268,7 +285,16 @@ export interface TilePoint {
  * thing it describes wanders off or dies.
  */
 export type ContextActionId =
-  'attack' | 'gather' | 'travel' | 'shop' | 'bank' | 'train' | 'bounty' | 'work' | 'outfit';
+  | 'attack'
+  | 'gather'
+  | 'travel'
+  | 'shop'
+  | 'bank'
+  | 'train'
+  | 'bounty'
+  | 'work'
+  | 'outfit'
+  | 'reforge';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -380,6 +406,10 @@ export interface UiEventMap {
   [STATION_OPENED_EVENT]: [stationId: StationId];
   [CRAFT_REQUESTED_EVENT]: [recipeId: RecipeId];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
+  [REFORGE_OPENED_EVENT]: [];
+  [REFORGE_CLOSED_EVENT]: [];
+  [REFORGE_REQUESTED_EVENT]: [itemId: ItemId];
+  [REFORGES_CHANGED_EVENT]: [reforges: Reforges];
   [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
   [TURN_IN_QUEST_REQUESTED_EVENT]: [questId: QuestId];
   [QUEST_LOG_CHANGED_EVENT]: [quests: QuestLog];

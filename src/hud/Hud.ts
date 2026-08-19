@@ -37,6 +37,7 @@ import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
+import type { Reforges } from '../systems/ReforgeSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import { hudLayout } from '../ui/layout';
@@ -57,6 +58,9 @@ import {
   BOUNTY_OPENED_EVENT,
   OUTFITTER_OPENED_EVENT,
   OUTFITTER_CLOSED_EVENT,
+  REFORGES_CHANGED_EVENT,
+  REFORGE_CLOSED_EVENT,
+  REFORGE_OPENED_EVENT,
   COMBAT_LOG_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
   CONTEXT_MENU_REQUESTED_EVENT,
@@ -167,6 +171,10 @@ interface HudModel {
   mastery: MasteryXp;
   activeTitleId: TitleId | null;
   unlockedZones: ZoneId[];
+  // What has been reworked at Greyford. Seeded from the save like the bag,
+  // because the character sheet's numbers are drawn off it and a sheet can be
+  // opened before the world has published anything.
+  reforges: Reforges;
   shopOpen: boolean;
   // What is behind the counter in town, and how much room there is for it.
   // Seeded from the save like the bag, then kept current by the world.
@@ -230,7 +238,12 @@ class Hud {
     this.subscriptions = createSubscriptions(events);
     this.classId = character.classId;
 
-    const stats = computeEffectiveStats(character.classId, character.gear, character.level);
+    const stats = computeEffectiveStats(
+      character.classId,
+      character.gear,
+      character.level,
+      character.reforges ?? {},
+    );
     this.model = {
       level: character.level,
       xp: character.xp,
@@ -249,6 +262,7 @@ class Hud {
       visits: character.visits,
       activeTitleId: character.activeTitleId,
       unlockedZones: character.unlockedZones,
+      reforges: character.reforges ?? {},
       shopOpen: false,
       bank: character.bank,
       bankSlots: character.bankSlots,
@@ -285,6 +299,11 @@ class Hud {
         currency: this.model.currency,
       }),
       station: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
+      reforge: () => ({
+        gear: this.model.gear,
+        inventory: this.model.inventory,
+        reforges: this.model.reforges,
+      }),
     });
     this.mapSheet = new MapSheet({
       access: () => ({
@@ -584,7 +603,12 @@ class Hud {
    * the model already holds, the same way the character sheet's copy is.
    */
   private refreshHealth(): void {
-    const { maxHp } = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
+    const { maxHp } = computeEffectiveStats(
+      this.classId,
+      this.model.gear,
+      this.model.level,
+      this.model.reforges,
+    );
     this.playerColumn.setHp(Math.min(this.model.hp, maxHp), maxHp);
   }
 
@@ -615,9 +639,15 @@ class Hud {
   }
 
   private refreshCharacterSheet(): void {
-    const stats = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
+    const stats = computeEffectiveStats(
+      this.classId,
+      this.model.gear,
+      this.model.level,
+      this.model.reforges,
+    );
     this.characterSheet.update({
       gear: this.model.gear,
+      reforges: this.model.reforges,
       stats: {
         hp: Math.min(this.model.hp, stats.maxHp),
         maxHp: stats.maxHp,
@@ -634,7 +664,12 @@ class Hud {
   // Capacity moves with the strength gear and levels buy, so this rides
   // inventory, gear and level changes — not every HP tick.
   private refreshEncumbrance(): void {
-    const stats = computeEffectiveStats(this.classId, this.model.gear, this.model.level);
+    const stats = computeEffectiveStats(
+      this.classId,
+      this.model.gear,
+      this.model.level,
+      this.model.reforges,
+    );
     this.inventorySheet.setEncumbrance(
       inventoryWeight(this.model.inventory),
       carryCapacity(stats.strength),
@@ -789,6 +824,7 @@ class Hud {
 
     listen(GEAR_CHANGED_EVENT, (gear) => {
       this.model.gear = gear;
+      this.overlays.refreshReforge();
       this.overlays.closeSlotPicker();
       this.refreshCharacterSheet();
       // Armour raises max HP, so the bar's ceiling moves with a swap.
@@ -806,6 +842,8 @@ class Hud {
       // And the outfitter, whose every row is a price in the bag: a trade
       // spends three materials at once and each one is a line on the panel.
       this.overlays.refreshOutfitter();
+      // And the fettler, whose rows are the gear in that same bag.
+      this.overlays.refreshReforge();
       // Quest progress is counted off the bag, so every pickup can move it.
       this.refreshQuests();
       // So is whether a key is in hand, which is what a shut zone's cell says.
@@ -857,6 +895,17 @@ class Hud {
 
     listen(OUTFITTER_OPENED_EVENT, () => this.overlays.openOutfitter());
     listen(OUTFITTER_CLOSED_EVENT, () => this.overlays.closeOutfitter());
+    listen(REFORGE_OPENED_EVENT, () => this.overlays.openReforge());
+    listen(REFORGE_CLOSED_EVENT, () => this.overlays.closeReforge());
+    // A reforge changes what a worn piece is worth, so the sheet's numbers and
+    // the health bar's ceiling both move without the gear having changed at all.
+    listen(REFORGES_CHANGED_EVENT, (reforges) => {
+      this.model.reforges = reforges;
+      this.refreshCharacterSheet();
+      this.refreshHealth();
+      this.refreshEncumbrance();
+      this.overlays.refreshReforge();
+    });
     listen(BOUNTY_OPENED_EVENT, () => this.overlays.openBounty());
     listen(BOUNTY_CLOSED_EVENT, () => this.overlays.closeBounty());
     listen(BOUNTY_CHANGED_EVENT, (bounty) => {

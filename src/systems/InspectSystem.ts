@@ -235,6 +235,21 @@ export function describeSignpost(exit: ZoneExit): InspectPanel {
 export function describeNpc(npcId: NpcId): InspectPanel {
   const title = npcName(npcId);
   switch (npcRole(npcId)) {
+    case 'reforger':
+      return {
+        title,
+        subtitle: 'Reforger',
+        lines: [
+          { label: 'Reworks', value: 'One piece of gear, once and for good' },
+          { label: 'Moves', value: 'Power from one stat to another' },
+          // The two halves of the price, and the half that is not here: said on
+          // the card because walking back to town for a stone is the whole
+          // journey somebody who did not know has just wasted.
+          { label: 'Takes', value: 'A second piece for that slot' },
+          { label: 'And', value: 'A Reforging Stone, bought in town' },
+        ],
+        note: 'Nothing gets stronger. Something gets to be what you want.',
+      };
     case 'outfitter':
       return {
         title,

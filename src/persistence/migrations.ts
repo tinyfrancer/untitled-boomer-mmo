@@ -158,6 +158,14 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     ...state,
     skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
   }),
+  // v21 → v22: gear can be reforged at Greyford, and an upgraded save has none.
+  //
+  // Empty is what that character actually had rather than a default standing in
+  // for information this step has lost, which is the v9 `kills` argument and the
+  // v19 `mastery` one exactly: nothing was reforged, because there was nowhere
+  // to do it. Nothing is granted either — a reforge costs a stone and a second
+  // piece, and handing one over would be paying a bill nobody ran up.
+  21: (state) => ({ ...state, reforges: {} }),
 };
 
 /**
