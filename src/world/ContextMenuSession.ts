@@ -37,6 +37,9 @@ const ROLE_ACTIONS = {
   // this one does not take any.
   outfitter: { id: 'outfit', label: 'Trade' },
   quartermaster: { id: 'bounty', label: 'Bounties' },
+  // Not 'Trade' either: what happens here is work done to something you already
+  // own, and nothing changes hands but a stone.
+  reforger: { id: 'reforge', label: 'Reforge' },
 } as const satisfies Record<NpcRoleId, ContextAction>;
 
 /**

@@ -1,4 +1,5 @@
 import { computeEffectiveStats } from '../systems/StatsSystem';
+import type { Reforges } from '../systems/ReforgeSystem';
 import { OUT_OF_COMBAT_DELAY_MS, manaRegenTick, regenTick } from '../systems/RegenSystem';
 import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/AbilitySystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
@@ -41,6 +42,7 @@ export class Player {
   private readonly keyboard: InputState;
   private moveTarget: Point | null = null;
   private gear: Gear;
+  private reforges: Reforges;
   // Regen accrues in fractions of a point per frame, so current HP is tracked
   // as a float here and only rounded when something reads it.
   private hpFloat: number;
@@ -61,6 +63,7 @@ export class Player {
     gear: Gear = NO_GEAR,
     name = 'Adventurer',
     level = 1,
+    reforges: Reforges = {},
   ) {
     this.x = x;
     this.y = y;
@@ -68,7 +71,8 @@ export class Player {
     this.classId = classId;
     this.level = level;
     this.gear = gear;
-    const stats = computeEffectiveStats(classId, gear, level);
+    this.reforges = reforges;
+    const stats = computeEffectiveStats(classId, gear, level, reforges);
     this.maxHp = stats.maxHp;
     this.hp = stats.maxHp;
     this.hpFloat = stats.maxHp;
@@ -116,8 +120,17 @@ export class Player {
     return this.gear;
   }
 
-  setGear(gear: Gear): void {
+  /**
+   * What is worn, and what has been done to it.
+   *
+   * The two travel together because they are one fact — a reforge is stored
+   * against an item id, so what a piece is worth wearing is only answerable with
+   * both in hand. Splitting them into two setters is how the paperdoll and the
+   * swing end up disagreeing for a frame.
+   */
+  setGear(gear: Gear, reforges: Reforges = {}): void {
     this.gear = gear;
+    this.reforges = reforges;
     this.applyStats();
   }
 
@@ -129,7 +142,7 @@ export class Player {
   // Max HP moves with both gear and level, so current HP rides the delta rather
   // than resetting — gaining a level should never feel like a partial heal loss.
   private applyStats(): void {
-    const stats = computeEffectiveStats(this.classId, this.gear, this.level);
+    const stats = computeEffectiveStats(this.classId, this.gear, this.level, this.reforges);
     const maxHpDelta = stats.maxHp - this.maxHp;
     this.maxHp = stats.maxHp;
     this.hpFloat = clamp(this.hpFloat + maxHpDelta, 0, this.maxHp);

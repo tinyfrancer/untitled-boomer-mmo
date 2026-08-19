@@ -10,6 +10,8 @@ import {
   BANK_CLOSED_EVENT,
   BOUNTY_CLOSED_EVENT,
   OUTFITTER_CLOSED_EVENT,
+  REFORGE_CLOSED_EVENT,
+  REFORGE_REQUESTED_EVENT,
   TRADE_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
   TURN_IN_BOUNTY_REQUESTED_EVENT,
@@ -93,6 +95,7 @@ import { BankSession } from './BankSession';
 import { TrainerSession } from './TrainerSession';
 import { BountySession } from './BountySession';
 import { OutfitterSession } from './OutfitterSession';
+import { ReforgeSession } from './ReforgeSession';
 import { CombatDirector } from './CombatDirector';
 import { ContextMenuSession } from './ContextMenuSession';
 import { GatherSession } from './GatherSession';
@@ -153,9 +156,13 @@ const COUNTERS = {
   trainer: { kind: 'train', open: 'trainer' },
   quartermaster: { kind: 'bounty', open: 'bounty' },
   outfitter: { kind: 'outfit', open: 'outfitter' },
+  reforger: { kind: 'reforge', open: 'reforge' },
 } as const satisfies Record<
   NpcRoleId,
-  { kind: InteractionKind; open: 'shop' | 'bank' | 'trainer' | 'bounty' | 'outfitter' }
+  {
+    kind: InteractionKind;
+    open: 'shop' | 'bank' | 'trainer' | 'bounty' | 'outfitter' | 'reforge';
+  }
 >;
 
 export interface ZoneWorldOptions {
@@ -214,6 +221,7 @@ export class ZoneWorld implements Targeting {
   private readonly trainer: TrainerSession;
   private readonly bounty: BountySession;
   private readonly outfitter: OutfitterSession;
+  private readonly reforge: ReforgeSession;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly combat: CombatDirector;
@@ -271,6 +279,7 @@ export class ZoneWorld implements Targeting {
       character.state.gear,
       character.state.name,
       character.state.level,
+      character.state.reforges,
     );
     if (hp !== undefined) {
       this.player.setHp(hp);
@@ -391,6 +400,7 @@ export class ZoneWorld implements Targeting {
     // shared context already carries both. The other four each needed a hook
     // into something only the world knows.
     this.outfitter = new OutfitterSession(this.ctx);
+    this.reforge = new ReforgeSession(this.ctx, rng ?? Math.random);
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,
       targeting: this,
@@ -481,6 +491,8 @@ export class ZoneWorld implements Targeting {
     listen(BOUNTY_CLOSED_EVENT, () => this.bounty.closedByUi());
     listen(OUTFITTER_CLOSED_EVENT, () => this.outfitter.closedByUi());
     listen(TRADE_REQUESTED_EVENT, (itemId) => this.outfitter.trade(itemId));
+    listen(REFORGE_CLOSED_EVENT, () => this.reforge.closedByUi());
+    listen(REFORGE_REQUESTED_EVENT, (itemId) => this.reforge.reforge(itemId));
     listen(CRAFT_REQUESTED_EVENT, (recipeId) => this.gathering.makeRecipe(recipeId));
     listen(TRAINER_CLOSED_EVENT, () => this.trainer.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
@@ -815,6 +827,11 @@ export class ZoneWorld implements Targeting {
     return this.bounty.npc;
   }
 
+  /** The fettler the open counter belongs to; null when it is shut. */
+  get reforgeNpc(): WorldNpc | null {
+    return this.reforge.npc;
+  }
+
   /** The outfitter the open counter belongs to; null when it is shut. */
   get outfitterNpc(): WorldNpc | null {
     return this.outfitter.npc;
@@ -832,6 +849,7 @@ export class ZoneWorld implements Targeting {
     this.trainer.updateRange();
     this.bounty.updateRange();
     this.outfitter.updateRange();
+    this.reforge.updateRange();
   }
 
   /** Everything that stops a session at once shuts all of them, never one. */
@@ -841,6 +859,11 @@ export class ZoneWorld implements Targeting {
     this.trainer.close();
     this.bounty.close();
     this.outfitter.close();
+    this.reforge.close();
+  }
+
+  handleReforgeRequested(itemId: ItemId): void {
+    this.reforge.reforge(itemId);
   }
 
   handleCraftRequested(recipeId: RecipeId): void {
@@ -1086,7 +1109,7 @@ export class ZoneWorld implements Targeting {
 
   // Gear moves max HP, so the HUD needs the new current HP alongside the gear.
   private applyGearChange(): void {
-    this.player.setGear(this.character.state.gear);
+    this.player.setGear(this.character.state.gear, this.character.state.reforges);
     this.ctx.events.emit(GEAR_CHANGED_EVENT, this.character.state.gear);
     this.ctx.publishInventory();
     this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);

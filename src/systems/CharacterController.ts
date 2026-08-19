@@ -61,6 +61,7 @@ import type {
   ItemId,
   MasteryTargetId,
   QuestId,
+  ReforgeId,
   SkillId,
   TitleId,
   ZoneId,
@@ -139,9 +140,26 @@ export class CharacterController {
     this.state.inventory = removeItemFromInventory(this.state.inventory, itemId, quantity);
   }
 
+  /**
+   * Records what the fettler did to a kind of gear.
+   *
+   * Keyed by item id because there are no item instances to key by — see
+   * `Reforges`. Nothing here refuses a second one: whether a piece may be worked
+   * twice is `reforgeRefusal`'s to say, and it is the counter that asks, the
+   * same split every other rule in here follows.
+   */
+  setReforge(itemId: ItemId, reforgeId: ReforgeId): void {
+    this.state.reforges = { ...this.state.reforges, [itemId]: reforgeId };
+  }
+
   /** What the pack can hold, which grows with the strength gear and levels buy. */
   carryCapacity(): number {
-    const stats = computeEffectiveStats(this.state.classId, this.state.gear, this.state.level);
+    const stats = computeEffectiveStats(
+      this.state.classId,
+      this.state.gear,
+      this.state.level,
+      this.state.reforges,
+    );
     return capacityForStrength(stats.strength);
   }
 

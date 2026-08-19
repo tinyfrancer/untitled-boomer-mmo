@@ -51,6 +51,26 @@ export const SHOP_STOCK: ShopStockEntry[] = [
   { itemId: 'cooked-fish', price: 24, requires: { kind: 'level', level: 2 } },
   // The twenty the player carried in for the feast, sold back one at a time.
   { itemId: 'cooked-crab', price: 36, requires: { kind: 'quest', questId: 'crab-feast' } },
+  /**
+   * The deepest thing on the shelf, and the only row here that is not sold to be
+   * used in town.
+   *
+   * It is **where the endgame coin sink is**. The two things copper was ever for
+   * are the death fee and the bank's shelves, and the vault caps out — so past
+   * the last slot bought, a purse had nowhere left to go while the barrow was
+   * paying three hundred a king. This is what it goes on now.
+   *
+   * Sold here and spent at Greyford, which is deliberate rather than awkward:
+   * the outpost's whole claim is that nothing out there wants money, so the shop
+   * takes the copper and the reforger takes the stone. What it costs the player
+   * is the walk, which is the same walk every offer on the outfitter's board
+   * already asks for.
+   *
+   * Gated on the level rather than on a quest, because what it is for arrives
+   * with the gear worth reworking rather than with anything the shopkeeper has
+   * you doing.
+   */
+  { itemId: 'reforging-stone', price: 500, requires: { kind: 'level', level: 7 } },
 ];
 
 export function shopEntryFor(itemId: ItemId): ShopStockEntry | null {

@@ -151,6 +151,10 @@ const ICON_COLOR = {
   // Chalk and cave water, and nothing like the crab's orange: what a shell looks
   // like on something that has never seen the sun.
   shell: 0x9aa6b0,
+  // Hot and unlike every other rock in the bag, which are all greys and rusts.
+  // This is the one thing on the shelf that does something to gear, and it has
+  // to read as that at thumbnail size rather than as a third ore.
+  reforgeStone: 0x7e57c2,
 } as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
@@ -1186,6 +1190,28 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'material',
     icon: { shape: 'meat', color: ICON_COLOR.burnt },
   },
+  /**
+   * What a reforge costs, and the only thing in the game bought in one place to
+   * be spent in another.
+   *
+   * The coin sink lives in town because Greyford's whole claim is that nothing
+   * out there wants money — so the shop takes the copper for the stone and the
+   * outpost takes the stone. What that buys beyond a tidy rule is the walk: a
+   * reforge is a circuit of the loop rather than a button pressed at a counter,
+   * which is what every offer on the outfitter's board already is.
+   *
+   * It is worth real coin back, and the shop's price then sits above that — so a
+   * stone bought and sold again loses money the way everything on that shelf
+   * does, and none of this is a way to make any.
+   */
+  'reforging-stone': {
+    id: 'reforging-stone',
+    name: 'Reforging Stone',
+    value: 120,
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'ore', color: ICON_COLOR.reforgeStone },
+  },
 };
 
 // What an item weighs when no row says otherwise. Nothing is free to carry, so
@@ -1243,8 +1269,20 @@ export function describeItemBonuses(itemId: ItemId | null): string {
   if (food) {
     return `Restores ${food.healAmount} HP over ${Math.round(food.healDurationMs / 1000)}s`;
   }
+  return describeBonuses(getEquipmentBonuses(itemId), itemId);
+}
 
-  const bonuses = getEquipmentBonuses(itemId);
+/**
+ * The same line, off numbers a caller worked out for itself.
+ *
+ * Split out for the one caller whose numbers are not the table's: a reforged
+ * piece carries what `reforgedBonuses` says rather than what its row does, and a
+ * sheet showing the row's numbers under a reforged name would be the panel
+ * disagreeing with the swing. Everything about the *item* — the tool it is, the
+ * armour class it is — still comes off the id, because a reforge changes none of
+ * that.
+ */
+export function describeBonuses(bonuses: EquipmentBonuses, itemId: ItemId | null): string {
   const parts: string[] = [];
   if (bonuses.attackPower) parts.push(`+${bonuses.attackPower} ATK`);
   if (bonuses.armor) parts.push(`+${bonuses.armor} ARM`);

@@ -1,5 +1,6 @@
 import { CLASSES } from '../data/classes';
-import { getEquipmentBonuses, weaponAttackRange } from '../data/items';
+import { weaponAttackRange } from '../data/items';
+import { reforgedBonuses, type Reforges } from './ReforgeSystem';
 import type { ClassId } from '../types/ids';
 import { gearItems, type Gear } from './InventorySystem';
 
@@ -20,10 +21,10 @@ export interface EffectiveStats {
   speed: number;
 }
 
-function sumGearBonuses(gear: Gear) {
+function sumGearBonuses(gear: Gear, reforges: Reforges) {
   return gearItems(gear).reduce(
     (total, itemId) => {
-      const bonuses = getEquipmentBonuses(itemId);
+      const bonuses = reforgedBonuses(itemId, itemId ? reforges[itemId] : null);
       total.health += bonuses.health;
       total.strength += bonuses.strength;
       total.intellect += bonuses.intellect;
@@ -35,9 +36,21 @@ function sumGearBonuses(gear: Gear) {
   );
 }
 
-export function computeEffectiveStats(classId: ClassId, gear: Gear, level = 1): EffectiveStats {
+/**
+ * `reforges` defaults to none rather than being required, which is what keeps a
+ * plain "what would this class be at this level in this gear" question — the one
+ * every duel in `EnemySystem.test.ts` asks — spelt the way it always was. A
+ * reforge trades power and never adds any, so a caller that leaves it out is
+ * asking about the same total, just distributed as the table wrote it.
+ */
+export function computeEffectiveStats(
+  classId: ClassId,
+  gear: Gear,
+  level = 1,
+  reforges: Reforges = {},
+): EffectiveStats {
   const classDef = CLASSES[classId];
-  const bonuses = sumGearBonuses(gear);
+  const bonuses = sumGearBonuses(gear, reforges);
   const growthSteps = Math.max(0, level - 1);
   const growth = classDef.baseStats.perLevel;
 

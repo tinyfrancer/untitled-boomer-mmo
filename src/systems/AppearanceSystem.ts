@@ -337,6 +337,22 @@ export const NPC_APPEARANCES = {
     weapon: { shape: 'sword', color: 0xc9b458 },
     offhand: null,
   },
+  /**
+   * Greyford's second counter, and the only person in the game holding a hammer.
+   *
+   * Sooted and dark against the outfitter beside them, because the two stand
+   * within sight of each other in one yard and a player crossing it has to know
+   * which is which before they are close enough to read a nameplate — the same
+   * argument the two goblins and the two dead are told apart by.
+   */
+  fettler: {
+    headColor: 0xd0a97f,
+    torsoColor: 0x4a3f38,
+    legColor: 0x2f2a26,
+    // A hammer, which the forge in town has nobody to hold.
+    weapon: { shape: 'pick', color: 0x6d6a63 },
+    offhand: null,
+  },
   // Keyed by `NpcId` rather than by a hand-written list of names, so a new
   // person standing in a town is a compile error here until they have a look.
 } as const satisfies Record<

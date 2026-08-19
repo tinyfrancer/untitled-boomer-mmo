@@ -368,7 +368,16 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     map: GREYFORD_MAP,
     mobSpawns: [],
     nodeSpawns: [],
-    npcSpawns: [{ dx: -64, dy: -160, npcId: 'outfitter' }],
+    /**
+     * Both at the doors of the yard's two buildings, and far enough apart that
+     * which one a tap opens is never a question about pixels: the rule every
+     * pair of counters in town already answers to, asked of an outpost that now
+     * has two of its own.
+     */
+    npcSpawns: [
+      { dx: -64, dy: -160, npcId: 'outfitter' },
+      { dx: 320, dy: -160, npcId: 'fettler' },
+    ],
     buildingSpawns: [
       { dx: -64, dy: -320, buildingId: 'trading-post' },
       { dx: 320, dy: -288, buildingId: 'longhouse' },

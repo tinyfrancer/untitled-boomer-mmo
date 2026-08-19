@@ -5,11 +5,12 @@ import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { Reforges } from '../systems/ReforgeSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 21;
+export const CHARACTER_STATE_VERSION = 22;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -23,6 +24,18 @@ export interface CharacterState {
   xp: number;
   gear: Gear;
   inventory: Inventory;
+  /**
+   * Which pieces have been reworked at Greyford, and into what.
+   *
+   * Keyed by **item id** rather than by an instance, because there are no
+   * instances: an inventory is a count per id, and there is no such thing as
+   * *this particular* chestplate to hang a modifier off. So a reforge is a fact
+   * about your steel chestplates — which reads as a compromise and behaves as
+   * the right answer, since it survives being unequipped, banked and withdrawn
+   * with nothing tracking it. Keyed by gear slot instead, a reforge would jump
+   * onto whatever was equipped next.
+   */
+  reforges: Reforges;
   // What is behind the counter in town. Weightless, and limited by `bankSlots`
   // rather than by what it weighs — one slot per item id, however deep the
   // stack on it (see BankSystem).
@@ -121,6 +134,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     gear: { ...NO_GEAR, weapon: CLASSES[classId].startingWeaponId },
     // Gathering tools come from the shop now, not the starting bag.
     inventory: {},
+    reforges: {},
     bank: {},
     bankSlots: STARTING_BANK_SLOTS,
     currency: STARTING_COPPER,

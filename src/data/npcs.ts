@@ -10,7 +10,8 @@ import type { NpcId } from '../types/ids';
  * to collect on it: a row here, a case in each of them, and no place left where
  * a person in a town is assumed to be selling something.
  */
-export type NpcRoleId = 'merchant' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter';
+export type NpcRoleId =
+  'merchant' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'reforger';
 
 export interface NpcDefinition {
   id: NpcId;
@@ -49,6 +50,25 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
    * already in the pack worth something other than a vendor line.
    */
   outfitter: { id: 'outfitter', name: 'Outfitter', role: 'outfitter' },
+  /**
+   * The sixth counter, and a person rather than a station for the reason the
+   * bounty board is one.
+   *
+   * A vat and a forge are `StationId`s, and that id means "where a recipe is
+   * made" — `recipesAt`, `STATION_SKILLS`, `STATION_PERSISTS` and `afkCampJob`
+   * all read it as one. A reforge is not a recipe: it takes a piece of gear and
+   * hands the same piece back changed, with no skill behind it and nothing an
+   * unattended camp could ever settle to. Wearing a station's clothes it would
+   * have been dead data in four crafting tables, exactly as the board would
+   * have been. A role was a row and a handful of cases.
+   *
+   * A fettler because of what the work is: not making anything and not selling
+   * anything, but taking apart what somebody else made and putting it back
+   * together to suit. There is no smith in this game to be confused with — the
+   * forge in town has nobody behind it — but calling this one a smith would
+   * still say "makes things", which is the one thing they do not do.
+   */
+  fettler: { id: 'fettler', name: 'Fettler', role: 'reforger' },
 };
 
 /** What an NPC is called, for the map's marker and for anyone examining them. */
