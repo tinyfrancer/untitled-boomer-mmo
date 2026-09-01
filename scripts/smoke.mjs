@@ -72,6 +72,29 @@ const PHONE = { width: 390, height: 844 };
 const FRAME_MS = 40;
 const FRAMES_PER_POLL = 12;
 
+/**
+ * What one drawn frame may cost, in milliseconds, on the throttled pass.
+ *
+ * Anchored to a measurement rather than chosen: `window.view.drawTime()` read
+ * in the `throttled` section before the first lighting change of
+ * `docs/interiors_and_light_plan.md` phase 1 came back at 12-15ms mean over
+ * three runs, on a game with two lights and no shadows. So the ceiling is set
+ * against what the game cost when nothing cast one.
+ *
+ * Three times that, for two reasons. It is a backstop rather than the
+ * measurement — the phase's rule is that each change is read off this
+ * instrument *before* it lands, and what a gate has to catch is the change
+ * that made drawing several times more expensive, not the one that cost a
+ * millisecond. And the number underneath it is a different machine's: a CI
+ * runner has no GPU either, but it is not this one, and a ceiling that fails
+ * on whose hardware ran it is a ceiling that gets raised rather than believed.
+ * 40ms is also where the draw alone stops fitting in a 25fps frame, which is
+ * the slowest the game is measured at anywhere.
+ *
+ * Raising this is a decision about the game, not about the run that hit it.
+ */
+const SLOW_DRAW_BUDGET_MS = 40;
+
 mkdirSync(OUT, { recursive: true });
 
 /** @type {{ name: string; passed: boolean; detail: string }[]} */
@@ -3311,6 +3334,26 @@ async function throttled() {
     'and nothing on the page threw while it was struggling',
     consoleErrors.length === errorsBeforeSlow,
     consoleErrors.slice(errorsBeforeSlow, errorsBeforeSlow + 3).join(' | '),
+  );
+
+  // --- The frame budget, read where it actually bites.
+  //
+  // This is the gate the lighting work is measured against, and it is here
+  // rather than on the unthrottled sections above because a machine that draws
+  // a frame in a fraction of a millisecond has no budget to blow. The reading
+  // is a rolling mean over the last frames drawn, every one of which was drawn
+  // under the throttle set at the top of this section.
+  //
+  // On the mean rather than the worst: one GC pause in thirty frames is not a
+  // regression, and a ceiling that fails on it is a ceiling nobody trusts. The
+  // worst is printed anyway, because when this does fail the shape of the
+  // failure is the first question. ---
+  const slowDraw = await page.evaluate(() => window.view.drawTime());
+  check(
+    'a frame draws inside the budget on an eight-times slower CPU',
+    slowDraw.samples >= 20 && slowDraw.averageMs < SLOW_DRAW_BUDGET_MS,
+    `${slowDraw.averageMs.toFixed(2)}ms mean over ${slowDraw.samples} frames ` +
+      `(worst ${slowDraw.worstMs.toFixed(2)}ms), budget ${SLOW_DRAW_BUDGET_MS}ms`,
   );
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
 }

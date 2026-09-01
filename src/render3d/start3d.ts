@@ -7,6 +7,7 @@ import { CONTEXT_MENU_REQUESTED_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '.
 import { createEventBus } from '../world/eventBus';
 import { bindUnloadPersist, gameContext, resetGame, type GameContext } from '../world/GameContext';
 import { LONG_PRESS_MS } from '../ui/gestures';
+import { FrameTimer } from './frameTimer';
 import { OrbitGesture } from './orbit';
 import { ZoneView3D } from './ZoneView3D';
 import type { DebugView, DrawnCounts } from '../types/debugView';
@@ -71,6 +72,10 @@ class ThreeHost implements GameHost {
   private holdTimer: ReturnType<typeof setTimeout> | null = null;
   private frameHandle: number | null = null;
   private lastFrameAt = 0;
+  // What the last frames cost to draw. Kept by the host rather than by the
+  // view, so it times the call *into* whatever is drawing and a renderer
+  // swapped in underneath is measured with nothing written for it.
+  private readonly frameTimer = new FrameTimer();
   private resizeObserver: ResizeObserver | null = null;
   private unbindKeyboard: (() => void) | null = null;
   private unbindUnloadPersist: (() => void) | null = null;
@@ -128,7 +133,14 @@ class ThreeHost implements GameHost {
     // Drawing keeps running under the hand crank — the camera still follows,
     // the canvas still redraws — so a smoke check that clicks something sees
     // the same frame a player would.
-    this.view?.render();
+    if (!this.view) return;
+    const drawStartedAt = performance.now();
+    this.view.render();
+    // Timed around the draw alone rather than across the whole frame: the
+    // simulation's step is the hand crank's under `?loop=manual` and is a
+    // page.evaluate away from being counted, and what the budget is about is
+    // what drawing costs.
+    this.frameTimer.sample(performance.now() - drawStartedAt);
   };
 
   /**
@@ -334,6 +346,7 @@ class ThreeHost implements GameHost {
       drawnCounts: () => this.view?.drawnCounts() ?? EMPTY_COUNTS,
       playerFigure: () => this.view?.playerFigure() ?? { walking: false, pose: 'none' },
       gpuMemory: () => this.view?.gpuMemory() ?? { geometries: 0, textures: 0 },
+      drawTime: () => this.frameTimer.reading(),
     };
     (window as unknown as { view: DebugView }).view = view;
   }
