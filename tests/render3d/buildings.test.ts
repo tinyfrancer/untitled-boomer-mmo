@@ -3,7 +3,7 @@ import { Box3, Vector3, type BoxGeometry, type Mesh, type MeshLambertMaterial } 
 import { TILE_SIZE } from '../../src/config/constants';
 import { BUILDINGS, buildingRect, doorPoint } from '../../src/data/buildings';
 import { BuildingActor } from '../../src/render3d/actors';
-import { buildBuilding } from '../../src/render3d/buildings';
+import { EAVE, buildBuilding } from '../../src/render3d/buildings';
 import { simToWorld } from '../../src/render3d/coords';
 import { OCCLUDED_OPACITY, applyOcclusion } from '../../src/render3d/occlusion';
 import { BUILDING_LOOKS } from '../../src/render3d/palette';
@@ -40,6 +40,51 @@ describe('buildBuilding', () => {
       expect(walls.geometry.parameters.width, definition.id).toBeCloseTo(definition.body.width, 6);
       expect(walls.geometry.parameters.depth, definition.id).toBeCloseTo(definition.body.height, 6);
     });
+  });
+
+  /**
+   * And a roof exactly as wide as the walls it sits on, at every aspect ratio.
+   *
+   * This is the sweep the bug it was written for would have failed on every row
+   * in the table. A four-sided cone's base square has its corners on the axes,
+   * so it has to be turned 45° to become a square — and a turn set on the *mesh*
+   * happens after the scale, since a local transform composes as
+   * translate · rotate · scale. Every roof in the game was a diamond stretched
+   * along its own diagonals: 384 × 384 over the 192 × 192 general store, and
+   * 512 × 512 over the 384 × 128 longhouse.
+   *
+   * Swept over `BUILDINGS` rather than checked on one, because a square
+   * footprint hides it — a diamond over a square still reads as a hip roof, and
+   * six of the ten rows here are square.
+   */
+  it('draws a roof exactly as wide as the walls under it', () => {
+    Object.values(BUILDINGS).forEach((definition) => {
+      const prop = buildBuilding(definition).object;
+      const roof = new Box3().setFromObject(named(prop, 'roof'));
+      const walls = new Box3().setFromObject(named(prop, 'walls'));
+
+      // The eaves stand a little proud, and that is the whole of the difference.
+      expect(roof.max.x - roof.min.x, definition.id).toBeCloseTo(
+        (walls.max.x - walls.min.x) * EAVE,
+        4,
+      );
+      expect(roof.max.z - roof.min.z, definition.id).toBeCloseTo(
+        (walls.max.z - walls.min.z) * EAVE,
+        4,
+      );
+    });
+  });
+
+  // The other half of the same bug: a roof turned 45° is not merely the wrong
+  // size, it is the wrong *shape*, and on anything but a square that shows as a
+  // ridge running across the building instead of along it.
+  it('keeps a long building longer than it is deep, roof and all', () => {
+    const longhouse = buildBuilding(BUILDINGS.longhouse).object;
+    const roof = new Box3().setFromObject(named(longhouse, 'roof'));
+    const body = BUILDINGS.longhouse.body;
+
+    expect(body.width).toBeGreaterThan(body.height);
+    expect(roof.max.x - roof.min.x).toBeGreaterThan(roof.max.z - roof.min.z);
   });
 
   it('stands its walls on the ground rather than through it', () => {

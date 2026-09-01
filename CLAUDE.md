@@ -38,6 +38,12 @@ band up — a rare key off the zone in front of it, a map cut out of solid rock,
 thing at the back — reached by walking off the bottom of the fen, where the raiders that carry the key
 already are. What it pays is the off hand nothing has filled since the starter band, and the second
 hoard in the game that comes off one creature.
+**Decisions that closed off a real alternative go in `docs/decisions.md`**, appended and never
+edited. That file is not a duplicate of this one: this describes the shape of the system as it
+stands, where that records the _forks_ — what was chosen, by whom, what was rejected and why — so
+the same argument is not had twice. A decision with no alternative is not a decision and belongs
+beside the code instead.
+
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
