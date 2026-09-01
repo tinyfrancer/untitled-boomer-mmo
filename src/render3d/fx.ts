@@ -150,13 +150,21 @@ export class FxLayer {
    * produced only a number over the mob read as nothing happening.
    */
   bolt(from: Point, to: Point): void {
+    // Unfogged, like the floats and the nameplates: a bolt is feedback that a
+    // spell left the caster's hand, and it is thrown at the far end of a reach
+    // the haze has already started on.
     const head = new Mesh(
       new SphereGeometry(BOLT_RADIUS, 10, 8),
-      new MeshBasicMaterial({ color: PALETTE.bolt }),
+      new MeshBasicMaterial({ color: PALETTE.bolt, fog: false }),
     );
     const halo = new Mesh(
       new SphereGeometry(BOLT_RADIUS * 1.6, 10, 8),
-      new MeshBasicMaterial({ color: PALETTE.boltGlow, transparent: true, opacity: 0.35 }),
+      new MeshBasicMaterial({
+        color: PALETTE.boltGlow,
+        transparent: true,
+        opacity: 0.35,
+        fog: false,
+      }),
     );
     const group = new Group();
     group.add(head, halo);

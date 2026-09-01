@@ -93,4 +93,16 @@ describe('buildGround', () => {
   it('tags itself so a rebuilt view can be counted', () => {
     expect(buildGround(GRID).userData.kind).toBe('ground');
   });
+
+  /**
+   * The floor, and only the floor: it takes the shadows everything else
+   * throws and puts none into the map itself. One flat plane covering the
+   * whole zone, tested against a depth map it also wrote, is the shortest
+   * road there is to acne over the entire ground.
+   */
+  it('receives shadows and casts none', () => {
+    const mesh = buildGround(GRID);
+    expect(mesh.receiveShadow).toBe(true);
+    expect(mesh.castShadow).toBe(false);
+  });
 });

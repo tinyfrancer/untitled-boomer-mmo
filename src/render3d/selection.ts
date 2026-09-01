@@ -30,7 +30,14 @@ export class SelectionRing {
   constructor() {
     this.object = new Mesh(
       new RingGeometry(RADIUS - THICKNESS, RADIUS, 32),
-      new MeshBasicMaterial({ color: PALETTE.selection, transparent: true, opacity: 0.9 }),
+      // Unfogged: it marks what the player has selected, and a marker that
+      // faded with distance would be dimmest exactly where it is most needed.
+      new MeshBasicMaterial({
+        color: PALETTE.selection,
+        transparent: true,
+        opacity: 0.9,
+        fog: false,
+      }),
     );
     this.object.rotation.x = -Math.PI / 2;
     this.object.position.y = HOVER;

@@ -9,6 +9,7 @@ import {
   type Object3D,
 } from 'three';
 import { TILE_SIZE } from '../config/constants';
+import { castsShadow } from './lights';
 import {
   WEAPON_GEM_COLOR,
   legOffsets,
@@ -126,7 +127,7 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
   let phase = 0;
 
   return {
-    object: group,
+    object: castsShadow(group),
     height: headY + rig.headRadius,
     stride(walking, elapsedMs) {
       walkingNow = walking;

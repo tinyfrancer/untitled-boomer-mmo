@@ -9,6 +9,7 @@ import {
 import { TILE_SIZE } from '../config/constants';
 import { stickFigure } from '../systems/AppearanceSystem';
 import { FIGURE_HEIGHT, buildFigure, type Figure } from './figure';
+import { castsShadow } from './lights';
 import { PALETTE, beastLook, humanoidLook, type BeastLook, type PersonLook } from './palette';
 import type { EnemyDefinition } from '../data/enemies';
 
@@ -159,7 +160,7 @@ function bobbing(group: Group, height: number, amplitude: number): Figure {
   let phase = 0;
 
   return {
-    object: group,
+    object: castsShadow(group),
     height,
     stride(walking, elapsedMs) {
       walkingNow = walking;

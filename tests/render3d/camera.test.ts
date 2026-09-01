@@ -8,6 +8,7 @@ import {
   CAMERA_PITCH,
   cameraDistance,
   createCamera,
+  fogRange,
   frameCamera,
   projectToScreen,
   resizeCamera,
@@ -174,6 +175,43 @@ describe('cameraDistance', () => {
 
   it('measures a landscape viewport by its height', () => {
     expect(cameraDistance(2)).toBe(cameraDistance(1));
+  });
+});
+
+describe('fogRange', () => {
+  /**
+   * The player stands `cameraDistance` from the camera by construction, and the
+   * haze deliberately starts *nearer* than that — three's fog ramps on a
+   * smoothstep, so the near end of it is flat and the player sits a few percent
+   * into a cue that has to reach much further to be worth anything. What must
+   * not happen is the player standing anywhere near the middle of the ramp.
+   */
+  it('has the player barely into the haze rather than in the thick of it', () => {
+    const aspect = 390 / 844;
+    const { near, far } = fogRange(aspect);
+    const atThePlayer = (cameraDistance(aspect) - near) / (far - near);
+    expect(atThePlayer).toBeGreaterThan(0);
+    expect(atThePlayer).toBeLessThan(0.2);
+  });
+
+  it('starts before it ends, at every viewport shape', () => {
+    [390 / 844, 844 / 390, 1, 1280 / 900].forEach((aspect) => {
+      const { near, far } = fogRange(aspect);
+      expect(far).toBeGreaterThan(near);
+    });
+  });
+
+  /**
+   * Measured in camera distances rather than world units, which is the thing
+   * that keeps the cue the same *cue* in both orientations: a landscape camera
+   * sits less than half as far back, so a fixed world range would swallow half
+   * the zone on one and graze the horizon on the other.
+   */
+  it('pulls in with the camera when the viewport turns', () => {
+    const portrait = fogRange(390 / 844);
+    const landscape = fogRange(844 / 390);
+    expect(landscape.near).toBeLessThan(portrait.near);
+    expect(landscape.far / landscape.near).toBeCloseTo(portrait.far / portrait.near, 6);
   });
 });
 

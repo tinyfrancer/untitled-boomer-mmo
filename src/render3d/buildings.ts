@@ -1,6 +1,7 @@
 import { BoxGeometry, ConeGeometry, Group, Mesh, MeshLambertMaterial } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import { BUILDING_LOOKS } from './palette';
+import { castsShadow } from './lights';
 import type { BuildingDefinition } from '../data/buildings';
 import type { BuildingShapeId, ZoneEdge } from '../types/ids';
 
@@ -120,7 +121,7 @@ export function buildBuilding(definition: BuildingDefinition): BuildingProp {
     group.add(chimney);
   }
 
-  return { object: group, height: wallHeight + roofHeight };
+  return { object: castsShadow(group), height: wallHeight + roofHeight };
 }
 
 /**

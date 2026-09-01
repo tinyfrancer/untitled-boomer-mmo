@@ -1,8 +1,8 @@
 import {
-  AmbientLight,
   Color,
-  DirectionalLight,
+  Fog,
   Object3D,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
@@ -19,11 +19,12 @@ import {
   StationActor,
   type Actor,
 } from './actors';
-import { createCamera, frameCamera, projectToScreen, resizeCamera } from './camera';
+import { createCamera, fogRange, frameCamera, projectToScreen, resizeCamera } from './camera';
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { FxLayer } from './fx';
 import { buildGround } from './ground';
+import { Sunlight } from './lights';
 import { applyOcclusion, type Occluder } from './occlusion';
 import { normalizeYaw } from './orbit';
 import { pickTap, pointerRay } from './picking';
@@ -73,6 +74,13 @@ export class ZoneView3D {
   // empties them without taking them out of the scene.
   private readonly fx = new FxLayer();
   private readonly selection = new SelectionRing();
+  // The sun and its fill outlive a zone the way the camera does; what does not
+  // is the shadow camera's framing, which is cut to the map it is over.
+  private readonly sunlight = new Sunlight();
+  // Distance-hazed toward the background, so the edge of the world reads as far
+  // away rather than as the line where the ground mesh stops. Its range is a
+  // function of how far back the camera stands, so it is set on every resize.
+  private readonly fog = new Fog(BACKGROUND);
   // Where the camera stands around the player. Owned here rather than by the
   // host because it outlives a zone — a player who has turned the camera to see
   // past a tree does not expect it snapped back north by walking through a
@@ -106,8 +114,14 @@ export class ZoneView3D {
     this.canvas.style.touchAction = 'pinch-zoom';
     parent.appendChild(this.canvas);
 
+    // Soft rather than hard: at a couple of world units to the texel a hard
+    // edge is a staircase, and every shadow here is cast by a box.
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = PCFSoftShadowMap;
+
     this.scene.background = new Color(BACKGROUND);
-    this.scene.add(...lights(), this.fx.object, this.selection.object);
+    this.scene.fog = this.fog;
+    this.scene.add(...this.sunlight.objects, this.fx.object, this.selection.object);
     this.resize();
   }
 
@@ -116,6 +130,7 @@ export class ZoneView3D {
     this.world = world;
     this.ground = buildGround(world.zone.map);
     this.scene.add(this.ground);
+    this.sunlight.frameZone(world.worldWidth, world.worldHeight);
 
     this.labelledLevel = world.character.state.level;
     this.player = new PlayerActor(world.player);
@@ -167,6 +182,7 @@ export class ZoneView3D {
     this.teardown();
     this.fx.dispose();
     this.selection.dispose();
+    this.sunlight.dispose();
     this.renderer.dispose();
     // `dispose()` frees what three allocated but leaves the WebGL context to be
     // collected whenever the browser gets round to it, and a browser allows
@@ -296,6 +312,11 @@ export class ZoneView3D {
     // framing in camera.ts, not the size of the canvas.
     this.renderer.setSize(width, height, false);
     resizeCamera(this.camera, width, height);
+    // The haze is measured in multiples of how far back the camera stands, and
+    // that is what a reshaped viewport moves.
+    const { near, far } = fogRange(this.camera.aspect);
+    this.fog.near = near;
+    this.fog.far = far;
   }
 
   worldToScreen(x: number, y: number): { x: number; y: number } {
@@ -374,16 +395,4 @@ export class ZoneView3D {
       frameCamera(this.camera, this.world.player, this.yaw);
     }
   }
-}
-
-/**
- * Two lights and no shadows. A hemisphere-style fill keeps the north faces of
- * things readable and one directional light from the north-west gives them an
- * edge; shadow maps are a per-zone GPU resource with a per-frame cost, and
- * there is nothing yet standing on the ground to cast one.
- */
-function lights(): Object3D[] {
-  const sun = new DirectionalLight(0xfff4e0, 2.1);
-  sun.position.set(-0.4, 1, -0.6);
-  return [new AmbientLight(0xb0c4de, 1.5), sun];
 }

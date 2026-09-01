@@ -77,9 +77,16 @@ const FRAMES_PER_POLL = 12;
  *
  * Anchored to a measurement rather than chosen: `window.view.drawTime()` read
  * in the `throttled` section before the first lighting change of
- * `docs/interiors_and_light_plan.md` phase 1 came back at 12-15ms mean over
- * three runs, on a game with two lights and no shadows. So the ceiling is set
- * against what the game cost when nothing cast one.
+ * `docs/interiors_and_light_plan.md` phase 1 came back at 20.7ms on a full run,
+ * on a game with two lights and no shadows. The sun, the shadow map and the
+ * depth cue took it to 25.2ms on the same run — so the ceiling is set against
+ * what the game cost when nothing cast a shadow, and what phase 1 spent of it
+ * is on the record rather than in somebody's memory.
+ *
+ * Read it off a **full run**, which is what the gate sees: the section carries
+ * state forward from every one before it, so `--section=throttled` on its own
+ * is a different and lighter game — it was 12-15ms there, both before and
+ * after.
  *
  * Three times that, for two reasons. It is a backstop rather than the
  * measurement — the phase's rule is that each change is read off this
