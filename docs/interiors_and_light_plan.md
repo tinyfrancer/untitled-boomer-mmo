@@ -1,10 +1,15 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phase 0 done, phase 1 next. Written 2026-09-01 against `7e5f66b`.
+**Status:** phases 0 and 1 done, phase 2 next. Written 2026-09-01 against `7e5f66b`.
 
 - **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
   row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
-- **Phase 1 is unstarted** and is written below in enough detail to be picked up cold. See
+- **Phase 1 done** 2026-09-01. `DebugView.drawTime()` and the ceiling on it landed first, as
+  written; then the sun, the shadow maps and the depth cue. It cost 4.4ms of a 40ms throttled draw
+  budget, measured on a full smoke run either side. **One instruction in it was reversed** — the
+  shadow camera is framed on the zone rather than on what the player's camera can see, because the
+  arithmetic says a viewport-framed frustum is the larger of the two. See `docs/decisions.md` 29-32.
+- **Phase 2 is unstarted** and is written below in enough detail to be picked up cold. See
   "Starting a phase cold" at the bottom.
 
 ## Starting a phase cold
@@ -119,9 +124,12 @@ makes it enforceable:
 - Shadow maps. Ground receives and casts nothing — it is the floor. Buildings, props and creatures
   cast. Fishing spots are the exception: they are the one prop drawn transparent already, and a
   transparent thing casting a hard shadow reads as a bug.
-- The shadow camera frames **what the camera can see**, following the player, rather than the whole
-  zone. A zone is 1600 × 1216 world units; a shadow map stretched over all of it is blocky at any
-  resolution a phone can afford.
+- ~~The shadow camera frames **what the camera can see**, following the player, rather than the
+  whole zone. A zone is 1600 × 1216 world units; a shadow map stretched over all of it is blocky at
+  any resolution a phone can afford.~~ **Wrong, and reversed when it was built** — see
+  `docs/decisions.md` 30. The resolution claim was made without doing the sum: at 2048 texels a
+  zone-framed map is a little over one world unit each. And a camera pitched 58° down can see both
+  edges of a zone at once, so a frustum framed on the viewport is the _larger_ of the two.
 - Depth cue — fog or an equivalent — so the far edge of a zone reads as far away.
 
 **The rule for this phase:** every change is measured on the throttled pass before it lands. A

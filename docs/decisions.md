@@ -394,3 +394,96 @@ invented to fit whatever shipped.
 `DebugView` rather than a renderer counter for the reason that interface is small and
 renderer-agnostic in the first place: a check written against `cameras.main` did not survive the
 last renderer swap, and this project has now done one.
+
+## 29. The sun comes from behind the camera, and only the ground receives
+
+**2026-09-01 · Claude**
+
+A hemisphere fill and a directional light from the **south-west**, with shadow maps on. The ground
+receives them and casts nothing; buildings, creatures and props cast.
+
+**Rejected:** keeping the old light's north-west direction and adding shadows under it; making
+everything a receiver as well as a caster.
+
+**Why:** the camera's resting place is due south of the player, so a sun from the north put every
+face anyone ever looked at in shade — which is why the flat fill had to be cranked to 1.5 and why
+nothing in the world had any shape. From the south-west the lit faces are the visible ones and the
+shadows fall away up the screen, where a 58° pitch shows them off. It does not follow the camera:
+turning the view round to look into the sun and seeing the shaded sides of things is most of what
+makes turning it worth doing.
+
+Receivers were held to the ground because that is where a shadow is actually read — a wall darkened
+by the shed next door is a subtlety on placeholder geometry, where a creature standing in its own
+shadow is a per-fragment lookup on every material in the game. It is also the surface that cannot
+cast: one flat plane covering the whole zone, tested against a depth map it wrote itself, is the
+shortest road there is to acne over the entire floor.
+
+**What it costs:** 4.4ms of the 40ms throttled draw budget, measured on a full smoke run before and
+after.
+
+## 30. The shadow camera is framed on the zone, not on what the camera can see
+
+**2026-09-01 · Claude · reverses a line in `docs/interiors_and_light_plan.md` phase 1**
+
+The shadow frustum is cut to the zone's own bounds plus a margin, once per zone, and does not move
+with the player.
+
+**Rejected:** the plan's own instruction — "the shadow camera frames what the camera can see,
+following the player, rather than the whole zone", on the grounds that "a zone is 1600 × 1216 world
+units; a shadow map stretched over all of it is blocky at any resolution a phone can afford".
+
+**Why:** the arithmetic says the opposite. A camera pitched 58° down sees ground from about 150
+units in front of itself out to nearly 2000, so from the middle of town both edges of the zone are
+on screen at once and a frustum framed on the viewport is **larger** than one framed on the map —
+about 2400 units against 2300. The plan's claim about resolution was made without doing the sum: at
+2048 texels the zone-framed map is a little over one world unit each, which is twenty texels across
+a tree trunk. Framing the zone also has no shimmer in it, where a map that follows the player has
+edges that crawl as they walk unless it is snapped to its own texel grid — a second mechanism the
+zone-framed version needs none of.
+
+**What it costs:** a zone much larger than today's would lose resolution where a following camera
+would not. Every zone in the game is 25 × 19, and a bigger one would be a `frameZone` that took a
+radius rather than a rewrite.
+
+## 31. The depth cue is measured in camera distances, and starts nearer than the player
+
+**2026-09-01 · Claude**
+
+Linear fog to the background colour, with near and far as multiples of `cameraDistance(aspect)`
+rather than fixed world distances — and a near multiple of 0.9, which is closer to the camera than
+the player is.
+
+**Rejected:** fog written in world units, which is what haze physically is; a near multiple safely
+past the player.
+
+**Why:** written in world units it would be the same fog in both orientations, which sounds right
+and is wrong — a landscape camera frames its tiles across the smaller axis and sits less than half
+as far back, so one range grazes the horizon on a portrait phone and swallows half the zone on a
+landscape one. This is a cue about depth on screen rather than weather in the air, and the screen is
+what it should be measured against.
+
+Starting nearer than the player is the part that looks like a mistake and is the only thing that
+makes the cue visible at all. There are barely 1.6 camera distances between the player's feet and
+the furthest ground anyone ever looks at, so a range wide enough to clear the player leaves nothing
+over: a near of 1.05 and a far of 1.5 measured 7% of haze between the bottom of the screen and the
+top, which is nothing. Three's fog ramps on a `smoothstep`, whose near end is flat, so a near of 0.9
+puts the player about three percent into the haze — invisible — and buys back the whole range.
+
+**What it costs:** the player is fogged, by an amount nobody can see. `tests/render3d/camera.test.ts`
+is what keeps it that way rather than a comment.
+
+## 32. A readout drawn in the world is not scenery
+
+**2026-09-01 · Claude**
+
+Nameplates, worn titles, quest markers, shop signs, damage numbers, the bolt and the selection ring
+all set `fog: false`.
+
+**Rejected:** fogging everything the scene holds, which is what a depth cue does by default.
+
+**Why:** these already opt out of the depth test for the same reason — a health bar hidden behind
+the tree you are fighting beside is a bug, not occlusion — and hazing them fails the same way one
+step further out. A signpost's label is how a phone leaves a zone, and it is furthest away exactly
+when it matters most; a mob's health bar dimming with distance is a creature you cannot tell is
+nearly dead from across a clearing. The post fades and the word over it does not, which is also the
+thing that makes the far end of a zone read as far away without becoming unnavigable.
