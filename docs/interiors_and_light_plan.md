@@ -1,6 +1,6 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phases 0 and 1 done, phase 2 next. Written 2026-09-01 against `7e5f66b`.
+**Status:** phases 0, 1 and 2 done, phase 3 next. Written 2026-09-01 against `7e5f66b`.
 
 - **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
   row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
@@ -9,8 +9,14 @@
   budget, measured on a full smoke run either side. **One instruction in it was reversed** — the
   shadow camera is framed on the zone rather than on what the player's camera can see, because the
   arithmetic says a viewport-framed frustum is the larger of the two. See `docs/decisions.md` 29-32.
-- **Phase 2 is unstarted** and is written below in enough detail to be picked up cold. See
-  "Starting a phase cold" at the bottom.
+- **Phase 2 done** 2026-09-01. `systems/PathSystem.ts` exists, nothing calls it, and the game
+  behaves exactly as it did. It is A\* over the tile grid as written, but **passability is
+  `isBlocked` on the body rather than a rasterising pass**, and two things the plan did not name
+  turned out to be the whole difficulty — see `docs/decisions.md` 33-36. The one that reaches
+  forward: **a doorway has to be at least two tiles wide**. Phase 4 expected to find that out by
+  measurement and this is the measurement, arriving early, because a gap exactly the body's width is
+  one it fits only in exact arithmetic.
+- **Phase 3 is unstarted** and is written below. See "Starting a phase cold" at the bottom.
 
 ## Starting a phase cold
 
@@ -143,18 +149,36 @@ still passes, with a measured frame time under the ceiling the first commit esta
 **Not in this phase:** the camera pitch (phase 7), interior lights (phase 6), the ground mesh and
 its tile seams (phase 7). Each is somebody else's PR and each would muddy the measurement.
 
-### Phase 2 — a pathfinder, switched off (PR 3)
+### Phase 2 — a pathfinder, switched off (PR 3) — **done**
 
 `systems/PathSystem.ts`: engine-free, a pure function of the collision world plus a start and a
-goal, answering with a list of waypoints. A* over the tile grid, with the AABB blockers rasterised
-onto it and inflated by `PLAYER_HALF_EXTENT` so a route through a gap is a route a body fits
-through.
+goal, answering with a list of waypoints. A* over the tile grid, with ~~the AABB blockers rasterised
+onto it and~~ the body **inflated by `PLAYER_HALF_EXTENT` so a route through a gap is a route a body
+fits through** — which is what asking `isBlocked` for the whole body at a point already does, so the
+rasterising pass was a second picture of the world and never got written (`docs/decisions.md` 33).
 
 Nothing uses it yet. It is unit-tested against hand-built worlds — a wall with a gap, a room with a
 door, an unreachable goal, a goal inside a blocker — and the game behaves exactly as it does today.
 
 **Why a grid A\* and not a navmesh:** the grid is 25 × 19. A navmesh solves a problem this world does
 not have, and a tile grid is already what `CollisionSystem` thinks in.
+
+**What the phase actually turned out to be about.** Finding a route is the easy half and took the
+shape written above. The hard half is that a route is a claim about a body walking, and a list of
+waypoints that reads correctly can still describe a walk that stops dead — which is why the tests
+here do not check the waypoints, they **drive the route through `stepToward` and `moveWithCollision`
+at 60fps and at 5** and assert the body arrives. Three hand-built worlds and one real zone were
+refuted that way. Two rules came out of it, both in `docs/decisions.md` 34-36:
+
+- **A waypoint is where the body stands in a cell, not the middle of the cell.** A\* picks the
+  cheapest cell rather than the roomiest, so a corridor two tiles wide comes back hugged against one
+  of its walls, and the walk arrives within `arriveRadius` of a waypoint rather than on it.
+- **A passage with no slack in it is not a route.** Hence the two-tile doorway, and hence `null`
+  where a lesser pathfinder hands back a route nothing can walk.
+
+A last thing worth knowing before phase 3: `findPath` answers `null` freely and that is the design.
+It means "do what you did before there was a pathfinder", so the wiring in phase 3 is a fallback to
+today's straight-line walk rather than a failure to handle.
 
 ### Phase 3 — pathfinding wired into the walk (PR 4)
 
@@ -175,8 +199,10 @@ frame's travel. A path does not change either; it just has more ends.
 - **`DOOR_SPAN` moves from `render3d/buildings.ts` into `data/buildings.ts`.** How wide a doorway
   _is_ is not the renderer's decision — the same argument `body` and `PLAYER_HALF_EXTENT` already
   make. The drawn door and the gap you walk through have to be one number.
-- The doorway has to be wider than the player is, with margin. If a 34% door span on the narrowest
-  building is not, the span becomes a minimum in tiles rather than a fraction.
+- The doorway has to be wider than the player is, with margin — and **phase 2 says how much: two
+  tiles**, because a gap exactly the body's width is one it fits only in exact arithmetic and the
+  pathfinder now refuses to turn a corner in one. So the span is a minimum in tiles rather than a
+  fraction, and the question left for this phase is which buildings that makes too narrow.
 - **The roof and the near walls cut away** when the player is inside. `occlusion.ts` fades what the
   camera is behind today; being inside is a different question with a different answer — hidden, not
   faded, because a faded roof over your head still reads as a lid.
@@ -241,8 +267,11 @@ the world is a different problem from one without.
   likely to fail on. Mitigated by measuring in phase 1 rather than at the end, and by the throttled
   smoke pass being a gate rather than a report.
 - **Movement regressions.** Phase 3 rewrites how every walk in the game ends. Mitigated by phases 2
-  and 3 being separate: the pathfinder is proven against hand-built worlds before anything uses it.
-- **Doorways too narrow for the body.** Found in phase 4 by measurement, fixed by making the span a
-  minimum rather than a fraction.
+  and 3 being separate: the pathfinder is proven against hand-built worlds before anything uses it —
+  and "proven" turned out to mean driven through the real mover at two frame rates rather than
+  read for correctness, which is what caught four routes that were wrong.
+- ~~**Doorways too narrow for the body.** Found in phase 4 by measurement, fixed by making the span a
+  minimum rather than a fraction.~~ **Answered in phase 2**: two tiles, and the pathfinder refuses
+  anything narrower rather than routing into it.
 - **Scope.** Eight PRs. Phases 6 and 7 are the ones to cut if it drags; everything through phase 5
   stands on its own.

@@ -411,10 +411,12 @@ placed by a centre offset like every other spawn and blocks as a `CollisionSyste
 the tree trunks rather than as painted-in `WALL_TILE`, because a zone's contents are offsets from the
 middle of the map and the tile grid is written out in absolute rows — one of those two has to be the
 map's own. Being solid is the load-bearing decision and not a shortcut: click-to-move is a straight
-line with collision sliding and **no pathfinding anywhere**, so a counter behind a doorway is a
+line with collision sliding and **nothing routes round a corner**, so a counter behind a doorway is a
 counter a tap walks into a wall trying to reach, from three sides of its own shop. What a building is
 for here is the outside of it — `doorPoint` is where the person who works there stands, and walking
-up to them is what walking into a shop means.
+up to them is what walking into a shop means. (A pathfinder exists now and nothing calls it — see
+below — so this paragraph is still true of the game and is what `docs/interiors_and_light_plan.md`
+is working through reversing.)
 
 Three rules follow, and `tests/systems/BuildingSystem.test.ts` holds all three because nothing else
 can see any of them:
@@ -816,6 +818,32 @@ state machine. Combat math itself (damage rolls, range/cooldown checks) is _not_
 it lives in `systems/CombatSystem.ts` and is called from `ZoneWorld`, which resolves both
 directions: `updateCombat()` for the player's swings and `updateEnemyAttacks()` for everything
 hitting back.
+
+**There is a pathfinder, and nothing calls it yet** (`systems/PathSystem.ts`). `findPath` is A\* over
+the same tile grid `CollisionSystem` thinks in, answering with the points to walk to in order, or
+`null` — which means "do what you did before there was a pathfinder", so wiring it in is a fallback
+to the straight line rather than a failure to handle. It is here ahead of the walk because using it
+rewrites how every walk in the game ends.
+
+What makes a cell passable is **`isBlocked` on the body being routed**, rather than a second grid
+built by rasterising the blockers: testing the whole body at a point _is_ the configuration-space
+inflation, and a rasteriser would have been a second picture of the world free to drift from the one
+every walk integrates against. Three things about it were decided against alternatives and are worth
+not undoing:
+
+- **A waypoint is where the body stands in a cell, not the middle of the cell.** A\* answers with
+  whichever cell is cheapest and never whichever is roomiest, so a route down a corridor two tiles
+  wide comes back hugging one of its walls — and the walk lands within `arriveRadius` of a waypoint
+  rather than on it, which beside a wall is a corner in that wall. Passability and where-to-stand are
+  one answer (`footing`) precisely so the two cannot disagree.
+- **A passage with no slack in it is not a route.** A gap exactly the body's width is one it fits
+  through only in exact arithmetic, so `findPath` refuses to turn a corner in one — which is where
+  the rule that **a doorway has to be at least two tiles wide** comes from. Walking the _length_ of
+  such a gap is still fine, and is what the straight line to the goal answers.
+- **The route is proved by being walked, not by being read.** `tests/systems/PathSystem.test.ts`
+  drives every route it builds through `stepToward` and `moveWithCollision` at 60fps and at 5, over
+  hand-built worlds and over every zone as `populateZone` builds it. Four routes that read perfectly
+  were refuted that way, which is the whole reason the two rules above exist.
 
 **Aggro contract**: `Mob.engage()` starts a chase, `disengage()` drops aggro _and heals the mob
 to full_ on its way back to spawn. Enemies with `aggressive: true` and an `aggroRadius` engage

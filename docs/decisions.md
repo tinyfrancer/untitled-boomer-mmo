@@ -487,3 +487,89 @@ step further out. A signpost's label is how a phone leaves a zone, and it is fur
 when it matters most; a mob's health bar dimming with distance is a creature you cannot tell is
 nearly dead from across a clearing. The post fades and the word over it does not, which is also the
 thing that makes the far end of a zone read as far away without becoming unnavigable.
+
+## 33. The pathfinder asks `isBlocked` rather than keeping its own picture of the world
+
+**2026-09-01 · Claude**
+
+`systems/PathSystem.ts` is A\* over the tile grid `CollisionSystem` already thinks in, and what makes
+a cell passable is `isBlocked` on the body being routed, asked at a spot inside that cell.
+
+**Rejected:** the plan's own instruction — "with the AABB blockers rasterised onto it and inflated by
+`PLAYER_HALF_EXTENT`" — as a separate pass building a second grid; and a navmesh.
+
+**Why:** the inflation a grid pathfinder normally writes out by hand is exactly what testing the
+whole body at a point already does, so the rasteriser would have been a second description of what
+is solid, free to drift from the one every walk in the game integrates against. A tree trunk that
+moved in `CollisionSystem` and not in the pathfinder is a route into a tree with nothing failing.
+The navmesh is a different scale of answer: the grid is 25 x 19, the search costs 1-2ms exhausted on
+a real zone, and a mesh solves a problem this world does not have.
+
+## 34. Where a body stands in a cell is part of whether it may go through it
+
+**2026-09-01 · Claude**
+
+`footing()` answers both at once: the point inside a cell the body stands at, and `null` when a route
+may not pass. Waypoints are that point rather than the cell's centre.
+
+**Rejected:** waypoints at cell centres, which is what a grid A\* hands back and what the plan
+assumed.
+
+**Why:** A\* answers with whichever cell is cheapest, never whichever is roomiest, so a route down a
+corridor two tiles wide comes back hugging one of its walls — and a waypoint flush against a wall is
+where a walk stops. The walk lands within `arriveRadius` of a waypoint rather than on it, so it
+starts the next leg a hair off the line; a hair off the line beside a wall it is running along is a
+corner in that wall, which refuses the one axis it was travelling on and leaves it correcting back at
+a fraction of a pixel a frame. It neither stops nor arrives. Three of the hand-built worlds and one
+real zone failed exactly that way before the footings existed, and every one of them was a route that
+read correctly.
+
+**What it costs:** a footing is sixteen probes, worked out on demand and remembered, so a search that
+never reaches a corner of the map never pays for it — and the straight line most taps are answered by
+asks for none at all.
+
+## 35. A passage the body cannot turn round in is not a route
+
+**2026-09-01 · Claude**
+
+A cell needs slack — room on an axis, either side of the body, summed — on **both** axes to be
+passable at all. A gap exactly the body's width has none on one of them and is refused.
+
+**Rejected:** handing back the route anyway and letting the walk fail in it; testing a body padded by
+the clearance instead of measuring slack.
+
+**Why:** a body a tile wide fits a gap a tile wide only in exact arithmetic, and the walk does not do
+exact arithmetic. Handing back a route nothing can walk is worse than handing back nothing, because
+`null` is already meaningful: it is the caller's cue to do what it did before there was a pathfinder,
+which is walk straight and press into whatever is in the way. A padded body was tried first and is
+the wrong shape of test — it fails a cell beside a wall corner, which is perfectly walkable, and it
+quantises to the cell grid, so any padding at all takes a two-tile corridor from passable to
+impassable while a three-tile one survives.
+
+Walking the length of such a passage is still fine and still happens: the straight line to the goal
+is measured for the true body, so a corridor one tile wide can be walked end to end. What is refused
+is arriving somewhere inside one and turning.
+
+**What it costs:** phase 4 of `docs/interiors_and_light_plan.md` asked to find out whether a doorway
+is wide enough by measurement, and this is the measurement, arriving two phases early: **a doorway
+has to be at least two tiles wide**, and `DOOR_SPAN` becoming a minimum in tiles is now a
+requirement rather than a contingency.
+
+## 36. The straightening is greedy forward, and only a shortcut has to earn its room
+
+**2026-09-01 · Claude**
+
+`pullStraight` reaches as far ahead as the line stays clear, measured for the body plus `CLEARANCE`.
+The leg left over — the grid's own step, out of an anchor — is taken on the grid's authority and
+measured for nothing.
+
+**Rejected:** asking for the furthest reachable point from each anchor, which is the shorter answer;
+measuring every leg with clearance; measuring every leg with the true body.
+
+**Why:** the exhaustive version costs the square of the path's length in line checks where the greedy
+one costs one per waypoint dropped, and a tap has to answer inside a frame. The split between the two
+kinds of leg is the load-bearing part: a shortcut is this function's own idea and a leg that grazes a
+wall is a worse idea than the corner it replaced, where the forced leg is the route itself and
+refusing it leaves nothing. Holding the forced leg to the true body was tried and is too strict by a
+hair — it rejects a leg that _touches_ a tree trunk's edge without crossing it, which is most of the
+paths round a tree stand, and the case it was guarding against is the one entry 35 already refuses.
