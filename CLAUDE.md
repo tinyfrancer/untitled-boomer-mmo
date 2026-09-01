@@ -38,6 +38,12 @@ band up — a rare key off the zone in front of it, a map cut out of solid rock,
 thing at the back — reached by walking off the bottom of the fen, where the raiders that carry the key
 already are. What it pays is the off hand nothing has filled since the starter band, and the second
 hoard in the game that comes off one creature.
+**Work in progress is planned in a doc before it is built**, phased into PRs with the argument for
+each decision in it — `docs/interiors_and_light_plan.md` is the live one (interiors, pathfinding and
+light), and `docs/archive/` holds the finished ones. A plan carries the shape of one piece of work
+where this file carries the shape of the system; check the live plan's status line before starting
+anything, since it says which phase landed and which is next.
+
 **Decisions that closed off a real alternative go in `docs/decisions.md`**, appended and never
 edited. That file is not a duplicate of this one: this describes the shape of the system as it
 stands, where that records the _forks_ — what was chosen, by whom, what was rejected and why — so

@@ -1,8 +1,27 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phase 0 in progress. Written 2026-09-01 against `7e5f66b`.
+**Status:** phase 0 done, phase 1 next. Written 2026-09-01 against `7e5f66b`.
 
-- **Phase 0 (PR 1)** — the roof bug, this plan, and `docs/decisions.md`. In progress.
+- **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
+  row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
+- **Phase 1 is unstarted** and is written below in enough detail to be picked up cold. See
+  "Starting a phase cold" at the bottom.
+
+## Starting a phase cold
+
+A session picking this up from nothing should, in order:
+
+1. Read `CLAUDE.md` — it is loaded automatically and describes the whole system as it stands.
+2. Read this file's phase section, and `docs/decisions.md` entries 25-28, which are what this
+   upgrade decided and why the alternatives lost.
+3. `git log --oneline -15` to see where the last phase actually stopped, which is the only source
+   that cannot be out of date.
+4. Branch before the first commit. Never commit to `main`, even for a doc fix.
+5. Gates before opening a PR: `npm run lint`, `npm run format:check`, `npm run typecheck`,
+   `npm run test`, `npm run build`, and `npm run smoke` with `npm run dev` already running in
+   another shell. The smoke job blocks merges, so run it locally rather than finding out from CI.
+6. Append to `docs/decisions.md` for anything that closed off an alternative, and update this
+   file's status line. Both are part of the phase, not paperwork after it.
 
 ## What this is
 
@@ -66,14 +85,55 @@ Nothing here touches movement or the renderer's structure.
 The single biggest visual win, and independent of everything below it. Nothing casts a shadow today,
 so nothing sits on the ground: a rat, a building and a signpost all hover.
 
+**Where it lives.** All of it is `src/render3d/ZoneView3D.ts`: `lights()` at the bottom of the file
+builds the two, and line ~110 attaches them with `this.scene.add(...lights(), ...)`. Lights outlive a
+zone, like the camera — a zone change rebuilds actors and ground, not these.
+
+The doc comment on `lights()` is what this phase reverses, and it states its own reason:
+
+> Two lights and no shadows. […] shadow maps are a per-zone GPU resource with a per-frame cost, and
+> there is nothing yet standing on the ground to cast one.
+
+The second half stopped being true a while ago — there are buildings, trees, veins, signposts,
+creatures and a player. The first half is still true and is what the budget below is for. **Rewrite
+that comment rather than deleting it**; the next person needs to know shadows were declined once and
+what changed.
+
+**Do the instrument first.** There is no way to measure a frame budget today: `DebugView`
+(`src/types/debugView.ts`) exposes `drawnCounts()` and `gpuMemory()` and nothing about _time_. So
+the rule below is currently unenforceable, and the first commit of this phase is the thing that
+makes it enforceable:
+
+- Add a draw-time reading to `DebugView` — a rolling average of the last N rAF draws, in
+  milliseconds. Keep it renderer-agnostic like the rest of that interface; a check written against
+  a Three-specific counter would not have survived the last renderer swap and would not survive the
+  next.
+- Assert a ceiling on it in smoke's `throttled` section, which already runs the page at
+  `Emulation.setCPUThrottlingRate` `rate: 8`. That section is the gate.
+- Take the reading **before** any lighting change, so the budget is set against what the game costs
+  today rather than against a number invented for it.
+
+**Then the work:**
+
 - A sun that gives faces different values, rather than the flat fill there is now.
-- Shadow maps, **with a frame budget from the first commit**. `ZoneView3D` declines them today in a
-  comment, for a real reason: they are a per-zone GPU resource with a per-frame cost, and this game
-  is aimed at a cheap phone in portrait. The throttled smoke pass at `rate: 8` is the gate.
+- Shadow maps. Ground receives and casts nothing — it is the floor. Buildings, props and creatures
+  cast. Fishing spots are the exception: they are the one prop drawn transparent already, and a
+  transparent thing casting a hard shadow reads as a bug.
+- The shadow camera frames **what the camera can see**, following the player, rather than the whole
+  zone. A zone is 1600 × 1216 world units; a shadow map stretched over all of it is blocky at any
+  resolution a phone can afford.
 - Depth cue — fog or an equivalent — so the far edge of a zone reads as far away.
 
 **The rule for this phase:** every change is measured on the throttled pass before it lands. A
 prettier game that drops frames on the device it was built for is a worse game.
+
+**Done looks like:** every drawn thing sits on the ground rather than hovering;
+`renderer.info.memory` still returns to where it started across three zone round trips, which smoke
+already checks and which a per-zone GPU resource is exactly the way to break; the throttled pass
+still passes, with a measured frame time under the ceiling the first commit established.
+
+**Not in this phase:** the camera pitch (phase 7), interior lights (phase 6), the ground mesh and
+its tile seams (phase 7). Each is somebody else's PR and each would muddy the measurement.
 
 ### Phase 2 — a pathfinder, switched off (PR 3)
 
