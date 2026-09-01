@@ -373,3 +373,24 @@ Phase 1 of the plan is the sun, shadow maps and a depth cue. Interiors are phase
 nothing casts one today, so nothing sits on the ground. Doing them first means the game looks better
 even if the pathfinding work drags, and it means the frame budget is established before ten lit
 interiors are asking to be drawn.
+
+## 28. The frame budget gets an instrument before it gets a rule
+
+**2026-09-01 · Claude**
+
+`DebugView` gains a draw-time reading, and smoke's throttled section asserts a ceiling on it, as the
+_first_ commit of phase 1 — before any lighting change.
+
+**Rejected:** stating the budget in the plan and checking it by eye; measuring with a Three-specific
+counter rather than through `DebugView`.
+
+**Why:** the plan's central rule for phase 1 is "every change is measured on the throttled pass
+before it lands", and there was nothing in the codebase that could measure it — `drawnCounts()` and
+`gpuMemory()` answer _what_ is drawn and what it costs in memory, and nothing answered what it costs
+in time. A rule with no instrument is a comment. Taking the reading before the first lighting change
+also means the ceiling is set against what the game costs today rather than against a number
+invented to fit whatever shipped.
+
+`DebugView` rather than a renderer counter for the reason that interface is small and
+renderer-agnostic in the first place: a check written against `cameras.main` did not survive the
+last renderer swap, and this project has now done one.
