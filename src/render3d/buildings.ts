@@ -45,7 +45,7 @@ const ROOF_FRACTION: Record<BuildingShapeId, number> = {
  * is a fifteenth of a tile — small enough that nothing can be hidden under it
  * and large enough that the roof reads as a roof rather than as a lid.
  */
-const EAVE = 1.07;
+export const EAVE = 1.07;
 
 /** A door is this much of the wall it is in, and this much of its height. */
 const DOOR_SPAN = 0.34;
@@ -53,6 +53,32 @@ const DOOR_HEIGHT = 0.78;
 
 /** How far a face is stood off the wall so the two never fight over a pixel. */
 const RELIEF = 0.6;
+
+/**
+ * A unit pyramid, one across and one tall, sitting on the origin.
+ *
+ * A four-sided cone is a pyramid, but its base square has its corners on the
+ * *axes* rather than its edges — a diamond — so it has to be turned 45° before
+ * it is a square anyone can scale to a footprint.
+ *
+ * **That turn is baked into the vertices rather than set on the mesh**, and the
+ * difference is the whole of a bug that shipped in every building in the game.
+ * A local transform composes as translate · rotate · scale, so a rotation set on
+ * the object happens *after* the scale: the diamond was stretched along its own
+ * diagonals and then turned, which drew every roof as an oversized diamond
+ * rather than a hip roof — 384 × 384 over the 192 × 192 general store, and
+ * 512 × 512 over the 384 × 128 longhouse. Square footprints hid it, because a
+ * diamond over a square still reads as a plausible roof; the longhouse did not.
+ *
+ * Baked, the scale acts on an already-square base and a roof is exactly its
+ * building's footprint at any aspect ratio, which is what
+ * `tests/render3d/buildings.test.ts` sweeps over every row in `BUILDINGS`.
+ */
+function pyramidGeometry(): ConeGeometry {
+  const geometry = new ConeGeometry(Math.SQRT1_2, 1, 4);
+  geometry.rotateY(Math.PI / 4);
+  return geometry;
+}
 
 export function buildBuilding(definition: BuildingDefinition): BuildingProp {
   const { width, height: depth } = definition.body;
@@ -72,15 +98,11 @@ export function buildBuilding(definition: BuildingDefinition): BuildingProp {
   walls.position.y = wallHeight / 2;
   group.add(walls);
 
-  // A four-sided cone is a pyramid whose base square has its corners on the
-  // radius, so `√½` gives a base one unit across once it is turned 45° — which
-  // is what lets one geometry be scaled to any footprint.
   const roof = new Mesh(
-    new ConeGeometry(Math.SQRT1_2, 1, 4),
+    pyramidGeometry(),
     new MeshLambertMaterial({ color: look.roof, flatShading: true }),
   );
   roof.name = 'roof';
-  roof.rotation.y = Math.PI / 4;
   roof.scale.set(width * EAVE, roofHeight, depth * EAVE);
   roof.position.y = wallHeight + roofHeight / 2;
   group.add(roof);
