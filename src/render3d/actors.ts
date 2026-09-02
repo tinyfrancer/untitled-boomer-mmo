@@ -27,7 +27,13 @@ import type { TitleId } from '../types/ids';
 import type { Campfire } from '../world/Campfire';
 import type { Player } from '../world/Player';
 import type { ResourceNode } from '../world/ResourceNode';
-import type { WorldBuilding, WorldNpc, WorldSignpost, WorldStation } from '../world/ZoneWorld';
+import type {
+  WorldBuilding,
+  WorldNpc,
+  WorldSignpost,
+  WorldStation,
+  WorldTap,
+} from '../world/ZoneWorld';
 
 /** How far over a figure's head its nameplate floats. */
 const PLATE_CLEARANCE = 12;
@@ -469,14 +475,16 @@ const DOOR_REACH = TILE_SIZE;
 export class BuildingActor implements Actor, Pickable, Occluder {
   readonly object = new Group();
   readonly building: WorldBuilding;
+  private readonly counter: WorldNpc | null;
   private readonly prop: ReturnType<typeof buildBuilding>;
   private readonly box: Box3;
   private occluded = false;
   private inside = false;
   private atDoor = false;
 
-  constructor(building: WorldBuilding) {
+  constructor(building: WorldBuilding, counter: WorldNpc | null = null) {
     this.building = building;
+    this.counter = counter;
     this.object.userData.kind = 'building';
     this.object.position.copy(simToWorld(building.x, building.y));
     this.prop = buildBuilding(building.definition);
@@ -568,20 +576,29 @@ export class BuildingActor implements Actor, Pickable, Occluder {
   }
 
   /**
-   * Where a tap on it walks to: the doorstep, or the room once you are standing
-   * on that doorstep.
+   * What a tap on it means: whoever works here, or the way in where nobody
+   * does.
    *
-   * Two taps to go indoors, and the second one is why this exists at all. From
-   * outside, the floor cannot be tapped — the roof is drawn over it and the pick
-   * box is the whole footprint standing as tall as it is drawn, so every ray
-   * aimed at the room meets the building. Without a second meaning there is no
-   * way into a building on a phone at all, which would leave the rooms as
-   * something only a keyboard could reach.
+   * The counter comes first, and that is the whole of how a shop is used now
+   * that the shopkeeper is behind a wall. There is no pixel a thumb can put on
+   * them from outside — the roof is drawn over the room and the pick box is the
+   * whole footprint standing as tall as it is drawn — so the shopfront is what
+   * a player has to aim at, and the walk it asks for is the one the pathfinder
+   * was built to answer: in through the door and up to the counter. The same
+   * ray crossing the figure's own box says `npc` too, so the two agree rather
+   * than offering a thumb two answers.
    *
-   * It reads the way a player would say it: walk to the shop, then go in.
+   * Where nobody works it is two taps to go indoors: the doorstep, and then the
+   * room once you are standing on it. From outside the floor cannot be tapped
+   * at all, so without that second meaning the empty rooms would be reachable
+   * by keyboard alone, on a game laid out for a phone.
    */
-  tapPoint(): Point {
-    return this.atDoor ? { x: this.building.x, y: this.building.y } : doorPoint(this.building);
+  tapAnswer(): WorldTap {
+    if (this.counter && !this.atDoor) return { kind: 'npc', npc: this.counter };
+    const point = this.atDoor
+      ? { x: this.building.x, y: this.building.y }
+      : doorPoint(this.building);
+    return { kind: 'ground', point };
   }
 
   dispose(): void {
