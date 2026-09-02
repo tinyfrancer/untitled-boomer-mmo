@@ -157,7 +157,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
   },
   /**
    * Greyford's counter, and a bay like the town's shopfronts because it does the
-   * same job: a person stands at the door of it and you walk up to them.
+   * same job: somebody stands at the back of it and you walk in to them.
    */
   'trading-post': {
     id: 'trading-post',
@@ -166,9 +166,10 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
     shape: 'hall',
     door: 'south',
   },
-  // Scenery, the way the mill is: nobody works here and nothing is tapped. It is
-  // what makes the outpost read as a place somebody lives rather than one
-  // building standing in a field.
+  // Scenery until the counters went indoors, and the fettler's hall since: the
+  // shallowest room anybody works in, which is what makes it the worked example
+  // of `docs/decisions.md` 46 — two tiles deep is a room served from its own
+  // doorway rather than one walked into.
   longhouse: {
     id: 'longhouse',
     name: 'Longhouse',
@@ -348,9 +349,9 @@ const DOORSTEP = TILE_SIZE / 2;
 /**
  * Where standing at the door means standing — outside it, on the ground.
  *
- * This is what a tap on a building resolves to, and what a counter's NPC is
- * placed against. One function rather than two coordinates written twice in
- * `zones.ts`, so a building that is moved takes its doorstep with it.
+ * This is what a tap on a building with nobody in it resolves to, and where a
+ * counter's NPC used to stand. One function rather than two coordinates written
+ * twice in `zones.ts`, so a building that is moved takes its doorstep with it.
  */
 export function doorPoint(building: Standing): { x: number; y: number } {
   const { width, height } = building.definition.body;
@@ -359,4 +360,60 @@ export function doorPoint(building: Standing): { x: number; y: number } {
     x: building.x + step.x * (width / 2 + DOORSTEP),
     y: building.y + step.y * (height / 2 + DOORSTEP),
   };
+}
+
+/**
+ * How far back into the room the person behind a counter stands, measured from
+ * the middle of the floor.
+ *
+ * A tile, which is what leaves the customer somewhere to be: the walk up to a
+ * counter ends `NPC_INTERACT_RADIUS` short of it, so the space between the two
+ * is the space a player stands in. Written from the middle rather than off the
+ * back wall because that is the half of the room the arithmetic is about, and
+ * because it is what makes the cap below one line.
+ *
+ * It is capped at the room's own half-depth, so a room with less than a tile of
+ * it puts the counter in the middle instead of pushing it through the wall.
+ * That is not a fallback — it is what a two-tile hut *is*.
+ */
+const COUNTER_INSET = TILE_SIZE;
+
+/**
+ * Where whoever works here stands: back from the middle of the room, toward the
+ * wall opposite the door.
+ *
+ * The mirror of `doorPoint` and for the same reason — move a shopfront and the
+ * counter moves with it — but the interesting half is the direction. A counter
+ * on the near side of a room is one served from the doorstep, and a room nobody
+ * has to enter is a room nobody ever sees. Pushed back, a three-tile shop is a
+ * shop the walk carries you into.
+ *
+ * It stays a tile off the back wall rather than against it, which is a rule
+ * about routes rather than about shopkeeping: A\* walks tile centres, so a spot
+ * in the wall's own row is a spot with no cell to reach it through and
+ * `findPath` answers `null` for the whole walk. See `docs/decisions.md` 46.
+ */
+export function counterPoint(building: Standing): { x: number; y: number } {
+  const { width, height } = building.definition.body;
+  const step = DOOR_STEP[building.definition.door];
+  const depth = (step.x !== 0 ? width : height) - WALL_THICKNESS * 2;
+  const back = depth / 2 - Math.min(COUNTER_INSET, depth / 2);
+  return { x: building.x - step.x * back, y: building.y - step.y * back };
+}
+
+/**
+ * Whoever of these people works out of this building, or `null` for the ones
+ * nobody does.
+ *
+ * Geometric rather than a `BuildingId → NpcId` column, which is the same call
+ * `tests/systems/BuildingSystem.test.ts` already made about where the counters
+ * stand: a smithy has nobody behind it and a cottage is nobody's counter, so a
+ * link in the table would be a field almost every row leaves unset. Standing in
+ * the room *is* working there.
+ */
+export function occupant<T extends { x: number; y: number }>(
+  building: Standing,
+  people: readonly T[],
+): T | null {
+  return people.find((person) => isInside(building, person)) ?? null;
 }

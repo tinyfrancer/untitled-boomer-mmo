@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { harness } from './harness';
 import { PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/constants';
-import { WALL_THICKNESS, buildingRect, buildingWalls, doorPoint } from '../../src/data/buildings';
+import {
+  WALL_THICKNESS,
+  buildingRect,
+  buildingWalls,
+  doorPoint,
+  isInside,
+} from '../../src/data/buildings';
 import { hasLineOfSight, isBlocked } from '../../src/systems/CollisionSystem';
 import { NPC_INTERACT_RADIUS } from '../../src/data/npcs';
 
@@ -159,20 +165,28 @@ describe('a building in the world', () => {
   });
 
   /**
-   * The whole point of putting the counters at the doors: arriving at the door
-   * is arriving at the person, so a tap on the building and a tap on the
-   * shopkeeper end in the same place.
+   * And the walk that a tap on a shopfront actually asks for, now that the
+   * person behind it is behind a wall.
+   *
+   * `BuildingActor.tapAnswer` resolves a tap on the store to the shopkeeper —
+   * there is no pixel a thumb can put on them from outside — so this is that
+   * answer driven through the world: from the middle of town, round the corner
+   * of the shop, in through the door and up to the counter. The assertion that
+   * matters is *where the player is standing* when the shop opens. Everything
+   * before this phase could be satisfied by being served in the street.
    */
-  it('puts the player in reach of the counter it houses, having only tapped the door', () => {
+  it('walks the player in through its door and serves them at the counter', () => {
     const { world, until } = harness();
     const shopkeeper = world.npcs.find((npc) => npc.npcId === 'shopkeeper');
     if (!shopkeeper) throw new Error('the town has no shopkeeper');
     const store = world.buildings.find((building) => building.definition.id === 'general-store');
     if (!store) throw new Error('the town has no general store');
+    expect(isInside(store, shopkeeper), 'the shopkeeper works out of the store').toBe(true);
 
-    world.tap({ kind: 'ground', point: doorPoint(store) });
-    until(() => !world.player.hasMoveTarget(), 'the player to reach the shop door', 20000);
+    world.tap({ kind: 'npc', npc: shopkeeper });
+    until(() => world.shopNpc !== null, 'the player to reach the shopkeeper', 20000);
 
+    expect(isInside(store, world.player), 'the player is served inside the shop').toBe(true);
     expect(
       Math.hypot(world.player.x - shopkeeper.x, world.player.y - shopkeeper.y),
     ).toBeLessThanOrEqual(NPC_INTERACT_RADIUS);

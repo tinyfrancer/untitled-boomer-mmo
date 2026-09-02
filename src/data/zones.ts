@@ -116,25 +116,24 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     mobSpawns: TOWN_MOB_SPAWNS,
     nodeSpawns: TOWN_NODE_SPAWNS,
     /**
-     * Each of the four at the door of the building they work out of, which is
-     * `doorPoint` of the matching row below rather than a coordinate written
+     * Each of the four at the back of the room they work in, which is
+     * `counterPoint` of the matching row below rather than a coordinate written
      * down twice — move a shopfront and the shopkeeper moves with it.
      *
-     * Two rules still put the buildings where they are, and both are about taps.
-     * Every pair of counters is more than `NPC_INTERACT_RADIUS` apart, so which
-     * one a tap opens is never a question about pixels. And none of them stands
-     * in the middle of a road — a person on the road a few tiles ahead of the
-     * spawn point is standing exactly where a player taps to walk forward, which
-     * turns "go north" into "open a shop" and is the same class of mistake as
-     * drawing a signpost under the tab bar. The high street is three tiles wide
-     * for exactly that reason: the middle lane is the one a player walks and the
-     * shoulders are where the counters stand.
+     * They stood on the doorsteps until the rooms could be walked into, and the
+     * two rules that put them there still hold from inside. Every pair of
+     * counters is more than `NPC_INTERACT_RADIUS` apart, so which one a tap
+     * opens is never a question about pixels — the walls make that harder to get
+     * wrong rather than easier, since the radius reaches straight through one.
+     * And none of them stands in the middle of a road: a person where a player
+     * taps to walk forward turns "go north" into "open a shop", which four walls
+     * do not fix either.
      */
     npcSpawns: [
-      { dx: 192, dy: -64, npcId: 'shopkeeper' },
-      { dx: -192, dy: -64, npcId: 'banker' },
-      { dx: -448, dy: -64, npcId: 'trainer' },
-      { dx: 448, dy: -64, npcId: 'quartermaster' },
+      { dx: 192, dy: -208, npcId: 'shopkeeper' },
+      { dx: -192, dy: -208, npcId: 'banker' },
+      { dx: -448, dy: -208, npcId: 'trainer' },
+      { dx: 448, dy: -160, npcId: 'quartermaster' },
     ],
     /**
      * At the smithy's door rather than inside it, and the placement rule here is
@@ -369,14 +368,19 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     mobSpawns: [],
     nodeSpawns: [],
     /**
-     * Both at the doors of the yard's two buildings, and far enough apart that
-     * which one a tap opens is never a question about pixels: the rule every
-     * pair of counters in town already answers to, asked of an outpost that now
-     * has two of its own.
+     * Both inside the yard's two buildings, at the back of the room like every
+     * counter in town, and far enough apart that which one a tap opens is never
+     * a question about pixels.
+     *
+     * The longhouse was scenery while the fettler stood at its door, and the day
+     * they moved in is the day it stopped being: what makes an outpost read as
+     * somewhere people live is a hall with somebody working in it just as well
+     * as an empty one, and a shed built to be nobody's would have been a second
+     * building to find room for out here.
      */
     npcSpawns: [
-      { dx: -64, dy: -160, npcId: 'outfitter' },
-      { dx: 320, dy: -160, npcId: 'fettler' },
+      { dx: -64, dy: -336, npcId: 'outfitter' },
+      { dx: 320, dy: -288, npcId: 'fettler' },
     ],
     buildingSpawns: [
       { dx: -64, dy: -320, buildingId: 'trading-post' },
