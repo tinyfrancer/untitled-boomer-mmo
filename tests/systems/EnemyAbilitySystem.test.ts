@@ -8,7 +8,7 @@ import {
   resolveEnemyAbilityDamage,
 } from '../../src/systems/EnemyAbilitySystem';
 
-const READY = { elapsedSince: () => Infinity };
+const READY = { elapsedSince: () => Infinity, clearLine: true };
 const CLEAVE = ENEMY_ABILITIES.cleave;
 const KNIFE = ENEMY_ABILITIES['throw-knife'];
 
@@ -24,6 +24,7 @@ describe('chooseEnemyAbility', () => {
   it('waits out its cooldown like everything else does', () => {
     const chosen = chooseEnemyAbility(ENEMIES['bandit-chief'], {
       distance: 60,
+      clearLine: true,
       elapsedSince: () => CLEAVE.cooldownMs - 1,
     });
     expect(chosen).toBeNull();
@@ -64,8 +65,30 @@ describe('abilityConnects', () => {
   // Asked again when the wind-up runs out rather than only when it started,
   // which is the whole mechanic: the shout is a second to step out in.
   it('lands on whoever is still inside its reach, and misses whoever left', () => {
-    expect(abilityConnects(CLEAVE, CLEAVE.range)).toBe(true);
-    expect(abilityConnects(CLEAVE, CLEAVE.range + 1)).toBe(false);
+    expect(abilityConnects(CLEAVE, CLEAVE.range, true)).toBe(true);
+    expect(abilityConnects(CLEAVE, CLEAVE.range + 1, true)).toBe(false);
+  });
+
+  /**
+   * The other way out of one, and the only one a room makes possible: stepping
+   * behind a wall while it winds up is the same dodge measured differently.
+   */
+  it('misses whoever put a wall in the way, however close they still are', () => {
+    expect(abilityConnects(KNIFE, 0, false)).toBe(false);
+  });
+});
+
+describe('a line that is not clear', () => {
+  // Refused at the start as well as at the end, because a telegraph that always
+  // misses is a telegraph that lies.
+  it('stops a creature winding one up at all', () => {
+    const blocked = chooseEnemyAbility(ENEMIES.bandit, {
+      ...READY,
+      clearLine: false,
+      distance: 200,
+    });
+    expect(blocked).toBeNull();
+    expect(chooseEnemyAbility(ENEMIES.bandit, { ...READY, distance: 200 })).toBe(KNIFE);
   });
 });
 

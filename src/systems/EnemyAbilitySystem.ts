@@ -9,6 +9,15 @@ export function enemyAbilitiesFor(definition: EnemyDefinition): EnemyAbilityDefi
 export interface EnemyAbilityContext {
   /** How far the player is right now. */
   distance: number;
+  /**
+   * Whether there is anything solid in between.
+   *
+   * One line for all of a creature's abilities rather than one per ability,
+   * since it is the same two points either way — and passed in rather than
+   * worked out here, because this module knows nothing about walls and the
+   * whole of `EnemySystem` is arithmetic over the tables.
+   */
+  clearLine: boolean;
   /** Since this ability was last started; Infinity if it never has been. */
   elapsedSince(ability: EnemyAbilityDefinition): number;
 }
@@ -26,6 +35,7 @@ export function chooseEnemyAbility(
   definition: EnemyDefinition,
   context: EnemyAbilityContext,
 ): EnemyAbilityDefinition | null {
+  if (!context.clearLine) return null;
   for (const ability of enemyAbilitiesFor(definition)) {
     if (context.elapsedSince(ability) < ability.cooldownMs) continue;
     if (context.distance > ability.range) continue;
@@ -38,10 +48,16 @@ export function chooseEnemyAbility(
 /**
  * Whether it lands, asked again when the wind-up runs out rather than only when
  * it started. That second question is the whole mechanic: the shout over the
- * creature's head is a second to walk out of reach in.
+ * creature's head is a second to walk out of reach in — or, now that a building
+ * is a room rather than a block, a second to step behind a wall in, which is the
+ * same dodge measured a different way.
  */
-export function abilityConnects(ability: EnemyAbilityDefinition, distance: number): boolean {
-  return distance <= ability.range;
+export function abilityConnects(
+  ability: EnemyAbilityDefinition,
+  distance: number,
+  clearLine: boolean,
+): boolean {
+  return clearLine && distance <= ability.range;
 }
 
 /** The blow itself, with the same variance every other swing in the game has. */

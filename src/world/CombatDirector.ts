@@ -27,6 +27,7 @@ import {
 } from '../systems/CombatSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { rollLootTable } from '../systems/LootSystem';
+import { hasLineOfSight, type CollisionWorld } from '../systems/CollisionSystem';
 import { distance } from '../systems/MovementSystem';
 import { ENEMY_ABILITIES, type EnemyAbilityDefinition } from '../data/enemyAbilities';
 import { abilityConnects, chooseEnemyAbility } from '../systems/EnemyAbilitySystem';
@@ -50,6 +51,12 @@ const DEFENSE_SKILL_XP_PER_SAVE = 1;
 export interface CombatDirectorDeps {
   mobs: Mob[];
   targeting: Targeting;
+  /**
+   * What is solid, for the one question this asks of the map: whether there is
+   * a wall between a creature and the thing it is about to throw a knife at.
+   * Fixed for the life of the zone, like the driver's own copy of it.
+   */
+  collisionWorld: CollisionWorld;
   /** The choke point the camp's XP penalty is applied at. */
   awardXp(reward: number): void;
   /** Being hit breaks a gather channel, whoever was swinging. */
@@ -216,6 +223,7 @@ export class CombatDirector {
       const gap = distance(mob, player);
       const ability = chooseEnemyAbility(mob.definition, {
         distance: gap,
+        clearLine: this.canSee(mob),
         elapsedSince: (candidate) =>
           this.ctx.now - (mob.lastAbilityAt.get(candidate.id) ?? -Infinity),
       });
@@ -231,6 +239,11 @@ export class CombatDirector {
       this.strike(mob, mob.attackPower);
       if (!player.isAlive()) return;
     }
+  }
+
+  /** Whether anything solid stands between a creature and the player. */
+  private canSee(mob: Mob): boolean {
+    return hasLineOfSight(this.deps.collisionWorld, mob, this.ctx.playerPoint());
   }
 
   /**
@@ -264,7 +277,7 @@ export class CombatDirector {
     mob.windUp = null;
     this.deps.targeting.publishTarget();
 
-    if (!abilityConnects(ability, distance(mob, this.ctx.player))) {
+    if (!abilityConnects(ability, distance(mob, this.ctx.player), this.canSee(mob))) {
       this.ctx.float(`${ability.name} misses!`, 'heal', 20);
       this.ctx.log(logEnemyAbilityDodged(ability.name));
       return;
