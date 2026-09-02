@@ -143,9 +143,13 @@ It reaches the game through three dev-only handles, one per channel:
 - **`window.world`** — the live `ZoneWorld`, re-set on every zone change since each builds a new
   world: `world.mobs`, `world.player.hp`, `world.teleport(x, y)`.
 - **`window.view`** — the handful of questions only whatever is drawing can answer:
-  `worldToScreen(x, y)`, `drawnCounts()`, `playerFigure()`, `gpuMemory()` and `step()`. The
-  interface is `src/types/debugView.ts`, and it is deliberately a small renderer-agnostic one —
-  that is what let the renderer be replaced under smoke rather than alongside it.
+  `worldToScreen(x, y)`, `drawnCounts()`, `playerFigure()`, `gpuMemory()`, `drawTime()` and
+  `step()`. The interface is `src/types/debugView.ts`, and it is deliberately a small
+  renderer-agnostic one — that is what let the renderer be replaced under smoke rather than
+  alongside it. There are three questions about a frame and they are different questions:
+  `drawnCounts()` is what is in it, `gpuMemory()` is what the card is holding, and `drawTime()` is
+  what it costs in milliseconds — the last of which is a **budget** rather than an observation, and
+  is the one thing on this handle smoke asserts a ceiling on.
 - **`window.events`** — the HUD channel, which is neither of the other two. It is how a check
   reaches a panel whose state has no cheap route through the world: two hundred combat-log lines,
   or a bag filled to the brim to scroll.
@@ -407,10 +411,12 @@ placed by a centre offset like every other spawn and blocks as a `CollisionSyste
 the tree trunks rather than as painted-in `WALL_TILE`, because a zone's contents are offsets from the
 middle of the map and the tile grid is written out in absolute rows — one of those two has to be the
 map's own. Being solid is the load-bearing decision and not a shortcut: click-to-move is a straight
-line with collision sliding and **no pathfinding anywhere**, so a counter behind a doorway is a
+line with collision sliding and **nothing routes round a corner**, so a counter behind a doorway is a
 counter a tap walks into a wall trying to reach, from three sides of its own shop. What a building is
 for here is the outside of it — `doorPoint` is where the person who works there stands, and walking
-up to them is what walking into a shop means.
+up to them is what walking into a shop means. (A pathfinder exists now and nothing calls it — see
+below — so this paragraph is still true of the game and is what `docs/interiors_and_light_plan.md`
+is working through reversing.)
 
 Three rules follow, and `tests/systems/BuildingSystem.test.ts` holds all three because nothing else
 can see any of them:
@@ -812,6 +818,32 @@ state machine. Combat math itself (damage rolls, range/cooldown checks) is _not_
 it lives in `systems/CombatSystem.ts` and is called from `ZoneWorld`, which resolves both
 directions: `updateCombat()` for the player's swings and `updateEnemyAttacks()` for everything
 hitting back.
+
+**There is a pathfinder, and nothing calls it yet** (`systems/PathSystem.ts`). `findPath` is A\* over
+the same tile grid `CollisionSystem` thinks in, answering with the points to walk to in order, or
+`null` — which means "do what you did before there was a pathfinder", so wiring it in is a fallback
+to the straight line rather than a failure to handle. It is here ahead of the walk because using it
+rewrites how every walk in the game ends.
+
+What makes a cell passable is **`isBlocked` on the body being routed**, rather than a second grid
+built by rasterising the blockers: testing the whole body at a point _is_ the configuration-space
+inflation, and a rasteriser would have been a second picture of the world free to drift from the one
+every walk integrates against. Three things about it were decided against alternatives and are worth
+not undoing:
+
+- **A waypoint is where the body stands in a cell, not the middle of the cell.** A\* answers with
+  whichever cell is cheapest and never whichever is roomiest, so a route down a corridor two tiles
+  wide comes back hugging one of its walls — and the walk lands within `arriveRadius` of a waypoint
+  rather than on it, which beside a wall is a corner in that wall. Passability and where-to-stand are
+  one answer (`footing`) precisely so the two cannot disagree.
+- **A passage with no slack in it is not a route.** A gap exactly the body's width is one it fits
+  through only in exact arithmetic, so `findPath` refuses to turn a corner in one — which is where
+  the rule that **a doorway has to be at least two tiles wide** comes from. Walking the _length_ of
+  such a gap is still fine, and is what the straight line to the goal answers.
+- **The route is proved by being walked, not by being read.** `tests/systems/PathSystem.test.ts`
+  drives every route it builds through `stepToward` and `moveWithCollision` at 60fps and at 5, over
+  hand-built worlds and over every zone as `populateZone` builds it. Four routes that read perfectly
+  were refuted that way, which is the whole reason the two rules above exist.
 
 **Aggro contract**: `Mob.engage()` starts a chase, `disengage()` drops aggro _and heals the mob
 to full_ on its way back to spawn. Enemies with `aggressive: true` and an `aggroRadius` engage
@@ -1467,6 +1499,52 @@ than in the renderer,
 for the same reason the stick-figure rig behind the paperdoll does: the ground the simulation calls
 water is a decision the whole game makes. Creature colour is not — `render3d/palette.ts` is the
 renderer's own, and nothing outside it asks what colour a rat is.
+
+**There is a sun now, and everything standing in it sits on the ground** (`render3d/lights.ts`).
+Two flat lights and no shadows was the right call while there was nothing to cast one; by the end
+of act two there were buildings, trees, veins, signposts, creatures and a player, and every one of
+them hovered. A `HemisphereLight` fill is what gives a face pointing up a different value from one
+pointing sideways with no sun on it, which a flat ambient could never do; the sun itself comes from
+the **south-west**, because the camera's resting place is due south and a light from the north put
+every face anyone ever looked at in shade. It does not follow the camera — turning the view round to
+look into the sun is most of what makes turning it worth doing.
+
+Four things about it were decided against alternatives:
+
+- **The shadow camera is cut to the zone, not to what the camera can see**, which reverses what
+  `docs/interiors_and_light_plan.md` asked for and is what the arithmetic says. A camera pitched 58°
+  down sees ground from 150 units in front of itself out to nearly 2000 — from the middle of town
+  both edges of the zone are on screen at once — so a frustum framed on the viewport is _larger_
+  than one framed on the map. Framed on the zone it is also fixed in the world for the life of that
+  zone, so a shadow's edge does not crawl as the player walks.
+- **Only the ground receives.** It is the surface a shadow is actually read on, and it is the one
+  that must not also cast: a single flat plane covering the whole zone, tested against a depth map
+  it wrote itself, is the shortest road to acne over the entire floor.
+- **A builder decides what casts, not an actor.** `castsShadow` is called on the group each builder
+  returns, which keeps a nameplate, a shop sign, a damage number and a selection ring out of the map
+  by construction — those hang on the actor _around_ the body — and keeps the player's shadow across
+  a gear change, which rebuilds the figure and never touches the actor. The exceptions are the two
+  transparent things: a fishing spot's ripples, and a campfire's flames, whose logs cast where the
+  fire does not. `tests/render3d/lights.test.ts` sweeps `ENEMIES`, `RESOURCE_NODES` and `BUILDINGS`
+  for it, so a row added later answers for itself.
+- **The depth cue is measured in camera distances, and starts nearer than the player**
+  (`fogRange` in `camera.ts`). That is where it stops being weather and becomes a cue: real haze
+  would not care which way the phone is held, but a landscape camera sits less than half as far back
+  as a portrait one, so a fog in world units grazes the horizon on one and swallows half the zone on
+  the other. There are barely 1.6 camera distances between the player's feet and the furthest ground
+  anyone looks at, so starting past them leaves nothing to fade with — three's fog ramps on a
+  smoothstep, whose near end is flat, so starting at 0.9 puts the player three percent in and buys
+  the whole range back. A **readout** opts out of it entirely (`fog: false` on the nameplates, the
+  signs, the floats, the bolt and the selection ring), for the reason those already opt out of the
+  depth test: the post fades and the word over it does not.
+
+**What it costs is measured rather than assumed.** `DebugView.drawTime()` is a rolling mean of what
+the last thirty drawn frames cost, kept by the host so it times the call _into_ whatever is drawing;
+smoke's throttled section asserts `SLOW_DRAW_BUDGET_MS` on it under an eight-times slower CPU. The
+sun, the shadow map and the depth cue together took a full run from 20.7ms to 25.2ms against a 40ms
+ceiling. Read it off a **full** run — the section carries state forward from every one before it, so
+`--section=throttled` alone is a lighter game and a different number. Raising the ceiling is a
+decision about the game, not about the run that hit it.
 
 **A nameplate stacks up to five things and only the health bar may not move** (`render3d/nameplate.ts`):
 the quest marker, the name, the worn title, the bar at the group's origin, and the player's mana

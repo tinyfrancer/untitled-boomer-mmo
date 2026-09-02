@@ -33,6 +33,27 @@ export interface DebugView {
    * never gets back, and this is the only thing that can see it.
    */
   gpuMemory(): { geometries: number; textures: number };
+  /**
+   * What a drawn frame costs in *time* — the third question about a frame,
+   * beside what is in it and what it costs the card to hold.
+   *
+   * The one thing here that is a budget rather than an observation: smoke's
+   * throttled section asserts a ceiling on the mean, which is what makes "a
+   * prettier game that drops frames on the device it was built for is a worse
+   * game" a check rather than a sentence in a plan. On the mean and not the
+   * worst, because one GC pause is not a regression.
+   */
+  drawTime(): DrawTime;
+}
+
+/** What a drawn frame costs, from `drawTime()`. */
+export interface DrawTime {
+  /** The mean of the window, or 0 before anything has been drawn. */
+  averageMs: number;
+  /** The worst single frame in it, which is what a hitch looks like. */
+  worstMs: number;
+  /** How many frames the mean is over. A reading off two frames is noise. */
+  samples: number;
 }
 
 export interface DrawnCounts {

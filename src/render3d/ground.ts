@@ -70,6 +70,9 @@ export function buildGround(map: number[][]): Mesh {
   const mesh = new Mesh(buildGroundGeometry(map), new MeshLambertMaterial({ vertexColors: true }));
   mesh.name = 'ground';
   mesh.userData.kind = 'ground';
+  // Receives and casts nothing: it is the floor, and a flat plane casting into
+  // the map it is being tested against is the shortest road to shadow acne.
+  mesh.receiveShadow = true;
   return mesh;
 }
 

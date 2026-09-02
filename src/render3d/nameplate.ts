@@ -241,7 +241,10 @@ export class Nameplate {
 function bar(width: number, height: number, color: number, opacity: number): Mesh {
   const mesh = new Mesh(
     new PlaneGeometry(width, height),
-    new MeshBasicMaterial({ color, transparent: true, opacity, depthTest: false }),
+    // Unfogged and untested against depth for the same reason: a health bar is
+    // a readout, and one that dims with distance is a mob you cannot tell is
+    // nearly dead from across the clearing.
+    new MeshBasicMaterial({ color, transparent: true, opacity, depthTest: false, fog: false }),
   );
   mesh.renderOrder = 10;
   return mesh;

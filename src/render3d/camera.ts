@@ -36,6 +36,29 @@ const TARGET_TILES_ACROSS = 12;
 const LOOK_SHORT = 80;
 
 /**
+ * Where the depth cue starts and ends, as multiples of the camera's distance.
+ *
+ * There is very little room here and it is worth knowing why before touching
+ * these. The camera stands `cameraDistance` back from the player, and the
+ * furthest ground anyone ever looks at — the far corner of a zone from its
+ * opposite edge — is under 1.6 of them away. Everything the haze has to
+ * distinguish is squeezed into that, so a range wide enough to leave the player
+ * alone by a comfortable margin leaves nothing over to fade the distance with:
+ * a near of 1.05 and a far of 1.5 was measured at a 7% difference between the
+ * player's feet and the top of the screen, which is nothing.
+ *
+ * Starting *nearer* than the player is what buys the range back, and it is
+ * three's `smoothstep` that makes it free: the ramp is flat where it begins, so
+ * a near of 0.9 puts the player a tenth of the way along it and about three
+ * percent of the way into the haze, which is invisible. The far edge of a zone
+ * lands at a quarter, and the length of one seen end to end at most of the way.
+ * The colour is the background, so the line where the ground mesh stops stops
+ * being a line.
+ */
+const FOG_NEAR = 0.9;
+const FOG_FAR = 1.8;
+
+/**
  * Near and far are in simulation pixels, because the render scale is 1: one sim
  * pixel is one world unit and nothing converts to metres. A second unit system
  * is the hazard the port is avoiding, not the axis mapping.
@@ -90,6 +113,24 @@ export function frameCamera(camera: PerspectiveCamera, player: Point, yaw = 0): 
     player.y + towardCamera.y * back,
   );
   camera.lookAt(look);
+}
+
+/**
+ * Where the depth cue starts and where it is total, as distances from the
+ * camera.
+ *
+ * Multiples of how far back the camera stands rather than fixed world numbers,
+ * which is the one place this stops being weather and becomes a *cue*: real
+ * haze is a property of the air and would not care which way the phone was
+ * held, but a landscape camera frames its tiles across the smaller axis and so
+ * sits less than half as far back as a portrait one. Written in world units,
+ * the same fog that grazed the horizon in portrait would swallow half the zone
+ * in landscape. Written in camera distances, the top of the screen is about as
+ * far gone either way, which is what the cue is for.
+ */
+export function fogRange(aspect: number): { near: number; far: number } {
+  const distance = cameraDistance(aspect);
+  return { near: distance * FOG_NEAR, far: distance * FOG_FAR };
 }
 
 export function resizeCamera(camera: PerspectiveCamera, width: number, height: number): void {

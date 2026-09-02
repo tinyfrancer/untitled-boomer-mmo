@@ -39,7 +39,12 @@ export function buildText(text: string, color: string, height: number): Sprite |
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   const sprite = new Sprite(
-    new SpriteMaterial({ map: texture, transparent: true, depthTest: false }),
+    // `fog: false` for the same reason `depthTest` is off: everything baked
+    // through here is a readout drawn in the world rather than a thing standing
+    // in it — a name, a title, a shop sign, a damage number — and a signpost's
+    // label hazing out at the edge of a zone would be the depth cue eating the
+    // one piece of furniture a phone leaves a zone by.
+    new SpriteMaterial({ map: texture, transparent: true, depthTest: false, fog: false }),
   );
   sprite.scale.set((height * canvas.width) / canvas.height, height, 1);
   return sprite;

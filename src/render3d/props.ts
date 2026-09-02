@@ -13,6 +13,7 @@ import {
 import { TILE_SIZE } from '../config/constants';
 import { itemIcon } from '../ui/itemIcons';
 import { WATER_DEPTH } from './ground';
+import { castsShadow } from './lights';
 import { PALETTE } from './palette';
 import type { ResourceNode } from '../world/ResourceNode';
 
@@ -108,7 +109,7 @@ function buildTree(node: ResourceNode): NodeProp {
 
   let standing = true;
   return {
-    object: group,
+    object: castsShadow(group),
     setAvailable(available) {
       standing = available;
       canopy.visible = available;
@@ -148,6 +149,10 @@ function buildFishingSpot(node: ResourceNode): NodeProp {
   group.add(centre);
 
   return {
+    // The one prop that casts nothing. It is drawn transparent on purpose and
+    // lies flat on the water, so what it would cast is a hard ring of shadow
+    // on the pond bed under something you can see through — which reads as a
+    // bug rather than as a fishing spot.
     object: group,
     setAvailable(available) {
       group.visible = available;
@@ -208,7 +213,7 @@ function buildVein(node: ResourceNode): NodeProp {
   group.add(seam);
 
   return {
-    object: group,
+    object: castsShadow(group),
     setAvailable(available) {
       seam.visible = available;
     },
@@ -254,7 +259,7 @@ export function buildSignpost(): Group {
   board.position.y = height * 0.72;
   group.add(board);
 
-  return group;
+  return castsShadow(group);
 }
 
 /**
@@ -300,7 +305,7 @@ export function buildForge(): Group {
   stem.position.set(-size * 0.22, size * 0.4, 0);
   group.add(stem);
 
-  return group;
+  return castsShadow(group);
 }
 
 /**
@@ -356,7 +361,7 @@ export function buildTannery(): Group {
   hide.position.set(0, size * 0.48, -size * 0.26);
   group.add(hide);
 
-  return group;
+  return castsShadow(group);
 }
 
 /** Crossed logs under a flame. The flicker is decoration; the burn clock is the sim's. */
@@ -364,6 +369,10 @@ export function buildCampfire(): { object: Group; flicker(elapsedMs: number): vo
   const size = TILE_SIZE * 0.8;
   const group = new Group();
 
+  // The logs cast and the flames do not: a cone of fire is drawn transparent
+  // and is the thing doing the lighting, so a hard shadow of one would be the
+  // fire putting out a shadow of itself.
+  const logs = new Group();
   [-1, 1].forEach((side) => {
     const log = new Mesh(
       new CylinderGeometry(size * 0.06, size * 0.06, size * 0.62, 6),
@@ -372,7 +381,7 @@ export function buildCampfire(): { object: Group; flicker(elapsedMs: number): vo
     log.rotation.z = Math.PI / 2;
     log.rotation.y = (side * Math.PI) / 5;
     log.position.y = size * 0.06;
-    group.add(log);
+    logs.add(log);
   });
 
   const flames = new Group();
@@ -389,7 +398,7 @@ export function buildCampfire(): { object: Group; flicker(elapsedMs: number): vo
     flame.position.y = size * 0.1 + tall / 2;
     flames.add(flame);
   });
-  group.add(flames);
+  group.add(castsShadow(logs), flames);
 
   return {
     object: group,
