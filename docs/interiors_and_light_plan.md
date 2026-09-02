@@ -1,6 +1,6 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phases 0 through 3 done, phase 4 next. Written 2026-09-01 against `7e5f66b`.
+**Status:** phases 0 through 4 done, phase 5 next. Written 2026-09-01 against `7e5f66b`.
 
 - **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
   row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
@@ -22,7 +22,20 @@
   the caller**, and **a walk toward something solid is routed to beside it and finished by pressing
   into it** — without which the pathfinder would have been wired in and done nothing for gathering,
   since every tree and vein in the game is a goal `findPath` refuses.
-- **Phase 4 is unstarted** and is written below. See "Starting a phase cold" at the bottom.
+- **Phase 4 done** 2026-09-02. Every building in the game is a room you can walk into and out of,
+  the roof and the near walls come away while you are in one, and the reachability sweep the plan
+  called the prize is in `tests/systems/BuildingSystem.test.ts` — a route from the zone's spawn point
+  into every building in the game. `docs/decisions.md` 40-44 carry the five things it decided, and
+  two of them were not in the plan at all:
+  - **Two taps to go indoors** (43). From outside, the roof is drawn over the floor and the pick box
+    is the whole footprint standing as tall as it is drawn, so no ray aimed at a room ever reaches
+    one. Without a second meaning for the same tap, the rooms this phase opened would have been
+    reachable by keyboard alone, on a game laid out for a phone.
+  - **The line-of-sight check the plan filed under "not in this" is in it** (44), because it is a bug
+    hollowing _created_ rather than one that was already there. Enemy abilities only: a tree trunk is
+    a blocker exactly as a wall is, so gating auto-attacks on it would make every tree in the game
+    something to fight around.
+- **Phase 5 is next** and is written below. See "Starting a phase cold" at the bottom.
 
 ## Starting a phase cold
 
@@ -32,9 +45,9 @@ A session picking this up from nothing should, in order:
 2. Read this file's phase section, and every `docs/decisions.md` entry from 25 down, which are what
    this upgrade has decided so far and why the alternatives lost. The ones a later phase most needs
    are 30 (the shadow frustum), 33-36 (what the pathfinder actually does, which is not quite what
-   phase 2 was told to build), 35's two-tile doorway, which phase 4 was expecting to discover for
-   itself, and 39 (how a walk toward something solid ends), which is the rule phase 5 will be
-   inverting when the counters move inside.
+   phase 2 was told to build), 39 (how a walk toward something solid ends), and 40-43, which are what
+   a building now _is_. Phase 5 in particular inverts 39 and rests on 43: a counter inside a room is
+   walked to through a door, and the tap that gets you there is the one `tapPoint` already answers.
 3. `git log --oneline -15` to see where the last phase actually stopped, which is the only source
    that cannot be out of date.
 4. Branch before the first commit. Never commit to `main`, even for a doc fix.
