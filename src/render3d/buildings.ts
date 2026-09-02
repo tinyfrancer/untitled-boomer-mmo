@@ -1,17 +1,18 @@
 import { BoxGeometry, ConeGeometry, Group, Mesh, MeshLambertMaterial } from 'three';
-import { TILE_SIZE } from '../config/constants';
 import { BUILDING_LOOKS } from './palette';
 import { castsShadow } from './lights';
-import type { BuildingDefinition } from '../data/buildings';
+import { WALL_THICKNESS, buildingWalls, doorGap, type BuildingDefinition } from '../data/buildings';
 import type { BuildingShapeId, ZoneEdge } from '../types/ids';
 
 /**
  * A building, as walls under a roof.
  *
- * There is nothing inside one and there is not meant to be: the whole of a
- * building here is a solid mass with a door painted on the side the counter
- * stands at, which is what keeps click-to-move — a straight line with no
- * pathfinding behind it — able to reach every person in town.
+ * A shell rather than a solid mass: four wall slabs with a gap in one of them,
+ * drawn from the **same rectangles `CollisionSystem` is given** so that what a
+ * player can see stopping them is what stops them. That is the rule the trunk
+ * and the vein already answer to, and it matters more here than anywhere —
+ * a wall drawn where there is none is a room you cannot get into, and a gap
+ * drawn where there is a wall is a door that does not open.
  *
  * What varies between them is size and `shape`, and that is deliberate. Seven
  * buildings drawn by seven builders is seven places to change when the town
@@ -22,6 +23,15 @@ export interface BuildingProp {
   readonly object: Group;
   /** How tall it is drawn, ridge and all — what hides the player behind it. */
   readonly height: number;
+  /**
+   * Take the lid off, or put it back.
+   *
+   * `from` is where the camera stands in the building's own frame, in
+   * simulation-space units — `null` for "nobody is in here". Every frame the
+   * player is inside, because the camera orbits and which walls are in the way
+   * moves with it.
+   */
+  readonly cutaway: (from: { x: number; y: number } | null) => void;
 }
 
 /** How far the walls stand, as a fraction of the building's shorter span. */
@@ -48,12 +58,8 @@ const ROOF_FRACTION: Record<BuildingShapeId, number> = {
  */
 export const EAVE = 1.07;
 
-/** A door is this much of the wall it is in, and this much of its height. */
-const DOOR_SPAN = 0.34;
-const DOOR_HEIGHT = 0.78;
-
-/** How far a face is stood off the wall so the two never fight over a pixel. */
-const RELIEF = 0.6;
+/** How proud of the ground the doorstep sits: enough to read, not to trip on. */
+const THRESHOLD_HEIGHT = 3;
 
 /**
  * A unit pyramid, one across and one tall, sitting on the origin.
@@ -91,12 +97,25 @@ export function buildBuilding(definition: BuildingDefinition): BuildingProp {
 
   const group = new Group();
 
-  const walls = new Mesh(
-    new BoxGeometry(width, wallHeight, depth),
-    new MeshLambertMaterial({ color: look.wall }),
-  );
+  // Placed at the origin, so the wall rects are asked for around 0,0 and land
+  // where the actor puts the whole group.
+  const standing = { x: 0, y: 0, definition };
+  const material = new MeshLambertMaterial({ color: look.wall });
+  const walls = new Group();
   walls.name = 'walls';
-  walls.position.y = wallHeight / 2;
+  const slabs: { edge: ZoneEdge; mesh: Mesh }[] = [];
+  for (const wall of buildingWalls(standing)) {
+    const slab = new Mesh(
+      new BoxGeometry(wall.right - wall.left, wallHeight, wall.bottom - wall.top),
+      material,
+    );
+    // The rects are in simulation space, where y runs south; the scene's z does
+    // the same (see `coords.ts`), so a wall's centre maps straight across.
+    slab.position.set((wall.left + wall.right) / 2, wallHeight / 2, (wall.top + wall.bottom) / 2);
+    slab.name = `wall:${wall.edge}`;
+    walls.add(slab);
+    slabs.push({ edge: wall.edge, mesh: slab });
+  }
   group.add(walls);
 
   const roof = new Mesh(
@@ -108,7 +127,7 @@ export function buildBuilding(definition: BuildingDefinition): BuildingProp {
   roof.position.y = wallHeight + roofHeight / 2;
   group.add(roof);
 
-  group.add(doorway(definition.door, width, depth, wallHeight, look.trim));
+  group.add(threshold(definition, look.trim));
 
   if (shape === 'workshop') {
     // The chimney is the whole of what tells a smithy from a shed at the
@@ -121,43 +140,66 @@ export function buildBuilding(definition: BuildingDefinition): BuildingProp {
     group.add(chimney);
   }
 
-  return { object: castsShadow(group), height: wallHeight + roofHeight };
+  /**
+   * The cutaway: the roof always, and whichever walls the camera is looking in
+   * over the top of.
+   *
+   * A wall is in the way exactly when the camera has got past its own plane —
+   * `from.y > depth / 2` for the south wall, and so on round. That is a stronger
+   * test than "the camera is on that side", and stronger on purpose: a camera
+   * due south of a building is a hair to one side or the other of its centre
+   * line, so the weaker test would flicker the east and west walls on the sign
+   * of a rounding error. Past the plane there is no such margin — the camera is
+   * hundreds of units out and the walls are tens apart.
+   */
+  const cutaway = (from: { x: number; y: number } | null): void => {
+    roof.visible = from === null;
+    for (const { edge, mesh } of slabs) {
+      const inTheWay =
+        from !== null &&
+        ((edge === 'north' && from.y < -depth / 2) ||
+          (edge === 'south' && from.y > depth / 2) ||
+          (edge === 'west' && from.x < -width / 2) ||
+          (edge === 'east' && from.x > width / 2));
+      mesh.visible = !inTheWay;
+    }
+  };
+
+  return { object: castsShadow(group), height: wallHeight + roofHeight, cutaway };
 }
 
 /**
- * The door, as a panel laid on the wall it is in.
+ * The door, as a threshold laid across the opening it is in.
  *
- * Flat rather than recessed, because there is nothing behind it to recess into
- * — what it marks is which side of the building is the front, which is the side
- * a counter's queue forms on and the side a tap on the roof walks you round to.
+ * A panel on the wall until the wall gained a hole in it, at which point a panel
+ * is a door that never opens. What is left is the step: flat on the ground,
+ * spanning exactly the gap `buildingWalls` left, so the opening reads as a way
+ * in rather than as a missing wall — and so a building still says which side its
+ * front is from above, which is the one thing the panel was actually for.
  */
-function doorway(
-  edge: ZoneEdge,
-  width: number,
-  depth: number,
-  wallHeight: number,
-  color: number,
-): Mesh {
-  const across = edge === 'north' || edge === 'south' ? width : depth;
-  const doorWidth = Math.min(across * DOOR_SPAN, TILE_SIZE * 0.8);
-  const doorHeight = wallHeight * DOOR_HEIGHT;
-  const thickness = RELIEF * 2;
+function threshold(definition: BuildingDefinition, color: number): Mesh {
+  const standing = { x: 0, y: 0, definition };
+  const gap = doorGap(standing);
+  const { width, height: depth } = definition.body;
+  const edge = definition.door;
+  const horizontal = edge === 'north' || edge === 'south';
+  const span = gap.to - gap.from;
 
   const door = new Mesh(
     new BoxGeometry(
-      edge === 'north' || edge === 'south' ? doorWidth : thickness,
-      doorHeight,
-      edge === 'north' || edge === 'south' ? thickness : doorWidth,
+      horizontal ? span : WALL_THICKNESS,
+      THRESHOLD_HEIGHT,
+      horizontal ? WALL_THICKNESS : span,
     ),
     new MeshLambertMaterial({ color }),
   );
   door.name = 'door';
   const outward = edge === 'south' || edge === 'east' ? 1 : -1;
-  const offset = (edge === 'north' || edge === 'south' ? depth : width) / 2;
+  const offset = (horizontal ? depth : width) / 2 - WALL_THICKNESS / 2;
   door.position.set(
-    edge === 'north' || edge === 'south' ? 0 : outward * offset,
-    doorHeight / 2,
-    edge === 'north' || edge === 'south' ? outward * offset : 0,
+    horizontal ? 0 : outward * offset,
+    THRESHOLD_HEIGHT / 2,
+    horizontal ? outward * offset : 0,
   );
   return door;
 }

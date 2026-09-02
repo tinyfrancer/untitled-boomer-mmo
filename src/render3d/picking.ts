@@ -1,6 +1,5 @@
 import { Box3, Plane, Raycaster, Vector2, Vector3, type PerspectiveCamera } from 'three';
 import { TILE_SIZE } from '../config/constants';
-import { doorPoint } from '../data/buildings';
 import { worldToSim } from './coords';
 import type { Point } from '../systems/MovementSystem';
 import type { Mob } from '../world/Mob';
@@ -66,7 +65,11 @@ export interface PickScene {
   readonly npcs: readonly (Pickable & { readonly npc: WorldNpc })[];
   readonly stations: readonly (Pickable & { readonly station: WorldStation })[];
   readonly mobs: readonly (Pickable & { readonly mob: Mob })[];
-  readonly buildings: readonly (Pickable & { readonly building: WorldBuilding })[];
+  readonly buildings: readonly (Pickable & {
+    readonly building: WorldBuilding;
+    /** Where a tap on it walks to — see `BuildingActor.tapPoint`. */
+    tapPoint(): Point;
+  })[];
 }
 
 /**
@@ -187,15 +190,15 @@ export function pickTap(raycaster: Raycaster, scene: PickScene): WorldTap | null
    * anywhere along the ray — and a building is three tiles of solid geometry
    * near the middle of town, where a person is a figure at the map's edge.
    *
-   * Ground because there is no third thing a tap on a solid building could
-   * sensibly mean. Left to fall through, the ray would carry on over the roof
-   * and land on the grass *behind* it, which walks the player into the back
-   * wall; the door is the same walk with the useful ending, and it needs no new
-   * `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the context menu
-   * to say so.
+   * Ground because there is no third thing a tap on a building could sensibly
+   * mean. Left to fall through, the ray would carry on over the roof and land on
+   * the grass *behind* it, which walks the player into the back wall; the door —
+   * or, once you are standing at it, the room — is the same walk with the useful
+   * ending, and it needs no new `WorldTap` kind, no case in `ZoneWorld.tap` and
+   * no line in the context menu to say so.
    */
   const building = nearestUnder(raycaster, scene.buildings);
-  if (building) return { kind: 'ground', point: doorPoint(building.building) };
+  if (building) return { kind: 'ground', point: building.tapPoint() };
 
   const point = groundUnder(raycaster);
   return point ? { kind: 'ground', point } : null;

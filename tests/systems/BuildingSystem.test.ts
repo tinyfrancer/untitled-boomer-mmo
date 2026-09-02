@@ -12,12 +12,14 @@ import { NPCS, NPC_INTERACT_RADIUS } from '../../src/data/npcs';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { BLOCKING_TILES } from '../../src/data/tiles';
 import { ZONES, type ZoneDefinition } from '../../src/data/zones';
+import { findPath } from '../../src/systems/PathSystem';
 import {
   arrivalPoint,
   oppositeEdge,
   signpostPoint,
   zoneWorldSize,
 } from '../../src/systems/ZoneSystem';
+import { populateZone } from '../../src/world/zoneEntities';
 
 interface Rect {
   left: number;
@@ -335,6 +337,40 @@ describe('every counter in town', () => {
           Math.hypot(a.dx - b.dx, a.dy - b.dy),
           `${NPCS[a.npcId].name} and ${NPCS[b.npcId].name}`,
         ).toBeGreaterThan(NPC_INTERACT_RADIUS);
+      });
+    });
+  });
+});
+
+/**
+ * The rule this file could only ever approximate before, and the reason phase 2
+ * of `docs/interiors_and_light_plan.md` came before phase 4.
+ *
+ * "Is this counter reachable" used to be checked as *lane clearance* — is the
+ * ground between the door and the open street free of anything solid — because
+ * a straight-line mover was all there was to reason about. With a pathfinder in
+ * the codebase the real question can be asked instead: route a body from where
+ * the zone puts a player to the middle of every building in the game, through
+ * whatever door it has, and fail if any of them cannot be walked into.
+ *
+ * It is the sharpest test of the hollowing, because it fails for every way of
+ * getting it wrong at once: a doorway too narrow for the body, a wall drawn
+ * across its own gap, a room too small to stand in, a building whose door faces
+ * something solid.
+ */
+describe('every building can be walked into', () => {
+  Object.values(ZONES).forEach((zone) => {
+    const buildings = zone.buildingSpawns ?? [];
+    if (buildings.length === 0) return;
+
+    it(`lets a player into every building in ${zone.id}`, () => {
+      const entities = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      const start = entities.spawnPoint;
+
+      entities.buildings.forEach((building) => {
+        const inside = { x: building.x, y: building.y };
+        const route = findPath(entities.collisionWorld, start, inside, PLAYER_HALF_EXTENT);
+        expect(route, `${zone.id}: no way into the ${building.definition.id}`).not.toBeNull();
       });
     });
   });

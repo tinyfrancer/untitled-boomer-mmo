@@ -20,7 +20,8 @@ import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildForge, buildNode, buildSignpost, buildTannery } from './props';
 import { buildBuilding } from './buildings';
 import { buildText } from './text';
-import { buildingRect } from '../data/buildings';
+import { buildingRect, doorPoint, isInside } from '../data/buildings';
+import type { Point } from '../systems/MovementSystem';
 import type { CharacterState } from '../persistence/CharacterState';
 import type { TitleId } from '../types/ids';
 import type { Campfire } from '../world/Campfire';
@@ -440,18 +441,30 @@ export class StationActor implements Actor, Pickable {
 }
 
 /**
- * A building: the largest thing in the world and the least eventful.
+ * How near the doorstep counts as standing on it.
  *
- * No sync, like the forge — nothing about it changes — but it is the one actor
- * that is both `Occluder` and `Pickable`, and for opposite reasons.
+ * A tile, which is what a walk to the door actually leaves: `doorPoint` is half
+ * a tile off the wall and the walk lands inside `arriveRadius` of it, which a
+ * slow frame widens to about 38 units. Wider would be a shop that swallows you
+ * from across the street; narrower would be a second tap that does nothing.
+ */
+const DOOR_REACH = TILE_SIZE;
+
+/**
+ * A building: the largest thing in the world, and the one actor that is both
+ * `Occluder` and `Pickable`, for opposite reasons.
  *
  * It **must** fade, because it is the only thing tall and wide enough to hide
  * the player outright: a shopfront the camera has been dragged behind would
  * otherwise leave nothing on screen to tap. And it is picked *last of all*,
  * below even the forge, because the priority in `pickTap` is not a depth sort —
  * anything ranked above mobs wins from anywhere along the ray, and a building is
- * three tiles of it. What a tap on one resolves to is a walk to its **door**,
- * which is the only part of a solid building worth standing at.
+ * three tiles of it.
+ *
+ * It had no `sync` while it was a solid mass, since nothing about it changed.
+ * A room changes two things, and both are about where the player is standing
+ * rather than about the building: what is drawn of it, and what a tap on it
+ * means.
  */
 export class BuildingActor implements Actor, Pickable, Occluder {
   readonly object = new Group();
@@ -459,6 +472,8 @@ export class BuildingActor implements Actor, Pickable, Occluder {
   private readonly prop: ReturnType<typeof buildBuilding>;
   private readonly box: Box3;
   private occluded = false;
+  private inside = false;
+  private atDoor = false;
 
   constructor(building: WorldBuilding) {
     this.building = building;
@@ -499,14 +514,74 @@ export class BuildingActor implements Actor, Pickable, Occluder {
     return this.box;
   }
 
+  /**
+   * Being inside, which is the occlusion question with a different answer.
+   *
+   * A roof faded to a quarter still reads as a lid over your head, so what
+   * standing in a room does is *take away* the roof and whichever walls the
+   * camera is looking in over — and the fade is switched off while it does,
+   * since the far walls left standing are the whole of what the room is read
+   * against. Which walls those are moves with the camera, so this runs every
+   * frame rather than latching on the way in.
+   */
+  sync(cameraPosition: Vector3, player: Point): void {
+    const inside = isInside(this.building, player);
+    const door = doorPoint(this.building);
+    this.atDoor = Math.hypot(player.x - door.x, player.y - door.y) <= DOOR_REACH;
+    this.prop.cutaway(
+      inside
+        ? {
+            x: cameraPosition.x - this.object.position.x,
+            y: cameraPosition.z - this.object.position.z,
+          }
+        : null,
+    );
+    if (inside === this.inside) return;
+    this.inside = inside;
+    this.applyOpacity();
+  }
+
   setOccluded(occluded: boolean): void {
     if (occluded === this.occluded) return;
     this.occluded = occluded;
-    setOpacity(this.prop.object, occluded ? OCCLUDED_OPACITY : 1);
+    this.applyOpacity();
   }
 
-  pickBox(): Box3 {
-    return this.box;
+  private applyOpacity(): void {
+    setOpacity(this.prop.object, this.occluded && !this.inside ? OCCLUDED_OPACITY : 1);
+  }
+
+  /**
+   * Nothing at all, from inside.
+   *
+   * The box is the whole footprint standing as tall as it is drawn, which from
+   * outside is right three times over — it is what stops you, what hides you and
+   * what a thumb aims at. From *inside* it is a lid over the floor: the tap
+   * would meet the building, resolve to its own doorstep, and walk a player who
+   * wanted to cross the room straight back out of it. The roof is not there to
+   * be tapped through once it has been cut away, so the honest answer is that
+   * there is nothing to pick, and the ray carries on to the ground — which is
+   * the floor.
+   */
+  pickBox(): Box3 | null {
+    return this.inside ? null : this.box;
+  }
+
+  /**
+   * Where a tap on it walks to: the doorstep, or the room once you are standing
+   * on that doorstep.
+   *
+   * Two taps to go indoors, and the second one is why this exists at all. From
+   * outside, the floor cannot be tapped — the roof is drawn over it and the pick
+   * box is the whole footprint standing as tall as it is drawn, so every ray
+   * aimed at the room meets the building. Without a second meaning there is no
+   * way into a building on a phone at all, which would leave the rooms as
+   * something only a keyboard could reach.
+   *
+   * It reads the way a player would say it: walk to the shop, then go in.
+   */
+  tapPoint(): Point {
+    return this.atDoor ? { x: this.building.x, y: this.building.y } : doorPoint(this.building);
   }
 
   dispose(): void {

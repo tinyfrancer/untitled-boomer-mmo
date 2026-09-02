@@ -3,6 +3,7 @@ import { EXIT_MARGIN, PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/con
 import { BLOCKING_TILES, GRASS_TILE, WATER_TILE } from '../../src/data/tiles';
 import {
   clampToWorld,
+  hasLineOfSight,
   isBlocked,
   moveWithCollision,
   type Aabb,
@@ -169,5 +170,61 @@ describe('the world-bounds clamp', () => {
         findExit([...exits], at.x, at.y, map.worldWidth, map.worldHeight, EXIT_MARGIN),
       ).not.toBeNull();
     });
+  });
+});
+
+/**
+ * Sight, which is the same walls asked a different question.
+ *
+ * It exists for one blow: the knife a bandit throws. That was impossible while
+ * a building was a solid mass a player could not be behind, and became possible
+ * the day one was hollowed into a room — so it is a bug this phase created and
+ * this phase closes.
+ */
+describe('hasLineOfSight', () => {
+  it('sees straight across open ground', () => {
+    const map = world(['....', '....', '....']);
+    expect(hasLineOfSight(map, tileCentre(0, 1), tileCentre(3, 1))).toBe(true);
+  });
+
+  it('is stopped by a blocking tile in the way', () => {
+    const map = world(['....', '.#..', '....']);
+    expect(hasLineOfSight(map, tileCentre(0, 1), tileCentre(3, 1))).toBe(false);
+  });
+
+  it('sees past one that is merely near the line', () => {
+    const map = world(['.#..', '....', '....']);
+    expect(hasLineOfSight(map, tileCentre(0, 1), tileCentre(3, 1))).toBe(true);
+  });
+
+  it('is stopped by a blocker, which is what a wall is', () => {
+    const wall = { left: TILE_SIZE, top: 0, right: TILE_SIZE + 16, bottom: TILE_SIZE * 3 };
+    const map = world(['....', '....', '....'], [wall]);
+    expect(hasLineOfSight(map, tileCentre(0, 1), tileCentre(3, 1))).toBe(false);
+  });
+
+  /**
+   * The measurement that decides whether the exact test was worth writing: a
+   * wall is a quarter of a tile thick, and a sampled line would need a step
+   * finer than that to catch one — a constant that quietly stops being fine
+   * enough the day something thinner is built.
+   */
+  it('catches a wall thinner than the tile it stands in', () => {
+    const thin = { left: 100, top: 0, right: 100 + TILE_SIZE / 4, bottom: TILE_SIZE * 3 };
+    const map = world(['....', '....', '....'], [thin]);
+    expect(hasLineOfSight(map, tileCentre(0, 1), tileCentre(3, 1))).toBe(false);
+  });
+
+  // A line that stops short of a wall has not gone through it, which is what
+  // keeps this a question about the gap rather than about the direction.
+  it('does not see through something beyond the far end of the line', () => {
+    const beyond = { left: TILE_SIZE * 3, top: 0, right: TILE_SIZE * 4, bottom: TILE_SIZE * 3 };
+    const map = world(['.....', '.....', '.....'], [beyond]);
+    expect(hasLineOfSight(map, tileCentre(0, 1), tileCentre(2, 1))).toBe(true);
+  });
+
+  it('reads the same line backwards', () => {
+    const map = world(['....', '.#..', '....']);
+    expect(hasLineOfSight(map, tileCentre(3, 1), tileCentre(0, 1))).toBe(false);
   });
 });

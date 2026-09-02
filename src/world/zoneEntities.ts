@@ -1,4 +1,4 @@
-import { BUILDINGS, buildingRect, type BuildingDefinition } from '../data/buildings';
+import { BUILDINGS, buildingWalls, type BuildingDefinition } from '../data/buildings';
 import { ENEMIES } from '../data/enemies';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { BLOCKING_TILES } from '../data/tiles';
@@ -139,7 +139,11 @@ export function populateZone(
         ...nodes
           .filter((node) => node.definition.blocks !== null)
           .map((node) => node.blockerRect()),
-        ...buildings.map(buildingRect),
+        // Walls rather than footprints: a building is a shell you can walk
+        // into now, so what stops you is four wall slabs with a gap in one of
+        // them. `buildingRect` is still the footprint — the map, the pick box
+        // and the fade all want that — and these are the other question.
+        ...buildings.flatMap(buildingWalls),
       ],
     },
   };

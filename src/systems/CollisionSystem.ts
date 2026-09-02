@@ -83,6 +83,76 @@ export function isBlocked(world: CollisionWorld, box: Aabb): boolean {
   return hitsBlockingTile(world, box) || hitsBlocker(world, box);
 }
 
+/**
+ * Whether a segment crosses a rectangle, by the slab method.
+ *
+ * Exact rather than sampled, and that is not fussiness: the thinnest solid
+ * thing in the world is a building's wall at a quarter of a tile, so a sampled
+ * line would need a step small enough to catch one and would still be a
+ * constant that quietly stops being small enough the day something thinner is
+ * built.
+ */
+function segmentCrosses(from: Point, to: Point, rect: Bounds): boolean {
+  const delta = { x: to.x - from.x, y: to.y - from.y };
+  let enter = 0;
+  let exit = 1;
+
+  // One axis at a time: the span of the line that is inside the rect's slab on
+  // that axis. The line crosses the rect when the two spans overlap.
+  const slab = (start: number, step: number, near: number, far: number): boolean => {
+    if (step === 0) return start > near && start < far;
+    const first = (near - start) / step;
+    const second = (far - start) / step;
+    enter = Math.max(enter, Math.min(first, second));
+    exit = Math.min(exit, Math.max(first, second));
+    return true;
+  };
+
+  if (!slab(from.x, delta.x, rect.left, rect.right)) return false;
+  if (!slab(from.y, delta.y, rect.top, rect.bottom)) return false;
+  return enter < exit;
+}
+
+/**
+ * Whether there is anything solid between two points.
+ *
+ * The same walls and rock a body cannot walk through, asked as a question about
+ * sight rather than about movement — so it takes two points rather than a body,
+ * since nothing here has to *fit* anywhere.
+ *
+ * What it is for is the blow that crosses a gap: a knife thrown through a shop
+ * wall was impossible while a building was a solid mass and became possible the
+ * day one was hollowed out. It is deliberately not asked of an auto-attack. A
+ * tree trunk is a blocker like a wall is, so gating every swing on this would
+ * make every tree in the game a thing to fight around — which is a retune of
+ * the whole of combat rather than the fix to a bug.
+ */
+export function hasLineOfSight(world: CollisionWorld, from: Point, to: Point): boolean {
+  if (world.blockers.some((rect) => segmentCrosses(from, to, rect))) return false;
+
+  // Only the tiles the line's own bounding box reaches, which for anything
+  // thrown in this game is a handful of cells.
+  const firstCol = Math.max(0, Math.floor(Math.min(from.x, to.x) / TILE_SIZE));
+  const lastCol = Math.floor(Math.max(from.x, to.x) / TILE_SIZE);
+  const firstRow = Math.max(0, Math.floor(Math.min(from.y, to.y) / TILE_SIZE));
+  const lastRow = Math.floor(Math.max(from.y, to.y) / TILE_SIZE);
+
+  for (let row = firstRow; row <= lastRow; row += 1) {
+    for (let col = firstCol; col <= lastCol; col += 1) {
+      const tile = world.grid[row]?.[col];
+      if (tile === undefined || !world.blockingTiles.has(tile)) continue;
+      const rect = {
+        left: col * TILE_SIZE,
+        top: row * TILE_SIZE,
+        right: (col + 1) * TILE_SIZE,
+        bottom: (row + 1) * TILE_SIZE,
+      };
+      if (segmentCrosses(from, to, rect)) return false;
+    }
+  }
+  return true;
+}
+
 export function clampToWorld(box: Aabb, world: CollisionWorld): Point {
   const inside = (value: number, half: number, size: number): number =>
     clamp(value, half, Math.max(half, size - half));

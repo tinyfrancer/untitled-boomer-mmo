@@ -265,6 +265,10 @@ export class ZoneView3D {
     // Only the props are asked: a rat standing in front of the player is not
     // something they need to see past, and fading creatures would fight the
     // death fade for the same materials.
+    // The room the player is standing in, if they are standing in one. Before
+    // the fade rather than after it, because a building being cut away is what
+    // decides whether it may also be faded.
+    this.buildingActors.forEach((actor) => actor.sync(this.camera.position, world.player));
     applyOcclusion(this.camera.position, world.player, this.occluders);
 
     // Billboards last, against the camera this frame is about to be drawn with.
