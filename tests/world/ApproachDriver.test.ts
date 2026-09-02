@@ -31,7 +31,11 @@ function driver(target: Mob | null = null) {
   // the origin a half-extent away from anything it was walking to.
   kit.player.setPosition(100, 200);
   const onKeyboardMove = vi.fn();
-  const approach = new ApproachDriver(kit.ctx, { targeting: { target }, onKeyboardMove });
+  const approach = new ApproachDriver(kit.ctx, {
+    targeting: { target },
+    collisionWorld: OPEN,
+    onKeyboardMove,
+  });
   // One frame of the world: the driver steers, the player integrates.
   const step = (deltaMs = 100) => {
     approach.update(deltaMs);

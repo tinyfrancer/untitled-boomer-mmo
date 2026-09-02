@@ -573,3 +573,78 @@ wall is a worse idea than the corner it replaced, where the forced leg is the ro
 refusing it leaves nothing. Holding the forced leg to the true body was tried and is too strict by a
 hair — it rejects a leg that _touches_ a tree trunk's edge without crossing it, which is most of the
 paths round a tree stand, and the case it was guarding against is the one entry 35 already refuses.
+
+## 37. The route belongs to the player, and the decision to ask for one belongs to the caller
+
+**2026-09-02 · Claude**
+
+`Player` walks a list of legs; `moveTo` sets a route of one, which is what every walk in the game
+already was. `ApproachDriver` is the only thing that calls `findPath`, so a walk on open ground and a
+walk up to a counter are routed while a pursuit is not.
+
+**Rejected:** planning inside `Player.moveTo`, so that every caller pathed for free; keeping the
+route in `ApproachDriver` and stepping the player toward one leg at a time from there.
+
+**Why:** the two rejected options are the same mistake from opposite ends. Planning in `moveTo` makes
+every caller pay, and the caller that would have paid worst is the pursuit — `ApproachDriver.pursue`
+re-aims at a moving mob every frame, so a plan there is a plan re-made sixty times a second, and a
+route re-made every frame swings between two ways round an obstacle as its quarry drifts. Keeping the
+whole route in the driver leaves `Player.update` unable to answer `hasMoveTarget()` for anything but
+the current leg, which is the flag `AbilityCaster` refuses a cast on and `resolveApproach` reads as
+"still walking" — both would have gone true and false again at every waypoint.
+
+What is left is a split along the seam that was already there: how a walk is _walked_ is the player's,
+because that is where `stepToward` and `moveWithCollision` already live, and whether a walk needs a
+route is the caller's, because only the caller knows whether its destination will still be there when
+the walk arrives.
+
+**What it costs:** mobs still do not path and neither does the player chasing one. Walking round a
+building after something that ran behind it is the case, and it is the same straight-line press it
+has always been.
+
+## 38. A leg is given up inside the frame that reaches it
+
+**2026-09-02 · Claude**
+
+`stepAlongRoute` loops: it drops each leg it has arrived at and steers for the next one in the same
+`update`, rather than one leg per frame.
+
+**Rejected:** a leg per frame, which is what the pathfinder's own test walker does.
+
+**Why:** `stepToward` reports arrival _before_ it moves, so a frame that reaches a waypoint is a frame
+the player stands still. At 60fps that is invisible; at 5fps it is a fifth of a second of nothing, at
+every waypoint — and a route only has waypoints in it because there was a corner there to be got
+round, so the stutter lands exactly where the walk is already hardest to read. The test walker gets
+away with it because it is not counting frames.
+
+## 39. A walk toward something solid is routed to beside it and finished by pressing into it
+
+**2026-09-02 · Claude**
+
+`standNear` backs a blocked goal along the line the walk comes in on until the body fits, and that is
+what the route is asked for. `ApproachDriver.walkTo` then appends the _original_ point as a last leg;
+`walk` does not.
+
+**Rejected:** routing to the goal and letting `findPath` refuse it, so every walk to a tree or a vein
+fell back to the straight line; ending the routed walk at `standNear`'s point for both kinds of walk.
+
+**Why:** `findPath` may not end a route inside a wall and that rule is right, but almost everything
+worth tapping is solid — every tree, every vein, every building — so refusing outright would have
+left the pathfinder wired in and doing nothing for the most repeated action in the game. Backing down
+the line lands where the straight walk would have stopped against the thing anyway, so it changes
+where the player ends up not at all and changes only whether there was a way to get there.
+
+Ending _at_ that point is the part that had to be taken back. A body's width short of a vein, minus
+the arrival band a slow frame widens to 38px, is outside a gather's reach with nothing left to close
+the gap — the walk finished and the gather was abandoned. Pressing up against the trunk is how this
+walk has always ended and is what satisfies the radius `resolveApproach` asks about every frame, so
+the route gets there and the straight line finishes. The split falls where the driver's own split
+already is: something is waiting at the end of a `walkTo` and the radius decides when it is near
+enough, where a `walk` on open ground is answerable in full by the nearest place the body can stand —
+which is why a tap in the middle of the pond now walks to the shore instead of grinding into it.
+
+**What it found and did not fix:** below about 10fps a body cannot close the last pixels onto a
+blocker at all. `moveWithCollision` cuts a frame into half-tile substeps and reverts a blocked one
+whole, so at 5fps it stalls up to 32px out — far enough that a tap on a vein never gathers. That is
+true on `main`, with no route involved, and fixing it is a change to how every walk in the game
+resolves; it is written down here rather than fixed in a phase about routing.

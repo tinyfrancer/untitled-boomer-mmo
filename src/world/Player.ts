@@ -6,7 +6,7 @@ import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { collectEffects, type ActiveEffect } from '../systems/EffectSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { clamp } from '../systems/math';
-import { stepToward, type Point } from '../systems/MovementSystem';
+import { stepToward, type MovementStep, type Point } from '../systems/MovementSystem';
 import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
 import { PLAYER_HALF_EXTENT } from '../config/constants';
 import type { InputState } from '../systems/InputState';
@@ -40,7 +40,12 @@ export class Player {
   armor = 0;
   attackCooldownMs: number;
   private readonly keyboard: InputState;
-  private moveTarget: Point | null = null;
+  /**
+   * The legs of the walk still ahead, nearest first, and empty when standing
+   * still. A straight walk is one leg of it, which is all a walk ever was
+   * before something could hand over a route round a corner.
+   */
+  private route: Point[] = [];
   private gear: Gear;
   private reforges: Reforges;
   // Regen accrues in fractions of a point per frame, so current HP is tracked
@@ -96,15 +101,26 @@ export class Player {
   // Click/tap-to-move: walk toward this world point until arrival, a new
   // destination, or a WASD press takes over.
   moveTo(x: number, y: number): void {
-    this.moveTarget = { x, y };
+    this.route = [{ x, y }];
+  }
+
+  /**
+   * Walk several points in order — what a tap answered by the pathfinder hands
+   * over, where `moveTo` is the same walk with nothing to go round.
+   *
+   * Copied rather than kept, because the caller's list came out of a search and
+   * has no business changing under a walk already using it.
+   */
+  followPath(path: readonly Point[]): void {
+    this.route = path.map((leg) => ({ x: leg.x, y: leg.y }));
   }
 
   stopMoving(): void {
-    this.moveTarget = null;
+    this.route = [];
   }
 
   hasMoveTarget(): boolean {
-    return this.moveTarget !== null;
+    return this.route.length > 0;
   }
 
   isMoving(): boolean {
@@ -312,6 +328,24 @@ export class Player {
     this.vy = vy;
   }
 
+  /**
+   * This frame's velocity along the route, dropping each leg as it is reached.
+   *
+   * A leg is given up and the next one steered for inside the same frame rather
+   * than on the next one. `stepToward` reports arrival *before* it moves, so a
+   * leg per frame would cost the walk a frame at every waypoint — nothing at
+   * 60fps and a fifth of a second at 5, on a route that only has waypoints in
+   * it because there was a corner there to be got round.
+   */
+  private stepAlongRoute(deltaMs: number): MovementStep {
+    for (let leg = this.route[0]; leg !== undefined; leg = this.route[0]) {
+      const step = stepToward(this.x, this.y, leg, this.speed, deltaMs);
+      if (!step.arrived) return step;
+      this.route.shift();
+    }
+    return { vx: 0, vy: 0, arrived: true };
+  }
+
   update(deltaMs: number, world: CollisionWorld): void {
     this.msSinceCombat += deltaMs;
     const beforeHealing = this.hpFloat;
@@ -342,12 +376,9 @@ export class Player {
 
     if (vx !== 0 || vy !== 0) {
       // Keyboard overrides and cancels any click destination.
-      this.moveTarget = null;
-    } else if (this.moveTarget) {
-      const step = stepToward(this.x, this.y, this.moveTarget, this.speed, deltaMs);
-      if (step.arrived) {
-        this.moveTarget = null;
-      }
+      this.route = [];
+    } else {
+      const step = this.stepAlongRoute(deltaMs);
       vx = step.vx;
       vy = step.vy;
     }

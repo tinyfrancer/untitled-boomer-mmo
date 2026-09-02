@@ -149,6 +149,49 @@ export function hasClearLine(
   return true;
 }
 
+/**
+ * Where a walk toward `goal` can actually end, for a body that cannot stand in
+ * it — backing along the line it was going to arrive on until it fits.
+ *
+ * A tree is the case this exists for, and a pond is the other one. The walk was
+ * never going to finish on the trunk; it was going to finish within reach of
+ * it, which is what every caller of `findPath` with something solid at the end
+ * of it means. Refusing outright — which is what `findPath` does with a goal
+ * nothing fits in, correctly, since nothing can end a walk inside a wall —
+ * would throw away the question rather than answer it.
+ *
+ * Backing down the line is the answer because it lands where the straight walk
+ * would have stopped against the thing anyway, so nothing about where the
+ * player ends up changes. What changes is that there is a route to it.
+ *
+ * The goal itself when the body already fits there. Otherwise it backs off no
+ * further than `from`, which is the one point on the line the body is known to
+ * fit at — so the worst answer is "stand where you are", which beside something
+ * you are already pressed against is the right one. The goal comes back
+ * unchanged only when even `from` is solid, which is a body standing inside
+ * something; `findPath` refuses that too, and the caller falls back to the walk
+ * it had before there was a pathfinder.
+ */
+export function standNear(
+  world: CollisionWorld,
+  from: Point,
+  goal: Point,
+  halfExtent: number,
+): Point {
+  if (!isBlocked(world, bodyAt(goal, halfExtent))) return goal;
+  const dx = from.x - goal.x;
+  const dy = from.y - goal.y;
+  const span = Math.hypot(dx, dy);
+  if (span === 0) return goal;
+  const steps = Math.ceil(span / LINE_SAMPLE_STEP);
+  for (let i = 1; i <= steps; i += 1) {
+    const t = Math.min(1, (i * LINE_SAMPLE_STEP) / span);
+    const probe = { x: goal.x + dx * t, y: goal.y + dy * t };
+    if (!isBlocked(world, bodyAt(probe, halfExtent))) return probe;
+  }
+  return goal;
+}
+
 /** Octile distance: the diagonals a straight run would use, then the rest. */
 function heuristic(col: number, row: number, goalCol: number, goalRow: number): number {
   const dc = Math.abs(goalCol - col);
@@ -213,12 +256,8 @@ function pullStraight(
  * The answer excludes the standing spot and ends exactly on the goal, so it is
  * never empty. `null` means the caller should do whatever it did before there was a
  * pathfinder: no route was found, the goal is somewhere the body could not
- * stand anyway, or the world has no grid at all.
- *
- * Nothing calls this yet. It is here ahead of the walk, and proved against
- * hand-built worlds, because wiring it in rewrites how every walk in the game
- * ends and that is a change worth making against a pathfinder already known to
- * be right.
+ * stand anyway, or the world has no grid at all. `ApproachDriver` is the caller,
+ * and the straight line it falls back to on `null` is the whole of its handling.
  */
 export function findPath(
   world: CollisionWorld,
