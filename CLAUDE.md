@@ -418,7 +418,7 @@ still what a thumb aims at and what hides the player, so the three questions one
 answer are two questions now.
 
 It was solid until a walk could route round a corner, and the argument for that is `docs/decisions.md`
-25 and 40-43. Four rules follow, and `tests/systems/BuildingSystem.test.ts` holds them because
+25 and 40-47. Five rules follow, and `tests/systems/BuildingSystem.test.ts` holds them because
 nothing else can see any of them:
 
 - **Every building in the game can be walked into**, proved by routing a body from the zone's spawn
@@ -431,24 +431,40 @@ nothing else can see any of them:
   buildings are in that case (the smithy, the inn and the cottage), and town has no room to grow
   them: a three-tile cottage was tried in every position the south-west corner allows and each one
   put a rat's wander disc or a tree's working ground inside a wall.
+- **Every counter can be walked up to**, which is the same sweep asked of the person rather than the
+  room and is not the same question: a route into a building ends wherever the middle of it is, where
+  a route to a counter has to end on a spot chosen for somebody to stand at. That is what
+  `counterPoint` is for — a tile back from the middle of the room, capped at its half-depth. Pushed
+  further back it lands in the wall's own tile row, and since A\* walks tile centres that is a spot
+  with no cell to reach it through: `findPath` then answers `null` for the whole walk rather than for
+  its last few pixels.
 - **Nothing else in a zone may stand inside one** — not a mob spawn's whole wander disc, not a node,
-  a counter, a station, a signpost, or the band a traveller arrives on. A rat inside a wall is drawn
-  inside it and never wanders out to prove it, the way a misplaced vein never does. (Phase 5 of
-  `docs/interiors_and_light_plan.md` inverts this for counters and leaves it for everything else.)
-- **Every counter's door faces the open ground it is approached across**, and the lane between the
-  two is clear of everything solid. That decides where a shopfront may be built rather than the other
-  way about, and it is why the town is one high street with the counters along the north side of it:
-  the camera stands to the south, so due south is where a tap comes from.
+  a station, a signpost, or the band a traveller arrives on. A rat inside a wall is drawn inside it
+  and never wanders out to prove it, the way a misplaced vein never does. The counters are the
+  exception and are the point: a shop is a room with somebody in it.
+- **Every counter's door faces the open ground it is approached across**, measured out from the
+  doorstep along whichever way the door faces, and the lane is clear of every other building. That
+  decides where a shopfront may be built rather than the other way about, and it is why the town is
+  one high street with the counters along the north side of it: the camera stands to the south, so
+  due south is where a tap comes from. Only the buildings somebody works out of — which way an empty
+  house faces costs nobody anything, and the cottage north of the quartermaster's post fronts
+  straight onto it.
 
-**Going indoors takes two taps, and the second one has no other way of being asked for.** A building
-is picked last of all — below even the forge — and answers with the **ground at its door**, since a
-tap on a wall can only sensibly mean "walk over there" and the useful ending is the doorstep rather
-than the grass behind it. But from outside there is no pixel a thumb could put on a floor: the roof
-is drawn over the room and the pick box is the whole footprint standing as tall as it is drawn, so
-_every_ ray aimed at the inside meets the building. So `BuildingActor.tapPoint` answers with the room
-instead once the player is within a tile of the doorstep — walk to the shop, then go in — and from
-inside, `pickBox()` answers `null` so a tap on the floor reaches the ground. Without both halves the
-rooms would be reachable by keyboard alone, on a game laid out for a phone.
+**A tap on a shopfront is a tap on whoever works behind it** (`BuildingActor.tapAnswer`, and
+`docs/decisions.md` 45). A building is picked last of all — below even the forge — and it answers as
+something else rather than with a kind of its own: the person inside, or the **ground at its door**
+for the ones nobody works out of. The counter comes first because from outside there is no pixel a
+thumb could put on one — the roof is drawn over the room and the pick box is the whole footprint
+standing as tall as it is drawn, so _every_ ray aimed at the inside meets the building. The same ray
+crossing the figure's own box says `npc` too, so the two agree instead of offering a thumb two
+answers depending on where a box happened to fall under a roof.
+
+**Going indoors takes two taps, and the second one has no other way of being asked for.** Where
+nobody works, a tap is the doorstep — and the room instead, once the player is within a tile of that
+doorstep. Walk to the shop, then go in. It outranks the counter, which is what keeps a room reachable
+in the two huts whose counter is served from the threshold. From inside, `pickBox()` answers `null`
+so a tap on the floor reaches the ground. Without all of that the rooms would be reachable by
+keyboard alone, on a game laid out for a phone.
 
 **Standing in one cuts it away rather than fading it** (`BuildingActor.sync`, called once a frame
 from `ZoneView3D` before the occlusion pass). The roof goes outright, because a roof faded to a
@@ -690,13 +706,31 @@ fact, and the two drifting apart is how a walk ends at the wrong desk. `NPC_APPE
 `NpcId` for the same reason `NO_GEAR` is keyed by `GearSlotId`: a new person is a compile error until
 they have a look, and `zoneMap` puts them on the map off `npcSpawns` with nothing else written down.
 
+**Every counter stands inside the building it works out of**, at the back of the room and facing the
+door (`counterPoint`). They stood on the doorsteps until the rooms could be walked into. What moved
+with them is **how close you have to stand to be served**: `NPC_INTERACT_RADIUS` is a tile now rather
+than nearly two, because a reach of two tiles hands the purse over through the shopfront — the walk
+stops in the street and nobody ever goes inside, which would leave the rooms as decoration. It is
+what decides whether a room is somewhere you stand, and the arithmetic is unforgiving: a room is
+entered only when its floor reaches further back than that reach, so a **three-tile building is a
+shop you walk into and a two-tile hut is one served from its own doorway**. Four of the six are the
+first kind. `docs/decisions.md` 46 is why the other two are not deepened instead, and
+`BuildingSystem.test.ts` asserts which is which so a room cannot change side by accident.
+
+What makes any of them **findable** from the street is a rule that was already there for another
+reason: a nameplate is a readout, so it is drawn with `depthTest` off and floats over whatever is in
+front of it. A counter's name and quest marker therefore hang over the roof of the shop they work in,
+which is how a player knows the shopkeeper is in the General Store rather than wondering where
+everybody went.
+
 **Where a counter stands is a tap rule twice over.** Every pair of NPCs in a zone sits more than
-`NPC_INTERACT_RADIUS` apart, so which one a tap opens is never a question about pixels — and none of
-them stands on the crossroads. A person on the road a few tiles ahead of the spawn point is standing
-exactly where a player taps to walk forward: the trainer was first placed three tiles up the north
-road and turned "go north" into "open a counter", which smoke caught as three ground-walk checks
-stopping an interact radius short of where they aimed. It is the same class of mistake as drawing a
-signpost under the tab bar, and `tests/world/trainer.test.ts` holds the spacing half of it.
+`NPC_INTERACT_RADIUS` apart, so which one a tap opens is never a question about pixels — walls make
+that harder to get wrong rather than easier, since the radius reaches straight through one — and none
+of them stands on the crossroads. A person on the road a few tiles ahead of the spawn point is
+standing exactly where a player taps to walk forward: the trainer was first placed three tiles up the
+north road and turned "go north" into "open a counter", which smoke caught as three ground-walk
+checks stopping an interact radius short of where they aimed. It is the same class of mistake as
+drawing a signpost under the tab bar, and `tests/world/trainer.test.ts` holds the spacing half of it.
 
 **A counter also needs an apron no creature can wander into**, which is the third half of that rule
 and the one nothing held. `pickTap` is a priority rather than a depth sort, so an NPC beats a mob
@@ -709,7 +743,10 @@ and were untappable whenever they drifted that way. `zones.ts` had already writt
 the forge's placement and moved the furniture for it, having learned it the same way — as a finger
 tap in smoke that selected nothing, one run in three. `tests/render3d/picking.test.ts` holds it now
 over every zone, swept across each mob's whole wander disc rather than checked at the spawn point,
-because a creature is only ever _at_ its spawn on the frame the zone was built. Nodes are left out
+because a creature is only ever _at_ its spawn on the frame the zone was built. The counters moving
+indoors is the same rule paid by somebody else: no mob's disc may reach inside a building either, so
+a person behind a wall is a person a rat cannot stand in front of. The sweep still runs, because what
+holds them apart is two rules in two files agreeing rather than one of them. Nodes are left out
 of that rule on purpose: they are terrain, scattered by the hundred, and a tree between you and a
 rat is in the way visibly, where a counter swallowing the tap looks like nothing at all.
 

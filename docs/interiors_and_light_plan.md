@@ -1,6 +1,6 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phases 0 through 4 done, phase 5 next. Written 2026-09-01 against `7e5f66b`.
+**Status:** phases 0 through 5 done, phase 6 next. Written 2026-09-01 against `7e5f66b`.
 
 - **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
   row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
@@ -35,7 +35,25 @@
     hollowing _created_ rather than one that was already there. Enemy abilities only: a tree trunk is
     a blocker exactly as a wall is, so gating auto-attacks on it would make every tree in the game
     something to fight around.
-- **Phase 5 is next** and is written below. See "Starting a phase cold" at the bottom.
+- **Phase 5 done** 2026-09-02. Every counter in the game works out of a room, the route sweep the
+  plan called the prize is in `tests/systems/BuildingSystem.test.ts`, and a tap on a shopfront is a
+  tap on whoever is behind it. `docs/decisions.md` 45-47 carry the three things it decided, and the
+  first two reverse or go past what is written below:
+  - **A tap on a shopfront answers with the counter** (45), where the table below says "unchanged:
+    a tap on a shop still walks you to its doorstep". Under the plan's letter, shopping became three
+    taps on the most repeated action in the game — and the question could not be left alone anyway,
+    since NPCs outrank buildings in `pickTap` and _part_ of every shopfront already answered with the
+    person behind it.
+  - **`NPC_INTERACT_RADIUS` came down from 120 to 64** (46), which the plan does not mention and
+    which the phase turns out to be about. At two tiles of reach the walk to a counter stops in the
+    street: the room is never entered, and moving the counters inside would have been decoration.
+    The reach is what decides whether a room is somewhere anybody stands.
+  - **Two of the six counters are still served from their doorway** (46), because a two-tile hut has
+    no floor to stand on behind a counter and town has no room to deepen the one it holds. Which
+    buildings are which is asserted rather than left to drift.
+- **Phase 6 is next.** See "Starting a phase cold" at the bottom, and read `docs/decisions.md` 45-47
+  before laying a room out: 46 is the arithmetic that says which rooms a player is ever standing in,
+  which is the same question as which rooms are worth furnishing.
 
 ## Starting a phase cold
 
@@ -45,9 +63,10 @@ A session picking this up from nothing should, in order:
 2. Read this file's phase section, and every `docs/decisions.md` entry from 25 down, which are what
    this upgrade has decided so far and why the alternatives lost. The ones a later phase most needs
    are 30 (the shadow frustum), 33-36 (what the pathfinder actually does, which is not quite what
-   phase 2 was told to build), 39 (how a walk toward something solid ends), and 40-43, which are what
-   a building now _is_. Phase 5 in particular inverts 39 and rests on 43: a counter inside a room is
-   walked to through a door, and the tap that gets you there is the one `tapPoint` already answers.
+   phase 2 was told to build), 39 (how a walk toward something solid ends), 40-43, which are what a
+   building now _is_, and 45-46, which are what a room with somebody in it is. Phase 6 in particular
+   rests on 46: it is the arithmetic that says which rooms a player ever stands in, and furnishing a
+   room nobody enters is furniture nobody sees.
 3. `git log --oneline -15` to see where the last phase actually stopped, which is the only source
    that cannot be out of date.
 4. Branch before the first commit. Never commit to `main`, even for a doc fix.
@@ -254,21 +273,32 @@ walk in the game resolves and does not belong in a phase about routing.
 Interiors are empty rooms at the end of this phase. That is on purpose: an empty room you can walk
 into and out of is the thing to get right before anything stands in one.
 
-### Phase 5 — the counters move inside (PR 6)
+### Phase 5 — the counters move inside (PR 6) — **done**
 
 `npcSpawns` move from doorsteps to interiors. Three rules in `tests/systems/BuildingSystem.test.ts`
 inverted, and the third one gets _stronger_ rather than weaker:
 
-| today                                                             | after                                                                     |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| nothing may stand inside a building                               | the counter stands inside, and nothing blocks the way to it               |
-| the lane from door to open ground is clear                        | unchanged, plus the interior is reachable                                 |
-| a building is picked last and answers with the ground at its door | unchanged — from outside, a tap on a shop still walks you to its doorstep |
+| today                                                             | after                                                                  |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| nothing may stand inside a building                               | the counter stands inside, and nothing blocks the way to it            |
+| the lane from door to open ground is clear                        | unchanged, plus the interior is reachable                              |
+| a building is picked last and answers with the ground at its door | ~~unchanged~~ **it answers with the counter** — `docs/decisions.md` 45 |
 
 The reachability rule is the prize. Today `BuildingSystem.test.ts` checks lane clearance as a
 _proxy_ for "can a player get to this counter". With a pathfinder in the codebase it can ask the
 real question: route from the zone's spawn point to every counter in the game, and fail if any of
 them cannot be reached.
+
+**What it actually turned out to be about** is the reach rather than the geometry. Moving the
+`npcSpawns` was a morning's arithmetic; what took the phase is that `NPC_INTERACT_RADIUS` was 120 —
+nearly two tiles, tuned for people standing in a field — and a three-tile shop is 160 units of floor
+with its doorstep 48 outside that. At 120 the walk to a counter ends _in the street_: the counters
+would have gone indoors and nobody would ever have followed them. The radius is a tile now, and the
+arithmetic that falls out of it is the rule phase 6 inherits — a room is entered only when its floor
+reaches further back than the reach, which a three-tile building does and a two-tile hut does not.
+The prize sweep caught the other half: a counter against its back wall is in the wall's own tile row,
+and A\* walks tile centres, so `findPath` answered `null` for the whole walk rather than the last few
+pixels of it.
 
 ### Phase 6 — fit out the rooms, and light them (PR 7)
 

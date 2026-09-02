@@ -751,3 +751,90 @@ one is the mechanic the wind-up already had, measured a different way.
 The segment test is exact rather than sampled. The thinnest solid thing in the world is a wall at a
 quarter of a tile, so a sampled line needs a step finer than that — and that step is a constant that
 quietly stops being fine enough the day something thinner is built.
+
+## 45. A tap on a shopfront is a tap on whoever works behind it
+
+**2026-09-02 · Claude**
+
+`BuildingActor.tapAnswer` answers a tap on a building somebody works out of with `{kind: 'npc'}` —
+the person inside — where a building nobody works out of still answers with its doorstep, and with
+its room from that doorstep (43). Which building is which is geometric: `occupant` is whoever of the
+zone's people is standing in the room.
+
+**Rejected:** leaving a shopfront answering with its doorstep, which is what phase 5 of
+`docs/interiors_and_light_plan.md` said to do — "unchanged: from outside, a tap on a shop still walks
+you to its doorstep". Also rejected: a `building` kind in `WorldTap`.
+
+**Why:** the counters went behind walls in this phase, and from outside there is no pixel a thumb can
+put on one — the roof is drawn over the room and the pick box is the whole footprint standing as tall
+as it is drawn. Under the plan's letter, shopping became three taps on the most repeated action in
+the game: the doorstep, then the room, then the person now finally visible. It is one tap here, and
+the walk it asks for is the one the pathfinder was built two phases ago to answer.
+
+The stronger reason is that the question could not be left alone. `pickTap` ranks NPCs above
+buildings, so a ray that happens to cross the counter's own box already answered `npc` while the ray
+beside it answered `doorstep` — _part_ of every shopfront meant one thing and part meant the other,
+invisibly, decided by where a figure's box happened to fall under a roof nobody can see through. This
+makes the two agree rather than leaving a thumb two answers.
+
+The doorstep exception from 43 survives and wins over the counter, which is what keeps a room
+reachable: in a hut too shallow to walk into, the walk to the counter ends at the threshold, and the
+second tap from there is still "go in".
+
+## 46. A counter's room has to be three tiles deep, and the reach came down to make four of them one
+
+**2026-09-02 · Claude**
+
+`NPC_INTERACT_RADIUS` is 64 rather than 120. `counterPoint` puts the counter a tile back from the
+middle of its room, capped at the room's own half-depth. Between them, the walk to a counter ends
+inside any room deeper than twice the radius — four of the six — and at the threshold of the other
+two.
+
+**Rejected:** leaving the radius at 120; standing the counter against its back wall; deepening the
+two-tile huts so that every counter is one you walk into.
+
+**Why:** 120 was tuned for people standing in a field, where being generous cost nothing. A
+three-tile shop is 160 units of floor and its doorstep sits 48 outside that, so a reach of 120 is one
+that serves the player _in the street_ — the walk stops before the threshold and nobody ever goes
+inside. That is the whole phase undone: rooms with counters in them that no player ever sees, and a
+phase 6 fitting out furniture nobody would ever stand next to. The reach is what decides whether a
+room is somewhere you stand, so it is the thing that had to move.
+
+Against the back wall was the first placement and it is wrong for a reason worth keeping: A\* walks
+tile centres, so a counter in the wall's own tile row is a counter with no cell to be reached
+through — `footing` refuses the cell, and `findPath` then answers `null` for the entire walk rather
+than for the last few pixels of it. `tests/systems/PathSystem.test.ts` caught it as "town: 992,368:
+expected null not to be null" the first time it was run. A tile back from the middle keeps the
+counter in a cell a body can stand in, and leaves exactly the gap the customer occupies.
+
+Deepening the huts is the fix that would have made the rule uniform, and town has no room for it: the
+quartermaster's post is pinned between the road it fronts and a cottage whose own doorstep is in the
+way, and moving that cottage runs it into either a rat's wander disc or the strip the north road's
+travellers arrive on. So two counters are served from their doorway, and
+`tests/systems/BuildingSystem.test.ts` asserts _which_ — a room that changes side has to be moved
+deliberately rather than drifting.
+
+## 47. A door faces open ground; a counter no longer needs a clear lane of its own
+
+**2026-09-02 · Claude**
+
+The lane sweep in `tests/systems/BuildingSystem.test.ts` measures out from a building's **doorstep**,
+along whichever way its door faces, and only for the buildings somebody works out of. What it used to
+measure was the lane due south of each _counter_. Beside it, a new sweep routes a body from the
+zone's spawn point to every counter in the game.
+
+**Rejected:** keeping the lane measured from the counter; applying the door rule to every building.
+
+**Why:** measured from the counter it is now a question about the shop's own south wall, which is
+always in the way — the person is behind it. What the rule was ever about is the approach, and the
+approach ends at a door. Generalising it to the door also generalises it off the south axis, which is
+what the smithy needed and never had.
+
+Every building was tried and fails honestly: the cottage north of the quartermaster's post fronts
+straight onto it. Which way an empty house faces costs nobody anything, so the rule belongs to the
+buildings that are walked up to on purpose.
+
+The route sweep is the prize phase 2 was built for, and it is not the same assertion as "every
+building can be walked into" one paragraph above it. That one ends wherever the middle of a room is;
+this one has to end on a spot chosen for somebody to stand at, which is the placement 46 got wrong
+the first time.
