@@ -11,7 +11,7 @@ import { arriveRadius, stepToward, type Point } from '../../src/systems/Movement
 import { zoneWorldSize } from '../../src/systems/ZoneSystem';
 import { ZONES } from '../../src/data/zones';
 import { populateZone } from '../../src/world/zoneEntities';
-import { findPath, hasClearLine } from '../../src/systems/PathSystem';
+import { findPath, hasClearLine, standNear } from '../../src/systems/PathSystem';
 
 // A map drawn as rows of characters, one per tile: '.' walkable, '#' water.
 function world(rows: string[], blockers: Bounds[] = []): CollisionWorld {
@@ -384,5 +384,51 @@ describe('hasClearLine', () => {
   it('is happy with a line that clears everything', () => {
     const map = world(['.....', '.....', '.....']);
     expect(hasClearLine(map, at(0, 0), at(4, 2), PLAYER_HALF_EXTENT)).toBe(true);
+  });
+});
+
+/**
+ * Choosing where to walk to is not the same question as finding the way there,
+ * which is why this is beside `findPath` rather than inside it: a route may
+ * never end inside a wall, and a walk toward a tree was always going to end
+ * beside one.
+ */
+describe('standNear', () => {
+  it('hands back a goal the body already fits at, untouched', () => {
+    const map = world(['.....', '.....', '.....']);
+    const goal = at(3, 1);
+    expect(standNear(map, at(0, 1), goal, PLAYER_HALF_EXTENT)).toEqual(goal);
+  });
+
+  it('backs off something solid, along the line the walk comes in on', () => {
+    const map = world(['.....', '..#..', '.....']);
+    const from = at(0, 1);
+    const stood = standNear(map, from, at(2, 1), PLAYER_HALF_EXTENT);
+
+    expect(isBlocked(map, body(stood))).toBe(false);
+    // Between the two, and nearer the thing than the walker: as close as the
+    // straight line would ever have got.
+    expect(stood.x).toBeGreaterThan(from.x);
+    expect(stood.x).toBeLessThan(at(2, 1).x);
+    expect(stood.y).toBeCloseTo(from.y);
+  });
+
+  it('backs off no further than the feet it started from', () => {
+    // A wall the full width of the map with the goal inside it: every point on
+    // the line is solid until the walker's own spot, which is the one place on
+    // it the body is known to fit. Standing still is the right answer — there
+    // is nowhere nearer the thing to be.
+    const map = world(['.....', '#####', '.....']);
+    const from = at(2, 0);
+    expect(standNear(map, from, at(2, 1), PLAYER_HALF_EXTENT)).toEqual(from);
+  });
+
+  it('gives the goal back when even those are solid', () => {
+    // Standing inside something, which the mover allows and this has no better
+    // answer for: the caller falls through to `findPath`, which refuses a goal
+    // nothing fits in, and the straight line is what is left.
+    const map = world(['.....', '#####', '.....']);
+    const goal = at(2, 1);
+    expect(standNear(map, at(1, 1), goal, PLAYER_HALF_EXTENT)).toEqual(goal);
   });
 });

@@ -381,6 +381,7 @@ export class ZoneWorld implements Targeting {
 
     this.approach = new ApproachDriver(this.ctx, {
       targeting: this,
+      collisionWorld: this.collisionWorld,
       // A hand on the keyboard is a hand on the controls, camp included.
       onKeyboardMove: () => this.afk.set(false),
     });
@@ -624,7 +625,7 @@ export class ZoneWorld implements Targeting {
         this.approachStation(target.station);
         return;
       case 'ground':
-        this.player.moveTo(target.point.x, target.point.y);
+        this.approach.walk(target.point);
     }
   }
 

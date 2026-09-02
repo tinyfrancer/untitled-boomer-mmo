@@ -1,6 +1,9 @@
+import { PLAYER_HALF_EXTENT } from '../config/constants';
+import type { CollisionWorld } from '../systems/CollisionSystem';
 import { approachRange, isInRange } from '../systems/CombatSystem';
 import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
 import { arriveRadius, distance, type Point } from '../systems/MovementSystem';
+import { findPath, standNear } from '../systems/PathSystem';
 import type { Targeting } from './targeting';
 import type { WorldContext } from './WorldContext';
 
@@ -15,19 +18,33 @@ interface PendingApproach {
 export interface ApproachDriverDeps {
   /** Only ever read: closing on a target is a walk, but choosing one is not. */
   targeting: Pick<Targeting, 'target'>;
+  /**
+   * What a walk has to get round. A plain value rather than a hook because it
+   * is one for the life of the zone — nothing the player does adds a blocker,
+   * and the driver dies with the world it was built for.
+   */
+  collisionWorld: CollisionWorld;
   /** A hand on the keyboard takes the controls back from every walk. */
   onKeyboardMove(): void;
 }
 
 /**
- * Click-to-move with something waiting at the end of it.
+ * Every click-to-move walk there is.
  *
- * Two walks, and they are different rules. A walk up to a node, a shopkeeper or
- * a signpost has a **destination** captured when it starts — those three stand
- * still — and something to do on arrival. A pursuit has no destination: it
- * re-aims at a mob that is moving, stops inside the player's own reach rather
- * than on top of it, and never carries an action, because the swing is
- * `CombatDirector`'s the moment the range check passes.
+ * Three of them, and the split is what each one knows when it starts. A walk on
+ * open ground has a **destination** and nothing waiting there. A walk up to a
+ * node, a shopkeeper or a signpost has a destination captured when it starts —
+ * those three stand still — and something to do on arrival. A pursuit has no
+ * destination at all: it re-aims at a mob that is moving, stops inside the
+ * player's own reach rather than on top of it, and never carries an action,
+ * because the swing is `CombatDirector`'s the moment the range check passes.
+ *
+ * The first two are routed and the third is not, which is the same call the
+ * plan makes about mobs: a route to something that moves is a route re-planned
+ * every frame, and one re-planned every frame is a walk that swings between two
+ * ways round an obstacle as its quarry drifts. What a pursuit does instead is
+ * exactly what it did before — bear down in a straight line — and what makes
+ * that livable is that anything being chased is coming the other way.
  */
 export class ApproachDriver {
   private readonly ctx: WorldContext;
@@ -41,8 +58,21 @@ export class ApproachDriver {
   }
 
   /**
+   * Walk to a point on open ground, with nothing waiting at the end of it.
+   *
+   * Ends where the body can stand, which for a tap in the middle of the pond is
+   * the shore. Nothing is asking anything of the arrival, so the nearest place
+   * the walk can honestly finish is the whole answer.
+   */
+  walk(at: Point): void {
+    this.ctx.player.followPath(this.routeTo(at));
+  }
+
+  /**
    * Walk to a thing that stands still, then act. The destination is captured
-   * here rather than re-read every frame, which is what that stillness buys.
+   * here rather than re-read every frame, which is what that stillness buys —
+   * and it is what lets the route be found once, at the tap, rather than by a
+   * search running under a walk already in progress.
    */
   walkTo(
     interaction: Pick<PendingInteraction, 'kind' | 'radius'>,
@@ -50,7 +80,31 @@ export class ApproachDriver {
     act: () => void,
   ): void {
     this.pending = { interaction: { ...interaction, point: { x: at.x, y: at.y } }, act };
-    this.ctx.player.moveTo(at.x, at.y);
+    // The last leg is aimed at the thing itself, which is the one place a route
+    // cannot end: a tree is solid, so the route stops a body's width short of
+    // it, and a slow frame's arrival band leaves the walk short of *that* —
+    // outside a gather's reach, with nothing left to close the gap. Pressing up
+    // against the trunk is how this walk has always ended and is what satisfies
+    // the radius `resolveApproach` is asking about every frame. So the route
+    // gets there and the straight line finishes.
+    this.ctx.player.followPath([...this.routeTo(at), { x: at.x, y: at.y }]);
+  }
+
+  /**
+   * The legs that get to where the body can stand, or the straight line at what
+   * was asked for when nothing does.
+   *
+   * The fallback is deliberately aimed at the point rather than at wherever the
+   * search gave up: `null` from `findPath` means "walk the way you walked
+   * before there was a pathfinder", and that walk slides along whatever it meets
+   * and stops where it stops. Anything cleverer here would be a second opinion
+   * about a destination the caller already settled.
+   */
+  private routeTo(at: Point): Point[] {
+    const { collisionWorld } = this.deps;
+    const { player } = this.ctx;
+    const goal = standNear(collisionWorld, player, at, PLAYER_HALF_EXTENT);
+    return findPath(collisionWorld, player, goal, PLAYER_HALF_EXTENT) ?? [at];
   }
 
   /** Close on whatever is selected, until it is inside reach. */

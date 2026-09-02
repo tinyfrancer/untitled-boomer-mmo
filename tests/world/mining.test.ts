@@ -66,28 +66,38 @@ describe('working a vein', () => {
 });
 
 /**
- * The blocker fraction became data in the same change that added veins, and this
- * is why: a boulder wearing a tree's third-of-a-tile trunk would have let the
- * player walk most of the way into it.
+ * A vein is rock all the way up where a tree is a canopy on a trunk, and the
+ * quarry is where a walk actually has to get past one.
+ *
+ * What says so moved when the walk gained a pathfinder. Pressing into the rock
+ * and stopping dead against it used to be the whole of the assertion; a walk
+ * goes round now, so what says the rock is solid is that the route bends at all
+ * — the destination is due north of the start, and nothing walking a straight
+ * line at it has any reason to move sideways.
  */
 describe('a vein in the way', () => {
-  it('stops the player where a canopy would have let them through', () => {
+  it('is walked round rather than pressed into', () => {
     const kit = mining();
     const vein = nodeNamed(kit.world, 'tin-vein');
     const blocker = vein.blockerRect();
 
     // Walked into from the south, which is the side the road comes in on, and
-    // aimed at a spot on the far side of it so the walk never arrives.
-    const from = blocker.bottom + 100;
-    kit.world.teleport(vein.x, from);
+    // aimed squarely at the far side of it. What is over there is the quarry
+    // face, so getting past the rock is the whole of what arriving can mean.
+    kit.world.teleport(vein.x, blocker.bottom + 100);
     kit.world.tap({ kind: 'ground', point: { x: vein.x, y: blocker.top - 100 } });
-    kit.tick(60);
 
-    // Both halves matter: stopped short of the rock, and stopped *at* it rather
-    // than never having set off, which is what a walk that silently failed to
-    // start would look like from the near side.
-    expect(kit.world.player.y).toBeGreaterThan(blocker.bottom);
-    expect(kit.world.player.y).toBeLessThan(from - 32);
-    expect(Math.abs(kit.world.player.x - vein.x)).toBeLessThan(24);
+    let widest = 0;
+    kit.until(
+      () => {
+        widest = Math.max(widest, Math.abs(kit.world.player.x - vein.x));
+        return !kit.world.player.hasMoveTarget();
+      },
+      'the player to get past the vein',
+      20000,
+    );
+
+    expect(kit.world.player.y).toBeLessThan(blocker.top);
+    expect(widest).toBeGreaterThan((blocker.right - blocker.left) / 2);
   });
 });
