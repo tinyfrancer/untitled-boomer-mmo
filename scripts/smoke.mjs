@@ -2532,8 +2532,26 @@ async function bagSheet() {
   });
   await page.mouse.move(bagCenter.x, bagCenter.y);
   await page.mouse.wheel(0, 5000);
-  await page.waitForTimeout(250);
-  const bagScrolled = await bag();
+
+  // Waited out rather than slept through, which is the rule everywhere else in
+  // this file and was the one place it was broken. A wheel is one of the few
+  // things here that cannot go on the hand crank — it is a real input event, and
+  // Chromium animates the scroll it starts on the compositor — so a fixed
+  // wall-clock wait is a guess about how loaded the machine is, and on a CI
+  // runner it guessed wrong: `scrollTop=0` against 159px of overflow, on a check
+  // that passes locally every time. Settling on two equal readings measures the
+  // animation instead of predicting it, and a scroll that never happens still
+  // reads 0 and still fails the check below rather than hanging.
+  const bagScrolled = await (async () => {
+    let last = -1;
+    for (let tries = 0; tries < 40; tries += 1) {
+      const seen = await bag();
+      if (seen.scrollTop > 0 && seen.scrollTop === last) return seen;
+      last = seen.scrollTop;
+      await page.waitForTimeout(50);
+    }
+    return bag();
+  })();
   check(
     'the wheel scrolls the bag and clamps at the end',
     bagScrolled.scrollTop === bagScrolled.maxScroll && bagScrolled.scrollTop > 0,
