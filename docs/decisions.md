@@ -648,3 +648,106 @@ blocker at all. `moveWithCollision` cuts a frame into half-tile substeps and rev
 whole, so at 5fps it stalls up to 32px out — far enough that a tap on a vein never gathers. That is
 true on `main`, with no route involved, and fixing it is a change to how every walk in the game
 resolves; it is written down here rather than fixed in a phase about routing.
+
+## 40. A building blocks with its walls, and its footprint stops being a blocker
+
+**2026-09-02 · Claude**
+
+`buildingWalls` answers with up to five rectangles — three whole walls plus the door wall in the
+segments either side of its opening — and `zoneEntities` gives those to `CollisionSystem` in place of
+the one `buildingRect` it used to. The footprint is still what a thumb aims at and what hides the
+player, so the three questions a building used to answer with one rectangle now answer with two.
+
+**Rejected:** painting the walls in as `WALL_TILE`, which is how the hideout and the barrow are
+solid.
+
+**Why:** a zone's contents are offsets from the middle of the map and the tile grid is written out in
+absolute rows, so a building painted into tiles would have to be placed twice — once in `zones.ts`
+and once in the map file — and moving one would silently move only half of it. That is the same
+argument that put buildings in `buildingSpawns` in the first place, and hollowing does not change it.
+
+**What it costs:** the walls run the full span of the footprint, so they overlap at the corners. That
+is free — a blocker is a rectangle a body may not be in, and being in two of them is being in one —
+and the alternative was four rectangles that have to agree about who owns each corner.
+
+## 41. A doorway is two tiles wide, or the wall is simply open
+
+**2026-09-02 · Claude**
+
+`doorGap` is `Math.min(MIN_DOOR_SPAN, along)`, so a wall no wider than two tiles has no segments at
+all and the front is open. Three buildings are in that case: the smithy, the inn and the cottage.
+
+**Rejected:** growing those three to three tiles so every building could have a doored front.
+
+**Why:** two tiles is measured rather than chosen (decision 35) — a body is exactly one tile wide and
+`footing` refuses to put a waypoint in a gap with no slack in it. Town has no room to grow them: a
+three-tile cottage was tried in every position the south-west corner allows and each one put a rat's
+wander disc or a tree's working ground inside a wall. And for one of the three it is not a compromise
+at all — the `workshop` shape's own comment already called the smithy "a roof over an open front
+rather than a storey".
+
+## 42. Being inside cuts the building away rather than fading it
+
+**2026-09-02 · Claude**
+
+`BuildingActor.sync` hides the roof outright and hides whichever walls the camera has got past the
+plane of, and switches the occlusion fade **off** while it does.
+
+**Rejected:** reusing the fade, which is what `occlusion.ts` already does for a camera behind a
+building.
+
+**Why:** a roof faded to a quarter still reads as a lid over your head. And the far walls are the
+whole of what a room is read against, so fading them along with the near ones leaves an interior with
+no shape at all — the fade and the cutaway are answers to the same question and giving both is worse
+than giving either.
+
+The test for a wall is that the camera is past its own plane rather than merely on its side, which is
+stronger than it needs to be and deliberately so: a camera due south of a building is a hair to one
+side or the other of its centre line, and the weaker test would flicker the east and west walls on
+the sign of a rounding error.
+
+## 43. Two taps to go indoors
+
+**2026-09-02 · Claude**
+
+A tap on a building resolves to its doorstep, as it always has — and to the middle of the room when
+the player is already standing within a tile of that doorstep (`BuildingActor.tapPoint`). From
+inside, the building answers `pickBox()` with `null`, so a tap on the floor reaches the ground.
+
+**Rejected:** leaving the doorstep as the only answer; resolving a tap to wherever the ray meets the
+ground inside the room.
+
+**Why:** from outside there is no pixel a thumb can put on a floor. The roof is drawn over the room
+and the pick box is the whole footprint standing as tall as it is drawn, so every ray aimed at the
+inside meets the building — which means that with one meaning per tap, the rooms this phase opened
+would have been reachable by keyboard alone, on a game laid out for a phone. Reading the ground under
+the ray was the alternative and it answers the wrong question: what the ray meets first is a roof, and
+a tap that fell through one would mean "walk to the grass behind the shop" the moment it missed.
+
+The `null` from inside is the same rule seen from the other side. Left pickable, a tap meant to cross
+a room would resolve to the doorstep and walk the player back out through the door they came in by.
+
+## 44. A blow that crosses a gap needs a line of sight; a swing does not
+
+**2026-09-02 · Claude**
+
+`hasLineOfSight` in `CollisionSystem` is asked before an enemy ability is wound up and again when it
+lands. Auto-attacks, in either direction, are not asked.
+
+**Rejected:** gating every attack on it; gating only the `thrown` ability.
+
+**Why:** the bandit's knife through a shop wall is a bug this phase created — it was impossible to
+stand behind a wall until a building had an inside — so closing it here is closing what hollowing
+opened. Extending it to auto-attacks is not the same size of change at all: a tree trunk is a
+`blockers` entry exactly as a wall is, so every tree in the game would become something to fight
+around, and that is a retune of the whole of combat rather than a fix. Restricting it to the thrown
+one would have left a Cleave landing through a quarter-tile of masonry, which is the same wrongness
+with a shorter reach — and the check is one predicate either way.
+
+Asked at both ends on purpose: refused at the start so a telegraph that could never land is never
+shouted, and again at the finish so stepping behind a wall during the wind-up is a dodge. That second
+one is the mechanic the wind-up already had, measured a different way.
+
+The segment test is exact rather than sampled. The thinnest solid thing in the world is a wall at a
+quarter of a tile, so a sampled line needs a step finer than that — and that step is a constant that
+quietly stops being fine enough the day something thinner is built.

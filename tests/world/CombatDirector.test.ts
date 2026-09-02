@@ -41,6 +41,15 @@ function fight(mobs: Mob[] = [], target: Mob | null = mobs[0] ?? null) {
   const deps = {
     mobs,
     targeting,
+    // Open ground: nothing here is about walls, and `tests/world/combat.test.ts`
+    // is where a line of sight is drawn through a real zone.
+    collisionWorld: {
+      grid: [],
+      blockingTiles: new Set<number>(),
+      worldWidth: 4000,
+      worldHeight: 4000,
+      blockers: [],
+    },
     awardXp: (reward: number) => awarded.push(reward),
     interruptGather: vi.fn(),
     interruptCast: vi.fn(),

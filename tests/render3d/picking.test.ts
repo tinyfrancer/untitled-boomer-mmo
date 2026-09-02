@@ -254,7 +254,7 @@ describe('pickTap', () => {
       npcs: [{ ...standing, npc: nth(world.npcs) }],
       stations: [{ ...standing, station: nth(world.stations) }],
       mobs: [{ ...standing, mob: nth(world.mobs) }],
-      buildings: [{ ...standing, building: nth(world.buildings) }],
+      buildings: [{ ...standing, building: nth(world.buildings), tapPoint: () => spot }],
     };
 
     expect(tapAt(camera, scene, spot)?.kind).toBe('node');
@@ -284,6 +284,48 @@ describe('pickTap', () => {
     const tapped = tapAt(camera, { buildings: [actor] }, roof);
 
     expect(tapped).toEqual({ kind: 'ground', point: doorPoint(building) });
+  });
+
+  /**
+   * And into it on the second tap, which is the only way there is onto a floor.
+   *
+   * From outside, the roof is drawn over the room and the pick box is the whole
+   * footprint standing as tall as it is drawn, so *every* ray aimed at the
+   * inside meets the building — there is no pixel a thumb could put on a floor.
+   * Without a second meaning for the same tap, the rooms this phase opened would
+   * be reachable by keyboard alone, on a game laid out for a phone.
+   */
+  it('walks into it on a second tap, from its own doorstep', () => {
+    const { world } = harness();
+    const building = nth(world.buildings);
+    const actor = new BuildingActor(building);
+    const roof = { x: building.x, y: building.y };
+    const camera = cameraOn({ x: roof.x, y: roof.y + 400 });
+    const door = doorPoint(building);
+
+    // Standing on the doorstep, having tapped it once already.
+    actor.sync(camera.position, door);
+
+    expect(tapAt(camera, { buildings: [actor] }, roof)).toEqual({ kind: 'ground', point: roof });
+  });
+
+  /**
+   * And from inside it answers nothing at all, so the ray reaches the ground —
+   * which is the floor. Left pickable, a tap meant to cross the room would
+   * resolve to the doorstep and walk the player back out through the door.
+   */
+  it('stops swallowing taps once the player is in the room', () => {
+    const { world } = harness();
+    const building = nth(world.buildings);
+    const actor = new BuildingActor(building);
+    const inside = { x: building.x, y: building.y };
+    const camera = cameraOn({ x: inside.x, y: inside.y + 400 });
+
+    actor.sync(camera.position, inside);
+    const tapped = tapAt(camera, { buildings: [actor] }, inside);
+
+    expect(tapped?.kind).toBe('ground');
+    expect(actor.pickBox()).toBeNull();
   });
 
   it('lets a rat standing in front of a shopfront still be attacked', () => {

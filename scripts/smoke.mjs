@@ -1571,6 +1571,117 @@ async function forge() {
   await step(2);
 }
 
+async function interiors() {
+  // --- Going indoors, which is a thing the world could not do at all until this
+  // phase: a building was one solid rect, and its inside was somewhere nothing
+  // could be.
+  //
+  // The geometry either side of this is unit-tested — the walls and the gap in
+  // `tests/world/buildings.test.ts`, the route in `tests/systems/PathSystem.ts`
+  // and `BuildingSystem.test.ts`, the cutaway and the two meanings of a tap in
+  // `tests/render3d/`. What only a browser has is the whole of it at once: a
+  // real press on the canvas, a ray through a camera the render loop has already
+  // moved, a route round a wall, and a roof that has to come off at the end of
+  // it. ---
+
+  await park();
+
+  // Which building is asked at the last moment rather than written down, for the
+  // reason the turned-camera tap below is: `pickTap` is a priority and not a
+  // depth sort, so a wandering rat anywhere along the ray is picked over the
+  // building behind it — and a person standing at a door is picked over their
+  // own shop. Both are correct behaviour and neither is what this is about.
+  const target = await page.evaluate(() => {
+    const w = window.world;
+    /** @type {{ x: number; y: number }[]} */
+    const spots = [...w.mobs.filter((mob) => mob.isAlive()), ...w.npcs];
+    return w.buildings
+      .map((building) => {
+        const at = window.view.worldToScreen(building.x, building.y);
+        const gaps = spots.map((thing) => {
+          const spot = window.view.worldToScreen(thing.x, thing.y);
+          return Math.hypot(spot.x - at.x, spot.y - at.y);
+        });
+        const half = building.definition.body;
+        return {
+          id: building.definition.id,
+          x: building.x,
+          y: building.y,
+          width: half.width,
+          depth: half.height,
+          clearance: gaps.length === 0 ? Infinity : Math.min(...gaps),
+        };
+      })
+      .reduce((best, one) => (one.clearance > best.clearance ? one : best));
+  });
+
+  // South of it and stopped, which is where a player walking up the high street
+  // would be, and where the camera frames the whole shopfront.
+  await page.evaluate((at) => {
+    window.world.clearTarget();
+    window.world.closeCounters();
+    window.world.player.stopMoving();
+    window.world.teleport(at.x, at.y + at.depth / 2 + 160);
+  }, target);
+  await step(2);
+  await draw();
+
+  const roof = await page.evaluate((at) => window.view.worldToScreen(at.x, at.y), target);
+  await clickAt(roof);
+  const atDoor = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        x: window.world.player.x,
+        y: window.world.player.y,
+        walking: window.world.player.hasMoveTarget(),
+      })),
+    (spot) => !spot.walking,
+    'the player to reach the door',
+    20000,
+  );
+  const outside = Math.abs(atDoor.y - target.y) > target.depth / 2;
+  check(
+    `a tap on the ${target.id} walks to its door rather than through it`,
+    outside,
+    `player at ${Math.round(atDoor.x)},${Math.round(atDoor.y)}, door wall at ${
+      target.y + target.depth / 2
+    }`,
+  );
+
+  // And the second tap is the one that has no other way of being asked for: from
+  // out here the roof is drawn over the floor, so there is no pixel a thumb
+  // could put on it.
+  await draw();
+  await clickAt(await page.evaluate((at) => window.view.worldToScreen(at.x, at.y), target));
+  const inside = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        x: window.world.player.x,
+        y: window.world.player.y,
+        walking: window.world.player.hasMoveTarget(),
+      })),
+    (spot) => !spot.walking,
+    'the player to walk inside',
+    30000,
+  );
+  check(
+    `and a second tap walks in through the door of the ${target.id}`,
+    Math.abs(inside.x - target.x) < target.width / 2 &&
+      Math.abs(inside.y - target.y) < target.depth / 2,
+    `player at ${Math.round(inside.x)},${Math.round(inside.y)} for a room at ${target.x},${
+      target.y
+    }`,
+  );
+
+  // The roof coming off is `tests/render3d/buildings.test.ts`'s to assert — it
+  // can read a mesh's visibility with no GPU. What is only true here is that the
+  // screenshot below is of a room rather than of a lid.
+  await page.screenshot({ path: `${OUT}/6b-interior.png` });
+
+  // And back out, so the sections after this one find the player in the open.
+  await park();
+}
+
 async function orbit() {
   // --- The drag, which is the same stream of PointerEvents as the tap and has
   // to be told apart from it. The gesture arithmetic and the camera framing are
@@ -2421,8 +2532,26 @@ async function bagSheet() {
   });
   await page.mouse.move(bagCenter.x, bagCenter.y);
   await page.mouse.wheel(0, 5000);
-  await page.waitForTimeout(250);
-  const bagScrolled = await bag();
+
+  // Waited out rather than slept through, which is the rule everywhere else in
+  // this file and was the one place it was broken. A wheel is one of the few
+  // things here that cannot go on the hand crank — it is a real input event, and
+  // Chromium animates the scroll it starts on the compositor — so a fixed
+  // wall-clock wait is a guess about how loaded the machine is, and on a CI
+  // runner it guessed wrong: `scrollTop=0` against 159px of overflow, on a check
+  // that passes locally every time. Settling on two equal readings measures the
+  // animation instead of predicting it, and a scroll that never happens still
+  // reads 0 and still fails the check below rather than hanging.
+  const bagScrolled = await (async () => {
+    let last = -1;
+    for (let tries = 0; tries < 40; tries += 1) {
+      const seen = await bag();
+      if (seen.scrollTop > 0 && seen.scrollTop === last) return seen;
+      last = seen.scrollTop;
+      await page.waitForTimeout(50);
+    }
+    return bag();
+  })();
   check(
     'the wheel scrolls the bag and clamps at the end',
     bagScrolled.scrollTop === bagScrolled.maxScroll && bagScrolled.scrollTop > 0,
@@ -3378,6 +3507,7 @@ const SECTIONS = [
   ['tab-bar', tabBar],
   ['landscape', landscape],
   ['picking', picking],
+  ['interiors', interiors],
   ['context-menu', contextMenu],
   ['feedback', feedback],
   ['bank', bank],

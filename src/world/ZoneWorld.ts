@@ -405,6 +405,7 @@ export class ZoneWorld implements Targeting {
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,
       targeting: this,
+      collisionWorld: this.collisionWorld,
       awardXp: (reward) => this.awardXp(reward),
       interruptGather: () => this.gathering.interrupt(),
       interruptCast: () => this.abilities.interrupt(),

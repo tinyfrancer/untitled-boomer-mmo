@@ -406,30 +406,68 @@ than a curve laid over the same action. `gatherDurationMs` floors the two terms 
 `MIN_GATHER_FRACTION`, because a capped skill holding a steel tool would otherwise gather instantly,
 which is the channel disappearing rather than a reward.
 
-**A town has walls in it, and a building is solid all the way through**
+**A town has walls in it, and a building is a shell rather than a solid mass**
 (`ZoneDefinition.buildingSpawns` into `data/buildings.ts`, drawn by `render3d/buildings.ts`). It is
-placed by a centre offset like every other spawn and blocks as a `CollisionSystem` blocker beside
+placed by a centre offset like every other spawn and blocks as `CollisionSystem` blockers beside
 the tree trunks rather than as painted-in `WALL_TILE`, because a zone's contents are offsets from the
 middle of the map and the tile grid is written out in absolute rows — one of those two has to be the
-map's own. Being solid is what makes a building the outside of itself: `doorPoint` is where the
-person who works there stands, and walking up to them is what walking into a shop means. (**The
-reason it was solid is gone** — a walk routes round corners now, so a counter behind a doorway is
-one a tap could actually reach. What is left is a wall with nothing behind it, which is what phases 4
-and 5 of `docs/interiors_and_light_plan.md` are for.)
+map's own. What it hands over is `buildingWalls`: three whole walls plus the door wall in the
+segments either side of its opening, which run the full span of the footprint and so overlap at the
+corners — free, since being inside two blockers is the same as being inside one. `buildingRect` is
+still what a thumb aims at and what hides the player, so the three questions one rectangle used to
+answer are two questions now.
 
-Three rules follow, and `tests/systems/BuildingSystem.test.ts` holds all three because nothing else
-can see any of them:
+It was solid until a walk could route round a corner, and the argument for that is `docs/decisions.md`
+25 and 40-43. Four rules follow, and `tests/systems/BuildingSystem.test.ts` holds them because
+nothing else can see any of them:
 
+- **Every building in the game can be walked into**, proved by routing a body from the zone's spawn
+  point to the middle of each one. It is the sharpest test of the hollowing because it fails for
+  every way of getting it wrong at once: a doorway too narrow for the body, a wall drawn across its
+  own gap, a room too small to stand in, a door facing something solid. The lane-clearance rule below
+  used to be a proxy for this; with a pathfinder it is the real question.
+- **A doorway is `MIN_DOOR_SPAN` — two tiles — or the wall is simply open.** `doorGap` takes the
+  lesser of that and the wall's own length, so a two-tile wall has no segments at all. Three
+  buildings are in that case (the smithy, the inn and the cottage), and town has no room to grow
+  them: a three-tile cottage was tried in every position the south-west corner allows and each one
+  put a rat's wander disc or a tree's working ground inside a wall.
 - **Nothing else in a zone may stand inside one** — not a mob spawn's whole wander disc, not a node,
   a counter, a station, a signpost, or the band a traveller arrives on. A rat inside a wall is drawn
-  inside it and never wanders out to prove it, the way a misplaced vein never does.
+  inside it and never wanders out to prove it, the way a misplaced vein never does. (Phase 5 of
+  `docs/interiors_and_light_plan.md` inverts this for counters and leaves it for everything else.)
 - **Every counter's door faces the open ground it is approached across**, and the lane between the
   two is clear of everything solid. That decides where a shopfront may be built rather than the other
   way about, and it is why the town is one high street with the counters along the north side of it:
   the camera stands to the south, so due south is where a tap comes from.
-- **A building is picked last of all** — below even the forge — and answers with the **ground at its
-  door**. See the pick priority below; a tap on a solid wall can only sensibly mean "walk over
-  there", and the useful ending is the doorstep rather than the grass behind it.
+
+**Going indoors takes two taps, and the second one has no other way of being asked for.** A building
+is picked last of all — below even the forge — and answers with the **ground at its door**, since a
+tap on a wall can only sensibly mean "walk over there" and the useful ending is the doorstep rather
+than the grass behind it. But from outside there is no pixel a thumb could put on a floor: the roof
+is drawn over the room and the pick box is the whole footprint standing as tall as it is drawn, so
+_every_ ray aimed at the inside meets the building. So `BuildingActor.tapPoint` answers with the room
+instead once the player is within a tile of the doorstep — walk to the shop, then go in — and from
+inside, `pickBox()` answers `null` so a tap on the floor reaches the ground. Without both halves the
+rooms would be reachable by keyboard alone, on a game laid out for a phone.
+
+**Standing in one cuts it away rather than fading it** (`BuildingActor.sync`, called once a frame
+from `ZoneView3D` before the occlusion pass). The roof goes outright, because a roof faded to a
+quarter still reads as a lid; so does any wall the camera has got _past the plane of_, which is a
+stronger test than "on that side" and stronger on purpose — a camera due south of a building is a
+hair to one side or the other of its centre line, and the weaker test would flicker the two side
+walls on the sign of a rounding error. The fade is switched off while it does, since the far walls
+left standing are the whole of what the room is read against.
+
+**A room is also somewhere to be out of sight, which nothing in the world was before.**
+`hasLineOfSight` in `CollisionSystem.ts` is the same blockers asked about a segment rather than about
+a body, and `CombatDirector` asks it twice per enemy ability: before a wind-up, so a telegraph that
+could never land is never shouted, and again when it resolves, so stepping behind a wall during the
+shout is a dodge. It is deliberately **not** asked of an auto-attack in either direction — a tree
+trunk is a blocker exactly as a wall is, so gating every swing would make every tree in the game
+something to fight around, which is a retune of the whole of combat rather than the fix to a bug the
+hollowing created. The segment test is exact rather than sampled, because the thinnest solid thing in
+the world is a wall at a quarter of a tile and a sampling step fine enough for that is a constant
+that quietly stops being fine enough the day something thinner is built.
 
 **An exit reserves a strip of its own edge, and that is a claim on the town's layout made from
 another zone.** A traveller materialises anywhere along the arriving edge — at whatever fraction of it
@@ -1627,12 +1665,14 @@ the map edge and the simulation does not.
 it.** A kind ranked above mobs wins from _anywhere along the ray_, including well behind what is
 being aimed at — a forge is a tile of furniture near the middle of town and a shopfront is three
 tiles of it, so either one above the mobs silently eats every tap on the rat beyond it. The building
-is also the only kind that answers as something else: it resolves to `{kind: 'ground'}` at its
-`doorPoint`, which needs no new `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the
-context menu. Left to fall through instead, the ray would carry on over the roof and land on the
-grass _behind_ the building — which used to walk the player into the back wall and, now that a walk
-routes, walks them all the way round the block instead. The second is the worse of the two: a tap on
-a shopfront that ends up behind the shop is a minute of walking rather than a wall to back away from.
+is also the only kind that answers as something else: it resolves to `{kind: 'ground'}` at whatever
+`tapPoint` says — its doorstep, or the room once you are standing on that doorstep — which needs no
+new `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the context menu. Left to fall through
+instead, the ray would carry on over the roof and land on the grass _behind_ the building — which
+used to walk the player into the back wall and, now that a walk routes, walks them all the way round
+the block instead. The second is the worse of the two: a tap on a shopfront that ends up behind the
+shop is a minute of walking rather than a wall to back away from. And from _inside_, a building is
+not picked at all (`pickBox()` answers `null`), because there the same box is a lid over the floor.
 
 **A tap and a drag are the same three events, and `render3d/orbit.ts` is what tells them apart.**
 A drag turns the camera's yaw around the player; a tap asks the world for something. The rule is a
@@ -1678,12 +1718,13 @@ Two things follow from the camera being movable at all:
   tap what you cannot see and tapping is the whole game. One ray from the camera to the player's
   feet — the lowest point on them, so it fades a fraction early — against a box per prop. The box is
   the **drawn** canopy, not the collision trunk it stops you with and not the thumb-sized volume it
-  is picked by: three different questions about the same tree. A **building** is the same rule where
-  all three answers coincide — it has no canopy and no trunk, so what stops you, what hides you and
-  what a thumb aims at are one footprint — and it is the thing the fade exists for most, being the
-  only object big enough to leave nothing on screen to tap. Its sign is deliberately left solid: a
-  shopfront the camera is behind still has to say which shop it is. Fishing spots are excluded on
-  purpose, being the one prop drawn transparent already.
+  is picked by: three different questions about the same tree. A **building** answers two of the
+  three with its footprint — what hides you and what a thumb aims at — where what stops you is its
+  walls, and it is the thing the fade exists for most, being the only object big enough to leave
+  nothing on screen to tap. Its sign is deliberately left solid: a shopfront the camera is behind
+  still has to say which shop it is. Fishing spots are excluded on purpose, being the one prop drawn
+  transparent already. And a building the player is _inside_ opts out of the fade entirely — see the
+  cutaway above, which is the same question with the opposite answer.
 
 ## Conventions
 
