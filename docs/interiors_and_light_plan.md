@@ -23,8 +23,11 @@
 A session picking this up from nothing should, in order:
 
 1. Read `CLAUDE.md` — it is loaded automatically and describes the whole system as it stands.
-2. Read this file's phase section, and `docs/decisions.md` entries 25-28, which are what this
-   upgrade decided and why the alternatives lost.
+2. Read this file's phase section, and every `docs/decisions.md` entry from 25 down, which are what
+   this upgrade has decided so far and why the alternatives lost. The ones a later phase most needs
+   are 30 (the shadow frustum), 33-36 (what the pathfinder actually does, which is not quite what
+   phase 2 was told to build) and 36's two-tile doorway, which phase 4 was expecting to discover for
+   itself.
 3. `git log --oneline -15` to see where the last phase actually stopped, which is the only source
    that cannot be out of date.
 4. Branch before the first commit. Never commit to `main`, even for a doc fix.
