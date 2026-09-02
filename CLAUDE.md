@@ -254,11 +254,12 @@ add to it:
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
 through), `AfkCamp`, `ShopSession`, `BankSession`, `TrainerSession`, `BountySession`, `QuestDesk`,
 `ContextMenuSession` (what a press held is about, and what was chosen from it), and `ApproachDriver`
-(the two click-to-move walks). Each owns its own state, is constructed by `ZoneWorld` and reaches
-the rest of the zone through two things and no others: the `WorldContext` they all share — the
-clock, the character, the player, both channels out of the simulation, and the handful of
-publishers more than one of them needs — and a small `Deps` interface of named hooks declared in
-its own file. A new rule belongs in the collaborator that owns the state it reads; a new
+(all three click-to-move walks, and the only thing that asks for a route). Each owns its own state,
+is constructed by `ZoneWorld` and reaches the rest of the zone through two things and no others: the
+`WorldContext` they all share — the clock, the character, the player, both channels out of the
+simulation, and the handful of publishers more than one of them needs — and a small `Deps` interface
+declared in its own file, of named hooks plus, where a collaborator needs one, a value that is fixed
+for the life of the zone (the driver's `collisionWorld` is the one). A new rule belongs in the collaborator that owns the state it reads; a new
 collaborator gets a `Deps` of its own rather than a reference to the world. What is left in
 `ZoneWorld` is what none of them can own: the entities, the order the tick runs in, what is
 selected (`world/targeting.ts`, which is the read-only view of it three of them get), the
@@ -410,13 +411,11 @@ which is the channel disappearing rather than a reward.
 placed by a centre offset like every other spawn and blocks as a `CollisionSystem` blocker beside
 the tree trunks rather than as painted-in `WALL_TILE`, because a zone's contents are offsets from the
 middle of the map and the tile grid is written out in absolute rows — one of those two has to be the
-map's own. Being solid is the load-bearing decision and not a shortcut: click-to-move is a straight
-line with collision sliding and **nothing routes round a corner**, so a counter behind a doorway is a
-counter a tap walks into a wall trying to reach, from three sides of its own shop. What a building is
-for here is the outside of it — `doorPoint` is where the person who works there stands, and walking
-up to them is what walking into a shop means. (A pathfinder exists now and nothing calls it — see
-below — so this paragraph is still true of the game and is what `docs/interiors_and_light_plan.md`
-is working through reversing.)
+map's own. Being solid is what makes a building the outside of itself: `doorPoint` is where the
+person who works there stands, and walking up to them is what walking into a shop means. (**The
+reason it was solid is gone** — a walk routes round corners now, so a counter behind a doorway is
+one a tap could actually reach. What is left is a wall with nothing behind it, which is what phases 4
+and 5 of `docs/interiors_and_light_plan.md` are for.)
 
 Three rules follow, and `tests/systems/BuildingSystem.test.ts` holds all three because nothing else
 can see any of them:
@@ -819,11 +818,11 @@ it lives in `systems/CombatSystem.ts` and is called from `ZoneWorld`, which reso
 directions: `updateCombat()` for the player's swings and `updateEnemyAttacks()` for everything
 hitting back.
 
-**There is a pathfinder, and nothing calls it yet** (`systems/PathSystem.ts`). `findPath` is A\* over
-the same tile grid `CollisionSystem` thinks in, answering with the points to walk to in order, or
-`null` — which means "do what you did before there was a pathfinder", so wiring it in is a fallback
-to the straight line rather than a failure to handle. It is here ahead of the walk because using it
-rewrites how every walk in the game ends.
+**A tap routes round what is in the way, and `ApproachDriver` is the only thing that asks**
+(`systems/PathSystem.ts`). `findPath` is A\* over the same tile grid `CollisionSystem` thinks in,
+answering with the points to walk to in order, or `null` — which means "do what you did before there
+was a pathfinder", so the driver's whole handling of it is a fallback to the straight line rather
+than a failure case.
 
 What makes a cell passable is **`isBlocked` on the body being routed**, rather than a second grid
 built by rasterising the blockers: testing the whole body at a point _is_ the configuration-space
@@ -844,6 +843,36 @@ not undoing:
   drives every route it builds through `stepToward` and `moveWithCollision` at 60fps and at 5, over
   hand-built worlds and over every zone as `populateZone` builds it. Four routes that read perfectly
   were refuted that way, which is the whole reason the two rules above exist.
+
+**Walking one is `Player`'s and asking for one is the caller's**, which is the split that let this be
+wired in without touching anything else. `Player` holds a list of legs and `moveTo` sets a route of
+one — which is what a walk always was — so `hasMoveTarget()` stays true across a whole route, and the
+two things that read it (`AbilityCaster` refusing a cast, `resolveApproach` asking whether the walk is
+over) went on meaning what they meant. A leg is **given up inside the frame that reaches it** rather
+than one per frame: `stepToward` reports arrival before it moves, so a leg a frame is a stall at every
+waypoint — a fifth of a second of one at 5fps, exactly where the corner was that put the waypoint
+there. `ApproachDriver` is the only caller, so the plain walk and the walk up to a counter are routed
+and **a pursuit is not**: a plan re-made every frame for a moving mob swings between two ways round an
+obstacle as its quarry drifts, which is the same call `docs/interiors_and_light_plan.md` makes about
+mobs not pathing.
+
+**A walk toward something solid is routed to beside it and finished by pressing into it**
+(`standNear`). Almost everything worth tapping is solid — every tree, every vein, every building — and
+a route may not end inside a wall, so routing to the thing itself would have left the pathfinder wired
+in and doing nothing for the most repeated action in the game. `standNear` backs the goal along the
+line the walk comes in on until the body fits, which is where the straight line would have stopped
+anyway, so what it changes is only whether there was a way to get there. `walkTo` then appends the
+**original** point as a last leg and `walk` does not, and that split is load-bearing rather than tidy:
+a body's width short of a vein, less the arrival band a slow frame widens to 38px, is outside a
+gather's reach with nothing left to close it — the walk finishes and the gather is abandoned. Pressing
+up against the trunk is what satisfies the radius `resolveApproach` asks about every frame. A `walk`
+on open ground has nothing asking anything of the arrival, so the nearest place the body can stand is
+the whole answer, which is why a tap in the middle of the pond now ends at the shore.
+
+One thing this found and did not fix: **below about 10fps a body cannot close the last pixels onto a
+blocker at all.** `moveWithCollision` cuts a frame into half-tile substeps and reverts a blocked one
+whole, so it stalls up to 32px out — far enough that a tap on a vein never gathers. That predates the
+route and happens with none involved.
 
 **Aggro contract**: `Mob.engage()` starts a chase, `disengage()` drops aggro _and heals the mob
 to full_ on its way back to spawn. Enemies with `aggressive: true` and an `aggroRadius` engage
@@ -1601,7 +1630,9 @@ tiles of it, so either one above the mobs silently eats every tap on the rat bey
 is also the only kind that answers as something else: it resolves to `{kind: 'ground'}` at its
 `doorPoint`, which needs no new `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the
 context menu. Left to fall through instead, the ray would carry on over the roof and land on the
-grass _behind_ the building, walking the player into the back wall.
+grass _behind_ the building — which used to walk the player into the back wall and, now that a walk
+routes, walks them all the way round the block instead. The second is the worse of the two: a tap on
+a shopfront that ends up behind the shop is a minute of walking rather than a wall to back away from.
 
 **A tap and a drag are the same three events, and `render3d/orbit.ts` is what tells them apart.**
 A drag turns the camera's yaw around the player; a tap asks the world for something. The rule is a

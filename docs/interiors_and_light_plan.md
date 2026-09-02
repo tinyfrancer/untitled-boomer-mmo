@@ -1,6 +1,6 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phases 0, 1 and 2 done, phase 3 next. Written 2026-09-01 against `7e5f66b`.
+**Status:** phases 0 through 3 done, phase 4 next. Written 2026-09-01 against `7e5f66b`.
 
 - **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
   row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
@@ -16,7 +16,13 @@
   forward: **a doorway has to be at least two tiles wide**. Phase 4 expected to find that out by
   measurement and this is the measurement, arriving early, because a gap exactly the body's width is
   one it fits only in exact arithmetic.
-- **Phase 3 is unstarted** and is written below. See "Starting a phase cold" at the bottom.
+- **Phase 3 done** 2026-09-02. Every click-to-move walk is routed except the pursuit, and a tap
+  across a tree stand goes round it. Two things the phase turned out to be about are in
+  `docs/decisions.md` 37-39: **the route lives on `Player` and the decision to ask for one lives on
+  the caller**, and **a walk toward something solid is routed to beside it and finished by pressing
+  into it** — without which the pathfinder would have been wired in and done nothing for gathering,
+  since every tree and vein in the game is a goal `findPath` refuses.
+- **Phase 4 is unstarted** and is written below. See "Starting a phase cold" at the bottom.
 
 ## Starting a phase cold
 
@@ -26,8 +32,9 @@ A session picking this up from nothing should, in order:
 2. Read this file's phase section, and every `docs/decisions.md` entry from 25 down, which are what
    this upgrade has decided so far and why the alternatives lost. The ones a later phase most needs
    are 30 (the shadow frustum), 33-36 (what the pathfinder actually does, which is not quite what
-   phase 2 was told to build) and 36's two-tile doorway, which phase 4 was expecting to discover for
-   itself.
+   phase 2 was told to build), 35's two-tile doorway, which phase 4 was expecting to discover for
+   itself, and 39 (how a walk toward something solid ends), which is the rule phase 5 will be
+   inverting when the counters move inside.
 3. `git log --oneline -15` to see where the last phase actually stopped, which is the only source
    that cannot be out of date.
 4. Branch before the first commit. Never commit to `main`, even for a doc fix.
@@ -183,7 +190,7 @@ A last thing worth knowing before phase 3: `findPath` answers `null` freely and 
 It means "do what you did before there was a pathfinder", so the wiring in phase 3 is a fallback to
 today's straight-line walk rather than a failure to handle.
 
-### Phase 3 — pathfinding wired into the walk (PR 4)
+### Phase 3 — pathfinding wired into the walk (PR 4) — **done**
 
 `ApproachDriver.walkTo` captures a _path_ rather than a point, and walks its legs in order with the
 existing `stepToward`. Buildings are still solid; the only visible change is that a tap across a
@@ -195,6 +202,27 @@ walk the game has, and smoke drives the real ones with a real finger.
 Two rules carried forward from the movement work, both already written down and both still true:
 the last step of a leg clamps to the distance remaining, and the arrival band scales with the
 frame's travel. A path does not change either; it just has more ends.
+
+**What it actually turned out to be about.** The legs were the easy half and took the shape written
+above. Three things the plan did not name are in `docs/decisions.md` 37-39:
+
+- **The route lives on `Player` and the choice to ask for one lives on the caller.** `moveTo` sets a
+  route of one leg, which is what a walk always was, so nothing else in the game had to change; the
+  driver is the only thing that calls `findPath`. That is what keeps the pursuit out of it — a plan
+  re-made every frame for a moving mob swings between two ways round an obstacle — and what keeps
+  `hasMoveTarget()` true for a whole route, which `AbilityCaster` and `resolveApproach` both read.
+- **A leg is given up inside the frame that reaches it**, because `stepToward` reports arrival before
+  it moves and a leg per frame is a stall at every waypoint — a fifth of a second of it at 5fps,
+  exactly where the corner is.
+- **A walk toward something solid is routed to beside it and finished by pressing into it.** This is
+  the one that would have made the phase a no-op if it had been missed: every tree, vein and building
+  is a goal `findPath` refuses outright, so without `standNear` the most repeated action in the game
+  would have gone on walking the straight line.
+
+**Found and deliberately not fixed:** below about 10fps a body cannot close the last pixels onto a
+blocker — `moveWithCollision` reverts a blocked half-tile substep whole, so it stalls up to 32px out
+and a tap on a vein never gathers. True on `main` with no route involved. It is a change to how every
+walk in the game resolves and does not belong in a phase about routing.
 
 ### Phase 4 — hollow the buildings (PR 5)
 
