@@ -62,15 +62,20 @@
     off the smallest room in the game rather than chosen.
   - **The light is one light, moved** (49), in the scene always rather than added at the doorway,
     because three recompiles every program in the world when the light count changes and that frame
-    would be the frame somebody walks through a door. The phase costs one to three milliseconds of
-    the 40ms throttled budget — 25.5ms before it against 27.0ms and 29.2ms on two runs after, which
-    is a spread wide enough that the light and the furniture cannot be told apart in it.
+    would be the frame somebody walks through a door. The phase costs **about ten of the 40ms
+    throttled budget** — three consecutive CI runs read 20.06ms on the phase 4 tree, 20.66ms on
+    phase 5 and 30.74ms on this one, and phase 5 moving within the noise is what makes the ten this
+    phase's rather than the interiors' generally. It was first recorded here as one to three, off a
+    dev container whose baseline turned out to drift 14ms in a day; **`drawTime()` is read off CI**
+    (decision 50).
   - **What the plan did not see coming:** the cutaway takes the roof's shadow with the roof, so a
     room stood in is a room in full sun. That is the reason the light is not optional decoration —
     without it an interior is the outdoors with walls round it.
 - **Phase 7 is next.** See "Starting a phase cold" at the bottom. It is the phase most likely to be
-  cut, and the draw budget is what it has left to spend: 27-29ms of 40 on a throttled pass, measured
-  twice on the same tree, so anything it adds has to be measured the same way rather than once.
+  cut, and the draw budget is what it has left to spend: **30.74ms of 40 on CI, so about nine
+  milliseconds** — and that is a tighter brief than it sounds for a phase whose main lever is the
+  camera pitch, since lowering the pitch is precisely a change to how much ground is drawn per frame.
+  Measure it on CI and more than once; a dev container cannot see nine milliseconds (decision 50).
 
 ## Starting a phase cold
 

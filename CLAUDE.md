@@ -499,9 +499,12 @@ scene with its intensity at zero rather than being added at the doorway, because
 every program in the world when the light count changes and that would be the frame somebody walks
 through a door. It is not decoration on top of a lit room: the cutaway hides the roof and a hidden
 roof casts no shadow, so a room being stood in is a room in full sun, and the lamp is the whole of
-what tells an interior from the grass outside. The rooms and the light together cost one to three
-milliseconds of the 40ms throttled draw budget, measured on full smoke runs either side — a spread
-wide enough that the two halves cannot be told apart in it.
+what tells an interior from the grass outside. The rooms and the light together cost **about ten of
+the forty milliseconds** of the throttled draw budget, which leaves about nine: three consecutive CI
+runs read 20.06ms on the pre-interiors tree, 20.66ms once the counters moved indoors, and 30.74ms
+with the rooms furnished and lit. **Read that number off CI rather than off a dev container** — a
+loaded one reads the same trees 10ms high and has no headroom left to see the difference in, which is
+how the cost was first written down here as one to three.
 
 **A room is also somewhere to be out of sight, which nothing in the world was before.**
 `hasLineOfSight` in `CollisionSystem.ts` is the same blockers asked about a segment rather than about

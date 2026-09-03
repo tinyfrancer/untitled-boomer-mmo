@@ -895,11 +895,48 @@ principle rather than on measurement. Three keys a material's program on how man
 holds, so a light arriving recompiles every program in the world on the frame it arrives — which
 here is the frame somebody walks through a door.
 
-What the phase costs was measured on full throttled smoke runs and is smaller than the run-to-run
-spread makes it look: 25.5ms before it, 26.3ms with the rooms furnished and the light left out of
-the scene, and 27.0ms and 29.2ms on two runs of the finished tree, against the 40ms ceiling phase 1
-established. Two runs of the same tree differ by a couple of milliseconds, so the reading to carry
-forward is "one to three of forty for the phase" rather than a figure for the light alone — the
-attribution the first run seemed to support does not survive the second. Whatever it is, it is paid
-everywhere and always, since every lambert material in the world evaluates one more light per
-fragment whether this one is burning or not.
+What the phase costs is **about ten of the forty milliseconds**, leaving about nine, and the honest
+version of that took two attempts to arrive at. It was first written down here as "one to three of
+forty" off dev-container runs reading 25.5ms before the phase against 27.0 and 29.2 after. Those
+runs were not wrong so much as unrepeatable: the same container later read 33-39ms on the _unchanged_
+phase 5 tree and 42-51ms on this one, so its baseline drifts by more than the effect being measured
+and, sitting at 33-39 against a 40ms ceiling, it has no headroom left to see a difference in at all.
+
+CI is the machine the ceiling was calibrated on and it is quiet: three consecutive runs of the
+throttled pass read 20.06ms on the phase 4 tree, 20.66ms on phase 5, and 30.74ms on this one. Phase 5
+moving within the noise is what makes the ten attributable to _this_ phase rather than to interiors
+arriving generally, and the dev container's own delta was the same ten on a slower floor — two
+machines agreeing on the size while disagreeing on the offset.
+
+The rule that falls out of it, and the reason this paragraph is worth its length: **read `drawTime()`
+off CI, not off a dev container.** A number measured where the baseline moves 14ms in a day is a
+number about the container.
+
+Whatever of the ten belongs to the light rather than the furniture is still not separated, and on
+this evidence cannot be from outside: it is paid everywhere and always, since every lambert material
+in the world evaluates one more light per fragment whether this one is burning or not.
+
+## 50. `drawTime()` is read off CI, not off a dev container
+
+**2026-09-03 · Claude**
+
+The throttled draw figure that decides whether a phase fits its budget is taken from the `browser
+smoke` job on CI. A dev container's number is for iterating on, not for recording.
+
+**Rejected:** trusting the container the work is done in, which is what phase 6 first did.
+
+**Why:** the container reads the _same tree_ differently across a day. Phase 5's code measured 25.4ms
+in the morning and 33.5-38.9ms that evening; phase 6's measured 41.7-50.5ms against a 40ms ceiling it
+was already failing on the unchanged baseline. A floor that moves 14ms cannot measure a 10ms effect,
+and once it sits at 33-39 of 40 there is no headroom left to see anything in at all. CI over the same
+period read 20.06, 20.66 and 30.74ms on the three trees — quiet enough that phase 6's ten
+milliseconds is visible and attributable, which on the container it was not.
+
+**What it cost to learn:** phase 6 shipped its own cost into `CLAUDE.md`, this file and the plan as
+"one to three of forty" when it is ten, and left the plan telling phase 7 it had 11-13ms to spend
+when it has nine. All four were corrected in the same PR that found it.
+
+**The failure mode to watch for:** a red budget check on a loaded container is ambiguous — it says
+either "this phase is too expensive" or "this machine is slow", and the two are told apart by
+measuring the _unchanged_ baseline on the same machine in the same session. That is the step worth
+not skipping, and it is cheap: one full smoke run on the tree you branched from.

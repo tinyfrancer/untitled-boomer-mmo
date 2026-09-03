@@ -200,15 +200,19 @@ export interface RoomLamp {
  * scene: adding one recompiles every program there is, and the frame that
  * happens on would be the frame somebody walks through a door.
  *
- * What that costs is measured rather than assumed: full throttled smoke runs
- * read 25.5ms before this phase and 27.0-29.2ms with it, against a 40ms
- * ceiling. The spread between two runs of the same tree is a couple of
- * milliseconds, so the honest reading is "one to three of forty" for the phase
- * and not a number for this light on its own. What is certain is that whatever
- * it costs is paid everywhere and always — every lambert material in the world
- * evaluates one more light per fragment whether this is burning or not — and
- * that is the price of the alternative being a stutter on the one frame that
- * must not have one.
+ * What that costs is measured rather than assumed, and the number to trust is
+ * CI's, since a loaded container reads everything here 10ms high and the
+ * ceiling was calibrated on a runner. Three consecutive CI runs of the
+ * throttled pass: 20.06ms on the phase 4 tree, 20.66ms on phase 5, and 30.74ms
+ * on this one, against a 40ms ceiling. **So this phase costs about ten of the
+ * forty and leaves about nine** — phase 5 moved within the noise, which is what
+ * makes the ten attributable here rather than to the interiors arriving
+ * generally.
+ *
+ * Whatever of it belongs to this light is paid everywhere and always — every
+ * lambert material in the world evaluates one more light per fragment whether
+ * this is burning or not — and that is the price of the alternative being a
+ * stutter on the one frame that must not have one.
  */
 export class RoomLight {
   readonly object = new PointLight(0xffffff, 0, ROOM_LIGHT_REACH);
