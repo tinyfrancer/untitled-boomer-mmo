@@ -474,6 +474,38 @@ hair to one side or the other of its centre line, and the weaker test would flic
 walls on the sign of a rounding error. The fade is switched off while it does, since the far walls
 left standing are the whole of what the room is read against.
 
+**A room has a floor and a few things standing against its walls, and none of them block**
+(`render3d/interiors.ts`, drawn off the interior half of `BUILDING_LOOKS`). What is in a room is
+keyed by the building's shape the way its colours are — shelves in a hall, a bench in a workshop, a
+bed in a cottage — with a per-`BuildingId` override table beside it for the two rooms whose whole
+character is the thing burning in them, the smithy's forge and the inn's fire. It is the renderer's
+own, like creature colour: nothing here blocks, is gathered, is tapped or is stood on, so the
+simulation has no opinion about any of it.
+
+Not blocking is the room's arithmetic rather than a shortcut. A three-tile shop is 160 units of floor
+with the counter a tile back from the middle and the customer `NPC_INTERACT_RADIUS` in front of it —
+the two people fill it end to end — so a blocking fitting is a cell A\* refuses and `findPath` then
+answers `null` for the whole walk. What keeps that from being a wall drawn where there is none is
+`FITTING_DEPTH`, which is the thickness of the wall a fitting stands against and is **measured off
+the smallest room in the game**: a body in the middle of a two-tile hut leaves sixteen units to
+either side. `tests/render3d/interiors.test.ts` puts a body on all three spots the game stands
+somebody on — the middle of the room, the counter, and where the walk to that counter ends — and
+fails on anything deeper.
+
+**A lit room is one light, moved to whichever room the player is standing in** (`RoomLight` in
+`render3d/lights.ts`, in that room's own `lamp` colour). One rather than one per building, since
+nine of the ten would be lighting the inside of a box no camera can see into — and it sits in the
+scene with its intensity at zero rather than being added at the doorway, because three recompiles
+every program in the world when the light count changes and that would be the frame somebody walks
+through a door. It is not decoration on top of a lit room: the cutaway hides the roof and a hidden
+roof casts no shadow, so a room being stood in is a room in full sun, and the lamp is the whole of
+what tells an interior from the grass outside. The rooms and the light together cost **about ten of
+the forty milliseconds** of the throttled draw budget, which leaves about nine: three consecutive CI
+runs read 20.06ms on the pre-interiors tree, 20.66ms once the counters moved indoors, and 30.74ms
+with the rooms furnished and lit. **Read that number off CI rather than off a dev container** — a
+loaded one reads the same trees 10ms high and has no headroom left to see the difference in, which is
+how the cost was first written down here as one to three.
+
 **A room is also somewhere to be out of sight, which nothing in the world was before.**
 `hasLineOfSight` in `CollisionSystem.ts` is the same blockers asked about a segment rather than about
 a body, and `CombatDirector` asks it twice per enemy ability: before a wind-up, so a telegraph that
