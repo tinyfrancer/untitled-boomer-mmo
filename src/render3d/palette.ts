@@ -46,6 +46,8 @@ export const PALETTE = {
    * ground it sits on is a boulder nobody can see to tap.
    */
   stone: 0x9b968c,
+  /** What is on a bed, which is the one thing in a room that is soft. */
+  bedding: 0xcfc4a8,
   ember: 0xe65100,
   emberMid: 0xffb300,
   emberCore: 0xfff59d,
@@ -61,23 +63,53 @@ export const PALETTE = {
 } as const;
 
 /**
- * What each kind of building is made of.
+ * What each kind of building is made of, outside and in.
  *
  * Keyed by the shape rather than by the building, the same bargain
  * `CREATURE_LOOKS` makes: a new `BUILDINGS` row names a shape and is drawn
  * without a line of view code written for it. What tells the bank from the
  * store is the sign over the door, not a colour of its own — this is the palette
  * of a town, and four shopfronts in four colours would read as a fairground.
+ *
+ * The last three are the room: what is underfoot, what the furniture in
+ * `interiors.ts` is made of, and what the light in there is the colour of. A
+ * room is read against its own floor rather than against the grass outside, so
+ * this is where an interior stops looking like an outdoors with walls round it.
  */
 export const BUILDING_LOOKS = {
-  hall: { wall: 0xc8b28c, roof: 0x6b3f2a, trim: 0x5d4037 },
+  hall: {
+    wall: 0xc8b28c,
+    roof: 0x6b3f2a,
+    trim: 0x5d4037,
+    floor: 0x7d5c3a,
+    fitting: 0x5a3f28,
+    lamp: 0xffc98a,
+  },
   // Soot and iron, and a roof it does not mind burning: the one building on the
-  // row that is a place of work rather than a place of business.
-  workshop: { wall: 0x8c8378, roof: 0x4a4a4a, trim: 0x424852 },
+  // row that is a place of work rather than a place of business. Its floor is
+  // the ground trodden flat rather than boards, and what lights it is a fire.
+  workshop: {
+    wall: 0x8c8378,
+    roof: 0x4a4a4a,
+    trim: 0x424852,
+    floor: 0x59544c,
+    fitting: 0x6b6259,
+    lamp: 0xff9a4d,
+  },
   // Whitewash and thatch, which is what makes a house read as a house at a
   // glance beside a shopfront it is otherwise the same box as.
-  cottage: { wall: 0xd8cdb6, roof: 0xa07d3e, trim: 0x6d4c41 },
-} satisfies Record<BuildingShapeId, { wall: number; roof: number; trim: number }>;
+  cottage: {
+    wall: 0xd8cdb6,
+    roof: 0xa07d3e,
+    trim: 0x6d4c41,
+    floor: 0x9c7c4e,
+    fitting: 0x6d4c41,
+    lamp: 0xffb066,
+  },
+} satisfies Record<
+  BuildingShapeId,
+  { wall: number; roof: number; trim: number; floor: number; fitting: number; lamp: number }
+>;
 
 /** A creature made of itself: fur or shell, and whatever comes off it. */
 export interface BeastLook {

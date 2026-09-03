@@ -1,5 +1,6 @@
 import { BoxGeometry, ConeGeometry, Group, Mesh, MeshLambertMaterial } from 'three';
 import { BUILDING_LOOKS } from './palette';
+import { buildInterior } from './interiors';
 import { castsShadow } from './lights';
 import { WALL_THICKNESS, buildingWalls, doorGap, type BuildingDefinition } from '../data/buildings';
 import type { BuildingShapeId, ZoneEdge } from '../types/ids';
@@ -23,6 +24,8 @@ export interface BuildingProp {
   readonly object: Group;
   /** How tall it is drawn, ridge and all — what hides the player behind it. */
   readonly height: number;
+  /** How tall the walls alone are — what the room's own light hangs against. */
+  readonly wallHeight: number;
   /**
    * Take the lid off, or put it back.
    *
@@ -165,7 +168,12 @@ export function buildBuilding(definition: BuildingDefinition): BuildingProp {
     }
   };
 
-  return { object: castsShadow(group), height: wallHeight + roofHeight, cutaway };
+  // The shell casts and the room does not, so the interior goes in after the
+  // sweep rather than being excluded from it by name — see `buildInterior`.
+  castsShadow(group);
+  group.add(buildInterior(definition));
+
+  return { object: group, height: wallHeight + roofHeight, wallHeight, cutaway };
 }
 
 /**
