@@ -1,6 +1,6 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phases 0 through 5 done, phase 6 next. Written 2026-09-01 against `7e5f66b`.
+**Status:** phases 0 through 6 done, phase 7 next. Written 2026-09-01 against `7e5f66b`.
 
 - **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
   row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
@@ -51,9 +51,26 @@
   - **Two of the six counters are still served from their doorway** (46), because a two-tile hut has
     no floor to stand on behind a counter and town has no room to deepen the one it holds. Which
     buildings are which is asserted rather than left to drift.
-- **Phase 6 is next.** See "Starting a phase cold" at the bottom, and read `docs/decisions.md` 45-47
-  before laying a room out: 46 is the arithmetic that says which rooms a player is ever standing in,
-  which is the same question as which rooms are worth furnishing.
+- **Phase 6 done** 2026-09-03. Every building in the game has a floor and a few things standing
+  against its walls, and the room the player is in is lit by a light of its own.
+  `docs/decisions.md` 48-49 carry the two things it decided, and the first goes further than the
+  plan's line below:
+  - **Nothing in a room blocks** (48), because 46's arithmetic leaves no floor to spend — the counter
+    and the customer already fill a three-tile shop end to end, and a blocking fitting is a cell A\*
+    refuses rather than a shelf in a corner. What keeps that from being the lie the walls are drawn
+    to avoid is that a fitting is exactly as deep as the wall it stands against, which is measured
+    off the smallest room in the game rather than chosen.
+  - **The light is one light, moved** (49), in the scene always rather than added at the doorway,
+    because three recompiles every program in the world when the light count changes and that frame
+    would be the frame somebody walks through a door. The phase costs one to three milliseconds of
+    the 40ms throttled budget — 25.5ms before it against 27.0ms and 29.2ms on two runs after, which
+    is a spread wide enough that the light and the furniture cannot be told apart in it.
+  - **What the plan did not see coming:** the cutaway takes the roof's shadow with the roof, so a
+    room stood in is a room in full sun. That is the reason the light is not optional decoration —
+    without it an interior is the outdoors with walls round it.
+- **Phase 7 is next.** See "Starting a phase cold" at the bottom. It is the phase most likely to be
+  cut, and the draw budget is what it has left to spend: 27-29ms of 40 on a throttled pass, measured
+  twice on the same tree, so anything it adds has to be measured the same way rather than once.
 
 ## Starting a phase cold
 
@@ -64,9 +81,10 @@ A session picking this up from nothing should, in order:
    this upgrade has decided so far and why the alternatives lost. The ones a later phase most needs
    are 30 (the shadow frustum), 33-36 (what the pathfinder actually does, which is not quite what
    phase 2 was told to build), 39 (how a walk toward something solid ends), 40-43, which are what a
-   building now _is_, and 45-46, which are what a room with somebody in it is. Phase 6 in particular
-   rests on 46: it is the arithmetic that says which rooms a player ever stands in, and furnishing a
-   room nobody enters is furniture nobody sees.
+   building now _is_, 45-46, which are what a room with somebody in it is, and 48-49, which are what
+   is in one and what lights it. Phase 7 in particular rests on 49's measurement: the throttled draw
+   budget is the thing a camera change and a reworked ground mesh both spend, and two runs of the
+   same tree differ by a couple of milliseconds — so a reading taken once says nothing.
 3. `git log --oneline -15` to see where the last phase actually stopped, which is the only source
    that cannot be out of date.
 4. Branch before the first commit. Never commit to `main`, even for a doc fix.
@@ -300,7 +318,7 @@ The prize sweep caught the other half: a counter against its back wall is in the
 and A\* walks tile centres, so `findPath` answered `null` for the whole walk rather than the last few
 pixels of it.
 
-### Phase 6 — fit out the rooms, and light them (PR 7)
+### Phase 6 — fit out the rooms, and light them (PR 7) — **done**
 
 Ten interiors, driven from the table rather than hand-placed one at a time: a `BUILDING_LOOKS`
 interior half saying what a floor is, what stands in it and what lights it. A forge glow in the
@@ -308,6 +326,18 @@ smithy, a fire in the inn, shelves behind a counter.
 
 Interior lighting is the payoff for phase 1 having been done properly: a room lit differently from
 the outdoors is the thing that makes going inside feel like going inside.
+
+**What it actually turned out to be about** is that a room has no floor to spare. The fit-out went in
+as written — `BUILDING_LOOKS` gained a floor, a furniture colour and a lamp colour, and
+`render3d/interiors.ts` reads a list of fittings off the shape with a per-building override beside it
+— but every interesting question was 46's arithmetic asked again. The counter and the customer fill a
+three-tile shop end to end, so nothing in a room may block, and a fitting is a wall's thickness deep
+because a body standing in the middle of a two-tile hut leaves exactly that much to either side. See
+`docs/decisions.md` 48.
+
+The light is 49, and the thing neither the plan nor phase 4 saw: the cutaway hides the roof, a hidden
+roof casts nothing, and so a room being stood in is a room in full sunlight. The lamp is not
+atmosphere on top of a lit room — it is the only thing telling an interior from the grass outside.
 
 ### Phase 7 — the ground and the camera (PR 8)
 

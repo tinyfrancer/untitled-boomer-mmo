@@ -838,3 +838,68 @@ The route sweep is the prize phase 2 was built for, and it is not the same asser
 building can be walked into" one paragraph above it. That one ends wherever the middle of a room is;
 this one has to end on a spot chosen for somebody to stand at, which is the placement 46 got wrong
 the first time.
+
+## 48. Nothing in a room blocks, because the room is the route
+
+**2026-09-03 · Claude**
+
+`render3d/interiors.ts` draws a floor and a few pieces of furniture in every building in the game,
+and none of it is a `CollisionSystem` blocker. It lives in the renderer rather than in `data/`, keyed
+by `BuildingShapeId` in `BUILDING_LOOKS` with a per-`BuildingId` override table beside it — the same
+shape `CREATURE_OVERRIDES` already has.
+
+**Rejected:** furniture that blocks, added to `buildingWalls` beside the walls; a counter drawn
+across the front of the person behind it.
+
+**Why:** the arithmetic in 46 leaves a room with almost no floor to spend. A three-tile shop is 160
+units of it; the counter stands a tile back from the middle and the customer ends
+`NPC_INTERACT_RADIUS` in front of that, so the two people already fill the room end to end. A
+blocking fitting would be a cell A\* refuses, and 46 is the record of what that costs — `findPath`
+answers `null` for the entire walk rather than for the last few pixels of it, so a shelf in the wrong
+tile is a shop nobody can reach rather than a shop with a shelf in it. The counter desk is the same
+sum: the gap between the two people is 64 units and a body is 64 wide, so a desk between them is a
+desk somebody is standing in.
+
+What keeps "you can walk through the furniture" from being the lie the walls are drawn to avoid is
+`FITTING_DEPTH`, which is the thickness of the wall a fitting stands against and is **measured
+rather than chosen**. A two-tile hut's floor is 96 units across, so a body standing in the middle of
+one — where the second of the two taps to go indoors puts them — leaves sixteen units to either
+wall. Anything deeper is furniture a player is standing inside the moment they walk in, and
+`tests/render3d/interiors.test.ts` fails on it: it puts a body on all three of the spots the game
+stands somebody on and asserts each is clear.
+
+Keeping it out of `data/` follows from the same fact. Nothing here blocks, is gathered, is tapped or
+is stood on, so the simulation has no opinion about any of it — a shelf is scenery in the sense a
+rat's brown is, and a `BUILDINGS` column for it would be data the world reads and never uses.
+
+## 49. One light indoors, moved to whichever room the player is in
+
+**2026-09-03 · Claude**
+
+`RoomLight` is a single `PointLight` that lives in the scene for the life of the session with its
+intensity at zero, and is moved into a room and lit — in that room's own `lamp` colour — for as long
+as the player is standing in one.
+
+**Rejected:** a light per building; adding and removing the light at the doorway; leaving the rooms
+lit by the sun alone.
+
+**Why:** ten point lights would sit in every shader in the scene for the nine rooms nobody is in, and
+eight of the ten would be lighting the inside of a box with a roof on it that no camera can see into.
+The sun alone was the free option and it is the one the cutaway rules out: taking the lid off a room
+leaves it standing in full sunlight, because a hidden roof casts no shadow either — so without a
+light of its own an interior is the outdoors with walls round it, which is precisely what this phase
+exists to stop.
+
+Adding it at the doorway is the version that costs nothing while outdoors, and it is rejected on
+principle rather than on measurement. Three keys a material's program on how many lights the scene
+holds, so a light arriving recompiles every program in the world on the frame it arrives — which
+here is the frame somebody walks through a door.
+
+What the phase costs was measured on full throttled smoke runs and is smaller than the run-to-run
+spread makes it look: 25.5ms before it, 26.3ms with the rooms furnished and the light left out of
+the scene, and 27.0ms and 29.2ms on two runs of the finished tree, against the 40ms ceiling phase 1
+established. Two runs of the same tree differ by a couple of milliseconds, so the reading to carry
+forward is "one to three of forty for the phase" rather than a figure for the light alone — the
+attribution the first run seemed to support does not survive the second. Whatever it is, it is paid
+everywhere and always, since every lambert material in the world evaluates one more light per
+fragment whether this one is burning or not.
