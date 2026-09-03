@@ -25,7 +25,7 @@ import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { FxLayer } from './fx';
 import { buildGround } from './ground';
-import { Sunlight } from './lights';
+import { RoomLight, Sunlight, type RoomLamp } from './lights';
 import { applyOcclusion, type Occluder } from './occlusion';
 import { normalizeYaw } from './orbit';
 import { pickTap, pointerRay } from './picking';
@@ -78,6 +78,12 @@ export class ZoneView3D {
   // The sun and its fill outlive a zone the way the camera does; what does not
   // is the shadow camera's framing, which is cut to the map it is over.
   private readonly sunlight = new Sunlight();
+  // The one light indoors, moved to whichever room the player is standing in.
+  // Session-long like the sun for a reason of its own: three keys a material's
+  // program on how many lights the scene holds, so a light that came and went
+  // with a doorway would recompile every program in the game on the frame it
+  // was walked through.
+  private readonly roomLight = new RoomLight();
   // Distance-hazed toward the background, so the edge of the world reads as far
   // away rather than as the line where the ground mesh stops. Its range is a
   // function of how far back the camera stands, so it is set on every resize.
@@ -122,7 +128,12 @@ export class ZoneView3D {
 
     this.scene.background = new Color(BACKGROUND);
     this.scene.fog = this.fog;
-    this.scene.add(...this.sunlight.objects, this.fx.object, this.selection.object);
+    this.scene.add(
+      ...this.sunlight.objects,
+      this.roomLight.object,
+      this.fx.object,
+      this.selection.object,
+    );
     this.resize();
   }
 
@@ -170,6 +181,10 @@ export class ZoneView3D {
     // the ring is under a mob that no longer exists.
     this.fx.clear();
     this.selection.follow(null);
+    // A room in the zone being left. `sync` answers nothing while there is no
+    // world, so a light not put out here would still be burning where that
+    // building stood when the next zone is built around it.
+    this.roomLight.shine(null);
     this.actors().forEach((actor) => actor.dispose());
     this.player = null;
     this.mobActors = [];
@@ -275,6 +290,10 @@ export class ZoneView3D {
     // the fade rather than after it, because a building being cut away is what
     // decides whether it may also be faded.
     this.buildingActors.forEach((actor) => actor.sync(this.camera.position, world.player));
+    // And its light, which is the other half of the cutaway: taking the roof
+    // off leaves a room standing in full sun, and the lamp is what still tells
+    // it from the grass outside.
+    this.roomLight.shine(this.roomLamp());
     applyOcclusion(this.camera.position, world.player, this.occluders);
 
     // Billboards last, against the camera this frame is about to be drawn with.
@@ -282,6 +301,21 @@ export class ZoneView3D {
     this.mobActors.forEach((actor) => actor.faceCamera(this.camera));
     this.npcActors.forEach((actor) => actor.faceCamera(this.camera));
     this.signpostActors.forEach((actor) => actor.faceCamera(this.camera));
+  }
+
+  /**
+   * The room the player is standing in, or `null` for one who is outdoors.
+   *
+   * A loop rather than a `find` over `map`, because this runs every frame and
+   * an array per frame for a list that answers `null` almost always is an
+   * allocation the occlusion pass already went out of its way to avoid.
+   */
+  private roomLamp(): RoomLamp | null {
+    for (const actor of this.buildingActors) {
+      const lamp = actor.roomLamp();
+      if (lamp) return lamp;
+    }
+    return null;
   }
 
   // A campfire is the one thing that appears and goes out mid-zone, so it is

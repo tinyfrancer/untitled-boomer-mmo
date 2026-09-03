@@ -1,4 +1,5 @@
-import { DirectionalLight, HemisphereLight, Mesh, Object3D, Vector3 } from 'three';
+import { DirectionalLight, HemisphereLight, Mesh, Object3D, PointLight, Vector3 } from 'three';
+import { TILE_SIZE } from '../config/constants';
 
 /**
  * Where the sun stands, as the direction light arrives *from*.
@@ -143,6 +144,81 @@ export class Sunlight {
    */
   dispose(): void {
     this.sun.shadow.dispose();
+  }
+}
+
+/**
+ * How far the light in a room carries: two tiles and a half.
+ *
+ * Cut to the room rather than left to reach — three fades a point light to
+ * nothing at its own cutoff, so a reach that stops about where the walls do is
+ * what keeps the glow off the grass outside. Nothing in this renderer casts a
+ * shadow from anything but the sun, so a wall does not stop this light: what
+ * stops it is the distance.
+ */
+const ROOM_LIGHT_REACH = TILE_SIZE * 2.5;
+
+/**
+ * How bright it burns, in the candela three's lights are measured in.
+ *
+ * A point light falls off with the square of the distance, so the number that
+ * reads as "about one" at the far corner of a room is in the thousands rather
+ * than near one: a room's corner stands roughly a tile and a quarter from its
+ * middle, and 6500 over that squared is a little under unity. Written as a
+ * measured number rather than a tuned one because that is the sum anybody
+ * changing `ROOM_LIGHT_REACH` has to redo.
+ */
+const ROOM_LIGHT_INTENSITY = 6500;
+
+/** How far up the wall it hangs, as a fraction of that wall's height. */
+export const LAMP_HEIGHT_FRACTION = 0.72;
+
+/**
+ * Where a lit room is and what colour it is lit.
+ *
+ * A `Vector3` held by the actor rather than built each frame: the building does
+ * not move, so this is one allocation for the life of a zone rather than one a
+ * frame for as long as somebody is standing indoors.
+ */
+export interface RoomLamp {
+  readonly at: Vector3;
+  readonly color: number;
+}
+
+/**
+ * The one light inside, moved to whichever room the player is standing in.
+ *
+ * One rather than one per building, and that is the whole decision. Ten point
+ * lights would sit in every shader in the scene for the nine rooms nobody is in,
+ * on a game that is measured on a phone throttled eight times down — and eight
+ * of the ten would be lighting the inside of a box with a roof on it, which no
+ * camera can see into. What a player is ever looking at is the room they are
+ * standing in.
+ *
+ * It stays in the scene with its intensity at zero rather than being added and
+ * removed, because three keys a material's program on how many lights are in the
+ * scene: adding one recompiles every program there is, and the frame that
+ * happens on would be the frame somebody walks through a door.
+ *
+ * What that costs is measured rather than assumed: full throttled smoke runs
+ * read 25.5ms before this phase and 27.0-29.2ms with it, against a 40ms
+ * ceiling. The spread between two runs of the same tree is a couple of
+ * milliseconds, so the honest reading is "one to three of forty" for the phase
+ * and not a number for this light on its own. What is certain is that whatever
+ * it costs is paid everywhere and always — every lambert material in the world
+ * evaluates one more light per fragment whether this is burning or not — and
+ * that is the price of the alternative being a stutter on the one frame that
+ * must not have one.
+ */
+export class RoomLight {
+  readonly object = new PointLight(0xffffff, 0, ROOM_LIGHT_REACH);
+
+  /** Lights the room, or puts it out — `null` for a player who is outdoors. */
+  shine(lamp: RoomLamp | null): void {
+    this.object.intensity = lamp ? ROOM_LIGHT_INTENSITY : 0;
+    if (!lamp) return;
+    this.object.position.copy(lamp.at);
+    this.object.color.setHex(lamp.color);
   }
 }
 

@@ -19,6 +19,8 @@ import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildForge, buildNode, buildSignpost, buildTannery } from './props';
 import { buildBuilding } from './buildings';
+import { LAMP_HEIGHT_FRACTION, type RoomLamp } from './lights';
+import { BUILDING_LOOKS } from './palette';
 import { buildText } from './text';
 import { buildingRect, doorPoint, isInside } from '../data/buildings';
 import type { Point } from '../systems/MovementSystem';
@@ -478,6 +480,7 @@ export class BuildingActor implements Actor, Pickable, Occluder {
   private readonly counter: WorldNpc | null;
   private readonly prop: ReturnType<typeof buildBuilding>;
   private readonly box: Box3;
+  private readonly lamp: RoomLamp;
   private occluded = false;
   private inside = false;
   private atDoor = false;
@@ -489,6 +492,11 @@ export class BuildingActor implements Actor, Pickable, Occluder {
     this.object.position.copy(simToWorld(building.x, building.y));
     this.prop = buildBuilding(building.definition);
     this.object.add(this.prop.object);
+
+    this.lamp = {
+      at: this.object.position.clone().setY(this.prop.wallHeight * LAMP_HEIGHT_FRACTION),
+      color: BUILDING_LOOKS[building.definition.shape].lamp,
+    };
 
     const rect = buildingRect(building);
     this.box = new Box3(
@@ -553,6 +561,18 @@ export class BuildingActor implements Actor, Pickable, Occluder {
     if (occluded === this.occluded) return;
     this.occluded = occluded;
     this.applyOpacity();
+  }
+
+  /**
+   * The room's own light, for as long as somebody is standing in it.
+   *
+   * Answered by the actor rather than read off the world, because being inside
+   * is a question the actor is already asking every frame for the cutaway — and
+   * the two have to agree: a room with its lid off and no light in it is the
+   * outdoors with walls round it, which is the thing this is for.
+   */
+  roomLamp(): RoomLamp | null {
+    return this.inside ? this.lamp : null;
   }
 
   private applyOpacity(): void {

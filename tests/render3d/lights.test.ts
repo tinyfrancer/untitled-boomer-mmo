@@ -3,6 +3,7 @@ import {
   Group,
   Mesh,
   Sprite,
+  Vector3,
   type DirectionalLight,
   type Object3D,
   type OrthographicCamera,
@@ -15,7 +16,7 @@ import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { ZONES } from '../../src/data/zones';
 import { buildBuilding } from '../../src/render3d/buildings';
 import { buildCreature } from '../../src/render3d/creatures';
-import { Sunlight, castsShadow } from '../../src/render3d/lights';
+import { RoomLight, Sunlight, castsShadow } from '../../src/render3d/lights';
 import {
   buildCampfire,
   buildForge,
@@ -97,6 +98,50 @@ describe('Sunlight', () => {
     const first = sunOf(lights).position.clone();
     lights.frameZone(WORLD.width, WORLD.height);
     expect(sunOf(lights).position).toEqual(first);
+  });
+});
+
+describe('RoomLight', () => {
+  const lamp = { at: new Vector3(640, 80, 320), color: 0xff9a4d };
+
+  it('is dark until somebody is standing in a room', () => {
+    expect(new RoomLight().object.intensity).toBe(0);
+  });
+
+  it('stands where the room is and burns the colour the room is lit', () => {
+    const light = new RoomLight();
+    light.shine(lamp);
+
+    expect(light.object.position).toEqual(lamp.at);
+    expect(light.object.color.getHex()).toBe(lamp.color);
+    expect(light.object.intensity).toBeGreaterThan(0);
+  });
+
+  it('goes out when the player walks back out', () => {
+    const light = new RoomLight();
+    light.shine(lamp);
+    light.shine(null);
+    expect(light.object.intensity).toBe(0);
+  });
+
+  /**
+   * The reason it is put out rather than taken away. Three keys a material's
+   * program on how many lights the scene holds, so a light added at a doorway
+   * recompiles every program in the game on the one frame that must not stutter.
+   */
+  it('stays the same light in the scene either way', () => {
+    const light = new RoomLight();
+    const object = light.object;
+    light.shine(lamp);
+    light.shine(null);
+    expect(light.object).toBe(object);
+  });
+
+  /** Cut to the room: a glow that reached past the walls would light the grass. */
+  it('reaches about as far as a room is wide', () => {
+    const light = new RoomLight();
+    expect(light.object.distance).toBeGreaterThan(TILE_SIZE);
+    expect(light.object.distance).toBeLessThan(TILE_SIZE * 4);
   });
 });
 
