@@ -19,6 +19,7 @@ import {
   StationActor,
   type Actor,
 } from './actors';
+import { occupant } from '../data/buildings';
 import { createCamera, fogRange, frameCamera, projectToScreen, resizeCamera } from './camera';
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
@@ -139,7 +140,12 @@ export class ZoneView3D {
     this.npcActors = world.npcs.map((npc) => new NpcActor(npc));
     this.signpostActors = world.signposts.map((signpost) => new SignpostActor(signpost));
     this.stationActors = world.stations.map((station) => new StationActor(station));
-    this.buildingActors = world.buildings.map((building) => new BuildingActor(building));
+    // Who works out of each one, matched by where they are standing rather than
+    // read off a column in the table: a tap on a shopfront is a tap on them, and
+    // from outside there is no other way to reach a counter behind a wall.
+    this.buildingActors = world.buildings.map(
+      (building) => new BuildingActor(building, occupant(building, world.npcs)),
+    );
     this.occluders = [...this.nodeActors, ...this.buildingActors];
     this.actors().forEach((actor) => this.scene.add(actor.object));
 

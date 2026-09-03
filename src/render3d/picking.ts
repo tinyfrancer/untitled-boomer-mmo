@@ -67,8 +67,8 @@ export interface PickScene {
   readonly mobs: readonly (Pickable & { readonly mob: Mob })[];
   readonly buildings: readonly (Pickable & {
     readonly building: WorldBuilding;
-    /** Where a tap on it walks to — see `BuildingActor.tapPoint`. */
-    tapPoint(): Point;
+    /** What a tap on it means — see `BuildingActor.tapAnswer`. */
+    tapAnswer(): WorldTap;
   })[];
 }
 
@@ -182,23 +182,22 @@ export function pickTap(raycaster: Raycaster, scene: PickScene): WorldTap | null
   if (station) return { kind: 'station', station: station.station };
 
   /**
-   * Last of all, and it answers with **ground** rather than with a kind of its
-   * own.
+   * Last of all, and it answers as something else — the person who works there,
+   * or the ground at the door of the ones nobody does.
    *
    * Last for the reason the forge is below the creatures, only more so: the list
    * is a priority and not a depth sort, so a kind placed above mobs wins from
    * anywhere along the ray — and a building is three tiles of solid geometry
    * near the middle of town, where a person is a figure at the map's edge.
    *
-   * Ground because there is no third thing a tap on a building could sensibly
-   * mean. Left to fall through, the ray would carry on over the roof and land on
-   * the grass *behind* it, which walks the player into the back wall; the door —
-   * or, once you are standing at it, the room — is the same walk with the useful
-   * ending, and it needs no new `WorldTap` kind, no case in `ZoneWorld.tap` and
-   * no line in the context menu to say so.
+   * Something else because there is nothing a `building` tap kind could do that
+   * these two do not already: it needs no case in `ZoneWorld.tap` and no line in
+   * the context menu. Left to fall through instead, the ray would carry on over
+   * the roof and land on the grass *behind* it, which used to walk the player
+   * into the back wall and now walks them all the way round the block.
    */
   const building = nearestUnder(raycaster, scene.buildings);
-  if (building) return { kind: 'ground', point: building.tapPoint() };
+  if (building) return building.tapAnswer();
 
   const point = groundUnder(raycaster);
   return point ? { kind: 'ground', point } : null;

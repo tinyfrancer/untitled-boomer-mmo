@@ -4,7 +4,10 @@ import { PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/constants';
 import {
   BUILDINGS,
   buildingRect,
+  counterPoint,
   doorPoint,
+  isInside,
+  occupant,
   type BuildingDefinition,
 } from '../../src/data/buildings';
 import { ENEMIES } from '../../src/data/enemies';
@@ -182,16 +185,18 @@ describe('where the buildings stand', () => {
     });
   });
 
-  it('leaves every counter, station and signpost standing outside', () => {
+  /**
+   * The counters are the one thing this no longer says, and phase 5 of
+   * `docs/interiors_and_light_plan.md` is where it stopped saying it: a shop is
+   * a room with somebody in it now. Everything else in a zone is still held to
+   * standing outside, and a station most of all — it is a tile of furniture that
+   * has to be *tapped*, and a tap cannot reach through a roof.
+   */
+  it('leaves every station and signpost standing outside', () => {
     zones.forEach((zone) => {
       const { width, height } = zoneWorldSize(zone);
       const buildings = placed(zone);
       const standing: Array<{ what: string; x: number; y: number }> = [
-        ...zone.npcSpawns.map(({ dx, dy, npcId }) => ({
-          what: npcId,
-          x: width / 2 + dx,
-          y: height / 2 + dy,
-        })),
         ...(zone.stationSpawns ?? []).map(({ dx, dy, station }) => ({
           what: station,
           x: width / 2 + dx,
@@ -245,43 +250,63 @@ describe('where the buildings stand', () => {
 });
 
 /**
- * The rule solid buildings brought with them, and the one nothing else can hold.
+ * The rule the buildings brought with them, asked of the doors now that the
+ * counters are behind them.
  *
- * `ApproachDriver` walks a straight line and slides along whatever it meets —
- * there is no pathfinding anywhere in this game — so a tap on a counter is only
- * answered if the line to it is clear. The camera stands to the south, which
- * makes due south the direction a player is overwhelmingly likely to be tapping
- * from, and it is the direction `tests/world/trainer.test.ts` and
- * `tests/world/bounty.test.ts` each walk one counter in from.
+ * It used to sweep the lane due south of each *counter*, which was the same
+ * question while a counter stood on its own doorstep and is a different one now:
+ * the first thing south of a shopkeeper is the shop's own south wall. What it
+ * was ever about is the approach — a door has to face open ground, or the room
+ * behind it is a room nobody arrives at — so it is measured from the doorstep
+ * outward, along whichever way the door faces.
  *
- * So every counter's door faces the open ground it is approached across, and the
- * lane between the two is clear of everything solid. That is what decides where
- * a shopfront may be built, rather than the other way about: the town is one
- * street with the counters along the north of it precisely because that leaves
- * every one of them a clear walk up from the square.
+ * Every counter's building only, and not the cottages: which way an empty
+ * house faces costs nobody anything, and the cottage by the quartermaster's post
+ * fronts straight onto it. That is what decides where a *shopfront* may be
+ * built, rather than the other way about: the town is one street with the
+ * counters along the north of it precisely because that leaves every one of
+ * them a clear walk up from the square.
  */
 describe('the walk up to a counter', () => {
   /** As far back as the two approach tests stand, and then some. */
-  const APPROACH = NPC_INTERACT_RADIUS * 3;
+  const APPROACH = TILE_SIZE * 6;
 
-  it('is clear of every building, from due south of the counter', () => {
+  /** Which way is out through the door, as a unit step. */
+  const OUT = {
+    north: { x: 0, y: -1 },
+    south: { x: 0, y: 1 },
+    west: { x: -1, y: 0 },
+    east: { x: 1, y: 0 },
+  };
+
+  it('is clear of every other building, out from the door it comes in through', () => {
     zones.forEach((zone) => {
       const { width, height } = zoneWorldSize(zone);
       const buildings = placed(zone);
+      const people = zone.npcSpawns.map(({ dx, dy, npcId }) => ({
+        what: npcId,
+        x: width / 2 + dx,
+        y: height / 2 + dy,
+      }));
 
-      zone.npcSpawns.forEach(({ dx, dy, npcId }) => {
-        const npc = { x: width / 2 + dx, y: height / 2 + dy };
-        // The whole lane the player's body sweeps walking north to the counter.
+      buildings.forEach((building) => {
+        const counter = occupant(building, people);
+        if (!counter) return;
+        const door = doorPoint(building);
+        const step = OUT[building.definition.door];
+        // The whole lane the player's body sweeps walking up to the door.
+        const far = { x: door.x + step.x * APPROACH, y: door.y + step.y * APPROACH };
         const lane = {
-          left: npc.x - PLAYER_HALF_EXTENT,
-          right: npc.x + PLAYER_HALF_EXTENT,
-          top: npc.y,
-          bottom: npc.y + APPROACH,
+          left: Math.min(door.x, far.x) - PLAYER_HALF_EXTENT,
+          right: Math.max(door.x, far.x) + PLAYER_HALF_EXTENT,
+          top: Math.min(door.y, far.y) - PLAYER_HALF_EXTENT,
+          bottom: Math.max(door.y, far.y) + PLAYER_HALF_EXTENT,
         };
-        buildings.forEach((building) => {
+        buildings.forEach((other) => {
+          if (other === building) return;
           expect(
-            overlaps(lane, buildingRect(building)),
-            `${zone.id}: the ${building.definition.id} stands between the ${npcId} and the square`,
+            overlaps(lane, buildingRect(other)),
+            `${zone.id}: the ${other.definition.id} stands between the ${counter.what} and the open`,
           ).toBe(false);
         });
       });
@@ -306,40 +331,64 @@ describe('the walk up to a counter', () => {
  * Which building each counter works out of, asserted as the geometry rather than
  * as a table: nothing in the data links an `NpcId` to a `BuildingId`, and
  * deliberately so — a smithy has nobody behind it and a cottage is nobody's
- * counter. What has to be true is only that every person in a town with
- * buildings in it is standing at one of their doors, rather than in a field
- * beside them.
+ * counter. What has to be true is only that every person in a zone with
+ * buildings in it is standing in one of them, rather than in a field beside
+ * them.
+ *
+ * Every zone with counters and buildings both, rather than town alone, because
+ * Greyford is the second and there was nothing holding it to any of this.
  */
-describe('every counter in town', () => {
-  const town = ZONES.town;
-  const { width, height } = zoneWorldSize(town);
+describe('every counter', () => {
+  const withCounters = zones.filter(
+    (zone) => zone.npcSpawns.length > 0 && (zone.buildingSpawns ?? []).length > 0,
+  );
 
-  it('stands on the doorstep of a building', () => {
-    const doors = placed(town).map(doorPoint);
+  it.each(withCounters.map((zone) => zone.id))('works out of a building in %s', (zoneId) => {
+    const zone = ZONES[zoneId];
+    const { width, height } = zoneWorldSize(zone);
 
-    town.npcSpawns.forEach(({ dx, dy, npcId }) => {
+    zone.npcSpawns.forEach(({ dx, dy, npcId }) => {
       const npc = { x: width / 2 + dx, y: height / 2 + dy };
-      const onADoorstep = doors.some(
-        (door) => Math.hypot(door.x - npc.x, door.y - npc.y) < TILE_SIZE / 2,
-      );
-      expect(onADoorstep, `the ${npcId} works out of nowhere`).toBe(true);
+      const home = placed(zone).find((building) => isInside(building, npc));
+      expect(home, `the ${npcId} works out of nowhere`).toBeDefined();
+    });
+  });
+
+  /**
+   * At the back of it rather than anywhere in it, which is the placement the
+   * walk depends on: a counter on the near side of a room is served from the
+   * doorstep, and a room nobody has to enter is a room nobody ever sees.
+   */
+  it.each(withCounters.map((zone) => zone.id))('stands at the back of the room in %s', (zoneId) => {
+    const zone = ZONES[zoneId];
+    const { width, height } = zoneWorldSize(zone);
+
+    zone.npcSpawns.forEach(({ dx, dy, npcId }) => {
+      const npc = { x: width / 2 + dx, y: height / 2 + dy };
+      const home = placed(zone).find((building) => isInside(building, npc));
+      if (!home) throw new Error(`the ${npcId} works out of nowhere`);
+      expect(counterPoint(home), npcId).toEqual(npc);
     });
   });
 
   // The rule that predates the buildings and survives them: which counter a tap
-  // opens must never be a question about pixels.
-  it('stands more than an interact radius from the next', () => {
-    const people = town.npcSpawns;
-    people.forEach((a) => {
-      people.forEach((b) => {
-        if (a === b) return;
-        expect(
-          Math.hypot(a.dx - b.dx, a.dy - b.dy),
-          `${NPCS[a.npcId].name} and ${NPCS[b.npcId].name}`,
-        ).toBeGreaterThan(NPC_INTERACT_RADIUS);
+  // opens must never be a question about pixels. Walls make it harder to get
+  // wrong rather than easier — the radius reaches straight through one.
+  it.each(withCounters.map((zone) => zone.id))(
+    'stands more than an interact radius from the next in %s',
+    (zoneId) => {
+      const people = ZONES[zoneId].npcSpawns;
+      people.forEach((a) => {
+        people.forEach((b) => {
+          if (a === b) return;
+          expect(
+            Math.hypot(a.dx - b.dx, a.dy - b.dy),
+            `${NPCS[a.npcId].name} and ${NPCS[b.npcId].name}`,
+          ).toBeGreaterThan(NPC_INTERACT_RADIUS);
+        });
       });
-    });
-  });
+    },
+  );
 });
 
 /**
@@ -373,5 +422,74 @@ describe('every building can be walked into', () => {
         expect(route, `${zone.id}: no way into the ${building.definition.id}`).not.toBeNull();
       });
     });
+  });
+});
+
+/**
+ * And the same question asked of the person rather than the room, which is what
+ * phase 5 of `docs/interiors_and_light_plan.md` was for.
+ *
+ * Not the same assertion as the one above, and the difference is the whole
+ * point: a route into a building ends wherever the middle of it is, where a
+ * route to a *counter* has to end at a spot chosen for somebody to stand at.
+ * A\* walks tile centres, so a counter pushed one notch too far back is a
+ * counter in the wall's own row — reachable to the eye, `null` to the walk, and
+ * a shop that answers a tap by pressing the player into a shopfront.
+ *
+ * Routed from the zone's spawn point because that is where a player who has
+ * just arrived, or just died, is standing.
+ */
+describe('every counter can be walked up to', () => {
+  Object.values(ZONES).forEach((zone) => {
+    if (zone.npcSpawns.length === 0) return;
+
+    it(`reaches every counter in ${zone.id} from the spawn point`, () => {
+      const entities = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      const start = entities.spawnPoint;
+
+      entities.npcs.forEach((npc) => {
+        const route = findPath(
+          entities.collisionWorld,
+          start,
+          { x: npc.x, y: npc.y },
+          PLAYER_HALF_EXTENT,
+        );
+        expect(route, `${zone.id}: no way up to the ${npc.npcId}`).not.toBeNull();
+      });
+    });
+  });
+});
+
+/**
+ * How deep a room has to be to be one anybody stands in, which is arithmetic
+ * rather than taste — and the reason two of the six counters are served from
+ * their own doorway.
+ *
+ * The walk up to a counter ends `NPC_INTERACT_RADIUS` short of it, measured
+ * from where the counter stands rather than from the door, so a room is entered
+ * only when its floor reaches further back than that. A two-tile hut does not:
+ * `counterPoint` puts the counter in the middle of one, and the middle of a
+ * two-tile hut is a tile from the threshold. That is what building a hut costs,
+ * and it is worth failing on rather than discovering as a shop nobody can see
+ * into — so this asserts which buildings are which, and a room that changes
+ * side has to be moved deliberately.
+ */
+describe('how far in the walk to a counter ends', () => {
+  const entered = ['general-store', 'bank-house', 'training-hall', 'trading-post'];
+  const served = ['quartermasters-post', 'longhouse'];
+
+  it.each([...entered, ...served])('is decided by how deep the %s is', (id) => {
+    const building = { x: 2000, y: 2000, definition: BUILDINGS[id as keyof typeof BUILDINGS] };
+    const counter = counterPoint(building);
+    const door = doorPoint(building);
+    // Where the walk stops: the last point on the line in from the door that is
+    // still an interact radius out.
+    const toward = Math.hypot(door.x - counter.x, door.y - counter.y);
+    const stop = {
+      x: counter.x + ((door.x - counter.x) / toward) * NPC_INTERACT_RADIUS,
+      y: counter.y + ((door.y - counter.y) / toward) * NPC_INTERACT_RADIUS,
+    };
+
+    expect(isInside(building, stop), id).toBe(entered.includes(id));
   });
 });

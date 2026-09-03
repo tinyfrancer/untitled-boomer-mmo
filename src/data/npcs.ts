@@ -80,9 +80,24 @@ export function npcRole(npcId: NpcId): NpcRoleId {
   return NPCS[npcId].role;
 }
 
-// How close the player has to stand to be served, and how far they can drift
-// before the counter closes on them. Shared by every role rather than one pair
-// each: counters that shut at different distances would be a rule a player has
-// to learn once per person for no reason.
-export const NPC_INTERACT_RADIUS = 120;
+/**
+ * How close the player has to stand to be served: a tile, which is the width of
+ * their own body — near enough to be *at* the counter.
+ *
+ * It was nearly two tiles while the counters stood in the open, where being
+ * generous cost nothing. Behind a wall it costs the room: a shop is two and a
+ * half tiles of floor and its doorstep sits half a tile outside that, so a reach
+ * of two tiles is one that hands a purse over through the shopfront and stops
+ * the walk in the street. Nobody would ever go inside. So this is what decides
+ * whether a room is somewhere you stand, and it is why a counter's room has to
+ * be three tiles deep to be one — `tests/systems/BuildingSystem.test.ts` holds
+ * that arithmetic rather than this comment.
+ *
+ * The pair is shared by every role rather than one each: counters that shut at
+ * different distances would be a rule a player has to learn once per person for
+ * no reason. They are deliberately far apart now — served at the counter, shut
+ * only once well away from it — so that shuffling around a room, or stepping
+ * back out through the door mid-trade, is free.
+ */
+export const NPC_INTERACT_RADIUS = 64;
 export const NPC_CLOSE_RADIUS = 200;

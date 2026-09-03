@@ -254,7 +254,13 @@ describe('pickTap', () => {
       npcs: [{ ...standing, npc: nth(world.npcs) }],
       stations: [{ ...standing, station: nth(world.stations) }],
       mobs: [{ ...standing, mob: nth(world.mobs) }],
-      buildings: [{ ...standing, building: nth(world.buildings), tapPoint: () => spot }],
+      buildings: [
+        {
+          ...standing,
+          building: nth(world.buildings),
+          tapAnswer: () => ({ kind: 'ground', point: spot }) as const,
+        },
+      ],
     };
 
     expect(tapAt(camera, scene, spot)?.kind).toBe('node');
@@ -326,6 +332,45 @@ describe('pickTap', () => {
 
     expect(tapped?.kind).toBe('ground');
     expect(actor.pickBox()).toBeNull();
+  });
+
+  /**
+   * And a shopfront with somebody behind it answers with *them*.
+   *
+   * The counters moved indoors in phase 5, and from outside there is no pixel a
+   * thumb can put on one: the roof is drawn over the room and the pick box is
+   * the whole footprint standing as tall as it is drawn. So the building is how
+   * a player addresses the person who works there, and the walk it asks for is
+   * the one the pathfinder was built to answer — in through the door.
+   */
+  it("answers with a shopfront's counter rather than its doorstep", () => {
+    const { world } = harness();
+    const store = world.buildings.find((each) => each.definition.id === 'general-store');
+    const shopkeeper = world.npcs.find((each) => each.npcId === 'shopkeeper');
+    if (!store || !shopkeeper) throw new Error('the town has no general store');
+    const actor = new BuildingActor(store, shopkeeper);
+    const roof = { x: store.x, y: store.y };
+    const camera = cameraOn({ x: roof.x, y: roof.y + 400 });
+
+    // Without the counter's own box in the scene, so the building is what
+    // answered rather than the figure standing inside it.
+    expect(tapAt(camera, { buildings: [actor] }, roof)).toEqual({ kind: 'npc', npc: shopkeeper });
+  });
+
+  // And the same tap from its own doorstep is still a step inside, which is what
+  // keeps a room reachable in the huts whose counter is served at the threshold.
+  it('still walks into a shop on a second tap, from its own doorstep', () => {
+    const { world } = harness();
+    const store = world.buildings.find((each) => each.definition.id === 'general-store');
+    const shopkeeper = world.npcs.find((each) => each.npcId === 'shopkeeper');
+    if (!store || !shopkeeper) throw new Error('the town has no general store');
+    const actor = new BuildingActor(store, shopkeeper);
+    const roof = { x: store.x, y: store.y };
+    const camera = cameraOn({ x: roof.x, y: roof.y + 400 });
+
+    actor.sync(camera.position, doorPoint(store));
+
+    expect(tapAt(camera, { buildings: [actor] }, roof)).toEqual({ kind: 'ground', point: roof });
   });
 
   it('lets a rat standing in front of a shopfront still be attacked', () => {

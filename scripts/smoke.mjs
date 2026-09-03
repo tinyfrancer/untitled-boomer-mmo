@@ -406,15 +406,24 @@ const SHOPKEEPER = "window.world.npcs.find((n) => n.npcId === 'shopkeeper')";
 const BANKER = "window.world.npcs.find((n) => n.npcId === 'banker')";
 const TRAINER = "window.world.npcs.find((n) => n.npcId === 'trainer')";
 const QUARTERMASTER = "window.world.npcs.find((n) => n.npcId === 'quartermaster')";
+// The shopfront the shopkeeper works out of, which is what a player aims at
+// from outside: the counter is behind a wall with a roof drawn over it.
+const GENERAL_STORE = "window.world.buildings.find((b) => b.definition.id === 'general-store')";
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 
 /**
  * Stands the player a little south of one of those, with nothing selected.
  *
+ * How far back is a parameter because a building has two meanings for the same
+ * tap: within a tile of its doorstep it is a step inside, and further out it is
+ * a walk to whoever works there. A tap meant as the second has to be aimed from
+ * outside the first.
+ *
  * @param {string} what
+ * @param {number} [back]
  */
-const standSouthOf = async (what) => {
+const standSouthOf = async (what, back = 150) => {
   await page.evaluate(`(() => {
     const at = ${what};
     window.world.clearTarget();
@@ -428,7 +437,7 @@ const standSouthOf = async (what) => {
     // them on — which moves the camera between reading a screen point and
     // clicking it, and reads as a tap that missed what it was aimed at.
     window.world.player.stopMoving();
-    window.world.teleport(at.x, at.y + 150);
+    window.world.teleport(at.x, at.y + ${back});
   })()`);
   // Everything else the HUD may be holding up. `closeCounters` reaches the
   // shop, the bank and the trainer, and Escape reaches the rest — an inspect
@@ -895,9 +904,38 @@ async function feedback() {
     `last: ${logged.filter((l) => l.trim()).at(-1)}`,
   );
 
-  // The shopkeeper is the case the pick boxes exist for: a ray at a figure's
-  // real geometry goes straight down the gap between its legs and out the other
-  // side, so aiming at the feet would open nothing.
+  // How a shop is actually reached now that the shopkeeper is behind a wall:
+  // there is no pixel a thumb can put on them from outside, so what a player
+  // aims at is the shopfront — and what has to happen is the whole of phases 3
+  // to 5 at once, a route round the corner and in through the door, ending
+  // *inside the room* rather than in the street outside it. Stood well back, so
+  // the tap is a walk rather than the doorstep's second meaning.
+  await standSouthOf(GENERAL_STORE, 320);
+  await clickAt(await screenAt(GENERAL_STORE));
+  await stepUntil(
+    () => page.evaluate(() => window.world.shopNpc !== null),
+    'the tapped shopfront to walk the player in and open the shop',
+  );
+  /** @type {{ x: number; y: number; store: { x: number; y: number; width: number; height: number } }} */
+  const served = await page.evaluate(`(() => {
+    const store = ${GENERAL_STORE};
+    const p = window.world.player;
+    return {
+      x: p.x,
+      y: p.y,
+      store: { x: store.x, y: store.y, ...store.definition.body },
+    };
+  })()`);
+  check(
+    'a real click on a shopfront walks in through its door and opens the counter inside',
+    Math.abs(served.x - served.store.x) < served.store.width / 2 &&
+      Math.abs(served.y - served.store.y) < served.store.height / 2,
+    `served at ${Math.round(served.x)},${Math.round(served.y)} for a shop at ${served.store.x},${served.store.y}`,
+  );
+
+  // And the shopkeeper themselves, from inside the room: the case the pick boxes
+  // exist for, since a ray at a figure's real geometry goes straight down the
+  // gap between its legs and out the other side.
   await standSouthOf(SHOPKEEPER);
   await clickAt(await screenAt(SHOPKEEPER));
   await stepUntil(
