@@ -19,9 +19,9 @@ function cameraOn(yaw = 0): PerspectiveCamera {
 
 /**
  * Something standing at a spot, as tall as a tree's canopy. The distances below
- * are close in on purpose: at 58° the camera looks over the top of anything
- * further off than about a tile and a half, so "between the camera and the
- * player" is a much smaller place than it sounds.
+ * are close in on purpose: the camera looks over the top of anything further
+ * off than about a tile and a half, so "between the camera and the player" is a
+ * much smaller place than it sounds.
  */
 function occluderAt(x: number, y: number, height = TILE_SIZE * 1.5): Occluder & { faded: boolean } {
   const half = TILE_SIZE / 2;

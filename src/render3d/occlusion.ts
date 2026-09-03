@@ -24,9 +24,11 @@ export const OCCLUDED_OPACITY = 0.25;
  * One ray rather than a silhouette, and aimed at the lowest point on purpose —
  * it is the first part of a figure to go behind anything and the last to come
  * out, so testing it fades a fraction early and unfades a fraction late. The
- * camera's 58° pitch is steep enough that the window is narrow either way: a
- * canopy has to be within about a tile and a half to get in front of anybody at
- * all, which is exactly the range a player stands in to gather from it.
+ * pitch keeps the window narrow either way: the line of sight comes down at
+ * about 47°, so a canopy has to be within a tile and a half of somebody to get
+ * in front of them at all, which is exactly the range a player stands in to
+ * gather from it. At the 58° camera this was half as wide, and the widening is
+ * what the lower one buys — more of what is genuinely in the way now fades.
  */
 const SIGHT_HEIGHT = 0;
 

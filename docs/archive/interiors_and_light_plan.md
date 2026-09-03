@@ -1,6 +1,6 @@
 # Plan: interiors, pathfinding and light
 
-**Status:** phases 0 through 6 done, phase 7 next. Written 2026-09-01 against `7e5f66b`.
+**Status:** done — phases 0 through 7 landed. Written 2026-09-01 against `7e5f66b`.
 
 - **Phase 0 (PR 115) merged** 2026-09-01 at `3d9b86f`. The roof bug is fixed and swept over every
   row in `BUILDINGS`; this plan and `docs/decisions.md` exist.
@@ -71,11 +71,28 @@
   - **What the plan did not see coming:** the cutaway takes the roof's shadow with the roof, so a
     room stood in is a room in full sun. That is the reason the light is not optional decoration —
     without it an interior is the outdoors with walls round it.
-- **Phase 7 is next.** See "Starting a phase cold" at the bottom. It is the phase most likely to be
-  cut, and the draw budget is what it has left to spend: **30.74ms of 40 on CI, so about nine
-  milliseconds** — and that is a tighter brief than it sounds for a phase whose main lever is the
-  camera pitch, since lowering the pitch is precisely a change to how much ground is drawn per frame.
-  Measure it on CI and more than once; a dev container cannot see nine milliseconds (decision 50).
+- **Phase 7 done** 2026-09-03. The tile seams are gone, a pond has a bank rather than a hole in the
+  world behind it, and the camera is pitched 45° down instead of 58 — which is where a wall stops
+  being a line under a lid. `docs/decisions.md` 51-53 carry the three things it decided, and the one
+  the plan did not see coming is the third:
+  - **A vertex is coloured by what it touches** (51), which needed the tile cut in quarters rather
+    than sampled at its corners: with four corner samples and every one an average, a three-tile road
+    has no pure road anywhere in it and reads as a smear. And a blocking tile blends with nothing,
+    because a shore drawn as a gradient is a gradient somewhere in the middle of which walking stops
+    working.
+  - **The ground grows the face it steps down** (52), which is not in the plan at all and is the
+    thing the lower camera would have made worse: the far rim of every pond was the background
+    showing through, and a thin line at 58° is a band at 45.
+  - **The pitch was three numbers, not one** (53). `TARGET_TILES_ACROSS` framed the view by its
+    _depth_, so tilting the camera also zoomed it 17% closer, and `FOG_FAR` is a ratio to that same
+    camera, whose axis a shallower pitch lays down closer to the ground. Neither said on its face
+    that it depended on the pitch. Framed by width instead, the tab-bar margin came out **wider**
+    than it was at 58°, so the angle cost nothing where the plan expected it to cost the most.
+  - **What it costs to draw is not measurable from a dev container**, which is decision 50 working
+    as written: three throttled runs in one session read 47.25ms on the unchanged tree and 49.00 and
+    45.57 on this one, all of them over a 40ms ceiling CI reads at 30.74 for the same baseline. A
+    change that lands on both sides of its own baseline is smaller than the machine. CI is the
+    reading that counts.
 
 ## Starting a phase cold
 
@@ -344,7 +361,7 @@ The light is 49, and the thing neither the plan nor phase 4 saw: the cutaway hid
 roof casts nothing, and so a room being stood in is a room in full sunlight. The lamp is not
 atmosphere on top of a lit room — it is the only thing telling an interior from the grass outside.
 
-### Phase 7 — the ground and the camera (PR 8)
+### Phase 7 — the ground and the camera (PR 8) — **done**
 
 - **Tile seams.** The grass/dirt boundary is a visible staircase today, because terrain is one
   vertex-coloured mesh at tile resolution.
@@ -355,6 +372,17 @@ atmosphere on top of a lit room — it is the only thing telling an interior fro
 
 Last because it is the phase most likely to be cut, and because a camera change with interiors in
 the world is a different problem from one without.
+
+**What it actually turned out to be about** is that both items were one item wearing two hats, and
+the hat was the same one every phase here has worn: a number that means something different once
+something else has moved. The seams were the easy half and took the shape written above, with the
+tile cut in quarters so a road keeps a middle. The camera was three numbers rather than one —
+`TARGET_TILES_ACROSS` framed the view by its depth and so zoomed the camera whenever it was tilted,
+and `FOG_FAR` is a ratio to a camera the pitch moves. Both were found by measuring rather than by
+reading; framing by width instead handed back more tab-bar margin than the phase started with, which
+is the opposite of the risk this was scheduled last for. What is _not_ in the plan is the third
+thing, which the lower camera would have made worse rather than better: a pond had no bank, so its
+far rim was a band of the background showing through the hole in the world.
 
 ## What is deliberately not in this
 

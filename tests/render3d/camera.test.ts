@@ -220,7 +220,7 @@ describe('frameCamera', () => {
   it('shows more of the long axis, not more of the short one', () => {
     // Seven tiles east of the player is off a portrait phone's screen and
     // inside a landscape one's, because the framing targets the *smaller* axis:
-    // both show twelve tiles across it and the longer axis gets what is left.
+    // both show ten tiles across it and the longer axis gets what is left.
     const far = { x: SPAWN.x + TILE_SIZE * 7, y: SPAWN.y };
     expect(screenAt(390, 844, SPAWN, far).x).toBeGreaterThan(390);
     expect(screenAt(1280, 900, SPAWN, far).x).toBeLessThan(1280);
