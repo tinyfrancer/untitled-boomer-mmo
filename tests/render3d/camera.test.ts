@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { nth } from '../nth';
+import { Vector3 } from 'three';
 import { TILE_SIZE } from '../../src/config/constants';
 import { TOWN_MAP } from '../../src/data/townMap';
 import { signpostPoint } from '../../src/systems/ZoneSystem';
@@ -28,11 +29,12 @@ function screenAt(
   player: { x: number; y: number },
   point: { x: number; y: number },
   yaw = 0,
+  standing = 0,
 ): { x: number; y: number } {
   const camera = createCamera();
   resizeCamera(camera, width, height);
   frameCamera(camera, player, yaw);
-  return projectToScreen(camera, simToWorld(point.x, point.y), width, height);
+  return projectToScreen(camera, simToWorld(point.x, point.y).setY(standing), width, height);
 }
 
 describe('frameCamera', () => {
@@ -158,6 +160,63 @@ describe('frameCamera', () => {
     });
   });
 
+  /**
+   * What the pitch is for, and the only thing holding it from being wound back
+   * up. A world unit standing up is worth `cos(pitch)` on screen and one lying
+   * flat is worth `sin(pitch)`, so a steep camera spends the screen on ground
+   * and draws everything on it as a lid: at 58° a wall was worth 0.62 of its
+   * own footprint and a building read as a roof plane. At 45 the two are worth
+   * the same, which is the whole of what "the world stands up" means here.
+   *
+   * The tab bar is the floor under the pitch — ground behind the player has to
+   * stay clear of it — and this is the ceiling over it. Between them the angle
+   * is a band rather than a number somebody liked.
+   */
+  it('draws a wall standing up rather than as a line under a roof', () => {
+    const ahead = { x: SPAWN.x, y: SPAWN.y - TILE_SIZE * 3 };
+    const foot = screenAt(390, 844, SPAWN, ahead).y;
+    const standing = foot - screenAt(390, 844, SPAWN, ahead, 0, TILE_SIZE).y;
+    const lyingFlat = foot - screenAt(390, 844, SPAWN, { x: ahead.x, y: ahead.y - TILE_SIZE }).y;
+    expect(standing / lyingFlat).toBeGreaterThan(0.95);
+  });
+
+  /**
+   * The floor under the pitch that has nothing to do with the tab bar: the
+   * camera is tilted further down than half its field of view, so the horizon
+   * is off the top of the screen at every angle. That is what makes every pixel
+   * ground, which is what lets `pickTap` fall through to the `y = 0` plane
+   * rather than having a tap that hits sky.
+   */
+  it('keeps the horizon off the top of the screen at every angle', () => {
+    for (const [width, height] of [
+      [390, 844],
+      [844, 390],
+    ]) {
+      const camera = createCamera();
+      resizeCamera(camera, width ?? 0, height ?? 0);
+      for (const yaw of [0, 1.1, Math.PI, -2.4]) {
+        frameCamera(camera, SPAWN, yaw);
+        camera.updateMatrixWorld();
+        // The middle of the top edge of the screen, as a direction out of it.
+        const top = new Vector3(0, 1, 0.5).unproject(camera).sub(camera.position);
+        expect(top.y).toBeLessThan(0);
+      }
+    }
+  });
+
+  /**
+   * How much world is on screen sideways, which is the thing a pitch change can
+   * move without anybody noticing: framed by its depth, tilting the camera down
+   * to 45° also pulled it 17% closer and took a tile and a half off either side.
+   * Framed by its width there is nothing for the pitch to spend here.
+   */
+  it('shows about ten tiles of ground across a portrait phone', () => {
+    const eastOf = (tiles: number) =>
+      screenAt(390, 844, SPAWN, { x: SPAWN.x + TILE_SIZE * tiles, y: SPAWN.y }).x;
+    expect(eastOf(4)).toBeLessThan(390);
+    expect(eastOf(6)).toBeGreaterThan(390);
+  });
+
   it('shows more of the long axis, not more of the short one', () => {
     // Seven tiles east of the player is off a portrait phone's screen and
     // inside a landscape one's, because the framing targets the *smaller* axis:
@@ -192,6 +251,47 @@ describe('fogRange', () => {
     const atThePlayer = (cameraDistance(aspect) - near) / (far - near);
     expect(atThePlayer).toBeGreaterThan(0);
     expect(atThePlayer).toBeLessThan(0.2);
+  });
+
+  /**
+   * The cue measured where it is read — in tiles of ground — rather than in the
+   * multiples it is written in. A multiple of the camera's distance is only a
+   * distance in the world by way of the pitch, so `FOG_FAR` stops meaning what
+   * it says the moment the camera moves: at 1.8 under the 45° camera the grass
+   * six tiles ahead was 31% hazed where it had been 15, and nothing in this
+   * file would have said so.
+   */
+  describe('measured in tiles ahead of the player', () => {
+    /** What the fog shader does: smoothstep over the depth along the view axis. */
+    const haze = (tiles: number, width = 390, height = 844): number => {
+      const camera = createCamera();
+      resizeCamera(camera, width, height);
+      frameCamera(camera, SPAWN);
+      camera.updateMatrixWorld();
+      const point = simToWorld(SPAWN.x, SPAWN.y - tiles * TILE_SIZE);
+      const depth = -point.applyMatrix4(camera.matrixWorldInverse).z;
+      const { near, far } = fogRange(camera.aspect);
+      const along = Math.min(1, Math.max(0, (depth - near) / (far - near)));
+      return along * along * (3 - 2 * along);
+    };
+
+    it('leaves the ground the player is walking over alone', () => {
+      expect(haze(6)).toBeLessThan(0.2);
+    });
+
+    it('has the far side of a zone hazed, and still legible', () => {
+      // The north edge of town from the spawn point in the middle of it.
+      const edge = TOWN_MAP.length / 2;
+      expect(haze(edge)).toBeGreaterThan(0.2);
+      expect(haze(edge)).toBeLessThan(0.5);
+    });
+
+    it('thickens with the distance rather than all at once', () => {
+      const along = [0, 3, 6, 9, 12].map((tiles) => haze(tiles));
+      for (let i = 1; i < along.length; i += 1) {
+        expect(along[i]).toBeGreaterThan(along[i - 1] ?? 0);
+      }
+    });
   });
 
   it('starts before it ends, at every viewport shape', () => {
