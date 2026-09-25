@@ -184,7 +184,7 @@ describe('a building in the world', () => {
     expect(isInside(store, shopkeeper), 'the shopkeeper works out of the store').toBe(true);
 
     world.tap({ kind: 'npc', npc: shopkeeper });
-    until(() => world.shopNpc !== null, 'the player to reach the shopkeeper', 20000);
+    until(() => world.counterNpc('merchant') !== null, 'the player to reach the shopkeeper', 20000);
 
     expect(isInside(store, world.player), 'the player is served inside the shop').toBe(true);
     expect(

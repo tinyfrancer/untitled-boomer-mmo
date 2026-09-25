@@ -2,7 +2,9 @@
 
 **Status:** live. Opened 2026-09-25 against `5c07204`. **Phase 0 landed** (the drift, this plan,
 decisions 54-57, and `CLAUDE.md` cut from 150 KB to 17 KB with the reasoning moved to
-`docs/architecture/`). **Next: phase 1.** Update this line as each phase lands.
+`docs/architecture/`). **Phases 1 and 2 landed together** — the redraw rule fell out of the counter
+table, since `refreshOpen()` is one call once there is one counter slot to redraw. **Next: phase 3.**
+Update this line as each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
 harness, smoke, and a screenshot of every zone at phone size — asked for as "a full analysis now

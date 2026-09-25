@@ -1,12 +1,9 @@
-import { NPC_CLOSE_RADIUS } from '../data/npcs';
 import { shopEntryFor } from '../data/shop';
 import { itemValue } from '../data/items';
-import { withinRadius } from '../systems/MovementSystem';
 import { stockAccess } from '../systems/ShopSystem';
 import type { ItemId } from '../types/ids';
-import { SHOP_CLOSED_EVENT, SHOP_OPENED_EVENT } from '../ui/uiEvents';
+import { CounterSession } from './CounterSession';
 import type { WorldContext } from './WorldContext';
-import type { WorldNpc } from './ZoneWorld';
 
 /**
  * Standing at a shopkeeper's counter: what is open, and what a coin buys.
@@ -15,43 +12,9 @@ import type { WorldNpc } from './ZoneWorld';
  * distance, because the window closing is what walking away from a vendor
  * means — and `updateRange` is what makes walking away close it.
  */
-export class ShopSession {
-  /** The shopkeeper the open window belongs to; null when it is shut. */
-  npc: WorldNpc | null = null;
-
-  private readonly ctx: WorldContext;
-
+export class ShopSession extends CounterSession {
   constructor(ctx: WorldContext) {
-    this.ctx = ctx;
-  }
-
-  isOpen(): boolean {
-    return this.npc !== null;
-  }
-
-  open(npc: WorldNpc): void {
-    this.ctx.player.stopMoving();
-    this.npc = npc;
-    this.ctx.events.emit(SHOP_OPENED_EVENT);
-  }
-
-  close(): void {
-    if (!this.npc) return;
-    this.npc = null;
-    this.ctx.events.emit(SHOP_CLOSED_EVENT);
-  }
-
-  /** The UI's close button already tore the panel down; just drop the state. */
-  closedByUi(): void {
-    this.npc = null;
-  }
-
-  /** Walking off mid-trade closes the window, like any vendor would. */
-  updateRange(): void {
-    if (!this.npc) return;
-    if (!withinRadius(this.ctx.player, this.npc, NPC_CLOSE_RADIUS)) {
-      this.close();
-    }
+    super(ctx, 'merchant');
   }
 
   buy(itemId: ItemId): void {

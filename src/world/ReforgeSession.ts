@@ -1,7 +1,5 @@
 import { ITEMS } from '../data/items';
-import { NPC_CLOSE_RADIUS } from '../data/npcs';
 import { REFORGE_STONE_ITEM_ID } from '../data/reforges';
-import { withinRadius } from '../systems/MovementSystem';
 import {
   describeReforge,
   feedableFrom,
@@ -10,9 +8,9 @@ import {
   rollReforge,
 } from '../systems/ReforgeSystem';
 import type { ItemId } from '../types/ids';
-import { REFORGES_CHANGED_EVENT, REFORGE_CLOSED_EVENT, REFORGE_OPENED_EVENT } from '../ui/uiEvents';
+import { REFORGES_CHANGED_EVENT } from '../ui/uiEvents';
+import { CounterSession } from './CounterSession';
 import type { WorldContext } from './WorldContext';
-import type { WorldNpc } from './zoneEntities';
 
 /**
  * Standing at the fettler's counter in Greyford, where gear is reworked.
@@ -24,44 +22,12 @@ import type { WorldNpc } from './zoneEntities';
  * player walked away, names an item id that no longer answers, and nothing
  * happens.
  */
-export class ReforgeSession {
-  /** The fettler the open window belongs to; null when it is shut. */
-  npc: WorldNpc | null = null;
-
-  private readonly ctx: WorldContext;
+export class ReforgeSession extends CounterSession {
   private readonly rng: () => number;
 
   constructor(ctx: WorldContext, rng: () => number = Math.random) {
-    this.ctx = ctx;
+    super(ctx, 'reforger');
     this.rng = rng;
-  }
-
-  isOpen(): boolean {
-    return this.npc !== null;
-  }
-
-  open(npc: WorldNpc): void {
-    this.ctx.player.stopMoving();
-    this.npc = npc;
-    this.ctx.events.emit(REFORGE_OPENED_EVENT);
-  }
-
-  close(): void {
-    if (!this.npc) return;
-    this.npc = null;
-    this.ctx.events.emit(REFORGE_CLOSED_EVENT);
-  }
-
-  /** The UI's close button already tore the panel down; just drop the state. */
-  closedByUi(): void {
-    this.npc = null;
-  }
-
-  updateRange(): void {
-    if (!this.npc) return;
-    if (!withinRadius(this.ctx.player, this.npc, NPC_CLOSE_RADIUS)) {
-      this.close();
-    }
   }
 
   /**

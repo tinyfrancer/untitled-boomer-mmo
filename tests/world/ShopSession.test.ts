@@ -6,8 +6,8 @@ import {
   CURRENCY_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   NOTICE_EVENT,
-  SHOP_CLOSED_EVENT,
-  SHOP_OPENED_EVENT,
+  COUNTER_OPENED_EVENT,
+  COUNTER_CLOSED_EVENT,
 } from '../../src/ui/uiEvents';
 import { ShopSession } from '../../src/world/ShopSession';
 import type { WorldNpc } from '../../src/world/ZoneWorld';
@@ -46,7 +46,7 @@ describe('the window', () => {
 
     expect(player.hasMoveTarget()).toBe(false);
     expect(shop.isOpen()).toBe(true);
-    expect(emissions(SHOP_OPENED_EVENT)).toHaveLength(1);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(1);
   });
 
   it('closes when the player walks out of range, and only says so once', () => {
@@ -59,7 +59,7 @@ describe('the window', () => {
     shop.updateRange();
 
     expect(shop.isOpen()).toBe(false);
-    expect(emissions(SHOP_CLOSED_EVENT)).toHaveLength(1);
+    expect(emissions(COUNTER_CLOSED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(1);
   });
 
   it('drops the state without announcing it when the panel closed itself', () => {
@@ -69,7 +69,7 @@ describe('the window', () => {
     shop.closedByUi();
 
     expect(shop.isOpen()).toBe(false);
-    expect(emissions(SHOP_CLOSED_EVENT)).toHaveLength(0);
+    expect(emissions(COUNTER_CLOSED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(0);
   });
 });
 

@@ -1,9 +1,7 @@
-import { NPC_CLOSE_RADIUS } from '../data/npcs';
-import { withinRadius } from '../systems/MovementSystem';
 import type { ItemId } from '../types/ids';
-import { BANK_CHANGED_EVENT, BANK_CLOSED_EVENT, BANK_OPENED_EVENT } from '../ui/uiEvents';
+import { BANK_CHANGED_EVENT } from '../ui/uiEvents';
+import { CounterSession } from './CounterSession';
 import type { WorldContext } from './WorldContext';
-import type { WorldNpc } from './ZoneWorld';
 
 /**
  * Standing at the bank counter: what is on the shelves, and what crosses them.
@@ -19,47 +17,18 @@ import type { WorldNpc } from './ZoneWorld';
  * on `BANK_CHANGED_EVENT` and sends back a bare item id, so a panel left open
  * across a zone change is describing shelves rather than holding them.
  */
-export class BankSession {
-  /** The banker the open window belongs to; null when it is shut. */
-  npc: WorldNpc | null = null;
-
-  private readonly ctx: WorldContext;
-
+export class BankSession extends CounterSession {
   constructor(ctx: WorldContext) {
-    this.ctx = ctx;
+    super(ctx, 'banker');
   }
 
-  isOpen(): boolean {
-    return this.npc !== null;
-  }
-
-  open(npc: WorldNpc): void {
-    this.ctx.player.stopMoving();
-    this.npc = npc;
-    this.ctx.events.emit(BANK_OPENED_EVENT);
-    // Seeded on open rather than only on change: the HUD outlives every world,
-    // so a panel built now has to be told what is on the shelves even when
-    // nothing has moved since the last time it was.
+  /**
+   * Seeded on open rather than only on change: the HUD outlives every world, so
+   * a panel built now has to be told what is on the shelves even when nothing
+   * has moved since the last time it was.
+   */
+  protected override opened(): void {
     this.publish();
-  }
-
-  close(): void {
-    if (!this.npc) return;
-    this.npc = null;
-    this.ctx.events.emit(BANK_CLOSED_EVENT);
-  }
-
-  /** The UI's close button already tore the panel down; just drop the state. */
-  closedByUi(): void {
-    this.npc = null;
-  }
-
-  /** Walking off mid-transaction shuts the counter, like any teller would. */
-  updateRange(): void {
-    if (!this.npc) return;
-    if (!withinRadius(this.ctx.player, this.npc, NPC_CLOSE_RADIUS)) {
-      this.close();
-    }
   }
 
   deposit(itemId: ItemId, quantity = 1): void {

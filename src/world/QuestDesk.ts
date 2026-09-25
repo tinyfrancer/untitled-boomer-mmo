@@ -2,13 +2,21 @@ import { QUESTS } from '../data/quests';
 import { logQuestAccepted, logQuestCompleted } from '../systems/CombatLogSystem';
 import type { CombatXpGain } from '../systems/CharacterController';
 import type { QuestId, TitleId } from '../types/ids';
+import type { WorldNpc } from './zoneEntities';
 import { QUEST_LOG_CHANGED_EVENT, TITLE_CHANGED_EVENT } from '../ui/uiEvents';
 import type { WorldContext } from './WorldContext';
 
 /** What the desk needs from the rest of the zone, and the whole of it. */
 export interface QuestDeskDeps {
-  /** The quest board is a page of the shop window: closing it walks away from both. */
-  isShopOpen: () => boolean;
+  /**
+   * Whoever is behind the counter the player is standing at, or null.
+   *
+   * A quest is taken from and handed to the person who gives it, so this is
+   * asked rather than whether a particular window is open: while the shopkeeper
+   * was the only giver the two were the same question, and a second giver is
+   * exactly where they stop being.
+   */
+  servingNpc: () => WorldNpc | null;
   /**
    * Handing a quest in is something the player did, so its XP goes straight to
    * the publisher rather than through the camp's halving.
@@ -17,8 +25,11 @@ export interface QuestDeskDeps {
 }
 
 /**
- * The shopkeeper's other counter: taking a quest, handing one in, and choosing
- * which earned title to wear.
+ * Taking a quest, handing one in, and choosing which earned title to wear.
+ *
+ * Offered across a counter rather than from a panel of its own: a quest is a
+ * conversation with the person who gives it, so it is open exactly while their
+ * counter is.
  *
  * Progress is not tracked here and is not tracked anywhere — `QuestSystem`
  * counts a "bring me N of X" off the bag on read, which is what makes looting,
@@ -35,7 +46,7 @@ export class QuestDesk {
   }
 
   accept(questId: QuestId): void {
-    if (!this.deps.isShopOpen()) return;
+    if (!this.isServedBy(questId)) return;
     if (!this.ctx.character.acceptQuest(questId)) return;
     this.ctx.log(logQuestAccepted(QUESTS[questId].name));
     this.announce();
@@ -43,7 +54,7 @@ export class QuestDesk {
   }
 
   turnIn(questId: QuestId): void {
-    if (!this.deps.isShopOpen()) return;
+    if (!this.isServedBy(questId)) return;
     // The controller refuses as a whole rather than half-applying: taking the
     // objective and finding no room for the reward is the one outcome that
     // cannot be undone.
@@ -65,6 +76,12 @@ export class QuestDesk {
     if (!this.ctx.character.setActiveTitle(titleId)) return;
     this.ctx.events.emit(TITLE_CHANGED_EVENT, this.ctx.character.state.activeTitleId);
     this.ctx.persistCharacter();
+  }
+
+  // Asked on every request rather than trusted from the panel, which was drawn
+  // from a copy of the log and may be describing a counter walked away from.
+  private isServedBy(questId: QuestId): boolean {
+    return this.deps.servingNpc()?.npcId === QUESTS[questId].giverNpcId;
   }
 
   private announce(): void {

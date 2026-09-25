@@ -50,12 +50,12 @@ describe('createEventBus', () => {
   it('survives a listener that unsubscribes itself mid-delivery', () => {
     const bus = createEventBus();
     const second = vi.fn();
-    const first = vi.fn(() => bus.off('shop-closed', first));
-    bus.on('shop-closed', first);
-    bus.on('shop-closed', second);
+    const first = vi.fn(() => bus.off('counter-closed', first));
+    bus.on('counter-closed', first);
+    bus.on('counter-closed', second);
 
-    bus.emit('shop-closed');
-    bus.emit('shop-closed');
+    bus.emit('counter-closed', 'merchant');
+    bus.emit('counter-closed', 'merchant');
 
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(2);

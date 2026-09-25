@@ -3,12 +3,12 @@ import { NPC_CLOSE_RADIUS } from '../../src/data/npcs';
 import { MAX_BANK_SLOTS, bankSlotPrice } from '../../src/systems/BankSystem';
 import {
   BANK_CHANGED_EVENT,
-  BANK_CLOSED_EVENT,
-  BANK_OPENED_EVENT,
   CURRENCY_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   NOTICE_EVENT,
   type BankState,
+  COUNTER_OPENED_EVENT,
+  COUNTER_CLOSED_EVENT,
 } from '../../src/ui/uiEvents';
 import { BankSession } from '../../src/world/BankSession';
 import type { WorldNpc } from '../../src/world/ZoneWorld';
@@ -45,7 +45,7 @@ describe('the counter', () => {
 
     expect(player.hasMoveTarget()).toBe(false);
     expect(bank.isOpen()).toBe(true);
-    expect(emissions(BANK_OPENED_EVENT)).toHaveLength(1);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'banker')).toHaveLength(1);
     // Seeded on open: the HUD outlives every world, so a panel built now has to
     // be told what is stored even though nothing has moved since it last was.
     expect(emissions(BANK_CHANGED_EVENT)).toHaveLength(1);
@@ -61,7 +61,7 @@ describe('the counter', () => {
     bank.updateRange();
 
     expect(bank.isOpen()).toBe(false);
-    expect(emissions(BANK_CLOSED_EVENT)).toHaveLength(1);
+    expect(emissions(COUNTER_CLOSED_EVENT).filter(([r]) => r === 'banker')).toHaveLength(1);
   });
 
   it('drops the state without announcing it when the panel closed itself', () => {
@@ -71,7 +71,7 @@ describe('the counter', () => {
     bank.closedByUi();
 
     expect(bank.isOpen()).toBe(false);
-    expect(emissions(BANK_CLOSED_EVENT)).toHaveLength(0);
+    expect(emissions(COUNTER_CLOSED_EVENT).filter(([r]) => r === 'banker')).toHaveLength(0);
   });
 
   it('moves nothing at all for a player who is not at the counter', () => {

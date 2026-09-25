@@ -26,7 +26,10 @@ function questDesk(options: { shopOpen?: boolean } = {}) {
     ...kit,
     publishXpGain,
     desk: new QuestDesk(kit.ctx, {
-      isShopOpen: () => options.shopOpen ?? true,
+      // The shopkeeper stands behind the counter unless the test says it is
+      // shut; every quest in the table is theirs to give.
+      servingNpc: () =>
+        (options.shopOpen ?? true) ? { npcId: 'shopkeeper', name: 'Shopkeeper', x: 0, y: 0 } : null,
       publishXpGain,
     }),
   };

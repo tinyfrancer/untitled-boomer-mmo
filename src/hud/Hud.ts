@@ -51,17 +51,11 @@ import {
   AFK_STATE_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   BANK_CHANGED_EVENT,
-  BANK_CLOSED_EVENT,
-  BANK_OPENED_EVENT,
   BOUNTY_CHANGED_EVENT,
-  BOUNTY_CLOSED_EVENT,
-  BOUNTY_OPENED_EVENT,
-  OUTFITTER_OPENED_EVENT,
-  OUTFITTER_CLOSED_EVENT,
   REFORGES_CHANGED_EVENT,
-  REFORGE_CLOSED_EVENT,
-  REFORGE_OPENED_EVENT,
   COMBAT_LOG_EVENT,
+  COUNTER_CLOSED_EVENT,
+  COUNTER_OPENED_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
   CONTEXT_MENU_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
@@ -87,11 +81,7 @@ import {
   QUEST_LOG_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
-  SHOP_CLOSED_EVENT,
-  SHOP_OPENED_EVENT,
   STATION_OPENED_EVENT,
-  TRAINER_OPENED_EVENT,
-  TRAINER_CLOSED_EVENT,
   LEARNED_ABILITIES_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
   TARGET_CLEARED_EVENT,
@@ -175,7 +165,6 @@ interface HudModel {
   // because the character sheet's numbers are drawn off it and a sheet can be
   // opened before the world has published anything.
   reforges: Reforges;
-  shopOpen: boolean;
   // What is behind the counter in town, and how much room there is for it.
   // Seeded from the save like the bag, then kept current by the world.
   bank: Inventory;
@@ -263,7 +252,6 @@ class Hud {
       activeTitleId: character.activeTitleId,
       unlockedZones: character.unlockedZones,
       reforges: character.reforges ?? {},
-      shopOpen: false,
       bank: character.bank,
       bankSlots: character.bankSlots,
       learnedAbilities: character.learnedAbilities,
@@ -273,13 +261,13 @@ class Hud {
     injectHudStyles();
     this.root = el('div', 'hud');
     this.overlays = new OverlayHost(this.root, events, {
-      shop: () => ({
+      merchant: () => ({
         ...this.questCounters(),
         currency: this.model.currency,
         quests: this.model.quests,
         level: this.model.level,
       }),
-      bank: () => ({
+      banker: () => ({
         contents: this.model.bank,
         slots: this.model.bankSlots,
         inventory: this.model.inventory,
@@ -292,14 +280,14 @@ class Hud {
         currency: this.model.currency,
       }),
       outfitter: () => this.model.inventory,
-      bounty: () => ({
+      quartermaster: () => ({
         ...this.questCounters(),
         level: this.model.level,
         bounty: this.model.bounty,
         currency: this.model.currency,
       }),
       station: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
-      reforge: () => ({
+      reforger: () => ({
         gear: this.model.gear,
         inventory: this.model.inventory,
         reforges: this.model.reforges,
@@ -536,7 +524,9 @@ class Hud {
   private itemActions(itemId: ItemId): ItemAction[] {
     return actionsForItem(itemId, {
       nearFire: this.model.actions.nearFire,
-      shopOpen: this.model.shopOpen,
+      // Selling is a thing done across the shopkeeper's counter, so the Sell
+      // button is there exactly while that counter is up.
+      shopOpen: this.overlays.openCounterRole() === 'merchant',
       classId: this.classId,
       stackSize: this.stackSize(itemId),
     });
@@ -627,10 +617,10 @@ class Hud {
     const counters = this.questCounters();
     this.tracker.update(this.model.quests, this.model.bounty, counters);
     this.questSheet.update(this.model.quests, this.model.bounty, counters);
-    // The board's rows are counted off the same three tallies, and a kill
-    // contract's count moves out in the world with the panel left up behind the
-    // player — which no other counter has to cope with.
-    this.overlays.refreshBounty();
+    // The board's and the shopkeeper's rows are counted off the same three
+    // tallies, and a kill contract's count moves out in the world with the
+    // panel left up behind the player.
+    this.overlays.refreshOpen();
   }
 
   /** How many lines the tracker will draw, which is what everything above it sits on. */
@@ -718,15 +708,10 @@ class Hud {
       this.refreshHealth();
       // A level buys strength, which buys capacity.
       this.refreshEncumbrance();
-      // And it puts rows on the shelf. A quest handed in at the counter pays XP,
-      // so a level can land with the shop open and in front of the player.
-      this.overlays.refreshShop();
-      // The trainer's list is gated on a level in exactly the same way, and a
-      // level is far likelier to land while standing at one.
-      this.overlays.refreshTrainer();
-      // And so is the board's, which is the one of the three a level can land
-      // *from*: handing a contract in pays XP at the counter that posted it.
-      this.overlays.refreshBounty();
+      // And it opens rows on the shelf, the trainer's list and the board — and a
+      // quest or a contract handed in pays XP, so a level can land with any of
+      // them open in front of the player.
+      this.overlays.refreshOpen();
       this.toast.show(`Level Up! Level ${level}`, THEME.color.levelUp);
     });
     listen(PLAYER_HP_CHANGED_EVENT, (hp) => {
@@ -765,7 +750,7 @@ class Hud {
       };
       this.refreshCharacterSheet();
       // A making level opens rows on the list the player is stood in front of.
-      this.overlays.refreshStation();
+      this.overlays.refreshOpen();
       if (progress.leveledUp) {
         this.toast.show(
           `${SKILLS[progress.skillId].name} Level ${progress.level}!`,
@@ -782,7 +767,6 @@ class Hud {
       // A corpse is progress on a kill objective, and the counter behind the
       // shopkeeper's row is the same one the feats sheet just redrew from.
       this.refreshQuests();
-      this.overlays.refreshShop();
     });
     listen(VISITS_CHANGED_EVENT, (visits) => {
       this.model.visits = visits;
@@ -824,7 +808,7 @@ class Hud {
 
     listen(GEAR_CHANGED_EVENT, (gear) => {
       this.model.gear = gear;
-      this.overlays.refreshReforge();
+      this.overlays.refreshOpen();
       this.overlays.closeSlotPicker();
       this.refreshCharacterSheet();
       // Armour raises max HP, so the bar's ceiling moves with a swap.
@@ -835,16 +819,9 @@ class Hud {
       this.model.inventory = inventory;
       this.inventorySheet.update(inventory);
       this.refreshEncumbrance();
-      this.overlays.refreshShop();
-      this.overlays.refreshBank();
-      // And a station's list, whose rows are drawn against what the bag holds.
-      this.overlays.refreshStation();
-      // And the outfitter, whose every row is a price in the bag: a trade
-      // spends three materials at once and each one is a line on the panel.
-      this.overlays.refreshOutfitter();
-      // And the fettler, whose rows are the gear in that same bag.
-      this.overlays.refreshReforge();
-      // Quest progress is counted off the bag, so every pickup can move it.
+      // Quest progress is counted off the bag, so every pickup can move it —
+      // and redrawing it redraws whichever counter or station is up, every one
+      // of which draws some of its rows against what the bag holds.
       this.refreshQuests();
       // So is whether a key is in hand, which is what a shut zone's cell says.
       this.mapSheet.refreshAccess();
@@ -852,10 +829,7 @@ class Hud {
     listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
       this.model.currency = totalCopper;
       this.inventorySheet.setCurrency(totalCopper);
-      this.overlays.refreshShop();
-      this.overlays.refreshBank();
-      this.overlays.refreshTrainer();
-      this.overlays.refreshBounty();
+      this.overlays.refreshOpen();
     });
     listen(ACTIONS_CHANGED_EVENT, (actions) => {
       this.model.actions = actions;
@@ -872,31 +846,22 @@ class Hud {
       }
     });
 
-    listen(SHOP_OPENED_EVENT, () => {
-      this.model.shopOpen = true;
-      this.overlays.openShop();
-      // Selling becomes possible, so a selected item may gain a Sell button.
+    // Whichever counter the world opened or shut. Opening or shutting the
+    // shopkeeper's is also what adds or takes away a Sell button in the bag.
+    listen(COUNTER_OPENED_EVENT, (role) => {
+      this.overlays.openCounter(role);
       this.inventorySheet.refreshActions();
     });
-    listen(SHOP_CLOSED_EVENT, () => {
-      this.model.shopOpen = false;
-      this.overlays.closeShop();
+    listen(COUNTER_CLOSED_EVENT, (role) => {
+      this.overlays.closeCounter(role);
       this.inventorySheet.refreshActions();
     });
 
-    // The bank draws the pack beside the shelves, so it redraws on either.
-    listen(BANK_OPENED_EVENT, () => this.overlays.openBank());
-    listen(BANK_CLOSED_EVENT, () => this.overlays.closeBank());
     listen(BANK_CHANGED_EVENT, (vault) => {
       this.model.bank = vault.contents;
       this.model.bankSlots = vault.slots;
-      this.overlays.refreshBank();
+      this.overlays.refreshOpen();
     });
-
-    listen(OUTFITTER_OPENED_EVENT, () => this.overlays.openOutfitter());
-    listen(OUTFITTER_CLOSED_EVENT, () => this.overlays.closeOutfitter());
-    listen(REFORGE_OPENED_EVENT, () => this.overlays.openReforge());
-    listen(REFORGE_CLOSED_EVENT, () => this.overlays.closeReforge());
     // A reforge changes what a worn piece is worth, so the sheet's numbers and
     // the health bar's ceiling both move without the gear having changed at all.
     listen(REFORGES_CHANGED_EVENT, (reforges) => {
@@ -904,10 +869,8 @@ class Hud {
       this.refreshCharacterSheet();
       this.refreshHealth();
       this.refreshEncumbrance();
-      this.overlays.refreshReforge();
+      this.overlays.refreshOpen();
     });
-    listen(BOUNTY_OPENED_EVENT, () => this.overlays.openBounty());
-    listen(BOUNTY_CLOSED_EVENT, () => this.overlays.closeBounty());
     listen(BOUNTY_CHANGED_EVENT, (bounty) => {
       this.model.bounty = bounty;
       this.refreshQuests();
@@ -917,14 +880,12 @@ class Hud {
     });
 
     listen(STATION_OPENED_EVENT, (stationId) => this.overlays.openStation(stationId));
-    listen(TRAINER_OPENED_EVENT, () => this.overlays.openTrainer());
-    listen(TRAINER_CLOSED_EVENT, () => this.overlays.closeTrainer());
     // A lesson lands on the bar and in the panel that sold it, in that order:
     // the bar is what the player pressed the row to get.
     listen(LEARNED_ABILITIES_CHANGED_EVENT, (abilityIds) => {
       this.model.learnedAbilities = abilityIds;
       this.refreshActionBar();
-      this.overlays.refreshTrainer();
+      this.overlays.refreshOpen();
     });
 
     listen(CHANNEL_STARTED_EVENT, (label) => this.channelBar.show(label));
@@ -945,7 +906,6 @@ class Hud {
     listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
       this.model.quests = quests;
       this.refreshQuests();
-      this.overlays.refreshShop();
       // How many tracker lines there are is a layout input for everything
       // stacked above it.
       this.applyLayout();

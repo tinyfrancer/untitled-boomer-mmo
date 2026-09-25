@@ -41,11 +41,11 @@ describe('the counter', () => {
     const kit = atTheFettler();
     kit.world.approachNpc(kit.fettler);
     kit.tick(1);
-    expect(kit.world.reforgeNpc).not.toBeNull();
+    expect(kit.world.counterNpc('reforger')).not.toBeNull();
 
     kit.world.teleport(kit.fettler.x + NPC_INTERACT_RADIUS * 4, kit.fettler.y);
     kit.tick(2);
-    expect(kit.world.reforgeNpc).toBeNull();
+    expect(kit.world.counterNpc('reforger')).toBeNull();
   });
 
   it('reworks a worn piece, spending the stone and the spare', () => {

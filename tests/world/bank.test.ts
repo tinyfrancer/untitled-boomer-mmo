@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness } from './harness';
-import { BANK_OPENED_EVENT, SHOP_OPENED_EVENT } from '../../src/ui/uiEvents';
+import { COUNTER_OPENED_EVENT } from '../../src/ui/uiEvents';
 import type { WorldNpc } from '../../src/world/ZoneWorld';
 
 /**
@@ -34,22 +34,22 @@ describe('the bank', () => {
   it('opens when the player is already standing at the counter', () => {
     const { world, emissions } = atTheBank();
 
-    expect(world.bankNpc).not.toBeNull();
-    expect(emissions(BANK_OPENED_EVENT)).toHaveLength(1);
+    expect(world.counterNpc('banker')).not.toBeNull();
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'banker')).toHaveLength(1);
   });
 
   // The whole reason the role exists. Two people stand a few steps apart in
   // town and only one of them sells anything.
   it('opens the bank rather than the shop, and the shopkeeper still opens the shop', () => {
     const { world, emissions } = atTheBank();
-    expect(emissions(SHOP_OPENED_EVENT)).toHaveLength(0);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(0);
 
     const keeper = npcNamed(world, 'shopkeeper');
     world.teleport(keeper.x, keeper.y + 50);
     world.approachNpc(keeper);
 
-    expect(world.shopNpc).not.toBeNull();
-    expect(emissions(SHOP_OPENED_EVENT)).toHaveLength(1);
+    expect(world.counterNpc('merchant')).not.toBeNull();
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(1);
   });
 
   it('closes itself when the player walks away', () => {
@@ -59,7 +59,7 @@ describe('the bank', () => {
     world.teleport(npc.x + 400, npc.y);
     world.updateNpcRange();
 
-    expect(world.bankNpc).toBeNull();
+    expect(world.counterNpc('banker')).toBeNull();
   });
 
   it('takes a gathering run off the player and gives it back', () => {
@@ -104,16 +104,16 @@ describe('the bank', () => {
 
   it('shuts the counter when the character is parked at a camp', () => {
     const { world, bus } = atTheBank();
-    expect(world.bankNpc).not.toBeNull();
+    expect(world.counterNpc('banker')).not.toBeNull();
 
     bus.emit('afk-toggle-requested');
 
-    expect(world.bankNpc).toBeNull();
+    expect(world.counterNpc('banker')).toBeNull();
   });
 
   it('shuts the counter on the way out of the zone', () => {
     const { world } = atTheBank();
-    expect(world.bankNpc).not.toBeNull();
+    expect(world.counterNpc('banker')).not.toBeNull();
 
     // Walked out, which is the only way a zone changes now. Weaker than the
     // travel this replaced — walking off the counter would have closed it on
@@ -122,6 +122,6 @@ describe('the bank', () => {
     world.teleport(world.worldWidth / 2, world.worldHeight - 10);
     world.update(16);
 
-    expect(world.bankNpc).toBeNull();
+    expect(world.counterNpc('banker')).toBeNull();
   });
 });

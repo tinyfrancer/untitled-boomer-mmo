@@ -1,6 +1,4 @@
-import { NPC_CLOSE_RADIUS } from '../data/npcs';
 import { bountyById } from '../systems/BountySystem';
-import { withinRadius } from '../systems/MovementSystem';
 import {
   logBountyAbandoned,
   logBountyAccepted,
@@ -9,9 +7,9 @@ import {
 } from '../systems/CombatLogSystem';
 import type { CombatXpGain } from '../systems/CharacterController';
 import type { BountyId } from '../types/ids';
-import { BOUNTY_CHANGED_EVENT, BOUNTY_CLOSED_EVENT, BOUNTY_OPENED_EVENT } from '../ui/uiEvents';
+import { BOUNTY_CHANGED_EVENT } from '../ui/uiEvents';
+import { CounterSession } from './CounterSession';
 import type { WorldContext } from './WorldContext';
-import type { WorldNpc } from './zoneEntities';
 
 /** What the board needs from the rest of the zone, and the whole of it. */
 export interface BountySessionDeps {
@@ -40,45 +38,12 @@ export interface BountySessionDeps {
  * the counter that gives it. That is the whole reason it is thirteenth in
  * `docs/archive/systems_plan.md` — a faucet is only safe once the drains exist.
  */
-export class BountySession {
-  /** The quartermaster the open board belongs to; null when it is shut. */
-  npc: WorldNpc | null = null;
-
-  private readonly ctx: WorldContext;
+export class BountySession extends CounterSession {
   private readonly deps: BountySessionDeps;
 
   constructor(ctx: WorldContext, deps: BountySessionDeps) {
-    this.ctx = ctx;
+    super(ctx, 'quartermaster');
     this.deps = deps;
-  }
-
-  isOpen(): boolean {
-    return this.npc !== null;
-  }
-
-  open(npc: WorldNpc): void {
-    this.ctx.player.stopMoving();
-    this.npc = npc;
-    this.ctx.events.emit(BOUNTY_OPENED_EVENT);
-  }
-
-  close(): void {
-    if (!this.npc) return;
-    this.npc = null;
-    this.ctx.events.emit(BOUNTY_CLOSED_EVENT);
-  }
-
-  /** The UI's close button already tore the panel down; just drop the state. */
-  closedByUi(): void {
-    this.npc = null;
-  }
-
-  /** Walking off mid-negotiation shuts the board, like every other counter. */
-  updateRange(): void {
-    if (!this.npc) return;
-    if (!withinRadius(this.ctx.player, this.npc, NPC_CLOSE_RADIUS)) {
-      this.close();
-    }
   }
 
   accept(bountyId: BountyId): void {

@@ -4,11 +4,9 @@ import { NPC_INTERACT_RADIUS } from '../../src/data/npcs';
 import { ABILITIES } from '../../src/data/abilities';
 import {
   ABILITY_STATE_CHANGED_EVENT,
-  BANK_OPENED_EVENT,
   LEARNED_ABILITIES_CHANGED_EVENT,
-  SHOP_OPENED_EVENT,
-  TRAINER_OPENED_EVENT,
   type AbilityState,
+  COUNTER_OPENED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { WorldNpc } from '../../src/world/ZoneWorld';
 
@@ -49,8 +47,8 @@ describe('the trainer', () => {
   it('opens when the player is already standing at the counter', () => {
     const { world, emissions } = atTheTrainer();
 
-    expect(world.trainerNpc).not.toBeNull();
-    expect(emissions(TRAINER_OPENED_EVENT)).toHaveLength(1);
+    expect(world.counterNpc('trainer')).not.toBeNull();
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'trainer')).toHaveLength(1);
   });
 
   // Three people stand a few steps apart in town and each of them does one
@@ -59,8 +57,8 @@ describe('the trainer', () => {
   it('opens neither of the other two counters', () => {
     const { emissions } = atTheTrainer();
 
-    expect(emissions(SHOP_OPENED_EVENT)).toHaveLength(0);
-    expect(emissions(BANK_OPENED_EVENT)).toHaveLength(0);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(0);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'banker')).toHaveLength(0);
   });
 
   it('is walked to when the tap comes from across the square', () => {
@@ -69,9 +67,9 @@ describe('the trainer', () => {
     kit.world.teleport(npc.x, npc.y + NPC_INTERACT_RADIUS * 3);
 
     kit.world.approachNpc(npc);
-    expect(kit.world.trainerNpc).toBeNull();
+    expect(kit.world.counterNpc('trainer')).toBeNull();
 
-    kit.until(() => kit.world.trainerNpc !== null, 'the player reaches the trainer');
+    kit.until(() => kit.world.counterNpc('trainer') !== null, 'the player reaches the trainer');
   });
 
   // Every counter in town is more than an interact radius from the next, so

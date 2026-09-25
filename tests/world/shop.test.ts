@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { harness } from './harness';
-import { SHOP_OPENED_EVENT } from '../../src/ui/uiEvents';
+import { COUNTER_OPENED_EVENT } from '../../src/ui/uiEvents';
 
 /**
  * Trading with the town shopkeeper. The rules worth holding are the two
@@ -24,8 +24,8 @@ describe('the shop', () => {
   it('opens when the player is already standing in range', () => {
     const { world, emissions } = atTheShop();
 
-    expect(world.shopNpc).not.toBeNull();
-    expect(emissions(SHOP_OPENED_EVENT)).toHaveLength(1);
+    expect(world.counterNpc('merchant')).not.toBeNull();
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(1);
   });
 
   it('closes itself when the player walks away', () => {
@@ -35,7 +35,7 @@ describe('the shop', () => {
     world.teleport(npc.x + 400, npc.y);
     world.updateNpcRange();
 
-    expect(world.shopNpc).toBeNull();
+    expect(world.counterNpc('merchant')).toBeNull();
   });
 
   it('sells nothing to a player who is not at the counter', () => {

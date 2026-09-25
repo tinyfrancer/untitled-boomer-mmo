@@ -121,11 +121,31 @@ could not be borrowed — `StationId` means "where a recipe is made", and `STATI
 would have been dead data in four crafting tables. A role was a row and four cases. The **fettler** at Greyford is the sixth and cost the same
 four, which is the seam still paying: a reforge is not a recipe, so a station would have been dead
 data in four crafting tables.
-`ZoneWorld.approachNpc` keeps that honest with one `COUNTERS` table keyed by role rather than a pair
-of matching conditionals — which counter to open and what the walk toward it is called are the same
-fact, and the two drifting apart is how a walk ends at the wrong desk. `NPC_APPEARANCES` is keyed by
-`NpcId` for the same reason `NO_GEAR` is keyed by `GearSlotId`: a new person is a compile error until
-they have a look, and `zoneMap` puts them on the map off `npcSpawns` with nothing else written down.
+`ZoneWorld.approachNpc` keeps that honest with two tables keyed by role — `COUNTER_WALKS`, what the
+walk toward each is called, and `Counters`, the session behind each — rather than a pair of matching
+conditionals: which counter to open and what the walk toward it is called are the same fact, and the
+two drifting apart is how a walk ends at the wrong desk. `NPC_APPEARANCES` is keyed by `NpcId` for
+the same reason `NO_GEAR` is keyed by `GearSlotId`: a new person is a compile error until they have a
+look, and `zoneMap` puts them on the map off `npcSpawns` with nothing else written down.
+
+**A counter is one thing with six roles** (`world/CounterSession.ts`, act three phase 1). Every
+session extends it and adds only what can be done while it is open; the base owns who is behind it,
+opening, closing, a close from the panel's X, and walking out of `NPC_CLOSE_RADIUS`. Both of its
+events — `COUNTER_OPENED_EVENT` and `COUNTER_CLOSED_EVENT` — carry the `NpcRoleId`, where there used
+to be a pair per counter: twelve constants for one idea, and a seventh counter was about ten files.
+On the HUD side `OverlayHost` holds one table of panel factories keyed by the same role, and
+`refreshOpen()` redraws whichever is up. Three rules ride on it:
+
+- **One counter is open at a time.** `approachNpc` shuts the rest before opening one, which is what
+  lets the HUD hold a single counter panel and lets `QuestDesk` ask "who is the player talking to"
+  and get one answer.
+- **A quest is taken from the person who gives it.** `QuestDesk` is gated on the serving NPC being the
+  quest's `giverNpcId`, not on the shop being open — the two were the same question only while the
+  shopkeeper was the only giver.
+- **Whatever panel is up is a function of the HUD's model**, so any model change redraws it.
+  `tests/hud/Hud.test.ts` asks that of every role, since a hand-kept list of refreshes is exactly what
+  a new panel gets left out of. A seventh role is now a row in `NPCS`, a session, a panel factory and
+  a walk name — each of which is a compile error until it exists.
 
 **Every counter stands inside the building it works out of**, at the back of the room and facing the
 door (`counterPoint`). They stood on the doorsteps until the rooms could be walked into. What moved
