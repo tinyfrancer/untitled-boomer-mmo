@@ -1034,11 +1034,13 @@ Both are the lesson `MAX_AVOIDANCE` taught in combat — a ratio quietly stops m
 when the thing it is a ratio _to_ moves — so the depth cue is now measured in **tiles ahead of the
 player** in the tests, which is where it is read, rather than in the multiples it is written in.
 
-**What it cost to draw: unknown from here, which is decision 50 working exactly as written.** Three
-throttled runs in one session on one container read 47.25ms on the unchanged tree and 49.00 and
-45.57 on this one — a change that measures both above and below its own baseline is a change smaller
-than the machine's noise, on a machine already failing a 40ms ceiling that CI reads at 30.74 for the
-tree this branched from. The number that counts is CI's, and the arithmetic says it should be small:
-the ground went from 950 triangles to about 3,800 plus a bank per pond edge, which is vertex work
-against a pixel count that has not changed, and the lower camera draws more distant ground into the
-same screen.
+**What it cost to draw: nothing CI can see.** The throttled pass read **25.15ms** on PR 122's CI run,
+against the 30.74ms phase 6's run read on the tree this branched from — under the baseline rather
+than over it. That is not a claim that the phase made drawing cheaper: two single readings three
+weeks apart on whichever runner GitHub handed out are not that precise an instrument, and nothing
+here should have got faster. What it does say is that the ground's extra vertices — 950 triangles
+to about 3,800 plus a bank per pond edge, against a pixel count that has not changed — cost less
+than the difference between two CI runs, and the nine milliseconds phase 6 left are still there.
+The dev container could not have said even that: three runs in one session read 47.25ms on the
+unchanged tree and 49.00 and 45.57 on this one, all over the ceiling, which is decision 50 working
+exactly as written.

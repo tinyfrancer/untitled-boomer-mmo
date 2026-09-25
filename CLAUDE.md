@@ -505,9 +505,11 @@ roof casts no shadow, so a room being stood in is a room in full sun, and the la
 what tells an interior from the grass outside. The rooms and the light together cost **about ten of
 the forty milliseconds** of the throttled draw budget, which leaves about nine: three consecutive CI
 runs read 20.06ms on the pre-interiors tree, 20.66ms once the counters moved indoors, and 30.74ms
-with the rooms furnished and lit. **Read that number off CI rather than off a dev container** — a
-loaded one reads the same trees 10ms high and has no headroom left to see the difference in, which is
-how the cost was first written down here as one to three.
+with the rooms furnished and lit. The ground and the camera after them read 25.15ms — under that, not
+over it, so whatever the ground's extra vertices cost is inside the noise between two CI runs, and
+the nine are still there for whatever is next. **Read that number off CI rather than off a dev
+container** — a loaded one reads the same trees 10ms high and has no headroom left to see the
+difference in, which is how the cost was first written down here as one to three.
 
 **A room is also somewhere to be out of sight, which nothing in the world was before.**
 `hasLineOfSight` in `CollisionSystem.ts` is the same blockers asked about a segment rather than about

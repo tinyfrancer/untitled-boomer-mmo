@@ -88,11 +88,12 @@
     camera, whose axis a shallower pitch lays down closer to the ground. Neither said on its face
     that it depended on the pitch. Framed by width instead, the tab-bar margin came out **wider**
     than it was at 58°, so the angle cost nothing where the plan expected it to cost the most.
-  - **What it costs to draw is not measurable from a dev container**, which is decision 50 working
-    as written: three throttled runs in one session read 47.25ms on the unchanged tree and 49.00 and
-    45.57 on this one, all of them over a 40ms ceiling CI reads at 30.74 for the same baseline. A
-    change that lands on both sides of its own baseline is smaller than the machine. CI is the
-    reading that counts.
+  - **What it costs to draw is nothing CI can see.** The throttled pass read 25.15ms on PR 122's
+    CI run against phase 6's 30.74ms — under the baseline rather than over it, which says the
+    ground's extra vertices cost less than the difference between two CI runs, not that drawing
+    got cheaper. The nine milliseconds phase 6 left are still there. A dev container could not have
+    said even that: three runs in one session read 47.25ms unchanged and 49.00 and 45.57 with the
+    phase, all over the ceiling (decision 50).
 
 ## Starting a phase cold
 
