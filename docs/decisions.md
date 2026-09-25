@@ -1133,3 +1133,37 @@ recompile every program on the frame the zone changed.
 underground, so one light is both and the scene's light count never moves. A lantern is also the
 better picture: a cave reads as a cave when the rock around the player is lit and the passage ahead
 falls off into the dark.
+
+## 60. Sound settings are kept per device, not on the character
+
+**2026-09-25 · Claude**
+
+Mute and volume live in `localStorage` under a key of their own (`audio/settings.ts`), beside the
+save rather than in `CharacterState`, and the host is the one thing that writes them.
+
+**Rejected:** a `sound` field on `CharacterState`, which would have come with a migration step and a
+save to carry it.
+
+**Why:** it is a fact about the speaker, not about the character. A character played on a phone on
+a train and on a laptop at home wants two answers, and a reset that wipes the character should not
+unmute the phone — smoke checks exactly that, muting before a reset and finding it muted after. It
+is also the version that needs no migration and cannot break a save: a setting that fails to load
+falls back to the default, where a malformed field on the save is a save with no chain to the
+current version.
+
+## 61. A moment worth hearing is a `WorldEvent`, even when the view draws it from state
+
+**2026-09-25 · Claude**
+
+`CombatDirector` pushes `{ kind: 'wind-up', by }` on the frame a creature starts winding up an
+ability. The view ignores it — the telegraph ring is drawn from `mob.windUp` every frame — and the
+sound board hears it as the warning.
+
+**Rejected:** the board reading `mob.windUp` off the world's mobs each frame, the way the view does.
+
+**Why:** a view can poll state because it redraws every frame anyway; a sound cannot, because what
+it has to know is the moment something _began_, and a poll only finds that out by keeping a copy of
+last frame's state to compare against — a second picture of the world, kept by the one consumer that
+has no other reason to hold a reference to it. The board hears the two channels and nothing else,
+which is what keeps it as swappable as the renderer. So the rule for the next sound: if the moment
+is not already on the view channel, the world pushes it there.

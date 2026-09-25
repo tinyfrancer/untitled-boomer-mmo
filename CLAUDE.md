@@ -199,6 +199,12 @@ picked against boxes in a fixed **priority** (node, signpost, NPC, mob, station,
 not a depth sort. What a frame costs is a budget smoke asserts under an eight-times-throttled CPU;
 raising it is a decision about the game, not about the run that hit it.
 
+**Sound loads no files either** (`src/audio/`, engine-free and owned by the host). Every cue is
+synthesised from a recipe in `cues.ts`, and the board hears the same `WorldEvent[]` the view is
+handed plus two HUD events (coin, achievement) — it never reads the world. So **a moment the view
+draws from state still needs a `WorldEvent` if it makes a sound**, since a sound cannot poll. Mute
+and volume are kept per device, not in `CharacterState`.
+
 **Balance is held by simulations, not judgement.** The duels in `EnemySystem.test.ts` hold the
 combat curve (a fresh level 1 beats a level 1 rat comfortably, sweats a 2, loses to a 3), the
 progression test holds the starter arc to level 3 and the cap to one level past the richest spawn,
@@ -220,6 +226,7 @@ Change a stat, a table or a curve and retune until those pass rather than eyebal
 | The AFK camp and offline progress                                  | `docs/architecture/afk.md`        |
 | The HUD's pieces, the map, layout, tabs                            | `docs/architecture/hud.md`        |
 | Camera, terrain, light, draw budget, nameplates, picking, gestures | `docs/architecture/rendering.md`  |
+| Sound: what it hears, cues, ambience, unlocking, mute and volume   | `docs/architecture/audio.md`      |
 | Tests vs smoke, the dev handles, the hand crank, frame-rate bugs   | `docs/architecture/testing.md`    |
 
 When a change moves one of those subsystems, the topic file is what gets corrected — and when it

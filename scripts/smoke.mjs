@@ -3173,7 +3173,9 @@ async function reset() {
       /** @type {HTMLElement} */ (
         document.querySelector('.hud-modal [data-action="reset-character"]')
       ).textContent === 'Tap again to confirm',
-    saveIntact: localStorage.length > 0,
+    // The save's own key rather than "anything stored": sound settings sit in
+    // the same storage and would make a deleted save look intact.
+    saveIntact: localStorage.getItem('untitled-boomer-mmo:character:v1') !== null,
   }));
   await page.screenshot({ path: `${OUT}/15-options.png` });
   await page.keyboard.press('Escape');
@@ -3187,6 +3189,39 @@ async function reset() {
     'escape closes the options modal',
     await page.evaluate(() => document.querySelector('.hud-modal') === null),
   );
+
+  // Sound is the one thing in here about the device rather than the character,
+  // so it is the one thing the reset below must leave standing. Muted here and
+  // checked again on the far side of the reset.
+  await tapTab('options');
+  const soundControls = await page.evaluate(() => {
+    const button = document.querySelector('.hud-modal [data-action="toggle-sound"]');
+    const slider = document.querySelector('.hud-modal [data-action="volume"]');
+    if (!button || !slider) return null;
+    const b = button.getBoundingClientRect();
+    const s = slider.getBoundingClientRect();
+    return {
+      shortest: Math.min(b.height, s.height),
+      right: Math.max(b.right, s.right),
+      width: window.innerWidth,
+    };
+  });
+  check(
+    'the options menu offers sound, sized for a thumb and on the screen',
+    soundControls !== null &&
+      soundControls.shortest >= 44 &&
+      soundControls.right <= soundControls.width,
+    JSON.stringify(soundControls),
+  );
+  await page.click('.hud-modal [data-action="toggle-sound"]');
+  /** @param {string | null} raw */
+  const mutedIn = (raw) => raw !== null && JSON.parse(raw).muted === true;
+  check(
+    'muting is kept on the device',
+    mutedIn(await page.evaluate(() => localStorage.getItem('untitled-boomer-mmo:sound:v1'))),
+  );
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(80);
 
   await tapTab('options');
   await page.click('.hud-modal [data-action="reset-character"]');
@@ -3220,6 +3255,22 @@ async function reset() {
     `${caster.mana}/${caster.maxMana} mana`,
   );
   await page.screenshot({ path: `${OUT}/16-wizard.png` });
+
+  await tapTab('options');
+  const soundAfter = await page.evaluate(() => ({
+    stored: localStorage.getItem('untitled-boomer-mmo:sound:v1'),
+    label: document.querySelector('.hud-modal [data-action="toggle-sound"]')?.textContent,
+  }));
+  check(
+    "and leaves the device muted, which is not the character's to wipe",
+    mutedIn(soundAfter.stored) && soundAfter.label === 'Sound: Off',
+    `${soundAfter.label}`,
+  );
+  // Back on for everything after this, so the throttled draw is measured with
+  // the sound a player would actually have running.
+  await page.click('.hud-modal [data-action="toggle-sound"]');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(80);
 
   // A caster is the only class with a projectile to draw, which is why this
   // waits for the wizard the reset just rolled: the bolt is the one WorldEvent

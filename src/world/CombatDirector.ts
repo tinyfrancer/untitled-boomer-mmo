@@ -263,6 +263,7 @@ export class CombatDirector {
     mob.windUp = { abilityId: ability.id, landsAt: this.ctx.now + ability.windUpMs };
     mob.lastAbilityAt.set(ability.id, this.ctx.now);
     mob.lastAttackAt = this.ctx.now;
+    this.ctx.push({ kind: 'wind-up', by: mob });
     // Shouted over its own head rather than over the player: what the player
     // has to read is which creature is about to do something.
     this.ctx.push({

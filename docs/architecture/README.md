@@ -17,6 +17,7 @@ correct it in the same PR when the change moves what it describes.
 | `afk.md`        | The camp, what it does, and offline progress                                                                                                |
 | `hud.md`        | The HTML overlay and its pieces, the map, layout, the tab bar and the menu                                                                  |
 | `rendering.md`  | Camera, terrain, light and shadow, the draw budget, nameplates, effects, picking, gestures, occlusion                                       |
+| `audio.md`      | Sound: what it hears from the two channels, the cues, the ambience, the gesture that unlocks it, mute and volume                            |
 | `testing.md`    | What goes in `tests/world/` and what in smoke, the dev handles, the hand crank                                                              |
 
 The forks — what was chosen against what — are in `docs/decisions.md`, and finished plans are in

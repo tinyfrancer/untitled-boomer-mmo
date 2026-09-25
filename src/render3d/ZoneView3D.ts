@@ -28,6 +28,7 @@ import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { FxLayer } from './fx';
 import { APRON_TILES, buildGround } from './ground';
+import { GatherBeat } from '../ui/gatherBeat';
 import { buildScatter } from './scatter';
 import { WATER_TIME, buildWaterSheen } from './water';
 import { buildingRect } from '../data/buildings';
@@ -48,13 +49,6 @@ import type { DrawnCounts } from '../types/debugView';
 const LANTERN_COLOR = 0xffc98a;
 const LANTERN_HEIGHT = TILE_SIZE * 1.4;
 const LANTERN_REACH = TILE_SIZE * 7;
-
-/**
- * Where in a gather's channel the tool comes down, as fractions of it: twice a
- * gather, so a chop reads as chopping rather than as standing beside a tree
- * while a bar fills.
- */
-const GATHER_BEATS = [0.3, 0.8];
 
 /**
  * The Three.js view onto one ZoneWorld: a renderer, a scene, a camera that
@@ -85,9 +79,8 @@ export class ZoneView3D {
   // Who draws each mob, for the moments that name one: a swing it made, a blow
   // it took. Built with the actors and dropped with them.
   private mobActorOf = new Map<Mob, MobActor>();
-  // How far through its channel the gather was on the last tick, which is how a
-  // beat is found: a tick that crosses one of `GATHER_BEATS` is a stroke.
-  private gatherProgress = 0;
+  // Where a gather's strokes fall, found in the progress it reports each tick.
+  private readonly gatherBeat = new GatherBeat();
   private nodeActors: NodeActor[] = [];
   private npcActors: NpcActor[] = [];
   private signpostActors: SignpostActor[] = [];
@@ -243,7 +236,7 @@ export class ZoneView3D {
     this.player = null;
     this.mobActors = [];
     this.mobActorOf = new Map();
-    this.gatherProgress = 0;
+    this.gatherBeat.reset();
     this.nodeActors = [];
     this.npcActors = [];
     this.signpostActors = [];
@@ -320,11 +313,7 @@ export class ZoneView3D {
         }
         return;
       case 'gather-tick': {
-        // A tick behind the last one is a new channel: the last gather landed
-        // and the next one began.
-        const last = event.progress < this.gatherProgress ? 0 : this.gatherProgress;
-        this.gatherProgress = event.progress;
-        if (!GATHER_BEATS.some((beat) => last < beat && event.progress >= beat)) return;
+        if (!this.gatherBeat.beat(event.progress)) return;
         this.player?.swing(event.at, now);
         this.fx.gatherChips(event.at, event.nodeId);
         return;

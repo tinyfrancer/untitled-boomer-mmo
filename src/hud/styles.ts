@@ -894,6 +894,20 @@ function hudCss(): string {
 .hud-modal__danger {
   color: ${THEME.color.playerDamage};
 }
+/* A slider is a thumb target like any button, so it stands as tall as one: a
+   range input's own height is a few pixels of track. */
+.hud-options__volume {
+  pointer-events: auto;
+  width: 100%;
+  min-height: ${THEME.touchMin}px;
+  margin: 0;
+  accent-color: ${cssColor(THEME.xpFill)};
+  cursor: pointer;
+}
+.hud-options__volume:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 /* Indented under the "Could not carry" heading, and dimmer than what was
    actually brought back — a list of what you do not have. */
 .hud-modal__missed {

@@ -35,6 +35,7 @@ import {
 } from '../systems/QuestSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
+import { DEFAULT_SOUND, type SoundSettings } from '../audio/settings';
 import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
@@ -96,6 +97,7 @@ import {
   type ContextMenuRequest,
   type ScreenPoint,
   type UiEventName,
+  SOUND_SETTINGS_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
@@ -128,6 +130,11 @@ export interface HudOptions {
    * earlier than this.
    */
   notifications?: PendingNotification[];
+  /**
+   * What the speaker was last set to on this device, for the options menu to
+   * start from. The host keeps it; the HUD only ever sends back a new one.
+   */
+  sound?: SoundSettings;
 }
 
 // Everything the HUD renders, in one object. Kept whole rather than scattered
@@ -174,6 +181,7 @@ interface HudModel {
   // the world — which is the same reason the bag is seeded and the map is not.
   learnedAbilities: AbilityId[];
   actions: AvailableActions;
+  sound: SoundSettings;
 }
 
 /**
@@ -222,7 +230,7 @@ class Hud {
   private readonly model: HudModel;
 
   constructor(options: HudOptions) {
-    const { parent, events, character, notifications = [] } = options;
+    const { parent, events, character, notifications = [], sound = DEFAULT_SOUND } = options;
     this.events = events;
     this.subscriptions = createSubscriptions(events);
     this.classId = character.classId;
@@ -256,6 +264,7 @@ class Hud {
       bankSlots: character.bankSlots,
       learnedAbilities: character.learnedAbilities,
       actions: { nearFire: false, nearStations: [] },
+      sound,
     };
 
     injectHudStyles();
@@ -489,7 +498,7 @@ class Hud {
       return;
     }
     if (tab === 'options') {
-      this.overlays.openOptions();
+      this.overlays.openOptions(this.model.sound);
       return;
     }
     this.setOpenSheet(this.openSheet === tab ? null : tab);
@@ -892,6 +901,11 @@ class Hud {
     listen(CHANNEL_PROGRESS_EVENT, (progress) => this.channelBar.setProgress(progress));
     listen(CHANNEL_ENDED_EVENT, () => this.channelBar.hide());
     listen(NOTICE_EVENT, (message) => this.toast.show(message, THEME.color.muted));
+    // Sent by the options menu itself; heard back here so the next time it opens
+    // it opens on what was chosen, the same round trip every other panel makes.
+    listen(SOUND_SETTINGS_CHANGED_EVENT, (settings) => {
+      this.model.sound = settings;
+    });
 
     listen(AFK_STATE_CHANGED_EVENT, (active) => {
       this.tabBar.setCamping(active);

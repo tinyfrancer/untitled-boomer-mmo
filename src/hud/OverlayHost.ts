@@ -8,6 +8,7 @@ import { ShopModal, type ShopState } from './ShopModal';
 import { TrainerModal, type TrainerState } from './TrainerModal';
 import { OutfitterModal } from './OutfitterModal';
 import { ReforgeModal, type ReforgePanelState } from './ReforgeModal';
+import type { SoundSettings } from '../audio/settings';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
 import { StationModal, type StationPanelState } from './StationModal';
@@ -26,6 +27,7 @@ import {
   WITHDRAW_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
+  SOUND_SETTINGS_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
   CRAFT_REQUESTED_EVENT,
@@ -194,9 +196,11 @@ export class OverlayHost {
     };
   }
 
-  openOptions(): void {
+  openOptions(sound: SoundSettings): void {
     this.options?.close();
     this.options = new OptionsModal({
+      sound,
+      onSoundChanged: (settings) => this.events.emit(SOUND_SETTINGS_CHANGED_EVENT, settings),
       onResetCharacter: () => {
         this.options?.close();
         this.events.emit(RESET_CHARACTER_REQUESTED_EVENT);

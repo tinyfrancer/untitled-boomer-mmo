@@ -52,6 +52,12 @@ export type WorldEvent =
   | { kind: 'swing'; by: Mob | null; toward: Point }
   /** The player went up a level, where they stood. */
   | { kind: 'level-up'; at: Point }
+  /**
+   * A creature started winding up an ability. The wind-up itself is state on the
+   * mob and the view draws it from there; this is the moment it began, which a
+   * sound has to be told about because a sound cannot poll.
+   */
+  | { kind: 'wind-up'; by: Mob }
   /** A swing turned aside. `skillName` is the skill that turned it. */
   | { kind: 'defend'; at: Point; skillName: string }
   | { kind: 'heal'; at: Point; amount: number }

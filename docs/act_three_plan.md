@@ -1,10 +1,13 @@
 # Act three: sound footing, a world worth looking at, and the upper band filled in
 
-**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-5 landed:** the drift, this
+**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-9 landed:** the drift, this
 plan, decisions 54-57 and a 17 KB `CLAUDE.md` (phase 0); the counter table and the redraw rule,
 which landed together because `refreshOpen()` is one call once there is one counter slot to redraw
-(phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4); and
-rock that stands up (phase 5); names you can read (phase 6); a fight you can see (phase 7); and water that moves and ground with something on it (phase 8). **Next: phase 9.** Update this line as each phase lands.
+(phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4);
+rock that stands up (phase 5); names you can read (phase 6); a fight you can see, with an enemy's
+wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
+something on it (phase 8); and sound (phase 9). **Next: phase 10.** Update this line as each phase
+lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
 harness, smoke, and a screenshot of every zone at phone size — asked for as "a full analysis now
@@ -229,6 +232,20 @@ docs describing what landed.
   starts it on the first gesture (browsers refuse before one), and closes it on reset.
 - **Mute** and **volume** in Options, stored per device in `localStorage` beside the save rather
   than in `CharacterState` — a setting about the speaker is not a fact about the character.
+
+**What it turned out to be about.** The synthesis was the easy half and took the shape above. Four
+things the section did not say are in `docs/architecture/audio.md` and decisions 60-61:
+
+- **A sound cannot poll.** The wind-up was state the view drew every frame, and the ear needed the
+  moment it began, so the world now pushes a `wind-up` event the view ignores (decision 61). That is
+  the rule for every sound after it.
+- **Coin is a purse that grew**, not any change to it: the death fee is published on the same
+  event, and a jingle over a corpse would be the game cheering the player's loss.
+- **A reset closes the context, and the next one's clock starts at zero**, so the spacing memory
+  had to go with it — kept, it held every cue silent until the new clock caught up with the old.
+- **The smoke check for the controls found a bug that predated all of it**: Escape closing a panel
+  also dropped the target, because the HUD and the world's keyboard binding each heard the key on
+  their own. Fixed in its own commit before this phase's, since it is not about sound.
 
 ### Phase 10 — loot that is not lost
 

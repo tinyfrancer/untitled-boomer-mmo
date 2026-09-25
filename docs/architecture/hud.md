@@ -14,7 +14,15 @@ port, and nothing drawing the world knows it exists.
 of it. Char / Bag / Quests / Feats / Log are `Sheet` subclasses and one is open at a time — `Hud`
 holds a single `openSheet`, not a visible flag per panel — while Camp and the gear icon are actions
 that open nothing. The shop, the slot picker, the options menu and the away report are overlays
-built on open and removed on close.
+built on open and removed on close. The options menu also holds the one setting that is not the
+character's — mute and volume, which the HUD is handed at mount and sends back whole on
+`SOUND_SETTINGS_CHANGED_EVENT` (`audio.md`).
+
+**An overlay that takes a key says so.** Escape closes whatever is open and is also the world's
+"drop the target", and the two used to hear it independently, so closing a panel mid-fight dropped
+the target too. `bindHudKeys` listens in the capture phase and cancels a key an overlay took, and
+the world's `bindKeyboard` ignores a cancelled key — which holds whichever of the two was bound
+first.
 
 **The player column is bars, and a bar's numbers go inside it** (`hud/PlayerColumn.ts`): name and
 level on one line, then health, mana and XP stacked, then the buff row. Three bars with three

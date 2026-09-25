@@ -4,6 +4,7 @@ import { AwayReportModal } from '../../src/hud/AwayReportModal';
 import { ContextMenu } from '../../src/hud/ContextMenu';
 import { InspectModal } from '../../src/hud/InspectModal';
 import { OptionsModal } from '../../src/hud/OptionsModal';
+import { DEFAULT_SOUND } from '../../src/audio/settings';
 import type { Overlay } from '../../src/hud/Overlay';
 import { BankModal } from '../../src/hud/BankModal';
 import { MAX_BANK_SLOTS } from '../../src/systems/BankSystem';
@@ -53,6 +54,7 @@ import {
   type ContextMenuRequest,
   COUNTER_OPENED_EVENT,
   COUNTER_CLOSED_EVENT,
+  SOUND_SETTINGS_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -217,6 +219,56 @@ describe('one sheet is open at a time', () => {
     menuItem('options');
     expect(openSheets()).toEqual(['inventory']);
     expect(modals()).toHaveLength(1);
+  });
+});
+
+/**
+ * The speaker, which is the one thing in Options that is not the character's.
+ * The HUD is handed where it was left and only ever sends a whole new setting
+ * back — it keeps nothing on the device itself, so the host stays the one place
+ * the setting is stored.
+ */
+describe("the options menu's sound", () => {
+  const soundButton = (): HTMLButtonElement | null =>
+    parent.querySelector('[data-action="toggle-sound"]');
+  const volume = (): HTMLInputElement | null => parent.querySelector('[data-action="volume"]');
+  const sent = () =>
+    emitted.filter((e) => e.event === SOUND_SETTINGS_CHANGED_EVENT).map((e) => e.args[0]);
+
+  it('opens on what the host handed the HUD', () => {
+    mountHud({
+      parent,
+      events,
+      character: createNewCharacter('Tester', 'warrior'),
+      sound: { muted: true, volume: 0.3 },
+    });
+    menuItem('options');
+    expect(soundButton()?.textContent).toBe('Sound: Off');
+    expect(soundButton()?.getAttribute('aria-pressed')).toBe('false');
+    expect(volume()?.value).toBe('30');
+    // Kept in its place while muted, so it says what unmuting comes back at.
+    expect(volume()?.disabled).toBe(true);
+  });
+
+  it('sends the whole setting on a toggle, and opens on it next time', () => {
+    mount();
+    menuItem('options');
+    soundButton()?.click();
+    expect(sent()).toEqual([{ muted: true, volume: 0.7 }]);
+
+    press('Escape');
+    menuItem('options');
+    expect(soundButton()?.textContent).toBe('Sound: Off');
+  });
+
+  it('sends the volume as the slider moves rather than when it is let go', () => {
+    mount();
+    menuItem('options');
+    const slider = volume();
+    if (!slider) throw new Error('no volume slider');
+    slider.value = '40';
+    slider.dispatchEvent(new Event('input'));
+    expect(sent()).toEqual([{ muted: false, volume: 0.4 }]);
   });
 });
 
@@ -1041,7 +1093,12 @@ describe('destroy', () => {
 describe('every overlay has the same lifecycle', () => {
   const noop = (): void => {};
   const overlays = (onClosed: () => void): Overlay[] => [
-    new OptionsModal({ onResetCharacter: noop, onClose: onClosed }),
+    new OptionsModal({
+      sound: DEFAULT_SOUND,
+      onSoundChanged: noop,
+      onResetCharacter: noop,
+      onClose: onClosed,
+    }),
     new SlotPicker('helmet', [], new DOMRect(), PHONE, noop, onClosed),
     new AwayReportModal(REPORT, onClosed),
     new ShopModal(

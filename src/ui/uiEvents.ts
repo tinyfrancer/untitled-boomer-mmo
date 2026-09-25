@@ -10,6 +10,7 @@ import type {
   TitleId,
   ZoneId,
 } from '../types/ids';
+import type { SoundSettings } from '../audio/settings';
 import type { NpcRoleId } from '../data/npcs';
 import type { StationId } from '../data/recipes';
 import type { Reforges } from '../systems/ReforgeSystem';
@@ -143,6 +144,11 @@ export const COMBAT_LOG_EVENT = 'combat-log';
 export const NOTICE_EVENT = 'notice';
 // Asked for by the options menu; the host owns the session, so it does the work.
 export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
+// What the player chose in the options menu about the speaker. Carried as the
+// whole setting rather than as a toggle so the latest one describes the present,
+// like everything else on this channel: the host applies and keeps it, and the
+// HUD redraws the menu from it.
+export const SOUND_SETTINGS_CHANGED_EVENT = 'sound-settings-changed';
 // AFK camping. The HUD asks for the toggle; ZoneWorld owns whether it is on,
 // since anything in the world can turn it back off, and reports the answer.
 export const AFK_TOGGLE_REQUESTED_EVENT = 'afk-toggle-requested';
@@ -403,6 +409,7 @@ export interface UiEventMap {
   [COMBAT_LOG_EVENT]: [entry: CombatLogEntry];
   [NOTICE_EVENT]: [message: string];
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
+  [SOUND_SETTINGS_CHANGED_EVENT]: [settings: SoundSettings];
   [AFK_TOGGLE_REQUESTED_EVENT]: [];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
