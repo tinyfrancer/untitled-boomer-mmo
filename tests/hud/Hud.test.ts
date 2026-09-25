@@ -18,7 +18,7 @@ import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
 import { SHOP_STOCK } from '../../src/data/shop';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
-import { describeEnemy, describeEnemyLoot } from '../../src/systems/InspectSystem';
+import { describeEnemy, describeEnemyLoot, describePile } from '../../src/systems/InspectSystem';
 import { THEME } from '../../src/ui/theme';
 import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
@@ -954,6 +954,27 @@ describe('the context menu', () => {
     ])('closes on %s', (_case, happen) => {
       happen();
       expect(lines()).toEqual([]);
+    });
+
+    // A pile has no drop table, only what is in it: its Inspect is the list,
+    // with a count where a creature's has a chance.
+    it('lists what is in a loot pile, with how many of each', () => {
+      events.emit(CONTEXT_MENU_REQUESTED_EVENT, {
+        title: 'Loot Pile',
+        actions: [{ id: 'take', label: 'Take' }],
+        details: describePile([
+          { itemId: 'rat-bones', quantity: 1 },
+          { itemId: 'rat-meat', quantity: 2 },
+        ]),
+        at: { x: 120, y: 200 },
+      });
+      expect(lines()).toEqual(['Take', 'Inspect']);
+
+      line('Inspect').click();
+
+      const held = [...parent.querySelectorAll<HTMLElement>('.hud-inspect__held')];
+      expect(held.map((row) => row.dataset.item)).toEqual(['rat-bones', 'rat-meat']);
+      expect(held[1]?.textContent).toContain('×2');
     });
 
     it('replaces itself rather than stacking a second menu', () => {

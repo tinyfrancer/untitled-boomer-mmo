@@ -13,6 +13,7 @@ import { TILE_SIZE } from '../config/constants';
 import {
   BuildingActor,
   CampfireActor,
+  LootPileActor,
   MobActor,
   NodeActor,
   NpcActor,
@@ -39,6 +40,7 @@ import { pickTap, pointerRay } from './picking';
 import { SelectionRing } from './selection';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import type { WorldEvent } from '../world/worldEvents';
+import type { LootPile } from '../world/LootPile';
 import type { Mob } from '../world/Mob';
 import type { DrawnCounts } from '../types/debugView';
 
@@ -91,6 +93,8 @@ export class ZoneView3D {
   // there would be one allocation per frame for a list that cannot change.
   private occluders: Occluder[] = [];
   private campfireActor: CampfireActor | null = null;
+  // Keyed by the pile, since several can lie at once and each goes on its own.
+  private pileActors = new Map<LootPile, LootPileActor>();
   // Both outlive a zone, like the camera and the lights: a target belongs to
   // the player and a damage number to the moment it was dealt, and neither is
   // anything the terrain owns. What they hold *is* the zone's, so a teardown
@@ -244,6 +248,7 @@ export class ZoneView3D {
     this.buildingActors = [];
     this.occluders = [];
     this.campfireActor = null;
+    this.pileActors = new Map();
     this.world = null;
   }
 
@@ -361,6 +366,7 @@ export class ZoneView3D {
     this.npcActors.forEach((actor) => actor.sync(world.character.state));
     this.syncCampfire(world);
     this.campfireActor?.sync(elapsedMs);
+    this.syncPiles(world);
     // Every frame, not on a target-changed event: a chased mob is moving, and
     // the ring is under its feet.
     this.selection.follow(world.target);
@@ -438,6 +444,28 @@ export class ZoneView3D {
     }
   }
 
+  /**
+   * The fire's rule for things that come and go mid-zone, for a kind there can
+   * be several of: a sack is built the frame its pile is in the world's list and
+   * taken down the frame the pile is gone, lapsed or emptied.
+   */
+  private syncPiles(world: ZoneWorld): void {
+    for (const pile of world.lootPiles) {
+      if (this.pileActors.has(pile)) continue;
+      const actor = new LootPileActor(pile);
+      this.pileActors.set(pile, actor);
+      this.scene.add(actor.object);
+    }
+    for (const [pile, actor] of this.pileActors) {
+      if (pile.isGone()) {
+        actor.dispose();
+        this.pileActors.delete(pile);
+      } else {
+        actor.sync();
+      }
+    }
+  }
+
   private actors(): Actor[] {
     return [
       ...(this.player ? [this.player] : []),
@@ -448,6 +476,7 @@ export class ZoneView3D {
       ...this.stationActors,
       ...this.buildingActors,
       ...(this.campfireActor ? [this.campfireActor] : []),
+      ...this.pileActors.values(),
     ];
   }
 
@@ -492,6 +521,7 @@ export class ZoneView3D {
       stations: this.stationActors,
       mobs: this.mobActors,
       buildings: this.buildingActors,
+      piles: [...this.pileActors.values()],
     });
   }
 
@@ -527,6 +557,7 @@ export class ZoneView3D {
       signs: byKind.get('sign') ?? 0,
       markers: byKind.get('marker') ?? 0,
       titles: byKind.get('title') ?? 0,
+      piles: byKind.get('pile') ?? 0,
       fx: this.fx.count(),
     };
   }

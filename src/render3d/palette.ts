@@ -34,6 +34,10 @@ export const PALETTE = {
   tanLiquor: 0x4a3520,
   tanVat: 0x6b4f2f,
   stretchedHide: 0xb08457,
+  // A loot pile: burlap, pale enough to be found on grass, sand and marsh from
+  // where the camera stands, and the cord round its neck.
+  sack: 0xc9ad7f,
+  sackTie: 0x6d4c2f,
   wood: 0x5d4037,
   woodLight: 0x8d6e63,
   leafDark: 0x1b5e20,

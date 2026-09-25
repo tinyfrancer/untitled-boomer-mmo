@@ -137,7 +137,7 @@ catch up to them in `sync()` once a frame. New gameplay goes in the world, not t
 and collision bodies are data (`EnemyDefinition.body`), never measured off anything drawn.
 
 **The rules are `ZoneWorld`'s collaborators, one per subsystem** (`CombatDirector`,
-`GatherSession`, `AbilityCaster`, `AfkCamp`, the counter sessions, `QuestDesk`,
+`GatherSession`, `AbilityCaster`, `AfkCamp`, the counter sessions, `QuestDesk`, `LootPiles`,
 `ContextMenuSession`, `ApproachDriver`). Each owns its state and reaches the zone through the shared
 `WorldContext` and a small `Deps` interface of its own — never a reference to the world. A new rule
 belongs in the collaborator that owns the state it reads. What stays in `ZoneWorld` is the entities,
@@ -177,7 +177,8 @@ leave nothing behind to count. Keep that split.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
-fail on a full pack — handle the refusal.
+fail on a full pack — handle the refusal. A kill's refusals become a loot pile where it fell, unless
+the player is camping (`docs/architecture/economy.md`).
 
 **Persistence**: import the `saveService` singleton from `src/persistence/index.ts`, never construct
 `LocalStorageSaveService`. When `CharacterState` changes shape, bump `CHARACTER_STATE_VERSION` and
@@ -197,8 +198,8 @@ framing holds that, measured in `tests/render3d/camera.test.ts` and in smoke.
 
 **The renderer loads no files.** Every mesh is primitives, terrain is one vertex-coloured mesh, and
 the only textures are text baked onto a canvas (`docs/decisions.md` 54 keeps it that way). A tap is
-picked against boxes in a fixed **priority** (node, signpost, NPC, mob, station, building, ground),
-not a depth sort. What a frame costs is a budget smoke asserts under an eight-times-throttled CPU;
+picked against boxes in a fixed **priority** (node, signpost, NPC, mob, station, building, loot
+pile, ground), not a depth sort. What a frame costs is a budget smoke asserts under an eight-times-throttled CPU;
 raising it is a decision about the game, not about the run that hit it.
 
 **Sound loads no files either** (`src/audio/`, engine-free and owned by the host). Every cue is

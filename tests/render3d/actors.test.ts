@@ -4,6 +4,7 @@ import { Box3, Group, Mesh, Sprite, type Material, type MeshLambertMaterial } fr
 import { DEATH_FADE_MS } from '../../src/world/Mob';
 import {
   CampfireActor,
+  LootPileActor,
   MobActor,
   NodeActor,
   NpcActor,
@@ -17,6 +18,8 @@ import { computeAppearance } from '../../src/systems/AppearanceSystem';
 import { titleName } from '../../src/systems/AchievementSystem';
 import { QUEST_ORDER } from '../../src/data/quests';
 import { Campfire } from '../../src/world/Campfire';
+import { LootPile } from '../../src/world/LootPile';
+import { LOOT_PILE_LIFETIME_MS } from '../../src/systems/LootSystem';
 import { harness } from '../world/harness';
 import { lastPainted, stubCanvas } from './canvasStub';
 import type { Object3D, Texture } from 'three';
@@ -400,5 +403,33 @@ describe('the rest of the zone', () => {
     actor.sync(210);
     actor.dispose();
     expect(allFreed()).toBe(true);
+  });
+
+  it('draws a pile as a sack where it lies, counted as a pile, and frees it', () => {
+    const pile = new LootPile({ x: 300, y: 200 }, [{ itemId: 'rat-bones', quantity: 1 }]);
+    const actor = new LootPileActor(pile);
+    const allFreed = trackDisposal(actor.object);
+
+    expect(actor.object.position).toEqual(simToWorld(300, 200));
+    expect(countKind(actor.object, 'pile')).toBe(1);
+    actor.dispose();
+    expect(allFreed()).toBe(true);
+  });
+
+  // Off the pile's clock rather than the view's, so it never blinks back on
+  // after the world has taken it away.
+  it('blinks through the last of its minute, and not before', () => {
+    const pile = new LootPile({ x: 300, y: 200 }, [{ itemId: 'rat-bones', quantity: 1 }]);
+    const actor = new LootPileActor(pile);
+    const shown = (): boolean[] =>
+      Array.from({ length: 8 }, () => {
+        pile.update(125);
+        actor.sync();
+        return actor.object.visible;
+      });
+
+    expect(shown().every(Boolean)).toBe(true);
+    pile.update(LOOT_PILE_LIFETIME_MS - 5000);
+    expect(new Set(shown())).toEqual(new Set([true, false]));
   });
 });

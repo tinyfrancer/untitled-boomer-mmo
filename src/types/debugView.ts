@@ -91,6 +91,12 @@ export interface DrawnCounts {
    */
   titles: number;
   /**
+   * Loot piles on the ground — one per pile in the world's list, which a check
+   * compares against `window.world.lootPiles`. They come and go mid-zone, so
+   * this is the count that shows a sack taken up when its pile is.
+   */
+  piles: number;
+  /**
    * Feedback in flight: damage numbers rising, a bolt between two points.
    * Transient by nature, so a check reads it right after the hit that caused
    * it — but it is also the one thing here a renderer cannot bake in jsdom (a

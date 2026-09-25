@@ -1,14 +1,14 @@
 # Act three: sound footing, a world worth looking at, and the upper band filled in
 
-**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-9 landed:** the drift, this
+**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-10 landed:** the drift, this
 plan, decisions 54-57 and a 17 KB `CLAUDE.md` (phase 0); the counter table and the redraw rule,
 which landed together because `refreshOpen()` is one call once there is one counter slot to redraw
 (phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4);
 rock that stands up (phase 5); names you can read (phase 6); a fight you can see, with an enemy's
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
-something on it (phase 8); and sound (phase 9). **Next: phase 10** — start from
-`act_three_handoff.md`, which also holds the user's answers on loot piles and the bow (decisions
-62-65): phase 12 is now a third class and arrows, and runs on into a phase 13. Update this line as
+something on it (phase 8); sound (phase 9); and loot that is not lost (phase 10). **Next: phase
+11** — start from `act_three_handoff.md`, which also holds the user's answers on the bow (decisions
+64-65): phase 12 is now a third class and arrows, and runs on into a phase 13. Update this line as
 each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
@@ -263,6 +263,25 @@ things the section did not say are in `docs/architecture/audio.md` and decisions
 - The camp's behaviour does not change, awake or offline: a camp leaves no pile, and an unattended
   session still counts what it could not carry into `missed`, since nobody is there to come back for
   it. (Decisions 62-63.)
+
+**What it turned out to be about.** Built much as written, as `world/LootPile.ts` (the pile, on the
+world's clock like a fire) and `world/LootPiles.ts` (the zone's piles, their minute, and taking from
+one), with `CombatDirector` drawing the camp line where it rolls the table. What the section did not
+say, and `docs/architecture/economy.md` and `rendering.md` now do:
+
+- **Taking what fits is the bank's rule, and now a method of its own.** `CharacterController`
+  gained `addWhatFits`, which the withdrawal uses too, so the two acquisitions that are not
+  all-or-nothing answer "how many fit" in one place. Each stack is asked on its own, so a heavy
+  thing that does not fit does not stop a light one after it.
+- **The pile's card is the first handed state rather than an id.** `describePile` is still a pure
+  function of its argument and still settled at the open; a pile only gets smaller, so a stale card
+  can promise too much but never too little.
+- **A sack says it is going by blinking** through its last ten seconds, off the pile's own clock,
+  and nothing counts the minute down (decision 66).
+- **It makes a sound**, a low thump, so the world pushes `loot-left` for the ear (decision 61's
+  rule), and the notice that goes with it says what happened rather than only that the pack is full.
+- **`GameContext` takes loaded dice** beside the wander's, so a test that walks out of a zone and
+  back can know what a kill left before it went.
 
 ### Phase 11 — the upper band gets directed content
 

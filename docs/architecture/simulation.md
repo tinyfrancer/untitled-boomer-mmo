@@ -6,7 +6,8 @@ _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs
 
 **The simulation is `src/world/`; `src/render3d/` only draws it.** `ZoneWorld` owns the player, the
 mobs and the nodes, and steps everything that moves them from `update(deltaMs)`. `world/Player.ts`,
-`world/Mob.ts`, `world/ResourceNode.ts` and `world/Campfire.ts` are the simulated things; the
+`world/Mob.ts`, `world/ResourceNode.ts`, `world/Campfire.ts` and `world/LootPile.ts` are the
+simulated things; the
 actor classes in `render3d/actors.ts` hold a reference to one and catch up to it in `sync()` once a
 frame. New gameplay goes in the world, not the view. Two consequences worth knowing before you
 add to it:
@@ -29,7 +30,7 @@ add to it:
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
-through), `AfkCamp`, `ShopSession`, `BankSession`, `TrainerSession`, `BountySession`, `QuestDesk`,
+through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `ShopSession`, `BankSession`, `TrainerSession`, `BountySession`, `QuestDesk`,
 `ContextMenuSession` (what a press held is about, and what was chosen from it), and `ApproachDriver`
 (all three click-to-move walks, and the only thing that asks for a route). Each owns its own state,
 is constructed by `ZoneWorld` and reaches the rest of the zone through two things and no others: the
@@ -85,7 +86,8 @@ requests itself and drops them in `destroy()`. The DOM HUD only listens and rend
 these carries state the HUD re-renders from, so the latest one always describes the present.
 
 The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: `hit`, `swing`,
-`defend`, `heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `level-up`, `zone-exit`. These are moments, not
+`defend`, `heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `level-up`, `wind-up`,
+`loot-left`, `zone-exit`. These are moments, not
 state — a bolt left the caster's hand, a number floated off a corpse — and a view that misses one
 cannot recover it from anywhere. They deliberately name a `tone` rather than a colour: the view
 decides what "reward" looks like. Anything the renderer needs to know about but cannot read off the
@@ -111,8 +113,9 @@ longer exists, so a view rebuilds instead of drawing them.
 player on — a corpse away from home was carried to town at full health for nothing, which made
 walking into a bandit both a faster way home than walking and a free heal on arrival. A respawn now
 happens where it happened, at the zone's spawn point, and `{kind: 'death', on: 'player'}` asks the
-host for nothing. What dying costs is the walk back plus the fee in `systems/DeathSystem.ts` — the
-first thing in the game currency is spent on, and deliberately coin rather than XP, since on a
+host for nothing — and, since nothing changes worlds, leaves the zone's loot piles where they lie
+for the player to walk back to (`docs/decisions.md` 63). What dying costs is the walk back plus the
+fee in `systems/DeathSystem.ts` — the first thing in the game currency is spent on, and deliberately coin rather than XP, since on a
 quadratic curve a penalty big enough to be felt is big enough to erase an evening. A purse too thin
 pays what it has: a respawn is never blocked on affordability. Arriving at full is still the point
 of dying, which is why the spawn point has to be safe — it is the middle of the map, where

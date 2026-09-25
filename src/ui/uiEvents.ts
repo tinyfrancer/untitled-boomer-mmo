@@ -293,7 +293,8 @@ export type ContextActionId =
   | 'bounty'
   | 'work'
   | 'outfit'
-  | 'reforge';
+  | 'reforge'
+  | 'take';
 
 export interface ContextAction {
   id: ContextActionId;

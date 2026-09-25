@@ -83,6 +83,8 @@ import {
 } from './zoneEntities';
 import { ResourceNode } from './ResourceNode';
 import { Campfire } from './Campfire';
+import { LOOT_PILE_REACH, type LootPile } from './LootPile';
+import { LootPiles } from './LootPiles';
 import { createSubscriptions, type Subscriptions } from './eventBus';
 import { AbilityCaster } from './AbilityCaster';
 import { ApproachDriver } from './ApproachDriver';
@@ -137,6 +139,7 @@ export type WorldTap =
   | { kind: 'npc'; npc: WorldNpc }
   | { kind: 'station'; station: WorldStation }
   | { kind: 'mob'; mob: Mob }
+  | { kind: 'pile'; pile: LootPile }
   | { kind: 'ground'; point: Point };
 
 /**
@@ -231,6 +234,7 @@ export class ZoneWorld implements Targeting {
   private readonly approach: ApproachDriver;
   private readonly quests: QuestDesk;
   private readonly contextMenu: ContextMenuSession;
+  private readonly loot: LootPiles;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
   // The nine HUD publishers that only speak when what they publish moves; the
@@ -395,6 +399,7 @@ export class ZoneWorld implements Targeting {
       stations: this.stations,
       isCamping: () => this.afk.active,
     });
+    this.loot = new LootPiles(this.ctx);
     this.counters = {
       merchant: new ShopSession(this.ctx),
       banker: new BankSession(this.ctx),
@@ -415,6 +420,8 @@ export class ZoneWorld implements Targeting {
       interruptGather: () => this.gathering.interrupt(),
       interruptCast: () => this.abilities.interrupt(),
       onPlayerDeath: () => this.handlePlayerDeath(),
+      isCamping: () => this.afk.active,
+      leavePile: (at, drops) => this.loot.leave(at, drops),
     });
     this.abilities = new AbilityCaster(this.ctx, {
       targeting: this,
@@ -544,6 +551,7 @@ export class ZoneWorld implements Targeting {
       }
     });
     this.nodes.forEach((node) => node.update(deltaMs));
+    this.loot.update(deltaMs);
     this.dropDeadTarget();
     this.gathering.update(deltaMs);
     this.abilities.update(deltaMs);
@@ -630,6 +638,9 @@ export class ZoneWorld implements Targeting {
         return;
       case 'station':
         this.approachStation(target.station);
+        return;
+      case 'pile':
+        this.approachPile(target.pile);
         return;
       case 'ground':
         this.approach.walk(target.point);
@@ -729,6 +740,20 @@ export class ZoneWorld implements Targeting {
       return;
     }
     this.approach.walkTo({ kind: 'station', radius: STATION_RADIUS }, station, open);
+  }
+
+  /**
+   * Walk onto a pile and take what fits. Not solid, so the walk ends on top of
+   * it; the reach only has to cover a body stopped short of where something
+   * narrower fell.
+   */
+  approachPile(pile: LootPile): void {
+    const take = (): void => this.loot.take(pile);
+    if (withinRadius(this.player, pile, LOOT_PILE_REACH)) {
+      take();
+      return;
+    }
+    this.approach.walkTo({ kind: 'loot', radius: LOOT_PILE_REACH }, pile, take);
   }
 
   // ---------------------------------------------------------------------------
@@ -890,6 +915,15 @@ export class ZoneWorld implements Targeting {
   }
 
   // ---------------------------------------------------------------------------
+  // Loot piles
+  // ---------------------------------------------------------------------------
+
+  /** Every pile on the ground in this zone, for whatever is drawing them. */
+  get lootPiles(): readonly LootPile[] {
+    return this.loot.piles;
+  }
+
+  // ---------------------------------------------------------------------------
   // Gathering, fire and cooking
   // ---------------------------------------------------------------------------
 
@@ -988,6 +1022,8 @@ export class ZoneWorld implements Targeting {
     this.contextMenu.clear();
     this.approach.cancel();
     this.player.stopMoving();
+    // The loot piles are left where they lie (decision 63): the respawn is in
+    // this zone, and a pile is still the player's to walk back to.
     this.ctx.log(logNotice('You have died.'));
     this.ctx.events.emit(PLAYER_DIED_EVENT);
     this.chargeDeathToll();

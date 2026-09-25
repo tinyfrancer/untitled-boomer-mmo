@@ -365,6 +365,39 @@ export function buildTannery(): Group {
 }
 
 /** Crossed logs under a flame. The flicker is decoration; the burn clock is the sim's. */
+/**
+ * What a full pack left on the ground: a sack, tied at the neck.
+ *
+ * Small, because it is something dropped rather than furniture, and never
+ * mistaken for the thing that dropped it — a creature is the one here with legs.
+ */
+export function buildLootSack(): Group {
+  const size = TILE_SIZE * 0.5;
+  const group = new Group();
+
+  const body = new Mesh(
+    new SphereGeometry(size / 2, 10, 8),
+    new MeshLambertMaterial({ color: PALETTE.sack }),
+  );
+  body.scale.set(1, 0.8, 1);
+  body.position.y = size * 0.4;
+
+  const neck = new Mesh(
+    new CylinderGeometry(size * 0.1, size * 0.2, size * 0.3, 8),
+    new MeshLambertMaterial({ color: PALETTE.sack }),
+  );
+  neck.position.y = size * 0.88;
+
+  const tie = new Mesh(
+    new CylinderGeometry(size * 0.16, size * 0.16, size * 0.07, 8),
+    new MeshLambertMaterial({ color: PALETTE.sackTie }),
+  );
+  tie.position.y = size * 0.8;
+
+  group.add(body, neck, tie);
+  return castsShadow(group);
+}
+
 export function buildCampfire(): { object: Group; flicker(elapsedMs: number): void } {
   const size = TILE_SIZE * 0.8;
   const group = new Group();

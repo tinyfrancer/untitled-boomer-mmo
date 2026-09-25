@@ -33,6 +33,7 @@ const EMPTY_COUNTS: DrawnCounts = {
   signs: 0,
   markers: 0,
   titles: 0,
+  piles: 0,
   fx: 0,
 };
 

@@ -17,7 +17,14 @@ import { Nameplate } from './nameplate';
 import { OCCLUDED_OPACITY, type Occluder } from './occlusion';
 import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
-import { buildCampfire, buildForge, buildNode, buildSignpost, buildTannery } from './props';
+import {
+  buildCampfire,
+  buildForge,
+  buildLootSack,
+  buildNode,
+  buildSignpost,
+  buildTannery,
+} from './props';
 import { buildBuilding } from './buildings';
 import { LAMP_HEIGHT_FRACTION, type RoomLamp } from './lights';
 import { BUILDING_LOOKS, PALETTE } from './palette';
@@ -30,6 +37,7 @@ import type { Point } from '../systems/MovementSystem';
 import type { CharacterState } from '../persistence/CharacterState';
 import type { TitleId } from '../types/ids';
 import type { Campfire } from '../world/Campfire';
+import type { LootPile } from '../world/LootPile';
 import type { Player } from '../world/Player';
 import type { ResourceNode } from '../world/ResourceNode';
 import type {
@@ -725,6 +733,51 @@ export class SignpostActor implements Actor, Pickable {
       width: TILE_SIZE,
       depth: TILE_SIZE,
       height: TILE_SIZE,
+    });
+  }
+
+  dispose(): void {
+    disposeTree(this.object);
+  }
+}
+
+/**
+ * The last stretch of a pile's minute, and how fast it blinks through it.
+ *
+ * A blink is the old way a thing on the ground says it is about to go, and one
+ * the player can see from across the map with nothing drawn over it. Read off
+ * the pile's own clock rather than the view's, so it says what the world will
+ * do: a pile is never seen to blink on after the world has taken it away.
+ */
+const PILE_BLINK_FROM_MS = 10_000;
+const PILE_BLINK_MS = 250;
+
+/** What a thumb aims at on a sack, before `pickBox` rounds it up to one. */
+const SACK_SPAN = TILE_SIZE * 0.5;
+
+export class LootPileActor implements Actor, Pickable {
+  readonly object = new Group();
+  readonly pile: LootPile;
+
+  constructor(pile: LootPile) {
+    this.pile = pile;
+    this.object.userData.kind = 'pile';
+    this.object.position.copy(simToWorld(pile.x, pile.y));
+    this.object.add(buildLootSack());
+  }
+
+  sync(): void {
+    const left = this.pile.remainingMs;
+    this.object.visible = left > PILE_BLINK_FROM_MS || Math.floor(left / PILE_BLINK_MS) % 2 === 0;
+  }
+
+  /** Nothing to pick once it is gone, in the frame before the view takes it down. */
+  pickBox(): Box3 | null {
+    if (this.pile.isGone()) return null;
+    return pickBox(this.pile.x, this.pile.y, {
+      width: SACK_SPAN,
+      depth: SACK_SPAN,
+      height: SACK_SPAN,
     });
   }
 

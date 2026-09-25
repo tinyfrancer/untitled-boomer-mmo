@@ -42,6 +42,8 @@ export interface GameContextOptions {
   events: EventBus;
   /** Deterministic mob wander, for tests. */
   rng?: () => number;
+  /** Loaded dice for every world the session builds, for tests; see `WorldContext.rolls`. */
+  rolls?: () => number;
 }
 
 /**
@@ -59,6 +61,7 @@ export class GameContext {
 
   private readonly events: EventBus;
   private readonly rng?: () => number;
+  private readonly rolls?: () => number;
   private notifications: PendingNotification[] = [];
   private world: ZoneWorld;
   private sinceSaveMs = 0;
@@ -67,6 +70,7 @@ export class GameContext {
   constructor(options: GameContextOptions) {
     this.events = options.events;
     this.rng = options.rng;
+    this.rolls = options.rolls;
     this.character = new CharacterController(options.character);
     this.world = this.buildWorld({ zoneId: options.character.zoneId ?? 'town' });
     this.collectParkedAfk();
@@ -157,6 +161,7 @@ export class GameContext {
       entry: request.entry,
       hp: request.hp,
       rng: this.rng,
+      rolls: this.rolls,
     });
   }
 

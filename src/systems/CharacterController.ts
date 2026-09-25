@@ -232,16 +232,31 @@ export class CharacterController {
     if (held <= 0) {
       return { ok: false, reason: 'The bank is not holding that.' };
     }
-    const count = Math.min(
-      held,
-      carryableCount(this.state.inventory, itemId, this.carryCapacity()),
-    );
+    const count = this.addWhatFits(itemId, held);
     if (count <= 0) {
       return { ok: false, reason: 'Your pack is too full to carry that.' };
     }
     this.state.bank = removeItemFromInventory(this.state.bank, itemId, count);
-    this.addItem(itemId, count);
     return { ok: true, moved: count, left: held - count };
+  }
+
+  /**
+   * Adds as many of this as the pack has room for, up to `quantity`, and answers
+   * how many that was — none, when there is no room at all.
+   *
+   * The other half of `tryAddItem`, for the two acquisitions that are not
+   * all-or-nothing: a withdrawal, and taking from a loot pile. In both the rest
+   * is still the player's and stays where it was, so taking what fits loses
+   * nothing, where a gather or a drop refused whole is simply not had.
+   */
+  addWhatFits(itemId: ItemId, quantity: number): number {
+    const count = Math.min(
+      Math.floor(quantity),
+      carryableCount(this.state.inventory, itemId, this.carryCapacity()),
+    );
+    if (count <= 0) return 0;
+    this.addItem(itemId, count);
+    return count;
   }
 
   /**

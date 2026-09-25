@@ -411,6 +411,7 @@ const QUARTERMASTER = "window.world.npcs.find((n) => n.npcId === 'quartermaster'
 const GENERAL_STORE = "window.world.buildings.find((b) => b.definition.id === 'general-store')";
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
+const PILE = 'window.world.lootPiles[0]';
 
 /**
  * Stands the player a little south of one of those, with nothing selected.
@@ -1125,6 +1126,120 @@ async function feedback() {
     Math.hypot(walked.x - destination.x, walked.y - destination.y) < 24,
     `player at ${Math.round(walked.x)},${Math.round(walked.y)} for ${destination.x},${destination.y}`,
   );
+}
+
+async function lootPiles() {
+  // --- Loot piles: what a kill leaves on the ground when the pack is full.
+  //
+  // The rules — exactly what a pile holds, its minute, taking what fits, a
+  // death leaving it and a zone change dropping it — are
+  // tests/world/lootPiles.test.ts. What only a browser shows is the sack, and
+  // it is the one thing drawn that comes and goes mid-zone in numbers: built on
+  // the frame a pile appears and handed back on the frame it goes, with no zone
+  // change to sweep it up, which is a teardown the round trips above never
+  // exercise. Then the two presses on it, through a real camera. ---
+  await page.evaluate(() => window.world.mobs.forEach((m) => m.disengage()));
+  // Every geometry in town uploaded before the first reading, so the camera
+  // walking a few steps to the sack cannot bring anything new into it.
+  await sweep();
+  // The floats a fight leaves are text on a canvas, faded on the view's wall
+  // clock rather than the game's, so a reading waits them out.
+  const settled = async () => {
+    for (let wait = 0; wait < 40 && (await drawnCounts()).fx > 0; wait += 1) {
+      await page.waitForTimeout(100);
+    }
+    await draw();
+    return gpuMemory();
+  };
+  const before = await settled();
+  const bag = await page.evaluate(() => ({ ...window.world.character.state.inventory }));
+
+  // A full pack and a rat on the spawn point, killed through the funnel both
+  // kill paths end in until one of them drops something — the dice are the
+  // page's own, and a rat carries nothing one time in five.
+  const dropped = await page.evaluate(() => {
+    const w = window.world;
+    const c = w.character;
+    c.addItem('crab-meat', Math.max(0, Math.floor(c.carryCapacity() - c.carriedWeight())));
+    for (const rat of w.mobs.filter((m) => m.isAlive() && m.definition.id === 'rat')) {
+      if (w.lootPiles.length > 0) break;
+      rat.setPosition(w.spawnPoint.x, w.spawnPoint.y);
+      rat.takeDamage(rat.maxHp);
+      w.resolveKill(rat);
+    }
+    return w.lootPiles.flatMap((pile) => pile.contents().map((drop) => drop.itemId));
+  });
+  await step(2);
+  const during = await settled();
+  const shown = await drawnCounts();
+  check(
+    'a kill the pack cannot hold leaves one sack where it fell, on the GPU',
+    dropped.length > 0 && shown.piles === 1 && during.geometries > before.geometries,
+    `holding ${dropped.join(', ')}; ${shown.piles} drawn, ${JSON.stringify(before)} -> ${JSON.stringify(during)}`,
+  );
+  await standSouthOf(PILE);
+  await page.screenshot({ path: `${OUT}/8b-loot-pile.png` });
+
+  // Asked about, it says Take; the card behind Inspect is what is in it.
+  const sack = await screenAt(PILE);
+  await page.mouse.move(sack.x, sack.y);
+  await page.mouse.click(sack.x, sack.y, { button: 'right' });
+  await draw();
+  const menu = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-context__row')].map((n) => n.textContent),
+  );
+  await page.click('.hud-context__row[data-context-action="Inspect"]');
+  const listed = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-inspect__held')].map(
+      (row) => /** @type {HTMLElement} */ (row).dataset.item ?? '',
+    ),
+  );
+  check(
+    'a right click on the sack offers Take, and Inspect lists what is in it',
+    menu.join(',') === 'Take,Inspect' && listed.join(',') === dropped.join(','),
+    `${menu.join(' | ')}; listed ${listed.join(', ')}`,
+  );
+  await page.click('[data-action="close-inspect"]');
+
+  // Room made, and a plain tap on it: the walk over and everything in it taken.
+  const held = await page.evaluate(() => {
+    const c = window.world.character;
+    c.removeItem('crab-meat', c.itemCount('crab-meat'));
+    window.events.emit('inventory-changed', c.state.inventory);
+    return { ...c.state.inventory };
+  });
+  await clickAt(await screenAt(PILE));
+  await stepUntil(
+    () => page.evaluate(() => window.world.lootPiles.length === 0),
+    'the tapped sack to be walked to and taken up',
+  );
+  // Counted against the bag before the tap rather than read as "any", since a
+  // pile that lapsed would empty the list just the same.
+  const carried = await page.evaluate(
+    ({ items, was }) =>
+      items.every(
+        (itemId) =>
+          (window.world.character.state.inventory[itemId] ?? 0) >
+          (was[/** @type {keyof typeof was} */ (itemId)] ?? 0),
+      ),
+    { items: dropped, was: held },
+  );
+  await step(2);
+  const after = await settled();
+  check(
+    'a tap takes the sack up, and its geometry goes back to the GPU with it',
+    carried &&
+      (await drawnCounts()).piles === 0 &&
+      JSON.stringify(after) === JSON.stringify(before),
+    `carried: ${carried}, ${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
+  );
+
+  // The bag as the sections after this one expect to find it.
+  await page.evaluate((inventory) => {
+    window.world.character.state.inventory = inventory;
+    window.events.emit('inventory-changed', inventory);
+  }, bag);
+  await park();
 }
 
 async function bank() {
@@ -3599,6 +3714,7 @@ const SECTIONS = [
   ['interiors', interiors],
   ['context-menu', contextMenu],
   ['feedback', feedback],
+  ['loot-piles', lootPiles],
   ['bank', bank],
   ['trainer', trainer],
   ['bounty-board', bountyBoard],

@@ -201,9 +201,23 @@ going and loses the haul, since the swing happened and stopping the camp dead wo
 night's XP rather than one load of logs. `GatherSession` asks `isCamping()` to tell the two apart.
 Currency is weightless and never fails.
 
-**A withdrawal is the one acquisition that takes what fits** (`CharacterController.withdraw`, using
-`carryableCount` in `EncumbranceSystem`). Every other path hands over a fixed amount that is
-_destroyed_ by a refusal — a gather yields two logs or swings for nothing — which is what makes
-all-or-nothing the right answer there. The rest of a withdrawal simply stays on the shelf and is
-still the player's, so refusing thirty logs outright because twelve fit would be inventing a loss.
-It says what stayed behind, since asking for thirty and getting twelve otherwise reads as a bug.
+**A kill's refusals are the same line drawn at the same place** (`docs/decisions.md` 62-63). A
+drop cannot be "stopped" the way a gather can — the creature is already dead — so for an attended
+player `CombatDirector.grantLoot` leaves whatever the pack refused in a **loot pile**
+(`world/LootPile.ts`) where the creature fell, and a camp loses it as it always did, with a log line
+per drop; `CombatDirector` asks the same `isCamping()` once per corpse. A pile holds exactly what was
+refused — never coin — and lies for `LOOT_PILE_LIFETIME_MS`, a minute of game time, which is time to
+make room or to walk back from the respawn point and not time to go to town and sell first. Each
+kill's refusals are a pile of their own, even on top of another, so there is no rule about how near
+is near. A pile is the zone's, like a fire: `LootPiles` holds them, nothing saves them, and a zone
+change or a teardown drops every one; a death does not, since the respawn is in the same zone. A
+tap on one walks over and takes what fits, a stack at a time, so a heavy thing that does not fit
+does not stop a light one after it; what is left keeps the pile's original minute.
+
+**Two acquisitions take what fits: a withdrawal and a pile** (`CharacterController.withdraw` and
+`addWhatFits`, using `carryableCount` in `EncumbranceSystem`). Every other path hands over a fixed
+amount that is _destroyed_ by a refusal — a gather yields two logs or swings for nothing — which is
+what makes all-or-nothing the right answer there. The rest of a withdrawal simply stays on the shelf
+and is still the player's, and the rest of a pile stays on the ground, so refusing thirty logs
+outright because twelve fit would be inventing a loss. Both say what stayed behind, since asking for
+thirty and getting twelve otherwise reads as a bug.

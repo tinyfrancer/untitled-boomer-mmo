@@ -7,10 +7,12 @@ import {
   describeEnemyLoot,
   describeNode,
   describeNpc,
+  describePile,
   describeSignpost,
   describeStation,
 } from '../systems/InspectSystem';
 import type { ContextAction, ContextActionId, ContextSubject } from '../ui/uiEvents';
+import type { LootPile } from './LootPile';
 import type { Mob } from './Mob';
 import type { ResourceNode } from './ResourceNode';
 import type { WorldContext } from './WorldContext';
@@ -26,6 +28,7 @@ const SUBJECT_ACTIONS = {
   node: 'gather',
   signpost: 'travel',
   station: 'work',
+  pile: 'take',
 } as const satisfies Record<Exclude<Subject['kind'], 'npc'>, ContextActionId>;
 
 /** What each counter is called, on the one line a menu gives it. */
@@ -112,6 +115,8 @@ export class ContextMenuSession {
         return this.npcMenu(target.npc);
       case 'station':
         return this.stationMenu(target.station);
+      case 'pile':
+        return this.pileMenu(target.pile);
     }
   }
 
@@ -145,6 +150,8 @@ export class ContextMenuSession {
     // The corpse case: a mob may die between the menu opening and a line being
     // chosen, and a walk to attack one would end standing over it.
     if (subject.kind === 'mob' && !subject.mob.isAlive()) return;
+    // Its twin: a pile can lapse, or be emptied by a tap, while the menu is up.
+    if (subject.kind === 'pile' && subject.pile.isGone()) return;
     this.deps.perform(subject);
   }
 
@@ -160,6 +167,20 @@ export class ContextMenuSession {
       actions: [action('attack', 'Attack')],
       details: describeEnemy(mob.definition, mob.level),
       loot: describeEnemyLoot(mob.definition),
+    };
+  }
+
+  /**
+   * What is in a pile, as it stood when the menu opened. The one card here read
+   * off something that changes, and settled at the open like every other: a
+   * pile only ever gets smaller, so a stale card can only promise too much, and
+   * Take is answered against what is really there.
+   */
+  private pileMenu(pile: LootPile): ContextSubject {
+    return {
+      title: 'Loot Pile',
+      actions: [action('take', 'Take')],
+      details: describePile(pile.contents()),
     };
   }
 

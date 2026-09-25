@@ -56,6 +56,10 @@ describe('MomentEar', () => {
     expect(new MomentEar().hear({ kind: 'wind-up', by: MOB })).toEqual(['wind-up']);
   });
 
+  it('hears a loot pile land, which is how a full pack sounds', () => {
+    expect(new MomentEar().hear({ kind: 'loot-left', at: AT })).toEqual(['sack']);
+  });
+
   it('tells a death by whose it was', () => {
     const ear = new MomentEar();
     expect(ear.hear({ kind: 'death', on: 'mob', mob: MOB })).toEqual(['mob-death']);

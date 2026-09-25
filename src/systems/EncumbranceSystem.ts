@@ -51,13 +51,13 @@ export function canCarry(
  * How many of this the pack still has room for, which is the other question
  * `canCarry` answers yes or no to.
  *
- * It exists for the one acquisition that is not all-or-nothing: a withdrawal
- * from the bank. Everything else the world hands the player is a fixed amount
- * that either goes in the pack or does not happen — a gather yields two logs or
- * swings for nothing — and nothing is destroyed by the refusal. A withdrawal is
- * the player naming a count from a store they already own, so the honest answer
- * to "give me thirty logs" with room for twelve is twelve logs, and the other
- * eighteen stay on the shelf.
+ * It exists for the two acquisitions that are not all-or-nothing: a withdrawal
+ * from the bank, and taking from a loot pile. Everything else the world hands
+ * the player is a fixed amount that either goes in the pack or does not happen —
+ * a gather yields two logs or swings for nothing. Those two are the player
+ * reaching into a store they already own, so the honest answer to "give me
+ * thirty logs" with room for twelve is twelve logs, and the other eighteen stay
+ * on the shelf, or on the ground.
  */
 export function carryableCount(inventory: Inventory, itemId: ItemId, capacity: number): number {
   const spare = capacity - inventoryWeight(inventory);

@@ -21,7 +21,10 @@ on the mob (`mob.windUp`), and the view draws the telegraph by reading it each f
 poll: it has to be told the moment something began. So `CombatDirector` pushes `{ kind: 'wind-up' }`
 when one starts, which the view ignores and the ear hears as the warning. The rejected alternative
 was the board reading the world's mobs, which would have made sound the one thing outside the view
-that holds a reference to the zone (`docs/decisions.md` 61).
+that holds a reference to the zone (`docs/decisions.md` 61). A loot pile is the second case: the
+sack is drawn from `world.lootPiles`, and `LootPiles.leave` pushes `{ kind: 'loot-left' }` for the
+ear, which hears it as a low thump — the sound of a full pack, which is worth hearing mid-fight
+because the notice that says so is easy to miss.
 
 **The gather's strokes are shared with the view** (`ui/gatherBeat.ts`). The world reports how far
 through its channel a gather is and nothing about strokes, which are presentation; `GatherBeat`

@@ -52,10 +52,11 @@ also the one job a full pack is _no_ warning about, since it spends what it carr
 makes.
 
 **A full pack never stops an unattended session; it only stops it keeping anything.** The camp keeps
-fighting or working and keeps earning, and everything it cannot pocket is counted into
-`OfflineAfkReport.missed` and itemised on the away report — "60 kills, 75 XP / Could not carry: Rat
-Bones x33, Rat Meat x26" rather than a bare "your pack filled up", which tells a player nothing
-about what a night cost them. Settling in with a pack that is already full is allowed and warned
+fighting or working and keeps earning, and — awake or offline — **it leaves no loot pile**, since a
+pile is something to come back for and nobody is there to (`docs/decisions.md` 62). Offline,
+everything it cannot pocket is counted into `OfflineAfkReport.missed` and itemised on the away
+report — "60 kills, 75 XP / Could not carry: Rat Bones x33, Rat Meat x26" rather than a bare "your
+pack filled up", which tells a player nothing about what a night cost them. Settling in with a pack that is already full is allowed and warned
 about at the toggle, since the XP is worth having on its own but nobody means to do it; that warning
 is latched (`packFull`) so it is said once rather than every frame for as long as the camp runs.
 

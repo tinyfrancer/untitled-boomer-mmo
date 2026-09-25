@@ -491,9 +491,9 @@ describe('CharacterController banking', () => {
   });
 
   /**
-   * The one acquisition deliberately not all-or-nothing: what will not fit is
-   * still the player's, sitting on the shelf, rather than destroyed by the
-   * refusal the way a gather's yield would be.
+   * One of the two acquisitions deliberately not all-or-nothing: what will not
+   * fit is still the player's, sitting on the shelf, rather than destroyed by
+   * the refusal the way a gather's yield would be.
    */
   it('withdraws what the pack will hold and reports what stayed behind', () => {
     const character = makeController();
@@ -506,6 +506,18 @@ describe('CharacterController banking', () => {
     expect(result.moved).toBeGreaterThan(0);
     expect(result.left).toBe(200 - result.moved);
     expect(character.bankCount('logs')).toBe(result.left);
+  });
+
+  // The other is a loot pile, which asks the same question without a bank.
+  it('adds what fits of a stack and says how many that was', () => {
+    const character = makeController();
+    const room = character.carryCapacity() - character.carriedWeight();
+    character.addItem('rat-bones', room - 3 * itemWeight('rat-meat'));
+
+    expect(character.addWhatFits('rat-meat', 5)).toBe(3);
+    expect(character.itemCount('rat-meat')).toBe(3);
+    expect(character.addWhatFits('rat-meat', 5)).toBe(0);
+    expect(character.itemCount('rat-meat')).toBe(3);
   });
 
   it('refuses a withdrawal into a pack with no room, keeping the shelf intact', () => {

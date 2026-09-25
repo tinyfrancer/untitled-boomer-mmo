@@ -10,6 +10,9 @@ last phase lands.
 
 ## Where things stand
 
+- **Phase 10 has landed since this was written** — see
+  [its section](#phase-10--loot-that-is-not-lost-landed). **Next is phase 11.** The rest of this
+  list is as it stood at the merge of PR #123.
 - **`main` has phases 0-9**: the cleanup (a 17 KB `CLAUDE.md` with the reasoning moved into
   `docs/architecture/`, one counter shell for six roles, one set of dice per zone), the graphics
   (the world carried past its edge, each zone's air, rock standing up, readable names, a fight with
@@ -66,54 +69,15 @@ The ranger and the arrows reshape phase 12, which is why this now runs to phase 
    closed off an alternative, and correct the architecture file for what moved. Part of the phase,
    not paperwork after it.
 
-## Phase 10 — loot that is not lost
+## Phase 10 — loot that is not lost (landed)
 
-**Where it starts.** `CombatDirector.grantLoot` (`src/world/CombatDirector.ts`) is the one place a
-drop is refused: `tryAddItem` fails, a line is logged, and the item is gone. That branch is where a
-pile gets filled. Coin is never refused and never goes in one.
-
-**Shape it after the campfire.** `world/Campfire.ts` is the existing thing that belongs to a zone
-rather than to the character, times out on the world's clock, and is dropped by a zone change —
-exactly what a pile is. No engine timers: the lifetime is an accumulator against the frame delta.
-
-**What is settled** (decisions 62-63):
-
-- **Only an attended player gets a pile.** A camp — awake or offline — leaves none. Offline, a
-  refusal is counted into the away report's `missed`, as now. Awake, nothing changes either: the
-  camp has no running tally, only the log line `grantLoot` writes per refused drop and the one
-  "Your pack is full" warning `AfkCamp` latches. "Keep counting" was an answer about piles, not a
-  request for an awake tally, so don't build one. The line to draw is `isCamping()`, the same one
-  `GatherSession` draws for what a full pack means.
-- **A pile lasts one minute of game time**, then is gone. Every map is 25×19 tiles, so the far
-  corner is about 1,000 units from anywhere and about three seconds at a walk: a minute is time to
-  drop something and pick the pile up, or to walk back from a respawn, and not time to go to town
-  and sell first. Game time stops while the tab is hidden, so the minute does too.
-- **Each kill's refusals are a pile of their own**, even beside another. No merging, so no rule
-  about how near is near.
-- **A pile outlives a death.** A respawn does not change zone — `ZoneWorld.handlePlayerDeath`
-  stands the player up at the zone's centre — so this is just `handlePlayerDeath` leaving piles
-  alone while it clears the target, the counters and the context menu. A zone change and a
-  teardown still drop every pile.
-
-**The pieces**, each a place the codebase already has a pattern for:
-
-- `WorldTap` (in `ZoneWorld.ts`) gains a `pile` kind, and `pickTap` (`render3d/picking.ts`) tries it
-  **above the ground and below everything else** — the list is a priority, and anything above mobs
-  would eat taps aimed at creatures behind it (`docs/architecture/rendering.md`, picking).
-- Taking from it is `tryAddItem` item by item, **taking what fits and leaving the rest** — the same
-  call `CharacterController.withdraw` makes with `carryableCount`, because the rest is still the
-  player's. What is left keeps the pile's original minute; taking from it does not restart the
-  clock.
-- A line in the context menu (`ContextMenuSession`, `InspectSystem`) saying what is in it.
-- An actor drawing a small sack, disposed through `disposeTree`; smoke's GPU-memory round trip has
-  to stay flat, and `drawnCounts` may need a kind for it.
-- If it should make a sound when it drops, the world pushes a `WorldEvent` for it (decision 61).
-
-**Tests**: `tests/world/` with the harness — fill the pack, kill something, a pile holds exactly
-what was refused; a tap takes what fits and leaves the rest; it is gone after a minute and there
-before it; two kills make two piles; a death leaves it on the ground; a zone change drops it; a
-camp's kill with a full pack leaves none. `tests/render3d/picking.test.ts` for its priority. A smoke
-check that one is drawn and taken down.
+**Landed** on its own PR, much as this section described it: `world/LootPile.ts` and
+`world/LootPiles.ts`, `CombatDirector.grantLoot` leaving a pile unless `isCamping()`, a `pile` tap
+kind picked above the ground and below everything else, a Take line and a card listing the contents,
+a sack that blinks through its last ten seconds (decision 66), and a `loot-left` event the ear hears
+as a thump. The plan's phase 10 has what it turned out to be about; `docs/architecture/economy.md`
+has the rules and `rendering.md` the sack. Tests are `tests/world/lootPiles.test.ts`, the picking
+and actor tests, and smoke's `loot-piles` section.
 
 ## Phase 11 — the upper band gets directed content
 
