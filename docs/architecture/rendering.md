@@ -231,6 +231,11 @@ actor they belong to — `render3d/reactions.ts` brings a weapon over its grip o
 and flashes the emissive term of whatever was struck, white for a creature and red for the player —
 and `fx.ts` sprays sparks off a crit, chips off each of a gather's two beats, and a ring of light off
 `level-up`. None of it is state the world keeps: a mob is never "mid-swing" to anything but the view.
+**An enemy wind-up is drawn at the reach it lands at** (`render3d/telegraph.ts`): a red rim at the
+ability's `range` under the creature and a disc filling out to it as the wind-up runs down. The shout
+says something is coming; the rim says where the line is to be on the far side of, which is the whole
+of what the player can do about it. It reads `mob.windUp`, which is state, and fills on the view's
+clock from when it first saw it; it is built on a creature's first wind-up, since most never have one.
 A damage ability says whether it is `thrown` in its effect, the word enemy abilities already used;
 this asked `range > 0` before, which every damage ability has, so a Power Slash threw a magic bolt.
 

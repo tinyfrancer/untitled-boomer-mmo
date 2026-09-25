@@ -22,6 +22,8 @@ import { buildBuilding } from './buildings';
 import { LAMP_HEIGHT_FRACTION, type RoomLamp } from './lights';
 import { BUILDING_LOOKS, PALETTE } from './palette';
 import { Reactions } from './reactions';
+import { Telegraph } from './telegraph';
+import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { buildText } from './text';
 import { buildingRect, doorPoint, isInside } from '../data/buildings';
 import type { Point } from '../systems/MovementSystem';
@@ -201,6 +203,10 @@ export class MobActor implements Actor, Pickable {
   private readonly creature: Figure;
   private readonly plate: Nameplate;
   private readonly reactions = new Reactions();
+  // Built on the first wind-up rather than here; see `Telegraph`. Which wind-up
+  // it is drawing and when the view first saw it, which is what it fills from.
+  private telegraph: Telegraph | null = null;
+  private telegraphed: { landsAt: number; seenAt: number } | null = null;
   // Beasts of the same kind spawned in the same frame would otherwise scuttle in
   // perfect lockstep; their spawn point is a stable seed for pulling them apart.
   private readonly phaseOffsetMs: number;
@@ -244,10 +250,12 @@ export class MobActor implements Actor, Pickable {
       setOpacity(this.facing, 1);
       this.creature.stride(this.mob.vx !== 0 || this.mob.vy !== 0, elapsedMs + this.phaseOffsetMs);
       this.reactions.apply(this.creature, elapsedMs);
+      this.syncTelegraph(elapsedMs);
       this.plate.setVisible(true);
       this.plate.setHealth(this.mob.hp, this.mob.maxHp);
       return;
     }
+    this.telegraph?.hide();
 
     // The death is read off the simulation's own clock rather than played as a
     // tween, which is what lets the world respawn on time with nothing drawing
@@ -262,6 +270,25 @@ export class MobActor implements Actor, Pickable {
 
   faceCamera(camera: Camera): void {
     this.plate.faceCamera(camera);
+  }
+
+  private syncTelegraph(elapsedMs: number): void {
+    const windUp = this.mob.windUp;
+    if (!windUp) {
+      this.telegraphed = null;
+      this.telegraph?.hide();
+      return;
+    }
+    if (!this.telegraph) {
+      this.telegraph = new Telegraph();
+      this.object.add(this.telegraph.object);
+    }
+    // A new wind-up is one landing at a different moment from the last one.
+    if (this.telegraphed?.landsAt !== windUp.landsAt) {
+      this.telegraphed = { landsAt: windUp.landsAt, seenAt: elapsedMs };
+    }
+    const ability = ENEMY_ABILITIES[windUp.abilityId];
+    this.telegraph.show(ability.range, (elapsedMs - this.telegraphed.seenAt) / ability.windUpMs);
   }
 
   /** A swing or a bite, turned to face what it was aimed at. See `PlayerActor.swing`. */

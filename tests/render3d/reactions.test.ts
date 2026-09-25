@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Mesh, MeshLambertMaterial, Points } from 'three';
+import { Group, Mesh, MeshLambertMaterial, Points } from 'three';
 import { ENEMIES } from '../../src/data/enemies';
+import { ENEMY_ABILITIES } from '../../src/data/enemyAbilities';
+import { MobActor } from '../../src/render3d/actors';
+import { Mob } from '../../src/world/Mob';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { computeAppearance } from '../../src/systems/AppearanceSystem';
 import { NO_GEAR } from '../../src/systems/InventorySystem';
@@ -142,5 +145,40 @@ describe('the moments a fight throws off', () => {
     expect(burst?.position.z).toBe(AT.y);
     fx.update(1500);
     expect(fx.count()).toBe(0);
+  });
+});
+
+describe('a wind-up, drawn on the ground', () => {
+  const telegraphOf = (actor: MobActor): Group | undefined =>
+    actor.object.children.find(
+      (child): child is Group => child instanceof Group && child.userData.kind === 'telegraph',
+    );
+
+  it('is nothing at all for a creature that has never wound up', () => {
+    const actor = new MobActor(new Mob(0, 0, ENEMIES.bandit, 3, () => 0.5), 3);
+    actor.sync(0);
+    expect(telegraphOf(actor)).toBeUndefined();
+  });
+
+  it('rims the reach it lands at, fills toward it, and goes when it lands', () => {
+    const bandit = new Mob(0, 0, ENEMIES['bandit-chief'], 4, () => 0.5);
+    const actor = new MobActor(bandit, 4);
+    const cleave = ENEMY_ABILITIES.cleave;
+    bandit.windUp = { abilityId: 'cleave', landsAt: 5000 };
+
+    actor.sync(100);
+    const telegraph = telegraphOf(actor);
+    expect(telegraph?.visible).toBe(true);
+    const [rim, fill] = telegraph?.children ?? [];
+    expect(rim?.scale.x).toBe(cleave.range);
+    const early = fill?.scale.x ?? 0;
+
+    actor.sync(100 + cleave.windUpMs / 2);
+    expect(fill?.scale.x).toBeGreaterThan(early);
+    expect(fill?.scale.x).toBeCloseTo(cleave.range / 2, 5);
+
+    bandit.windUp = null;
+    actor.sync(100 + cleave.windUpMs);
+    expect(telegraph?.visible).toBe(false);
   });
 });

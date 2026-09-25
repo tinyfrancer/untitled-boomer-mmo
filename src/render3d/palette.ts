@@ -71,6 +71,8 @@ export const PALETTE = {
   woodChip: 0xa1887f,
   splash: 0xe0f7fa,
   levelUp: 0xffd54f,
+  /** An enemy ability winding up, drawn at the reach it lands at. */
+  telegraph: 0xff5252,
 } as const;
 
 /**
