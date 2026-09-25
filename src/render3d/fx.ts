@@ -18,8 +18,11 @@ import type { FloatTone, WorldEvent } from '../world/worldEvents';
 const FLOAT_MS = 600;
 const FLOAT_RISE = 34;
 
-/** How tall the glyphs are drawn, in world units: twice a nameplate's. */
-const FLOAT_SIZE = 24;
+/**
+ * How tall the glyphs are drawn, in world units: half again a nameplate's, so a
+ * number is read before the name it rises past.
+ */
+const FLOAT_SIZE = 32;
 
 /**
  * How far above the ground a number starts.

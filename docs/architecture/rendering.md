@@ -189,6 +189,15 @@ warrior. The name is the only line counted as a `label` by `drawnCounts` — `ma
 by construction. All three are polled off `character.state` once a frame rather than pushed by an
 event, since what moves them (an item in the bag, a title worn) publishes nothing.
 
+**A name is sized in phone pixels, and every baked word wears an outline** (act three phase 6). A
+world unit is worth whatever the camera makes it, and a portrait camera stands far enough back to fit
+ten tiles across that it draws about 0.6 pixels to the unit at the player: the twelve units a name
+used to be came out five pixels of glyph, unreadable. `DEFAULT_LABEL_HEIGHT` is 22 now and
+`tests/render3d/nameplate.test.ts` holds it in pixels on a 390x844 phone rather than in units. The
+outline is baked into the same texture in `text.ts` — a coloured glyph with nothing round it reads
+only over the grounds it happens to contrast with — and it is the same black under every tone, so
+what a line says and what colour it says it in are still the fill's alone.
+
 **Every line on a plate is a fraction of the one it hangs off**, so `labelHeight` is the single
 number that squishes a whole plate and the gaps close with it — a plate that shrank its bar and kept
 a mob's spacing around it would not have got any smaller. The player's is squished and floats higher

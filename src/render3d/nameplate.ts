@@ -4,11 +4,20 @@ import { PALETTE } from './palette';
 import { buildText } from './text';
 import { barFill } from '../systems/math';
 
-const DEFAULT_WIDTH = 56;
-const DEFAULT_HEIGHT = 8;
+const DEFAULT_WIDTH = 60;
+const DEFAULT_HEIGHT = 9;
 
-/** How tall the name is drawn, in world units, when nothing says otherwise. */
-const DEFAULT_LABEL_HEIGHT = 12;
+/**
+ * How tall the name is drawn, in world units, when nothing says otherwise.
+ *
+ * Sized off what a phone shows rather than off a number that looked right in a
+ * desktop window: a portrait camera draws about 0.6 pixels to the world unit at
+ * the player, and a baked line is 70% glyph, so the 12 this used to be was a
+ * name five pixels tall. Twenty-two is about nine and a half, which with the
+ * outline is about the least that reads — `tests/render3d/nameplate.test.ts`
+ * holds it there.
+ */
+export const DEFAULT_LABEL_HEIGHT = 22;
 
 /**
  * Stacking two sprites by half of each of their heights leaves them touching,

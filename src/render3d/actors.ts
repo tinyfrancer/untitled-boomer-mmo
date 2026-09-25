@@ -50,7 +50,7 @@ const PLATE_CLEARANCE = 12;
  * keeps the whole stack from taking back the room that bought.
  */
 const PLAYER_PLATE_CLEARANCE = 22;
-const PLAYER_PLATE = { width: 54, height: 7, labelHeight: 10 };
+export const PLAYER_PLATE = { width: 58, height: 8, labelHeight: 17 };
 
 /** Just clear of the signpost's board, which stands a tile tall. */
 const SIGNPOST_LABEL_HEIGHT = 76;
@@ -61,7 +61,7 @@ const SIGNPOST_LABEL_HEIGHT = 76;
  * Bigger than a nameplate's, because it is read from across town rather than
  * from the tile you are standing on — which is the whole job of a shop sign.
  */
-const SIGN_HEIGHT = 18;
+const SIGN_HEIGHT = 26;
 const SIGN_CLEARANCE = 14;
 
 /**

@@ -4,7 +4,7 @@ import { simToWorld } from './coords';
 import type { Point } from '../systems/MovementSystem';
 
 /** Vertical field of view, in degrees. */
-const FIELD_OF_VIEW = 50;
+export const FIELD_OF_VIEW = 50;
 
 /**
  * How far the camera is tilted down from the horizon.

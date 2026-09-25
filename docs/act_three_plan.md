@@ -4,7 +4,7 @@
 plan, decisions 54-57 and a 17 KB `CLAUDE.md` (phase 0); the counter table and the redraw rule,
 which landed together because `refreshOpen()` is one call once there is one counter slot to redraw
 (phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4); and
-rock that stands up (phase 5). **Next: phase 6.** Update this line as each phase lands.
+rock that stands up (phase 5); and names you can read (phase 6). **Next: phase 7.** Update this line as each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
 harness, smoke, and a screenshot of every zone at phone size — asked for as "a full analysis now

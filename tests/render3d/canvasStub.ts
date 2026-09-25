@@ -19,9 +19,16 @@ export function stubCanvas(): Painted[] {
   const context = {
     font: '',
     fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    lineJoin: '',
     textAlign: '',
     textBaseline: '',
     measureText: () => ({ width: 64 }),
+    // The outline under every glyph. Not recorded: what a line says and what
+    // colour it says it in are the fill's, and the outline is the same black
+    // under all of them.
+    strokeText() {},
     fillText(text: string) {
       painted.push({ text, color: context.fillStyle });
     },
