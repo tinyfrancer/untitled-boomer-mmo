@@ -27,7 +27,10 @@ import { createCamera, fogRange, frameCamera, projectToScreen, resizeCamera } fr
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { FxLayer } from './fx';
-import { buildGround } from './ground';
+import { APRON_TILES, buildGround } from './ground';
+import { buildScatter } from './scatter';
+import { WATER_TIME, buildWaterSheen } from './water';
+import { buildingRect } from '../data/buildings';
 import { RoomLight, Sunlight, type RoomLamp } from './lights';
 import { applyOcclusion, type Occluder } from './occlusion';
 import { normalizeYaw } from './orbit';
@@ -73,6 +76,10 @@ export class ZoneView3D {
   private readonly camera: PerspectiveCamera = createCamera();
   private world: ZoneWorld | null = null;
   private ground: Mesh | null = null;
+  // The zone's two layers of dressing over the ground: light moving on its
+  // water, and what is strewn over the rest. Both the zone's, so both go with it.
+  private water: Mesh | null = null;
+  private scatter: Object3D | null = null;
   private player: PlayerActor | null = null;
   private mobActors: MobActor[] = [];
   // Who draws each mob, for the moments that name one: a swing it made, a blow
@@ -171,6 +178,14 @@ export class ZoneView3D {
     this.world = world;
     this.ground = buildGround(world.zone.map);
     this.scene.add(this.ground);
+    this.water = buildWaterSheen(world.zone.map, APRON_TILES);
+    if (this.water) this.scene.add(this.water);
+    // Nothing strewn on a building's floor, which it would otherwise grow through.
+    const floors = world.buildings.map(buildingRect);
+    this.scatter = buildScatter(world.zone.map, (x, y) =>
+      floors.some((rect) => x > rect.left && x < rect.right && y > rect.top && y < rect.bottom),
+    );
+    this.scene.add(this.scatter);
     this.sunlight.frameZone(world.worldWidth, world.worldHeight);
     this.breathe(atmosphereFor(world.zone.setting));
 
@@ -207,6 +222,14 @@ export class ZoneView3D {
     if (this.ground) {
       disposeTree(this.ground);
       this.ground = null;
+    }
+    if (this.water) {
+      disposeTree(this.water);
+      this.water = null;
+    }
+    if (this.scatter) {
+      disposeTree(this.scatter);
+      this.scatter = null;
     }
     // A number rising off a rat in town has nowhere to land on the beach, and
     // the ring is under a mob that no longer exists.
@@ -333,6 +356,7 @@ export class ZoneView3D {
     const world = this.world;
     if (!world) return;
     const elapsedMs = performance.now() - this.startedAt;
+    WATER_TIME.value = elapsedMs / 1000;
 
     // Levelling recolours every enemy name at once, since the shades are
     // relative to the player rather than fixed.

@@ -1,4 +1,4 @@
-import type { BufferGeometry, Material, Object3D, Texture } from 'three';
+import type { BufferGeometry, InstancedMesh, Material, Object3D, Texture } from 'three';
 
 interface Drawable {
   geometry?: BufferGeometry;
@@ -21,6 +21,10 @@ interface Drawable {
  */
 export function disposeTree(root: Object3D): void {
   root.traverse((object) => {
+    // An instanced mesh's per-instance matrices and colours are buffers of the
+    // mesh's own, not of its geometry, and the renderer lets them go only when
+    // the mesh says it is disposed — freeing the geometry leaves them uploaded.
+    if ((object as InstancedMesh).isInstancedMesh) (object as InstancedMesh).dispose();
     const drawable = object as Object3D & Drawable;
     drawable.geometry?.dispose();
     const material = drawable.material;

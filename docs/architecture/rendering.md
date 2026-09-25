@@ -131,6 +131,17 @@ the two can never be wanted at once — nothing is built underground — and whi
 and so every compiled program, the same in every zone. `Sunlight.breathe` dims and recolours the same
 two lights rather than adding any, for the same reason.
 
+**The ground is dressed, and the dressing is the renderer's own** (`render3d/scatter.ts` and
+`water.ts`, act three phase 8). Tufts and flowers on grass, reeds in the marsh, pebbles on stone and
+paths, shells on sand — one `InstancedMesh` per kind per zone, so a zone's thousand tufts are five draw
+calls, placed off a tile hash so a zone grows the same every time it is built, and kept off building
+floors. Water gets glints: a thin additive sheet over every water tile whose brightness is three
+crossing waves of world position and a shared clock, computed in the shader rather than by moving
+vertices, which would be a buffer upload a frame for something the card can work out from a time. None
+of it blocks, is picked, casts, or is known to the simulation. **`disposeTree` calls an instanced
+mesh's own `dispose()`**: its per-instance buffers belong to the mesh rather than to the geometry, and
+the renderer lets them go only when the mesh says so.
+
 **There is a sun now, and everything standing in it sits on the ground** (`render3d/lights.ts`).
 Two flat lights and no shadows was the right call while there was nothing to cast one; by the end
 of act two there were buildings, trees, veins, signposts, creatures and a player, and every one of
