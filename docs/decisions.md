@@ -1099,3 +1099,37 @@ Everything it said about a subsystem moves, verbatim where it is still true, int
 topic and a cost on every other session. Moving rather than trimming loses nothing — a paragraph
 either stays or moves — and a topic file is read at exactly the moment its reasoning is worth the
 tokens.
+
+## 58. The world's edge is the map carried outward into a haze, not a skybox
+
+**2026-09-25 · Claude**
+
+The ground mesh grows `APRON_TILES` of the nearest edge tile past every side of the map, dimmed over
+its first three tiles, and the fog's colour and the clear colour are one per-setting haze.
+
+**Rejected:** a sky dome or gradient, which the camera cannot see — at a 45° pitch with a 50° field
+of view the horizon is never in frame, so every pixel is ground and a sky would be drawn only where
+the ground had run out; a neutral "out of bounds" tile around every map, which reads as a border
+drawn round a board; and leaving the apron undimmed, which makes the bounds clamp an invisible wall.
+
+**Why:** what the top fifth of a portrait frame showed was the clear colour where the mesh stopped.
+Carrying the edge outward keeps a road that leaves by an exit visibly leaving, and making the haze the
+clear colour means there is no line anywhere for the eye to find.
+
+## 59. Underground is dark, and the one point light is the player's lantern there
+
+**2026-09-25 · Claude**
+
+`ZoneDefinition.setting` names what kind of place a zone is; `render3d/atmosphere.ts` says what each
+looks like. Underground dims the fill and the sun and lights the player's surroundings with the same
+point light a room is lit with.
+
+**Rejected:** torches as point lights placed from the data, which the plan proposed. Every light in
+the scene is evaluated by every lambert fragment whether it is burning or not, the throttled budget
+is measured on a phone eight times slowed, and a light count that changed with the zone would
+recompile every program on the frame the zone changed.
+
+**Why:** the room lamp and the lantern can never be wanted at once, since nothing is built
+underground, so one light is both and the scene's light count never moves. A lantern is also the
+better picture: a cave reads as a cave when the rock around the player is lit and the passage ahead
+falls off into the dark.

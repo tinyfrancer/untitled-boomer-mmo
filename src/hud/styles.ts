@@ -123,6 +123,28 @@ function hudCss(): string {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
+/* --- Text over the world ------------------------------------------------ */
+
+/* Everything written straight onto the world rather than onto a panel. The
+   world behind it used to end in a dark clear colour at the top of the screen;
+   now it runs on into pale haze, and a grey caption over a pale sky is a caption
+   nobody reads. The shadow is what the bar labels already wore, doubled with a
+   soft halo so a thin glyph keeps an edge over grass, sand and sky alike. */
+.hud-player__head,
+.hud-player__title,
+.hud-effect__name,
+.hud-effect__time,
+.hud-target__name,
+.hud-target__winding,
+.hud-tracker__line,
+.hud-ability__cost,
+.hud-channel__label {
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 5px rgba(0, 0, 0, 0.8);
+}
+
 /* --- Player column ------------------------------------------------------- */
 
 .hud-player {
@@ -152,7 +174,7 @@ function hudCss(): string {
 .hud-player__level {
   flex: none;
   font-size: ${THEME.font.sm}px;
-  color: ${THEME.color.muted};
+  color: ${THEME.color.text};
 }
 /* On its own line rather than appended to the name: the two together overrun
    the column, and the title is not the part to shrink. */

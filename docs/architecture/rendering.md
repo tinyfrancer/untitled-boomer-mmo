@@ -101,6 +101,36 @@ the next thing that steps down is drawn already, and it is single-sided and woun
 tile: the face is only ever seen from inside the dip, and wound the other way it is the void it was
 added to fill.
 
+**Rock stands up, and it cost one constant** (`WALL_HEIGHT`, act three phase 5). A wall was paint at
+height zero, which made the Deep Cut and the barrow a floor with dark rectangles on it; the face code
+above was written against tile _height_ rather than against water by name, so raising `WALL_TILE`
+grew every rock face in the game with no new mesh. The height is the least that reads as solid: at a
+45° camera a wall hides as much ground behind it as it is tall, so it stays well under a figure and
+what it hides is a pair of boots. The rock colour was lightened in the same change, because at height
+zero only its darkness said "solid" and stood up it read as a hole.
+
+**The ground runs on past the map, into a haze that is also the clear colour** (`APRON_TILES` in
+`ground.ts`, act three phase 4). A portrait camera at 45° sees about twenty-nine tiles north of the
+player at the top of the frame, far past the map's edge, and for as long as the mesh stopped there
+the top fifth of every portrait frame was the clear colour — a navy hole. The apron is the map's own
+edge carried outward, one quad a tile, so a road leaving by an exit keeps going and the beach's ocean
+keeps going east; it dims over its first three tiles so the bounds clamp does not read as an
+invisible wall. The fog's colour and the scene's background are **one colour on purpose**: the far
+ground fades into it and whatever the ground does not cover is it, so the world has no edge at all.
+Nothing in the simulation knows the apron exists, and it is still one mesh, so the teardown check
+counts it as it always did.
+
+**A zone says what kind of place it is, and the renderer says what that looks like**
+(`ZoneDefinition.setting` into `render3d/atmosphere.ts`). `open`, `marsh` or `underground` is a fact
+about the world — the fen is a marsh whatever draws it — and the haze, the fill's two colours, the
+fill and sun strengths and the lantern are the renderer's answer, the same split `shape` makes for a
+creature. Required rather than defaulted, so a new zone says what it is instead of inheriting the
+beach's weather. **Underground is lit by what the player carries**: the one point light in the scene
+is the room lamp indoors and a warm lantern over the player's head underground, which is safe because
+the two can never be wanted at once — nothing is built underground — and which keeps the light count,
+and so every compiled program, the same in every zone. `Sunlight.breathe` dims and recolours the same
+two lights rather than adding any, for the same reason.
+
 **There is a sun now, and everything standing in it sits on the ground** (`render3d/lights.ts`).
 Two flat lights and no shadows was the right call while there was nothing to cast one; by the end
 of act two there were buildings, trees, veins, signposts, creatures and a player, and every one of

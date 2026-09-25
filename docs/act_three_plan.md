@@ -1,10 +1,10 @@
 # Act three: sound footing, a world worth looking at, and the upper band filled in
 
-**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-3 landed:** the drift, this
+**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-5 landed:** the drift, this
 plan, decisions 54-57 and a 17 KB `CLAUDE.md` (phase 0); the counter table and the redraw rule,
 which landed together because `refreshOpen()` is one call once there is one counter slot to redraw
-(phases 1 and 2); and the zone's dice (phase 3). **Next: phase 4.** Update this line as each phase
-lands.
+(phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4); and
+rock that stands up (phase 5). **Next: phase 6.** Update this line as each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
 harness, smoke, and a screenshot of every zone at phone size — asked for as "a full analysis now
@@ -173,10 +173,11 @@ docs describing what landed.
   (`'open' | 'marsh' | 'underground'`), and `render3d/atmosphere.ts` says what that looks like —
   sky, fog, sun and fill — the same split `shape` makes for creatures. Underground is dark: no sky,
   a low cold fill, the sun off, and the apron drawn as rock.
-- **Torches underground**, placed from the data (`ZoneDefinition.lightSpawns`) as a small pool of
-  point lights of fixed count, like `RoomLight` and for its reason: a light count that changed with
-  the zone would recompile every program on the frame the zone changed. What the budget pays for
-  them is measured on CI before the count is settled.
+- ~~Torches underground, placed from the data as a small pool of point lights.~~ **Landed as a
+  lantern instead** (decision 59): the one point light the scene already has is the room lamp
+  indoors and a warm light over the player's head underground, since nothing is built underground
+  and the two are never wanted at once. No light was added, so no program recompiles and the budget
+  pays nothing new.
 
   **Why a setting and not a colour table on the zone:** what a place _is_ belongs to the game —
   the fen is a marsh whatever draws it — and what a marsh _looks like_ is the renderer's, which is

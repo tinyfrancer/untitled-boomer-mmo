@@ -1,9 +1,22 @@
 import { BufferAttribute, BufferGeometry, Color, Mesh, MeshLambertMaterial } from 'three';
 import { TILE_SIZE } from '../config/constants';
-import { BLOCKING_TILES, GRASS_TILE, WATER_TILE, tileColor } from '../data/tiles';
+import { BLOCKING_TILES, GRASS_TILE, WALL_TILE, WATER_TILE, tileColor } from '../data/tiles';
 
 /** How far below the land a water tile sits, so a pond reads as a hole in it. */
 export const WATER_DEPTH = 14;
+
+/**
+ * How far rock stands above the floor cut out of it.
+ *
+ * It was paint — a wall at height zero — which made the Deep Cut and the barrow
+ * a floor with dark rectangles on it, where what blocks did not look like it
+ * blocked. Standing it up is what makes a passage read as one. The height is
+ * the least that does: at a 45° camera a wall hides as much ground behind it as
+ * it is tall, and a player walking along the north side of a passage has their
+ * feet that close to the wall south of them. Well under a figure's height, so
+ * what is hidden is a pair of boots rather than a person.
+ */
+export const WALL_HEIGHT = 36;
 
 /**
  * How dark the cut face of the land is against the ground on top of it.
@@ -63,9 +76,35 @@ const TILE_SIDES = [
 
 const UP = [0, 1, 0] as const;
 
-/** How high the ground stands on a tile. Only water steps down today. */
+/**
+ * How many tiles of ground are drawn past every edge of the map.
+ *
+ * Enough to reach the far edge of what a portrait camera sees from a player
+ * standing on the edge of a zone, which is where the fog has all but swallowed
+ * it: the top of a 390x844 frame is about twenty-nine tiles north of the player.
+ * Short of that, the map ended in a hard line with the clear colour showing
+ * beyond it — a fifth of every portrait frame was a navy hole.
+ */
+export const APRON_TILES = 30;
+
+/**
+ * How much darker the apron is, at its darkest, than the ground it carries on.
+ *
+ * The bounds clamp is where walking stops, and a world that runs on past it
+ * with nothing to say so is an invisible wall. Dimmed over the first few tiles
+ * out, the edge reads as the edge of the lit part of the world rather than as
+ * more of it.
+ */
+const APRON_DIM = 0.3;
+
+/** How many tiles out the apron reaches its darkest. */
+const APRON_DIM_TILES = 3;
+
+/** How high the ground stands on a tile: water steps down, rock stands up. */
 export function tileHeight(tile: number): number {
-  return tile === WATER_TILE ? -WATER_DEPTH : 0;
+  if (tile === WATER_TILE) return -WATER_DEPTH;
+  if (tile === WALL_TILE) return WALL_HEIGHT;
+  return 0;
 }
 
 /**
@@ -92,7 +131,15 @@ function touching(index: number, fraction: number): number[] {
 const lerp = (from: number, to: number, at: number): number => from + (to - from) * at;
 
 /**
- * The zone's terrain as one mesh: one geometry, one material, one draw call.
+ * The zone's terrain as one mesh: one geometry, one material, one draw call —
+ * and, with `apron`, that many tiles of it again past every edge.
+ *
+ * The apron is the map's own edge carried outward: every tile beyond the map is
+ * the nearest tile on it, so a road leaving by the west edge keeps going west
+ * and the beach's ocean keeps going east. It is one quad a tile rather than
+ * four, since nothing out there is ever close enough to show the difference,
+ * and it is drawn and nothing else — the simulation stops at the bounds clamp,
+ * exactly where it always did.
  *
  * A tilemap of separate quads would be 475 meshes to dispose per zone and 475
  * draw calls per frame, which is the wrong shape for both problems. Colour
@@ -107,17 +154,28 @@ const lerp = (from: number, to: number, at: number): number => from + (to - from
  * draws. And where the ground steps down, it grows the face it steps down —
  * without which a pond is a hole with the background showing through its rim.
  */
-export function buildGroundGeometry(map: number[][]): BufferGeometry {
+export function buildGroundGeometry(map: number[][], apron = 0): BufferGeometry {
   const rows = map.length;
   const cols = map[0]?.length ?? 0;
+  const reach = rows > 0 && cols > 0 ? apron : 0;
   const positions: number[] = [];
   const normals: number[] = [];
   const colors: number[] = [];
   const color = new Color();
   const scratch = new Color();
 
-  const tileAt = (col: number, row: number): number | null =>
-    row < 0 || row >= rows || col < 0 || col >= cols ? null : (map[row]?.[col] ?? GRASS_TILE);
+  // Off the map is the nearest tile on it, as far as the apron reaches, and
+  // nothing past that.
+  const tileAt = (col: number, row: number): number | null => {
+    if (row < -reach || row >= rows + reach || col < -reach || col >= cols + reach) return null;
+    const onRow = Math.min(rows - 1, Math.max(0, row));
+    const onCol = Math.min(cols - 1, Math.max(0, col));
+    return map[onRow]?.[onCol] ?? GRASS_TILE;
+  };
+  // How far outside the map a point is, in tiles, measured to the nearer edge.
+  const outside = (x: number, y: number): number => Math.max(0, -x, x - cols, -y, y - rows);
+  const dim = (x: number, y: number): number =>
+    1 - APRON_DIM * Math.min(1, outside(x, y) / APRON_DIM_TILES);
 
   const vertex = (x: number, y: number, z: number, normal: readonly number[], of: Color): void => {
     positions.push(x, y, z);
@@ -150,24 +208,27 @@ export function buildGroundGeometry(map: number[][]): BufferGeometry {
       }
     }
     // The tile is always one of the ones it touches, so there is a mean to take.
-    return color.setRGB(r / met, g / met, b / met).multiplyScalar(shadeAt(col + u, row + v));
+    return color
+      .setRGB(r / met, g / met, b / met)
+      .multiplyScalar(shadeAt(col + u, row + v) * dim(col + u, row + v));
   };
 
-  for (let row = 0; row < rows; row += 1) {
-    const line = map[row] ?? [];
-    for (let col = 0; col < cols; col += 1) {
-      const tile = line[col] ?? GRASS_TILE;
+  for (let row = -reach; row < rows + reach; row += 1) {
+    for (let col = -reach; col < cols + reach; col += 1) {
+      const tile = tileAt(col, row) ?? GRASS_TILE;
       const height = tileHeight(tile);
       // Sim x is east and sim y is south, so a map column is x and a map row
       // is z (see coords.ts).
       const west = col * TILE_SIZE;
       const north = row * TILE_SIZE;
+      const onMap = row >= 0 && row < rows && col >= 0 && col < cols;
+      const steps = onMap ? TILE_STEPS : 1;
 
-      for (let down = 0; down < TILE_STEPS; down += 1) {
-        for (let across = 0; across < TILE_STEPS; across += 1) {
+      for (let down = 0; down < steps; down += 1) {
+        for (let across = 0; across < steps; across += 1) {
           for (const corner of QUAD_CORNERS) {
-            const u = (across + corner[0]) / TILE_STEPS;
-            const v = (down + corner[1]) / TILE_STEPS;
+            const u = (across + corner[0]) / steps;
+            const v = (down + corner[1]) / steps;
             vertex(
               west + u * TILE_SIZE,
               height,
@@ -195,7 +256,11 @@ export function buildGroundGeometry(map: number[][]): BufferGeometry {
             side.normal,
             color
               .setHex(tileColor(neighbour))
-              .multiplyScalar(BANK_SHADE * shadeAt(col + corner[0], row + corner[1])),
+              .multiplyScalar(
+                BANK_SHADE *
+                  shadeAt(col + corner[0], row + corner[1]) *
+                  dim(col + corner[0], row + corner[1]),
+              ),
           );
         at(side.from, height);
         at(side.to, height);
@@ -217,7 +282,10 @@ export function buildGroundGeometry(map: number[][]): BufferGeometry {
 
 /** The ground mesh for a zone's map, tagged so `drawnCounts` can find it. */
 export function buildGround(map: number[][]): Mesh {
-  const mesh = new Mesh(buildGroundGeometry(map), new MeshLambertMaterial({ vertexColors: true }));
+  const mesh = new Mesh(
+    buildGroundGeometry(map, APRON_TILES),
+    new MeshLambertMaterial({ vertexColors: true }),
+  );
   mesh.name = 'ground';
   mesh.userData.kind = 'ground';
   // Receives and casts nothing: it is the floor, and a flat plane casting into

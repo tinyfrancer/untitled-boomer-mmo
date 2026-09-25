@@ -34,9 +34,11 @@ export const TILE_COLORS: Record<number, number> = {
   [WATER_TILE]: 0x1565c0,
   [SAND_TILE]: 0xe0c184,
   [STONE_TILE]: 0x6d6a63,
-  // Darker than the floor by enough to read as solid at a glance, which is all
-  // a wall has to do when the collision grid is what actually stops anyone.
-  [WALL_TILE]: 0x35322e,
+  // Darker than the floor by enough to read as solid at a glance on the map,
+  // and light enough to read as rock rather than as a hole once the renderer
+  // stands it up: at height zero only the colour said "solid", and it was
+  // nearly black to say it.
+  [WALL_TILE]: 0x4f4a43,
   // Olive and desaturated, so it sits between the grass it is not and the water
   // it is next to without being mistaken for either.
   [MARSH_TILE]: 0x4d5b3c,

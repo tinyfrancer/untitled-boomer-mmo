@@ -321,6 +321,12 @@ export type BuildingShapeId = 'hall' | 'workshop' | 'cottage';
 // for the geometry each one implies.
 export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 
+// What kind of place a zone is, which is the game's to say — the fen is a marsh
+// whatever draws it — and what the air there looks like is the renderer's
+// (`render3d/atmosphere.ts`). Underground is anywhere cut out of rock: the
+// hideout, the Deep Cut and the barrow.
+export type ZoneSetting = 'open' | 'marsh' | 'underground';
+
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.

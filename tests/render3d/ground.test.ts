@@ -2,9 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { BufferGeometry, Color } from 'three';
 import { TILE_SIZE } from '../../src/config/constants';
-import { GRASS_TILE, PATH_TILE, SAND_TILE, WATER_TILE, tileColor } from '../../src/data/tiles';
+import {
+  GRASS_TILE,
+  PATH_TILE,
+  SAND_TILE,
+  STONE_TILE,
+  WALL_TILE,
+  WATER_TILE,
+  tileColor,
+} from '../../src/data/tiles';
 import { TOWN_MAP } from '../../src/data/townMap';
 import {
+  APRON_TILES,
+  WALL_HEIGHT,
   WATER_DEPTH,
   buildGround,
   buildGroundGeometry,
@@ -279,5 +289,83 @@ describe('buildGround', () => {
     const mesh = buildGround(GRID);
     expect(mesh.receiveShadow).toBe(true);
     expect(mesh.castShadow).toBe(false);
+  });
+});
+
+/**
+ * The world runs past the map. The top fifth of a portrait frame used to be the
+ * clear colour, because the camera looks further north than the map goes; the
+ * apron carries the map's own edge outward until the fog has it.
+ */
+describe('the apron', () => {
+  const map = [
+    [GRASS_TILE, PATH_TILE],
+    [SAND_TILE, GRASS_TILE],
+  ];
+
+  it('reaches that many tiles past every edge', () => {
+    const geometry = buildGroundGeometry(map, 3);
+    geometry.computeBoundingBox();
+    const box = geometry.boundingBox;
+    expect(box?.min.x).toBe(-3 * TILE_SIZE);
+    expect(box?.min.z).toBe(-3 * TILE_SIZE);
+    expect(box?.max.x).toBe(5 * TILE_SIZE);
+    expect(box?.max.z).toBe(5 * TILE_SIZE);
+  });
+
+  it('is the nearest edge tile carried outward, and dimmer than it', () => {
+    const geometry = buildGroundGeometry([[PATH_TILE]], 4);
+    // Well out, where the dimming has bottomed out: the path's hue, darker.
+    const far = groundAt(geometry, 4, -3);
+    const path = pure(PATH_TILE, 4, -3);
+    expect(far.r / far.g).toBeCloseTo(path.r / path.g, 5);
+    expect(far.g).toBeLessThan(path.g);
+    expect(far.g).toBeGreaterThan(path.g * 0.5);
+  });
+
+  it('leaves the map itself exactly as it was', () => {
+    const without = buildGroundGeometry(TOWN_MAP);
+    const withApron = buildGroundGeometry(TOWN_MAP, 2);
+    // A tile two in from the edge touches nothing the apron added.
+    expect(groundAt(withApron, 5, 5).getHex()).toBe(groundAt(without, 5, 5).getHex());
+  });
+
+  it('is what the zone is built with', () => {
+    const geometry = buildGround(TOWN_MAP).geometry;
+    geometry.computeBoundingBox();
+    expect(geometry.boundingBox?.min.x).toBe(-APRON_TILES * TILE_SIZE);
+  });
+});
+
+/**
+ * Rock stands up. It used to be paint at height zero, which made a cave a floor
+ * with dark rectangles on it; the bank code that grows a face where the ground
+ * steps down grows one where it steps up, because it was written against height
+ * rather than against water.
+ */
+describe('rock', () => {
+  const geometry = buildGroundGeometry([[STONE_TILE], [WALL_TILE]]);
+
+  it('stands a wall height above the floor', () => {
+    const array = geometry.getAttribute('position').array as Float32Array;
+    const heights = new Set<number>();
+    for (let i = 1; i < array.length; i += 3) heights.add(nth(array, i));
+    expect([...heights].sort((a, b) => a - b)).toEqual([0, WALL_HEIGHT]);
+  });
+
+  it('grows its face on the floor side, facing the floor', () => {
+    const normal = geometry.getAttribute('normal').array as Float32Array;
+    const faces = new Set<string>();
+    for (let i = 0; i < normal.length; i += 3) {
+      const face = [nth(normal, i), nth(normal, i + 1), nth(normal, i + 2)].join(',');
+      if (face !== '0,1,0') faces.add(face);
+    }
+    // The floor is north of the rock, so the face looks north: -z.
+    expect([...faces]).toEqual(['0,0,-1']);
+  });
+
+  it('stays below a figure, so a wall hides boots rather than a person', () => {
+    expect(WALL_HEIGHT).toBeLessThan(TILE_SIZE * 0.75);
+    expect(WALL_HEIGHT).toBeGreaterThan(WATER_DEPTH);
   });
 });

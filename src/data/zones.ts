@@ -1,5 +1,5 @@
 import type { StationId } from './recipes';
-import type { BuildingId, ItemId, NpcId, ZoneEdge, ZoneId } from '../types/ids';
+import type { BuildingId, ItemId, NpcId, ZoneEdge, ZoneId, ZoneSetting } from '../types/ids';
 import { TOWN_MAP } from './townMap';
 import { BEACH_MAP } from './beachMap';
 import { BLACKWATER_FEN_MAP } from './blackwaterFenMap';
@@ -76,6 +76,13 @@ export interface ZoneDefinition {
    * whole point is a tool is a wasted walk without it.
    */
   description: string;
+  /**
+   * What kind of place this is: out under the sky, a marsh, or underground.
+   * Required rather than defaulted, so a new zone says what it is rather than
+   * inheriting the beach's weather — the renderer decides what each one looks
+   * like, and nothing in the simulation reads it.
+   */
+  setting: ZoneSetting;
   map: number[][];
   mobSpawns: MobSpawnPoint[];
   nodeSpawns: NodeSpawnPoint[];
@@ -111,6 +118,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   town: {
     id: 'town',
     name: 'Town',
+    setting: 'open',
     description: 'A shop, a pond and more rats than anyone will admit to.',
     map: TOWN_MAP,
     mobSpawns: TOWN_MOB_SPAWNS,
@@ -192,6 +200,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   beach: {
     id: 'beach',
     name: 'Beach',
+    setting: 'open',
     description: 'Crabs along the shore and deep water to fish. Bring a pan.',
     map: BEACH_MAP,
     mobSpawns: BEACH_MOB_SPAWNS,
@@ -205,6 +214,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   quarry: {
     id: 'quarry',
     name: 'Quarry',
+    setting: 'open',
     description: 'Tin and iron in the rock, and rats in the spoil. Bring a pickaxe.',
     map: QUARRY_MAP,
     mobSpawns: QUARRY_MOB_SPAWNS,
@@ -236,6 +246,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   'deep-cut': {
     id: 'deep-cut',
     name: 'The Deep Cut',
+    setting: 'underground',
     description: 'Coal and rich iron under the quarry, and goblins already working them.',
     map: DEEP_CUT_MAP,
     mobSpawns: DEEP_CUT_MOB_SPAWNS,
@@ -246,6 +257,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   'bandit-camp': {
     id: 'bandit-camp',
     name: 'Bandit Camp',
+    setting: 'open',
     description: 'Armour and coin, off men who swing first. Come geared.',
     map: BANDIT_CAMP_MAP,
     mobSpawns: BANDIT_CAMP_MOB_SPAWNS,
@@ -271,6 +283,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   'old-mill-road': {
     id: 'old-mill-road',
     name: 'Old Mill Road',
+    setting: 'open',
     description: 'Goblins on the west road, three to a knot. Harder than anything in town.',
     map: OLD_MILL_ROAD_MAP,
     mobSpawns: OLD_MILL_ROAD_MOB_SPAWNS,
@@ -302,6 +315,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   'blackwater-fen': {
     id: 'blackwater-fen',
     name: 'Blackwater Fen',
+    setting: 'marsh',
     description: 'Eels in the deep pools and raiders standing over them. Bring a pole.',
     map: BLACKWATER_FEN_MAP,
     mobSpawns: BLACKWATER_FEN_MOB_SPAWNS,
@@ -332,6 +346,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   'sunken-barrow': {
     id: 'sunken-barrow',
     name: 'The Sunken Barrow',
+    setting: 'underground',
     description: 'Locked, and what is buried in there was buried holding it. Come at eight.',
     map: SUNKEN_BARROW_MAP,
     mobSpawns: SUNKEN_BARROW_MOB_SPAWNS,
@@ -363,6 +378,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   greyford: {
     id: 'greyford',
     name: 'Greyford Outpost',
+    setting: 'open',
     description: 'A trading post out where the work is. Bring what you dug up.',
     map: GREYFORD_MAP,
     mobSpawns: [],
@@ -398,6 +414,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   'bandit-hideout': {
     id: 'bandit-hideout',
     name: 'Bandit Hideout',
+    setting: 'underground',
     description: 'Locked. Whatever they are guarding in there, they guard it well.',
     map: BANDIT_HIDEOUT_MAP,
     mobSpawns: BANDIT_HIDEOUT_MOB_SPAWNS,

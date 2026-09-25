@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   Group,
+  HemisphereLight,
   Mesh,
   Sprite,
   Vector3,
@@ -17,6 +18,7 @@ import { ZONES } from '../../src/data/zones';
 import { buildBuilding } from '../../src/render3d/buildings';
 import { buildCreature } from '../../src/render3d/creatures';
 import { RoomLight, Sunlight, castsShadow } from '../../src/render3d/lights';
+import { ATMOSPHERES } from '../../src/render3d/atmosphere';
 import {
   buildCampfire,
   buildForge,
@@ -140,8 +142,61 @@ describe('RoomLight', () => {
   /** Cut to the room: a glow that reached past the walls would light the grass. */
   it('reaches about as far as a room is wide', () => {
     const light = new RoomLight();
+    light.shine(lamp);
     expect(light.object.distance).toBeGreaterThan(TILE_SIZE);
     expect(light.object.distance).toBeLessThan(TILE_SIZE * 4);
+  });
+
+  /**
+   * The other thing the one light is: the lantern a player carries underground,
+   * which lights a passage rather than a room. Reach and strength ride on the
+   * lamp, and a room lit after it is back to a room's.
+   */
+  it('reaches as far as the lamp it is lit with says, and back to a room after', () => {
+    const light = new RoomLight();
+    light.shine({ ...lamp, reach: TILE_SIZE * 7, intensity: 1234 });
+    expect(light.object.distance).toBe(TILE_SIZE * 7);
+    expect(light.object.intensity).toBe(1234);
+
+    light.shine(lamp);
+    expect(light.object.distance).toBeLessThan(TILE_SIZE * 4);
+  });
+});
+
+describe('the air of a zone', () => {
+  const hemisphereOf = (lights: Sunlight): HemisphereLight => {
+    const fill = lights.objects.find(
+      (object): object is HemisphereLight => object instanceof HemisphereLight,
+    );
+    if (!fill) throw new Error('no fill light');
+    return fill;
+  };
+
+  it('is said by every zone, and underground is where the three are cut from rock', () => {
+    const underground = Object.values(ZONES)
+      .filter((zone) => zone.setting === 'underground')
+      .map((zone) => zone.id)
+      .sort();
+    expect(underground).toEqual(['bandit-hideout', 'deep-cut', 'sunken-barrow']);
+  });
+
+  it('carries a lantern only underground, where it is darker than anywhere outside', () => {
+    expect(ATMOSPHERES.open.lantern).toBe(0);
+    expect(ATMOSPHERES.marsh.lantern).toBe(0);
+    expect(ATMOSPHERES.underground.lantern).toBeGreaterThan(0);
+    expect(ATMOSPHERES.underground.sun).toBeLessThan(ATMOSPHERES.marsh.sun);
+    expect(ATMOSPHERES.underground.fill).toBeLessThan(ATMOSPHERES.marsh.fill);
+  });
+
+  it('dims the same two lights rather than adding or taking any away', () => {
+    const lights = new Sunlight();
+    const before = [...lights.objects];
+    lights.breathe(ATMOSPHERES.underground);
+
+    expect(lights.objects).toEqual(before);
+    expect(sunOf(lights).intensity).toBe(ATMOSPHERES.underground.sun);
+    expect(hemisphereOf(lights).intensity).toBe(ATMOSPHERES.underground.fill);
+    expect(hemisphereOf(lights).groundColor.getHex()).toBe(ATMOSPHERES.underground.ground);
   });
 });
 

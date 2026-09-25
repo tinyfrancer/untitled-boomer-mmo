@@ -5,9 +5,11 @@ import {
   PCFSoftShadowMap,
   PerspectiveCamera,
   Scene,
+  Vector3,
   WebGLRenderer,
   type Mesh,
 } from 'three';
+import { TILE_SIZE } from '../config/constants';
 import {
   BuildingActor,
   CampfireActor,
@@ -20,6 +22,7 @@ import {
   type Actor,
 } from './actors';
 import { occupant } from '../data/buildings';
+import { ATMOSPHERES, atmosphereFor, type Atmosphere } from './atmosphere';
 import { createCamera, fogRange, frameCamera, projectToScreen, resizeCamera } from './camera';
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
@@ -34,8 +37,13 @@ import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import type { WorldEvent } from '../world/worldEvents';
 import type { DrawnCounts } from '../types/debugView';
 
-/** Dark enough that the world edge reads as sky rather than as a hole. */
-const BACKGROUND = 0x1a1a2e;
+/**
+ * The lantern the player carries underground: warm, head high, and reaching
+ * far enough to light the width of a passage and a little of what is down it.
+ */
+const LANTERN_COLOR = 0xffc98a;
+const LANTERN_HEIGHT = TILE_SIZE * 1.4;
+const LANTERN_REACH = TILE_SIZE * 7;
 
 /**
  * The Three.js view onto one ZoneWorld: a renderer, a scene, a camera that
@@ -87,7 +95,12 @@ export class ZoneView3D {
   // Distance-hazed toward the background, so the edge of the world reads as far
   // away rather than as the line where the ground mesh stops. Its range is a
   // function of how far back the camera stands, so it is set on every resize.
-  private readonly fog = new Fog(BACKGROUND);
+  private readonly fog = new Fog(ATMOSPHERES.open.haze);
+  // The air of the zone being drawn, and the lantern it may ask for — a lamp
+  // whose point is moved rather than rebuilt, since it follows the player
+  // every frame.
+  private atmosphere: Atmosphere = ATMOSPHERES.open;
+  private readonly lanternAt = new Vector3();
   // Where the camera stands around the player. Owned here rather than by the
   // host because it outlives a zone — a player who has turned the camera to see
   // past a tree does not expect it snapped back north by walking through a
@@ -126,7 +139,9 @@ export class ZoneView3D {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
 
-    this.scene.background = new Color(BACKGROUND);
+    // One colour with the fog, on purpose: the far ground fades into it and
+    // whatever the ground does not cover is it, so the world has no edge.
+    this.scene.background = new Color(ATMOSPHERES.open.haze);
     this.scene.fog = this.fog;
     this.scene.add(
       ...this.sunlight.objects,
@@ -143,6 +158,7 @@ export class ZoneView3D {
     this.ground = buildGround(world.zone.map);
     this.scene.add(this.ground);
     this.sunlight.frameZone(world.worldWidth, world.worldHeight);
+    this.breathe(atmosphereFor(world.zone.setting));
 
     this.labelledLevel = world.character.state.level;
     this.player = new PlayerActor(world.player);
@@ -303,8 +319,21 @@ export class ZoneView3D {
     this.signpostActors.forEach((actor) => actor.faceCamera(this.camera));
   }
 
+  /** The air of a zone: the haze, the fill, the sun, and whether there is a lantern. */
+  private breathe(atmosphere: Atmosphere): void {
+    this.atmosphere = atmosphere;
+    this.fog.color.setHex(atmosphere.haze);
+    (this.scene.background as Color).setHex(atmosphere.haze);
+    this.sunlight.breathe(atmosphere);
+  }
+
   /**
-   * The room the player is standing in, or `null` for one who is outdoors.
+   * What the one point light is lighting: the room the player is standing in,
+   * the lantern they carry underground, or nothing.
+   *
+   * The two cannot both be wanted — nothing is built underground — which is
+   * what lets one light be both and keeps the scene's light count, and so
+   * every compiled program, the same in every zone.
    *
    * A loop rather than a `find` over `map`, because this runs every frame and
    * an array per frame for a list that answers `null` almost always is an
@@ -315,7 +344,17 @@ export class ZoneView3D {
       const lamp = actor.roomLamp();
       if (lamp) return lamp;
     }
-    return null;
+    const player = this.world?.player;
+    if (!player || this.atmosphere.lantern <= 0) return null;
+    // Set in place rather than built by `simToWorld`, whose axes it follows:
+    // this runs every frame for as long as the player is underground.
+    this.lanternAt.set(player.x, LANTERN_HEIGHT, player.y);
+    return {
+      at: this.lanternAt,
+      color: LANTERN_COLOR,
+      reach: LANTERN_REACH,
+      intensity: this.atmosphere.lantern,
+    };
   }
 
   // A campfire is the one thing that appears and goes out mid-zone, so it is
