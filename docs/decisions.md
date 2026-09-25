@@ -1167,3 +1167,55 @@ last frame's state to compare against — a second picture of the world, kept by
 has no other reason to hold a reference to it. The board hears the two channels and nothing else,
 which is what keeps it as swappable as the renderer. So the rule for the next sound: if the moment
 is not already on the view channel, the world pushes it there.
+
+## 62. A camp leaves no loot pile; only an attended player gets one
+
+**2026-09-25 · the user, asked by Claude**
+
+A kill whose drops do not fit leaves a pile (phase 10) only when nobody is camping. A camp keeps
+doing what it does now: offline, a refusal is counted into the away report's `missed`; awake, it is
+the log line per refused drop and the one full-pack warning.
+
+**Rejected:** a pile under an awake camp as well, which the plan left unsaid.
+
+**Why:** a pile is something to come back for, and a camp is the case where nobody is there to. Piles
+under an unattended camp would accumulate for as long as it ran.
+
+## 63. A loot pile lasts one minute, each kill leaves its own, and it outlives a death
+
+**2026-09-25 · the user, asked by Claude**
+
+A pile is gone one minute of game time after it drops. A second kill's refusals make a second pile
+rather than joining one nearby. A death does not clear piles — the respawn is in the same zone — so
+only a zone change or a teardown drops one early.
+
+**Rejected:** "a few minutes", the plan's figure; merging refusals into a pile already on the
+ground nearby; clearing piles on a death.
+
+**What it means:** every map is 25×19 tiles, so a minute is time to make room and pick a pile up, or
+to walk back to it from the respawn point, and not time to go to town and sell first.
+
+## 64. The bow shoots arrows, made by fletching and smithing
+
+**2026-09-25 · the user, asked by Claude**
+
+The bow needs ammunition. Arrows are made, and making them takes both making skills that touch them:
+fletching for the wood, smithing for the metal.
+
+**Rejected:** a bow with no ammunition, which is what the plan described by not mentioning any.
+
+**Still open**, and in `docs/act_three_handoff.md`: whether one is spent per shot, what a bow does
+with none, where they are carried, and how a level 1 character gets them.
+
+## 65. A third class, whose weapon is the bow
+
+**2026-09-25 · the user**
+
+A hunter or ranger class joins the warrior and the wizard, and the bow is its weapon. This reverses
+the part of decision 55 that rejected a third class for act three; 55 stands as written, since this
+file is appended rather than edited.
+
+**Rejected:** the plan's bow for the warrior, as the only use of a bow.
+
+**Still open**, and in `docs/act_three_handoff.md`: the class's name, whether a warrior can still
+hold a bow, and what its damage scales with.

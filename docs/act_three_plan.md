@@ -6,7 +6,9 @@ which landed together because `refreshOpen()` is one call once there is one coun
 (phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4);
 rock that stands up (phase 5); names you can read (phase 6); a fight you can see, with an enemy's
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
-something on it (phase 8); and sound (phase 9). **Next: phase 10** — start from `act_three_handoff.md`. Update this line as
+something on it (phase 8); and sound (phase 9). **Next: phase 10** — start from
+`act_three_handoff.md`, which also holds the user's answers on loot piles and the bow (decisions
+62-65): phase 12 is now a third class and arrows, and runs on into a phase 13. Update this line as
 each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
@@ -252,12 +254,15 @@ things the section did not say are in `docs/architecture/audio.md` and decisions
 ### Phase 10 — loot that is not lost
 
 - A kill whose drops do not fit leaves a **loot pile** (`world/LootPile.ts`) where the creature
-  fell, holding exactly what could not be carried. It lasts a few minutes of game time, is tapped to
-  take what fits, and is drawn as a small sack. Coin is never in one; coin never failed.
+  fell, holding exactly what could not be carried. It lasts **one minute** of game time, is tapped
+  to take what fits, and is drawn as a small sack. Each kill leaves its own. Coin is never in one;
+  coin never failed.
 - It is a `WorldTap` kind and a line in the context menu, picked above the ground and below
   everything else. A zone change or teardown drops every pile — they are the zone's, like a fire.
-- The camp's behaviour does not change: an unattended session still counts what it could not
-  carry into `missed`, since nobody is there to come back for it.
+  A death does not: the respawn is in the same zone, and the pile is still there to walk back to.
+- The camp's behaviour does not change, awake or offline: a camp leaves no pile, and an unattended
+  session still counts what it could not carry into `missed`, since nobody is there to come back for
+  it. (Decisions 62-63.)
 
 ### Phase 11 — the upper band gets directed content
 
@@ -274,6 +279,14 @@ things the section did not say are in `docs/architecture/audio.md` and decisions
   rather than eyeballed.
 
 ### Phase 12 — willow, fletching and the bow
+
+> **Superseded in part, 2026-09-25.** The user has since chosen a third class whose weapon is the
+> bow (decision 65) and arrows made by fletching and smithing (decision 64). The bow below is no
+> longer the warrior's, and a class that starts at level 1 needs its arrows at level 1, so this phase
+> is recommended to split in two: **12, the ranger** (class, starter bow, archery, first-tier
+> arrows and fletching) and **13, willow** (the upper band's tier of the same chain).
+> `act_three_handoff.md` has the split, what is still to be asked, and where each piece touches the
+> code. Rewrite this section to match before building it.
 
 - **Willow** on the mill road's millpond, a woodcutting node above hardwood.
 - **Fletching**, the fourth making skill, at a fletcher's bench in Greyford's yard — beside the
