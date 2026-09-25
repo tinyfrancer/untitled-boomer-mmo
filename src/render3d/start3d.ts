@@ -41,7 +41,7 @@ const MANUAL_LOOP = import.meta.env.DEV && manualLoopRequested(window.location.s
  * entire AFK session in a single frame, through code written for tens of
  * milliseconds, so a raw rAF loop has to clamp it itself. 100ms is 10fps —
  * slower than any frame the game is expected to survive, and it *is* expected
- * to survive them (see the arriveRadius note in CLAUDE.md).
+ * to survive them (see the arriveRadius note in `docs/architecture/simulation.md`).
  */
 const MAX_FRAME_MS = 100;
 

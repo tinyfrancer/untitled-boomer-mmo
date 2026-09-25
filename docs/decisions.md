@@ -1044,3 +1044,58 @@ than the difference between two CI runs, and the nine milliseconds phase 6 left 
 The dev container could not have said even that: three runs in one session read 47.25ms on the
 unchanged tree and 49.00 and 45.57 on this one, all over the ceiling, which is decision 50 working
 exactly as written.
+
+## 54. The graphics stay procedural
+
+**2026-09-25 · the user, asked by Claude**
+
+Act three improves how the game looks, and every improvement is code: geometry, vertex colour,
+lights, and shaders written here. The renderer still loads no image, model or sound file.
+
+**Rejected:** free CC0 asset packs (glTF models, textures, recorded audio), which are the fastest
+route to a bigger visual jump; and doing the code-only work now with the asset question left open.
+
+**Why:** the zero-asset pipeline is what keeps the GPU budget and the teardown check predictable —
+`renderer.info.memory` counts what the game builds, and nothing the game builds is a file somebody
+else sized. It is also the original "no art skills" constraint in `docs/initial_design.txt`, now
+chosen rather than inherited. If the ceiling is reached, that is a new decision, not a reopening of
+this one.
+
+## 55. Act three's features are all four that were offered
+
+**2026-09-25 · the user, asked by Claude**
+
+Fill levels 4-8 with directed content, stop a full pack destroying loot, add sound, and land willow
+with fletching and a bow. All four are phases of `docs/act_three_plan.md`.
+
+**Rejected:** a third class, and multiplayer groundwork, neither of which was chosen this round.
+
+## 56. Cleanup before features
+
+**2026-09-25 · the user, asked by Claude**
+
+The three duplicated joints the read found — six counters written six times, the HUD's hand-kept
+redraw lists, and an rng that stops at the wander — are fixed before any feature is built on them.
+
+**Rejected:** refactoring only what a feature touches, as it touches it; and leaving the
+architecture alone.
+
+**Why:** every feature in the plan lands on one of those joints. Upper-band quests need a counter
+other than the shop to offer quests; loot piles and bows add panels and rolls. Built first, each
+joint is fixed once; built alongside, it would be half-fixed three times.
+
+## 57. `CLAUDE.md` holds the rules and a map; the reasoning moves to topic docs
+
+**2026-09-25 · the user, asked by Claude**
+
+`CLAUDE.md` was 150 KB — about 37,000 tokens loaded into every session. It is cut to the project
+summary, the commands, the workflow, the seams and the invariants, and says where to read more.
+Everything it said about a subsystem moves, verbatim where it is still true, into
+`docs/architecture/<topic>.md`.
+
+**Rejected:** trimming only the history in place; leaving it as it was.
+
+**Why:** the essays are the most useful thing in the repo for the session whose work touches their
+topic and a cost on every other session. Moving rather than trimming loses nothing — a paragraph
+either stays or moves — and a topic file is read at exactly the moment its reasoning is worth the
+tokens.

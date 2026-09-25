@@ -122,7 +122,7 @@ function figureLandmarks(figure: ReturnType<typeof buildFigure>) {
 }
 
 /**
- * The claim in CLAUDE.md — that the sheet's paperdoll and the figure in the
+ * The claim in `docs/architecture/hud.md` — that the sheet's paperdoll and the figure in the
  * world are the same rig, so "a shoulder is in the same place in either" — was
  * asserted nowhere: the rig has tests and each consumer has tests, but not the
  * agreement between them.
