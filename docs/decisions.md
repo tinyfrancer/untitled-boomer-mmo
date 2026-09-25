@@ -1232,3 +1232,22 @@ file is appended rather than edited.
 **Rejected:** the plan's bow for the warrior, as the only use of a bow; a bow only the ranger may
 hold; scaling the ranger off strength or intellect, the two stats that exist; dodge, or anything
 else, as a second use of agility for now; and "hunter" as its name.
+
+## 66. A loot pile says it is going by blinking, and nothing counts its minute down
+
+**2026-09-25 · Claude**
+
+A sack blinks through the last ten seconds of its pile's minute, timed off the pile's own clock. Its
+context-menu card says a pile lasts a minute from the kill, and nothing anywhere shows how much of
+that minute is left.
+
+**Rejected:** a countdown on the card, which is settled when the menu opens (every card is, so one
+left up never describes something that has since changed) and would be wrong a second later; a
+timer over the sack, which is a nameplate per pile — a texture baked and disposed for every kill a
+full pack makes, and text on the ground where nothing else has any; and saying nothing until the
+sack vanishes, which leaves a player walking back to it no way to know whether to run.
+
+**Why:** a thing on the ground blinking before it goes is the oldest convention the genre has, reads
+from across the map at a glance, and costs a `visible` flag. Reading it off the world's clock rather
+than the view's means the blink always ends where the world takes the pile away: the sack is never
+seen to come back on after it is gone.

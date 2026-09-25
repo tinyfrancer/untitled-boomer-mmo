@@ -256,7 +256,7 @@ it is drawn, and never smaller than `MIN_PICK_SPAN`. Raycasting the real geometr
 and is wrong twice over: a ray aimed at a figure's feet — which is what `view.worldToScreen(x, y)`
 answers, and roughly where a player aims — passes between its legs and out the other side, and a
 crab is 18 screen pixels wide on a phone. `pickTap` then tries node → signpost → NPC → mob →
-station → building → ground, which is a **priority, not a depth sort**: a rat in
+station → building → loot pile → ground, which is a **priority, not a depth sort**: a rat in
 front of the shopkeeper does not stop you shopping. Only within one kind does the nearest win. The
 ground is the mathematical `y = 0` plane rather than the terrain mesh, because the mesh stops at
 the map edge and the simulation does not.
@@ -273,6 +273,17 @@ used to walk the player into the back wall and, now that a walk routes, walks th
 the block instead. The second is the worse of the two: a tap on a shopfront that ends up behind the
 shop is a minute of walking rather than a wall to back away from. And from _inside_, a building is
 not picked at all (`pickBox()` answers `null`), because there the same box is a lid over the floor.
+
+**A loot pile is below all of them, and only above the ground**, for the forge's reason in its
+plainest form: a pile lies wherever something died, which is wherever the next creature is standing,
+so a sack ranked any higher would eat the tap on the rat standing over it — or on a rat anywhere in
+front of it along the ray. It is also the one drawn thing besides the fire that comes and goes
+mid-zone, and the only one there can be several of: `ZoneView3D` builds a `LootPileActor` the frame
+a pile appears in `world.lootPiles` and disposes it the frame the pile is gone, lapsed or emptied, so
+`drawnCounts().piles` follows the world's list and smoke holds the GPU flat across one being dropped
+and taken up. The sack is three primitives and no nameplate. It **blinks through the last ten
+seconds of its minute**, read off the pile's own clock rather than the view's, which is how it says
+it is going without a timer drawn over it (`docs/decisions.md` 66).
 
 **A tap and a drag are the same three events, and `render3d/orbit.ts` is what tells them apart.**
 A drag turns the camera's yaw around the player; a tap asks the world for something. The rule is a
@@ -305,7 +316,9 @@ something other than what was pressed resolves to nothing. Choosing an action ru
 attacking and gathering. Everything a menu _shows_ comes from `systems/InspectSystem.ts`, which is
 a pure function of the data tables and is settled at the moment the menu opens: a drop rate on
 screen is the number `rollLootTable` rolls against, and a card left up is describing rats rather
-than a stale rat. Anything that ticks stays off it on purpose — a creature's current HP belongs to
+than a stale rat. A loot pile is the one card handed state rather than an id, since there is no
+table to read a pile off; it is still settled at the open, and a pile only ever gets smaller, so a
+card left up can promise too much but never too little — Take is answered against what is there. Anything that ticks stays off it on purpose — a creature's current HP belongs to
 the target frame, which is redrawn as it changes.
 
 Two things follow from the camera being movable at all:
