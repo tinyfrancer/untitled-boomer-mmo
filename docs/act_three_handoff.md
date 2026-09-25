@@ -30,16 +30,23 @@ last phase lands.
 
 Asked at the end of the phase 9 session; each is a decision in `docs/decisions.md`.
 
-| Question                                                  | Answer                                                          | Decision |
-| --------------------------------------------------------- | --------------------------------------------------------------- | -------- |
-| A camp running with the tab open: pile, or not?           | **No pile.** It keeps counting what it could not carry.         | 62       |
-| How long does a pile last? Does a second kill add to one? | **One minute** of game time. **Each kill leaves its own pile.** | 63       |
-| Does a pile survive the player's death?                   | **Yes.**                                                        | 63       |
-| Does the bow need ammunition?                             | **Arrows**, made by **fletching and smithing** together.        | 64       |
-| (Raised by the user)                                      | **A hunter/ranger class** whose weapon is the bow.              | 65       |
+| Question                                                  | Answer                                                                     | Decision |
+| --------------------------------------------------------- | -------------------------------------------------------------------------- | -------- |
+| A camp running with the tab open: pile, or not?           | **No pile.** It keeps counting what it could not carry.                    | 62       |
+| How long does a pile last? Does a second kill add to one? | **One minute** of game time. **Each kill leaves its own pile.**            | 63       |
+| Does a pile survive the player's death?                   | **Yes.**                                                                   | 63       |
+| (Raised by the user)                                      | **A third class, the ranger**, whose weapon is the bow.                    | 65       |
+| Can a warrior use a bow?                                  | **Yes, but it should not be a good idea.**                                 | 65       |
+| What does a ranger's damage scale with?                   | **Agility**, a new third stat.                                             | 65       |
+| Does the bow need ammunition?                             | **Arrows**, made by **fletching and smithing** together.                   | 64       |
+| Is an arrow spent per shot? And with none left?           | **Spent.** With none left, the archer **fights with their fists**.         | 64       |
+| Where are arrows carried?                                 | **In a quiver in the offhand**, which the two-handed bow leaves free.      | 64       |
+| Where does a level 1 ranger get arrows?                   | **A shop.** Certain creatures may drop them too.                           | 64       |
+| What does an arrow weigh?                                 | **Well under 1**, so a good many can be carried.                           | 64       |
+| How many does one making step make?                       | **Several**: one log makes several shafts, and one iron bar several heads. | 64       |
 
-The last two reshape phase 12, which is why this now runs to phase 13: see
-[below](#phases-12-and-13--the-ranger-arrows-fletching-and-willow).
+The ranger and the arrows reshape phase 12, which is why this now runs to phase 13: see
+[below](#phases-12-and-13--the-ranger-then-fletching-and-willow).
 
 ## Starting cold
 
@@ -137,96 +144,128 @@ them as rows keyed by `ClassId` (`CLASS_ABILITIES`, a quest's `gear: Record<Clas
 the ranger's phase gets a compile error at every one it has to answer, which is the point of keying
 them that way.
 
-## Phases 12 and 13 — the ranger, arrows, fletching and willow
+## Phases 12 and 13 — the ranger, then fletching and willow
 
 **What changed.** The plan's phase 12 gave a bow to the warrior, trained by an `archery` skill,
-with no ammunition. The user has since chosen **a third class whose weapon is the bow** (decision
-65 — which reverses the part of decision 55 that rejected a third class this round) and **arrows,
-made by fletching and smithing** (decision 64). Rewrite the plan's phase 12 to match before
-building it.
+with no ammunition. The user has since chosen **a third class, the ranger**, whose weapon is the
+bow and whose stat is **agility** (decision 65 — which reverses the part of decision 55 that
+rejected a third class this round), and **arrows** that are spent, quivered, bought first and made
+later (decision 64). Rewrite the plan's phase 12 to match before building it.
 
-**Recommended split — confirm it with the user first.** A class that begins at level 1 needs its
-weapon and its ammunition at level 1, so the bottom of the whole chain has to land with the class.
-Willow is the upper band's tier of that chain, and is the part the plan already described.
+**Recommended split — confirm it with the user first.** Arrows come from a shop, so a level 1
+ranger does not need the making chain, and the chain can stay the upper-band work the plan
+described, at the bench the plan put in Greyford's yard.
 
-- **Phase 12 — the ranger.** The class, a starter bow, the `archery` combat skill, arrows at the
-  lowest tier, and fletching's first rung: shafts from `logs` (woodcutting 1), heads from `tin-bar`
-  at the town forge (smithing 1), the two made into arrows. The duels and the save migration.
-- **Phase 13 — willow.** The willow node on the mill road's millpond above hardwood, a willow bow and
-  shafts, and iron and steel heads at the forge's existing tiers. `deadEnds.test.ts` holds willow to
-  having a use on the day it lands, which fletching already existing makes easy.
+- **Phase 12 — the ranger.** The class and agility, a starter bow, the `archery` combat skill, the
+  quiver, arrows on a shop's shelf and in a few loot tables, fists when the quiver is empty, the
+  two-handed rule, the camp spending arrows, the duels and the save migration.
+- **Phase 13 — fletching and willow.** The plan's phase 12 much as written: the fletcher's bench,
+  recipes that make several of a thing, shafts from logs, heads from iron bars at the forge, the
+  two made into arrows, and willow on the mill road's millpond. `deadEnds.test.ts` holds willow to
+  having a use on the day it lands.
 
-**Still to put to the user** — none of these is answered, and each is a real fork:
+### What is settled, and what each answer means in the code
 
-1. **Hunter or ranger?** The user wrote both. This doc says ranger for want of a name.
-2. **Is the bow the ranger's alone?** The plan gave it to the warrior. Weapons are open to every
-   class today; only armour is restricted, through `ARMOR_TYPE_CLASSES`. A bow that only one class
-   can hold is a new rule, and the shape it would take is a table by `weaponShape` beside that one.
-3. **What does a ranger's damage scale with?** `PrimaryStat` is `'strength' | 'intellect'`. A new
-   third stat reaches `ClassStats`, `LevelGrowth`, gear bonuses, reforges, stats, inspect and
-   every piece of gear that names one — much the biggest option. Strength also buys carrying
-   capacity (`EncumbranceSystem`: 70 plus 3 a point), which matters to a class that carries arrows.
-4. **Where does a level 1 ranger get arrows?** Either a starting stack and a fletching bench in
-   _town_ beside the forge, where logs and tin are already level 1 — which moves the bench the plan
-   put in Greyford's yard; or the town shop sells a plain arrow and the bench stays in Greyford as
-   planned, with fletching an upper-band skill. The recommended split assumes the first.
-5. **What happens without arrows?** Ammunition implies one is spent per shot, which this doc
-   assumes; confirm it. Then a bow with none either refuses to fire, with a line saying why, or
-   falls back to the fists (`unarmed`, which already exists as a skill).
-6. **Where are arrows carried?** In the bag, spent from the stack, is the smallest change: no new
-   slot, nothing stacked inside an equipment slot, no migration for it. A quiver in the offhand is
-   the alternative — the bow is two-handed, so the slot is free — but a slot holds one item id
-   today, not a count.
+**The ranger is a new `ClassId`**, which is mostly compile errors: `CLASSES`, `CLASS_ABILITIES`
+(four on the bar, the attack first), and every quest's `gear` reward (`Record<ClassId, ItemId>`).
+**Except `CharacterCreate.ts`**, whose `CLASS_IDS` is a plain `ClassId[]` — a third class would
+simply not be offered at creation. Make it `exhaustive<ClassId>()` while you are there. A new class
+needs no save migration of its own, since every existing save names one of the two that exist; the
+ternary in `migrations.ts` that picks by class is history and stays as it is. Leather is
+warrior-only in `ARMOR_TYPE_CLASSES`, so a ranger in leather is one entry there.
 
-**What the code already does, and what is new:**
+**Agility is a third stat**, and a stat reaches a long way. `PrimaryStat` is
+`'strength' | 'intellect'`; `ClassStats`, `LevelGrowth`, `EffectiveStats`, `sumGearBonuses` and
+`computeEffectiveStats` (`systems/StatsSystem.ts`), gear's `strengthBonus`/`intellectBonus`, the
+reforge table and `reforgedBonuses`, the inspect lines and the character sheet all name the two that
+exist. Every class gets an agility figure; the warrior's and wizard's should be small and grow by
+nothing a level.
 
-- **A new `ClassId` is mostly compile errors**: `CLASSES`, `CLASS_ABILITIES` (four on the bar, the
-  attack first), and every quest's `gear` reward. **Except `CharacterCreate.ts`**, whose `CLASS_IDS`
-  is a plain `ClassId[]` — a third class would simply not be offered at creation. Make it
-  `exhaustive<ClassId>()` while you are there. A new class needs **no save migration**, since every
-  existing save names one of the two that exist; the ternary in `migrations.ts` that picks by class
-  is history and stays as it is.
-- **Armour**: leather is warrior-only in `ARMOR_TYPE_CLASSES`. A ranger in leather is one entry.
-- **The offhand is "one per class"**, a shield and an orb, and the comment on `brown-shield` in
-  `data/items.ts` argues it. A two-handed class has none, so that comment needs correcting.
-- **Nothing is two-handed yet.** Equipping a bow has to empty or refuse the offhand, and an offhand
-  equipped over a bow has to be refused or unequip it — a rule in `CharacterController`, which
-  refuses as a whole rather than half-applying. If the bow is the ranger's alone and the ranger has
-  no offhand at all, this shrinks to "a ranger's offhand is always empty", but a warrior holding a
-  bow would still need it.
-- **Ranged auto-attacks are not new**: the wand reaches 200-220 through `attackRange` and
-  `weaponAttackRange`. Mobs do not path (decision 26), so the wizard already kites for free, and the
-  bow's reach is priced against the wand's. **What is new is the spend**: the player's swing in
-  `CombatDirector` (where it pushes `swing` with `by: null`) takes an arrow through
-  `CharacterController`, and the inventory publishes on every shot.
-- **The camp spends arrows too.** An awake ranger camp runs out and has to stop fighting. The
-  offline payout (`systems/OfflineAfkSystem.ts`) credits kills by count, so it has to bound them by
-  the arrows carried and spend them — otherwise the offline camp is a bow with infinite ammunition.
-- **A recipe makes exactly one item** (`CraftingRecipe.outputItemId`, no quantity). One tin bar for
-  one arrowhead makes arrows cost more than any kill pays back. A bar that makes a handful needs an
-  output quantity, new to `CraftingSystem`, the offline camp's crafting payout, and the station's
-  list.
-- **Nothing weighs under 1** (`DEFAULT_ITEM_WEIGHT`), and fifty arrows at 1 each would be most of a
-  wizard's pack. Arrows need a fractional weight, the game's first: check that the bag's weight
-  readout, `carryableCount` (which floors spare over weight) and a float sum of the pack all behave
-  with one.
-- **The camp can only settle to a one-of-one recipe** (`findCraftableFrom`: one input, quantity 1).
-  Shafts from a log and heads from a bar can be camp jobs; shaft plus head into arrows has two
-  inputs and cannot. That is probably fine — putting arrows together is hands-on — but it is a
-  property to choose, not discover.
-- **Two new skills mean a save migration.** Saves are at `CHARACTER_STATE_VERSION` 22; every past
-  skill addition bumped it and spread `createInitialSkills()` _under_ the saved skills, so existing
-  progress survives and only the new ones start fresh (`persistence/migrations.ts` shows three).
-  `fletching` is a making skill (`GatherSkillId`, like smithing), `archery` a combat one
-  (`CombatSkillId`).
-- **Fletching's station** follows the tannery, which arrived third and widened nothing: a
-  `StationId` with its `STATION_LABELS`, `STATION_ACTION_LABELS` and `STATION_SKILLS` entries,
-  `recipesAt`, a bench in a zone's `stationSpawns`, and `RECIPES` rows
-  (`docs/architecture/making.md`).
-- **Balance**: the duels in `EnemySystem.test.ts` hold every class to the same curve — a fresh level
-  1 beats a level 1 rat comfortably, sweats a 2, loses to a 3 — so the ranger gets a row there, and
-  `progression.test.ts` holds its arc. The plan's line still applies: the bow is a different fight,
-  not a better one.
+**A warrior may draw a bow, and it should be a bad idea** — which has to come out of the numbers,
+because nothing here forbids anything by warning. Today `attackPower` is the _class's_ primary stat
+plus gear, whatever is in the hand, so a warrior with a bow would shoot with the full strength of a
+sword and the reach of a wand: the best weapon in the game for the class it is meant to suit worst.
+**Recommended: a bow shot scales with agility whoever draws it**, so a warrior's bow is only as good
+as the little agility a warrior has. That makes the weapon, not the class, decide the stat a hit
+scales with, which is new. A wizard could draw one too — weapons are open to every class — and the
+same rule answers them.
+
+**The two-handed rule is needed either way**, since a warrior can hold a bow and owns a shield.
+Equipping a bow has to empty or refuse a shield or orb, and equipping one of those over a bow has to
+be refused or unequip it. The quiver is the one thing a bow allows in the offhand. It is a rule in
+`CharacterController`, which refuses as a whole rather than half-applying. The comment on
+`brown-shield` in `data/items.ts` argues the offhand is "one per class"; a ranger's is the quiver,
+so that holds, but the comment needs saying so.
+
+**The quiver is in the offhand, and a slot holds one item id, not a count.** `Gear` is
+`Record<GearSlotId, ItemId | null>`. Arrows in a slot need a count stored beside it, which is a
+`CharacterState` change and so a migration — the same bump that adds `archery`. Whether the quiver is
+its own item that holds arrows (and could come in sizes) or arrows equipped straight into the
+offhand as a stack and drawn as a quiver is open; the second is fewer new things.
+
+**An arrow is spent on every shot.** The player's swing is in `CombatDirector` (where it pushes
+`swing` with `by: null`); it takes one from the quiver through `CharacterController` and publishes
+the change. **With the quiver empty the ranger fights with their fists**: `weaponSkillFor`
+(`systems/CombatSystem.ts`) answers `'unarmed'` rather than `'archery'`, the reach is a fist's, and
+the bow's own attack bonus should not ride along on a punch. `weaponSkillFor` today answers
+`'one-handed'` for anything equippable, so the bow is the first weapon it has to tell apart.
+
+**The camp spends arrows too.** An awake ranger camp that runs dry is fighting with its fists, which
+a camp's pull may not survive. The offline payout (`systems/OfflineAfkSystem.ts`) credits kills by
+count, so it has to spend arrows per kill and price the kills after the quiver empties as fist kills
+— or stop there. Without that, the offline camp is a bow that never runs out.
+
+**The first arrows come from a shop** (`data/shop.ts`, a `ShopStockEntry` on a shelf), **and may
+drop** from certain creatures, which is a loot-table row. The people are the natural candidates —
+bandits in the starter band, the goblin scavenger and fen raider above it — and never a boss, since
+`uniqueLoot.test.ts` holds boss drops unique. A bounty paying arrows would be held to the rule that
+it pays under what the shop charges. A new character starts with 75 copper and the weapon their class
+names; a ranger with an empty quiver is a fists class until they reach a shop, so **give the class a
+starting stack**, the way every class starts holding its weapon.
+
+**An arrow weighs well under 1**, and nothing in the game does yet (`DEFAULT_ITEM_WEIGHT` is 1). Check
+that the bag's weight readout, `carryableCount` (which floors spare over weight) and a float sum of
+the pack all behave with a fraction. Worn gear is not weighed at all — `inventoryWeight` counts the
+bag — so arrows in the quiver weigh nothing and only the spares in the bag count. That is how all
+gear works, and probably fine.
+
+**Balance**: the duels in `EnemySystem.test.ts` hold every class to the same curve — a fresh level
+1 beats a level 1 rat comfortably, sweats a 2, loses to a 3 — so the ranger gets a row there, and
+`progression.test.ts` holds its arc. Ranged auto-attacks are not new (the wand reaches 200-220 through
+`weaponAttackRange`), and mobs do not path (decision 26), so the wizard already kites for free; the
+bow's reach is priced against the wand's. The plan's line still applies: a different fight, not a
+better one.
+
+**Saves**: `CHARACTER_STATE_VERSION` is 22. Every past skill addition bumped it and spread
+`createInitialSkills()` _under_ the saved skills, so existing progress survives and only the new
+ones start fresh (`persistence/migrations.ts` shows three). Phase 12 adds `archery` (a
+`CombatSkillId`) and the quiver's count; phase 13 adds `fletching` (a `GatherSkillId`, like
+smithing) — one bump each.
+
+### Phase 13's making chain
+
+- **A recipe that makes several** is new: `CraftingRecipe` has an `outputItemId` and no quantity.
+  An output quantity touches `CraftingSystem`, the offline camp's crafting payout and the station's
+  list, which should say how many a job makes.
+- **Shafts from a log, heads from an iron bar** at the town forge, arrows from the two together at
+  the fletcher's bench. **The camp can only settle to a one-of-one recipe** (`findCraftableFrom`: one
+  input, quantity 1), so shafts and heads can be camp jobs and putting arrows together cannot. That
+  is probably fine — it is hands-on — but it is a property to choose, not discover.
+- **The bench** follows the tannery, which arrived third and widened nothing: a `StationId` with its
+  `STATION_LABELS`, `STATION_ACTION_LABELS` and `STATION_SKILLS` entries, `recipesAt`, a place in
+  Greyford's `stationSpawns`, and `RECIPES` rows (`docs/architecture/making.md`).
+- **What willow is for** — better shafts, a better bow, or both — is the tier to design.
+
+### Still to put to the user
+
+1. **Does agility do anything besides power a bow?** Strength also buys carrying capacity and
+   intellect buys mana. The smallest version is nothing else; dodge or crit are the obvious others.
+2. **Is the quiver an item that holds arrows, or arrows equipped as a stack?** See above; the
+   second is smaller.
+3. **Which creatures drop arrows**, since the user said "possibly". Propose the people above and
+   confirm.
+4. **Does an arrow's tier change the damage** (iron heads against steel), or only the bow's? Only
+   matters from phase 13, when there is more than one arrow.
 
 ## Things learned this session that are already written down
 

@@ -280,13 +280,14 @@ things the section did not say are in `docs/architecture/audio.md` and decisions
 
 ### Phase 12 — willow, fletching and the bow
 
-> **Superseded in part, 2026-09-25.** The user has since chosen a third class whose weapon is the
-> bow (decision 65) and arrows made by fletching and smithing (decision 64). The bow below is no
-> longer the warrior's, and a class that starts at level 1 needs its arrows at level 1, so this phase
-> is recommended to split in two: **12, the ranger** (class, starter bow, archery, first-tier
-> arrows and fletching) and **13, willow** (the upper band's tier of the same chain).
-> `act_three_handoff.md` has the split, what is still to be asked, and where each piece touches the
-> code. Rewrite this section to match before building it.
+> **Superseded in part, 2026-09-25.** The user has since chosen a third class, the ranger, whose
+> weapon is the bow and whose stat is agility (decision 65), and arrows that are spent per shot,
+> carried in a quiver, bought first and made later by fletching and smithing (decision 64). A
+> warrior can still draw a bow, but it is no longer the warrior's weapon. So this phase is
+> recommended to split in two: **12, the ranger** (class, agility, bow, archery, quiver, arrows from
+> a shop) and **13, fletching and willow** (this section much as written, plus recipes that make
+> several of a thing). `act_three_handoff.md` has the split, what is still to be asked, and where
+> each piece touches the code. Rewrite this section to match before building it.
 
 - **Willow** on the mill road's millpond, a woodcutting node above hardwood.
 - **Fletching**, the fourth making skill, at a fletcher's bench in Greyford's yard — beside the

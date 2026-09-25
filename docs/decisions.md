@@ -1195,27 +1195,33 @@ ground nearby; clearing piles on a death.
 **What it means:** every map is 25×19 tiles, so a minute is time to make room and pick a pile up, or
 to walk back to it from the respawn point, and not time to go to town and sell first.
 
-## 64. The bow shoots arrows, made by fletching and smithing
+## 64. The bow shoots arrows: spent, quivered, bought first and made later
 
 **2026-09-25 · the user, asked by Claude**
 
-The bow needs ammunition. Arrows are made, and making them takes both making skills that touch them:
-fletching for the wood, smithing for the metal.
+The bow needs ammunition, and every question about it was put to the user:
 
-**Rejected:** a bow with no ammunition, which is what the plan described by not mentioning any.
+- **An arrow is spent on every shot.** With none left, the archer fights with their fists.
+- **Arrows ride in a quiver in the offhand**, which the bow leaves free by taking both hands.
+- **The first arrows are bought**, from a shop, and certain creatures may drop them.
+- **They are made by fletching and smithing** together: fletching for the wood, smithing for the
+  metal. **One log makes several shafts, and one iron bar several heads.**
+- **An arrow weighs well under 1**, so a character can carry a good many.
 
-**Still open**, and in `docs/act_three_handoff.md`: whether one is spent per shot, what a bow does
-with none, where they are carried, and how a level 1 character gets them.
+**Rejected:** a bow with no ammunition, which is what the plan described by not mentioning any; a
+bow that refuses to fire when the quiver is empty; arrows carried in the bag and spent from the
+stack; a fletching bench in town so a level 1 archer could make their own; and a recipe's one
+output per input, which is all the game has had.
 
-## 65. A third class, whose weapon is the bow
+## 65. A third class, the ranger, whose weapon is the bow and whose stat is agility
 
 **2026-09-25 · the user**
 
-A hunter or ranger class joins the warrior and the wizard, and the bow is its weapon. This reverses
-the part of decision 55 that rejected a third class for act three; 55 stands as written, since this
-file is appended rather than edited.
+A ranger joins the warrior and the wizard. The bow is its weapon, and its damage scales with a new
+third stat, **agility**. A warrior can still draw a bow, but it is not meant to be a good idea. This
+reverses the part of decision 55 that rejected a third class for act three; 55 stands as written,
+since this file is appended rather than edited.
 
-**Rejected:** the plan's bow for the warrior, as the only use of a bow.
-
-**Still open**, and in `docs/act_three_handoff.md`: the class's name, whether a warrior can still
-hold a bow, and what its damage scales with.
+**Rejected:** the plan's bow for the warrior, as the only use of a bow; a bow only the ranger may
+hold; scaling the ranger off strength or intellect, the two stats that exist; and "hunter" as its
+name.
