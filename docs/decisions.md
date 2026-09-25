@@ -1202,26 +1202,33 @@ to walk back to it from the respawn point, and not time to go to town and sell f
 The bow needs ammunition, and every question about it was put to the user:
 
 - **An arrow is spent on every shot.** With none left, the archer fights with their fists.
-- **Arrows ride in a quiver in the offhand**, which the bow leaves free by taking both hands.
-- **The first arrows are bought**, from a shop, and certain creatures may drop them.
+- **Arrows ride in a quiver in the offhand**, which the bow leaves free by taking both hands. **The
+  quiver is an item with stats of its own**, replaced by a better one as the character levels, the
+  way armour is.
+- **The first arrows are bought**, from a shop, and **humanoid creatures drop them**.
+- **Bows and arrows each carry their own stats, and both change a shot's damage** — which arrow is
+  nocked matters, not only which bow.
 - **They are made by fletching and smithing** together: fletching for the wood, smithing for the
   metal. **One log makes several shafts, and one iron bar several heads.**
 - **An arrow weighs well under 1**, so a character can carry a good many.
 
 **Rejected:** a bow with no ammunition, which is what the plan described by not mentioning any; a
 bow that refuses to fire when the quiver is empty; arrows carried in the bag and spent from the
-stack; a fletching bench in town so a level 1 archer could make their own; and a recipe's one
-output per input, which is all the game has had.
+stack; arrows equipped straight into the offhand as a stack, with the quiver only a picture; arrows
+that differ in nothing but name; a fletching bench in town so a level 1 archer could make their
+own; and a recipe's one output per input, which is all the game has had.
 
 ## 65. A third class, the ranger, whose weapon is the bow and whose stat is agility
 
 **2026-09-25 · the user**
 
 A ranger joins the warrior and the wizard. The bow is its weapon, and its damage scales with a new
-third stat, **agility**. A warrior can still draw a bow, but it is not meant to be a good idea. This
-reverses the part of decision 55 that rejected a third class for act three; 55 stands as written,
-since this file is appended rather than edited.
+third stat, **agility**. Beyond that, **agility adds physical crit chance, and for now nothing
+else** — left open for later iterations, so a future use of it is an addition rather than a
+reversal. A warrior can still draw a bow, but it is not meant to be a good idea. This reverses the
+part of decision 55 that rejected a third class for act three; 55 stands as written, since this
+file is appended rather than edited.
 
 **Rejected:** the plan's bow for the warrior, as the only use of a bow; a bow only the ranger may
-hold; scaling the ranger off strength or intellect, the two stats that exist; and "hunter" as its
-name.
+hold; scaling the ranger off strength or intellect, the two stats that exist; dodge, or anything
+else, as a second use of agility for now; and "hunter" as its name.

@@ -38,10 +38,13 @@ Asked at the end of the phase 9 session; each is a decision in `docs/decisions.m
 | (Raised by the user)                                      | **A third class, the ranger**, whose weapon is the bow.                    | 65       |
 | Can a warrior use a bow?                                  | **Yes, but it should not be a good idea.**                                 | 65       |
 | What does a ranger's damage scale with?                   | **Agility**, a new third stat.                                             | 65       |
+| Does agility do anything else?                            | **Physical crit chance**, and for now nothing more. Open to more later.    | 65       |
 | Does the bow need ammunition?                             | **Arrows**, made by **fletching and smithing** together.                   | 64       |
 | Is an arrow spent per shot? And with none left?           | **Spent.** With none left, the archer **fights with their fists**.         | 64       |
 | Where are arrows carried?                                 | **In a quiver in the offhand**, which the two-handed bow leaves free.      | 64       |
-| Where does a level 1 ranger get arrows?                   | **A shop.** Certain creatures may drop them too.                           | 64       |
+| Is the quiver an item?                                    | **Yes, with its own stats**, replaced by better ones while levelling.      | 64       |
+| Do bows and arrows differ?                                | **Both have their own stats, and both change a shot's damage.**            | 64       |
+| Where does a level 1 ranger get arrows?                   | **A shop.** And **humanoid creatures drop them**.                          | 64       |
 | What does an arrow weigh?                                 | **Well under 1**, so a good many can be carried.                           | 64       |
 | How many does one making step make?                       | **Several**: one log makes several shafts, and one iron bar several heads. | 64       |
 
@@ -181,6 +184,16 @@ reforge table and `reforgedBonuses`, the inspect lines and the character sheet a
 exist. Every class gets an agility figure; the warrior's and wizard's should be small and grow by
 nothing a level.
 
+**What agility does**: it is the ranger's damage stat, and besides that it **adds physical crit
+chance — and for now nothing else** (decision 65 leaves more open for later, so a future use is an
+addition). Crit today is `critChance(weaponSkillLevel)` in `systems/CombatSystem.ts`, capped at
+`MAX_CRIT_CHANCE` (20%), and **the same `resolveAttack` serves swings and spells** —
+`resolveAbilityDamage` routes a fireball through it with the governing skill standing in for weapon
+skill. "Physical" therefore needs saying somewhere it is not said today: agility's share applies to a
+weapon's swing or shot and a physical ability, and not to a spell. Whether a wand's auto-attack is
+physical is the edge case to decide, though a wizard's agility is small enough that it barely
+matters. Whether agility's crit sits under the 20% cap or on top of it is tuning.
+
 **A warrior may draw a bow, and it should be a bad idea** — which has to come out of the numbers,
 because nothing here forbids anything by warning. Today `attackPower` is the _class's_ primary stat
 plus gear, whatever is in the hand, so a warrior with a bow would shoot with the full strength of a
@@ -190,6 +203,17 @@ as the little agility a warrior has. That makes the weapon, not the class, decid
 scales with, which is new. A wizard could draw one too — weapons are open to every class — and the
 same rule answers them.
 
+**Bows and arrows each have stats, and both change a shot's damage.** A bow is equipment and
+already has somewhere to say so: `attackPowerBonus` and `attackRange` are fields on every weapon
+row. **An arrow is not equipment and has nowhere yet**: `ItemDefinition` is a union of `equipment`,
+`material` and `consumable`, and an arrow's stats are read off the arrow that is nocked, not off
+anything worn. That points at a fourth kind — `ammunition`, say — carrying the arrow's own damage
+figure, and a new kind is a compile error at every switch over `kind`, which is how the bag, the
+inspect lines and the sell price get told about it. A shot is then the agility-scaled attack power,
+the bow's bonus and the arrow's, through the same `resolveAttack`. Stats beyond damage (a bow's
+draw speed — attack speed is per class today — or an arrow's own crit) are room to design in, not
+asked for.
+
 **The two-handed rule is needed either way**, since a warrior can hold a bow and owns a shield.
 Equipping a bow has to empty or refuse a shield or orb, and equipping one of those over a bow has to
 be refused or unequip it. The quiver is the one thing a bow allows in the offhand. It is a rule in
@@ -197,17 +221,22 @@ be refused or unequip it. The quiver is the one thing a bow allows in the offhan
 `brown-shield` in `data/items.ts` argues the offhand is "one per class"; a ranger's is the quiver,
 so that holds, but the comment needs saying so.
 
-**The quiver is in the offhand, and a slot holds one item id, not a count.** `Gear` is
-`Record<GearSlotId, ItemId | null>`. Arrows in a slot need a count stored beside it, which is a
-`CharacterState` change and so a migration — the same bump that adds `archery`. Whether the quiver is
-its own item that holds arrows (and could come in sizes) or arrows equipped straight into the
-offhand as a stack and drawn as a quiver is open; the second is fewer new things.
+**The quiver is an item with stats of its own, replaced as the character levels** — an offhand row
+(`offhandShape: 'quiver'`, a new `OffhandShapeId`) with a tier and colour like any other gear. Its
+ordinary bonuses need nothing new, since `sumGearBonuses` already counts whatever is worn in the
+offhand. What is new is that **it holds something**: how many arrows it takes is its natural stat,
+and the arrows in it are a stack — which arrow, and how many — that `Gear`
+(`Record<GearSlotId, ItemId | null>`) has nowhere to keep. That is a `CharacterState` field and so a
+migration, the same bump that adds `archery`. Taking a quiver off puts its arrows back in the bag
+through `tryAddItem`, and a full pack refuses the whole swap rather than dropping arrows. Where
+better quivers come from — the shop, drops, or the tannery, since a quiver is leather — is ordinary
+tier tuning.
 
 **An arrow is spent on every shot.** The player's swing is in `CombatDirector` (where it pushes
 `swing` with `by: null`); it takes one from the quiver through `CharacterController` and publishes
 the change. **With the quiver empty the ranger fights with their fists**: `weaponSkillFor`
 (`systems/CombatSystem.ts`) answers `'unarmed'` rather than `'archery'`, the reach is a fist's, and
-the bow's own attack bonus should not ride along on a punch. `weaponSkillFor` today answers
+neither the bow's bonus nor an arrow's should ride along on a punch. `weaponSkillFor` today answers
 `'one-handed'` for anything equippable, so the bow is the first weapon it has to tell apart.
 
 **The camp spends arrows too.** An awake ranger camp that runs dry is fighting with its fists, which
@@ -215,31 +244,34 @@ a camp's pull may not survive. The offline payout (`systems/OfflineAfkSystem.ts`
 count, so it has to spend arrows per kill and price the kills after the quiver empties as fist kills
 — or stop there. Without that, the offline camp is a bow that never runs out.
 
-**The first arrows come from a shop** (`data/shop.ts`, a `ShopStockEntry` on a shelf), **and may
-drop** from certain creatures, which is a loot-table row. The people are the natural candidates —
-bandits in the starter band, the goblin scavenger and fen raider above it — and never a boss, since
-`uniqueLoot.test.ts` holds boss drops unique. A bounty paying arrows would be held to the rule that
-it pays under what the shop charges. A new character starts with 75 copper and the weapon their class
-names; a ranger with an empty quiver is a fists class until they reach a shop, so **give the class a
-starting stack**, the way every class starts holding its weapon.
+**The first arrows come from a shop** (`data/shop.ts`, a `ShopStockEntry` on a shelf), **and every
+humanoid creature drops them** — a row in each of their loot tables. `EnemyDefinition.shape` already
+says which: the bandit, the goblin scavenger, the goblin miner, the barrow wight and the fen raider,
+and the two bosses (see below). "Every humanoid drops arrows" is a rule a new enemy row could quietly
+break, so hold it with a test over `ENEMIES` rather than trusting the tables. A bounty paying arrows
+would be held to the rule that it pays under what the shop charges. A new character starts with 75
+copper and the weapon their class names; a ranger with an empty quiver is a fists class until they
+reach a shop, so **give the class a starting quiver with arrows in it**, the way every class starts
+holding its weapon.
 
 **An arrow weighs well under 1**, and nothing in the game does yet (`DEFAULT_ITEM_WEIGHT` is 1). Check
 that the bag's weight readout, `carryableCount` (which floors spare over weight) and a float sum of
 the pack all behave with a fraction. Worn gear is not weighed at all — `inventoryWeight` counts the
-bag — so arrows in the quiver weigh nothing and only the spares in the bag count. That is how all
-gear works, and probably fine.
+bag — so arrows in the quiver weigh nothing and only the spares in the bag count. With the quiver's
+size as a stat, that makes a bigger quiver worth having for its own sake, which is probably the
+right shape.
 
 **Balance**: the duels in `EnemySystem.test.ts` hold every class to the same curve — a fresh level
-1 beats a level 1 rat comfortably, sweats a 2, loses to a 3 — so the ranger gets a row there, and
-`progression.test.ts` holds its arc. Ranged auto-attacks are not new (the wand reaches 200-220 through
-`weaponAttackRange`), and mobs do not path (decision 26), so the wizard already kites for free; the
-bow's reach is priced against the wand's. The plan's line still applies: a different fight, not a
-better one.
+1 beats a level 1 rat comfortably, sweats a 2, loses to a 3 — so the ranger gets a row there, with a
+starter bow and starter arrows, and `progression.test.ts` holds its arc. Ranged auto-attacks are not
+new (the wand reaches 200-220 through `weaponAttackRange`), and mobs do not path (decision 26), so
+the wizard already kites for free; the bow's reach is priced against the wand's. The plan's line
+still applies: a different fight, not a better one.
 
 **Saves**: `CHARACTER_STATE_VERSION` is 22. Every past skill addition bumped it and spread
 `createInitialSkills()` _under_ the saved skills, so existing progress survives and only the new
 ones start fresh (`persistence/migrations.ts` shows three). Phase 12 adds `archery` (a
-`CombatSkillId`) and the quiver's count; phase 13 adds `fletching` (a `GatherSkillId`, like
+`CombatSkillId`) and the quiver's contents; phase 13 adds `fletching` (a `GatherSkillId`, like
 smithing) — one bump each.
 
 ### Phase 13's making chain
@@ -251,6 +283,8 @@ smithing) — one bump each.
   the fletcher's bench. **The camp can only settle to a one-of-one recipe** (`findCraftableFrom`: one
   input, quantity 1), so shafts and heads can be camp jobs and putting arrows together cannot. That
   is probably fine — it is hands-on — but it is a property to choose, not discover.
+- **Arrows by tier**: since an arrow's stats change the damage, iron heads and steel heads make two
+  arrows worth telling apart, and the shop's and the drops' arrows are the bottom rung under them.
 - **The bench** follows the tannery, which arrived third and widened nothing: a `StationId` with its
   `STATION_LABELS`, `STATION_ACTION_LABELS` and `STATION_SKILLS` entries, `recipesAt`, a place in
   Greyford's `stationSpawns`, and `RECIPES` rows (`docs/architecture/making.md`).
@@ -258,14 +292,19 @@ smithing) — one bump each.
 
 ### Still to put to the user
 
-1. **Does agility do anything besides power a bow?** Strength also buys carrying capacity and
-   intellect buys mana. The smallest version is nothing else; dodge or crit are the obvious others.
-2. **Is the quiver an item that holds arrows, or arrows equipped as a stack?** See above; the
-   second is smaller.
-3. **Which creatures drop arrows**, since the user said "possibly". Propose the people above and
-   confirm.
-4. **Does an arrow's tier change the damage** (iron heads against steel), or only the bow's? Only
-   matters from phase 13, when there is more than one arrow.
+1. **The two bosses are humanoid.** The bandit chief and the barrow king are both
+   `shape: 'humanoid'`, and `uniqueLoot.test.ts` fails any item a boss drops that can be had anywhere
+   else — so shop arrows on a boss's table break the build. Either bosses are left out of "every
+   humanoid", or that test learns that ammunition is not a trophy. **Recommended: leave bosses out**;
+   their table is what makes them worth the walk.
+2. **Does the quiver refill itself from the bag?** If it does, an empty quiver only happens when the
+   bag is out too, and fists are rare. If loading is something the player does, the quiver's size is
+   a real limit in a long fight, and running dry mid-pull is a thing that happens. The quiver's size
+   as a stat matters much more under the second.
+3. **A reading to confirm**: "agility will just do physical crit chance" is recorded as agility being
+   the ranger's damage stat _and_, besides that, physical crit — because it answered "does agility do
+   anything besides power a bow?". If it meant crit _instead_ of damage, the ranger's damage has to
+   come from somewhere else, and the warrior-with-a-bow problem above comes back.
 
 ## Things learned this session that are already written down
 
