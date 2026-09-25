@@ -10,6 +10,15 @@ casting in vitest — `tests/world/harness.ts` is what every test there is built
 back the world, the character, the keyboard and a `tick`/`until` pair measured in game
 milliseconds. That is the first place to add cover for anything the game _does_.
 
+**A zone has two random sources, and a test can pin either** (act three phase 3). `rng` is where the
+rats walk and where spawns fall, and the harness pins it at 0.5 by default so a failure is never a
+rat that drifted. `rolls` is every other die in the zone — a swing, a crit, a dodge, a block, a
+drop, a gather, a burn, a fizzle, a reforge — carried on `WorldContext.rolls` and handed to the
+systems that already took an rng. The harness leaves it on `Math.random`, because most tests hold a
+rule over whatever the dice say; a test about one outcome passes `rolls` and loads them rather than
+looping until the outcome comes up or spying on `Math.random`, which reaches only the rolls somebody
+remembered to leave on it.
+
 `scripts/smoke.mjs` (Playwright + headless Chromium) covers the other half and deliberately
 nothing else: the game booting and the flows that cross between zones, real mouse, touch and key
 events reaching the game, the view building and _unbuilding_ itself, the HUD's geometry at real

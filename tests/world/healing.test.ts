@@ -84,10 +84,10 @@ describe('a heal', () => {
   });
 
   /**
-   * Cast in a loop on purpose. `Mend` fizzles like every other spell — the roll
-   * is `Math.random`, not the harness's seeded rng — so a single cast asserting
-   * that health came back is a test that fails one run in seven for the one
-   * reason it is not about.
+   * Cast in a loop on purpose. `Mend` fizzles like every other spell and the
+   * harness leaves the dice unloaded, so a single cast asserting that health
+   * came back is a test that fails one run in seven for the one reason it is
+   * not about.
    */
   it('lands eventually, and heals when it does', () => {
     const kit = harness({ classId: 'wizard', level: 3 });

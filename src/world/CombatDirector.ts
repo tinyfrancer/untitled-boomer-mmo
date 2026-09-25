@@ -167,7 +167,7 @@ export class CombatDirector {
 
     // Asked before the damage is rolled: a swing that is slipped never happened,
     // and the skill takes no rep for it either.
-    if (enemyAvoids(target.definition.avoidChance)) {
+    if (enemyAvoids(target.definition.avoidChance, this.ctx.rolls)) {
       this.ctx.push({
         kind: 'float',
         at: { x: target.x, y: target.y },
@@ -180,10 +180,13 @@ export class CombatDirector {
       return;
     }
 
-    const { damage, crit } = resolveAttack({
-      attackPower: player.attackPower,
-      weaponSkillLevel: character.skillLevelOf(weaponSkill),
-    });
+    const { damage, crit } = resolveAttack(
+      {
+        attackPower: player.attackPower,
+        weaponSkillLevel: character.skillLevelOf(weaponSkill),
+      },
+      this.ctx.rolls,
+    );
     this.ctx.push({
       kind: 'hit',
       on: 'mob',
@@ -305,12 +308,15 @@ export class CombatDirector {
 
     // A turned-aside hit trains the skill that turned it aside and stops
     // there — no damage, and nothing to interrupt a gather.
-    const defense = rollDefense({
-      blockLevel: character.skillLevelOf('block'),
-      parryLevel: character.skillLevelOf('parry'),
-      hasWeapon: character.state.gear.weapon !== null,
-      hasShield: isShield(character.state.gear.offhand),
-    });
+    const defense = rollDefense(
+      {
+        blockLevel: character.skillLevelOf('block'),
+        parryLevel: character.skillLevelOf('parry'),
+        hasWeapon: character.state.gear.weapon !== null,
+        hasShield: isShield(character.state.gear.offhand),
+      },
+      this.ctx.rolls,
+    );
     if (defense.avoided && defense.skillId) {
       this.ctx.push({
         kind: 'defend',
@@ -324,7 +330,10 @@ export class CombatDirector {
 
     // Armour first, then the shield: what the mana shield soaks is what got
     // through the plate, not what was swung at it.
-    const damage = mitigatedDamage(resolveAttack({ attackPower }).damage, player.armor);
+    const damage = mitigatedDamage(
+      resolveAttack({ attackPower }, this.ctx.rolls).damage,
+      player.armor,
+    );
     const absorbed = player.takeDamage(damage);
     this.ctx.push({
       kind: 'hit',
@@ -354,7 +363,7 @@ export class CombatDirector {
   private grantLoot(lootTableId?: LootTableId): void {
     if (!lootTableId) return;
     const { character } = this.ctx;
-    const { drops, copper } = rollLootTable(lootTableId);
+    const { drops, copper } = rollLootTable(lootTableId, this.ctx.rolls);
 
     let took = false;
     drops.forEach((drop) => {

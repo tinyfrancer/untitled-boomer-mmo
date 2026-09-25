@@ -179,7 +179,10 @@ export interface ZoneWorldOptions {
   entry?: { edge: ZoneEdge; fraction: number };
   /** HP carried across a zone walk; absent on a session's first world. */
   hp?: number;
+  /** Where the mobs wander and where the zone's spawns fall. */
   rng?: () => number;
+  /** Every roll in the fight, the gather and the counters; see `WorldContext.rolls`. */
+  rolls?: () => number;
 }
 
 /**
@@ -251,7 +254,7 @@ export class ZoneWorld implements Targeting {
   private blockedAtEdge: ZoneId | null = null;
 
   constructor(options: ZoneWorldOptions) {
-    const { zone, character, events, input, entry, hp, rng } = options;
+    const { zone, character, events, input, entry, hp, rng, rolls } = options;
     this.zone = zone;
     this.character = character;
     this.input = input;
@@ -284,7 +287,7 @@ export class ZoneWorld implements Targeting {
     if (hp !== undefined) {
       this.player.setHp(hp);
     }
-    this.ctx = new WorldContext(character, events, this.player, zone.id);
+    this.ctx = new WorldContext(character, events, this.player, zone.id, rolls);
     // A world built for a zone *is* an arrival in it, which is what makes this
     // the one place a visit is credited: the walk and the session resumed both
     // end here, and a third route in would too. It is deliberately
@@ -402,7 +405,7 @@ export class ZoneWorld implements Targeting {
         publishXpGain: (gain) => this.publishXpGain(gain),
       }),
       outfitter: new OutfitterSession(this.ctx),
-      reforger: new ReforgeSession(this.ctx, rng ?? Math.random),
+      reforger: new ReforgeSession(this.ctx),
     };
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,

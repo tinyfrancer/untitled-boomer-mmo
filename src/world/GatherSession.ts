@@ -303,6 +303,7 @@ export class GatherSession {
       recipe,
       character.skillLevelOf(recipe.skill),
       character.masteryChanceFor(recipe.id),
+      this.ctx.rolls,
     );
     // A failure with nothing to show for it spends nothing: see `rollCraft`.
     if (result.consumed) {
@@ -354,6 +355,7 @@ export class GatherSession {
     const quantity = rollGatherQuantity(
       character.skillLevelOf(definition.skill),
       character.masteryChanceFor(definition.id),
+      this.ctx.rolls,
     );
     /**
      * What a full pack means depends on who is watching.

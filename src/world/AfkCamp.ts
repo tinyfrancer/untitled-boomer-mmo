@@ -173,6 +173,7 @@ export class AfkCamp {
       capacity: character.carryCapacity(),
       gear: character.state.gear,
       skills: character.state.skills,
+      rng: this.ctx.rolls,
     });
     if (report.kills <= 0 && report.gathers <= 0 && report.crafts <= 0) {
       this.ctx.persistCharacter();

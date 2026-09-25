@@ -176,9 +176,9 @@ describe('a craft', () => {
   it('teaches nothing about the recipe for a burn', () => {
     // A botched fish teaches nothing about the fish, which is the same line
     // `result.xp` already draws — so a pool is fed by what came off the fire
-    // rather than by time spent at it. The burn roll is the crafting system's
-    // own `Math.random`, so this holds the relationship rather than forcing it:
-    // however the rolls fell, the pool is exactly the successes.
+    // rather than by time spent at it. The dice are left unloaded, so this holds
+    // the relationship rather than forcing an outcome: however the rolls fell,
+    // the pool is exactly the successes.
     const kit = cooking();
     kit.until(() => (kit.state.inventory['raw-fish'] ?? 0) === 0, 'the stack to be cooked through');
 

@@ -23,11 +23,8 @@ import type { WorldContext } from './WorldContext';
  * happens.
  */
 export class ReforgeSession extends CounterSession {
-  private readonly rng: () => number;
-
-  constructor(ctx: WorldContext, rng: () => number = Math.random) {
+  constructor(ctx: WorldContext) {
     super(ctx, 'reforger');
-    this.rng = rng;
   }
 
   /**
@@ -57,7 +54,7 @@ export class ReforgeSession extends CounterSession {
       return;
     }
 
-    const rolled = rollReforge(itemId, this.rng);
+    const rolled = rollReforge(itemId, this.ctx.rolls);
     if (!rolled) return;
 
     // The fuel is chosen here rather than by the player, and it is the cheapest
