@@ -20,7 +20,8 @@ import { WATER_DEPTH } from './ground';
 import { buildCampfire, buildForge, buildNode, buildSignpost, buildTannery } from './props';
 import { buildBuilding } from './buildings';
 import { LAMP_HEIGHT_FRACTION, type RoomLamp } from './lights';
-import { BUILDING_LOOKS } from './palette';
+import { BUILDING_LOOKS, PALETTE } from './palette';
+import { Reactions } from './reactions';
 import { buildText } from './text';
 import { buildingRect, doorPoint, isInside } from '../data/buildings';
 import type { Point } from '../systems/MovementSystem';
@@ -104,6 +105,7 @@ export class PlayerActor implements Actor {
   private readonly facing = new Group();
   private readonly plate: Nameplate;
   private readonly player: Player;
+  private readonly reactions = new Reactions();
   private figure: Figure;
   private appearanceKey: string;
 
@@ -116,6 +118,7 @@ export class PlayerActor implements Actor {
     this.appearanceKey = appearanceKey(appearance);
     this.figure = buildFigure(appearance);
     this.facing.add(this.figure.object);
+    this.reactions.track(this.figure.object);
 
     // The one plate in the world with a pool under its health, since the player
     // is the one thing whose mana anybody spends.
@@ -146,11 +149,13 @@ export class PlayerActor implements Actor {
       disposeTree(this.figure.object);
       this.figure = buildFigure(appearance);
       this.facing.add(this.figure.object);
+      this.reactions.track(this.figure.object);
     }
 
     this.object.position.copy(simToWorld(this.player.x, this.player.y));
     this.facing.rotation.y = facingYaw(this.player.vx, this.player.vy, this.facing.rotation.y);
     this.figure.stride(this.player.isMoving(), elapsedMs);
+    this.reactions.apply(this.figure, elapsedMs);
     this.plate.setLabel(this.player.name, THEME.color.text);
     this.plate.setHealth(this.player.hp, this.player.maxHp);
     this.plate.setMana(this.player.mana, this.player.maxMana);
@@ -158,6 +163,25 @@ export class PlayerActor implements Actor {
 
   faceCamera(camera: Camera): void {
     this.plate.faceCamera(camera);
+  }
+
+  /**
+   * A swing, from a `swing` moment: turned to what it was aimed at — a player
+   * standing still to fight faces wherever they last walked — and the weapon
+   * brought over on the view's clock.
+   */
+  swing(toward: Point, atMs: number): void {
+    this.facing.rotation.y = facingYaw(
+      toward.x - this.player.x,
+      toward.y - this.player.y,
+      this.facing.rotation.y,
+    );
+    this.reactions.swing(atMs);
+  }
+
+  /** A blow that got through, from a `hit` moment. */
+  struck(atMs: number): void {
+    this.reactions.hit(atMs, PALETTE.hurtFlash);
   }
 
   /** What `window.view.playerFigure()` answers: the walk, not the simulation. */
@@ -176,6 +200,7 @@ export class MobActor implements Actor, Pickable {
   private readonly facing = new Group();
   private readonly creature: Figure;
   private readonly plate: Nameplate;
+  private readonly reactions = new Reactions();
   // Beasts of the same kind spawned in the same frame would otherwise scuttle in
   // perfect lockstep; their spawn point is a stable seed for pulling them apart.
   private readonly phaseOffsetMs: number;
@@ -187,6 +212,7 @@ export class MobActor implements Actor, Pickable {
 
     this.creature = buildCreature(mob.definition);
     this.facing.add(this.creature.object);
+    this.reactions.track(this.creature.object);
     this.phaseOffsetMs = (mob.spawnX * 7 + mob.spawnY * 13) % 1000;
 
     this.plate = new Nameplate(this.creature.height + PLATE_CLEARANCE);
@@ -217,6 +243,7 @@ export class MobActor implements Actor, Pickable {
       this.facing.rotation.x = 0;
       setOpacity(this.facing, 1);
       this.creature.stride(this.mob.vx !== 0 || this.mob.vy !== 0, elapsedMs + this.phaseOffsetMs);
+      this.reactions.apply(this.creature, elapsedMs);
       this.plate.setVisible(true);
       this.plate.setHealth(this.mob.hp, this.mob.maxHp);
       return;
@@ -235,6 +262,21 @@ export class MobActor implements Actor, Pickable {
 
   faceCamera(camera: Camera): void {
     this.plate.faceCamera(camera);
+  }
+
+  /** A swing or a bite, turned to face what it was aimed at. See `PlayerActor.swing`. */
+  swing(toward: Point, atMs: number): void {
+    this.facing.rotation.y = facingYaw(
+      toward.x - this.mob.x,
+      toward.y - this.mob.y,
+      this.facing.rotation.y,
+    );
+    this.reactions.swing(atMs);
+  }
+
+  /** A blow the player landed. */
+  struck(atMs: number): void {
+    this.reactions.hit(atMs, PALETTE.strikeFlash);
   }
 
   /**

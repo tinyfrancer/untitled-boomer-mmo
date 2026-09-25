@@ -1050,6 +1050,7 @@ export class ZoneWorld implements Targeting {
     this.ctx.events.emit(XP_GAINED_EVENT, gain);
 
     if (gain.leveledUp) {
+      this.ctx.push({ kind: 'level-up', at: this.ctx.playerPoint() });
       this.ctx.log(logLevelUp(gain.level));
       this.player.setLevel(gain.level);
       this.publishTarget();

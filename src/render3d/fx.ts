@@ -1,12 +1,22 @@
 import {
+  BufferAttribute,
+  BufferGeometry,
+  CylinderGeometry,
+  DoubleSide,
   Group,
   Mesh,
   MeshBasicMaterial,
+  Points,
+  PointsMaterial,
+  RingGeometry,
   SphereGeometry,
   type Material,
   type Object3D,
 } from 'three';
+import { RESOURCE_NODES } from '../data/resourceNodes';
 import { FLOAT_TONE_COLORS } from '../ui/theme';
+import { itemIcon } from '../ui/itemIcons';
+import type { ResourceNodeId } from '../types/ids';
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { PALETTE } from './palette';
@@ -43,6 +53,44 @@ const BOLT_RADIUS = 8;
 
 /** Chest height, so a bolt flies between the caster and the target rather than along the floor. */
 const BOLT_HEIGHT = 34;
+
+/**
+ * A spray of short-lived points: sparks off a crit, chips off a gather. One
+ * geometry per burst and one draw call, since a crit in a long fight is every
+ * few seconds and a chop is every second, and a mesh a spark would be a dozen
+ * uploads a time.
+ */
+interface BurstStyle {
+  readonly count: number;
+  readonly lift: number;
+  /** How fast the points leave, in world units a second, and how far they fall. */
+  readonly speed: number;
+  readonly gravity: number;
+  readonly size: number;
+  readonly lifeMs: number;
+}
+
+const CRIT_SPARKS: BurstStyle = {
+  count: 14,
+  lift: 40,
+  speed: 170,
+  gravity: 260,
+  size: 7,
+  lifeMs: 420,
+};
+const GATHER_CHIPS: BurstStyle = {
+  count: 7,
+  lift: 22,
+  speed: 90,
+  gravity: 320,
+  size: 6,
+  lifeMs: 380,
+};
+
+/** A level-up: a ring spreading across the ground and a column of light over it. */
+const LEVEL_UP_MS = 1100;
+const LEVEL_UP_RING = 90;
+const LEVEL_UP_COLUMN = 150;
 
 /**
  * One short-lived thing being drawn, and how far through it is.
@@ -106,6 +154,7 @@ export class FxLayer {
           const hue = event.via === 'ability' ? 'reward' : tone;
           this.float(event.at, text, event.crit ? 'crit' : hue);
         }
+        if (event.crit) this.burst(event.at, PALETTE.critSpark, CRIT_SPARKS);
         return;
       }
       case 'defend':
@@ -120,12 +169,21 @@ export class FxLayer {
       case 'bolt-cast':
         this.bolt(event.from, event.to);
         return;
+      case 'level-up':
+        this.levelUp(event.at);
+        return;
       default:
-        // `spawn` and `gather-tick` are already visible in the state the actors
-        // sync to; `death` is drawn by the corpse's own fade, and `zone-exit`
+        // `spawn` is already visible in the state the actors sync to; `death`
+        // is drawn by the corpse's own fade; `swing` and a gather's beat are
+        // played by the actors, whom the view hands them to; and `zone-exit`
         // belongs to the session — a frame that changed zone rebuilds instead.
         return;
     }
+  }
+
+  /** The chips a gather's beat knocks off whatever is being worked. */
+  gatherChips(at: Point, nodeId: ResourceNodeId): void {
+    this.burst(at, chipColor(nodeId), GATHER_CHIPS);
   }
 
   /** A number or a word over a spot in the world, rising as it fades. */
@@ -186,6 +244,101 @@ export class FxLayer {
   }
 
   /**
+   * Points thrown out from a spot, arcing up and falling as they fade. Where
+   * each goes is fixed at birth off the golden angle rather than rolled, so a
+   * burst is the same shape every time and the view never touches a random
+   * source the simulation might one day want to own.
+   */
+  private burst(at: Point, color: number, style: BurstStyle): void {
+    const start = simToWorld(at.x, at.y, style.lift);
+    const positions = new Float32Array(style.count * 3);
+    const velocities: number[] = [];
+    for (let i = 0; i < style.count; i += 1) {
+      const around = i * 2.399963;
+      const up = 0.45 + 0.5 * ((i * 0.618034) % 1);
+      const out = style.speed * (0.55 + 0.45 * ((i * 0.381966) % 1));
+      velocities.push(Math.cos(around) * out, up * style.speed, Math.sin(around) * out);
+      positions.set([start.x, start.y, start.z], i * 3);
+    }
+    const geometry = new BufferGeometry();
+    const attribute = new BufferAttribute(positions, 3);
+    geometry.setAttribute('position', attribute);
+    const material = new PointsMaterial({
+      color,
+      size: style.size,
+      transparent: true,
+      depthWrite: false,
+      fog: false,
+    });
+    const points = new Points(geometry, material);
+    const seconds = style.lifeMs / 1000;
+    this.add({
+      object: points,
+      bornAt: this.now,
+      lifeMs: style.lifeMs,
+      play(progress) {
+        const t = progress * seconds;
+        for (let i = 0; i < style.count; i += 1) {
+          attribute.setXYZ(
+            i,
+            start.x + (velocities[i * 3] ?? 0) * t,
+            start.y + (velocities[i * 3 + 1] ?? 0) * t - 0.5 * style.gravity * t * t,
+            start.z + (velocities[i * 3 + 2] ?? 0) * t,
+          );
+        }
+        attribute.needsUpdate = true;
+        material.opacity = 1 - progress * progress;
+      },
+    });
+  }
+
+  /**
+   * A level: a ring spreading out across the ground from the player's feet and
+   * a column of light standing over them, both gone in about a second. The
+   * toast says which level; this says where, and that it was the player.
+   */
+  private levelUp(at: Point): void {
+    const ring = new Mesh(
+      new RingGeometry(0.82, 1, 40),
+      new MeshBasicMaterial({
+        color: PALETTE.levelUp,
+        transparent: true,
+        side: DoubleSide,
+        depthWrite: false,
+        fog: false,
+      }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 2;
+    const column = new Mesh(
+      new CylinderGeometry(22, 30, LEVEL_UP_COLUMN, 20, 1, true),
+      new MeshBasicMaterial({
+        color: PALETTE.levelUp,
+        transparent: true,
+        side: DoubleSide,
+        depthWrite: false,
+        fog: false,
+      }),
+    );
+    column.position.y = LEVEL_UP_COLUMN / 2;
+    const group = new Group();
+    group.add(ring, column);
+    group.position.copy(simToWorld(at.x, at.y));
+    this.add({
+      object: group,
+      bornAt: this.now,
+      lifeMs: LEVEL_UP_MS,
+      play(progress) {
+        const spread = 10 + LEVEL_UP_RING * Math.sqrt(progress);
+        ring.scale.set(spread, spread, 1);
+        setAlpha(ring, 0.9 * (1 - progress));
+        column.scale.set(1 - 0.4 * progress, 0.4 + 0.8 * progress, 1 - 0.4 * progress);
+        setAlpha(column, 0.45 * (1 - progress) * Math.min(1, progress * 6));
+      },
+    });
+  }
+
+  /**
    * Advances everything in flight and retires what has finished, on the view's
    * clock — the same one the walk cycles and the campfire's flicker run on.
    */
@@ -233,4 +386,21 @@ export class FxLayer {
 function setAlpha(object: Object3D, alpha: number): void {
   const material = (object as Object3D & { material?: Material }).material;
   if (material) material.opacity = alpha;
+}
+
+/**
+ * What a gather knocks loose: wood off a tree, spray off a fishing spot, and a
+ * vein's own ore — read off the item it yields, the way the vein's prop is
+ * coloured, so a chip of tin is the grey a tin ore is in the bag.
+ */
+function chipColor(nodeId: ResourceNodeId): number {
+  const definition = RESOURCE_NODES[nodeId];
+  switch (definition.shape) {
+    case 'tree':
+      return PALETTE.woodChip;
+    case 'ripple':
+      return PALETTE.splash;
+    case 'vein':
+      return itemIcon(definition.yieldItemId).color;
+  }
 }

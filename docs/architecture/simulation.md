@@ -84,8 +84,8 @@ world can emit to the HUD without importing an engine; the world also subscribes
 requests itself and drops them in `destroy()`. The DOM HUD only listens and renders. Every one of
 these carries state the HUD re-renders from, so the latest one always describes the present.
 
-The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: `hit`, `defend`,
-`heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `zone-exit`. These are moments, not
+The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: `hit`, `swing`,
+`defend`, `heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `level-up`, `zone-exit`. These are moments, not
 state — a bolt left the caster's hand, a number floated off a corpse — and a view that misses one
 cannot recover it from anywhere. They deliberately name a `tone` rather than a colour: the view
 decides what "reward" looks like. Anything the renderer needs to know about but cannot read off the

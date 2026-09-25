@@ -164,6 +164,7 @@ export class CombatDirector {
 
     this.lastAttackAt = this.ctx.now;
     const weaponSkill = character.activeWeaponSkill();
+    this.ctx.push({ kind: 'swing', by: null, toward: { x: target.x, y: target.y } });
 
     // Asked before the damage is rolled: a swing that is slipped never happened,
     // and the skill takes no rep for it either.
@@ -190,6 +191,7 @@ export class CombatDirector {
     this.ctx.push({
       kind: 'hit',
       on: 'mob',
+      mob: target,
       via: 'weapon',
       crit,
       at: { x: target.x, y: target.y },
@@ -240,6 +242,7 @@ export class CombatDirector {
       if (!isCooldownReady(this.ctx.now - mob.lastAttackAt, mob.attackCooldownMs)) continue;
 
       mob.lastAttackAt = this.ctx.now;
+      this.ctx.push({ kind: 'swing', by: mob, toward: this.ctx.playerPoint() });
       this.strike(mob, mob.attackPower);
       if (!player.isAlive()) return;
     }
@@ -286,6 +289,7 @@ export class CombatDirector {
       this.ctx.log(logEnemyAbilityDodged(ability.name));
       return;
     }
+    this.ctx.push({ kind: 'swing', by: mob, toward: this.ctx.playerPoint() });
     // Drawn crossing the gap for the one that is thrown; a swing has no flight.
     if (ability.thrown) {
       this.ctx.push({
@@ -338,6 +342,7 @@ export class CombatDirector {
     this.ctx.push({
       kind: 'hit',
       on: 'player',
+      mob: null,
       via: 'weapon',
       // Nothing that swings at the player carries a weapon skill, and the crit
       // chance comes out of that skill and nowhere else.

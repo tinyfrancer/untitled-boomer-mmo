@@ -50,8 +50,32 @@ export interface Figure {
   readonly height: number;
   /** Swings the legs for this frame. `elapsedMs` is view time, not the sim's. */
   stride(walking: boolean, elapsedMs: number): void;
+  /**
+   * How far through a swing it is, 0 to 1, with 0 standing ready. Driven by the
+   * actor off the view's clock from a `swing` moment, the way a damage number
+   * is: the simulation has decided the swing already, and this is only what it
+   * looks like to have made one.
+   */
+  strike(progress: number): void;
   /** What the legs are doing, in the rig's `LegPhase` vocabulary. */
   pose(): string;
+}
+
+/**
+ * How far a person's weapon comes over, and how far they lean into it, at the
+ * height of a swing. A chop rather than a sweep, because it reads at the size a
+ * figure is drawn from any angle the camera can be turned to.
+ */
+const SWING_ARC = 1.5;
+const SWING_LEAN = 0.18;
+
+/** 0 at either end of a swing and 1 at its height: a sharp strike, a slower recovery. */
+export function swingCurve(progress: number): number {
+  if (progress <= 0 || progress >= 1) return 0;
+  const peak = 0.35;
+  return progress < peak
+    ? Math.sin(((progress / peak) * Math.PI) / 2)
+    : Math.cos((((progress - peak) / (1 - peak)) * Math.PI) / 2);
 }
 
 export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figure {
@@ -109,10 +133,13 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
   head.position.y = headY;
   group.add(head);
 
+  // The weapon hangs off a grip that turns, so a swing brings the blade over
+  // the hand holding it rather than spinning it about its own middle.
+  const grip = new Group();
+  grip.position.set(rig.rightHandX - rig.cx, shoulderY, 0);
+  group.add(grip);
   if (appearance.weapon) {
-    const weapon = buildWeapon(appearance.weapon.shape, appearance.weapon.color, size);
-    weapon.position.set(rig.rightHandX - rig.cx, shoulderY, 0);
-    group.add(weapon);
+    grip.add(buildWeapon(appearance.weapon.shape, appearance.weapon.color, size));
   }
 
   // The other hand. Left, so the two never occupy the same space however the
@@ -138,6 +165,11 @@ export function buildFigure(appearance: Appearance, size = FIGURE_HEIGHT): Figur
       // a stride — since that is the vocabulary `legOffsets` is keyed by, and
       // it is what smoke asks a figure about rather than reading a rotation.
       phase = !walking ? 0 : swing >= 0 ? 1 : 2;
+    },
+    strike(progress) {
+      const swing = swingCurve(progress);
+      grip.rotation.x = swing * SWING_ARC;
+      group.rotation.x = swing * SWING_LEAN;
     },
     pose() {
       return `${walkingNow ? 'walk' : 'stand'}:${phase}`;

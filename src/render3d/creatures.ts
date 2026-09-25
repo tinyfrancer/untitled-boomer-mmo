@@ -8,7 +8,7 @@ import {
 } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import { stickFigure } from '../systems/AppearanceSystem';
-import { FIGURE_HEIGHT, buildFigure, type Figure } from './figure';
+import { FIGURE_HEIGHT, buildFigure, swingCurve, type Figure } from './figure';
 import { castsShadow } from './lights';
 import { PALETTE, beastLook, humanoidLook, type BeastLook, type PersonLook } from './palette';
 import type { EnemyDefinition } from '../data/enemies';
@@ -78,7 +78,7 @@ function buildQuadruped(definition: EnemyDefinition, look: BeastLook): Figure {
   tail.position.set(0, height * 0.5, -length * 0.3);
   group.add(tail);
 
-  return bobbing(group, height * 1.3, height * 0.06);
+  return bobbing(group, height * 1.3, height * 0.06, length);
 }
 
 /** Wider than it is long, claws forward, riding low on splayed legs. */
@@ -124,7 +124,7 @@ function buildCrustacean(definition: EnemyDefinition, look: BeastLook): Figure {
     group.add(eye);
   });
 
-  return bobbing(group, height * 1.5, height * 0.08);
+  return bobbing(group, height * 1.5, height * 0.08, length);
 }
 
 /**
@@ -150,11 +150,15 @@ function buildHumanoid(definition: EnemyDefinition, look: PersonLook): Figure {
   return figure;
 }
 
+/** How far a beast darts at what it is biting, as a fraction of its length. */
+const LUNGE_FRACTION = 0.35;
+
 /**
  * A beast's walk. It has no hips to swing, so moving bobs it instead — enough
- * that a scuttling crab reads as alive, and it costs one sine.
+ * that a scuttling crab reads as alive, and it costs one sine. It has no weapon
+ * to swing either, so an attack is a dart forward at what it is biting.
  */
-function bobbing(group: Group, height: number, amplitude: number): Figure {
+function bobbing(group: Group, height: number, amplitude: number, length: number): Figure {
   const BOB_PERIOD_MS = 320;
   let walkingNow = false;
   let phase = 0;
@@ -167,6 +171,9 @@ function bobbing(group: Group, height: number, amplitude: number): Figure {
       const swing = walking ? Math.sin((elapsedMs / BOB_PERIOD_MS) * Math.PI * 2) : 0;
       group.position.y = Math.abs(swing) * amplitude;
       phase = !walking ? 0 : swing >= 0 ? 1 : 2;
+    },
+    strike(progress) {
+      group.position.z = swingCurve(progress) * length * LUNGE_FRACTION;
     },
     pose() {
       return `${walkingNow ? 'walk' : 'stand'}:${phase}`;

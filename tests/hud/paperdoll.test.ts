@@ -175,7 +175,8 @@ describe('the paperdoll and the figure in the world are the same rig', () => {
 
     const figure = buildFigure(computeAppearance({ ...BARE, weapon: 'rusty-sword' }));
     const groups = figure.object.children.filter((child): child is Group => child instanceof Group);
-    // Two hip hinges, then whatever is being held.
+    // Two hip hinges, then the grip whatever is held hangs off — at the hand,
+    // and turned about it when the figure swings.
     const weapon = nth(groups, groups.length - 1);
 
     expect((blade.x1 - drawn.cx) / box).toBeCloseTo(weapon.position.x / FIGURE_HEIGHT, 6);
@@ -201,7 +202,8 @@ describe('the paperdoll and the figure in the world are the same rig', () => {
 
     const figure = buildFigure(computeAppearance({ ...BARE, weapon: itemId }));
     const groups = figure.object.children.filter((child): child is Group => child instanceof Group);
-    const held = nth(groups, groups.length - 1);
+    const grip = nth(groups, groups.length - 1);
+    const held = nth(grip.children, 0);
     const shaft = Math.max(
       ...held.children.map((child) =>
         child instanceof Mesh && 'height' in child.geometry.parameters

@@ -28,6 +28,12 @@ export type WorldEvent =
   | {
       kind: 'hit';
       on: 'player' | 'mob';
+      /**
+       * Which creature it landed on, or null when it was the player. Carried so
+       * a view can make the thing that was hit flinch, which a point on the
+       * ground cannot say; required for the reason `crit` is.
+       */
+      mob: Mob | null;
       via: 'weapon' | 'ability';
       // Whether it landed hard. Required rather than optional so a new path to
       // a hit has to say, which is the same reason `absorbed` is.
@@ -36,6 +42,16 @@ export type WorldEvent =
       damage: number;
       absorbed: number;
     }
+  /**
+   * Somebody swung, whether or not it landed — `by` is the creature, or null for
+   * the player. A moment rather than a state: nothing in the world can be asked
+   * afterwards whether a mob is mid-swing, which is the whole test for this
+   * channel. `toward` is what it was aimed at, since a creature standing still
+   * to fight is still facing wherever it last walked.
+   */
+  | { kind: 'swing'; by: Mob | null; toward: Point }
+  /** The player went up a level, where they stood. */
+  | { kind: 'level-up'; at: Point }
   /** A swing turned aside. `skillName` is the skill that turned it. */
   | { kind: 'defend'; at: Point; skillName: string }
   | { kind: 'heal'; at: Point; amount: number }

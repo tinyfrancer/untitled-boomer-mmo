@@ -213,6 +213,16 @@ holding the yaw from `facingYaw`, and the nameplate — which is billboarded by 
 rotation overwritten from the camera each frame, and so cannot live under something being turned to
 face where the creature is walking.
 
+**A fight has motion in it, played off moments** (act three phase 7). `swing` is said from the one
+place each side swings (`CombatDirector`, and `AbilityCaster` for a blow), whether or not it lands,
+naming who swung and what at; a `hit` names the creature it landed on. The view hands both to the
+actor they belong to — `render3d/reactions.ts` brings a weapon over its grip or darts a beast forward,
+and flashes the emissive term of whatever was struck, white for a creature and red for the player —
+and `fx.ts` sprays sparks off a crit, chips off each of a gather's two beats, and a ring of light off
+`level-up`. None of it is state the world keeps: a mob is never "mid-swing" to anything but the view.
+A damage ability says whether it is `thrown` in its effect, the word enemy abilities already used;
+this asked `range > 0` before, which every damage ability has, so a Power Slash threw a magic bolt.
+
 **What is a moment and what is a state are drawn on different clocks** (`render3d/fx.ts`,
 `selection.ts`). A damage number and a bolt come off the `WorldEvent` channel, are handed to
 `FxLayer` by the host's tick, and age against the _view's_ clock — the same one the walk cycles and

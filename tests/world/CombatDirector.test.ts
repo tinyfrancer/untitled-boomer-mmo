@@ -346,3 +346,34 @@ describe('every roll in the zone is thrown with its dice', () => {
     expect(kit.character.state.inventory['hideout-key']).toBe(before['hideout-key']);
   });
 });
+
+/**
+ * The swing is its own moment, told whether or not it lands: a slipped blow is
+ * still a blade coming down, and a view that only animated hits would stand the
+ * player still for every miss.
+ */
+describe('a swing, as the view is told it', () => {
+  it("is said for the player's every swing, landed or slipped, aimed at the target", () => {
+    const crab = new Mob(10, 0, ENEMIES.crab, 1, () => 0.5);
+    // The first roll is the crab's dodge: 0 is under its avoid chance, so it slips.
+    const kit = fight([crab], crab, () => 0);
+    kit.ctx.now += 10000;
+    kit.combat.update();
+
+    const events = kit.drain();
+    expect(events).toContainEqual({ kind: 'swing', by: null, toward: { x: 10, y: 0 } });
+    expect(events.some((event) => event.kind === 'hit')).toBe(false);
+  });
+
+  it("is said for a creature's swing, and the blow names the creature it landed on", () => {
+    const rat = new Mob(10, 0, ENEMIES.rat, 1, () => 0.5);
+    const kit = fight([rat], rat, () => 0.5);
+    rat.engage();
+    kit.ctx.now += 10000;
+    kit.combat.update();
+
+    const events = kit.drain();
+    expect(events).toContainEqual({ kind: 'swing', by: rat, toward: { x: 0, y: 0 } });
+    expect(events).toContainEqual(expect.objectContaining({ kind: 'hit', on: 'mob', mob: rat }));
+  });
+});

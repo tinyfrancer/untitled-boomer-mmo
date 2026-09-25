@@ -35,6 +35,7 @@ import { pickTap, pointerRay } from './picking';
 import { SelectionRing } from './selection';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import type { WorldEvent } from '../world/worldEvents';
+import type { Mob } from '../world/Mob';
 import type { DrawnCounts } from '../types/debugView';
 
 /**
@@ -44,6 +45,13 @@ import type { DrawnCounts } from '../types/debugView';
 const LANTERN_COLOR = 0xffc98a;
 const LANTERN_HEIGHT = TILE_SIZE * 1.4;
 const LANTERN_REACH = TILE_SIZE * 7;
+
+/**
+ * Where in a gather's channel the tool comes down, as fractions of it: twice a
+ * gather, so a chop reads as chopping rather than as standing beside a tree
+ * while a bar fills.
+ */
+const GATHER_BEATS = [0.3, 0.8];
 
 /**
  * The Three.js view onto one ZoneWorld: a renderer, a scene, a camera that
@@ -67,6 +75,12 @@ export class ZoneView3D {
   private ground: Mesh | null = null;
   private player: PlayerActor | null = null;
   private mobActors: MobActor[] = [];
+  // Who draws each mob, for the moments that name one: a swing it made, a blow
+  // it took. Built with the actors and dropped with them.
+  private mobActorOf = new Map<Mob, MobActor>();
+  // How far through its channel the gather was on the last tick, which is how a
+  // beat is found: a tick that crosses one of `GATHER_BEATS` is a stroke.
+  private gatherProgress = 0;
   private nodeActors: NodeActor[] = [];
   private npcActors: NpcActor[] = [];
   private signpostActors: SignpostActor[] = [];
@@ -163,6 +177,7 @@ export class ZoneView3D {
     this.labelledLevel = world.character.state.level;
     this.player = new PlayerActor(world.player);
     this.mobActors = world.mobs.map((mob) => new MobActor(mob, this.labelledLevel));
+    this.mobActorOf = new Map(this.mobActors.map((actor) => [actor.mob, actor]));
     this.nodeActors = world.nodes.map((node) => new NodeActor(node));
     this.npcActors = world.npcs.map((npc) => new NpcActor(npc));
     this.signpostActors = world.signposts.map((signpost) => new SignpostActor(signpost));
@@ -204,6 +219,8 @@ export class ZoneView3D {
     this.actors().forEach((actor) => actor.dispose());
     this.player = null;
     this.mobActors = [];
+    this.mobActorOf = new Map();
+    this.gatherProgress = 0;
     this.nodeActors = [];
     this.npcActors = [];
     this.signpostActors = [];
@@ -253,7 +270,45 @@ export class ZoneView3D {
    * not handed one has no way to know it happened.
    */
   draw(events: readonly WorldEvent[]): void {
-    events.forEach((event) => this.fx.draw(event));
+    const now = performance.now() - this.startedAt;
+    events.forEach((event) => {
+      this.fx.draw(event);
+      this.react(event, now);
+    });
+  }
+
+  /**
+   * The moments that belong to somebody rather than to a spot: a swing is played
+   * by whoever swung, a blow that got through flashes whoever took it, and a
+   * gather's beat is the player's tool coming down and the chips it knocks off.
+   */
+  private react(event: WorldEvent, now: number): void {
+    switch (event.kind) {
+      case 'swing': {
+        const actor = event.by ? this.mobActorOf.get(event.by) : this.player;
+        actor?.swing(event.toward, now);
+        return;
+      }
+      case 'hit':
+        if (event.mob) {
+          this.mobActorOf.get(event.mob)?.struck(now);
+        } else if (event.damage > event.absorbed) {
+          this.player?.struck(now);
+        }
+        return;
+      case 'gather-tick': {
+        // A tick behind the last one is a new channel: the last gather landed
+        // and the next one began.
+        const last = event.progress < this.gatherProgress ? 0 : this.gatherProgress;
+        this.gatherProgress = event.progress;
+        if (!GATHER_BEATS.some((beat) => last < beat && event.progress >= beat)) return;
+        this.player?.swing(event.at, now);
+        this.fx.gatherChips(event.at, event.nodeId);
+        return;
+      }
+      default:
+        return;
+    }
   }
 
   /** Turns the camera around the player — the drag, in radians. */

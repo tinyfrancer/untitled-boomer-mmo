@@ -237,18 +237,23 @@ export class AbilityCaster {
         );
         // A bolt thrown from the caster to the target. Purely cosmetic, but a
         // ranged nuke that produced only a number over the mob read as nothing
-        // happening. A melee ability has no flight to draw.
-        if (ability.range > 0) {
+        // happening. A melee ability has no flight to draw: it is a swing. This
+        // asked `range > 0` once, which every damage ability has, so a Power
+        // Slash used to throw a magic bolt a tile and a quarter.
+        if (ability.effect.thrown) {
           this.ctx.push({
             kind: 'bolt-cast',
             abilityId: ability.id,
             from: this.ctx.playerPoint(),
             to: { x: target.x, y: target.y },
           });
+        } else {
+          this.ctx.push({ kind: 'swing', by: null, toward: { x: target.x, y: target.y } });
         }
         this.ctx.push({
           kind: 'hit',
           on: 'mob',
+          mob: target,
           via: 'ability',
           crit,
           at: { x: target.x, y: target.y },
