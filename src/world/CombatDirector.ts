@@ -70,8 +70,9 @@ export interface CombatDirectorDeps {
    */
   interruptCast(): void;
   /**
-   * Dying stops everything else the session was doing and may hand the player
-   * to another zone, so the world takes it from here.
+   * Dying stops everything else the zone was doing at once — the camp, the
+   * gather, the counters, the walk — which only the world can reach, so it
+   * takes it from here.
    */
   onPlayerDeath(): void;
 }
@@ -358,8 +359,9 @@ export class CombatDirector {
     let took = false;
     drops.forEach((drop) => {
       const name = describeItemName(drop.itemId);
-      // A full pack leaves the drop on the corpse rather than silently eating
-      // it: the log line is the only way the player would ever know.
+      // A full pack loses the drop — there is no corpse to leave it on — so
+      // the log line is the only way the player would ever know what the fight
+      // would have paid.
       if (!character.tryAddItem(drop.itemId, drop.quantity)) {
         this.ctx.log(logNotice(`Your pack is too full to carry ${name}.`));
         return;

@@ -41,8 +41,8 @@ export type WorldEvent =
   | { kind: 'heal'; at: Point; amount: number }
   | { kind: 'float'; at: Point; text: string; tone: FloatTone }
   /**
-   * The player died. Nothing here for the host to load, unlike an exit or a
-   * travel: a corpse gets up in the zone it fell in, so a death is the one
+   * The player died. Nothing here for the host to load, unlike an exit: a
+   * corpse gets up in the zone it fell in, so a death is the one
    * thing that stops everything at once without changing worlds.
    */
   | { kind: 'death'; on: 'player' }

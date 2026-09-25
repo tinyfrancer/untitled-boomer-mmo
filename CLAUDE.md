@@ -20,7 +20,7 @@ to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper
 kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
 work you were doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
-mobile-first HUD; and local save/load with versioned migrations. Five of the nine zones are level
+mobile-first HUD; and local save/load with versioned migrations. Five of the ten zones are level
 1-3 starter content — what separates those is what they drop, not how hard they are, and the hideout
 is gated by a rare key rather than by a level. Five things sit above that band. The named mob at the
 back of the hideout is level 4, carries loot that comes off a single creature, and is the fight the
@@ -267,7 +267,8 @@ collaborator gets a `Deps` of its own rather than a reference to the world. What
 selected (`world/targeting.ts`, which is the read-only view of it three of them get), the
 publishers that speak only on change (`publishOnChange`), and the three things that stop
 everything at once — a zone change, a death, a teardown. Its `handle*` methods are a thin
-delegating surface kept for the view and `scripts/smoke.mjs`.
+delegating surface kept for `tests/world/`, which drives a counter or a cast by calling one rather
+than by emitting the request the HUD would; neither the view nor `scripts/smoke.mjs` uses them.
 
 **The boot flow is an if-statement, not a scene graph.** `src/bootFlow.ts` resumes the save, or
 mounts the plain-HTML creation screen (`hud/CharacterCreate.ts`) and starts the session with what
@@ -323,9 +324,9 @@ prove it.
 **A zone may be locked, and the key is spent rather than carried** (`ZoneDefinition.requiresKey`,
 ruled on by `systems/ZoneAccessSystem.ts`). `zoneAccess` answers three things and not two — `open`,
 `locked`, and `unlockable`, which is "shut, and the key is in the pack" — because a door about to
-open costs something and the caller has to know that before it walks through. All three routes into
-a zone ask `ZoneWorld.openWayInto`, which is the **only** place a key is ever spent, so "consumed
-once, open for good" is one rule rather than three; leaning on a shut edge is latched
+open costs something and the caller has to know that before it walks through. Both routes into a
+zone — the edge walk and the signpost — ask `ZoneWorld.openWayInto`, which is the **only** place a
+key is ever spent, so "consumed once, open for good" is one rule rather than two; leaning on a shut edge is latched
 (`blockedAtEdge`) so the refusal is one toast rather than one a frame. What the key opened is stored
 on `CharacterState.unlockedZones` and is the one thing here that could not be derived — the key is
 gone afterwards, so an empty pack means either "never found one" or "already been", and the world

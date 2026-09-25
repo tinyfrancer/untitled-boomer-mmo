@@ -566,8 +566,8 @@ export class CharacterController {
    * out of again leaves nothing behind to count.
    *
    * Called once per world built rather than once per frame spent there, so
-   * every route in (a walk through an exit, a travel off the map, and a session
-   * resumed) credits exactly one arrival without knowing the others exist.
+   * every route in (a walk through an exit, and a session resumed) credits
+   * exactly one arrival without knowing the other exists.
    */
   recordVisit(zoneId: ZoneId): void {
     this.state.visits = {

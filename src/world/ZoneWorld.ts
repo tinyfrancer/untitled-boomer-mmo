@@ -172,7 +172,7 @@ export interface ZoneWorldOptions {
   input: InputState;
   /** Which edge the player walked in through, when they did. */
   entry?: { edge: ZoneEdge; fraction: number };
-  /** HP carried across a zone walk or a travel; absent on a session's first world. */
+  /** HP carried across a zone walk; absent on a session's first world. */
   hp?: number;
   rng?: () => number;
 }
@@ -286,17 +286,18 @@ export class ZoneWorld implements Targeting {
     }
     this.ctx = new WorldContext(character, events, this.player, zone.id);
     // A world built for a zone *is* an arrival in it, which is what makes this
-    // the one place a visit is credited: the walk, the travel and the session
-    // resumed all end here, and a fourth route in would too. It is deliberately
+    // the one place a visit is credited: the walk and the session resumed both
+    // end here, and a third route in would too. It is deliberately
     // not `recordLocation`, which is called on every save and says where the
     // character is rather than that they have just got there.
     character.recordVisit(zone.id);
 
     // What each publisher counts as a change. HP and mana are their own
     // signature; the action bar compares only what it draws, and the item
-    // buttons only whether a fire is in reach. The two seeds are what the world
-    // opens already having said: the constructor sends HP unconditionally
-    // below, and there is no fire lit in the first frame of any zone.
+    // buttons only whether a fire or a station is in reach. The two seeds are
+    // what the world opens already having said: the constructor sends HP
+    // unconditionally below, and a class with nothing learned has no bar for a
+    // list of no abilities to redraw.
     this.publishPlayerHp = publishOnChange(
       () => this.player.hp,
       String,
@@ -329,6 +330,9 @@ export class ZoneWorld implements Targeting {
       (states) => this.ctx.events.emit(ABILITY_STATE_CHANGED_EVENT, states),
       '',
     );
+    // Unseeded, like the map's two below: the HUD outlives the world, and a
+    // player who walks out of a zone beside a fire would arrive with a Cook
+    // button still lit unless the new world says otherwise.
     this.publishActions = publishOnChange(
       () => ({
         nearFire: this.gathering.isNearFire(),
@@ -336,7 +340,6 @@ export class ZoneWorld implements Targeting {
       }),
       (actions) => `${actions.nearFire}/${actions.nearStations.join(',')}`,
       (actions) => this.ctx.events.emit(ACTIONS_CHANGED_EVENT, actions),
-      'false',
     );
     // The map's two. Neither carries a seed, and both are read from the tick
     // rather than sent from here: the host mounts the HUD after building the
@@ -441,14 +444,14 @@ export class ZoneWorld implements Targeting {
 
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt by a zone
-    // walk or a travel — resync it unconditionally.
+    // walk — resync it unconditionally.
     this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   // Where the player stands when this world opens: the arrival point if they
   // walked in through an exit, the spot the save was left at if they are
   // resuming into the zone that save names, and the middle of the map
-  // otherwise — a new character, or one who travelled here from the map.
+  // otherwise — a new character, or a save that names no particular spot.
   private startPoint(entry: ZoneWorldOptions['entry']): Point {
     if (entry) {
       return arrivalPoint(
@@ -729,10 +732,10 @@ export class ZoneWorld implements Targeting {
    * Whether the way into a zone is open, spending the key if this is the moment
    * it opens.
    *
-   * Every route into a zone asks this — the edge walk, the signpost, and travel
-   * from the world map — so a door cannot be locked against one of them and
-   * open to another. It is the only place a key is ever spent, which is what
-   * makes "consumed once, open for good" one rule rather than three.
+   * Both routes into a zone ask this — the edge walk and the signpost — so a
+   * door cannot be locked against one of them and open to the other. It is the
+   * only place a key is ever spent, which is what makes "consumed once, open
+   * for good" one rule rather than two.
    */
   private openWayInto(zoneId: ZoneId): boolean {
     const access = zoneAccess(zoneId, {
@@ -806,7 +809,8 @@ export class ZoneWorld implements Targeting {
   }
 
   // ---------------------------------------------------------------------------
-  // The four counters: vendoring, the bank, the trainer and the board
+  // The six counters: vendoring, the bank, the trainer, the board, the
+  // outfitter and the fettler
   // ---------------------------------------------------------------------------
 
   /** The shopkeeper the open shop belongs to; null when the shop is closed. */
@@ -1015,10 +1019,9 @@ export class ZoneWorld implements Targeting {
     // to town for nothing made dying the fastest way to travel and a free heal
     // on arrival; what it costs now is the walk back.
     //
-    // The spawn point is the middle of the map, which is where travelling from
-    // the world map already puts someone — so a respawn is exactly as exposed
-    // as an arrival the game has always allowed, and no zone's centre sits
-    // inside a mob's aggro radius.
+    // The spawn point is the middle of the map, and `spawnSafety.test.ts` holds
+    // it clear of every aggressive creature's whole wander disc — so getting up
+    // is never getting straight back into the fight that ended.
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
     this.player.setVelocity(0, 0);
     this.player.restoreToFull();

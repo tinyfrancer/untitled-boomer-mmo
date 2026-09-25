@@ -39,7 +39,7 @@ const BACKGROUND = 0x1a1a2e;
 
 /**
  * The Three.js view onto one ZoneWorld: a renderer, a scene, a camera that
- * follows the player, and — for now — the ground under them.
+ * follows the player, the ground, and one actor per simulated thing.
  *
  * The split between what is built once and what is built per zone is the whole
  * point of this class. The renderer, the camera and the lights belong to the
@@ -282,10 +282,6 @@ export class ZoneView3D {
     this.selection.follow(world.target);
     this.fx.update(elapsedMs);
 
-    // Whatever the camera has ended up behind — the trees and the buildings.
-    // Only the props are asked: a rat standing in front of the player is not
-    // something they need to see past, and fading creatures would fight the
-    // death fade for the same materials.
     // The room the player is standing in, if they are standing in one. Before
     // the fade rather than after it, because a building being cut away is what
     // decides whether it may also be faded.
@@ -294,6 +290,10 @@ export class ZoneView3D {
     // off leaves a room standing in full sun, and the lamp is what still tells
     // it from the grass outside.
     this.roomLight.shine(this.roomLamp());
+    // Whatever the camera has ended up behind — the trees and the buildings.
+    // Only the props are asked: a rat standing in front of the player is not
+    // something they need to see past, and fading creatures would fight the
+    // death fade for the same materials.
     applyOcclusion(this.camera.position, world.player, this.occluders);
 
     // Billboards last, against the camera this frame is about to be drawn with.
