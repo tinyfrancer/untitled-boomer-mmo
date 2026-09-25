@@ -6,6 +6,16 @@ export interface LootDrop {
   quantity: number;
 }
 
+/**
+ * How long a loot pile lies where it fell, in game time (decision 63).
+ *
+ * Every map is 25×19 tiles, so the far corner is about three seconds at a walk:
+ * a minute is time to drop something and come back for the pile, or to walk
+ * back to it from the respawn point, and not time to go to town and sell first.
+ * Game time stops while the tab is hidden, so this does too.
+ */
+export const LOOT_PILE_LIFETIME_MS = 60_000;
+
 export interface LootResult {
   drops: LootDrop[];
   copper: number;

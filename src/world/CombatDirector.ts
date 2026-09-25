@@ -26,12 +26,12 @@ import {
   rollDefense,
 } from '../systems/CombatSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
-import { rollLootTable } from '../systems/LootSystem';
+import { rollLootTable, type LootDrop } from '../systems/LootSystem';
 import { hasLineOfSight, type CollisionWorld } from '../systems/CollisionSystem';
-import { distance } from '../systems/MovementSystem';
+import { distance, type Point } from '../systems/MovementSystem';
 import { ENEMY_ABILITIES, type EnemyAbilityDefinition } from '../data/enemyAbilities';
 import { abilityConnects, chooseEnemyAbility } from '../systems/EnemyAbilitySystem';
-import type { EnemyId, LootTableId } from '../types/ids';
+import type { EnemyId } from '../types/ids';
 import {
   ACHIEVEMENT_UNLOCKED_EVENT,
   KILLS_CHANGED_EVENT,
@@ -75,6 +75,14 @@ export interface CombatDirectorDeps {
    * takes it from here.
    */
   onPlayerDeath(): void;
+  /**
+   * Whether nobody is at the keyboard, which decides what a drop the pack
+   * refuses becomes: a pile to come back for, or nothing (decision 62). The
+   * same line `GatherSession` draws for what a full pack means.
+   */
+  isCamping(): boolean;
+  /** Leaves a kill's refusals on the ground where it fell. */
+  leavePile(at: Point, drops: LootDrop[]): void;
 }
 
 /**
@@ -112,7 +120,7 @@ export class CombatDirector {
     this.ctx.push({ kind: 'death', on: 'mob', mob });
     this.ctx.log(logKill(mob.name));
     this.deps.awardXp(mob.xpReward);
-    this.grantLoot(mob.lootTableId);
+    this.grantLoot(mob);
     this.announceUnlocks(this.creditKill(mob.definition.id));
   }
 
@@ -366,26 +374,40 @@ export class CombatDirector {
     }
   }
 
-  private grantLoot(lootTableId?: LootTableId): void {
+  private grantLoot(mob: Mob): void {
+    const { lootTableId } = mob;
     if (!lootTableId) return;
     const { character } = this.ctx;
     const { drops, copper } = rollLootTable(lootTableId, this.ctx.rolls);
 
+    // Asked once for the whole corpse: a camp cannot start or stop halfway
+    // through the table.
+    const camping = this.deps.isCamping();
+    const refused: LootDrop[] = [];
     let took = false;
     drops.forEach((drop) => {
       const name = describeItemName(drop.itemId);
-      // A full pack loses the drop — there is no corpse to leave it on — so
+      if (character.tryAddItem(drop.itemId, drop.quantity)) {
+        this.ctx.log(logLoot(name, drop.quantity));
+        took = true;
+        return;
+      }
+      // A camp loses the drop — nobody is there to come back for a pile, and
+      // piles under an unattended camp would pile up for as long as it ran — so
       // the log line is the only way the player would ever know what the fight
       // would have paid.
-      if (!character.tryAddItem(drop.itemId, drop.quantity)) {
+      if (camping) {
         this.ctx.log(logNotice(`Your pack is too full to carry ${name}.`));
         return;
       }
-      this.ctx.log(logLoot(name, drop.quantity));
-      took = true;
+      this.ctx.log(logNotice(`Your pack is too full for ${name}; it is left where it fell.`));
+      refused.push(drop);
     });
     if (took) {
       this.ctx.publishInventory();
+    }
+    if (refused.length > 0) {
+      this.deps.leavePile({ x: mob.x, y: mob.y }, refused);
     }
     if (copper > 0) {
       character.addCurrency(copper);

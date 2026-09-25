@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
 import type { CombatLogEntry } from '../../src/systems/CombatLogSystem';
+import { rollLootTable, type LootDrop } from '../../src/systems/LootSystem';
+import type { Point } from '../../src/systems/MovementSystem';
 import {
   ACHIEVEMENT_UNLOCKED_EVENT,
   COMBAT_LOG_EVENT,
@@ -29,9 +31,15 @@ function ratAt(x: number, y: number): Mob {
   return new Mob(x, y, ENEMIES.rat, 1, () => 0.5);
 }
 
-function fight(mobs: Mob[] = [], target: Mob | null = mobs[0] ?? null, rolls?: () => number) {
+function fight(
+  mobs: Mob[] = [],
+  target: Mob | null = mobs[0] ?? null,
+  rolls?: () => number,
+  camping = false,
+) {
   const kit = testContext({ rolls });
   const awarded: number[] = [];
+  const piles: { at: Point; drops: LootDrop[] }[] = [];
   const targeting: Targeting = {
     target,
     publishTarget: vi.fn(),
@@ -55,8 +63,10 @@ function fight(mobs: Mob[] = [], target: Mob | null = mobs[0] ?? null, rolls?: (
     interruptGather: vi.fn(),
     interruptCast: vi.fn(),
     onPlayerDeath: vi.fn(),
+    isCamping: () => camping,
+    leavePile: (at: Point, drops: LootDrop[]) => piles.push({ at, drops }),
   };
-  return { ...kit, deps, awarded, targeting, combat: new CombatDirector(kit.ctx, deps) };
+  return { ...kit, deps, awarded, piles, targeting, combat: new CombatDirector(kit.ctx, deps) };
 }
 
 describe('the player’s swings', () => {
@@ -121,17 +131,41 @@ describe('what a corpse is worth', () => {
     expect(kit.drain().some((event) => event.kind === 'death')).toBe(true);
   });
 
-  it('loses a drop a full pack cannot take, and says so in the log', () => {
-    const bandit = new Mob(10, 0, ENEMIES.bandit, 1, () => 0.5);
+  it('leaves what a full pack refuses in a pile where the creature fell', () => {
+    const bandit = new Mob(140, 60, ENEMIES.bandit, 1, () => 0.5);
     // Loaded so the table actually rolls something to refuse.
     const kit = fight([bandit], bandit, () => 0);
     kit.character.addItem('rat-bones', 10000);
+    const rolled = rollLootTable(bandit.lootTableId!, () => 0).drops;
 
     kit.combat.resolveKill(bandit);
 
     const lines = kit.emissions(COMBAT_LOG_EVENT).map(([entry]) => (entry as CombatLogEntry).text);
     expect(kit.emissions(INVENTORY_CHANGED_EVENT)).toHaveLength(0);
-    expect(lines.some((line) => line.includes('too full'))).toBe(true);
+    expect(lines.filter((line) => line.includes('left where it fell'))).toHaveLength(rolled.length);
+    expect(kit.piles).toEqual([{ at: { x: 140, y: 60 }, drops: rolled }]);
+  });
+
+  it('leaves no pile under a camp, and loses the drop the way it always did', () => {
+    const bandit = new Mob(10, 0, ENEMIES.bandit, 1, () => 0.5);
+    const kit = fight([bandit], bandit, () => 0, true);
+    kit.character.addItem('rat-bones', 10000);
+
+    kit.combat.resolveKill(bandit);
+
+    const lines = kit.emissions(COMBAT_LOG_EVENT).map(([entry]) => (entry as CombatLogEntry).text);
+    expect(kit.piles).toEqual([]);
+    expect(lines.some((line) => line.includes('too full to carry'))).toBe(true);
+  });
+
+  it('leaves no pile when everything fitted', () => {
+    const bandit = new Mob(10, 0, ENEMIES.bandit, 1, () => 0.5);
+    const kit = fight([bandit], bandit, () => 0);
+
+    kit.combat.resolveKill(bandit);
+
+    expect(kit.piles).toEqual([]);
+    expect(kit.emissions(INVENTORY_CHANGED_EVENT)).toHaveLength(1);
   });
 
   it('announces the achievement and the title the last kill of a tier earned', () => {

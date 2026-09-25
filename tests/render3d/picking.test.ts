@@ -3,6 +3,7 @@ import { nth } from '../nth';
 import { TILE_SIZE } from '../../src/config/constants';
 import {
   BuildingActor,
+  LootPileActor,
   MobActor,
   NodeActor,
   NpcActor,
@@ -33,6 +34,8 @@ import type { Point } from '../../src/systems/MovementSystem';
 import type { WorldTap } from '../../src/world/ZoneWorld';
 import type { ZoneId } from '../../src/types/ids';
 import type { Mob } from '../../src/world/Mob';
+import { LootPile } from '../../src/world/LootPile';
+import { LOOT_PILE_LIFETIME_MS } from '../../src/systems/LootSystem';
 
 /**
  * A portrait phone, which is where picking is hardest: the camera sits furthest
@@ -54,6 +57,7 @@ const EMPTY: PickScene = {
   stations: [],
   mobs: [],
   buildings: [],
+  piles: [],
 };
 
 /**
@@ -229,6 +233,70 @@ describe('pickTap', () => {
     expect(tapAt(camera, { mobs: actors }, { x: mob.x, y: mob.y })?.kind).toBe('ground');
   });
 
+  it('takes from a loot pile tapped where it lies', () => {
+    const pile = new LootPile({ x: 700, y: 700 }, [{ itemId: 'rat-bones', quantity: 1 }]);
+    const camera = cameraOn({ x: pile.x, y: pile.y + 150 });
+
+    const tapped = tapAt(camera, { piles: [new LootPileActor(pile)] }, pile);
+
+    expect(tapped).toEqual({ kind: 'pile', pile });
+  });
+
+  // The corpse's twin: a pile that has lapsed offers no box in the frame
+  // before the view takes its sack down.
+  it('hands a tap on a lapsed pile to the ground', () => {
+    const pile = new LootPile({ x: 700, y: 700 }, [{ itemId: 'rat-bones', quantity: 1 }]);
+    const actor = new LootPileActor(pile);
+    const camera = cameraOn({ x: pile.x, y: pile.y + 150 });
+
+    pile.update(LOOT_PILE_LIFETIME_MS);
+
+    expect(tapAt(camera, { piles: [actor] }, pile)?.kind).toBe('ground');
+  });
+
+  /**
+   * Above the ground and below everything else. A pile lies wherever something
+   * died, which is wherever the next one is standing: ranked any higher, a sack
+   * would eat the tap on the rat standing over it — or, since the order is not a
+   * depth sort, on a rat anywhere in front of it along the ray.
+   */
+  it('gives a tap on a pile to anything else standing on it', () => {
+    const { world } = harness();
+    const spot = { x: 700, y: 700 };
+    const standing = {
+      pickBox: () =>
+        pickBox(spot.x, spot.y, { width: TILE_SIZE, depth: TILE_SIZE, height: TILE_SIZE }),
+    };
+    const pile = new LootPile(spot, [{ itemId: 'rat-bones', quantity: 1 }]);
+    const piles = [{ ...standing, pile }];
+    const camera = cameraOn({ x: spot.x, y: spot.y + 150 });
+
+    expect(
+      tapAt(camera, { piles, mobs: [{ ...standing, mob: nth(world.mobs) }] }, spot)?.kind,
+    ).toBe('mob');
+    expect(
+      tapAt(camera, { piles, stations: [{ ...standing, station: nth(world.stations) }] }, spot)
+        ?.kind,
+    ).toBe('station');
+    expect(
+      tapAt(
+        camera,
+        {
+          piles,
+          buildings: [
+            {
+              ...standing,
+              building: nth(world.buildings),
+              tapAnswer: () => ({ kind: 'ground', point: spot }) as const,
+            },
+          ],
+        },
+        spot,
+      )?.kind,
+    ).toBe('ground');
+    expect(tapAt(camera, { piles }, spot)?.kind).toBe('pile');
+  });
+
   /**
    * The order is a priority rather than a depth sort, which is the whole reason
    * each kind is asked separately: a rat wandering in front of the shopkeeper
@@ -261,6 +329,7 @@ describe('pickTap', () => {
           tapAnswer: () => ({ kind: 'ground', point: spot }) as const,
         },
       ],
+      piles: [],
     };
 
     expect(tapAt(camera, scene, spot)?.kind).toBe('node');

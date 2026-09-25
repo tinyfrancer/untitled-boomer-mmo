@@ -23,6 +23,7 @@ import { ZONES, type ZoneExit } from '../data/zones';
 import { QUESTS } from '../data/quests';
 import { MAX_BANK_SLOTS, STARTING_BANK_SLOTS, bankSlotPrice } from './BankSystem';
 import { formatCurrency } from './CurrencySystem';
+import { LOOT_PILE_LIFETIME_MS } from './LootSystem';
 import { scaleEnemyStats } from './EnemySystem';
 import type { EnemyDefinition } from '../data/enemies';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
@@ -52,12 +53,20 @@ export interface InspectDrop {
   chance: number;
 }
 
+/** One stack lying on the ground: what it is, and how many. */
+export interface InspectStack {
+  itemId: ItemId;
+  quantity: number;
+}
+
 export interface InspectPanel {
   title: string;
   subtitle: string;
   lines: InspectLine[];
   /** Present only on a loot panel, and empty for something that carries nothing. */
   drops?: InspectDrop[];
+  /** Present only on a loot pile's card: what is lying in it. */
+  held?: InspectStack[];
   /** One sentence of English under the numbers, where numbers alone mislead. */
   note?: string;
 }
@@ -138,6 +147,31 @@ export function describeEnemyLoot(definition: EnemyDefinition): InspectPanel {
     lines,
     drops,
     note: drops.length === 0 && lines.length === 0 ? 'This one leaves nothing behind.' : undefined,
+  };
+}
+
+/**
+ * What a kill left on the ground, as it stood when the card opened.
+ *
+ * The one card here that is handed state rather than an id, since a pile is
+ * made of whatever a pack refused and there is no table to read it off. Still a
+ * pure function of its argument, and still settled once: a pile only gets
+ * smaller, so a card left open can only promise too much, never too little.
+ * The weight line is the one number that answers "can I take it all", which is
+ * the whole of the question someone asking about a pile has.
+ */
+export function describePile(contents: readonly InspectStack[]): InspectPanel {
+  const weight = contents.reduce(
+    (total, stack) => total + itemWeight(stack.itemId) * stack.quantity,
+    0,
+  );
+  return {
+    title: 'Loot Pile',
+    subtitle: 'What a full pack could not take',
+    // To a tenth, so a sum of light things never prints its float error.
+    lines: [{ label: 'Weight', value: String(Math.round(weight * 10) / 10) }],
+    held: contents.map(({ itemId, quantity }) => ({ itemId, quantity })),
+    note: `It lies here for ${LOOT_PILE_LIFETIME_MS / 1000}s from the kill, and then it is gone.`,
   };
 }
 

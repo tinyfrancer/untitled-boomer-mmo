@@ -5,8 +5,8 @@ import { describeItemName } from '../data/items';
 import { formatChance, type InspectPanel } from '../systems/InspectSystem';
 
 /**
- * What something *is*, spelled out: a stat block, or a drop table with the
- * chance beside every line.
+ * What something *is*, spelled out: a stat block, a drop table with the chance
+ * beside every line, or what is lying in a loot pile.
  *
  * One component for both because they are the same card with different rows —
  * `InspectSystem` decides what is worth saying about a rat, a tree, a signpost
@@ -60,6 +60,18 @@ export class InspectModal extends Overlay {
         entry.root.dataset.item = drop.itemId;
         body.append(entry.root);
       }
+    }
+
+    for (const stack of panel.held ?? []) {
+      const entry = row({
+        className: 'hud-list-row hud-inspect__held',
+        label: describeItemName(stack.itemId),
+        value: `×${stack.quantity}`,
+        valueClass: 'hud-list-row__value',
+        icon: itemIconSvg(stack.itemId),
+      });
+      entry.root.dataset.item = stack.itemId;
+      body.append(entry.root);
     }
 
     if (panel.note) {

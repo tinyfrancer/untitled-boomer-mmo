@@ -23,7 +23,8 @@ export type CueId =
   | 'splash'
   | 'level-up'
   | 'coin'
-  | 'achievement';
+  | 'achievement'
+  | 'sack';
 
 export type VoiceWave = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'noise';
 
@@ -160,5 +161,14 @@ export const CUES: Record<CueId, Cue> = {
       { wave: 'sine', from: 1320, ms: 700, gain: 0.08, delayMs: 20 },
     ],
     spacingMs: 800,
+  },
+  // A loot pile landing: a dull thump with the rustle of cloth on it. Low and
+  // soft, because it says the pack was full rather than that anything was won.
+  sack: {
+    voices: [
+      { wave: 'sine', from: 140, to: 70, ms: 150, gain: 0.3 },
+      { wave: 'noise', from: 500, ms: 120, gain: 0.14, filter: 'lowpass' },
+    ],
+    spacingMs: 150,
   },
 };

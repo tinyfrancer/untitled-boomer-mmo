@@ -1,7 +1,16 @@
 import { distance, type Point } from './MovementSystem';
 
 export type InteractionKind =
-  'gather' | 'shop' | 'bank' | 'train' | 'bounty' | 'outfit' | 'reforge' | 'station' | 'signpost';
+  | 'gather'
+  | 'shop'
+  | 'bank'
+  | 'train'
+  | 'bounty'
+  | 'outfit'
+  | 'reforge'
+  | 'station'
+  | 'signpost'
+  | 'loot';
 
 /** Something the player tapped and is walking toward to act on. */
 export interface PendingInteraction {

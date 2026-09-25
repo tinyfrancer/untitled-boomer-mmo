@@ -71,6 +71,12 @@ export type WorldEvent =
   | { kind: 'death'; on: 'mob'; mob: Mob }
   | { kind: 'spawn'; mob: Mob }
   /**
+   * A kill left a loot pile where it fell, because the pack could not take all
+   * of it. The sack is state and the view draws it from there; this is the
+   * moment it dropped, which the ear is told about for the reason a wind-up is.
+   */
+  | { kind: 'loot-left'; at: Point }
+  /**
    * A projectile to draw between two points; instant-hit abilities omit it.
    * Either side of a fight can throw one, and the id says which — nothing draws
    * them differently yet, but a bolt and a knife are not the same object and

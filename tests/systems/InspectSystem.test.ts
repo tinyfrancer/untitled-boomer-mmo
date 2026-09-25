@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
-import { describeItemName } from '../../src/data/items';
+import { describeItemName, itemWeight } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { QUEST_ORDER } from '../../src/data/quests';
@@ -8,6 +8,7 @@ import { SHOP_STOCK } from '../../src/data/shop';
 import { ZONES } from '../../src/data/zones';
 import { STARTING_BANK_SLOTS, bankSlotPrice } from '../../src/systems/BankSystem';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
+import { LOOT_PILE_LIFETIME_MS } from '../../src/systems/LootSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
 import {
   describeEnemy,
@@ -15,6 +16,7 @@ import {
   describeItem,
   describeNode,
   describeNpc,
+  describePile,
   describeSignpost,
   formatChance,
   type InspectPanel,
@@ -115,6 +117,25 @@ describe('describing a node', () => {
   it('tells a pond from a tree', () => {
     expect(valueOf(describeNode(RESOURCE_NODES['fishing-spot']), 'Charges')).toBe('Never runs out');
     expect(valueOf(describeNode(RESOURCE_NODES.tree), 'Charges')).toBe('4, then regrows');
+  });
+});
+
+describe('describing a loot pile', () => {
+  it('lists what is in it, and weighs it, which is what "can I take it all" asks', () => {
+    const panel = describePile([
+      { itemId: 'rat-bones', quantity: 2 },
+      { itemId: 'iron-ore', quantity: 1 },
+    ]);
+
+    expect(panel.title).toBe('Loot Pile');
+    expect(panel.held).toEqual([
+      { itemId: 'rat-bones', quantity: 2 },
+      { itemId: 'iron-ore', quantity: 1 },
+    ]);
+    expect(valueOf(panel, 'Weight')).toBe(
+      String(2 * itemWeight('rat-bones') + itemWeight('iron-ore')),
+    );
+    expect(panel.note).toContain(`${LOOT_PILE_LIFETIME_MS / 1000}s`);
   });
 });
 

@@ -42,6 +42,8 @@ export class MomentEar {
         return [event.on === 'player' ? 'player-death' : 'mob-death'];
       case 'level-up':
         return ['level-up'];
+      case 'loot-left':
+        return ['sack'];
       case 'gather-tick':
         if (!this.gatherBeat.beat(event.progress)) return [];
         return [gatherCue(event.nodeId)];
