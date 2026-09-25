@@ -6,15 +6,52 @@ import type { Point } from '../systems/MovementSystem';
 /** Vertical field of view, in degrees. */
 const FIELD_OF_VIEW = 50;
 
-/** How far the camera is tilted down from the horizon. */
-export const CAMERA_PITCH = (58 * Math.PI) / 180;
+/**
+ * How far the camera is tilted down from the horizon.
+ *
+ * It was 58° for as long as there was nothing standing up in the world worth
+ * looking at from the side. What that angle draws is roof planes and the tops
+ * of heads: a building is a lid, a wall is a line, and a world with ten rooms
+ * in it reads as a map of itself. At 45° a world unit standing up is worth
+ * exactly what one lying flat is: the shopfronts stand up, a doorway is an
+ * opening rather than a notch, and the ground ahead of the player runs to
+ * twenty-three tiles where it ran to fifteen.
+ *
+ * Two things bound it and neither is taste. What it may not do is push anything
+ * under the tab bar, which is opaque and eats every tap landing on it — ground
+ * *behind* the player is where the perspective squeezes hardest, and a
+ * shallower camera squeezes it harder. And the floor under that is half the
+ * field of view: pitched shallower than 25° the horizon comes into frame, and a
+ * tap aimed past the ground would have nothing to land on.
+ * `tests/render3d/camera.test.ts` holds both, and the ceiling over them.
+ *
+ * Two other numbers move when this one does, and both were found by measuring
+ * rather than by reading: `TARGET_TILES_ACROSS`, which used to frame the view
+ * by its depth and so zoomed the camera in when it was tilted, and `FOG_FAR`,
+ * which is a ratio to a camera whose axis this lays down closer to the ground.
+ */
+export const CAMERA_PITCH = (45 * Math.PI) / 180;
 
 /**
- * How many tiles the camera aims to show across the viewport's smaller axis.
- * Ground seen at an angle shows less usable map than the same count laid out
- * flat, and the tiles beyond ten buy the headroom the constraint below needs.
+ * How many tiles of ground the camera shows across the viewport's smaller axis,
+ * measured at the player.
+ *
+ * Width rather than depth, and that is the half of it worth knowing. A screen
+ * is a fixed box: at a given distance the *width* of ground on it is decided by
+ * the field of view alone, and the depth by how far the camera is tilted over —
+ * so a framing can hold one of the two still across a change of pitch and not
+ * both. This holds the width, which is what "things are drawn this big" means
+ * to whoever is looking at it.
+ *
+ * It used to hold the depth, by way of a `sin(pitch)` obliquity factor, and 12
+ * of those came out at 10.2 tiles of width on a portrait phone. Holding the
+ * depth is the version where tilting the camera also zooms it: bringing the
+ * pitch down to 45° would have pulled the camera 17% closer and taken a tile
+ * and a half off either side of the screen, which is not a thing anybody asked
+ * for and is not visible in the number that caused it. Ten tiles of width is
+ * what the old framing drew, now written as what it is.
  */
-const TARGET_TILES_ACROSS = 12;
+const TARGET_TILES_ACROSS = 10;
 
 /**
  * How far short of the player the camera actually aims, which lifts them above
@@ -32,6 +69,13 @@ const TARGET_TILES_ACROSS = 12;
  * tiles behind a player standing on the spawn point, and once rendered four
  * pixels inside the bar where it could not be tapped at all — back in reach.
  * `tests/render3d/camera.test.ts` is what holds it.
+ *
+ * It survived the pitch coming down to 45° untouched, which is worth a line
+ * because it very nearly did not. A shallower camera squeezes the ground behind
+ * the player harder, and against a camera that had also been pulled 17% closer
+ * this was 40 short of holding the signpost clear. Framing the view by its
+ * width rather than its depth is what gave that back — the margin is wider now
+ * than it was at 58° — so the pitch cost nothing here in the end.
  */
 const LOOK_SHORT = 80;
 
@@ -41,7 +85,7 @@ const LOOK_SHORT = 80;
  * There is very little room here and it is worth knowing why before touching
  * these. The camera stands `cameraDistance` back from the player, and the
  * furthest ground anyone ever looks at — the far corner of a zone from its
- * opposite edge — is under 1.6 of them away. Everything the haze has to
+ * opposite edge — is about 1.6 of them away. Everything the haze has to
  * distinguish is squeezed into that, so a range wide enough to leave the player
  * alone by a comfortable margin leaves nothing over to fade the distance with:
  * a near of 1.05 and a far of 1.5 was measured at a 7% difference between the
@@ -49,14 +93,26 @@ const LOOK_SHORT = 80;
  *
  * Starting *nearer* than the player is what buys the range back, and it is
  * three's `smoothstep` that makes it free: the ramp is flat where it begins, so
- * a near of 0.9 puts the player a tenth of the way along it and about three
- * percent of the way into the haze, which is invisible. The far edge of a zone
- * lands at a quarter, and the length of one seen end to end at most of the way.
- * The colour is the background, so the line where the ground mesh stops stops
- * being a line.
+ * a near of 0.9 puts the player a tenth of the way along it and a couple of
+ * percent into the haze, which is invisible. The far edge of a zone lands at a
+ * quarter, and the length of one seen end to end at most of the way. The colour
+ * is the background, so the line where the ground mesh stops stops being a line.
+ *
+ * **The far end is 2.1 because the camera is pitched 45° down**, and it was 1.8
+ * when the camera was pitched at 58. What the shader measures is depth along
+ * the camera's own axis, and a shallower camera lays that axis down closer to
+ * the ground — so the same tile of grass is further along it than it used to
+ * be, at the same distance from the same camera. Left at 1.8 the grass six
+ * tiles ahead went from 15% hazed to 22%, and the far side of a zone from 25%
+ * to 38%. 2.1 puts every one of them back within a point or two of where it
+ * was. The rule that falls out of it is the one `MAX_AVOIDANCE` learned in
+ * combat: a ratio quietly stops meaning what it says when the thing it is a
+ * ratio *to* moves, so this number and `CAMERA_PITCH` move together, and
+ * `tests/render3d/camera.test.ts` measures the cue in tiles rather than in
+ * multiples.
  */
 const FOG_NEAR = 0.9;
-const FOG_FAR = 1.8;
+const FOG_FAR = 2.1;
 
 /**
  * Near and far are in simulation pixels, because the render scale is 1: one sim
@@ -71,16 +127,19 @@ export function createCamera(): PerspectiveCamera {
  * How far back the camera sits, from the shape of the viewport.
  *
  * A perspective camera's field of view is vertical, so a portrait phone would
- * otherwise show twelve tiles of height and five of width. This asks for the
- * twelve across the *smaller* axis and lets the longer one show more. The
- * `sin(pitch)` is the obliquity: ground seen
- * at an angle covers more of itself than ground seen from straight above.
+ * otherwise show ten tiles of height and four of width. This asks for the ten
+ * across the *smaller* axis and lets the longer one show more.
+ *
+ * Pitch is deliberately absent. What the field of view frames at a distance is
+ * a width, and a width is the same width however far the camera is tilted over
+ * — so this is what makes the pitch a decision about the angle alone rather
+ * than about the angle and the zoom together.
  */
 export function cameraDistance(aspect: number): number {
   const groundSpan = TARGET_TILES_ACROSS * TILE_SIZE;
   const verticalSpan = aspect >= 1 ? groundSpan : groundSpan / aspect;
   const halfFov = (FIELD_OF_VIEW * Math.PI) / 360;
-  return (verticalSpan * Math.sin(CAMERA_PITCH)) / (2 * Math.tan(halfFov));
+  return verticalSpan / (2 * Math.tan(halfFov));
 }
 
 /**

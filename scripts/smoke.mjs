@@ -77,7 +77,7 @@ const FRAMES_PER_POLL = 12;
  *
  * Anchored to a measurement rather than chosen: `window.view.drawTime()` read
  * in the `throttled` section before the first lighting change of
- * `docs/interiors_and_light_plan.md` phase 1 came back at 20.7ms on a full run,
+ * `docs/archive/interiors_and_light_plan.md` phase 1 came back at 20.7ms on a full run,
  * on a game with two lights and no shadows. The sun, the shadow map and the
  * depth cue took it to 25.2ms on the same run — so the ceiling is set against
  * what the game cost when nothing cast a shadow, and what phase 1 spent of it
@@ -672,7 +672,7 @@ async function landscape() {
   // vertical room than a portrait one, and `tests/render3d/camera.test.ts`
   // measures the tab-bar rule only at portrait sizes. This is the other
   // orientation of the same rule, and it is not the same statement — a
-  // landscape camera frames twelve tiles of *depth* rather than of width, so
+  // landscape camera frames ten tiles of *depth* rather than of width, so
   // the south signpost is eight tiles behind the player at the spawn point and
   // simply out of frame there. What has to hold is that walking toward it
   // brings it into reach, which is measured below. ---

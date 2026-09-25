@@ -187,7 +187,7 @@ describe('where the buildings stand', () => {
 
   /**
    * The counters are the one thing this no longer says, and phase 5 of
-   * `docs/interiors_and_light_plan.md` is where it stopped saying it: a shop is
+   * `docs/archive/interiors_and_light_plan.md` is where it stopped saying it: a shop is
    * a room with somebody in it now. Everything else in a zone is still held to
    * standing outside, and a station most of all — it is a tile of furniture that
    * has to be *tapped*, and a tap cannot reach through a roof.
@@ -393,7 +393,7 @@ describe('every counter', () => {
 
 /**
  * The rule this file could only ever approximate before, and the reason phase 2
- * of `docs/interiors_and_light_plan.md` came before phase 4.
+ * of `docs/archive/interiors_and_light_plan.md` came before phase 4.
  *
  * "Is this counter reachable" used to be checked as *lane clearance* — is the
  * ground between the door and the open street free of anything solid — because
@@ -427,7 +427,7 @@ describe('every building can be walked into', () => {
 
 /**
  * And the same question asked of the person rather than the room, which is what
- * phase 5 of `docs/interiors_and_light_plan.md` was for.
+ * phase 5 of `docs/archive/interiors_and_light_plan.md` was for.
  *
  * Not the same assertion as the one above, and the difference is the whole
  * point: a route into a building ends wherever the middle of it is, where a

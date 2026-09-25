@@ -110,12 +110,16 @@ export class Sunlight {
    * Cuts the shadow camera to a zone, in simulation units.
    *
    * Framed on the zone rather than on what the player's camera can see, which
-   * is the opposite of what `docs/interiors_and_light_plan.md` proposed and is
-   * a straight consequence of doing the arithmetic. A camera pitched 58° down
-   * sees ground from about 150 units in front of itself out to nearly 2000 —
-   * from the middle of town you can see both edges of the zone at once — so a
-   * frustum cut to what is on screen is *larger* than one cut to the map, not
-   * smaller. Cutting to the zone is also the version with no shimmer in it:
+   * is the opposite of what `docs/archive/interiors_and_light_plan.md` proposed and is
+   * a straight consequence of doing the arithmetic. The camera sees ground from
+   * a few hundred units in front of itself out past 2500 — from the middle of
+   * town both edges of the zone are on screen at once — so a frustum cut to
+   * what is on screen is *larger* than one cut to the map, not smaller. That
+   * was true of the 58° camera and is more true of the 45° one, which sees
+   * eight tiles further ahead than it used to: a pitch change moves the
+   * viewport's frustum and leaves the zone's exactly where it was, which is
+   * most of the point of framing on the zone. Cutting to it is also the version
+   * with no shimmer in it:
    * the map is fixed in the world for as long as the zone is, so a shadow's
    * edge does not crawl as the player walks.
    */

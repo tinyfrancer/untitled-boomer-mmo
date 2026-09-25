@@ -38,7 +38,7 @@ export interface BountySessionDeps {
  * What it does not share with the other three is that nothing here is ever spent
  * *by* the player: the shop, the bank and the trainer all take coin, and this is
  * the counter that gives it. That is the whole reason it is thirteenth in
- * `docs/systems_plan.md` — a faucet is only safe once the drains exist.
+ * `docs/archive/systems_plan.md` — a faucet is only safe once the drains exist.
  */
 export class BountySession {
   /** The quartermaster the open board belongs to; null when it is shut. */

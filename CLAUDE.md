@@ -39,10 +39,12 @@ thing at the back — reached by walking off the bottom of the fen, where the ra
 already are. What it pays is the off hand nothing has filled since the starter band, and the second
 hoard in the game that comes off one creature.
 **Work in progress is planned in a doc before it is built**, phased into PRs with the argument for
-each decision in it — `docs/interiors_and_light_plan.md` is the live one (interiors, pathfinding and
-light), and `docs/archive/` holds the finished ones. A plan carries the shape of one piece of work
-where this file carries the shape of the system; check the live plan's status line before starting
-anything, since it says which phase landed and which is next.
+each decision in it. There is **no live plan** right now — the last one,
+`docs/archive/interiors_and_light_plan.md` (interiors, pathfinding and light), finished on
+2026-09-03 and went to `docs/archive/` with the rest. A plan carries the shape of one piece of work
+where this file carries the shape of the system; when there is a live one, check its status line
+before starting anything, since it says which phase landed and which is next. Anything big enough to
+phase gets a new plan doc rather than being started against this file alone.
 
 **Decisions that closed off a real alternative go in `docs/decisions.md`**, appended and never
 edited. That file is not a duplicate of this one: this describes the shape of the system as it
@@ -133,7 +135,7 @@ block for the HUD rules that differ on a roomy screen). Five things in it exist 
   nowhere. It is also where the two events one right click arrives as (`pointerdown` with a
   non-primary button, then `contextmenu`) are held to being one gesture.
 - **A landscape resize**, which is the one shape `tests/render3d/camera.test.ts` does not measure.
-  A landscape camera frames twelve tiles of _depth_ rather than of width, so the south signpost is
+  A landscape camera frames ten tiles of _depth_ rather than of width, so the south signpost is
   out of frame from the spawn point; what holds is that walking toward it brings it into reach.
 - **A CPU-throttled pass at `rate: 8`, cranked at 140ms a frame** — see "Reproducing a
   frame-rate-dependent bug" below for why that is two questions rather than one.
@@ -347,8 +349,9 @@ the quarry's face left a ledge along its west one. **Expect a zone that ties two
 charge both of them**, which is the same bill a spoke charges once.
 
 **Town trades in coin and Greyford trades in stuff**, which is the whole of why the outpost is not
-town in a different colour — the thing `docs/zones_act_two.md` warned it would be. All four counters
-at home deal in currency: the shop sells, the bank stores, the trainer charges, the board pays. The
+town in a different colour — the thing `docs/archive/zones_act_two.md` warned it would be. All four
+counters at home deal in currency: the shop sells, the bank stores, the trainer charges, the board
+pays. The
 `outfitter` role (`data/outfitter.ts`, ruled on by `systems/OutfitterSystem.ts`, run by
 `world/OutfitterSession.ts`) takes ore, coal and hardwood and hands back the steel tools, and there
 is no price in copper anywhere on it. Every offer wants something from each of the three zones around
@@ -502,9 +505,11 @@ roof casts no shadow, so a room being stood in is a room in full sun, and the la
 what tells an interior from the grass outside. The rooms and the light together cost **about ten of
 the forty milliseconds** of the throttled draw budget, which leaves about nine: three consecutive CI
 runs read 20.06ms on the pre-interiors tree, 20.66ms once the counters moved indoors, and 30.74ms
-with the rooms furnished and lit. **Read that number off CI rather than off a dev container** — a
-loaded one reads the same trees 10ms high and has no headroom left to see the difference in, which is
-how the cost was first written down here as one to three.
+with the rooms furnished and lit. The ground and the camera after them read 25.15ms — under that, not
+over it, so whatever the ground's extra vertices cost is inside the noise between two CI runs, and
+the nine are still there for whatever is next. **Read that number off CI rather than off a dev
+container** — a loaded one reads the same trees 10ms high and has no headroom left to see the
+difference in, which is how the cost was first written down here as one to three.
 
 **A room is also somewhere to be out of sight, which nothing in the world was before.**
 `hasLineOfSight` in `CollisionSystem.ts` is the same blockers asked about a segment rather than about
@@ -841,6 +846,19 @@ in `ui/layout.ts` is where the reserved band is decided. It is measured at real 
 reserve its height in `layout.ts` rather than hoping nothing important lands in the last sixty
 pixels.
 
+**The pitch is a band rather than a number somebody liked, and it is 45°.** The bar is the floor
+under it — ground behind the player is where the perspective squeezes hardest, and a shallower
+camera squeezes it harder — and under that is half the field of view, where the horizon comes into
+frame and a tap aimed past the ground has nothing to land on. The ceiling over it is what a steep
+camera costs: a world unit standing up is worth `cos(pitch)` on screen and one lying flat is worth
+`sin(pitch)`, so at the 58° this used to be, a wall was worth 0.62 of its own footprint and every
+building read as a roof plane. `camera.test.ts` holds all three. **Two other numbers move when the
+pitch does** and neither says so on its face: `TARGET_TILES_ACROSS` used to frame the view by its
+_depth_, so tilting the camera also zoomed it, and `FOG_FAR` is a ratio to a camera whose axis a
+shallower pitch lays down closer to the ground. Framing by width instead is what makes the pitch a
+decision about the angle alone; the fog is re-derived when it moves, and the tests measure the cue in
+tiles ahead of the player rather than in the multiples it is written in.
+
 **In landscape the rule is about approaching, not about standing still.** The camera frames its
 tile budget across the viewport's _smaller_ axis, so a landscape phone spends it on depth: the south
 signpost is eight tiles behind a player on the town spawn point and is simply out of frame there.
@@ -960,7 +978,7 @@ than one per frame: `stepToward` reports arrival before it moves, so a leg a fra
 waypoint — a fifth of a second of one at 5fps, exactly where the corner was that put the waypoint
 there. `ApproachDriver` is the only caller, so the plain walk and the walk up to a counter are routed
 and **a pursuit is not**: a plan re-made every frame for a moving mob swings between two ways round an
-obstacle as its quarry drifts, which is the same call `docs/interiors_and_light_plan.md` makes about
+obstacle as its quarry drifts, which is the same call `docs/archive/interiors_and_light_plan.md` makes about
 mobs not pathing.
 
 **A walk toward something solid is routed to beside it and finished by pressing into it**
@@ -1060,7 +1078,7 @@ drop long before the purse stops being a reason to come back — and it carries 
 sitting between the brown leather the camp drops and the plate a forge makes. It is leather
 throughout, so it is a warrior's upgrade and a wizard's payday only, and for one zone that meant a
 caster walked the road west for coin alone with the bandit table still the whole of how they were
-dressed. `docs/zones_act_two.md` had assigned cloth to the fen, so the gap was a deliberate
+dressed. `docs/archive/zones_act_two.md` had assigned cloth to the fen, so the gap was a deliberate
 consequence rather than an oversight, and `tests/systems/oldMillRoad.test.ts` asserted the armour type
 so that closing it would be a decision somebody came back and made rather than a thing that drifted.
 The fen is that decision: **fenweave** is the cloth line above brown, it drops off fen raiders and
@@ -1624,7 +1642,7 @@ stats or a weapon swap won't change reach until the view rebuilds.
 
 **There are no art assets, and the renderer loads no image at all** (placeholder shapes only, per
 the "no art skills" constraint in `docs/initial_design.txt`). Terrain is one vertex-coloured mesh
-(`render3d/ground.ts`) and every entity is untextured primitives (`render3d/figure.ts`,
+(`render3d/ground.ts`, see below) and every entity is untextured primitives (`render3d/figure.ts`,
 `creatures.ts`, `props.ts`). The only textures uploaded are text baked onto a canvas by
 `render3d/text.ts` — a nameplate's name and a floating damage number — which is also the reason
 `disposeTree` names `material.map` explicitly, and the reason the unit suite stubs a 2D context
@@ -1635,6 +1653,29 @@ than in the renderer,
 for the same reason the stick-figure rig behind the paperdoll does: the ground the simulation calls
 water is a decision the whole game makes. Creature colour is not — `render3d/palette.ts` is the
 renderer's own, and nothing outside it asks what colour a rat is.
+
+**A ground vertex is coloured by what it touches, and a blocking tile touches nothing**
+(`buildGroundGeometry`). A tile is four quads rather than one, and each vertex takes the mean of the
+tiles that reach it — the one under a tile's middle, the two either side of an edge, the four that
+meet at a corner — so a road fades into the grass over the outer half of each of them instead of
+ending in the staircase a grid of flat squares draws. The middle sample is why the tile is cut up at
+all: with four corner samples and every one an average, a three-tile road has no pure road anywhere
+in it and reads as a smear. **What may not blend is a boundary a body is stopped at.** `blends` puts
+two tiles in the same mean only if they agree about being crossable, because a shore drawn as a
+gradient is a gradient somewhere in the middle of which walking stops working, and where the ground
+may be crossed is the one thing about terrain a player has to read at a glance. The brightness wobble
+had to move with it — `cornerShade` is per grid corner and `shadeAt` interpolates between them, since
+a shade held flat across a tile would put the grid of hard squares straight back in, drawn in
+brightness rather than in hue.
+
+**Where the ground steps down, it grows the face it steps down.** A water tile sits `WATER_DEPTH`
+below the land and nothing joined the two, so the far rim of every pond was a band of the background
+showing through the hole in the world. Each tile now grows a vertical quad on any side whose
+neighbour stands higher, in the colour of the ground it is cut into, darkened — a bank rather than a
+palette entry of its own. It is written against tile _height_ rather than against water by name, so
+the next thing that steps down is drawn already, and it is single-sided and wound toward the low
+tile: the face is only ever seen from inside the dip, and wound the other way it is the void it was
+added to fill.
 
 **There is a sun now, and everything standing in it sits on the ground** (`render3d/lights.ts`).
 Two flat lights and no shadows was the right call while there was nothing to cast one; by the end
@@ -1648,11 +1689,12 @@ look into the sun is most of what makes turning it worth doing.
 Four things about it were decided against alternatives:
 
 - **The shadow camera is cut to the zone, not to what the camera can see**, which reverses what
-  `docs/interiors_and_light_plan.md` asked for and is what the arithmetic says. A camera pitched 58°
-  down sees ground from 150 units in front of itself out to nearly 2000 — from the middle of town
+  `docs/archive/interiors_and_light_plan.md` asked for and is what the arithmetic says. The camera
+  sees ground from a few hundred units in front of itself out past 2500 — from the middle of town
   both edges of the zone are on screen at once — so a frustum framed on the viewport is _larger_
   than one framed on the map. Framed on the zone it is also fixed in the world for the life of that
-  zone, so a shadow's edge does not crawl as the player walks.
+  zone, so a shadow's edge does not crawl as the player walks, and it is the frame a **pitch change
+  leaves alone**: the camera coming down to 45° moved the viewport's frustum and this one not at all.
 - **Only the ground receives.** It is the surface a shadow is actually read on, and it is the one
   that must not also cast: a single flat plane covering the whole zone, tested against a depth map
   it wrote itself, is the shortest road to acne over the entire floor.

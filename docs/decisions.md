@@ -243,7 +243,7 @@ gathering skill produces, with no copper anywhere on the table.
 **Rejected:** making Greyford a second shop further away.
 
 **Why:** without something of its own it is town in a different colour, which is exactly what
-`docs/zones_act_two.md` warned it would be.
+`docs/archive/zones_act_two.md` warned it would be.
 
 ## 19. The reforging stone is bought in town and spent at Greyford
 
@@ -345,7 +345,7 @@ stand walks into it and presses until the player gives up.
 
 **What it costs:** the rule in `CLAUDE.md` that a building is solid, the three rules in
 `BuildingSystem.test.ts` that follow from it, and a rewrite of how every walk in the game ends. See
-`docs/interiors_and_light_plan.md`.
+`docs/archive/interiors_and_light_plan.md`.
 
 ## 26. Mobs do not path, but ranged abilities gain line of sight
 
@@ -423,7 +423,7 @@ after.
 
 ## 30. The shadow camera is framed on the zone, not on what the camera can see
 
-**2026-09-01 · Claude · reverses a line in `docs/interiors_and_light_plan.md` phase 1**
+**2026-09-01 · Claude · reverses a line in `docs/archive/interiors_and_light_plan.md` phase 1**
 
 The shadow frustum is cut to the zone's own bounds plus a margin, once per zone, and does not move
 with the player.
@@ -550,7 +550,7 @@ Walking the length of such a passage is still fine and still happens: the straig
 is measured for the true body, so a corridor one tile wide can be walked end to end. What is refused
 is arriving somewhere inside one and turning.
 
-**What it costs:** phase 4 of `docs/interiors_and_light_plan.md` asked to find out whether a doorway
+**What it costs:** phase 4 of `docs/archive/interiors_and_light_plan.md` asked to find out whether a doorway
 is wide enough by measurement, and this is the measurement, arriving two phases early: **a doorway
 has to be at least two tiles wide**, and `DOOR_SPAN` becoming a minimum in tiles is now a
 requirement rather than a contingency.
@@ -762,7 +762,7 @@ its room from that doorstep (43). Which building is which is geometric: `occupan
 zone's people is standing in the room.
 
 **Rejected:** leaving a shopfront answering with its doorstep, which is what phase 5 of
-`docs/interiors_and_light_plan.md` said to do — "unchanged: from outside, a tap on a shop still walks
+`docs/archive/interiors_and_light_plan.md` said to do — "unchanged: from outside, a tap on a shop still walks
 you to its doorstep". Also rejected: a `building` kind in `WorldTap`.
 
 **Why:** the counters went behind walls in this phase, and from outside there is no pixel a thumb can
@@ -940,3 +940,107 @@ when it has nine. All four were corrected in the same PR that found it.
 either "this phase is too expensive" or "this machine is slow", and the two are told apart by
 measuring the _unchanged_ baseline on the same machine in the same session. That is the step worth
 not skipping, and it is cheap: one full smoke run on the tree you branched from.
+
+## 51. A ground vertex is coloured by what it touches, and a blocking tile touches nothing
+
+**2026-09-03 · Claude**
+
+`buildGroundGeometry` draws each tile as four quads rather than one, and colours every vertex with
+the mean of the tiles that reach it — one under a tile's middle, two either side of an edge, four at
+a corner. Two tiles are in that mean only if they agree about being crossable, so grass, path, sand,
+marsh and stone all fade into one another and water and wall do not.
+
+**Rejected:** leaving the tile flat and hard-edged; blending at the corners alone, with no sample in
+the middle; blending everything including the shore; a texture, or a second material with a mask.
+
+**Why:** at tile resolution a flat quad draws every boundary as a staircase of 64-unit squares,
+which is the item phase 7 was written to fix. Corner sampling alone is the obvious fix and it is
+wrong in a way that only shows up on the screen: with four samples per tile and every one of them an
+average of its neighbours, a three-tile road has no pure road anywhere in it and reads as a brown
+smear. The middle sample is the whole point of cutting the tile up, and two steps is enough to have
+one — nine quads a tile would buy a narrower transition for four times the vertices, against a draw
+budget with nine milliseconds left in it.
+
+The shore is the interesting half. Everything walkable blending into everything else walkable is
+right because a road is a place the grass has been worn off rather than a thing with an edge. Water
+is not: the line is where a body is stopped, `CollisionSystem` puts it exactly on the tile boundary,
+and a gradient is a gradient somewhere in the middle of which walking stops working. `blends` is
+therefore a rule about `BLOCKING_TILES` rather than a blanket average, and it costs nothing to state
+because both sides of a boundary compute the same filtered set and so agree on the seam by
+construction.
+
+The per-tile brightness wobble had to move with it. Held flat across a tile it would have put back
+exactly the grid of hard squares this exists to take out, drawn in brightness rather than in hue, so
+`tileShade` became `cornerShade` with `shadeAt` interpolating between corners.
+
+## 52. Where the ground steps down, it grows the face it steps down
+
+**2026-09-03 · Claude**
+
+A water tile sits `WATER_DEPTH` below the land and the two were never joined, so the far rim of every
+pond in the game was a band of the background showing through the hole. Each tile now grows a
+vertical quad on any side whose neighbour stands higher, wound to be seen from the low side and
+coloured as the ground it is cut into, darkened.
+
+**Rejected:** flattening the water into the land, which is the version with no seam at all; a solid
+box under each pond; leaving it, on the grounds that at 58° it was a thin line.
+
+**Why:** the depth is what makes a pond read as a hole rather than as blue ground, and phase 7's
+whole business is that the camera comes down — at 45° that thin line is a band. Written against tile
+_height_ rather than against water by name it costs nothing to generalise, so the day something else
+steps down it is drawn already.
+
+Single-sided and wound toward the low tile, deliberately: the face is only ever seen from inside the
+dip, because the ground above covers it from the other direction. Wound the wrong way it is the void
+it was added to fill, which is why the winding is asserted rather than eyeballed.
+
+## 53. The camera is pitched 45°, and the framing stopped being a function of the pitch
+
+**2026-09-03 · Claude**
+
+`CAMERA_PITCH` came down from 58° to 45°. `TARGET_TILES_ACROSS` stopped being multiplied by
+`sin(pitch)` and became ten tiles of _width_ rather than twelve of depth, and `FOG_FAR` went from 1.8
+to 2.1.
+
+**Rejected:** 50°, which is the conservative version and barely reads as a change; 40°, which puts
+the south signpost under the tab bar and shows a fifth of the screen as void; lowering the pitch on
+its own and letting the framing and the fog follow it silently.
+
+**Why the angle:** what a 58° camera draws is roof planes and the tops of heads. That was the right
+call while the world was rats and trees and is the wrong one after phase 6, which built ten rooms
+nobody could see the inside of. A world unit standing up is worth `cos(pitch)` on screen and one
+lying flat is worth `sin(pitch)`, so 45° is exactly where a wall stops being a line under a lid — and
+the pitch has a floor at half the field of view, where the horizon comes into frame and a tap has
+nothing to land on. The tab bar is the other bound. Between them the angle is a band, and
+`tests/render3d/camera.test.ts` now holds both ends of it rather than only the bottom.
+
+**Why the other two moved,** which is the part worth not re-learning: neither said on its face that
+it depended on the pitch, and both did.
+
+- `cameraDistance` framed twelve tiles of _depth_, through an obliquity factor that is only there
+  because ground seen at an angle covers more of itself. A screen is a fixed box, so a framing can
+  hold the width still across a change of pitch or the depth, and not both — and holding the depth is
+  the version where tilting the camera also zooms it. Tilting to 45° pulled the camera 17% closer and
+  took a tile and a half off either side of the screen, which nobody asked for and which is invisible
+  in the number that caused it. Framed by width, ten tiles is what the old framing happened to draw
+  and the pitch has nothing left to spend here — the tab-bar margin came out _wider_ than it was at
+  58°, so the pitch cost nothing in the end.
+- `FOG_FAR` is a multiple of that camera's distance, and three's fog measures depth along the
+  camera's own axis. A shallower camera lays that axis down closer to the ground, so the same tile of
+  grass is further along it at the same distance from the same camera: left at 1.8, the grass six
+  tiles ahead went from 15% hazed to 22% and the far side of a zone from 25% to 38%.
+
+Both are the lesson `MAX_AVOIDANCE` taught in combat — a ratio quietly stops meaning what it says
+when the thing it is a ratio _to_ moves — so the depth cue is now measured in **tiles ahead of the
+player** in the tests, which is where it is read, rather than in the multiples it is written in.
+
+**What it cost to draw: nothing CI can see.** The throttled pass read **25.15ms** on PR 122's CI run,
+against the 30.74ms phase 6's run read on the tree this branched from — under the baseline rather
+than over it. That is not a claim that the phase made drawing cheaper: two single readings three
+weeks apart on whichever runner GitHub handed out are not that precise an instrument, and nothing
+here should have got faster. What it does say is that the ground's extra vertices — 950 triangles
+to about 3,800 plus a bank per pond edge, against a pixel count that has not changed — cost less
+than the difference between two CI runs, and the nine milliseconds phase 6 left are still there.
+The dev container could not have said even that: three runs in one session read 47.25ms on the
+unchanged tree and 49.00 and 45.57 on this one, all over the ceiling, which is decision 50 working
+exactly as written.

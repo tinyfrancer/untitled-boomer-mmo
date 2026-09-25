@@ -26,7 +26,7 @@ Decisions taken in the interview that shaped it:
   chunking, mob culling, and a rewrite of how AFK picks what it was grinding — and a
   dungeon is an instance either way, so it buys nothing the dungeon needs. What one big
   map is actually wanted for is travel that feels connected, and that is bought by the
-  world map instead. See docs/dungeon_plan.md for the full reasoning.
+  world map instead. See docs/archive/dungeon_plan.md for the full reasoning.
 - "Max level" on the world map is a *zoom* level, not a character level: the map zooms
   out to show every zone and how they connect, and that view is where travel happens.
   No level gate on what is visible.

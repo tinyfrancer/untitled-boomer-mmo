@@ -15,9 +15,9 @@ import type {
 /**
  * The smallest a pick volume may be along any axis.
  *
- * The camera frames twelve tiles across the short side of the viewport, so on a
- * 390px phone one simulation pixel is about half a screen pixel: a crab's
- * 35-unit body is 18px of thumb, well under `THEME.touchMin`. Rounding every
+ * The camera frames ten tiles across the short side of the viewport, so on a
+ * 390px phone one simulation pixel is about six tenths of a screen pixel: a
+ * crab's 35-unit body is 21px of thumb, well under `THEME.touchMin`. Rounding every
  * volume up to three quarters of a tile costs nothing — the things being picked
  * are tiles apart — and is the difference between a rat you can tap and one you
  * have to stalk.
