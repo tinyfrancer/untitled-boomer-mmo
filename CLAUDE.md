@@ -23,7 +23,9 @@ what each zone is for.
 **Work in progress is planned in a doc before it is built**, phased into PRs with the argument for
 each decision in it. The **live plan** is `docs/act_three_plan.md` (cleanup, graphics, sound, loot
 piles, upper-band content, fletching and the bow). Check its status line before starting anything —
-it says which phase landed and which is next. Finished plans go to `docs/archive/`. Anything big
+it says which phase landed and which is next. **A session picking it up cold starts with
+`docs/act_three_handoff.md`**, which says where each remaining phase touches the code and which
+questions are still open. Finished plans go to `docs/archive/`. Anything big
 enough to phase gets a new plan doc rather than being started against this file alone.
 
 **Decisions that closed off a real alternative go in `docs/decisions.md`**, appended and never

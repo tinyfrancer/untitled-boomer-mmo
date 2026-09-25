@@ -6,8 +6,8 @@ which landed together because `refreshOpen()` is one call once there is one coun
 (phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4);
 rock that stands up (phase 5); names you can read (phase 6); a fight you can see, with an enemy's
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
-something on it (phase 8); and sound (phase 9). **Next: phase 10.** Update this line as each phase
-lands.
+something on it (phase 8); and sound (phase 9). **Next: phase 10** — start from `act_three_handoff.md`. Update this line as
+each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
 harness, smoke, and a screenshot of every zone at phone size — asked for as "a full analysis now
@@ -246,6 +246,8 @@ things the section did not say are in `docs/architecture/audio.md` and decisions
 - **The smoke check for the controls found a bug that predated all of it**: Escape closing a panel
   also dropped the target, because the HUD and the world's keyboard binding each heard the key on
   their own. Fixed in its own commit before this phase's, since it is not about sound.
+- **It cost nothing CI can see**: the throttled pass read 26.49ms with sound in, against a 40ms
+  ceiling.
 
 ### Phase 10 — loot that is not lost
 
