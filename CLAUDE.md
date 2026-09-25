@@ -349,8 +349,9 @@ the quarry's face left a ledge along its west one. **Expect a zone that ties two
 charge both of them**, which is the same bill a spoke charges once.
 
 **Town trades in coin and Greyford trades in stuff**, which is the whole of why the outpost is not
-town in a different colour — the thing `docs/zones_act_two.md` warned it would be. All four counters
-at home deal in currency: the shop sells, the bank stores, the trainer charges, the board pays. The
+town in a different colour — the thing `docs/archive/zones_act_two.md` warned it would be. All four
+counters at home deal in currency: the shop sells, the bank stores, the trainer charges, the board
+pays. The
 `outfitter` role (`data/outfitter.ts`, ruled on by `systems/OutfitterSystem.ts`, run by
 `world/OutfitterSession.ts`) takes ore, coal and hardwood and hands back the steel tools, and there
 is no price in copper anywhere on it. Every offer wants something from each of the three zones around
@@ -1075,7 +1076,7 @@ drop long before the purse stops being a reason to come back — and it carries 
 sitting between the brown leather the camp drops and the plate a forge makes. It is leather
 throughout, so it is a warrior's upgrade and a wizard's payday only, and for one zone that meant a
 caster walked the road west for coin alone with the bandit table still the whole of how they were
-dressed. `docs/zones_act_two.md` had assigned cloth to the fen, so the gap was a deliberate
+dressed. `docs/archive/zones_act_two.md` had assigned cloth to the fen, so the gap was a deliberate
 consequence rather than an oversight, and `tests/systems/oldMillRoad.test.ts` asserted the armour type
 so that closing it would be a decision somebody came back and made rather than a thing that drifted.
 The fen is that decision: **fenweave** is the cloth line above brown, it drops off fen raiders and

@@ -201,7 +201,7 @@ describe('where the price is paid', () => {
    * The coin sink is in **town**, which is what lets this be an endgame money
    * sink without Greyford starting to want money. Break either half of this and
    * the outpost quietly becomes town in a different colour, which is the thing
-   * `docs/zones_act_two.md` warned about and `greyford.test.ts` guards.
+   * `docs/archive/zones_act_two.md` warned about and `greyford.test.ts` guards.
    */
   it('sells the stone in town and asks for no coin at Greyford', () => {
     const stone = SHOP_STOCK.find((row) => row.itemId === 'reforging-stone');

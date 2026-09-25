@@ -182,7 +182,7 @@ describe('handing one in', () => {
   });
 
   /**
-   * The rule `docs/systems_plan.md` names in the section this PR comes from:
+   * The rule `docs/archive/systems_plan.md` names in the section this PR comes from:
    * a bounty pays through `publishXpGain` rather than `awardXp`, so it never
    * takes the camping penalty. A camp can finish a kill contract while nobody
    * is watching; it cannot walk to town and hand one in, and the XP is for the

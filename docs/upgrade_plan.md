@@ -1,8 +1,10 @@
 # Upgrade plan: TypeScript 7
 
-**Status:** blocked upstream. Measured 2026-07-28 against `74f4b86`. Both pins are unchanged as of
-2026-08-06 — `typescript@6.0.3`, `typescript-eslint@8.65.0` — so the block below still applies as
-written; the tracking issue itself has not been re-read since. This is what is left of a
+**Status:** blocked upstream. Measured 2026-07-28 against `74f4b86`. **Re-checked 2026-09-25 and
+still blocked:** the repo's pins are unchanged (`typescript@6.0.3`, `typescript-eslint@8.65.0`),
+TypeScript's latest is still 7.0.2, and typescript-eslint's latest, 8.70.1, still declares
+`typescript: ">=4.8.4 <6.1.0"` — so upgrading typescript-eslint alone would not help. The tracking
+issue below is still open. This is what is left of a
 five-package upgrade plan. The other four landed that same day, and the plan they landed under is
 `docs/archive/upgrade_plan.md`, which describes a renderer that no longer exists.
 

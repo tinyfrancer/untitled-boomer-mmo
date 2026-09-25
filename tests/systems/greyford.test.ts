@@ -16,7 +16,7 @@ import type { ItemId } from '../../src/types/ids';
  * walkable ground, `BuildingSystem` that nothing stands in a doorway or a lane,
  * `spawnSafety` that the arrival strips are clear. What is here is what would
  * still pass if the outpost quietly became town in a different colour, which is
- * exactly what `docs/zones_act_two.md` warned it would be without something of
+ * exactly what `docs/archive/zones_act_two.md` warned it would be without something of
  * its own.
  */
 

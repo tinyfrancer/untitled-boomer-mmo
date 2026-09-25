@@ -194,7 +194,7 @@ describe('bountyMarker', () => {
 
 /**
  * The tuning contract, and the reason the board is thirteenth in
- * `docs/systems_plan.md` rather than third.
+ * `docs/archive/systems_plan.md` rather than third.
  *
  * Every bounty *mints currency*, which is the one thing in this game that has
  * no natural ceiling — a kill is gated by a respawn and a gather by a regrow,

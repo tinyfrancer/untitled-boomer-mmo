@@ -7,7 +7,7 @@ import type { ItemId } from '../types/ids';
  * this counter from the shopkeeper's: town's four all deal in currency — the
  * shop sells, the bank stores, the trainer charges and the board pays — and a
  * fifth doing the same thing further from home would be town in a different
- * colour, which is precisely what `docs/zones_act_two.md` warned Greyford would
+ * colour, which is precisely what `docs/archive/zones_act_two.md` warned Greyford would
  * be if it got nothing of its own.
  *
  * It is also what makes the ore already in the pack worth something other than

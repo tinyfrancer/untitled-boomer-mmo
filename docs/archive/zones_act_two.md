@@ -1,6 +1,7 @@
 # Act Two: five zones past the starter band
 
-A brainstorm, not a spec. **Zones 1, 2, 3 and 5 are built** (see below); zone 4 is not.
+A brainstorm, not a spec. **All five are built** (see below), zone 4 last and out of the order
+written here — "The order to build them in" at the bottom says why that departure was right.
 
 ## Where the game currently stops
 

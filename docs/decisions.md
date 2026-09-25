@@ -243,7 +243,7 @@ gathering skill produces, with no copper anywhere on the table.
 **Rejected:** making Greyford a second shop further away.
 
 **Why:** without something of its own it is town in a different colour, which is exactly what
-`docs/zones_act_two.md` warned it would be.
+`docs/archive/zones_act_two.md` warned it would be.
 
 ## 19. The reforging stone is bought in town and spent at Greyford
 

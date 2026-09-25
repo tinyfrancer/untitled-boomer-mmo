@@ -1,7 +1,7 @@
 # Systems plan — the arithmetic, the economy, and the crafting web
 
 Fourteen stacked PRs, in dependency order. One feature each, each shipping green with no dead
-buttons and no half-wired surface — the same rule `docs/dungeon_plan.md` was built under.
+buttons and no half-wired surface — the same rule `docs/archive/dungeon_plan.md` was built under.
 
 It comes out of an audit of what v1 actually does rather than what it was asked for. The findings
 are not "the game is small": it is deliberately small, and that is fine. They are places where the
