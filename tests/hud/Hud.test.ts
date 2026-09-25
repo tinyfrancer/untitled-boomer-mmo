@@ -19,6 +19,7 @@ import { SHOP_STOCK } from '../../src/data/shop';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
 import { describeEnemy, describeEnemyLoot } from '../../src/systems/InspectSystem';
 import { THEME } from '../../src/ui/theme';
+import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
 import type { NpcRoleId } from '../../src/data/npcs';
 import {
@@ -241,6 +242,33 @@ describe('the keyboard', () => {
     expect(modals()).toHaveLength(1);
     press('Escape');
     expect(modals()).toHaveLength(0);
+  });
+
+  /**
+   * Escape means two things: close what is open, and — to the world — drop the
+   * target. Closing a panel mid-fight used to do both, since each heard the key
+   * on its own. The world's binding is made first here on purpose, which is the
+   * order that would hand it the key before the HUD had said it was taken.
+   */
+  it('lets an Escape that closed a panel leave the target alone', () => {
+    unmountHud();
+    const input = new InputState();
+    const unbind = bindKeyboard(input, window);
+    mount();
+    const escape = (): void => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', cancelable: true }),
+      );
+    };
+
+    menuItem('options');
+    escape();
+    expect(modals()).toHaveLength(0);
+    expect(input.takeActions()).toEqual([]);
+
+    escape();
+    expect(input.takeActions()).toEqual(['clear-target']);
+    unbind();
   });
 
   it('opens a menu-held sheet by its own key, without going through the menu', () => {
