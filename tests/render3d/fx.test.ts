@@ -98,6 +98,7 @@ describe('what a WorldEvent is drawn as', () => {
   const hit = (over: Partial<Extract<WorldEvent, { kind: 'hit' }>> = {}): WorldEvent => ({
     kind: 'hit',
     on: 'mob',
+    mob: null,
     via: 'weapon',
     crit: false,
     at: AT,

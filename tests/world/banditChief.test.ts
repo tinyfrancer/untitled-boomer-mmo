@@ -150,6 +150,10 @@ describe('the chief winds up', () => {
     const drawn = kit.tickUntil(() => chief.windUp !== null);
 
     expect(chief.windUp?.abilityId).toBe('cleave');
+    // The moment it began, once: the wind-up is state the view draws from, but
+    // a sound cannot poll state and has to be told. The chief's own, since the
+    // men in the room are reaching for their knives meanwhile.
+    expect(drawn.filter((event) => event.kind === 'wind-up' && event.by === chief)).toHaveLength(1);
     expect(drawn).toContainEqual({
       kind: 'float',
       at: { x: chief.x, y: chief.y },

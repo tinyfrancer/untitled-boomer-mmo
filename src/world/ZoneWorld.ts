@@ -7,10 +7,7 @@ import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
-  BANK_CLOSED_EVENT,
-  BOUNTY_CLOSED_EVENT,
-  OUTFITTER_CLOSED_EVENT,
-  REFORGE_CLOSED_EVENT,
+  COUNTER_CLOSED_EVENT,
   REFORGE_REQUESTED_EVENT,
   TRADE_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
@@ -18,7 +15,6 @@ import {
   STATION_OPENED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
   CRAFT_REQUESTED_EVENT,
-  TRAINER_CLOSED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
   DEPOSIT_ITEM_REQUESTED_EVENT,
@@ -36,7 +32,6 @@ import {
   RESET_CHARACTER_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
-  SHOP_CLOSED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
@@ -96,6 +91,7 @@ import { TrainerSession } from './TrainerSession';
 import { BountySession } from './BountySession';
 import { OutfitterSession } from './OutfitterSession';
 import { ReforgeSession } from './ReforgeSession';
+import type { CounterSession } from './CounterSession';
 import { CombatDirector } from './CombatDirector';
 import { ContextMenuSession } from './ContextMenuSession';
 import { GatherSession } from './GatherSession';
@@ -144,26 +140,35 @@ export type WorldTap =
   | { kind: 'ground'; point: Point };
 
 /**
- * Which counter each role stands behind, and what the walk toward it is called.
+ * What the walk toward each role's counter is called.
  *
- * Keyed by `NpcRoleId` so a fourth person in a town is a compile error here
- * until someone says what standing at them does — the same argument
- * `NPC_APPEARANCES` makes for what they look like.
+ * Keyed by `NpcRoleId` so a seventh person in a town is a compile error here
+ * until someone says what walking up to them is — the same argument
+ * `NPC_APPEARANCES` makes for what they look like, and `Counters` below makes
+ * for what standing at them does.
  */
-const COUNTERS = {
-  merchant: { kind: 'shop', open: 'shop' },
-  banker: { kind: 'bank', open: 'bank' },
-  trainer: { kind: 'train', open: 'trainer' },
-  quartermaster: { kind: 'bounty', open: 'bounty' },
-  outfitter: { kind: 'outfit', open: 'outfitter' },
-  reforger: { kind: 'reforge', open: 'reforge' },
-} as const satisfies Record<
-  NpcRoleId,
-  {
-    kind: InteractionKind;
-    open: 'shop' | 'bank' | 'trainer' | 'bounty' | 'outfitter' | 'reforge';
-  }
->;
+const COUNTER_WALKS = {
+  merchant: 'shop',
+  banker: 'bank',
+  trainer: 'train',
+  quartermaster: 'bounty',
+  outfitter: 'outfit',
+  reforger: 'reforge',
+} as const satisfies Record<NpcRoleId, InteractionKind>;
+
+/**
+ * The session behind each role's counter. Typed per role rather than as a bare
+ * `Record<NpcRoleId, CounterSession>`, so the listener for a sale can reach the
+ * shop's `sell` without a cast — and it still has to name every role.
+ */
+interface Counters extends Record<NpcRoleId, CounterSession> {
+  merchant: ShopSession;
+  banker: BankSession;
+  trainer: TrainerSession;
+  quartermaster: BountySession;
+  outfitter: OutfitterSession;
+  reforger: ReforgeSession;
+}
 
 export interface ZoneWorldOptions {
   zone: ZoneDefinition;
@@ -172,9 +177,12 @@ export interface ZoneWorldOptions {
   input: InputState;
   /** Which edge the player walked in through, when they did. */
   entry?: { edge: ZoneEdge; fraction: number };
-  /** HP carried across a zone walk or a travel; absent on a session's first world. */
+  /** HP carried across a zone walk; absent on a session's first world. */
   hp?: number;
+  /** Where the mobs wander and where the zone's spawns fall. */
   rng?: () => number;
+  /** Every roll in the fight, the gather and the counters; see `WorldContext.rolls`. */
+  rolls?: () => number;
 }
 
 /**
@@ -216,12 +224,7 @@ export class ZoneWorld implements Targeting {
   /** The clock, the channels and the character — everything shared. */
   private readonly ctx: WorldContext;
   private readonly gathering: GatherSession;
-  private readonly shop: ShopSession;
-  private readonly bank: BankSession;
-  private readonly trainer: TrainerSession;
-  private readonly bounty: BountySession;
-  private readonly outfitter: OutfitterSession;
-  private readonly reforge: ReforgeSession;
+  private readonly counters: Counters;
   private readonly afk: AfkCamp;
   private readonly abilities: AbilityCaster;
   private readonly combat: CombatDirector;
@@ -251,7 +254,7 @@ export class ZoneWorld implements Targeting {
   private blockedAtEdge: ZoneId | null = null;
 
   constructor(options: ZoneWorldOptions) {
-    const { zone, character, events, input, entry, hp, rng } = options;
+    const { zone, character, events, input, entry, hp, rng, rolls } = options;
     this.zone = zone;
     this.character = character;
     this.input = input;
@@ -284,19 +287,20 @@ export class ZoneWorld implements Targeting {
     if (hp !== undefined) {
       this.player.setHp(hp);
     }
-    this.ctx = new WorldContext(character, events, this.player, zone.id);
+    this.ctx = new WorldContext(character, events, this.player, zone.id, rolls);
     // A world built for a zone *is* an arrival in it, which is what makes this
-    // the one place a visit is credited: the walk, the travel and the session
-    // resumed all end here, and a fourth route in would too. It is deliberately
+    // the one place a visit is credited: the walk and the session resumed both
+    // end here, and a third route in would too. It is deliberately
     // not `recordLocation`, which is called on every save and says where the
     // character is rather than that they have just got there.
     character.recordVisit(zone.id);
 
     // What each publisher counts as a change. HP and mana are their own
     // signature; the action bar compares only what it draws, and the item
-    // buttons only whether a fire is in reach. The two seeds are what the world
-    // opens already having said: the constructor sends HP unconditionally
-    // below, and there is no fire lit in the first frame of any zone.
+    // buttons only whether a fire or a station is in reach. The two seeds are
+    // what the world opens already having said: the constructor sends HP
+    // unconditionally below, and a class with nothing learned has no bar for a
+    // list of no abilities to redraw.
     this.publishPlayerHp = publishOnChange(
       () => this.player.hp,
       String,
@@ -329,6 +333,9 @@ export class ZoneWorld implements Targeting {
       (states) => this.ctx.events.emit(ABILITY_STATE_CHANGED_EVENT, states),
       '',
     );
+    // Unseeded, like the map's two below: the HUD outlives the world, and a
+    // player who walks out of a zone beside a fire would arrive with a Cook
+    // button still lit unless the new world says otherwise.
     this.publishActions = publishOnChange(
       () => ({
         nearFire: this.gathering.isNearFire(),
@@ -336,7 +343,6 @@ export class ZoneWorld implements Targeting {
       }),
       (actions) => `${actions.nearFire}/${actions.nearStations.join(',')}`,
       (actions) => this.ctx.events.emit(ACTIONS_CHANGED_EVENT, actions),
-      'false',
     );
     // The map's two. Neither carries a seed, and both are read from the tick
     // rather than sent from here: the host mounts the HUD after building the
@@ -389,19 +395,18 @@ export class ZoneWorld implements Targeting {
       stations: this.stations,
       isCamping: () => this.afk.active,
     });
-    this.shop = new ShopSession(this.ctx);
-    this.bank = new BankSession(this.ctx);
-    this.trainer = new TrainerSession(this.ctx, {
-      publishAbilityState: () => this.publishAbilityState(),
-    });
-    this.bounty = new BountySession(this.ctx, {
-      publishXpGain: (gain) => this.publishXpGain(gain),
-    });
-    // No `Deps` of its own: a trade reads the bag and writes the bag, and the
-    // shared context already carries both. The other four each needed a hook
-    // into something only the world knows.
-    this.outfitter = new OutfitterSession(this.ctx);
-    this.reforge = new ReforgeSession(this.ctx, rng ?? Math.random);
+    this.counters = {
+      merchant: new ShopSession(this.ctx),
+      banker: new BankSession(this.ctx),
+      trainer: new TrainerSession(this.ctx, {
+        publishAbilityState: () => this.publishAbilityState(),
+      }),
+      quartermaster: new BountySession(this.ctx, {
+        publishXpGain: (gain) => this.publishXpGain(gain),
+      }),
+      outfitter: new OutfitterSession(this.ctx),
+      reforger: new ReforgeSession(this.ctx),
+    };
     this.combat = new CombatDirector(this.ctx, {
       mobs: this.mobs,
       targeting: this,
@@ -432,7 +437,7 @@ export class ZoneWorld implements Targeting {
       creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),
     });
     this.quests = new QuestDesk(this.ctx, {
-      isShopOpen: () => this.shop.isOpen(),
+      servingNpc: () => this.openCounter()?.npc ?? null,
       publishXpGain: (gain) => this.publishXpGain(gain),
     });
     this.contextMenu = new ContextMenuSession(this.ctx, {
@@ -441,14 +446,14 @@ export class ZoneWorld implements Targeting {
 
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt by a zone
-    // walk or a travel — resync it unconditionally.
+    // walk — resync it unconditionally.
     this.ctx.events.emit(PLAYER_HP_CHANGED_EVENT, this.player.hp);
   }
 
   // Where the player stands when this world opens: the arrival point if they
   // walked in through an exit, the spot the save was left at if they are
   // resuming into the zone that save names, and the middle of the map
-  // otherwise — a new character, or one who travelled here from the map.
+  // otherwise — a new character, or a save that names no particular spot.
   private startPoint(entry: ZoneWorldOptions['entry']): Point {
     if (entry) {
       return arrivalPoint(
@@ -477,26 +482,27 @@ export class ZoneWorld implements Targeting {
     listen(EAT_ITEM_REQUESTED_EVENT, (itemId) => this.gathering.eat(itemId));
     listen(COOK_REQUESTED_EVENT, (itemId) => this.gathering.cook(itemId));
     listen(LIGHT_FIRE_REQUESTED_EVENT, () => this.gathering.lightFire());
-    listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => this.shop.buy(itemId));
-    listen(SELL_ITEM_REQUESTED_EVENT, (itemId, quantity) => this.shop.sell(itemId, quantity));
-    listen(SHOP_CLOSED_EVENT, () => this.shop.closedByUi());
-    listen(DEPOSIT_ITEM_REQUESTED_EVENT, (itemId, quantity) => this.bank.deposit(itemId, quantity));
-    listen(WITHDRAW_ITEM_REQUESTED_EVENT, (itemId, quantity) =>
-      this.bank.withdraw(itemId, quantity),
+    const { counters } = this;
+    // A panel's close button, which the world hears as the counter already shut.
+    listen(COUNTER_CLOSED_EVENT, (role) => counters[role].closedByUi());
+    listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => counters.merchant.buy(itemId));
+    listen(SELL_ITEM_REQUESTED_EVENT, (itemId, quantity) =>
+      counters.merchant.sell(itemId, quantity),
     );
-    listen(BUY_BANK_SLOT_REQUESTED_EVENT, () => this.bank.buySlot());
-    listen(BANK_CLOSED_EVENT, () => this.bank.closedByUi());
-    listen(LEARN_ABILITY_REQUESTED_EVENT, (abilityId) => this.trainer.learn(abilityId));
-    listen(ACCEPT_BOUNTY_REQUESTED_EVENT, (bountyId) => this.bounty.accept(bountyId));
-    listen(TURN_IN_BOUNTY_REQUESTED_EVENT, (bountyId) => this.bounty.turnIn(bountyId));
-    listen(ABANDON_BOUNTY_REQUESTED_EVENT, () => this.bounty.abandon());
-    listen(BOUNTY_CLOSED_EVENT, () => this.bounty.closedByUi());
-    listen(OUTFITTER_CLOSED_EVENT, () => this.outfitter.closedByUi());
-    listen(TRADE_REQUESTED_EVENT, (itemId) => this.outfitter.trade(itemId));
-    listen(REFORGE_CLOSED_EVENT, () => this.reforge.closedByUi());
-    listen(REFORGE_REQUESTED_EVENT, (itemId) => this.reforge.reforge(itemId));
+    listen(DEPOSIT_ITEM_REQUESTED_EVENT, (itemId, quantity) =>
+      counters.banker.deposit(itemId, quantity),
+    );
+    listen(WITHDRAW_ITEM_REQUESTED_EVENT, (itemId, quantity) =>
+      counters.banker.withdraw(itemId, quantity),
+    );
+    listen(BUY_BANK_SLOT_REQUESTED_EVENT, () => counters.banker.buySlot());
+    listen(LEARN_ABILITY_REQUESTED_EVENT, (abilityId) => counters.trainer.learn(abilityId));
+    listen(ACCEPT_BOUNTY_REQUESTED_EVENT, (bountyId) => counters.quartermaster.accept(bountyId));
+    listen(TURN_IN_BOUNTY_REQUESTED_EVENT, (bountyId) => counters.quartermaster.turnIn(bountyId));
+    listen(ABANDON_BOUNTY_REQUESTED_EVENT, () => counters.quartermaster.abandon());
+    listen(TRADE_REQUESTED_EVENT, (itemId) => counters.outfitter.trade(itemId));
+    listen(REFORGE_REQUESTED_EVENT, (itemId) => counters.reforger.reforge(itemId));
     listen(CRAFT_REQUESTED_EVENT, (recipeId) => this.gathering.makeRecipe(recipeId));
-    listen(TRAINER_CLOSED_EVENT, () => this.trainer.closedByUi());
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
     listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
@@ -686,17 +692,21 @@ export class ZoneWorld implements Targeting {
    * `NPCS` rather than another silent assumption.
    */
   approachNpc(npc: WorldNpc): void {
-    // One table rather than a pair of matching conditionals: which counter to
-    // open and what the walk toward it is called are the same fact about the
-    // person, and the two drifting apart is exactly how a walk ends at the
-    // wrong desk.
-    const { kind, open } = COUNTERS[npcRole(npc.npcId)];
-    const serve = (): void => this[open].open(npc);
+    // Both keyed by the same role: which counter to open and what the walk
+    // toward it is called are the same fact about the person, and the two
+    // drifting apart is exactly how a walk ends at the wrong desk.
+    const role = npcRole(npc.npcId);
+    // One counter at a time, which is what lets the HUD hold one counter panel
+    // and the quest desk ask "who am I talking to" and get one answer.
+    const serve = (): void => {
+      this.closeCounters();
+      this.counters[role].open(npc);
+    };
     if (withinRadius(this.player, npc, NPC_INTERACT_RADIUS)) {
       serve();
       return;
     }
-    this.approach.walkTo({ kind, radius: NPC_INTERACT_RADIUS }, npc, serve);
+    this.approach.walkTo({ kind: COUNTER_WALKS[role], radius: NPC_INTERACT_RADIUS }, npc, serve);
   }
 
   /**
@@ -729,10 +739,10 @@ export class ZoneWorld implements Targeting {
    * Whether the way into a zone is open, spending the key if this is the moment
    * it opens.
    *
-   * Every route into a zone asks this — the edge walk, the signpost, and travel
-   * from the world map — so a door cannot be locked against one of them and
-   * open to another. It is the only place a key is ever spent, which is what
-   * makes "consumed once, open for good" one rule rather than three.
+   * Both routes into a zone ask this — the edge walk and the signpost — so a
+   * door cannot be locked against one of them and open to the other. It is the
+   * only place a key is ever spent, which is what makes "consumed once, open
+   * for good" one rule rather than two.
    */
   private openWayInto(zoneId: ZoneId): boolean {
     const access = zoneAccess(zoneId, {
@@ -806,37 +816,18 @@ export class ZoneWorld implements Targeting {
   }
 
   // ---------------------------------------------------------------------------
-  // The four counters: vendoring, the bank, the trainer and the board
+  // The counters: vendoring, the bank, the trainer, the board, the outfitter
+  // and the fettler
   // ---------------------------------------------------------------------------
 
-  /** The shopkeeper the open shop belongs to; null when the shop is closed. */
-  get shopNpc(): WorldNpc | null {
-    return this.shop.npc;
+  /** Who is behind that role's counter while it is open; null when it is shut. */
+  counterNpc(role: NpcRoleId): WorldNpc | null {
+    return this.counters[role].npc;
   }
 
-  /** The banker the open vault belongs to; null when the counter is shut. */
-  get bankNpc(): WorldNpc | null {
-    return this.bank.npc;
-  }
-
-  /** The trainer the open syllabus belongs to; null when it is shut. */
-  get trainerNpc(): WorldNpc | null {
-    return this.trainer.npc;
-  }
-
-  /** The quartermaster the open board belongs to; null when it is shut. */
-  get bountyNpc(): WorldNpc | null {
-    return this.bounty.npc;
-  }
-
-  /** The fettler the open counter belongs to; null when it is shut. */
-  get reforgeNpc(): WorldNpc | null {
-    return this.reforge.npc;
-  }
-
-  /** The outfitter the open counter belongs to; null when it is shut. */
-  get outfitterNpc(): WorldNpc | null {
-    return this.outfitter.npc;
+  /** The one counter that is open, if any is. */
+  openCounter(): CounterSession | null {
+    return Object.values(this.counters).find((counter) => counter.isOpen()) ?? null;
   }
 
   /** Whether the character has been left camping. */
@@ -846,26 +837,16 @@ export class ZoneWorld implements Targeting {
 
   /** Walking away shuts whichever counter is open; all ask the same distance. */
   updateNpcRange(): void {
-    this.shop.updateRange();
-    this.bank.updateRange();
-    this.trainer.updateRange();
-    this.bounty.updateRange();
-    this.outfitter.updateRange();
-    this.reforge.updateRange();
+    Object.values(this.counters).forEach((counter) => counter.updateRange());
   }
 
   /** Everything that stops a session at once shuts all of them, never one. */
   closeCounters(): void {
-    this.shop.close();
-    this.bank.close();
-    this.trainer.close();
-    this.bounty.close();
-    this.outfitter.close();
-    this.reforge.close();
+    Object.values(this.counters).forEach((counter) => counter.close());
   }
 
   handleReforgeRequested(itemId: ItemId): void {
-    this.reforge.reforge(itemId);
+    this.counters.reforger.reforge(itemId);
   }
 
   handleCraftRequested(recipeId: RecipeId): void {
@@ -873,39 +854,39 @@ export class ZoneWorld implements Targeting {
   }
 
   handleLearnRequested(abilityId: AbilityId): void {
-    this.trainer.learn(abilityId);
+    this.counters.trainer.learn(abilityId);
   }
 
   handleAcceptBountyRequested(bountyId: BountyId): void {
-    this.bounty.accept(bountyId);
+    this.counters.quartermaster.accept(bountyId);
   }
 
   handleTurnInBountyRequested(bountyId: BountyId): void {
-    this.bounty.turnIn(bountyId);
+    this.counters.quartermaster.turnIn(bountyId);
   }
 
   handleAbandonBountyRequested(): void {
-    this.bounty.abandon();
+    this.counters.quartermaster.abandon();
   }
 
   handleBuyRequested(itemId: ItemId): void {
-    this.shop.buy(itemId);
+    this.counters.merchant.buy(itemId);
   }
 
   handleSellRequested(itemId: ItemId, quantity = 1): void {
-    this.shop.sell(itemId, quantity);
+    this.counters.merchant.sell(itemId, quantity);
   }
 
   handleDepositRequested(itemId: ItemId, quantity = 1): void {
-    this.bank.deposit(itemId, quantity);
+    this.counters.banker.deposit(itemId, quantity);
   }
 
   handleWithdrawRequested(itemId: ItemId, quantity = 1): void {
-    this.bank.withdraw(itemId, quantity);
+    this.counters.banker.withdraw(itemId, quantity);
   }
 
   handleBuyBankSlotRequested(): void {
-    this.bank.buySlot();
+    this.counters.banker.buySlot();
   }
 
   // ---------------------------------------------------------------------------
@@ -1015,10 +996,9 @@ export class ZoneWorld implements Targeting {
     // to town for nothing made dying the fastest way to travel and a free heal
     // on arrival; what it costs now is the walk back.
     //
-    // The spawn point is the middle of the map, which is where travelling from
-    // the world map already puts someone — so a respawn is exactly as exposed
-    // as an arrival the game has always allowed, and no zone's centre sits
-    // inside a mob's aggro radius.
+    // The spawn point is the middle of the map, and `spawnSafety.test.ts` holds
+    // it clear of every aggressive creature's whole wander disc — so getting up
+    // is never getting straight back into the fight that ended.
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
     this.player.setVelocity(0, 0);
     this.player.restoreToFull();
@@ -1070,6 +1050,7 @@ export class ZoneWorld implements Targeting {
     this.ctx.events.emit(XP_GAINED_EVENT, gain);
 
     if (gain.leveledUp) {
+      this.ctx.push({ kind: 'level-up', at: this.ctx.playerPoint() });
       this.ctx.log(logLevelUp(gain.level));
       this.player.setLevel(gain.level);
       this.publishTarget();

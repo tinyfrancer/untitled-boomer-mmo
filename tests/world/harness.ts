@@ -76,8 +76,15 @@ export interface HarnessOptions {
    * actually walks out of creation with.
    */
   learnedAbilities?: AbilityId[];
-  /** Deterministic by default: see the note on the rng below. */
+  /** Where rats walk. Deterministic by default: see the note on the rng below. */
   rng?: () => number;
+  /**
+   * Every roll in the zone — swings, crits, drops, gathers, burns, fizzles.
+   * Left on `Math.random` by default, because most tests here are about a rule
+   * rather than a roll and are written to hold whatever the dice say; a test
+   * about one outcome loads them instead of looping until it comes up.
+   */
+  rolls?: () => number;
 }
 
 export function harness(options: HarnessOptions = {}): Harness {
@@ -98,6 +105,7 @@ export function harness(options: HarnessOptions = {}): Harness {
     // Every wander picks the same angle and half the radius, so a run that
     // fails does so for a reason and not because a rat drifted.
     rng: options.rng ?? (() => 0.5),
+    rolls: options.rolls,
   });
 
   const tick = (steps: number, deltaMs = 200): WorldEvent[] => {

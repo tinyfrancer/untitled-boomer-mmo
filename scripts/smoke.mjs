@@ -913,7 +913,7 @@ async function feedback() {
   await standSouthOf(GENERAL_STORE, 320);
   await clickAt(await screenAt(GENERAL_STORE));
   await stepUntil(
-    () => page.evaluate(() => window.world.shopNpc !== null),
+    () => page.evaluate(() => window.world.counterNpc('merchant') !== null),
     'the tapped shopfront to walk the player in and open the shop',
   );
   /** @type {{ x: number; y: number; store: { x: number; y: number; width: number; height: number } }} */
@@ -939,7 +939,7 @@ async function feedback() {
   await standSouthOf(SHOPKEEPER);
   await clickAt(await screenAt(SHOPKEEPER));
   await stepUntil(
-    () => page.evaluate(() => window.world.shopNpc !== null),
+    () => page.evaluate(() => window.world.counterNpc('merchant') !== null),
     'the tapped shopkeeper to open the shop',
   );
   check('a real click on the shopkeeper walks over and opens the shop', true);
@@ -1095,7 +1095,7 @@ async function feedback() {
   // Closing from the panel's own X, which asks the world rather than telling it.
   await page.click('.hud-modal [data-action="close-shop"]');
   await stepUntil(
-    () => page.evaluate(() => window.world.shopNpc === null),
+    () => page.evaluate(() => window.world.counterNpc('merchant') === null),
     'the shop panel to close the shop',
   );
   check(
@@ -1139,12 +1139,12 @@ async function bank() {
   await standSouthOf(BANKER);
   await clickAt(await screenAt(BANKER));
   await stepUntil(
-    () => page.evaluate(() => window.world.bankNpc !== null),
+    () => page.evaluate(() => window.world.counterNpc('banker') !== null),
     'the tapped banker to open the bank',
   );
   const opened = await page.evaluate(() => ({
-    bank: window.world.bankNpc?.npcId ?? null,
-    shop: window.world.shopNpc?.npcId ?? null,
+    bank: window.world.counterNpc('banker')?.npcId ?? null,
+    shop: window.world.counterNpc('merchant')?.npcId ?? null,
     panel: document.querySelector('.hud-modal__box--bank') !== null,
   }));
   check(
@@ -1213,7 +1213,7 @@ async function bank() {
   // Closing from the panel's own X, which asks the world rather than telling it.
   await page.click('.hud-modal [data-action="close-bank"]');
   await stepUntil(
-    () => page.evaluate(() => window.world.bankNpc === null),
+    () => page.evaluate(() => window.world.counterNpc('banker') === null),
     'the bank panel to close the counter',
   );
   check(
@@ -1235,13 +1235,13 @@ async function trainer() {
   await standSouthOf(TRAINER);
   await clickAt(await screenAt(TRAINER));
   await stepUntil(
-    () => page.evaluate(() => window.world.trainerNpc !== null),
+    () => page.evaluate(() => window.world.counterNpc('trainer') !== null),
     'the tapped trainer to open the syllabus',
   );
   const opened = await page.evaluate(() => ({
-    trainer: window.world.trainerNpc?.npcId ?? null,
-    shop: window.world.shopNpc?.npcId ?? null,
-    bank: window.world.bankNpc?.npcId ?? null,
+    trainer: window.world.counterNpc('trainer')?.npcId ?? null,
+    shop: window.world.counterNpc('merchant')?.npcId ?? null,
+    bank: window.world.counterNpc('banker')?.npcId ?? null,
     panel: document.querySelector('.hud-modal__box--trainer') !== null,
   }));
   check(
@@ -1332,7 +1332,7 @@ async function trainer() {
   // Closing from the panel's own X, which asks the world rather than telling it.
   await page.click('.hud-modal [data-action="close-trainer"]');
   await stepUntil(
-    () => page.evaluate(() => window.world.trainerNpc === null),
+    () => page.evaluate(() => window.world.counterNpc('trainer') === null),
     'the trainer panel to close the counter',
   );
   check(
@@ -1366,14 +1366,14 @@ async function bountyBoard() {
   await standSouthOf(QUARTERMASTER);
   await clickAt(await screenAt(QUARTERMASTER));
   await stepUntil(
-    () => page.evaluate(() => window.world.bountyNpc !== null),
+    () => page.evaluate(() => window.world.counterNpc('quartermaster') !== null),
     'the tapped quartermaster to open the board',
   );
   const opened = await page.evaluate(() => ({
-    board: window.world.bountyNpc?.npcId ?? null,
-    shop: window.world.shopNpc?.npcId ?? null,
-    bank: window.world.bankNpc?.npcId ?? null,
-    trainer: window.world.trainerNpc?.npcId ?? null,
+    board: window.world.counterNpc('quartermaster')?.npcId ?? null,
+    shop: window.world.counterNpc('merchant')?.npcId ?? null,
+    bank: window.world.counterNpc('banker')?.npcId ?? null,
+    trainer: window.world.counterNpc('trainer')?.npcId ?? null,
     panel: document.querySelector('.hud-modal__box--bounty') !== null,
     // Every row carries what it asks for on the line under it.
     rows: document.querySelectorAll('.hud-modal__box--bounty .hud-list-row[data-bounty]').length,
@@ -1491,7 +1491,7 @@ async function bountyBoard() {
   // Closing from the panel's own X, which asks the world rather than telling it.
   await page.click('.hud-modal [data-action="close-bounty"]');
   await stepUntil(
-    () => page.evaluate(() => window.world.bountyNpc === null),
+    () => page.evaluate(() => window.world.counterNpc('quartermaster') === null),
     'the board to close the counter it was opened by',
   );
   check(
@@ -3173,7 +3173,9 @@ async function reset() {
       /** @type {HTMLElement} */ (
         document.querySelector('.hud-modal [data-action="reset-character"]')
       ).textContent === 'Tap again to confirm',
-    saveIntact: localStorage.length > 0,
+    // The save's own key rather than "anything stored": sound settings sit in
+    // the same storage and would make a deleted save look intact.
+    saveIntact: localStorage.getItem('untitled-boomer-mmo:character:v1') !== null,
   }));
   await page.screenshot({ path: `${OUT}/15-options.png` });
   await page.keyboard.press('Escape');
@@ -3187,6 +3189,39 @@ async function reset() {
     'escape closes the options modal',
     await page.evaluate(() => document.querySelector('.hud-modal') === null),
   );
+
+  // Sound is the one thing in here about the device rather than the character,
+  // so it is the one thing the reset below must leave standing. Muted here and
+  // checked again on the far side of the reset.
+  await tapTab('options');
+  const soundControls = await page.evaluate(() => {
+    const button = document.querySelector('.hud-modal [data-action="toggle-sound"]');
+    const slider = document.querySelector('.hud-modal [data-action="volume"]');
+    if (!button || !slider) return null;
+    const b = button.getBoundingClientRect();
+    const s = slider.getBoundingClientRect();
+    return {
+      shortest: Math.min(b.height, s.height),
+      right: Math.max(b.right, s.right),
+      width: window.innerWidth,
+    };
+  });
+  check(
+    'the options menu offers sound, sized for a thumb and on the screen',
+    soundControls !== null &&
+      soundControls.shortest >= 44 &&
+      soundControls.right <= soundControls.width,
+    JSON.stringify(soundControls),
+  );
+  await page.click('.hud-modal [data-action="toggle-sound"]');
+  /** @param {string | null} raw */
+  const mutedIn = (raw) => raw !== null && JSON.parse(raw).muted === true;
+  check(
+    'muting is kept on the device',
+    mutedIn(await page.evaluate(() => localStorage.getItem('untitled-boomer-mmo:sound:v1'))),
+  );
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(80);
 
   await tapTab('options');
   await page.click('.hud-modal [data-action="reset-character"]');
@@ -3220,6 +3255,22 @@ async function reset() {
     `${caster.mana}/${caster.maxMana} mana`,
   );
   await page.screenshot({ path: `${OUT}/16-wizard.png` });
+
+  await tapTab('options');
+  const soundAfter = await page.evaluate(() => ({
+    stored: localStorage.getItem('untitled-boomer-mmo:sound:v1'),
+    label: document.querySelector('.hud-modal [data-action="toggle-sound"]')?.textContent,
+  }));
+  check(
+    "and leaves the device muted, which is not the character's to wipe",
+    mutedIn(soundAfter.stored) && soundAfter.label === 'Sound: Off',
+    `${soundAfter.label}`,
+  );
+  // Back on for everything after this, so the throttled draw is measured with
+  // the sound a player would actually have running.
+  await page.click('.hud-modal [data-action="toggle-sound"]');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(80);
 
   // A caster is the only class with a projectile to draw, which is why this
   // waits for the wizard the reset just rolled: the bolt is the one WorldEvent

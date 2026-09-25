@@ -28,6 +28,9 @@ export function bindHudKeys(handlers: HudKeyHandlers): () => void {
     }
 
     if (event.key === 'Escape' && handlers.onEscape()) {
+      // Taken, and said so: the world binds Escape too, as "drop the target",
+      // and a key that closed a panel was not also a request to stop fighting.
+      event.preventDefault();
       return;
     }
 
@@ -45,6 +48,9 @@ export function bindHudKeys(handlers: HudKeyHandlers): () => void {
     }
   };
 
-  window.addEventListener('keydown', onKeyDown);
-  return () => window.removeEventListener('keydown', onKeyDown);
+  // Capture, so the HUD hears a key before the world's own binding does
+  // whichever of the two was bound first — that is what lets taking one mean
+  // anything.
+  window.addEventListener('keydown', onKeyDown, true);
+  return () => window.removeEventListener('keydown', onKeyDown, true);
 }

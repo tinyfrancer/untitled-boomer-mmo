@@ -1,5 +1,6 @@
 import { DirectionalLight, HemisphereLight, Mesh, Object3D, PointLight, Vector3 } from 'three';
 import { TILE_SIZE } from '../config/constants';
+import { ATMOSPHERES, type Atmosphere } from './atmosphere';
 
 /**
  * Where the sun stands, as the direction light arrives *from*.
@@ -60,19 +61,15 @@ const SHADOW_MARGIN = 160;
 const SHADOW_NORMAL_BIAS = 3;
 
 /**
- * The sky and the ground the fill light is the colour of.
- *
- * A hemisphere rather than a flat ambient, which is the thing that makes a face
- * pointing up read differently from one pointing sideways with no sun on it at
- * all: the old `AmbientLight` added the same value to every surface in the
- * world, so the only shape anything had came from the one directional light and
- * everything facing away from it was a silhouette.
+ * The fill is a hemisphere rather than a flat ambient, which is the thing that
+ * makes a face pointing up read differently from one pointing sideways with no
+ * sun on it at all: the old `AmbientLight` added the same value to every surface
+ * in the world, so the only shape anything had came from the one directional
+ * light and everything facing away from it was a silhouette. Its colours and
+ * both strengths are the zone's air (`atmosphere.ts`); the sun's own colour is
+ * the one thing about it that does not change with where you are.
  */
-const SKY_COLOR = 0xb4d0f0;
-const GROUND_COLOR = 0x4a4335;
-const FILL_INTENSITY = 1.25;
 const SUN_COLOR = 0xfff2d8;
-const SUN_INTENSITY = 2.6;
 
 /**
  * The session's lighting: a hemisphere fill, a sun, and the shadow the sun
@@ -94,16 +91,31 @@ export class Sunlight {
   /** Everything the scene has to hold, including the sun's aim. */
   readonly objects: Object3D[];
   private readonly sun: DirectionalLight;
+  private readonly fill: HemisphereLight;
 
   constructor() {
-    const fill = new HemisphereLight(SKY_COLOR, GROUND_COLOR, FILL_INTENSITY);
-    this.sun = new DirectionalLight(SUN_COLOR, SUN_INTENSITY);
+    const { sky, ground, fill, sun } = ATMOSPHERES.open;
+    this.fill = new HemisphereLight(sky, ground, fill);
+    this.sun = new DirectionalLight(SUN_COLOR, sun);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(SHADOW_MAP_PX, SHADOW_MAP_PX);
     this.sun.shadow.normalBias = SHADOW_NORMAL_BIAS;
     // A directional light aims at its target's *world* position, so the target
     // has to be in the graph rather than merely referenced.
-    this.objects = [fill, this.sun, this.sun.target];
+    this.objects = [this.fill, this.sun, this.sun.target];
+  }
+
+  /**
+   * Lights the zone the way its air says: the fill's two colours and its
+   * strength, and how much sun gets down there. Nothing is added or removed —
+   * the same two lights burn brighter or dimmer — so no program recompiles on a
+   * zone walk.
+   */
+  breathe(atmosphere: Atmosphere): void {
+    this.fill.color.setHex(atmosphere.sky);
+    this.fill.groundColor.setHex(atmosphere.ground);
+    this.fill.intensity = atmosphere.fill;
+    this.sun.intensity = atmosphere.sun;
   }
 
   /**
@@ -187,6 +199,13 @@ export const LAMP_HEIGHT_FRACTION = 0.72;
 export interface RoomLamp {
   readonly at: Vector3;
   readonly color: number;
+  /**
+   * How far it reaches and how bright it burns, when it is not a room. The one
+   * other thing this light is: the lantern the player carries underground,
+   * which lights a cave passage rather than a shop and has to reach further.
+   */
+  readonly reach?: number;
+  readonly intensity?: number;
 }
 
 /**
@@ -223,10 +242,11 @@ export class RoomLight {
 
   /** Lights the room, or puts it out — `null` for a player who is outdoors. */
   shine(lamp: RoomLamp | null): void {
-    this.object.intensity = lamp ? ROOM_LIGHT_INTENSITY : 0;
+    this.object.intensity = lamp ? (lamp.intensity ?? ROOM_LIGHT_INTENSITY) : 0;
     if (!lamp) return;
     this.object.position.copy(lamp.at);
     this.object.color.setHex(lamp.color);
+    this.object.distance = lamp.reach ?? ROOM_LIGHT_REACH;
   }
 }
 

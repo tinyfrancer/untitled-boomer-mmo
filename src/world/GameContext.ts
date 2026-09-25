@@ -130,11 +130,12 @@ export class GameContext {
     this.notifications = [];
   }
 
-  // The two ways a world hands the player to the next one. Both are the world
+  // The one way a world hands the player to the next one. It is the world
   // refusing to load a zone on purpose (see ZoneWorld's class comment): it says
   // where the player is going and stops, and building that zone is this job.
-  // Death is deliberately not one of them any more — a respawn happens in the
-  // zone it happened in, so it changes no worlds and asks nothing of the host.
+  // There used to be two more — travel off the world map, and a death away from
+  // town — and both are gone: a respawn happens in the zone it happened in, so
+  // it changes no worlds and asks nothing of the host.
   private zoneLoadFor(event: WorldEvent): ZoneLoadRequest | null {
     if (event.kind === 'zone-exit') {
       return {
@@ -180,9 +181,9 @@ export class GameContext {
 }
 
 // The one session in play. A module-level slot rather than a parameter because
-// the boot flow hands the game over between scenes today and between plain
-// modules after the port, and both need somewhere to find it. Everything that
-// takes a context takes it as an argument; this is only how the host gets one.
+// the boot flow starts the session and the host picks it up, and the two are
+// separate modules that both need somewhere to find it. Everything that takes a
+// context takes it as an argument; this is only how the host gets one.
 let current: GameContext | null = null;
 
 export function startGame(options: GameContextOptions): GameContext {

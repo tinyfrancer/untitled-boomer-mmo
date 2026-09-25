@@ -138,9 +138,9 @@ describe('what a failed smith costs', () => {
    * cooking worth levelling — but ore is heavy and took a pack-filling trip to
    * carry home, so a bad roll at the forge costs the time and nothing else.
    *
-   * Smelted in a loop rather than once: the roll is `Math.random`, and a single
-   * swing asserting a failure would be a test that passes for the wrong reason
-   * most runs.
+   * Smelted in a loop with the dice left unloaded: what is held is a
+   * conservation over however the rolls fell, and a single swing asserting a
+   * failure would be a test that passes for the wrong reason most runs.
    */
   it('spends exactly one rock per bar, however many swings failed', () => {
     const kit = atTheForge();

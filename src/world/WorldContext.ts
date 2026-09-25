@@ -40,13 +40,31 @@ export class WorldContext {
   /** Which zone this is, for the save and for anything parked in it. */
   readonly zoneId: ZoneId;
 
+  /**
+   * The die every roll in the zone is thrown with: a swing, a crit, a dodge, a
+   * block, a drop, a gather, a burn, a fizzle, a reforge.
+   *
+   * Its own source rather than the wander's, so a test that pins where the rats
+   * walk does not also pin every swing, and one that loads the dice does not
+   * move the rats. The systems each take an rng already; this is the one they
+   * are handed, where every collaborator used to leave them on `Math.random`.
+   */
+  readonly rolls: () => number;
+
   private pending: WorldEvent[] = [];
 
-  constructor(character: CharacterController, events: EventBus, player: Player, zoneId: ZoneId) {
+  constructor(
+    character: CharacterController,
+    events: EventBus,
+    player: Player,
+    zoneId: ZoneId,
+    rolls: () => number = Math.random,
+  ) {
     this.character = character;
     this.events = events;
     this.player = player;
     this.zoneId = zoneId;
+    this.rolls = rolls;
   }
 
   /** The view channel: a moment that happened this frame. */

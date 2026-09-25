@@ -8,6 +8,18 @@ import { CanvasTexture, SRGBColorSpace, Sprite, SpriteMaterial } from 'three';
 const FONT_PX = 32;
 
 /**
+ * The dark edge every glyph is drawn inside, as a fraction of the font size.
+ *
+ * A name is read over grass, sand, marsh, rock and pale haze, and a coloured
+ * glyph with nothing round it is legible over exactly the grounds it happens to
+ * contrast with — a grey rat's name over the town road was not. An outline is
+ * what every MMO nameplate wears for that reason, and it is baked into the
+ * texture rather than drawn as a second sprite, which would be a second upload
+ * for every name.
+ */
+const OUTLINE_FRACTION = 0.22;
+
+/**
  * A line of text, baked onto a canvas and hung on a sprite.
  *
  * There is no DOM option here: an HTML label would need the HUD to project
@@ -31,9 +43,13 @@ export function buildText(text: string, color: string, height: number): Sprite |
   canvas.height = Math.ceil(FONT_PX * 1.4);
   // Resizing the canvas resets everything set on the context above it.
   context.font = font;
-  context.fillStyle = color;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
+  context.lineJoin = 'round';
+  context.lineWidth = FONT_PX * OUTLINE_FRACTION;
+  context.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+  context.strokeText(text, canvas.width / 2, canvas.height / 2);
+  context.fillStyle = color;
   context.fillText(text, canvas.width / 2, canvas.height / 2);
 
   const texture = new CanvasTexture(canvas);

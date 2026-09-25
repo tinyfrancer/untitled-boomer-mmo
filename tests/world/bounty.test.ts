@@ -3,15 +3,12 @@ import { harness } from './harness';
 import { BOUNTIES } from '../../src/data/bounties';
 import { NPC_CLOSE_RADIUS, NPC_INTERACT_RADIUS } from '../../src/data/npcs';
 import {
-  BANK_OPENED_EVENT,
   BOUNTY_CHANGED_EVENT,
-  BOUNTY_CLOSED_EVENT,
-  BOUNTY_OPENED_EVENT,
   CURRENCY_CHANGED_EVENT,
   NOTICE_EVENT,
-  SHOP_OPENED_EVENT,
-  TRAINER_OPENED_EVENT,
   XP_GAINED_EVENT,
+  COUNTER_OPENED_EVENT,
+  COUNTER_CLOSED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { WorldNpc } from '../../src/world/ZoneWorld';
 
@@ -48,8 +45,8 @@ describe('the quartermaster', () => {
   it('opens the board when the player is already standing at it', () => {
     const { world, emissions } = atTheBoard();
 
-    expect(world.bountyNpc).not.toBeNull();
-    expect(emissions(BOUNTY_OPENED_EVENT)).toHaveLength(1);
+    expect(world.counterNpc('quartermaster')).not.toBeNull();
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'quartermaster')).toHaveLength(1);
   });
 
   // Four people stand a few steps apart in town and each of them does one
@@ -58,9 +55,9 @@ describe('the quartermaster', () => {
   it('opens none of the three counters beside it', () => {
     const { emissions } = atTheBoard();
 
-    expect(emissions(SHOP_OPENED_EVENT)).toHaveLength(0);
-    expect(emissions(BANK_OPENED_EVENT)).toHaveLength(0);
-    expect(emissions(TRAINER_OPENED_EVENT)).toHaveLength(0);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(0);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'banker')).toHaveLength(0);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'trainer')).toHaveLength(0);
   });
 
   it('is walked to when the tap comes from across the square', () => {
@@ -69,9 +66,12 @@ describe('the quartermaster', () => {
     kit.world.teleport(npc.x, npc.y + NPC_INTERACT_RADIUS * 3);
 
     kit.world.approachNpc(npc);
-    expect(kit.world.bountyNpc).toBeNull();
+    expect(kit.world.counterNpc('quartermaster')).toBeNull();
 
-    kit.until(() => kit.world.bountyNpc !== null, 'the player reaches the quartermaster');
+    kit.until(
+      () => kit.world.counterNpc('quartermaster') !== null,
+      'the player reaches the quartermaster',
+    );
   });
 
   it('shuts when the player walks away from it', () => {
@@ -80,8 +80,10 @@ describe('the quartermaster', () => {
     kit.world.teleport(kit.npc.x, kit.npc.y + NPC_CLOSE_RADIUS * 2);
     kit.tick(1);
 
-    expect(kit.world.bountyNpc).toBeNull();
-    expect(kit.emissions(BOUNTY_CLOSED_EVENT)).toHaveLength(1);
+    expect(kit.world.counterNpc('quartermaster')).toBeNull();
+    expect(kit.emissions(COUNTER_CLOSED_EVENT).filter(([r]) => r === 'quartermaster')).toHaveLength(
+      1,
+    );
   });
 
   // Every counter in town is more than an interact radius from the next, so
@@ -262,8 +264,10 @@ describe('progress made away from the counter', () => {
     kit.world.teleport(kit.world.worldWidth / 2, kit.world.worldHeight - 10);
     kit.tick(1);
 
-    expect(kit.world.bountyNpc).toBeNull();
-    expect(kit.emissions(BOUNTY_CLOSED_EVENT)).toHaveLength(1);
+    expect(kit.world.counterNpc('quartermaster')).toBeNull();
+    expect(kit.emissions(COUNTER_CLOSED_EVENT).filter(([r]) => r === 'quartermaster')).toHaveLength(
+      1,
+    );
     // Standing work outlives the zone it was taken in — that is what makes it
     // worth taking before walking somewhere to do it.
     expect(kit.state.bounty?.bountyId).toBe('rat-cull');

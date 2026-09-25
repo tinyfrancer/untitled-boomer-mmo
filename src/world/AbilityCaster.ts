@@ -177,7 +177,7 @@ export class AbilityCaster {
   // what makes Destruction worth levelling.
   private resolve(ability: AbilityDefinition, skillLevel: number): void {
     this.ctx.log(logAbilityUsed(ability.name));
-    if (ability.skill && rollSpellFailure(ability, skillLevel)) {
+    if (ability.skill && rollSpellFailure(ability, skillLevel, this.ctx.rolls)) {
       this.ctx.float('Fizzle!', 'dim');
       this.ctx.log(logSpellFailed(ability.name));
       this.ctx.awardSkillXp(ability.skill, ABILITY_SKILL_XP_PER_CAST, { silent: true });
@@ -229,21 +229,31 @@ export class AbilityCaster {
           this.ctx.notice('Your target is too far away.');
           return;
         }
-        const { damage, crit } = resolveAbilityDamage(ability, player.attackPower, skillLevel);
+        const { damage, crit } = resolveAbilityDamage(
+          ability,
+          player.attackPower,
+          skillLevel,
+          this.ctx.rolls,
+        );
         // A bolt thrown from the caster to the target. Purely cosmetic, but a
         // ranged nuke that produced only a number over the mob read as nothing
-        // happening. A melee ability has no flight to draw.
-        if (ability.range > 0) {
+        // happening. A melee ability has no flight to draw: it is a swing. This
+        // asked `range > 0` once, which every damage ability has, so a Power
+        // Slash used to throw a magic bolt a tile and a quarter.
+        if (ability.effect.thrown) {
           this.ctx.push({
             kind: 'bolt-cast',
             abilityId: ability.id,
             from: this.ctx.playerPoint(),
             to: { x: target.x, y: target.y },
           });
+        } else {
+          this.ctx.push({ kind: 'swing', by: null, toward: { x: target.x, y: target.y } });
         }
         this.ctx.push({
           kind: 'hit',
           on: 'mob',
+          mob: target,
           via: 'ability',
           crit,
           at: { x: target.x, y: target.y },

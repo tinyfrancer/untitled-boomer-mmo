@@ -1,15 +1,9 @@
-import { NPC_CLOSE_RADIUS } from '../data/npcs';
 import { abilityById } from '../systems/AbilitySystem';
-import { withinRadius } from '../systems/MovementSystem';
 import { logNotice } from '../systems/CombatLogSystem';
 import type { AbilityId } from '../types/ids';
-import {
-  LEARNED_ABILITIES_CHANGED_EVENT,
-  TRAINER_CLOSED_EVENT,
-  TRAINER_OPENED_EVENT,
-} from '../ui/uiEvents';
+import { LEARNED_ABILITIES_CHANGED_EVENT } from '../ui/uiEvents';
+import { CounterSession } from './CounterSession';
 import type { WorldContext } from './WorldContext';
-import type { WorldNpc } from './zoneEntities';
 
 /** What the counter needs from the rest of the zone, and the whole of it. */
 export interface TrainerSessionDeps {
@@ -31,45 +25,12 @@ export interface TrainerSessionDeps {
  * afterwards is neither for sale nor withheld, which is the third answer
  * `trainingAccess` has and `stockAccess` does not need.
  */
-export class TrainerSession {
-  /** The trainer the open window belongs to; null when it is shut. */
-  npc: WorldNpc | null = null;
-
-  private readonly ctx: WorldContext;
+export class TrainerSession extends CounterSession {
   private readonly deps: TrainerSessionDeps;
 
   constructor(ctx: WorldContext, deps: TrainerSessionDeps) {
-    this.ctx = ctx;
+    super(ctx, 'trainer');
     this.deps = deps;
-  }
-
-  isOpen(): boolean {
-    return this.npc !== null;
-  }
-
-  open(npc: WorldNpc): void {
-    this.ctx.player.stopMoving();
-    this.npc = npc;
-    this.ctx.events.emit(TRAINER_OPENED_EVENT);
-  }
-
-  close(): void {
-    if (!this.npc) return;
-    this.npc = null;
-    this.ctx.events.emit(TRAINER_CLOSED_EVENT);
-  }
-
-  /** The UI's close button already tore the panel down; just drop the state. */
-  closedByUi(): void {
-    this.npc = null;
-  }
-
-  /** Walking off mid-lesson shuts the counter, like every other one. */
-  updateRange(): void {
-    if (!this.npc) return;
-    if (!withinRadius(this.ctx.player, this.npc, NPC_CLOSE_RADIUS)) {
-      this.close();
-    }
   }
 
   learn(abilityId: AbilityId): void {

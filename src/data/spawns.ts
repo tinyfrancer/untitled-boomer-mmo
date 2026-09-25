@@ -272,10 +272,10 @@ export const BANDIT_HIDEOUT_MOB_SPAWNS: MobSpawnPoint[] = [
 export const BLACKWATER_FEN_MOB_SPAWNS: MobSpawnPoint[] = [
   // Moved out to 365 units from the middle of the map, which is past its own
   // aggro radius and its wander disc together. At dy -32 it stood 71 from the
-  // centre — and the centre is where a death respawns you and where travelling
-  // by map puts you down, so dying in the fen dropped you straight back into
-  // melee with a level 5. The rule it broke is one `CLAUDE.md` states about
-  // every zone: the spawn point is safe by construction. It was not.
+  // centre — and the centre is where a death respawns you, so dying in the fen
+  // dropped you straight back into melee with a level 5. The rule it broke is
+  // one the game states about every zone: the spawn point is safe. It was not,
+  // and `spawnSafety.test.ts` holds it now.
   { dx: -224, dy: -288, enemyId: 'fen-raider', level: 5 },
   { dx: -320, dy: -224, enemyId: 'bog-lurker', level: 5 },
   { dx: 352, dy: -160, enemyId: 'bog-lurker', level: 5 },

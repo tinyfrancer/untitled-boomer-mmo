@@ -70,8 +70,9 @@ export interface CombatDirectorDeps {
    */
   interruptCast(): void;
   /**
-   * Dying stops everything else the session was doing and may hand the player
-   * to another zone, so the world takes it from here.
+   * Dying stops everything else the zone was doing at once — the camp, the
+   * gather, the counters, the walk — which only the world can reach, so it
+   * takes it from here.
    */
   onPlayerDeath(): void;
 }
@@ -163,10 +164,11 @@ export class CombatDirector {
 
     this.lastAttackAt = this.ctx.now;
     const weaponSkill = character.activeWeaponSkill();
+    this.ctx.push({ kind: 'swing', by: null, toward: { x: target.x, y: target.y } });
 
     // Asked before the damage is rolled: a swing that is slipped never happened,
     // and the skill takes no rep for it either.
-    if (enemyAvoids(target.definition.avoidChance)) {
+    if (enemyAvoids(target.definition.avoidChance, this.ctx.rolls)) {
       this.ctx.push({
         kind: 'float',
         at: { x: target.x, y: target.y },
@@ -179,13 +181,17 @@ export class CombatDirector {
       return;
     }
 
-    const { damage, crit } = resolveAttack({
-      attackPower: player.attackPower,
-      weaponSkillLevel: character.skillLevelOf(weaponSkill),
-    });
+    const { damage, crit } = resolveAttack(
+      {
+        attackPower: player.attackPower,
+        weaponSkillLevel: character.skillLevelOf(weaponSkill),
+      },
+      this.ctx.rolls,
+    );
     this.ctx.push({
       kind: 'hit',
       on: 'mob',
+      mob: target,
       via: 'weapon',
       crit,
       at: { x: target.x, y: target.y },
@@ -236,6 +242,7 @@ export class CombatDirector {
       if (!isCooldownReady(this.ctx.now - mob.lastAttackAt, mob.attackCooldownMs)) continue;
 
       mob.lastAttackAt = this.ctx.now;
+      this.ctx.push({ kind: 'swing', by: mob, toward: this.ctx.playerPoint() });
       this.strike(mob, mob.attackPower);
       if (!player.isAlive()) return;
     }
@@ -256,6 +263,7 @@ export class CombatDirector {
     mob.windUp = { abilityId: ability.id, landsAt: this.ctx.now + ability.windUpMs };
     mob.lastAbilityAt.set(ability.id, this.ctx.now);
     mob.lastAttackAt = this.ctx.now;
+    this.ctx.push({ kind: 'wind-up', by: mob });
     // Shouted over its own head rather than over the player: what the player
     // has to read is which creature is about to do something.
     this.ctx.push({
@@ -282,6 +290,7 @@ export class CombatDirector {
       this.ctx.log(logEnemyAbilityDodged(ability.name));
       return;
     }
+    this.ctx.push({ kind: 'swing', by: mob, toward: this.ctx.playerPoint() });
     // Drawn crossing the gap for the one that is thrown; a swing has no flight.
     if (ability.thrown) {
       this.ctx.push({
@@ -304,12 +313,15 @@ export class CombatDirector {
 
     // A turned-aside hit trains the skill that turned it aside and stops
     // there — no damage, and nothing to interrupt a gather.
-    const defense = rollDefense({
-      blockLevel: character.skillLevelOf('block'),
-      parryLevel: character.skillLevelOf('parry'),
-      hasWeapon: character.state.gear.weapon !== null,
-      hasShield: isShield(character.state.gear.offhand),
-    });
+    const defense = rollDefense(
+      {
+        blockLevel: character.skillLevelOf('block'),
+        parryLevel: character.skillLevelOf('parry'),
+        hasWeapon: character.state.gear.weapon !== null,
+        hasShield: isShield(character.state.gear.offhand),
+      },
+      this.ctx.rolls,
+    );
     if (defense.avoided && defense.skillId) {
       this.ctx.push({
         kind: 'defend',
@@ -323,11 +335,15 @@ export class CombatDirector {
 
     // Armour first, then the shield: what the mana shield soaks is what got
     // through the plate, not what was swung at it.
-    const damage = mitigatedDamage(resolveAttack({ attackPower }).damage, player.armor);
+    const damage = mitigatedDamage(
+      resolveAttack({ attackPower }, this.ctx.rolls).damage,
+      player.armor,
+    );
     const absorbed = player.takeDamage(damage);
     this.ctx.push({
       kind: 'hit',
       on: 'player',
+      mob: null,
       via: 'weapon',
       // Nothing that swings at the player carries a weapon skill, and the crit
       // chance comes out of that skill and nowhere else.
@@ -353,13 +369,14 @@ export class CombatDirector {
   private grantLoot(lootTableId?: LootTableId): void {
     if (!lootTableId) return;
     const { character } = this.ctx;
-    const { drops, copper } = rollLootTable(lootTableId);
+    const { drops, copper } = rollLootTable(lootTableId, this.ctx.rolls);
 
     let took = false;
     drops.forEach((drop) => {
       const name = describeItemName(drop.itemId);
-      // A full pack leaves the drop on the corpse rather than silently eating
-      // it: the log line is the only way the player would ever know.
+      // A full pack loses the drop — there is no corpse to leave it on — so
+      // the log line is the only way the player would ever know what the fight
+      // would have paid.
       if (!character.tryAddItem(drop.itemId, drop.quantity)) {
         this.ctx.log(logNotice(`Your pack is too full to carry ${name}.`));
         return;

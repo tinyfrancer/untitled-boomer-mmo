@@ -5,8 +5,8 @@ import {
   CURRENCY_CHANGED_EVENT,
   LEARNED_ABILITIES_CHANGED_EVENT,
   NOTICE_EVENT,
-  TRAINER_CLOSED_EVENT,
-  TRAINER_OPENED_EVENT,
+  COUNTER_OPENED_EVENT,
+  COUNTER_CLOSED_EVENT,
 } from '../../src/ui/uiEvents';
 import { STORAGE_KEY } from '../../src/persistence/LocalStorageSaveService';
 import type { CharacterState } from '../../src/persistence';
@@ -50,7 +50,7 @@ describe('the counter', () => {
 
     expect(player.hasMoveTarget()).toBe(false);
     expect(trainer.isOpen()).toBe(true);
-    expect(emissions(TRAINER_OPENED_EVENT)).toHaveLength(1);
+    expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'trainer')).toHaveLength(1);
   });
 
   // No seed on open, unlike the bank's: the panel is drawn from the HUD's own
@@ -169,6 +169,6 @@ describe('learning', () => {
     trainer.close();
     trainer.close();
 
-    expect(emissions(TRAINER_CLOSED_EVENT)).toHaveLength(1);
+    expect(emissions(COUNTER_CLOSED_EVENT).filter(([r]) => r === 'trainer')).toHaveLength(1);
   });
 });

@@ -4,6 +4,7 @@ import { AwayReportModal } from '../../src/hud/AwayReportModal';
 import { ContextMenu } from '../../src/hud/ContextMenu';
 import { InspectModal } from '../../src/hud/InspectModal';
 import { OptionsModal } from '../../src/hud/OptionsModal';
+import { DEFAULT_SOUND } from '../../src/audio/settings';
 import type { Overlay } from '../../src/hud/Overlay';
 import { BankModal } from '../../src/hud/BankModal';
 import { MAX_BANK_SLOTS } from '../../src/systems/BankSystem';
@@ -19,7 +20,9 @@ import { SHOP_STOCK } from '../../src/data/shop';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
 import { describeEnemy, describeEnemyLoot } from '../../src/systems/InspectSystem';
 import { THEME } from '../../src/ui/theme';
+import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
+import type { NpcRoleId } from '../../src/data/npcs';
 import {
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
@@ -39,11 +42,7 @@ import {
   PLAYER_MANA_CHANGED_EVENT,
   PLAYER_TILE_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
-  SHOP_CLOSED_EVENT,
-  SHOP_OPENED_EVENT,
   BANK_CHANGED_EVENT,
-  BANK_CLOSED_EVENT,
-  BANK_OPENED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
   DEPOSIT_ITEM_REQUESTED_EVENT,
   WITHDRAW_ITEM_REQUESTED_EVENT,
@@ -53,6 +52,9 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
   type ContextMenuRequest,
+  COUNTER_OPENED_EVENT,
+  COUNTER_CLOSED_EVENT,
+  SOUND_SETTINGS_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -220,6 +222,56 @@ describe('one sheet is open at a time', () => {
   });
 });
 
+/**
+ * The speaker, which is the one thing in Options that is not the character's.
+ * The HUD is handed where it was left and only ever sends a whole new setting
+ * back — it keeps nothing on the device itself, so the host stays the one place
+ * the setting is stored.
+ */
+describe("the options menu's sound", () => {
+  const soundButton = (): HTMLButtonElement | null =>
+    parent.querySelector('[data-action="toggle-sound"]');
+  const volume = (): HTMLInputElement | null => parent.querySelector('[data-action="volume"]');
+  const sent = () =>
+    emitted.filter((e) => e.event === SOUND_SETTINGS_CHANGED_EVENT).map((e) => e.args[0]);
+
+  it('opens on what the host handed the HUD', () => {
+    mountHud({
+      parent,
+      events,
+      character: createNewCharacter('Tester', 'warrior'),
+      sound: { muted: true, volume: 0.3 },
+    });
+    menuItem('options');
+    expect(soundButton()?.textContent).toBe('Sound: Off');
+    expect(soundButton()?.getAttribute('aria-pressed')).toBe('false');
+    expect(volume()?.value).toBe('30');
+    // Kept in its place while muted, so it says what unmuting comes back at.
+    expect(volume()?.disabled).toBe(true);
+  });
+
+  it('sends the whole setting on a toggle, and opens on it next time', () => {
+    mount();
+    menuItem('options');
+    soundButton()?.click();
+    expect(sent()).toEqual([{ muted: true, volume: 0.7 }]);
+
+    press('Escape');
+    menuItem('options');
+    expect(soundButton()?.textContent).toBe('Sound: Off');
+  });
+
+  it('sends the volume as the slider moves rather than when it is let go', () => {
+    mount();
+    menuItem('options');
+    const slider = volume();
+    if (!slider) throw new Error('no volume slider');
+    slider.value = '40';
+    slider.dispatchEvent(new Event('input'));
+    expect(sent()).toEqual([{ muted: false, volume: 0.4 }]);
+  });
+});
+
 describe('the keyboard', () => {
   beforeEach(() => mount());
 
@@ -242,6 +294,33 @@ describe('the keyboard', () => {
     expect(modals()).toHaveLength(1);
     press('Escape');
     expect(modals()).toHaveLength(0);
+  });
+
+  /**
+   * Escape means two things: close what is open, and — to the world — drop the
+   * target. Closing a panel mid-fight used to do both, since each heard the key
+   * on its own. The world's binding is made first here on purpose, which is the
+   * order that would hand it the key before the HUD had said it was taken.
+   */
+  it('lets an Escape that closed a panel leave the target alone', () => {
+    unmountHud();
+    const input = new InputState();
+    const unbind = bindKeyboard(input, window);
+    mount();
+    const escape = (): void => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', cancelable: true }),
+      );
+    };
+
+    menuItem('options');
+    escape();
+    expect(modals()).toHaveLength(0);
+    expect(input.takeActions()).toEqual([]);
+
+    escape();
+    expect(input.takeActions()).toEqual(['clear-target']);
+    unbind();
   });
 
   it('opens a menu-held sheet by its own key, without going through the menu', () => {
@@ -501,15 +580,15 @@ describe('the shop', () => {
   it('opens and closes with the world, not with a tab', () => {
     mount();
     expect(shop()).toBeNull();
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
     expect(shop()).not.toBeNull();
-    events.emit(SHOP_CLOSED_EVENT);
+    events.emit(COUNTER_CLOSED_EVENT, 'merchant');
     expect(shop()).toBeNull();
   });
 
   it('refreshes while open from the bag and the purse it does not own', () => {
     mount();
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
     expect(shop()?.textContent).not.toContain('Rat Bones');
 
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
@@ -527,7 +606,7 @@ describe('the shop', () => {
    */
   it('draws a row it has not earned with the requirement where the price goes', () => {
     mount();
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
 
     const row = shop()?.querySelector<HTMLElement>(`.hud-list-row[data-item="${gated.itemId}"]`);
     expect(row?.dataset.locked).toBe(gated.itemId);
@@ -542,7 +621,7 @@ describe('the shop', () => {
    */
   it('puts the row on the shelf the moment the level lands', () => {
     mount();
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
     expect(locked()).toContain(gated.itemId);
 
     events.emit(LEVEL_UP_EVENT, gateLevel);
@@ -561,7 +640,7 @@ describe('the shop', () => {
    */
   it('grows a bulk button on a stack, and asks for the whole of it', () => {
     mount();
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 12, 'brown-helmet': 1 });
 
     expect(shop()?.querySelector('[data-sell-all="brown-helmet"]')).toBeNull();
@@ -579,15 +658,15 @@ describe('the bank', () => {
   it('opens and closes with the world, like the other counter', () => {
     mount();
     expect(bank()).toBeNull();
-    events.emit(BANK_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'banker');
     expect(bank()).not.toBeNull();
-    events.emit(BANK_CLOSED_EVENT);
+    events.emit(COUNTER_CLOSED_EVENT, 'banker');
     expect(bank()).toBeNull();
   });
 
   it('draws the shelves the world sent and the pack it already holds', () => {
     mount();
-    events.emit(BANK_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'banker');
     events.emit(BANK_CHANGED_EVENT, { contents: { logs: 30 }, slots: 8 });
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
 
@@ -602,7 +681,7 @@ describe('the bank', () => {
    */
   it('sends a row as one and the button beside it as the stack, both ways', () => {
     mount();
-    events.emit(BANK_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'banker');
     events.emit(BANK_CHANGED_EVENT, { contents: { logs: 30 }, slots: 8 });
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 12 });
 
@@ -620,7 +699,7 @@ describe('the bank', () => {
 
   it('offers a slot to rent until there are none left', () => {
     mount();
-    events.emit(BANK_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'banker');
     events.emit(BANK_CHANGED_EVENT, { contents: {}, slots: 8 });
 
     bank()?.querySelector<HTMLButtonElement>('[data-action="buy-bank-slot"]')?.click();
@@ -631,6 +710,70 @@ describe('the bank', () => {
     events.emit(BANK_CHANGED_EVENT, { contents: {}, slots: MAX_BANK_SLOTS });
     expect(bank()?.querySelector('[data-action="buy-bank-slot"]')).toBeNull();
     expect(bank()?.textContent).toContain('Every slot rented');
+  });
+});
+
+describe('every counter is one panel, keyed by who stands behind it', () => {
+  const ROLES: NpcRoleId[] = [
+    'merchant',
+    'banker',
+    'trainer',
+    'quartermaster',
+    'outfitter',
+    'reforger',
+  ];
+  const panels = (): Element[] => [...parent.querySelectorAll('.hud-modal--top')];
+
+  it.each(ROLES)('puts up the %s counter and takes it down with the world', (role) => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, role);
+    expect(panels()).toHaveLength(1);
+    events.emit(COUNTER_CLOSED_EVENT, role);
+    expect(panels()).toHaveLength(0);
+  });
+
+  it('holds one counter up at a time', () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'banker');
+    expect(panels()).toHaveLength(1);
+    expect(parent.querySelector('.hud-modal__box--bank')).not.toBeNull();
+    // A close meant for the counter that is no longer up takes nothing down.
+    events.emit(COUNTER_CLOSED_EVENT, 'merchant');
+    expect(panels()).toHaveLength(1);
+  });
+
+  it.each(ROLES)('asks the world to shut the %s counter from its X', (role) => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, role);
+    parent.querySelector<HTMLButtonElement>('.hud-modal--top .hud-modal__close')?.click();
+    expect(emitted.at(-1)).toEqual({ event: COUNTER_CLOSED_EVENT, args: [role] });
+  });
+
+  /**
+   * The rule the HUD's listeners used to spell out panel by panel: whatever is
+   * up is drawn from the model, so the model moving redraws it. Asked of every
+   * role at once, because a list of refreshes is exactly what a new panel gets
+   * left out of.
+   */
+  it.each(ROLES)('redraws the %s counter when the pack, the purse and the level move', (role) => {
+    mount({ gear: { ...createNewCharacter('Tester', 'warrior').gear, helmet: 'brown-helmet' } });
+    events.emit(COUNTER_OPENED_EVENT, role);
+    const before = panels()[0]?.innerHTML;
+
+    events.emit(INVENTORY_CHANGED_EVENT, {
+      'tin-ore': 9,
+      'iron-ore': 9,
+      coal: 9,
+      hardwood: 9,
+      'rat-bones': 9,
+      'brown-helmet': 1,
+      'reforging-stone': 1,
+    });
+    events.emit(CURRENCY_CHANGED_EVENT, 999999);
+    events.emit(LEVEL_UP_EVENT, 8);
+
+    expect(panels()[0]?.innerHTML).not.toBe(before);
   });
 });
 
@@ -703,7 +846,7 @@ describe('the inventory panel forwards its buttons', () => {
     pressAction('raw-fish', 'cook');
     expect(emitted.at(-1)).toEqual({ event: COOK_REQUESTED_EVENT, args: ['raw-fish'] });
 
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
     pressAction('cooked-fish', 'sell');
     expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['cooked-fish', 1] });
   });
@@ -711,7 +854,7 @@ describe('the inventory panel forwards its buttons', () => {
   // The bulk half of the same request: one event with a count on it, so the
   // counter has one rule about vendoring rather than two.
   it('asks to sell the whole stack, and offers that only on a stack', () => {
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
 
     pressAction('rat-bones', 'sell-all');
     expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['rat-bones', 12] });
@@ -930,7 +1073,7 @@ describe('destroy', () => {
     tab('character').click();
     parent.querySelector<HTMLButtonElement>('.hud-slot[data-slot="helmet"]')?.click();
     menuItem('options');
-    events.emit(SHOP_OPENED_EVENT);
+    events.emit(COUNTER_OPENED_EVENT, 'merchant');
     expect(parent.querySelector('.hud-picker')).not.toBeNull();
     expect(modals()).toHaveLength(2);
 
@@ -950,7 +1093,12 @@ describe('destroy', () => {
 describe('every overlay has the same lifecycle', () => {
   const noop = (): void => {};
   const overlays = (onClosed: () => void): Overlay[] => [
-    new OptionsModal({ onResetCharacter: noop, onClose: onClosed }),
+    new OptionsModal({
+      sound: DEFAULT_SOUND,
+      onSoundChanged: noop,
+      onResetCharacter: noop,
+      onClose: onClosed,
+    }),
     new SlotPicker('helmet', [], new DOMRect(), PHONE, noop, onClosed),
     new AwayReportModal(REPORT, onClosed),
     new ShopModal(

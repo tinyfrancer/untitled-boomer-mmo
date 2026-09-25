@@ -1044,3 +1044,126 @@ than the difference between two CI runs, and the nine milliseconds phase 6 left 
 The dev container could not have said even that: three runs in one session read 47.25ms on the
 unchanged tree and 49.00 and 45.57 on this one, all over the ceiling, which is decision 50 working
 exactly as written.
+
+## 54. The graphics stay procedural
+
+**2026-09-25 · the user, asked by Claude**
+
+Act three improves how the game looks, and every improvement is code: geometry, vertex colour,
+lights, and shaders written here. The renderer still loads no image, model or sound file.
+
+**Rejected:** free CC0 asset packs (glTF models, textures, recorded audio), which are the fastest
+route to a bigger visual jump; and doing the code-only work now with the asset question left open.
+
+**Why:** the zero-asset pipeline is what keeps the GPU budget and the teardown check predictable —
+`renderer.info.memory` counts what the game builds, and nothing the game builds is a file somebody
+else sized. It is also the original "no art skills" constraint in `docs/initial_design.txt`, now
+chosen rather than inherited. If the ceiling is reached, that is a new decision, not a reopening of
+this one.
+
+## 55. Act three's features are all four that were offered
+
+**2026-09-25 · the user, asked by Claude**
+
+Fill levels 4-8 with directed content, stop a full pack destroying loot, add sound, and land willow
+with fletching and a bow. All four are phases of `docs/act_three_plan.md`.
+
+**Rejected:** a third class, and multiplayer groundwork, neither of which was chosen this round.
+
+## 56. Cleanup before features
+
+**2026-09-25 · the user, asked by Claude**
+
+The three duplicated joints the read found — six counters written six times, the HUD's hand-kept
+redraw lists, and an rng that stops at the wander — are fixed before any feature is built on them.
+
+**Rejected:** refactoring only what a feature touches, as it touches it; and leaving the
+architecture alone.
+
+**Why:** every feature in the plan lands on one of those joints. Upper-band quests need a counter
+other than the shop to offer quests; loot piles and bows add panels and rolls. Built first, each
+joint is fixed once; built alongside, it would be half-fixed three times.
+
+## 57. `CLAUDE.md` holds the rules and a map; the reasoning moves to topic docs
+
+**2026-09-25 · the user, asked by Claude**
+
+`CLAUDE.md` was 150 KB — about 37,000 tokens loaded into every session. It is cut to the project
+summary, the commands, the workflow, the seams and the invariants, and says where to read more.
+Everything it said about a subsystem moves, verbatim where it is still true, into
+`docs/architecture/<topic>.md`.
+
+**Rejected:** trimming only the history in place; leaving it as it was.
+
+**Why:** the essays are the most useful thing in the repo for the session whose work touches their
+topic and a cost on every other session. Moving rather than trimming loses nothing — a paragraph
+either stays or moves — and a topic file is read at exactly the moment its reasoning is worth the
+tokens.
+
+## 58. The world's edge is the map carried outward into a haze, not a skybox
+
+**2026-09-25 · Claude**
+
+The ground mesh grows `APRON_TILES` of the nearest edge tile past every side of the map, dimmed over
+its first three tiles, and the fog's colour and the clear colour are one per-setting haze.
+
+**Rejected:** a sky dome or gradient, which the camera cannot see — at a 45° pitch with a 50° field
+of view the horizon is never in frame, so every pixel is ground and a sky would be drawn only where
+the ground had run out; a neutral "out of bounds" tile around every map, which reads as a border
+drawn round a board; and leaving the apron undimmed, which makes the bounds clamp an invisible wall.
+
+**Why:** what the top fifth of a portrait frame showed was the clear colour where the mesh stopped.
+Carrying the edge outward keeps a road that leaves by an exit visibly leaving, and making the haze the
+clear colour means there is no line anywhere for the eye to find.
+
+## 59. Underground is dark, and the one point light is the player's lantern there
+
+**2026-09-25 · Claude**
+
+`ZoneDefinition.setting` names what kind of place a zone is; `render3d/atmosphere.ts` says what each
+looks like. Underground dims the fill and the sun and lights the player's surroundings with the same
+point light a room is lit with.
+
+**Rejected:** torches as point lights placed from the data, which the plan proposed. Every light in
+the scene is evaluated by every lambert fragment whether it is burning or not, the throttled budget
+is measured on a phone eight times slowed, and a light count that changed with the zone would
+recompile every program on the frame the zone changed.
+
+**Why:** the room lamp and the lantern can never be wanted at once, since nothing is built
+underground, so one light is both and the scene's light count never moves. A lantern is also the
+better picture: a cave reads as a cave when the rock around the player is lit and the passage ahead
+falls off into the dark.
+
+## 60. Sound settings are kept per device, not on the character
+
+**2026-09-25 · Claude**
+
+Mute and volume live in `localStorage` under a key of their own (`audio/settings.ts`), beside the
+save rather than in `CharacterState`, and the host is the one thing that writes them.
+
+**Rejected:** a `sound` field on `CharacterState`, which would have come with a migration step and a
+save to carry it.
+
+**Why:** it is a fact about the speaker, not about the character. A character played on a phone on
+a train and on a laptop at home wants two answers, and a reset that wipes the character should not
+unmute the phone — smoke checks exactly that, muting before a reset and finding it muted after. It
+is also the version that needs no migration and cannot break a save: a setting that fails to load
+falls back to the default, where a malformed field on the save is a save with no chain to the
+current version.
+
+## 61. A moment worth hearing is a `WorldEvent`, even when the view draws it from state
+
+**2026-09-25 · Claude**
+
+`CombatDirector` pushes `{ kind: 'wind-up', by }` on the frame a creature starts winding up an
+ability. The view ignores it — the telegraph ring is drawn from `mob.windUp` every frame — and the
+sound board hears it as the warning.
+
+**Rejected:** the board reading `mob.windUp` off the world's mobs each frame, the way the view does.
+
+**Why:** a view can poll state because it redraws every frame anyway; a sound cannot, because what
+it has to know is the moment something _began_, and a poll only finds that out by keeping a copy of
+last frame's state to compare against — a second picture of the world, kept by the one consumer that
+has no other reason to hold a reference to it. The board hears the two channels and nothing else,
+which is what keeps it as swappable as the renderer. So the rule for the next sound: if the moment
+is not already on the view channel, the world pushes it there.

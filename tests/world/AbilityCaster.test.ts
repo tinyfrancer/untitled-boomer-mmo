@@ -23,8 +23,8 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-function bar(target: Mob | null = null) {
-  const kit = testContext({ classId: 'wizard' });
+function bar(target: Mob | null = null, classId: 'wizard' | 'warrior' = 'wizard') {
+  const kit = testContext({ classId });
   const killed: Mob[] = [];
   const targeting: Targeting = {
     target,
@@ -332,5 +332,38 @@ describe('what the bar draws', () => {
     player.spendMana(player.maxMana);
 
     expect(caster.states().every((state) => state.usable)).toBe(false);
+  });
+});
+
+/**
+ * What the view is told a damage ability looked like. A spell crosses the gap
+ * and a blow does not: this asked `range > 0` once, which every damage ability
+ * has, so a Power Slash threw a magic bolt a tile and a quarter.
+ */
+describe('how a damage ability is drawn', () => {
+  it('throws a bolt for a spell, and does not swing', () => {
+    const rat = ratAt(100, 0);
+    const kit = bar(rat);
+    for (let cast = 0; cast < 40 && rat.isAlive(); cast += 1) {
+      rat.hp = 1;
+      kit.player.restoreToFull();
+      kit.caster.lastCastAt.clear();
+      kit.caster.cast('fireball');
+      waitOutTheCast(kit.caster);
+    }
+    const events = kit.drain();
+    expect(events.some((event) => event.kind === 'bolt-cast')).toBe(true);
+    expect(events.some((event) => event.kind === 'swing')).toBe(false);
+  });
+
+  it('swings for a blow, at the thing it lands on, and throws nothing', () => {
+    const rat = ratAt(40, 0);
+    const kit = bar(rat, 'warrior');
+    kit.caster.cast('power-slash');
+
+    const events = kit.drain();
+    expect(events.some((event) => event.kind === 'bolt-cast')).toBe(false);
+    expect(events).toContainEqual({ kind: 'swing', by: null, toward: { x: 40, y: 0 } });
+    expect(events).toContainEqual(expect.objectContaining({ kind: 'hit', mob: rat }));
   });
 });

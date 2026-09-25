@@ -38,6 +38,8 @@ export interface TestContextOptions {
   zoneId?: ZoneId;
   /** Defaults to the whole class list; see the note in `harness.ts`. */
   learnedAbilities?: AbilityId[];
+  /** The zone's dice; `Math.random` unless a test loads them. */
+  rolls?: () => number;
 }
 
 export function testContext(options: TestContextOptions = {}): TestContext {
@@ -51,7 +53,7 @@ export function testContext(options: TestContextOptions = {}): TestContext {
   const character = new CharacterController(state);
   const input = new InputState();
   const player = new Player(0, 0, state.classId, input, state.gear, state.name, state.level);
-  const ctx = new WorldContext(character, bus, player, options.zoneId ?? 'town');
+  const ctx = new WorldContext(character, bus, player, options.zoneId ?? 'town', options.rolls);
 
   return {
     ctx,

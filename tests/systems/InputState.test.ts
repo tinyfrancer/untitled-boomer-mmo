@@ -184,6 +184,23 @@ describe('bindKeyboard', () => {
     unbind();
   });
 
+  /**
+   * Escape is the world's "drop the target" and also how a panel is closed. The
+   * HUD says it took a key by cancelling it, and the world keeps out of a key
+   * something above it already answered.
+   */
+  it('leaves alone a key something above the world already answered', () => {
+    const answer = (event: Event): void => event.preventDefault();
+    window.addEventListener('keydown', answer, true);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true }));
+    window.removeEventListener('keydown', answer, true);
+    expect(input.takeActions()).toEqual([]);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true }));
+    expect(input.takeActions()).toEqual(['clear-target']);
+    unbind();
+  });
+
   it('stops listening once unbound', () => {
     unbind();
     key('keydown', 'KeyS');

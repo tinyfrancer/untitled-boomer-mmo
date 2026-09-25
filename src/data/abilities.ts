@@ -5,8 +5,13 @@ import type { AbilityId, ClassId, CombatSkillId } from '../types/ids';
  * of optional fields so a new effect is a new case the resolver has to handle.
  */
 export type AbilityEffect =
-  // A hit for `powerMultiplier` times a normal swing.
-  | { kind: 'damage'; powerMultiplier: number }
+  /**
+   * A hit for `powerMultiplier` times a normal swing. `thrown` is whether it
+   * crosses the gap — a spell a view draws as a bolt in flight — rather than
+   * landing off the end of a blade, which is a swing. The same word enemy
+   * abilities use for the same distinction.
+   */
+  | { kind: 'damage'; powerMultiplier: number; thrown: boolean }
   // Soaks up to `amount` damage until it runs out or the timer does.
   | { kind: 'absorb'; amount: number; durationMs: number }
   /**
@@ -88,7 +93,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     castTimeMs: 1400,
     skill: 'destruction',
     baseFailureChance: 0.2,
-    effect: { kind: 'damage', powerMultiplier: 2 },
+    effect: { kind: 'damage', powerMultiplier: 2, thrown: true },
   },
   'mana-shield': {
     id: 'mana-shield',
@@ -138,7 +143,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     castTimeMs: 2400,
     skill: 'destruction',
     baseFailureChance: 0.2,
-    effect: { kind: 'damage', powerMultiplier: 3.5 },
+    effect: { kind: 'damage', powerMultiplier: 3.5, thrown: true },
   },
   'power-slash': {
     id: 'power-slash',
@@ -151,7 +156,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     range: 80,
     castTimeMs: 0,
     baseFailureChance: 0,
-    effect: { kind: 'damage', powerMultiplier: 2.2 },
+    effect: { kind: 'damage', powerMultiplier: 2.2, thrown: false },
   },
   'battle-fury': {
     id: 'battle-fury',
@@ -196,7 +201,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     baseFailureChance: 0,
     // Not a better Power Slash: 11.3x a swing a minute against its 16.5x. It is
     // the opener and the finisher, where Power Slash is what fills a fight.
-    effect: { kind: 'damage', powerMultiplier: 3.4 },
+    effect: { kind: 'damage', powerMultiplier: 3.4, thrown: false },
   },
 };
 

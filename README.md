@@ -1,13 +1,15 @@
 # Untitled Boomer MMO
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a
-learning side project. This is v1: single-player, three zones — a town with leveled rats
-and a shop, a beach with crabs and ocean fishing, and a bandit camp — plus character
-creation, leveling, gear, two-way combat, gathering and cooking, currency and a
-weight-limited pack, collection quests, slayer achievements, an AFK camping mode that
-pays out offline, and local save/load. See
+learning side project. This is v1: single-player, ten zones from a starter town to a
+level 8 barrow, two classes, three gathering skills (woodcutting, fishing, mining) and
+three making ones (cooking, smithing, leatherworking), gear and reforging, two-way combat
+with telegraphed enemy abilities, a bank, a trainer, a quest chain and a board of
+repeatable contracts, slayer achievements and titles, per-target mastery, an AFK camping
+mode that pays out offline, and local save/load. See
 [`docs/initial_design.txt`](docs/initial_design.txt) for the full long-term vision, most
-of which is deliberately not built yet.
+of which is deliberately not built yet, and [`CLAUDE.md`](CLAUDE.md) for how the code is
+shaped and why.
 
 ## Stack
 
@@ -50,22 +52,24 @@ to expose it on your local network for testing on a phone.
 
 The game is laid out for a portrait phone, and everything works with a mouse too.
 
-- **Tap or click the ground** to walk there. **WASD** also moves — W is up the screen, not
-  north, so it follows the camera.
+- **Tap or click the ground** to walk there — the walk routes round walls and buildings.
+  **WASD** also moves; W is up the screen, not north, so it follows the camera.
 - **Drag** to swing the camera around your character.
 - **Tap a creature** to target it and start auto-attacking — stay in range and it fights on
-  its own, EverQuest/WoW-style, no need to keep tapping. **Esc**, or a tap on empty ground,
-  clears your target.
-- **Tap a resource node** to gather from it, a **signpost** to travel to the next zone, and
-  the **shopkeeper** to buy, sell and pick up quests.
-- **The tab bar** along the bottom opens Char, Bag, Quests, Feats and Log, sets up Camp, and
-  the **⚙** button opens the options menu. Each has a keyboard shortcut (`c`, `i`, `q`, `v`,
-  `l`, `z`), and `1`/`2` fire the action bar.
-- **To start over**, open **⚙ → Reset Character** and confirm. (`F9` does the same thing on a
-  keyboard; the menu exists because a phone has no way to press it.)
+  its own, EverQuest/WoW-style. **Esc**, or a tap on empty ground, clears your target.
+- **Tap a tree, fishing spot or ore vein** to gather from it, a **signpost** to walk to the
+  next zone, a **forge** or **tannery** to make things, and a **person** (or the shopfront
+  they work behind) to open their counter: the shop, the bank, the trainer, the
+  quartermaster's board, and at Greyford the outfitter and the fettler.
+- **Press and hold** (or right-click) anything to ask what it is and what it drops.
+- **The tab bar** along the bottom opens Char, Bag and Quests, toggles Camp, and **Menu**
+  opens the Map, Feats, Mastery, the Combat Log and Options. Keyboard shortcuts: `c`, `i`,
+  `q`, `z`, `m`, `v`, `y`, `l`, and `1`–`4` fire the action bar.
+- **To start over**, open **Menu → Options → Reset Character** and confirm. (`F9` does the
+  same thing on a keyboard.)
 
-Progress (level, XP, class, gear, quests, kills, where you were standing) autosaves to your
-browser and persists across reloads.
+Progress (level, XP, skills, gear, the bank, quests, kills, where you were standing)
+autosaves to your browser and persists across reloads.
 
 ## Project layout
 

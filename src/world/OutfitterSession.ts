@@ -1,11 +1,8 @@
-import { NPC_CLOSE_RADIUS } from '../data/npcs';
 import { outfitterOfferFor } from '../data/outfitter';
-import { withinRadius } from '../systems/MovementSystem';
 import { tradeRefusal } from '../systems/OutfitterSystem';
 import type { ItemId } from '../types/ids';
-import { OUTFITTER_CLOSED_EVENT, OUTFITTER_OPENED_EVENT } from '../ui/uiEvents';
+import { CounterSession } from './CounterSession';
 import type { WorldContext } from './WorldContext';
-import type { WorldNpc } from './ZoneWorld';
 
 /**
  * Standing at the outfitter's counter in Greyford, where nothing costs money.
@@ -15,42 +12,9 @@ import type { WorldNpc } from './ZoneWorld';
  * than the offers themselves — because that shape is what keeps a panel in an
  * HTML overlay from ever holding the goods.
  */
-export class OutfitterSession {
-  /** The outfitter the open window belongs to; null when it is shut. */
-  npc: WorldNpc | null = null;
-
-  private readonly ctx: WorldContext;
-
+export class OutfitterSession extends CounterSession {
   constructor(ctx: WorldContext) {
-    this.ctx = ctx;
-  }
-
-  isOpen(): boolean {
-    return this.npc !== null;
-  }
-
-  open(npc: WorldNpc): void {
-    this.ctx.player.stopMoving();
-    this.npc = npc;
-    this.ctx.events.emit(OUTFITTER_OPENED_EVENT);
-  }
-
-  close(): void {
-    if (!this.npc) return;
-    this.npc = null;
-    this.ctx.events.emit(OUTFITTER_CLOSED_EVENT);
-  }
-
-  /** The UI's close button already tore the panel down; just drop the state. */
-  closedByUi(): void {
-    this.npc = null;
-  }
-
-  updateRange(): void {
-    if (!this.npc) return;
-    if (!withinRadius(this.ctx.player, this.npc, NPC_CLOSE_RADIUS)) {
-      this.close();
-    }
+    super(ctx, 'outfitter');
   }
 
   /**

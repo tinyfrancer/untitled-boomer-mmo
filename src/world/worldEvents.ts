@@ -28,6 +28,12 @@ export type WorldEvent =
   | {
       kind: 'hit';
       on: 'player' | 'mob';
+      /**
+       * Which creature it landed on, or null when it was the player. Carried so
+       * a view can make the thing that was hit flinch, which a point on the
+       * ground cannot say; required for the reason `crit` is.
+       */
+      mob: Mob | null;
       via: 'weapon' | 'ability';
       // Whether it landed hard. Required rather than optional so a new path to
       // a hit has to say, which is the same reason `absorbed` is.
@@ -36,13 +42,29 @@ export type WorldEvent =
       damage: number;
       absorbed: number;
     }
+  /**
+   * Somebody swung, whether or not it landed — `by` is the creature, or null for
+   * the player. A moment rather than a state: nothing in the world can be asked
+   * afterwards whether a mob is mid-swing, which is the whole test for this
+   * channel. `toward` is what it was aimed at, since a creature standing still
+   * to fight is still facing wherever it last walked.
+   */
+  | { kind: 'swing'; by: Mob | null; toward: Point }
+  /** The player went up a level, where they stood. */
+  | { kind: 'level-up'; at: Point }
+  /**
+   * A creature started winding up an ability. The wind-up itself is state on the
+   * mob and the view draws it from there; this is the moment it began, which a
+   * sound has to be told about because a sound cannot poll.
+   */
+  | { kind: 'wind-up'; by: Mob }
   /** A swing turned aside. `skillName` is the skill that turned it. */
   | { kind: 'defend'; at: Point; skillName: string }
   | { kind: 'heal'; at: Point; amount: number }
   | { kind: 'float'; at: Point; text: string; tone: FloatTone }
   /**
-   * The player died. Nothing here for the host to load, unlike an exit or a
-   * travel: a corpse gets up in the zone it fell in, so a death is the one
+   * The player died. Nothing here for the host to load, unlike an exit: a
+   * corpse gets up in the zone it fell in, so a death is the one
    * thing that stops everything at once without changing worlds.
    */
   | { kind: 'death'; on: 'player' }

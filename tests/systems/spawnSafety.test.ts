@@ -9,7 +9,7 @@ import type { ZoneEdge } from '../../src/types/ids';
 /**
  * Where the game puts a player down, and what is allowed to be standing there.
  *
- * `CLAUDE.md` has stated for a long time that the spawn point is safe by
+ * `CLAUDE.md` stated for a long time that the spawn point is safe by
  * construction — "it is the middle of the map, where travelling from the world
  * map already puts someone, and no zone's centre sits inside an aggro radius".
  * It was not true. Blackwater Fen shipped with a level 5 raider 71 units from

@@ -1,9 +1,15 @@
+import { SoundBoard } from '../audio/SoundBoard';
+import { loadSoundSettings, saveSoundSettings, type SoundSettings } from '../audio/settings';
 import { manualLoopRequested } from '../config/flags';
 import { bootIntoGame, showCharacterCreate, type GameHost } from '../bootFlow';
 import { hudMounted, mountHud, unmountHud } from '../hud/Hud';
 import { uiRoot } from '../hud/dom';
 import { bindKeyboard } from '../systems/InputState';
-import { CONTEXT_MENU_REQUESTED_EVENT, RESET_CHARACTER_REQUESTED_EVENT } from '../ui/uiEvents';
+import {
+  CONTEXT_MENU_REQUESTED_EVENT,
+  RESET_CHARACTER_REQUESTED_EVENT,
+  SOUND_SETTINGS_CHANGED_EVENT,
+} from '../ui/uiEvents';
 import { createEventBus } from '../world/eventBus';
 import { bindUnloadPersist, gameContext, resetGame, type GameContext } from '../world/GameContext';
 import { LONG_PRESS_MS } from '../ui/gestures';
@@ -41,15 +47,15 @@ const MANUAL_LOOP = import.meta.env.DEV && manualLoopRequested(window.location.s
  * entire AFK session in a single frame, through code written for tens of
  * milliseconds, so a raw rAF loop has to clamp it itself. 100ms is 10fps —
  * slower than any frame the game is expected to survive, and it *is* expected
- * to survive them (see the arriveRadius note in CLAUDE.md).
+ * to survive them (see the arriveRadius note in `docs/architecture/simulation.md`).
  */
 const MAX_FRAME_MS = 100;
 
 /**
  * The host: everything that has to happen around a zone without drawing it.
  *
- * It owns the frame loop, the keyboard, the pointer, the HUD mount and the
- * reset, and it hands the session's world to a `ZoneView3D`. Neither the
+ * It owns the frame loop, the keyboard, the pointer, the HUD mount, the sound
+ * and the reset, and it hands the session's world to a `ZoneView3D`. Neither the
  * `GameContext` under it nor the HUD over it knows what is drawing — which is
  * what made swapping the renderer possible, and is why host duties belong
  * here rather than leaking into either.
@@ -79,6 +85,21 @@ class ThreeHost implements GameHost {
   private resizeObserver: ResizeObserver | null = null;
   private unbindKeyboard: (() => void) | null = null;
   private unbindUnloadPersist: (() => void) | null = null;
+  // Fed the same moments the view is, so the world no more knows there is a
+  // speaker than it knows there is a screen.
+  private readonly sound = new SoundBoard(loadSoundSettings());
+
+  constructor() {
+    // For the life of the page rather than of a session: a browser will not
+    // start audio before a gesture, and the click that begins a character on
+    // the creation screen is as good a gesture as any tap on the world.
+    // Captured, so a panel that stops a press going further still counts.
+    window.addEventListener('pointerdown', this.unlockSound, true);
+    window.addEventListener('keydown', this.unlockSound, true);
+    // What the speaker should do is not the session's either: it is kept per
+    // device, and outlives a reset for the same reason.
+    this.events.on(SOUND_SETTINGS_CHANGED_EVENT, this.applySound);
+  }
 
   startZone(): void {
     const context = gameContext();
@@ -89,6 +110,8 @@ class ThreeHost implements GameHost {
 
     this.view = new ZoneView3D(uiRoot());
     this.view.build(context.currentWorld);
+    this.sound.listenTo(this.events);
+    this.sound.enter(context.currentWorld.zone.setting);
     this.publishWorld();
     if (import.meta.env.DEV) {
       this.installDebugView();
@@ -102,6 +125,7 @@ class ThreeHost implements GameHost {
         events: this.events,
         character: context.character.state,
         notifications: context.takeNotifications(),
+        sound: this.sound.settings,
       });
     }
 
@@ -274,10 +298,12 @@ class ThreeHost implements GameHost {
       // down, so there is nothing left to draw them over.
       view.teardown();
       view.build(context.currentWorld);
+      this.sound.enter(context.currentWorld.zone.setting);
       this.publishWorld();
       return;
     }
     view.draw(events);
+    this.sound.hear(events);
   }
 
   /**
@@ -307,9 +333,19 @@ class ThreeHost implements GameHost {
     this.resizeObserver = null;
     this.view?.dispose();
     this.view = null;
+    this.sound.dispose();
     this.context = null;
     this.publishWorld();
   }
+
+  private readonly unlockSound = (): void => {
+    this.sound.unlock();
+  };
+
+  private readonly applySound = (settings: SoundSettings): void => {
+    this.sound.configure(settings);
+    saveSoundSettings(this.sound.settings);
+  };
 
   private readonly resetCharacter = (): void => {
     resetGame();

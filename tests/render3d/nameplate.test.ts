@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Group, Mesh, type Object3D } from 'three';
-import { Nameplate } from '../../src/render3d/nameplate';
+import { DEFAULT_LABEL_HEIGHT, Nameplate } from '../../src/render3d/nameplate';
+import { FIELD_OF_VIEW, cameraDistance } from '../../src/render3d/camera';
+import { PLAYER_PLATE } from '../../src/render3d/actors';
 import { stubCanvas } from './canvasStub';
 
 const WIDTH = 64;
@@ -124,5 +126,31 @@ describe('the mana bar', () => {
     expect(plate.object.children.some((child) => child instanceof Group)).toBe(false);
     // A shopkeeper's plate has neither bar and must not throw for being asked.
     expect(() => new Nameplate(20, { healthBar: false }).setMana(1, 1)).not.toThrow();
+  });
+});
+
+/**
+ * What a name comes out as on the phone the game is laid out for. Held in pixels
+ * rather than world units, because a world unit is worth whatever the camera
+ * makes it: a portrait camera stands a long way back to fit ten tiles across,
+ * and the twelve units a name used to be came out five pixels tall there.
+ */
+describe('a name on a portrait phone', () => {
+  const PHONE = { width: 390, height: 844 };
+  // A baked line is the glyphs plus the room either side of them.
+  const GLYPH_FRACTION = 1 / 1.4;
+  const pixelsPerUnit = (): number => {
+    const distance = cameraDistance(PHONE.width / PHONE.height);
+    const halfFov = (FIELD_OF_VIEW * Math.PI) / 360;
+    return PHONE.height / (2 * distance * Math.tan(halfFov));
+  };
+
+  it('is at least nine pixels of glyph over a creature', () => {
+    expect(DEFAULT_LABEL_HEIGHT * GLYPH_FRACTION * pixelsPerUnit()).toBeGreaterThanOrEqual(9);
+  });
+
+  it('is at least seven over the player, whose plate is squished on purpose', () => {
+    expect(PLAYER_PLATE.labelHeight * GLYPH_FRACTION * pixelsPerUnit()).toBeGreaterThanOrEqual(7);
+    expect(PLAYER_PLATE.labelHeight).toBeLessThan(DEFAULT_LABEL_HEIGHT);
   });
 });

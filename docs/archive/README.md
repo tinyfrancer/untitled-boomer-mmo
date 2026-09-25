@@ -5,8 +5,8 @@ are the way they are, and they are **not** a description of the present: they we
 the codebase of their day, and several of them talk about the 2D Phaser renderer that PR 20 of
 `3d_port_plan.md` deleted. Where one of these disagrees with the code, the code is right.
 
-Any plan in `docs/` outside this directory is live or still to do. Today that is only
-`upgrade_plan.md`, which is blocked upstream. The `feature_N_*.txt` briefs beside it are the
+Any plan in `docs/` outside this directory is live or still to do. Today that is
+`act_three_plan.md`, which is being worked, and `upgrade_plan.md`, which is blocked upstream. The `feature_N_*.txt` briefs beside it are the
 original prompts, kept as a record rather than as a spec.
 
 | Plan                          | What it was                             | Finished   |

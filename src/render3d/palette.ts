@@ -60,6 +60,19 @@ export const PALETTE = {
   boltGlow: 0xffd54f,
   /** The ring under the current target. */
   selection: 0xffee58,
+  /**
+   * The flash off a blow that lands: white on a creature the player hit, red on
+   * the player, so which way a trade went reads without a number.
+   */
+  strikeFlash: 0xffffff,
+  hurtFlash: 0xff3b30,
+  /** A crit's sparks, a gather's chips, and the light a level goes up in. */
+  critSpark: 0xffe082,
+  woodChip: 0xa1887f,
+  splash: 0xe0f7fa,
+  levelUp: 0xffd54f,
+  /** An enemy ability winding up, drawn at the reach it lands at. */
+  telegraph: 0xff5252,
 } as const;
 
 /**

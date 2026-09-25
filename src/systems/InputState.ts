@@ -125,7 +125,9 @@ function isTextEntry(target: EventTarget | null): boolean {
 /** Wires an `InputState` to real key events. Returns the unbind. */
 export function bindKeyboard(state: InputState, target: Window): () => void {
   const onKeyDown = (event: KeyboardEvent) => {
-    if (!isTextEntry(event.target)) {
+    // A key something above the world already answered — Escape closing a
+    // panel — is not also a request of the world's.
+    if (!isTextEntry(event.target) && !event.defaultPrevented) {
       state.press(event.code);
     }
   };

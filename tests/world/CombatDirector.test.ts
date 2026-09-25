@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
 import type { CombatLogEntry } from '../../src/systems/CombatLogSystem';
 import {
@@ -12,6 +12,7 @@ import { CombatDirector } from '../../src/world/CombatDirector';
 import { Mob } from '../../src/world/Mob';
 import type { Targeting } from '../../src/world/targeting';
 import { testContext } from './context';
+import { harness } from './harness';
 
 /**
  * The cadence of a fight, with a mob placed by hand rather than wandering.
@@ -28,8 +29,8 @@ function ratAt(x: number, y: number): Mob {
   return new Mob(x, y, ENEMIES.rat, 1, () => 0.5);
 }
 
-function fight(mobs: Mob[] = [], target: Mob | null = mobs[0] ?? null) {
-  const kit = testContext();
+function fight(mobs: Mob[] = [], target: Mob | null = mobs[0] ?? null, rolls?: () => number) {
+  const kit = testContext({ rolls });
   const awarded: number[] = [];
   const targeting: Targeting = {
     target,
@@ -120,15 +121,13 @@ describe('what a corpse is worth', () => {
     expect(kit.drain().some((event) => event.kind === 'death')).toBe(true);
   });
 
-  it('leaves a drop on the corpse a full pack cannot take, and says so in the log', () => {
+  it('loses a drop a full pack cannot take, and says so in the log', () => {
     const bandit = new Mob(10, 0, ENEMIES.bandit, 1, () => 0.5);
-    const kit = fight([bandit], bandit);
+    // Loaded so the table actually rolls something to refuse.
+    const kit = fight([bandit], bandit, () => 0);
     kit.character.addItem('rat-bones', 10000);
-    // Pinned so the table actually rolls something to refuse.
-    const rng = vi.spyOn(Math, 'random').mockReturnValue(0);
 
     kit.combat.resolveKill(bandit);
-    rng.mockRestore();
 
     const lines = kit.emissions(COMBAT_LOG_EVENT).map(([entry]) => (entry as CombatLogEntry).text);
     expect(kit.emissions(INVENTORY_CHANGED_EVENT)).toHaveLength(0);
@@ -230,23 +229,20 @@ describe('what hits back', () => {
  * that lands hard. `CombatSystem.test.ts` holds the arithmetic; this holds that
  * the two paths reach it and that what comes back is announced.
  *
- * Both rolls go through `Math.random` inside the director, so the die is loaded
- * here rather than swung at until it comes up — a fight left to chance is a
- * test that passes most of the time, which is worth less than no test at all.
+ * Both rolls are the zone's dice, so they are loaded here rather than swung at
+ * until they come up — a fight left to chance is a test that passes most of the
+ * time, which is worth less than no test at all.
  */
 describe('a swing that can miss, and one that can land hard', () => {
   let rolls: number[] = [];
 
   beforeEach(() => {
     rolls = [];
-    // Every roll in order, falling back to the midpoint once the script runs
-    // out: 0.5 is under no chance in the game and over none of them either.
-    vi.spyOn(Math, 'random').mockImplementation(() => rolls.shift() ?? 0.5);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  // Every roll in order, falling back to the midpoint once the script runs out:
+  // 0.5 is under no chance in the game and over none of them either.
+  const scripted = (): number => rolls.shift() ?? 0.5;
 
   function crabAt(x: number, y: number): Mob {
     return new Mob(x, y, ENEMIES.crab, 1, () => 0.5);
@@ -259,7 +255,7 @@ describe('a swing that can miss, and one that can land hard', () => {
 
   it('lets a crab slip a swing entirely, damage and rep alike', () => {
     const crab = crabAt(10, 0);
-    const kit = fight([crab], crab);
+    const kit = fight([crab], crab, scripted);
     const before = crab.hp;
 
     // Under the crab's 15%, so the swing never reaches the damage roll.
@@ -275,7 +271,7 @@ describe('a swing that can miss, and one that can land hard', () => {
   // Nothing else in the game dodges, so the same roll lands on a rat.
   it('leaves a rat with nothing to slip', () => {
     const rat = ratAt(10, 0);
-    const kit = fight([rat], rat);
+    const kit = fight([rat], rat, scripted);
     const before = rat.hp;
 
     rolls = [0.05];
@@ -290,7 +286,7 @@ describe('a swing that can miss, and one that can land hard', () => {
   it('announces a crit as its own line and its own number', () => {
     const rat = ratAt(10, 0);
     rat.hp = 1000;
-    const kit = fight([rat], rat);
+    const kit = fight([rat], rat, scripted);
     // A capped weapon skill, which is where the 20% crit chance is.
     kit.character.state.skills['one-handed'] = { level: 50, xp: 0 };
 
@@ -307,7 +303,7 @@ describe('a swing that can miss, and one that can land hard', () => {
   it('leaves an ordinary swing ordinary', () => {
     const rat = ratAt(10, 0);
     rat.hp = 1000;
-    const kit = fight([rat], rat);
+    const kit = fight([rat], rat, scripted);
     kit.character.state.skills['one-handed'] = { level: 50, xp: 0 };
 
     // Over the crit chance this time, so the same swing lands flat.
@@ -315,5 +311,69 @@ describe('a swing that can miss, and one that can land hard', () => {
     swing(kit);
 
     expect(kit.drain()).toContainEqual(expect.objectContaining({ kind: 'hit', crit: false }));
+  });
+});
+
+/**
+ * The zone's dice are the one source of every roll, which is what lets a test
+ * about an outcome load them rather than loop until it happens. Held over the
+ * whole world rather than one collaborator: a roll left on `Math.random` is a
+ * path the loaded dice silently do not reach.
+ */
+describe('every roll in the zone is thrown with its dice', () => {
+  it('drops everything a table can drop when the dice come up zero', () => {
+    const kit = harness({ zoneId: 'bandit-camp', level: 3, rolls: () => 0 });
+    const bandit = kit.world.mobs.find((mob) => mob.definition.id === 'bandit');
+    if (!bandit) throw new Error('the bandit camp has no bandit');
+
+    const before = kit.character.state.currency;
+    bandit.takeDamage(bandit.maxHp);
+    kit.world.resolveKill(bandit);
+
+    expect(kit.character.state.currency).toBeGreaterThan(before);
+    expect(Object.keys(kit.character.state.inventory).length).toBeGreaterThan(1);
+  });
+
+  it('never drops what a table only sometimes drops when the dice come up high', () => {
+    const kit = harness({ zoneId: 'bandit-camp', level: 3, rolls: () => 0.999999 });
+    const bandit = kit.world.mobs.find((mob) => mob.definition.id === 'bandit');
+    if (!bandit) throw new Error('the bandit camp has no bandit');
+
+    const before = { ...kit.character.state.inventory };
+    bandit.takeDamage(bandit.maxHp);
+    kit.world.resolveKill(bandit);
+
+    expect(kit.character.state.inventory['hideout-key']).toBe(before['hideout-key']);
+  });
+});
+
+/**
+ * The swing is its own moment, told whether or not it lands: a slipped blow is
+ * still a blade coming down, and a view that only animated hits would stand the
+ * player still for every miss.
+ */
+describe('a swing, as the view is told it', () => {
+  it("is said for the player's every swing, landed or slipped, aimed at the target", () => {
+    const crab = new Mob(10, 0, ENEMIES.crab, 1, () => 0.5);
+    // The first roll is the crab's dodge: 0 is under its avoid chance, so it slips.
+    const kit = fight([crab], crab, () => 0);
+    kit.ctx.now += 10000;
+    kit.combat.update();
+
+    const events = kit.drain();
+    expect(events).toContainEqual({ kind: 'swing', by: null, toward: { x: 10, y: 0 } });
+    expect(events.some((event) => event.kind === 'hit')).toBe(false);
+  });
+
+  it("is said for a creature's swing, and the blow names the creature it landed on", () => {
+    const rat = new Mob(10, 0, ENEMIES.rat, 1, () => 0.5);
+    const kit = fight([rat], rat, () => 0.5);
+    rat.engage();
+    kit.ctx.now += 10000;
+    kit.combat.update();
+
+    const events = kit.drain();
+    expect(events).toContainEqual({ kind: 'swing', by: rat, toward: { x: 0, y: 0 } });
+    expect(events).toContainEqual(expect.objectContaining({ kind: 'hit', on: 'mob', mob: rat }));
   });
 });

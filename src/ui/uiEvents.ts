@@ -10,6 +10,8 @@ import type {
   TitleId,
   ZoneId,
 } from '../types/ids';
+import type { SoundSettings } from '../audio/settings';
+import type { NpcRoleId } from '../data/npcs';
 import type { StationId } from '../data/recipes';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
@@ -40,25 +42,25 @@ export const EAT_ITEM_REQUESTED_EVENT = 'eat-item-requested';
 export const COOK_REQUESTED_EVENT = 'cook-requested';
 export const LIGHT_FIRE_REQUESTED_EVENT = 'light-fire-requested';
 export const ACTIONS_CHANGED_EVENT = 'actions-changed';
-// Shop flow: ZoneWorld owns whether the shop is open (it knows about range);
-// the HUD renders the panel and forwards buy/sell taps back as requests.
-export const SHOP_OPENED_EVENT = 'shop-opened';
-export const SHOP_CLOSED_EVENT = 'shop-closed';
-// Greyford's counter, and the same three the shop has: the world says it opened
-// and shut, and the panel sends back the one row that was tapped.
-export const OUTFITTER_OPENED_EVENT = 'outfitter-opened';
-export const OUTFITTER_CLOSED_EVENT = 'outfitter-closed';
+// Every counter, whoever stands behind it. The world owns whether one is open
+// (it knows about range) and says so with the role; the HUD puts up that role's
+// panel and forwards the rows tapped back as requests. A close button sends the
+// same closed event the other way, which is the world's cue to drop its state.
+//
+// One pair for six counters, where there used to be a pair each: the payload is
+// the role, so a seventh is a row in the tables keyed by it rather than two more
+// constants, two more listeners on each side, and a line somebody forgets.
+export const COUNTER_OPENED_EVENT = 'counter-opened';
+export const COUNTER_CLOSED_EVENT = 'counter-closed';
+// Greyford's outfitter: the panel sends back the one row that was tapped.
 export const TRADE_REQUESTED_EVENT = 'trade-requested';
 export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
 // Carries how many, so emptying a stack is the same request as parting with one
 // of it rather than a second rule about vendoring.
 export const SELL_ITEM_REQUESTED_EVENT = 'sell-item-requested';
-// The bank, which is the shop's shape a second time: the world owns whether the
-// counter is open (it knows about range), the HUD draws a copy of what is on the
-// shelves, and a row tapped comes back as a bare item id and a count. Nothing in
-// an HTML overlay ever holds the vault itself.
-export const BANK_OPENED_EVENT = 'bank-opened';
-export const BANK_CLOSED_EVENT = 'bank-closed';
+// The bank: the HUD draws a copy of what is on the shelves, and a row tapped
+// comes back as a bare item id and a count. Nothing in an HTML overlay ever holds
+// the vault itself.
 export const DEPOSIT_ITEM_REQUESTED_EVENT = 'deposit-item-requested';
 export const WITHDRAW_ITEM_REQUESTED_EVENT = 'withdraw-item-requested';
 export const BUY_BANK_SLOT_REQUESTED_EVENT = 'buy-bank-slot-requested';
@@ -66,11 +68,8 @@ export const BUY_BANK_SLOT_REQUESTED_EVENT = 'buy-bank-slot-requested';
 // either moves. One event rather than two because the panel draws them
 // together: a slot count with nothing to put in it says nothing.
 export const BANK_CHANGED_EVENT = 'bank-changed';
-// The trainer, which is the same shape a third time — the world owns whether
-// the counter is open, the panel is handed a copy of the syllabus, and a row
-// tapped comes back as a bare ability id.
-export const TRAINER_OPENED_EVENT = 'trainer-opened';
-export const TRAINER_CLOSED_EVENT = 'trainer-closed';
+// The trainer: the panel is handed a copy of the syllabus, and a row tapped
+// comes back as a bare ability id.
 export const LEARN_ABILITY_REQUESTED_EVENT = 'learn-ability-requested';
 // What has been bought, whole, each time it grows. The bar is rebuilt from it
 // rather than told which button to add, so a lesson landing with the panel open
@@ -78,13 +77,10 @@ export const LEARN_ABILITY_REQUESTED_EVENT = 'learn-ability-requested';
 // the HUD that listens exists — the HUD reads its opening set off the character
 // it is constructed with.
 export const LEARNED_ABILITIES_CHANGED_EVENT = 'learned-abilities-changed';
-// The bounty board, which is the counter shape a fourth time. What is different
-// is on the wire rather than in the shape: the board's own contents are a pure
-// function of the tables and the level, so nothing publishes them — the only
-// thing that travels is the one contract in hand, and the panel derives every
-// row from that plus what the HUD already holds.
-export const BOUNTY_OPENED_EVENT = 'bounty-opened';
-export const BOUNTY_CLOSED_EVENT = 'bounty-closed';
+// The bounty board. The board's own contents are a pure function of the tables
+// and the level, so nothing publishes them — the only thing that travels is the
+// one contract in hand, and the panel derives every row from that plus what the
+// HUD already holds.
 export const ACCEPT_BOUNTY_REQUESTED_EVENT = 'accept-bounty-requested';
 export const TURN_IN_BOUNTY_REQUESTED_EVENT = 'turn-in-bounty-requested';
 // Giving one back, which the one-at-a-time rule makes a real button rather than
@@ -109,11 +105,9 @@ export const STATION_OPENED_EVENT = 'station-opened';
 // argument saying where the player is standing.
 export const CRAFT_REQUESTED_EVENT = 'craft-requested';
 export const CURRENCY_CHANGED_EVENT = 'currency-changed';
-// The reforger's counter at Greyford, which is the shop's twin down to the
-// ask/decide split: the panel is handed a description and sends back a bare item
-// id, so a list left open after the piece was banked resolves to nothing.
-export const REFORGE_OPENED_EVENT = 'reforge-opened';
-export const REFORGE_CLOSED_EVENT = 'reforge-closed';
+// The reforger's counter at Greyford: the panel is handed a description and
+// sends back a bare item id, so a list left open after the piece was banked
+// resolves to nothing.
 export const REFORGE_REQUESTED_EVENT = 'reforge-requested';
 /**
  * What has been reworked, whole, each time it changes.
@@ -150,6 +144,11 @@ export const COMBAT_LOG_EVENT = 'combat-log';
 export const NOTICE_EVENT = 'notice';
 // Asked for by the options menu; the host owns the session, so it does the work.
 export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
+// What the player chose in the options menu about the speaker. Carried as the
+// whole setting rather than as a toggle so the latest one describes the present,
+// like everything else on this channel: the host applies and keeps it, and the
+// HUD redraws the menu from it.
+export const SOUND_SETTINGS_CHANGED_EVENT = 'sound-settings-changed';
 // AFK camping. The HUD asks for the toggle; ZoneWorld owns whether it is on,
 // since anything in the world can turn it back off, and reports the answer.
 export const AFK_TOGGLE_REQUESTED_EVENT = 'afk-toggle-requested';
@@ -380,25 +379,17 @@ export interface UiEventMap {
   [COOK_REQUESTED_EVENT]: [itemId: ItemId];
   [LIGHT_FIRE_REQUESTED_EVENT]: [];
   [ACTIONS_CHANGED_EVENT]: [actions: AvailableActions];
-  [SHOP_OPENED_EVENT]: [];
-  [SHOP_CLOSED_EVENT]: [];
-  [OUTFITTER_OPENED_EVENT]: [];
-  [OUTFITTER_CLOSED_EVENT]: [];
+  [COUNTER_OPENED_EVENT]: [role: NpcRoleId];
+  [COUNTER_CLOSED_EVENT]: [role: NpcRoleId];
   [TRADE_REQUESTED_EVENT]: [itemId: ItemId];
   [BUY_ITEM_REQUESTED_EVENT]: [itemId: ItemId];
   [SELL_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
-  [BANK_OPENED_EVENT]: [];
-  [BANK_CLOSED_EVENT]: [];
   [DEPOSIT_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [WITHDRAW_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [BUY_BANK_SLOT_REQUESTED_EVENT]: [];
   [BANK_CHANGED_EVENT]: [vault: BankState];
-  [TRAINER_OPENED_EVENT]: [];
-  [TRAINER_CLOSED_EVENT]: [];
   [LEARN_ABILITY_REQUESTED_EVENT]: [abilityId: AbilityId];
   [LEARNED_ABILITIES_CHANGED_EVENT]: [abilityIds: AbilityId[]];
-  [BOUNTY_OPENED_EVENT]: [];
-  [BOUNTY_CLOSED_EVENT]: [];
   [ACCEPT_BOUNTY_REQUESTED_EVENT]: [bountyId: BountyId];
   [TURN_IN_BOUNTY_REQUESTED_EVENT]: [bountyId: BountyId];
   [ABANDON_BOUNTY_REQUESTED_EVENT]: [];
@@ -406,8 +397,6 @@ export interface UiEventMap {
   [STATION_OPENED_EVENT]: [stationId: StationId];
   [CRAFT_REQUESTED_EVENT]: [recipeId: RecipeId];
   [CURRENCY_CHANGED_EVENT]: [totalCopper: number];
-  [REFORGE_OPENED_EVENT]: [];
-  [REFORGE_CLOSED_EVENT]: [];
   [REFORGE_REQUESTED_EVENT]: [itemId: ItemId];
   [REFORGES_CHANGED_EVENT]: [reforges: Reforges];
   [ACCEPT_QUEST_REQUESTED_EVENT]: [questId: QuestId];
@@ -420,6 +409,7 @@ export interface UiEventMap {
   [COMBAT_LOG_EVENT]: [entry: CombatLogEntry];
   [NOTICE_EVENT]: [message: string];
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
+  [SOUND_SETTINGS_CHANGED_EVENT]: [settings: SoundSettings];
   [AFK_TOGGLE_REQUESTED_EVENT]: [];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];

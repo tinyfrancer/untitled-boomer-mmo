@@ -5,9 +5,11 @@ import {
   PCFSoftShadowMap,
   PerspectiveCamera,
   Scene,
+  Vector3,
   WebGLRenderer,
   type Mesh,
 } from 'three';
+import { TILE_SIZE } from '../config/constants';
 import {
   BuildingActor,
   CampfireActor,
@@ -20,11 +22,16 @@ import {
   type Actor,
 } from './actors';
 import { occupant } from '../data/buildings';
+import { ATMOSPHERES, atmosphereFor, type Atmosphere } from './atmosphere';
 import { createCamera, fogRange, frameCamera, projectToScreen, resizeCamera } from './camera';
 import { simToWorld } from './coords';
 import { disposeTree } from './dispose';
 import { FxLayer } from './fx';
-import { buildGround } from './ground';
+import { APRON_TILES, buildGround } from './ground';
+import { GatherBeat } from '../ui/gatherBeat';
+import { buildScatter } from './scatter';
+import { WATER_TIME, buildWaterSheen } from './water';
+import { buildingRect } from '../data/buildings';
 import { RoomLight, Sunlight, type RoomLamp } from './lights';
 import { applyOcclusion, type Occluder } from './occlusion';
 import { normalizeYaw } from './orbit';
@@ -32,14 +39,20 @@ import { pickTap, pointerRay } from './picking';
 import { SelectionRing } from './selection';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import type { WorldEvent } from '../world/worldEvents';
+import type { Mob } from '../world/Mob';
 import type { DrawnCounts } from '../types/debugView';
 
-/** Dark enough that the world edge reads as sky rather than as a hole. */
-const BACKGROUND = 0x1a1a2e;
+/**
+ * The lantern the player carries underground: warm, head high, and reaching
+ * far enough to light the width of a passage and a little of what is down it.
+ */
+const LANTERN_COLOR = 0xffc98a;
+const LANTERN_HEIGHT = TILE_SIZE * 1.4;
+const LANTERN_REACH = TILE_SIZE * 7;
 
 /**
  * The Three.js view onto one ZoneWorld: a renderer, a scene, a camera that
- * follows the player, and — for now — the ground under them.
+ * follows the player, the ground, and one actor per simulated thing.
  *
  * The split between what is built once and what is built per zone is the whole
  * point of this class. The renderer, the camera and the lights belong to the
@@ -57,8 +70,17 @@ export class ZoneView3D {
   private readonly camera: PerspectiveCamera = createCamera();
   private world: ZoneWorld | null = null;
   private ground: Mesh | null = null;
+  // The zone's two layers of dressing over the ground: light moving on its
+  // water, and what is strewn over the rest. Both the zone's, so both go with it.
+  private water: Mesh | null = null;
+  private scatter: Object3D | null = null;
   private player: PlayerActor | null = null;
   private mobActors: MobActor[] = [];
+  // Who draws each mob, for the moments that name one: a swing it made, a blow
+  // it took. Built with the actors and dropped with them.
+  private mobActorOf = new Map<Mob, MobActor>();
+  // Where a gather's strokes fall, found in the progress it reports each tick.
+  private readonly gatherBeat = new GatherBeat();
   private nodeActors: NodeActor[] = [];
   private npcActors: NpcActor[] = [];
   private signpostActors: SignpostActor[] = [];
@@ -87,7 +109,12 @@ export class ZoneView3D {
   // Distance-hazed toward the background, so the edge of the world reads as far
   // away rather than as the line where the ground mesh stops. Its range is a
   // function of how far back the camera stands, so it is set on every resize.
-  private readonly fog = new Fog(BACKGROUND);
+  private readonly fog = new Fog(ATMOSPHERES.open.haze);
+  // The air of the zone being drawn, and the lantern it may ask for — a lamp
+  // whose point is moved rather than rebuilt, since it follows the player
+  // every frame.
+  private atmosphere: Atmosphere = ATMOSPHERES.open;
+  private readonly lanternAt = new Vector3();
   // Where the camera stands around the player. Owned here rather than by the
   // host because it outlives a zone — a player who has turned the camera to see
   // past a tree does not expect it snapped back north by walking through a
@@ -126,7 +153,9 @@ export class ZoneView3D {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
 
-    this.scene.background = new Color(BACKGROUND);
+    // One colour with the fog, on purpose: the far ground fades into it and
+    // whatever the ground does not cover is it, so the world has no edge.
+    this.scene.background = new Color(ATMOSPHERES.open.haze);
     this.scene.fog = this.fog;
     this.scene.add(
       ...this.sunlight.objects,
@@ -142,11 +171,21 @@ export class ZoneView3D {
     this.world = world;
     this.ground = buildGround(world.zone.map);
     this.scene.add(this.ground);
+    this.water = buildWaterSheen(world.zone.map, APRON_TILES);
+    if (this.water) this.scene.add(this.water);
+    // Nothing strewn on a building's floor, which it would otherwise grow through.
+    const floors = world.buildings.map(buildingRect);
+    this.scatter = buildScatter(world.zone.map, (x, y) =>
+      floors.some((rect) => x > rect.left && x < rect.right && y > rect.top && y < rect.bottom),
+    );
+    this.scene.add(this.scatter);
     this.sunlight.frameZone(world.worldWidth, world.worldHeight);
+    this.breathe(atmosphereFor(world.zone.setting));
 
     this.labelledLevel = world.character.state.level;
     this.player = new PlayerActor(world.player);
     this.mobActors = world.mobs.map((mob) => new MobActor(mob, this.labelledLevel));
+    this.mobActorOf = new Map(this.mobActors.map((actor) => [actor.mob, actor]));
     this.nodeActors = world.nodes.map((node) => new NodeActor(node));
     this.npcActors = world.npcs.map((npc) => new NpcActor(npc));
     this.signpostActors = world.signposts.map((signpost) => new SignpostActor(signpost));
@@ -177,6 +216,14 @@ export class ZoneView3D {
       disposeTree(this.ground);
       this.ground = null;
     }
+    if (this.water) {
+      disposeTree(this.water);
+      this.water = null;
+    }
+    if (this.scatter) {
+      disposeTree(this.scatter);
+      this.scatter = null;
+    }
     // A number rising off a rat in town has nowhere to land on the beach, and
     // the ring is under a mob that no longer exists.
     this.fx.clear();
@@ -188,6 +235,8 @@ export class ZoneView3D {
     this.actors().forEach((actor) => actor.dispose());
     this.player = null;
     this.mobActors = [];
+    this.mobActorOf = new Map();
+    this.gatherBeat.reset();
     this.nodeActors = [];
     this.npcActors = [];
     this.signpostActors = [];
@@ -237,7 +286,41 @@ export class ZoneView3D {
    * not handed one has no way to know it happened.
    */
   draw(events: readonly WorldEvent[]): void {
-    events.forEach((event) => this.fx.draw(event));
+    const now = performance.now() - this.startedAt;
+    events.forEach((event) => {
+      this.fx.draw(event);
+      this.react(event, now);
+    });
+  }
+
+  /**
+   * The moments that belong to somebody rather than to a spot: a swing is played
+   * by whoever swung, a blow that got through flashes whoever took it, and a
+   * gather's beat is the player's tool coming down and the chips it knocks off.
+   */
+  private react(event: WorldEvent, now: number): void {
+    switch (event.kind) {
+      case 'swing': {
+        const actor = event.by ? this.mobActorOf.get(event.by) : this.player;
+        actor?.swing(event.toward, now);
+        return;
+      }
+      case 'hit':
+        if (event.mob) {
+          this.mobActorOf.get(event.mob)?.struck(now);
+        } else if (event.damage > event.absorbed) {
+          this.player?.struck(now);
+        }
+        return;
+      case 'gather-tick': {
+        if (!this.gatherBeat.beat(event.progress)) return;
+        this.player?.swing(event.at, now);
+        this.fx.gatherChips(event.at, event.nodeId);
+        return;
+      }
+      default:
+        return;
+    }
   }
 
   /** Turns the camera around the player — the drag, in radians. */
@@ -262,6 +345,7 @@ export class ZoneView3D {
     const world = this.world;
     if (!world) return;
     const elapsedMs = performance.now() - this.startedAt;
+    WATER_TIME.value = elapsedMs / 1000;
 
     // Levelling recolours every enemy name at once, since the shades are
     // relative to the player rather than fixed.
@@ -282,10 +366,6 @@ export class ZoneView3D {
     this.selection.follow(world.target);
     this.fx.update(elapsedMs);
 
-    // Whatever the camera has ended up behind — the trees and the buildings.
-    // Only the props are asked: a rat standing in front of the player is not
-    // something they need to see past, and fading creatures would fight the
-    // death fade for the same materials.
     // The room the player is standing in, if they are standing in one. Before
     // the fade rather than after it, because a building being cut away is what
     // decides whether it may also be faded.
@@ -294,6 +374,10 @@ export class ZoneView3D {
     // off leaves a room standing in full sun, and the lamp is what still tells
     // it from the grass outside.
     this.roomLight.shine(this.roomLamp());
+    // Whatever the camera has ended up behind — the trees and the buildings.
+    // Only the props are asked: a rat standing in front of the player is not
+    // something they need to see past, and fading creatures would fight the
+    // death fade for the same materials.
     applyOcclusion(this.camera.position, world.player, this.occluders);
 
     // Billboards last, against the camera this frame is about to be drawn with.
@@ -303,8 +387,21 @@ export class ZoneView3D {
     this.signpostActors.forEach((actor) => actor.faceCamera(this.camera));
   }
 
+  /** The air of a zone: the haze, the fill, the sun, and whether there is a lantern. */
+  private breathe(atmosphere: Atmosphere): void {
+    this.atmosphere = atmosphere;
+    this.fog.color.setHex(atmosphere.haze);
+    (this.scene.background as Color).setHex(atmosphere.haze);
+    this.sunlight.breathe(atmosphere);
+  }
+
   /**
-   * The room the player is standing in, or `null` for one who is outdoors.
+   * What the one point light is lighting: the room the player is standing in,
+   * the lantern they carry underground, or nothing.
+   *
+   * The two cannot both be wanted — nothing is built underground — which is
+   * what lets one light be both and keeps the scene's light count, and so
+   * every compiled program, the same in every zone.
    *
    * A loop rather than a `find` over `map`, because this runs every frame and
    * an array per frame for a list that answers `null` almost always is an
@@ -315,7 +412,17 @@ export class ZoneView3D {
       const lamp = actor.roomLamp();
       if (lamp) return lamp;
     }
-    return null;
+    const player = this.world?.player;
+    if (!player || this.atmosphere.lantern <= 0) return null;
+    // Set in place rather than built by `simToWorld`, whose axes it follows:
+    // this runs every frame for as long as the player is underground.
+    this.lanternAt.set(player.x, LANTERN_HEIGHT, player.y);
+    return {
+      at: this.lanternAt,
+      color: LANTERN_COLOR,
+      reach: LANTERN_REACH,
+      intensity: this.atmosphere.lantern,
+    };
   }
 
   // A campfire is the one thing that appears and goes out mid-zone, so it is

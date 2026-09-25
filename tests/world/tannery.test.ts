@@ -113,9 +113,10 @@ describe('the vat', () => {
   });
 
   /**
-   * A bad roll keeps the hide. Tanned in a loop rather than once, because the
-   * roll is `Math.random` and a single swing asserting a failure would be a test
-   * that passes for the wrong reason most runs.
+   * A bad roll keeps the hide. Tanned in a loop with the dice left unloaded,
+   * because what is held here is a relationship over however the rolls fell —
+   * a single swing asserting a failure would pass for the wrong reason most
+   * runs.
    *
    * The forge's twin of this asserts flat conservation — ore plus bars always
    * adds back to twenty — and that is only true there by accident of the rate: a
