@@ -1167,3 +1167,68 @@ last frame's state to compare against — a second picture of the world, kept by
 has no other reason to hold a reference to it. The board hears the two channels and nothing else,
 which is what keeps it as swappable as the renderer. So the rule for the next sound: if the moment
 is not already on the view channel, the world pushes it there.
+
+## 62. A camp leaves no loot pile; only an attended player gets one
+
+**2026-09-25 · the user, asked by Claude**
+
+A kill whose drops do not fit leaves a pile (phase 10) only when nobody is camping. A camp keeps
+doing what it does now: offline, a refusal is counted into the away report's `missed`; awake, it is
+the log line per refused drop and the one full-pack warning.
+
+**Rejected:** a pile under an awake camp as well, which the plan left unsaid.
+
+**Why:** a pile is something to come back for, and a camp is the case where nobody is there to. Piles
+under an unattended camp would accumulate for as long as it ran.
+
+## 63. A loot pile lasts one minute, each kill leaves its own, and it outlives a death
+
+**2026-09-25 · the user, asked by Claude**
+
+A pile is gone one minute of game time after it drops. A second kill's refusals make a second pile
+rather than joining one nearby. A death does not clear piles — the respawn is in the same zone — so
+only a zone change or a teardown drops one early.
+
+**Rejected:** "a few minutes", the plan's figure; merging refusals into a pile already on the
+ground nearby; clearing piles on a death.
+
+**What it means:** every map is 25×19 tiles, so a minute is time to make room and pick a pile up, or
+to walk back to it from the respawn point, and not time to go to town and sell first.
+
+## 64. The bow shoots arrows: spent, quivered, bought first and made later
+
+**2026-09-25 · the user, asked by Claude**
+
+The bow needs ammunition, and every question about it was put to the user:
+
+- **An arrow is spent on every shot.** With none left, the archer fights with their fists.
+- **Arrows ride in a quiver in the offhand**, which the bow leaves free by taking both hands. **The
+  quiver is an item with stats of its own**, replaced by a better one as the character levels, the
+  way armour is.
+- **The first arrows are bought**, from a shop, and **humanoid creatures drop them**.
+- **Bows and arrows each carry their own stats, and both change a shot's damage** — which arrow is
+  nocked matters, not only which bow.
+- **They are made by fletching and smithing** together: fletching for the wood, smithing for the
+  metal. **One log makes several shafts, and one iron bar several heads.**
+- **An arrow weighs well under 1**, so a character can carry a good many.
+
+**Rejected:** a bow with no ammunition, which is what the plan described by not mentioning any; a
+bow that refuses to fire when the quiver is empty; arrows carried in the bag and spent from the
+stack; arrows equipped straight into the offhand as a stack, with the quiver only a picture; arrows
+that differ in nothing but name; a fletching bench in town so a level 1 archer could make their
+own; and a recipe's one output per input, which is all the game has had.
+
+## 65. A third class, the ranger, whose weapon is the bow and whose stat is agility
+
+**2026-09-25 · the user**
+
+A ranger joins the warrior and the wizard. The bow is its weapon, and its damage scales with a new
+third stat, **agility**. Beyond that, **agility adds physical crit chance, and for now nothing
+else** — left open for later iterations, so a future use of it is an addition rather than a
+reversal. A warrior can still draw a bow, but it is not meant to be a good idea. This reverses the
+part of decision 55 that rejected a third class for act three; 55 stands as written, since this
+file is appended rather than edited.
+
+**Rejected:** the plan's bow for the warrior, as the only use of a bow; a bow only the ranger may
+hold; scaling the ranger off strength or intellect, the two stats that exist; dodge, or anything
+else, as a second use of agility for now; and "hunter" as its name.
