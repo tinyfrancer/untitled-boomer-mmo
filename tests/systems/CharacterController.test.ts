@@ -286,7 +286,11 @@ describe('CharacterController quests', () => {
       giverNpcId: 'shopkeeper',
       description: '',
       objective: { kind: 'collect', itemId: 'raw-fish', quantity: 1 },
-      reward: { copper: 50, xp: 10, gear: { warrior: 'brown-chestplate', wizard: 'brown-robe' } },
+      reward: {
+        copper: 50,
+        xp: 10,
+        gear: { warrior: 'brown-chestplate', wizard: 'brown-robe', ranger: 'brown-chestplate' },
+      },
     };
     try {
       const character = makeController();

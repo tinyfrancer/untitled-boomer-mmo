@@ -221,7 +221,11 @@ describe('what it pays', () => {
    * and a caster has therefore been carrying a level 1 orb for the whole climb.
    */
   it('fills the off hand rather than adding a fifth armour set', () => {
-    const drops = LOOT_TABLES['barrow-wight'].entries.map((entry) => ITEMS[entry.itemId]);
+    // The handful of arrows every humanoid carries is a rule of its own, held
+    // over every table in `EnemySystem.test.ts`, and is not gear.
+    const drops = LOOT_TABLES['barrow-wight'].entries
+      .map((entry) => ITEMS[entry.itemId])
+      .filter((item) => item.kind !== 'ammunition');
     expect(drops).not.toHaveLength(0);
 
     drops.forEach((item) => {

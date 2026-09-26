@@ -4,12 +4,13 @@ import type { ReforgeId } from '../types/ids';
 /**
  * What a reforge may move power between.
  *
- * The five bonuses an equipment row can carry, named here rather than imported
+ * The six bonuses an equipment row can carry, named here rather than imported
  * off `EquipmentBonuses` so this table stays a plain data file: `data/` never
  * reaches into `systems/`, and the arithmetic that applies one of these lives in
  * `systems/ReforgeSystem.ts` where it can.
  */
-export type ReforgeStatId = 'health' | 'strength' | 'intellect' | 'attackPower' | 'armor';
+export type ReforgeStatId =
+  'health' | 'strength' | 'intellect' | 'agility' | 'attackPower' | 'armor';
 
 /**
  * What a point of each stat is worth against a point of any other.
@@ -24,14 +25,15 @@ export type ReforgeStatId = 'health' | 'strength' | 'intellect' | 'attackPower' 
  * `mitigatedDamage`'s curve and a point of it near the top of the game is worth
  * a fraction of a point near the bottom. Health is armour's twin at these
  * numbers — a rat hits for 3, so three health and three armour both buy about
- * one more blow. Strength and intellect sit between: each buys a stat *and*
- * something else (carrying capacity, a mana pool), which is worth something but
- * not a swing.
+ * one more blow. Strength, intellect and agility sit between: each buys a stat
+ * *and* something else (carrying capacity, a mana pool, a chance to land hard),
+ * which is worth something but not a swing.
  */
 export const STAT_WEIGHTS: Record<ReforgeStatId, number> = {
   attackPower: 3,
   strength: 2,
   intellect: 2,
+  agility: 2,
   armor: 1,
   health: 1,
 };
@@ -48,7 +50,7 @@ export interface ReforgeDefinition {
 }
 
 /**
- * The five, and why there are exactly five.
+ * The six, and why there are exactly six.
  *
  * Each names a stat to take from and a stat to give to, and the exchange is
  * whole points at `STAT_WEIGHTS` par — so no reforge is better than another and
@@ -58,8 +60,9 @@ export interface ReforgeDefinition {
  *
  * They are deliberately not symmetrical opposites of each other. Every one has
  * to be worth *somebody's* while: `keen` and `bulwark` are the warrior's two
- * directions, `arcane` and `hale` are the caster's, and `brawn` is the one
- * anybody takes, since a bigger pack is worth the same to both.
+ * directions, `arcane` and `hale` are the caster's, `nimble` is the ranger's,
+ * and `brawn` is the one anybody takes, since a bigger pack is worth the same
+ * to all three.
  */
 export const REFORGES: Record<ReforgeId, ReforgeDefinition> = {
   // Armour into damage. The one that turns a plate set into something that
@@ -79,11 +82,21 @@ export const REFORGES: Record<ReforgeId, ReforgeDefinition> = {
   // Health into strength, so a pack holds more. The one trade that buys
   // something outside a fight, and the one both classes want the same amount.
   brawn: { id: 'brawn', name: 'Brawn', from: 'health', to: 'strength', take: 2, give: 1 },
+  // Armour into agility, which is `arcane` for the third class: a ranger taking
+  // the leather further in the direction a bow already went.
+  nimble: { id: 'nimble', name: 'Nimble', from: 'armor', to: 'agility', take: 2, give: 1 },
 };
 
 // Every reforge there is, for the roll that has to pick among them and for the
 // sweeps that have to check all of them.
-export const REFORGE_IDS = exhaustive<ReforgeId>()(['keen', 'bulwark', 'arcane', 'hale', 'brawn']);
+export const REFORGE_IDS = exhaustive<ReforgeId>()([
+  'keen',
+  'bulwark',
+  'arcane',
+  'hale',
+  'brawn',
+  'nimble',
+]);
 
 /**
  * What the counter wants for one, beside the piece fed into it.

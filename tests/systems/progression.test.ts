@@ -14,6 +14,10 @@ import { addXp, type LevelState } from '../../src/systems/LevelingSystem';
 import { addSkillXp, createInitialSkills, skillLevel } from '../../src/systems/SkillSystem';
 import { failureChance } from '../../src/systems/CraftingSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
+import { computeEffectiveStats } from '../../src/systems/StatsSystem';
+import { canEquip } from '../../src/systems/EquipSystem';
+import { CLASSES } from '../../src/data/classes';
+import { SHOP_STOCK } from '../../src/data/shop';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { xpToReachLevel } from '../../src/data/xpTable';
 import { ZONES } from '../../src/data/zones';
@@ -218,6 +222,66 @@ describe('the starter arc', () => {
     expect(arc.fishCooked).toBeGreaterThan(0);
     // Reaching the gate should be a detour, not a second grind.
     expect(arc.fishCooked).toBeLessThan(30);
+  });
+});
+
+/**
+ * The ranger walks the arc the warrior does — it wears the same leather, and
+ * the quests hand it the same pieces — and pays for it in a coin the warrior
+ * never spends: an arrow a shot. What this holds is that the arc pays for its
+ * own arrows with room to spare, so the bow is a different fight rather than a
+ * tax on one.
+ *
+ * Priced at level 1 throughout, which is the most a kill ever costs: a shot
+ * only gets harder as the arc levels the ranger, so the real bill is smaller.
+ */
+describe("the ranger's arc", () => {
+  const arc = intendedArc();
+  const QUIVERED = {
+    helmet: null,
+    chest: null,
+    pants: null,
+    weapon: 'shortbow',
+    offhand: 'worn-quiver',
+  } as const;
+  const shot = computeEffectiveStats('ranger', QUIVERED, 1, {}, 'crude-arrows').attackPower;
+  const shotsFor = (spawns: MobSpawnPoint[], enemyId: EnemyId): number =>
+    spawns.reduce(
+      (total, spawn) =>
+        total + Math.ceil(scaleEnemyStats(ENEMIES[enemyId], spawn.level).maxHp / shot),
+      0,
+    ) / spawns.length;
+
+  it('wears everything the arc hands out', () => {
+    Object.values(QUESTS).forEach((quest) => {
+      const piece = quest.reward.gear?.ranger;
+      if (piece) expect(canEquip(piece, 'ranger').ok, `${quest.id} pays ${piece}`).toBe(true);
+    });
+  });
+
+  it('pays for every arrow it shoots out of well under half the coin it earns', () => {
+    const shotAtArc =
+      arc.ratKills * shotsFor(TOWN_MOB_SPAWNS, 'rat') +
+      arc.crabKills * shotsFor(BEACH_MOB_SPAWNS, 'crab') +
+      arc.banditKills * shotsFor(BANDIT_CAMP_MOB_SPAWNS, 'bandit');
+
+    const handful = LOOT_TABLES.bandit.entries.find((entry) => entry.itemId === 'crude-arrows');
+    const perHandful = handful?.quantity ? (handful.quantity.min + handful.quantity.max) / 2 : 1;
+    const pickedUp = arc.banditKills * (handful?.chance ?? 0) * perHandful;
+    const started = CLASSES.ranger.startingArrows?.count ?? 0;
+    const bought = Math.max(0, shotAtArc - started - pickedUp);
+
+    const shelf = SHOP_STOCK.find((entry) => entry.itemId === 'crude-arrows');
+    if (!shelf) throw new Error('the shop sells no arrows');
+    const cost = bought * (shelf.price / (shelf.quantity ?? 1));
+
+    const purse = LOOT_TABLES.bandit.currency;
+    const coin =
+      arc.quests.reduce((total, questId) => total + QUESTS[questId].reward.copper, 0) +
+      arc.banditKills * (purse ? (purse.chance * (purse.min + purse.max)) / 2 : 0);
+
+    expect(bought).toBeGreaterThan(0);
+    expect(cost / coin).toBeLessThan(0.45);
   });
 });
 

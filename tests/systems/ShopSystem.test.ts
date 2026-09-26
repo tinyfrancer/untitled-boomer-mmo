@@ -116,7 +116,9 @@ describe('the stock', () => {
     SHOP_STOCK.forEach((row) => {
       const value = itemValue(row.itemId) ?? 0;
       expect(value, `${row.itemId} has no sell value`).toBeGreaterThan(0);
-      expect(row.price, `${row.itemId} at ${row.price}`).toBeGreaterThan(value);
+      // A bundle is priced as a whole and sold back one at a time.
+      const bundle = row.quantity ?? 1;
+      expect(row.price, `${row.itemId} at ${row.price}`).toBeGreaterThan(value * bundle);
     });
   });
 

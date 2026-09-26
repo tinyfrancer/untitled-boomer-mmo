@@ -3,6 +3,24 @@ import type { ItemId, LootTableId } from '../types/ids';
 export interface LootTableEntry {
   itemId: ItemId;
   chance: number;
+  /**
+   * How many drop when it does, rolled evenly between the two; absent is one.
+   * Arrows are the only thing that comes by the handful, since one is spent a
+   * shot and a pocketful of them is what a body is carrying.
+   */
+  quantity?: { min: number; max: number };
+}
+
+/**
+ * The handful every humanoid carries, since anything with pockets and a fight
+ * in it has a few arrows about it (decision 64). One row for all of them rather
+ * than one written into each table, so the rate is one number and the rule is
+ * one test: `tests/systems/EnemySystem.test.ts` fails any humanoid that is not a
+ * boss and carries none. The count rises with the band, because so does what a
+ * creature there takes to kill.
+ */
+function arrows(min: number, max: number): LootTableEntry {
+  return { itemId: 'crude-arrows', chance: 0.5, quantity: { min, max } };
 }
 
 export interface CurrencyDrop {
@@ -49,6 +67,9 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       // slot nobody fills.
       { itemId: 'brown-shield', chance: 0.06 },
       { itemId: 'apprentice-orb', chance: 0.06 },
+      // The ranger's first step up, at the axe's rate beside it.
+      { itemId: 'hunting-bow', chance: 0.04 },
+      arrows(2, 6),
       // The way into the hideout, and the rarest thing on the table by a
       // distance: it is meant to be a run of bandits rather than an errand.
       { itemId: 'hideout-key', chance: 0.03 },
@@ -73,9 +94,12 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'studded-helmet', chance: 0.06 },
       { itemId: 'studded-jerkin', chance: 0.05 },
       { itemId: 'studded-legs', chance: 0.055 },
+      // Cut from the same hide as the set, for the hand a bow leaves free.
+      { itemId: 'studded-quiver', chance: 0.05 },
       // Scavengers, so what they have eaten off is what they carry: the one
       // thing on the table nothing here made.
       { itemId: 'cooked-fish', chance: 0.12 },
+      arrows(3, 7),
     ],
     currency: { min: 18, max: 46, chance: 0.92 },
   },
@@ -83,8 +107,8 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
    * The only table in the game whose contents come off nothing else.
    *
    * The bandana always drops, because a fight this long has to be worth
-   * something every time and it is the one piece both classes can wear. The two
-   * weapons are the chase, and there are two of them so the run is worth making
+   * something every time and it is the one piece every class can wear. The
+   * three weapons are the chase, one a class, so the run is worth making
    * whoever you rolled — a warrior selling a wand is still selling 150 copper.
    */
   'bandit-chief': {
@@ -93,6 +117,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'cutthroats-bandana', chance: 1 },
       { itemId: 'cutthroats-blade', chance: 0.2 },
       { itemId: 'stolen-wand', chance: 0.2 },
+      { itemId: 'poachers-bow', chance: 0.2 },
     ],
     // A chief's purse: several times what the men outside are carrying.
     currency: { min: 60, max: 120, chance: 1 },
@@ -136,6 +161,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'pickaxe', chance: 0.08 },
       // Rats in a mine, and a goblin with a fire.
       { itemId: 'cooked-rat', chance: 0.12 },
+      arrows(3, 7),
     ],
     currency: { min: 20, max: 50, chance: 0.92 },
   },
@@ -168,6 +194,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       // hideout's is on the camp outside it — a key found somewhere unrelated to
       // what it opens is a key nobody connects to a place.
       { itemId: 'barrow-key', chance: 0.03 },
+      arrows(3, 8),
     ],
     currency: { min: 22, max: 54, chance: 0.92 },
   },
@@ -187,6 +214,8 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     entries: [
       { itemId: 'grave-shield', chance: 0.05 },
       { itemId: 'grave-lantern', chance: 0.05 },
+      { itemId: 'grave-quiver', chance: 0.05 },
+      arrows(4, 9),
     ],
     // Half again the raider's, and the deepest purse anything repeatable
     // carries. Coin is most of why the wights are worth clearing rather than
@@ -198,9 +227,8 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
    * the chief's argument one band up.
    *
    * The crown always drops, because a fight this long has to be worth something
-   * every time and it is the one piece both classes can wear. The two weapons are
-   * the chase, and there are two of them so the run is worth making whoever you
-   * rolled.
+   * every time and it is the one piece every class can wear. The three weapons
+   * are the chase, one a class, so the run is worth making whoever you rolled.
    */
   'barrow-king': {
     id: 'barrow-king',
@@ -208,6 +236,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'barrow-crown', chance: 1 },
       { itemId: 'barrow-blade', chance: 0.2 },
       { itemId: 'barrow-scepter', chance: 0.2 },
+      { itemId: 'barrow-longbow', chance: 0.2 },
     ],
     // A king's hoard, and several times what the men in his chamber carry.
     currency: { min: 180, max: 320, chance: 1 },

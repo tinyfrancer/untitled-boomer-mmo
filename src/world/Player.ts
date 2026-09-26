@@ -12,6 +12,7 @@ import { PLAYER_HALF_EXTENT } from '../config/constants';
 import type { InputState } from '../systems/InputState';
 import type { ClassId, ItemId } from '../types/ids';
 import { NO_GEAR, type Gear } from '../systems/InventorySystem';
+import { isBow } from '../data/items';
 
 /**
  * The player, as simulation only: position, velocity, stats, pools and buffs.
@@ -33,6 +34,7 @@ export class Player {
   mana: number;
   strength: number;
   intellect: number;
+  agility: number;
   speed: number;
   attackPower: number;
   attackRange: number;
@@ -48,6 +50,13 @@ export class Player {
   private route: Point[] = [];
   private gear: Gear;
   private reforges: Reforges;
+  /**
+   * The arrow a bow in hand would nock, or null with none to nock — which
+   * turns the bow into a pair of fists, reach and all (`computeEffectiveStats`).
+   * Told by the world, since what is in the quiver and the bag is the
+   * character's to know rather than the body's.
+   */
+  private arrow: ItemId | null;
   // Regen accrues in fractions of a point per frame, so current HP is tracked
   // as a float here and only rounded when something reads it.
   private hpFloat: number;
@@ -69,6 +78,7 @@ export class Player {
     name = 'Adventurer',
     level = 1,
     reforges: Reforges = {},
+    arrow: ItemId | null = null,
   ) {
     this.x = x;
     this.y = y;
@@ -77,7 +87,8 @@ export class Player {
     this.level = level;
     this.gear = gear;
     this.reforges = reforges;
-    const stats = computeEffectiveStats(classId, gear, level, reforges);
+    this.arrow = arrow;
+    const stats = computeEffectiveStats(classId, gear, level, reforges, arrow);
     this.maxHp = stats.maxHp;
     this.hp = stats.maxHp;
     this.hpFloat = stats.maxHp;
@@ -86,6 +97,7 @@ export class Player {
     this.manaFloat = stats.maxMana;
     this.strength = stats.strength;
     this.intellect = stats.intellect;
+    this.agility = stats.agility;
     this.speed = stats.speed;
     this.attackPower = stats.attackPower;
     this.attackRange = stats.attackRange;
@@ -155,10 +167,32 @@ export class Player {
     this.applyStats();
   }
 
+  /**
+   * What the next shot nocks. Quiet when nothing moved, since the world asks
+   * every frame: the quiver runs dry mid-fight, and a bow that has become a
+   * pair of fists has to close to a fist's reach from the next frame on.
+   */
+  setArrow(arrow: ItemId | null): void {
+    if (arrow === this.arrow) return;
+    this.arrow = arrow;
+    this.applyStats();
+  }
+
+  /** Whether a swing now is a shot: a bow in hand and an arrow to nock. */
+  isShooting(): boolean {
+    return this.arrow !== null && isBow(this.gear.weapon);
+  }
+
   // Max HP moves with both gear and level, so current HP rides the delta rather
   // than resetting — gaining a level should never feel like a partial heal loss.
   private applyStats(): void {
-    const stats = computeEffectiveStats(this.classId, this.gear, this.level, this.reforges);
+    const stats = computeEffectiveStats(
+      this.classId,
+      this.gear,
+      this.level,
+      this.reforges,
+      this.arrow,
+    );
     const maxHpDelta = stats.maxHp - this.maxHp;
     this.maxHp = stats.maxHp;
     this.hpFloat = clamp(this.hpFloat + maxHpDelta, 0, this.maxHp);
@@ -171,6 +205,7 @@ export class Player {
     this.mana = Math.round(this.manaFloat);
     this.strength = stats.strength;
     this.intellect = stats.intellect;
+    this.agility = stats.agility;
     this.attackPower = stats.attackPower;
     // Reach rides the weapon, so putting the wand away has to shorten it here
     // rather than waiting for the view to rebuild the figure. Armour is the

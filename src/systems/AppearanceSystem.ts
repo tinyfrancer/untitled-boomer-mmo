@@ -75,7 +75,14 @@ export const WEAPON_GEM_COLOR = 0xffd54f;
 export type WeaponHead =
   | { kind: 'gem'; radius: number }
   // A wedge biting outward from the end of the haft.
-  | { kind: 'blade'; reach: number; drop: number };
+  | { kind: 'blade'; reach: number; drop: number }
+  /**
+   * A stave bent away from its string: `depth` is how far the middle of the
+   * bow stands off the straight line between its two ends, where the string
+   * runs. The only head that is not at the tip, since a bow is held by its
+   * middle and is all head.
+   */
+  | { kind: 'bend'; depth: number };
 
 /**
  * How a weapon hangs off the grip, measured along the weapon's own axis:
@@ -139,6 +146,17 @@ const WEAPON_RIGS: Record<WeaponShapeId, WeaponRig> = {
     guard: null,
     head: { kind: 'blade', reach: 0.17, drop: 0.05 },
   },
+  // Held by the middle, so as much of it runs below the hand as above, and
+  // stood straight up: a bow leant over like a wand reads as a stick with a
+  // thread on it at the size a figure is drawn.
+  bow: {
+    butt: 0.27,
+    tip: 0.27,
+    lean: 0,
+    thickness: 0.03,
+    guard: null,
+    head: { kind: 'bend', depth: 0.09 },
+  },
 };
 
 export function weaponRig(shape: WeaponShapeId, size: number): WeaponRig {
@@ -157,10 +175,18 @@ function scaleHead(head: WeaponHead | null, size: number): WeaponHead | null {
   if (!head) {
     return null;
   }
-  return head.kind === 'gem'
-    ? { kind: 'gem', radius: head.radius * size }
-    : { kind: 'blade', reach: head.reach * size, drop: head.drop * size };
+  switch (head.kind) {
+    case 'gem':
+      return { kind: 'gem', radius: head.radius * size };
+    case 'blade':
+      return { kind: 'blade', reach: head.reach * size, drop: head.drop * size };
+    case 'bend':
+      return { kind: 'bend', depth: head.depth * size };
+  }
 }
+
+/** What a bow's string is drawn in by both renderers: pale, and thin. */
+export const BOWSTRING_COLOR = 0xeceff1;
 
 export interface Appearance {
   headColor: number;

@@ -33,8 +33,10 @@ export class ShopSession extends CounterSession {
       return;
     }
     // Checked before the coin leaves the purse, so a full pack never sells the
-    // player something they can't take home.
-    if (!this.ctx.character.canCarryItem(itemId, 1)) {
+    // player something they can't take home. Asked of the whole bundle, and of
+    // the quiver as well as the bag, since an arrow bought goes into it first.
+    const quantity = entry.quantity ?? 1;
+    if (!this.ctx.character.canCarryItem(itemId, quantity)) {
       this.ctx.notice('Your pack is too full to carry that.');
       return;
     }
@@ -42,7 +44,7 @@ export class ShopSession extends CounterSession {
       this.ctx.notice("You can't afford that.");
       return;
     }
-    this.ctx.character.addItem(itemId, 1);
+    this.ctx.character.tryAddItem(itemId, quantity);
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
   }

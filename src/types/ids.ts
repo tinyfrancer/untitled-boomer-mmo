@@ -1,4 +1,4 @@
-export type ClassId = 'warrior' | 'wizard';
+export type ClassId = 'warrior' | 'wizard' | 'ranger';
 
 export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 
@@ -21,7 +21,7 @@ export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
  * of *directions* rather than of upgrades — which is what makes a rolled one
  * something to live with rather than something to reroll.
  */
-export type ReforgeId = 'keen' | 'bulwark' | 'arcane' | 'hale' | 'brawn';
+export type ReforgeId = 'keen' | 'bulwark' | 'arcane' | 'hale' | 'brawn' | 'nimble';
 
 export type ItemId =
   | 'rusty-sword'
@@ -132,6 +132,17 @@ export type ItemId =
   | 'steel-pickaxe'
   | 'steel-axe'
   | 'steel-pole'
+  // The ranger's: a bow for every rung a sword and a wand have, a quiver for the
+  // hand the bow leaves free, and the arrow both are for. The chief's and the
+  // king's bows join their blades and wands as things off one creature.
+  | 'shortbow'
+  | 'hunting-bow'
+  | 'poachers-bow'
+  | 'barrow-longbow'
+  | 'worn-quiver'
+  | 'studded-quiver'
+  | 'grave-quiver'
+  | 'crude-arrows'
   // What a reforge is paid for with. Bought in town and spent at Greyford,
   // which is how the coin sink sits at one end of the loop and the work at the
   // other without the outpost starting to want money.
@@ -202,12 +213,12 @@ export type LootTableId =
   | 'barrow-wight'
   | 'barrow-king';
 
-export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick';
+export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick' | 'bow';
 
 // What fills the hand that is not holding the weapon. Its own union rather than
 // a slice of WeaponShapeId: nothing here is swung, and the two hands are drawn
 // by different code on both the paperdoll and the figure.
-export type OffhandShapeId = 'shield' | 'orb';
+export type OffhandShapeId = 'shield' | 'orb' | 'quiver';
 
 /**
  * What an item is drawn as in the bag, at the size of a thumbnail.
@@ -230,14 +241,16 @@ export type ItemIconShape =
   | 'log'
   | 'ore'
   | 'bar'
-  | 'key';
+  | 'key'
+  | 'arrow';
 
 export type GatherSkillId =
   'fishing' | 'woodcutting' | 'mining' | 'cooking' | 'smithing' | 'leatherworking';
 
 // Skills that level by fighting rather than by gathering. Their cap rides the
 // character's level (see combatSkillCap), so they can't be ground ahead of it.
-export type CombatSkillId = 'one-handed' | 'unarmed' | 'block' | 'parry' | 'destruction';
+export type CombatSkillId =
+  'one-handed' | 'archery' | 'unarmed' | 'block' | 'parry' | 'destruction';
 
 export type SkillId = GatherSkillId | CombatSkillId;
 
@@ -372,6 +385,10 @@ export type AbilityId =
   | 'battle-fury'
   | 'second-wind'
   | 'crushing-blow'
+  | 'aimed-shot'
+  | 'rapid-fire'
+  | 'field-dressing'
+  | 'piercing-shot'
   // The second rank of each, sold at levels 5 to 8. An id of its own rather than
   // a number on the first rank's, so a save stores a rank bought exactly as it
   // stores any other lesson and needed no migration to start holding one.
@@ -382,7 +399,11 @@ export type AbilityId =
   | 'power-slash-2'
   | 'battle-fury-2'
   | 'second-wind-2'
-  | 'crushing-blow-2';
+  | 'crushing-blow-2'
+  | 'aimed-shot-2'
+  | 'rapid-fire-2'
+  | 'field-dressing-2'
+  | 'piercing-shot-2';
 
 // What an enemy does instead of a swing. Its own union rather than a slice of
 // AbilityId: nothing a creature does is on the player's action bar, and the two

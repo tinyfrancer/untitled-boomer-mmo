@@ -2,12 +2,27 @@ import { addXp, xpToNextLevel } from './LevelingSystem';
 import { abilityById } from './AbilitySystem';
 import { trainingAccess } from './TrainerSystem';
 import { canEquip, type EquipCheck } from './EquipSystem';
+import { ITEMS, isArrow, isBow, isQuiver, quiverCapacity } from '../data/items';
+import {
+  arrowsCarried,
+  drawArrow,
+  emptyQuiver,
+  loadedArrow,
+  quiverRoom,
+  refillQuiver,
+  spendArrows,
+  stowInQuiver,
+  type Loadout,
+  type Quiver,
+} from './QuiverSystem';
 import { addSkillXp, skillLevel, skillXpToNextLevel } from './SkillSystem';
 import {
   addItemToInventory,
   equipItem,
   removeItemFromInventory,
   unequipItem,
+  type Gear,
+  type Inventory,
 } from './InventorySystem';
 import type { CharacterState } from '../persistence/CharacterState';
 import { weaponSkillFor } from './CombatSystem';
@@ -92,6 +107,17 @@ export type BankMove = { ok: false; reason: string } | { ok: true; moved: number
 export type BankSlotPurchase =
   { ok: false; reason: string } | { ok: true; price: number; slots: number };
 
+/**
+ * One arrow off the string. `arrow` is what was shot, or null for a bow with
+ * nothing to shoot; `refill` is what the bag put in the quiver on the way, if
+ * anything, and `lastArrow` says this shot emptied quiver and bag together.
+ */
+export interface ArrowDraw {
+  arrow: ItemId | null;
+  refill: Quiver | null;
+  lastArrow: boolean;
+}
+
 export type AbilityTraining =
   { ok: false; reason: string } | { ok: true; abilityId: AbilityId; cost: number };
 
@@ -168,20 +194,96 @@ export class CharacterController {
   }
 
   canCarryItem(itemId: ItemId, quantity = 1): boolean {
-    return canCarry(this.state.inventory, itemId, quantity, this.carryCapacity());
+    const plan = this.stowPlan(itemId, quantity);
+    return canCarry(plan.loadout.inventory, itemId, plan.toBag, this.carryCapacity());
   }
 
   /**
    * Adds the item, or nothing at all if the pack is too full for it. The
    * acquisition paths — gathering, loot, buying — go through this so a full
    * pack is one rule rather than three.
+   *
+   * An arrow goes into the quiver first, as much of it as the quiver has room
+   * for (decision 70), and only the rest is the bag's to weigh — so a full pack
+   * never refuses an arrow the quiver could hold.
    */
   tryAddItem(itemId: ItemId, quantity = 1): boolean {
-    if (!this.canCarryItem(itemId, quantity)) {
+    const plan = this.stowPlan(itemId, quantity);
+    if (!canCarry(plan.loadout.inventory, itemId, plan.toBag, this.carryCapacity())) {
       return false;
     }
-    this.addItem(itemId, quantity);
+    this.stow(plan, itemId, plan.toQuiver, plan.toBag);
     return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // The quiver
+  // ---------------------------------------------------------------------------
+
+  /** How many arrows the offhand holds: none, unless it is a quiver. */
+  quiverCapacity(): number {
+    return quiverCapacity(this.state.gear.offhand);
+  }
+
+  /** The arrow the next shot nocks, or null when there is nothing to shoot. */
+  loadedArrow(): ItemId | null {
+    return loadedArrow(this.state.gear, this.state.quiver, this.state.inventory);
+  }
+
+  /**
+   * Takes one arrow out of the quiver for a shot, filling it from the bag first
+   * if it was dry and again after if that was the last one in it.
+   */
+  drawArrow(): ArrowDraw {
+    const before = this.state.inventory;
+    const drawn = drawArrow(this.loadout(), this.quiverCapacity());
+    this.state.quiver = drawn.quiver;
+    this.state.inventory = drawn.inventory;
+    const moved = arrowsCarried(null, before) - arrowsCarried(null, drawn.inventory);
+    const refilledWith = drawn.quiver?.itemId ?? drawn.arrow;
+    return {
+      arrow: drawn.arrow,
+      refill: moved > 0 && refilledWith ? { itemId: refilledWith, count: moved } : null,
+      lastArrow: drawn.arrow !== null && drawn.quiver === null,
+    };
+  }
+
+  /**
+   * Spends up to `count` arrows as that many shots would, and answers how many
+   * there were — what an unattended camp shot while nobody was watching.
+   */
+  spendArrows(count: number): number {
+    const spent = spendArrows(this.loadout(), this.quiverCapacity(), count);
+    this.state.quiver = spent.quiver;
+    this.state.inventory = spent.inventory;
+    return spent.spent;
+  }
+
+  private loadout(): Loadout {
+    return { quiver: this.state.quiver, inventory: this.state.inventory };
+  }
+
+  /**
+   * Where an arriving stack would go: into a quiver topped up from the bag
+   * first, as much as it has room for, and the rest into the bag. Pure — the
+   * top-up is part of the answer rather than done, so asking changes nothing.
+   */
+  private stowPlan(
+    itemId: ItemId,
+    quantity: number,
+  ): { loadout: Loadout; toQuiver: number; toBag: number } {
+    const capacity = this.quiverCapacity();
+    const loadout = isArrow(itemId) ? refillQuiver(this.loadout(), capacity) : this.loadout();
+    const toQuiver = Math.min(quantity, quiverRoom(loadout.quiver, capacity, itemId));
+    return { loadout, toQuiver, toBag: quantity - toQuiver };
+  }
+
+  private stow(plan: { loadout: Loadout }, itemId: ItemId, toQuiver: number, toBag: number): void {
+    this.state.quiver = stowInQuiver(plan.loadout.quiver, itemId, toQuiver);
+    this.state.inventory =
+      toBag > 0
+        ? addItemToInventory(plan.loadout.inventory, itemId, toBag)
+        : plan.loadout.inventory;
   }
 
   // ---------------------------------------------------------------------------
@@ -250,12 +352,14 @@ export class CharacterController {
    * nothing, where a gather or a drop refused whole is simply not had.
    */
   addWhatFits(itemId: ItemId, quantity: number): number {
-    const count = Math.min(
-      Math.floor(quantity),
-      carryableCount(this.state.inventory, itemId, this.carryCapacity()),
+    const plan = this.stowPlan(itemId, Math.floor(quantity));
+    const toBag = Math.min(
+      plan.toBag,
+      carryableCount(plan.loadout.inventory, itemId, this.carryCapacity()),
     );
+    const count = plan.toQuiver + toBag;
     if (count <= 0) return 0;
-    this.addItem(itemId, count);
+    this.stow(plan, itemId, plan.toQuiver, toBag);
     return count;
   }
 
@@ -316,22 +420,74 @@ export class CharacterController {
     return true;
   }
 
-  /** Refuses, changing nothing, if this class can't wear the item. */
+  /**
+   * Refuses, changing nothing, if this class can't wear the item — or if it
+   * would take a quiver off with arrows in it that the pack cannot hold.
+   *
+   * **A bow takes both hands.** Drawing one puts away whatever the other hand
+   * holds unless it is a quiver, and taking up a shield or an orb puts the bow
+   * away, the way either would be dropped to pick the other up. Both go to the
+   * bag like any swapped piece.
+   */
   equip(itemId: ItemId): EquipCheck {
     const check = canEquip(itemId, this.state.classId);
     if (!check.ok) {
       return check;
     }
-    const result = equipItem(this.state.gear, this.state.inventory, itemId);
-    this.state.gear = result.gear;
-    this.state.inventory = result.inventory;
-    return check;
+    let result = equipItem(this.state.gear, this.state.inventory, itemId);
+    const item = ITEMS[itemId];
+    if (isBow(itemId) && result.gear.offhand && !isQuiver(result.gear.offhand)) {
+      result = unequipItem(result.gear, result.inventory, 'offhand');
+    }
+    if (item.kind === 'equipment' && item.slot === 'offhand' && !isQuiver(itemId)) {
+      if (isBow(result.gear.weapon)) {
+        result = unequipItem(result.gear, result.inventory, 'weapon');
+      }
+    }
+    return this.wear(result.gear, result.inventory);
   }
 
-  unequip(slot: GearSlotId): void {
+  /** Refuses, changing nothing, if the quiver coming off holds more than the pack can. */
+  unequip(slot: GearSlotId): EquipCheck {
     const result = unequipItem(this.state.gear, this.state.inventory, slot);
-    this.state.gear = result.gear;
-    this.state.inventory = result.inventory;
+    return this.wear(result.gear, result.inventory);
+  }
+
+  /**
+   * Puts on a new set, and takes the arrows with the quiver: what the new
+   * quiver holds of them stays quivered, and the rest go to the bag — or the
+   * whole change is refused, rather than a full pack leaving arrows on the
+   * floor. A quiver put on dry fills itself from the bag.
+   */
+  private wear(gear: Gear, inventory: Inventory): EquipCheck {
+    const capacity = quiverCapacity(gear.offhand);
+    const quiver = this.state.quiver;
+    const kept = quiver && capacity > 0 ? Math.min(quiver.count, capacity) : 0;
+    const overflow = (quiver?.count ?? 0) - kept;
+    if (quiver && overflow > 0) {
+      const strength = computeEffectiveStats(
+        this.state.classId,
+        gear,
+        this.state.level,
+        this.state.reforges,
+      ).strength;
+      if (!canCarry(inventory, quiver.itemId, overflow, capacityForStrength(strength))) {
+        return { ok: false, reason: 'Your pack is too full for the arrows in your quiver.' };
+      }
+    }
+    const loadout =
+      quiver && kept > 0
+        ? {
+            quiver: { itemId: quiver.itemId, count: kept },
+            inventory:
+              overflow > 0 ? addItemToInventory(inventory, quiver.itemId, overflow) : inventory,
+          }
+        : emptyQuiver({ quiver, inventory });
+    const filled = refillQuiver(loadout, capacity);
+    this.state.gear = gear;
+    this.state.inventory = filled.inventory;
+    this.state.quiver = filled.quiver;
+    return { ok: true };
   }
 
   awardXp(amount: number): CombatXpGain {
@@ -361,7 +517,7 @@ export class CharacterController {
 
   /** The weapon skill the currently equipped weapon (or empty hand) trains. */
   activeWeaponSkill(): CombatSkillId {
-    return weaponSkillFor(this.state.gear.weapon);
+    return weaponSkillFor(this.state.gear.weapon, this.loadedArrow());
   }
 
   skillLevelOf(skillId: SkillId): number {

@@ -6,11 +6,13 @@ import {
   Mesh,
   MeshLambertMaterial,
   SphereGeometry,
+  TorusGeometry,
   type Object3D,
 } from 'three';
 import { TILE_SIZE } from '../config/constants';
 import { castsShadow } from './lights';
 import {
+  BOWSTRING_COLOR,
   WEAPON_GEM_COLOR,
   legOffsets,
   stickFigure,
@@ -192,6 +194,11 @@ function buildWeapon(shape: WeaponShapeId, color: number, size: number): Group {
   const rig = weaponRig(shape, size);
 
   const length = rig.butt + rig.tip;
+  if (rig.head?.kind === 'bend') {
+    const bow = buildBow(rig.head.depth, length, rig.thickness, rig.tip - rig.butt, material);
+    bow.rotation.z = -Math.asin(rig.lean / rig.tip);
+    return bow;
+  }
   const shaft =
     shape === 'sword'
       ? new Mesh(new BoxGeometry(rig.thickness, length, rig.thickness * 0.4), material)
@@ -232,12 +239,60 @@ function buildWeapon(shape: WeaponShapeId, color: number, size: number): Group {
 }
 
 /**
+ * A stave bent into an arc between its two ends and the string run straight
+ * across them — the arc out of a torus cut short, which is the one primitive
+ * that bends. `offset` is how far the middle of the chord sits above the grip.
+ */
+function buildBow(
+  depth: number,
+  chord: number,
+  thickness: number,
+  offset: number,
+  material: MeshLambertMaterial,
+): Group {
+  const group = new Group();
+  // The circle whose arc spans `chord` and stands `depth` off it at the middle.
+  const radius = (chord * chord) / (8 * depth) + depth / 2;
+  const sweep = 2 * Math.asin(chord / (2 * radius));
+  const stave = new Mesh(new TorusGeometry(radius, thickness / 2, 5, 12, sweep), material);
+  // A torus arc starts on +x and runs anticlockwise; turned so it is centred on
+  // +x, and pushed back so the chord between its ends passes through the grip.
+  stave.rotation.z = -sweep / 2;
+  stave.position.set(depth - radius, offset / 2, 0);
+  group.add(stave);
+
+  const string = new Mesh(
+    new CylinderGeometry(thickness * 0.15, thickness * 0.15, chord, 4),
+    new MeshLambertMaterial({ color: BOWSTRING_COLOR }),
+  );
+  string.position.y = offset / 2;
+  group.add(string);
+  return group;
+}
+
+/**
  * What the off hand holds. A shield is a slab standing across the body, so it
  * is drawn in the plane a viewer sees rather than along the weapon's axis; an
  * orb is a sphere and needs no orientation at all.
  */
 function buildOffhand(shape: OffhandShapeId, color: number, size: number): Object3D {
   const group = new Group();
+  if (shape === 'quiver') {
+    // A tube at the hip with the fletching standing out of the top: the tube
+    // alone is a stump at this size, and the feathers are what say arrows.
+    const tube = new Mesh(
+      new CylinderGeometry(size * 0.045, size * 0.035, size * 0.24, 8),
+      new MeshLambertMaterial({ color }),
+    );
+    group.add(tube);
+    const feathers = new MeshLambertMaterial({ color: BOWSTRING_COLOR });
+    [-1, 0, 1].forEach((step) => {
+      const fletch = new Mesh(new BoxGeometry(size * 0.02, size * 0.07, size * 0.02), feathers);
+      fletch.position.set(step * size * 0.022, size * 0.15, 0);
+      group.add(fletch);
+    });
+    return group;
+  }
   if (shape === 'orb') {
     const orb = new Mesh(
       new SphereGeometry(size * 0.075, 10, 8),

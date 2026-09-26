@@ -5,6 +5,7 @@ import { OUT_OF_COMBAT_DELAY_MS } from '../../src/systems/RegenSystem';
 import type { EnemyId, ItemId } from '../../src/types/ids';
 import { AFK_STATE_CHANGED_EVENT } from '../../src/ui/uiEvents';
 import { AfkCamp } from '../../src/world/AfkCamp';
+import { arrowsCarried } from '../../src/systems/QuiverSystem';
 import { Mob } from '../../src/world/Mob';
 import { ResourceNode } from '../../src/world/ResourceNode';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
@@ -243,6 +244,46 @@ describe('a camp that was left running when the tab closed', () => {
     expect(result?.report.crafts).toBeGreaterThan(0);
     expect(character.itemCount('tin-bar')).toBe(result?.report.crafts);
     expect(character.itemCount('tin-ore') + character.itemCount('tin-bar')).toBe(8);
+  });
+
+  /**
+   * A bow's night is spent in arrows, and they come off the character the way a
+   * forge's ore does: out of the quiver first, the rest of the report after.
+   */
+  it('takes the arrows a night at a bow shot back off the character', () => {
+    const { camp, state } = camped();
+    state.gear = { ...state.gear, weapon: 'shortbow', offhand: 'worn-quiver' };
+    state.quiver = { itemId: 'crude-arrows', count: 20 };
+    state.afk = {
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+    };
+
+    const result = camp.resolveParked();
+
+    expect(result?.report.arrowsSpent).toBeGreaterThan(0);
+    expect(result?.report.outOfArrows).toBe(true);
+    expect(arrowsCarried(state.quiver, state.inventory)).toBe(
+      20 - (result?.report.arrowsSpent ?? 0),
+    );
+  });
+
+  it('still reports a night a bow spent with nothing to shoot', () => {
+    const { camp, state } = camped();
+    state.gear = { ...state.gear, weapon: 'shortbow', offhand: 'worn-quiver' };
+    state.quiver = null;
+    state.afk = {
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+    };
+
+    const result = camp.resolveParked();
+
+    expect(result?.report.kills).toBe(0);
+    expect(result?.report.outOfArrows).toBe(true);
+    expect(state.afk).toBeNull();
   });
 
   it('cannot pay twice, however many times a load asks', () => {

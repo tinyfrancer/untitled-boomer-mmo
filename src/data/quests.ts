@@ -70,7 +70,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
     reward: {
       copper: 120,
       xp: 90,
-      gear: { warrior: 'brown-helmet', wizard: 'brown-cloth-hat' },
+      gear: { warrior: 'brown-helmet', wizard: 'brown-cloth-hat', ranger: 'brown-helmet' },
     },
   },
   // The one errand off the chain, and the only quest in the game that asks for
@@ -96,7 +96,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
     reward: {
       copper: 240,
       xp: 180,
-      gear: { warrior: 'brown-chestplate', wizard: 'brown-robe' },
+      gear: { warrior: 'brown-chestplate', wizard: 'brown-robe', ranger: 'brown-chestplate' },
     },
   },
   // Deliberately fewer bandits than a full armour set costs: a kill objective
@@ -181,7 +181,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
     reward: {
       copper: 250,
       xp: 400,
-      gear: { warrior: 'studded-jerkin', wizard: 'fenweave-robe' },
+      gear: { warrior: 'studded-jerkin', wizard: 'fenweave-robe', ranger: 'studded-jerkin' },
     },
   },
   // Held back by the outfitter's work rather than by anything of the fettler's

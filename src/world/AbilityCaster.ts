@@ -103,6 +103,7 @@ export class AbilityCaster {
       targetDistance: target ? distance(player, target) : Infinity,
       moving: player.isMoving() || player.hasMoveTarget(),
       casting: this.casting !== null,
+      loaded: player.isShooting(),
     });
     if (!check.ok) {
       this.ctx.notice(check.reason);
@@ -233,18 +234,36 @@ export class AbilityCaster {
           this.ctx.notice('Your target is too far away.');
           return;
         }
+        // Read before a shot draws its arrow, for the reason the swing reads it
+        // first: the last arrow drawn is still an arrow shot.
+        const attackPower = player.attackPower;
+        // A shot is loosed when it goes off rather than when it is pressed: an
+        // aim broken by a step never left the string. The auto-attack keeps
+        // shooting through an aim, so the quiver can be dry by the end of one.
+        if (ability.shot && !this.ctx.loose()) {
+          this.ctx.notice(`${ability.name} needs an arrow to shoot.`);
+          return;
+        }
         const { damage, crit } = resolveAbilityDamage(
           ability,
-          player.attackPower,
+          attackPower,
           skillLevel,
           this.ctx.rolls,
+          player.agility,
         );
         // A bolt thrown from the caster to the target. Purely cosmetic, but a
         // ranged nuke that produced only a number over the mob read as nothing
         // happening. A melee ability has no flight to draw: it is a swing. This
         // asked `range > 0` once, which every damage ability has, so a Power
-        // Slash used to throw a magic bolt a tile and a quarter.
-        if (ability.effect.thrown) {
+        // Slash used to throw a magic bolt a tile and a quarter. A shot is an
+        // arrow in flight rather than a bolt, and the shooter drawing for it.
+        if (ability.shot) {
+          this.ctx.push({
+            kind: 'shot',
+            from: this.ctx.playerPoint(),
+            to: { x: target.x, y: target.y },
+          });
+        } else if (ability.effect.thrown) {
           this.ctx.push({
             kind: 'bolt-cast',
             abilityId: ability.id,

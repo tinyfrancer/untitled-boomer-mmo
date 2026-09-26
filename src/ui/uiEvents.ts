@@ -24,6 +24,7 @@ import type { CombatLogEntry } from '../systems/CombatLogSystem';
 import type { InspectPanel } from '../systems/InspectSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
+import type { Quiver } from '../systems/QuiverSystem';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -33,6 +34,10 @@ export const PLAYER_HP_CHANGED_EVENT = 'player-hp-changed';
 export const PLAYER_DIED_EVENT = 'player-died';
 export const GEAR_CHANGED_EVENT = 'gear-changed';
 export const INVENTORY_CHANGED_EVENT = 'inventory-changed';
+// What is in the quiver, whole, each time the bag is published and each time a
+// shot is taken. Beside the bag rather than in it, since quivered arrows are
+// not the bag's: they weigh nothing, and cannot be sold or banked.
+export const QUIVER_CHANGED_EVENT = 'quiver-changed';
 export const EQUIP_ITEM_REQUESTED_EVENT = 'equip-item-requested';
 export const UNEQUIP_SLOT_REQUESTED_EVENT = 'unequip-slot-requested';
 export const SKILL_XP_GAINED_EVENT = 'skill-xp-gained';
@@ -375,6 +380,7 @@ export interface UiEventMap {
   [PLAYER_DIED_EVENT]: [];
   [GEAR_CHANGED_EVENT]: [gear: Gear];
   [INVENTORY_CHANGED_EVENT]: [inventory: Inventory];
+  [QUIVER_CHANGED_EVENT]: [quiver: Quiver | null];
   [EQUIP_ITEM_REQUESTED_EVENT]: [itemId: ItemId];
   [UNEQUIP_SLOT_REQUESTED_EVENT]: [slot: GearSlotId];
   [SKILL_XP_GAINED_EVENT]: [gain: SkillXpGain];

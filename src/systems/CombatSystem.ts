@@ -1,5 +1,5 @@
 import { MAX_CHARACTER_LEVEL, combatSkillCap } from '../config/constants';
-import { isEquippable } from '../data/items';
+import { isBow, isEquippable } from '../data/items';
 import type { CombatSkillId, ItemId } from '../types/ids';
 
 export interface Attacker {
@@ -7,6 +7,12 @@ export interface Attacker {
   // The attacker's level in the weapon skill they are swinging, if they have
   // skills at all — mobs don't.
   weaponSkillLevel?: number;
+  /**
+   * The attacker's agility, when this is a physical hit — a swing, a shot, or
+   * an ability that is one. Left out for a spell and for anything a creature
+   * does, neither of which agility has anything to say about.
+   */
+  agility?: number;
 }
 
 export interface AttackResult {
@@ -73,10 +79,30 @@ export function critChance(skillLevel = 0): number {
   return Math.min(MAX_CRIT_CHANCE, Math.max(0, skillLevel) * CRIT_PER_SKILL);
 }
 
+/**
+ * Agility's share of a physical hit's chance to land hard (decisions 65, 70).
+ *
+ * **On top of the weapon skill's, not under its ceiling**, with a ceiling of its
+ * own. Under the skill's 20% it would buy nothing at all from the moment the
+ * skill was trained out, which for a class whose stat it is would make the stat
+ * half a stat at the cap; and the skill's budget is derived to leave the average
+ * at cap where it was, which a second source inside it would quietly move. Half
+ * a percent a point reaches the ceiling at 30 agility — a ranger at the top of
+ * the game in the best of the barrow — and a warrior's single point buys half a
+ * percent, which is the whole of what agility does for anyone who is not drawing
+ * a bow.
+ */
+const CRIT_PER_AGILITY = 0.005;
+const MAX_AGILITY_CRIT = 0.15;
+
+export function agilityCritChance(agility = 0): number {
+  return Math.min(MAX_AGILITY_CRIT, Math.max(0, agility) * CRIT_PER_AGILITY);
+}
+
 export function resolveAttack(attacker: Attacker, rng: () => number = Math.random): AttackResult {
   const variance = 1 + (rng() * 2 - 1) * DAMAGE_VARIANCE;
   const swing = attacker.attackPower * variance * weaponSkillBonus(attacker.weaponSkillLevel);
-  const crit = rng() < critChance(attacker.weaponSkillLevel);
+  const crit = rng() < critChance(attacker.weaponSkillLevel) + agilityCritChance(attacker.agility);
   return {
     damage: Math.max(MIN_DAMAGE, Math.round(swing * (crit ? CRIT_MULTIPLIER : 1))),
     crit,
@@ -97,10 +123,19 @@ export function enemyAvoids(avoidChance = 0, rng: () => number = Math.random): b
   return avoidChance > 0 && rng() < avoidChance;
 }
 
-// Which weapon skill an equipped item trains. Anything in the weapon slot is
-// one-handed today; empty hands train fists.
-export function weaponSkillFor(weaponItemId: ItemId | null): CombatSkillId {
-  return weaponItemId && isEquippable(weaponItemId) ? 'one-handed' : 'unarmed';
+/**
+ * Which weapon skill a hit trains: archery for a shot, fists for empty hands —
+ * and for a bow with nothing nocked, since what that is swinging is a punch.
+ * Anything else in the weapon slot is one-handed. `arrow` is what the shot
+ * nocks (`loadedArrow`), and means nothing under anything but a bow.
+ */
+export function weaponSkillFor(
+  weaponItemId: ItemId | null,
+  arrow: ItemId | null = null,
+): CombatSkillId {
+  if (!weaponItemId || !isEquippable(weaponItemId)) return 'unarmed';
+  if (isBow(weaponItemId)) return arrow ? 'archery' : 'unarmed';
+  return 'one-handed';
 }
 
 // What a shield is worth to a block, on top of the skill. Multiplied rather

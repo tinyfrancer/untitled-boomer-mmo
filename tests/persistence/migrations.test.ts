@@ -547,6 +547,43 @@ describe('migrateCharacterState', () => {
     expect(migrated?.gear.chest).toBe('steel-chestplate');
   });
 
+  /**
+   * v22 -> v23: the ranger arrives. Archery joins the sheet spread under what
+   * was trained, and nobody was carrying a quiver, so there are no arrows in
+   * one — which is what that character had rather than a default for it.
+   */
+  it('opens archery at level 1 and an empty quiver, touching nothing else', () => {
+    const withoutArchery: Partial<ReturnType<typeof createInitialSkills>> = createInitialSkills();
+    delete withoutArchery.archery;
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 22,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+      kills: {},
+      visits: {},
+      bounty: null,
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      mastery: {},
+      reforges: {},
+      // A save from a game with no archery in it, and a parry trained up.
+      skills: { ...withoutArchery, parry: { level: 12, xp: 5 } },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.skills.archery).toEqual({ level: 1, xp: 0 });
+    expect(migrated?.skills.parry).toEqual({ level: 12, xp: 5 });
+    expect(migrated?.quiver).toBeNull();
+    expect(migrated?.classId).toBe('wizard');
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();
