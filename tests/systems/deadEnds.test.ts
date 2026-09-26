@@ -92,12 +92,15 @@ describe('what the game hands out', () => {
   });
 
   // The same rule from the other end: a station that makes something nobody can
-  // wear, eat or build with is a station making vendor trash slowly.
-  it('makes nothing that is not worn, eaten or made into something else', () => {
+  // wear, eat, shoot or build with is a station making vendor trash slowly.
+  it('makes nothing that is not worn, eaten, shot or made into something else', () => {
     RECIPE_LIST.forEach((recipe) => {
       const output = ITEMS[recipe.outputItemId];
       const used =
-        output.kind === 'equipment' || output.kind === 'consumable' || isRecipeInput(output.id);
+        output.kind === 'equipment' ||
+        output.kind === 'consumable' ||
+        output.kind === 'ammunition' ||
+        isRecipeInput(output.id);
       expect(used, `${recipe.id} makes ${output.id}, which nothing wants`).toBe(true);
     });
   });

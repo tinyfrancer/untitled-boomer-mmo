@@ -166,6 +166,23 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
         ...line(24, 76, 18, 64, BOX * 0.04, color),
         ...line(24, 76, 36, 82, BOX * 0.04, color),
       ];
+    case 'shaft':
+      return [
+        // Three bare sticks bound in the middle: an arrow with nothing on
+        // either end, and a bundle rather than one, since a single stick reads
+        // as a twig and what this is is a batch waiting for its heads.
+        ...line(22, 70, 74, 22, BOX * 0.045, color),
+        ...line(28, 78, 80, 30, BOX * 0.045, color),
+        ...line(20, 84, 72, 36, BOX * 0.045, color),
+        ...line(42, 66, 56, 52, BOX * 0.12, 0x6d4c41),
+      ];
+    case 'arrowhead':
+      return [
+        // A barbed point on a short tang, and nothing behind it: the head of the
+        // arrow icon drawn large, in the metal it was cut from.
+        path(`M 78 20 L 64 66 L 52 56 L 42 70 L 30 58 L 44 48 L 34 36 Z`, color),
+        ...line(40, 62, 24, 80, BOX * 0.05, shade(color)),
+      ];
     case 'bar':
       return [
         // An ingot seen from a corner: the rock is gone and what is left is a

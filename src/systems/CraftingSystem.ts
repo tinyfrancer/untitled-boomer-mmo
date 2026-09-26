@@ -17,9 +17,9 @@ export type CraftCheck = { ok: true } | { ok: false; reason: string };
 export interface CraftResult {
   itemId: ItemId | null;
   /**
-   * How many came off the bench: one, or two where the recipe's mastery paid
-   * out. A failure is always one — a pool that doubled a burnt fish would be a
-   * curve that pays worse the further along it you are.
+   * How many came off the bench: the recipe's batch, or two of it where the
+   * recipe's mastery paid out. A failure is always one — a pool that doubled a
+   * burnt fish would be a curve that pays worse the further along it you are.
    */
   quantity: number;
   xp: number;
@@ -42,6 +42,11 @@ export type CraftOutcome =
 
 export function recipeById(id: RecipeId): CraftingRecipe {
   return RECIPES[id];
+}
+
+/** How many one job at this recipe makes: its `outputQuantity`, or one. */
+export function batchSize(recipe: CraftingRecipe): number {
+  return recipe.outputQuantity ?? 1;
 }
 
 /** Everything made at one station, which is what its panel lists. */
@@ -182,7 +187,8 @@ export function advanceCraft(state: CraftState, deltaMs: number, atStation: bool
  * behind a success: the two questions are "did this work" and then "did it work
  * twice", which is what keeps a doubled result from ever being a doubled
  * failure. It is the gather's second term at the other kind of station — see
- * `rollGatherQuantity`.
+ * `rollGatherQuantity`. Twice is twice the batch: a pool that paid one more
+ * shaft on fifteen would be a pool nobody could see paying.
  */
 export function rollCraft(
   recipe: CraftingRecipe,
@@ -197,7 +203,7 @@ export function rollCraft(
   }
   return {
     itemId: recipe.outputItemId,
-    quantity: rng() < masteryChance ? 2 : 1,
+    quantity: batchSize(recipe) * (rng() < masteryChance ? 2 : 1),
     xp: recipe.xpReward,
     failed: false,
     consumed: true,

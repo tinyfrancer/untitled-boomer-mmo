@@ -68,6 +68,21 @@ describe('CharacterController encumbrance', () => {
     expect(character.carryCapacity()).toBeGreaterThan(bare);
   });
 
+  // What comes off a station: spent for before it was handed over, so never
+  // refused, and still through the quiver the way anything arriving is.
+  it('never refuses what a bench made, and quivers made arrows first', () => {
+    const character = new CharacterController(createNewCharacter('Fletch', 'ranger'));
+    character.state.quiver = null;
+    character.addItem('rat-bones', character.carryCapacity());
+
+    character.addMadeItem('crude-arrows', 15);
+    character.addMadeItem('bone-char', 2);
+
+    expect(character.state.quiver).toEqual({ itemId: 'crude-arrows', count: 15 });
+    expect(character.itemCount('crude-arrows')).toBe(0);
+    expect(character.itemCount('bone-char')).toBe(2);
+  });
+
   it('stops charging for gear once it is worn rather than carried', () => {
     const character = makeController();
     character.addItem('brown-helmet', 1);

@@ -178,6 +178,13 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
     quiver: null,
   }),
+  // v23 → v24: fletching joins the sheet, by the step every skill added since
+  // launch has taken — spread under, so everything trained survives and only
+  // fletching starts at level 1.
+  23: (state) => ({
+    ...state,
+    skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
+  }),
 };
 
 /**

@@ -89,7 +89,7 @@ describe('the second vertical', () => {
   // A vat that went out overnight would be a campfire wearing a zone's clothes.
   it('is a fact about the zone rather than about the player', () => {
     expect(STATION_PERSISTS.tannery).toBe(true);
-    expect(ZONES.greyford.stationSpawns?.map((spawn) => spawn.station)).toEqual(['tannery']);
+    expect(ZONES.greyford.stationSpawns?.map((spawn) => spawn.station)).toContain('tannery');
   });
 });
 
@@ -108,13 +108,12 @@ describe('what the tannery makes', () => {
   });
 
   /**
-   * Sole input, which is load-bearing rather than tidy: that shape is what
-   * `findCraftableFrom` looks for, so it is what makes tanning a job an
-   * unattended camp can settle to. A two-input tanning row would leave the
-   * tannery a station nobody could ever camp — and `STATION_PERSISTS` saying
-   * something about it that nothing read.
+   * One hide, one leather. It was held here as the shape a camp needed, which
+   * it never was — a camp settles to any row it can supply, lists and all (see
+   * `AfkSystem.test.ts`) — so what is left is the trade itself: a cure takes
+   * the hide and nothing else, so the fen alone paces the skill.
    */
-  it('cures a hide from one thing, so a camp can be left at it', () => {
+  it('cures a hide from nothing but the hide', () => {
     expect(RECIPES['cured-leather'].inputs).toEqual([{ itemId: 'lurker-hide', quantity: 1 }]);
   });
 

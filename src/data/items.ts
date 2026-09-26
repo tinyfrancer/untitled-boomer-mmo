@@ -186,6 +186,17 @@ const ICON_COLOR = {
   reforgeStone: 0x7e57c2,
   // Pale fletching on a dark shaft, so an arrow is not a stick of wood.
   crudeArrow: 0xd7c8a8,
+  // The made arrows are told from the crude one and from each other by the
+  // fletch, which is the only part of the outline an item's colour paints:
+  // goose-grey for the iron, and a dyed red for the steel, which is the arrow
+  // worth finding in a full bag at a glance.
+  ironArrow: 0x90a4ae,
+  steelArrow: 0xc62828,
+  // Pale and green-grey where hardwood is the darkest wood in the bag: willow is
+  // the soft, pliant one, and the two sit in a woodcutter's pack together.
+  willow: 0xb5b27a,
+  // A shaft is the wood it was cut from, planed: lighter than the log.
+  shaft: 0xc8b596,
 } as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
@@ -523,8 +534,8 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     agilityBonus: 3,
   },
   /**
-   * The bottom rung of arrow, and the only one there is until fletching: bought
-   * in town by the bundle and carried by everything with pockets.
+   * The bottom rung of arrow, and the only one anybody can buy: sold in town by
+   * the bundle and carried by everything with pockets.
    *
    * A tenth of a point each, so a hundred spares weigh what a helmet does and
    * the ones in the quiver weigh nothing at all.
@@ -537,6 +548,71 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'ammunition',
     damage: 1,
     icon: { shape: 'arrow', color: ICON_COLOR.crudeArrow },
+  },
+  /**
+   * The two made arrows, and the rungs above the crude one: each doubles what
+   * the arrow under it adds to a shot (decision 76). Nothing sells them and
+   * nothing drops them — they come off the fletcher's bench or not at all.
+   *
+   * Priced just over what went into them, the way a bar is over its ore: a
+   * log and an iron bar are 27c and fifteen iron arrows 30c, and a willow and a
+   * steel bar are 89c and fifteen steel arrows 90c. Enough that the bench is
+   * never a way to end up poorer, and nowhere near a way to get rich.
+   */
+  'iron-arrows': {
+    id: 'iron-arrows',
+    name: 'Iron Arrows',
+    value: 2,
+    weight: 0.1,
+    kind: 'ammunition',
+    damage: 2,
+    icon: { shape: 'arrow', color: ICON_COLOR.ironArrow },
+  },
+  'steel-arrows': {
+    id: 'steel-arrows',
+    name: 'Steel Arrows',
+    value: 6,
+    weight: 0.1,
+    kind: 'ammunition',
+    damage: 4,
+    icon: { shape: 'arrow', color: ICON_COLOR.steelArrow },
+  },
+  /**
+   * The halves of an arrow, fifteen to a log or a bar.
+   *
+   * No price, which is the key's argument made for a different reason: fifteen
+   * shafts off a three-copper log at even a copper each would be the best trade
+   * in the game, and a head's copper would make the forge a mint. What they are
+   * worth is the arrow they become, and `deadEnds.test.ts` holds that they
+   * become one.
+   */
+  'arrow-shafts': {
+    id: 'arrow-shafts',
+    name: 'Arrow Shafts',
+    weight: 0.1,
+    kind: 'material',
+    icon: { shape: 'shaft', color: ICON_COLOR.shaft },
+  },
+  'willow-shafts': {
+    id: 'willow-shafts',
+    name: 'Willow Shafts',
+    weight: 0.1,
+    kind: 'material',
+    icon: { shape: 'shaft', color: ICON_COLOR.willow },
+  },
+  'iron-arrowheads': {
+    id: 'iron-arrowheads',
+    name: 'Iron Arrowheads',
+    weight: 0.1,
+    kind: 'material',
+    icon: { shape: 'arrowhead', color: ICON_COLOR.ironBar },
+  },
+  'steel-arrowheads': {
+    id: 'steel-arrowheads',
+    name: 'Steel Arrowheads',
+    weight: 0.1,
+    kind: 'material',
+    icon: { shape: 'arrowhead', color: ICON_COLOR.steelBar },
   },
   'rat-bones': {
     id: 'rat-bones',
@@ -775,6 +851,23 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'material',
     icon: { shape: 'log', color: ICON_COLOR.hardwood },
+  },
+  /**
+   * What the millpond grows, and the third rung woodcutting climbs to.
+   *
+   * It waited for the bow the way hardwood waited for the Deep Cut: a gathering
+   * skill yielding something no recipe takes is the strictest rule in
+   * `deadEnds.test.ts`, and a willow had nothing to be until there was an arrow
+   * worth a better shaft. Lighter than hardwood and dearer, since it is behind
+   * two more levels of axe.
+   */
+  willow: {
+    id: 'willow',
+    name: 'Willow',
+    value: 9,
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'log', color: ICON_COLOR.willow },
   },
   /**
    * What comes out of the quarry, and the heaviest thing in the game that is

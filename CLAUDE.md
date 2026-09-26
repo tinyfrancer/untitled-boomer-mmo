@@ -14,7 +14,7 @@ project by a professional software engineer with no prior game-dev experience. v
 ten zones from a level 1-3 starter band (town, beach, quarry, bandit camp, the locked bandit
 hideout) up through the Old Mill Road, Blackwater Fen, the Deep Cut and Greyford Outpost to the
 locked Sunken Barrow at level 7-8; three classes, the third a ranger whose bow spends an arrow a
-shot; three gathering skills and three making ones; gear,
+shot; three gathering skills and four making ones, the fourth fletching the ranger's arrows; gear,
 armour and reforging; two-way combat with telegraphed enemy abilities; a shop, a bank, a trainer, a
 quest chain and a contract board, and a barter counter at Greyford; slayer achievements, titles and
 per-target mastery; an AFK camp that pays out offline; click/tap-to-move with a mobile-first HUD;
@@ -22,12 +22,12 @@ and local save/load with versioned migrations. `docs/architecture/zones.md` has 
 what each zone is for.
 
 **Work in progress is planned in a doc before it is built**, phased into PRs with the argument for
-each decision in it. The **live plan** is `docs/act_three_plan.md` (cleanup, graphics, sound, loot
-piles, upper-band content, fletching and the bow). Check its status line before starting anything —
-it says which phase landed and which is next. **A session picking it up cold starts with
-`docs/act_three_handoff.md`**, which says where each remaining phase touches the code and which
-questions are still open. Finished plans go to `docs/archive/`. Anything big
-enough to phase gets a new plan doc rather than being started against this file alone.
+each decision in it. There is **no live plan** right now — the last one,
+`docs/archive/act_three_plan.md` (cleanup, graphics, sound, loot piles, upper-band content, the
+ranger, fletching and willow), finished on 2026-09-26 and went to `docs/archive/` with its handoff.
+When there is a live one, check its status line before starting anything, since it says which phase
+landed and which is next. Anything big enough to phase gets a new plan doc rather than being started
+against this file alone.
 
 **Decisions that closed off a real alternative go in `docs/decisions.md`**, appended and never
 edited. That file is not a duplicate of this one: this describes the shape of the system as it
@@ -179,7 +179,9 @@ leave nothing behind to count. Keep that split.
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
 fail on a full pack — handle the refusal — and which puts an arrow in the quiver before the bag sees
-it, so `addItem` straight into the bag skips a rule as well as a check. A kill's refusals become a loot pile where it fell, unless
+it, so `addItem` straight into the bag skips a rule as well as a check. What comes off a station is
+the one thing never refused, since its inputs were spent first, and it goes through `addMadeItem`,
+which still quivers an arrow first. A kill's refusals become a loot pile where it fell, unless
 the player is camping (`docs/architecture/economy.md`).
 
 **Persistence**: import the `saveService` singleton from `src/persistence/index.ts`, never construct

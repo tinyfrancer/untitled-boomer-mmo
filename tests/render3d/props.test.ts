@@ -10,6 +10,7 @@ import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { WATER_DEPTH } from '../../src/render3d/ground';
 import {
   buildCampfire,
+  buildFletchingBench,
   buildForge,
   buildNode,
   buildSignpost,
@@ -149,7 +150,7 @@ describe('a signpost', () => {
 
 describe('a station', () => {
   /**
-   * Both props have to fit the box a tap is picked against, which is a tile cube
+   * Every prop has to fit the box a tap is picked against, which is a tile cube
    * standing where the station does (`StationActor.pickBox`). A prop that grew
    * past it would have corners a thumb aimed at cleanly and missed — the same
    * disagreement between what is drawn and what answers as `PLAYER_HALF_EXTENT`
@@ -158,6 +159,7 @@ describe('a station', () => {
   it.each([
     ['forge', buildForge],
     ['tannery', buildTannery],
+    ['bench', buildFletchingBench],
   ])('draws %s inside the box a tap is picked against', (_name, build) => {
     // A hair of slack, because a leg whose foot lands exactly on the ground
     // computes its own bound a float's width either side of zero.

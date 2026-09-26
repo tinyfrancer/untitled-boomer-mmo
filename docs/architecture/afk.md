@@ -41,8 +41,12 @@ camp, and smithing inherited the same hole the day the forge landed. What makes 
 rather than drift is that **a station is a tool you cannot carry**: nothing is stored and nothing is
 chosen twice, the derivation simply reads two inputs instead of one. Standing at a fire holding raw
 fish is a cooking camp; at a forge holding ore, a smithing one; at the vat holding hides, a tanning
-one — the third of those cost the AFK code nothing at all, which is the derivation paying off the
-same way mining did. **A station beats a
+one; at the bench holding logs, or shafts and heads, a fletching one — the last two cost the AFK
+code nothing at all, which is the derivation paying off the same way mining did. **Any row a camp
+can supply is a job**, a list of inputs as readily as one of one thing: the camp asks `canCraft` of
+every row at a station in reach and takes the best-paying (`bestCraftInReach`), and the offline
+payout asks `hasInputs`. The act three plan assumed otherwise and it was never so (`docs/decisions.md`
+78). **A station beats a
 tool** — you walked to the forge where the pickaxe is merely what you are holding — and the two
 cannot deadlock, because a craft eats out of the bag and the bag runs dry, at which point the
 gatherer that filled it takes over again. The camp never lights a fire: a log is not the camp's to
@@ -76,7 +80,8 @@ for eight hours at a fire nobody was tending. That is the one thing a parked ses
 — a zone says what a camp was fighting or gathering, but a forge is one tile of a town — so
 `AfkSession.station` records the station the camp _settled to work at_ and nothing else, which is the
 awake loop's own precedence decided once at the toggle. The offline branch takes the same order the
-awake camp runs: the station first, then the tool, then the fight. It is also the only branch that
+awake camp runs: the station first, then the tool, then the fight. It counts `crafts` in things
+made rather than jobs, since a job at the bench is fifteen shafts. It is also the only branch that
 **spends** anything, so `OfflineAfkReport.consumed` runs the opposite way from `drops` and
 `resolveParked` has to take it back off the character — a payout that only did the second half would
 mint bars out of ore that was never used.

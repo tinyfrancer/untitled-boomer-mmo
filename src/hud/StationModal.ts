@@ -2,7 +2,7 @@ import { Overlay } from './Overlay';
 import { el, row, sectionHeader } from './dom';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName } from '../data/items';
-import { recipesAt } from '../systems/CraftingSystem';
+import { batchSize, recipesAt } from '../systems/CraftingSystem';
 import { STATION_LABELS, STATION_SKILLS, type StationId } from '../data/recipes';
 import { SKILLS } from '../data/skills';
 import { skillLevel, type Skills } from '../systems/SkillSystem';
@@ -119,7 +119,10 @@ export class StationModal extends Overlay {
         return `${describeItemName(input.itemId)} ${held}/${input.quantity}`;
       })
       .join(', ');
-    const note = el('div', 'hud-list-row__note', cost);
+    // How many a job makes, for the rows that make more than one — which is
+    // most of what tells a log at the bench from a log on the fire.
+    const batch = batchSize(recipe);
+    const note = el('div', 'hud-list-row__note', batch > 1 ? `${cost} — makes ${batch}` : cost);
     if (short) {
       note.style.color = THEME.color.playerDamage;
     }

@@ -8,6 +8,7 @@ import {
 } from '../data/recipes';
 import {
   advanceCraft,
+  batchSize,
   beginCraft,
   canCraft,
   findCraftableFrom,
@@ -312,7 +313,7 @@ export class GatherSession {
       }
     }
     if (result.itemId) {
-      character.addItem(result.itemId, result.quantity);
+      character.addMadeItem(result.itemId, result.quantity);
     }
     this.ctx.publishInventory();
     if (result.failed) {
@@ -320,8 +321,12 @@ export class GatherSession {
       // botched bar is still on the bench and only the time is lost.
       this.ctx.notice(result.consumed ? 'You burn it.' : `You ruin the ${recipe.name}.`);
     } else {
-      if (result.quantity > 1) {
-        this.ctx.notice(`Your skill yields a second ${recipe.name}.`);
+      if (result.quantity > batchSize(recipe)) {
+        this.ctx.notice(
+          batchSize(recipe) > 1
+            ? `Your skill yields a second batch of ${recipe.name}.`
+            : `Your skill yields a second ${recipe.name}.`,
+        );
       }
       this.ctx.awardSkillXp(recipe.skill, result.xp);
       // Credited only behind a success, so the pool is fed by what came off the

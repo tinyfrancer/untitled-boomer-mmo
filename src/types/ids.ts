@@ -143,6 +143,16 @@ export type ItemId =
   | 'studded-quiver'
   | 'grave-quiver'
   | 'crude-arrows'
+  // Fletching's: the willow on the millpond, the shafts a log or a willow is cut
+  // into, the heads a bar is cut into at the forge, and the two arrows those make
+  // — one rung each above the crude ones the shop sells.
+  | 'willow'
+  | 'arrow-shafts'
+  | 'willow-shafts'
+  | 'iron-arrowheads'
+  | 'steel-arrowheads'
+  | 'iron-arrows'
+  | 'steel-arrows'
   // What a reforge is paid for with. Bought in town and spent at Greyford,
   // which is how the coin sink sits at one end of the loop and the work at the
   // other without the outpost starting to want money.
@@ -172,7 +182,13 @@ export type RecipeId =
   | 'cured-leather'
   | 'fenhide-cowl'
   | 'fenhide-vest'
-  | 'fenhide-leggings';
+  | 'fenhide-leggings'
+  | 'arrow-shafts'
+  | 'willow-shafts'
+  | 'iron-arrowheads'
+  | 'steel-arrowheads'
+  | 'iron-arrows'
+  | 'steel-arrows';
 
 export type EnemyId =
   | 'rat'
@@ -242,10 +258,12 @@ export type ItemIconShape =
   | 'ore'
   | 'bar'
   | 'key'
-  | 'arrow';
+  | 'arrow'
+  | 'shaft'
+  | 'arrowhead';
 
 export type GatherSkillId =
-  'fishing' | 'woodcutting' | 'mining' | 'cooking' | 'smithing' | 'leatherworking';
+  'fishing' | 'woodcutting' | 'mining' | 'cooking' | 'smithing' | 'leatherworking' | 'fletching';
 
 // Skills that level by fighting rather than by gathering. Their cap rides the
 // character's level (see combatSkillCap), so they can't be ground ahead of it.
@@ -257,6 +275,7 @@ export type SkillId = GatherSkillId | CombatSkillId;
 export type ResourceNodeId =
   | 'tree'
   | 'hardwood'
+  | 'willow'
   | 'fishing-spot'
   | 'ocean-fishing-spot'
   | 'deep-fishing-spot'

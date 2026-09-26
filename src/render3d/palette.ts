@@ -34,6 +34,12 @@ export const PALETTE = {
   tanLiquor: 0x4a3520,
   tanVat: 0x6b4f2f,
   stretchedHide: 0xb08457,
+  // The fletcher's bench: pale planed timber where the vat is dark and soaked,
+  // with a bundle of shafts and a white tuft of fletching on it — the two things
+  // that say "arrows" from where the camera stands.
+  benchTop: 0xa1887f,
+  shaftBundle: 0xd7ccc8,
+  fletching: 0xf5f5f5,
   // A loot pile: burlap, pale enough to be found on grass, sand and marsh from
   // where the camera stands, and the cord round its neck.
   sack: 0xc9ad7f,

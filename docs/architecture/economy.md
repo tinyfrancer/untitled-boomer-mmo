@@ -54,7 +54,9 @@ The **tannery** in the yard is the other half of that claim, and the more load-b
 the one forge and every made thing in the game came off it, which quietly made "production" and
 "smithing" the same word; the vat is the second vertical, and it is out here rather than in town for
 the reason the counter is — what it works is what the zones around it produce. See the fenhide tier
-below for what it makes and why.
+below for what it makes and why. The **fletcher's bench** beside it is the third vertical and the
+same argument again (act three phase 13): the timber off the road south and the heads off the town
+forge become arrows here, which is `docs/architecture/making.md`'s to explain.
 
 **What is on the shelf is earned, and a locked row is still drawn** (`StockRequirement` in
 `data/shop.ts`, ruled on by `systems/ShopSystem.ts`). A stock row may name a character level or a
@@ -196,7 +198,9 @@ rat is in the way visibly, where a counter swallowing the tap looks like nothing
 **Acquiring an item can fail.** The pack has a weight limit (`systems/EncumbranceSystem.ts`,
 capacity from strength), so gathering, loot and buying all go through
 `CharacterController.tryAddItem`, which adds nothing and returns false when the pack is full.
-Use it rather than `addItem` for anything the world hands the player, and handle the refusal.
+Use it rather than `addItem` for anything the world hands the player, and handle the refusal. The
+one exception is what comes off a station, which spent its inputs first and so is never refused:
+`addMadeItem` hands it over without asking the pack (`docs/decisions.md` 79).
 **What a refusal means depends on who is watching**: an attended player is stopped — they are right
 there and can make room, and nothing is destroyed while they do — where an unattended one keeps
 going and loses the haul, since the swing happened and stopping the camp dead would cost them a
@@ -224,8 +228,10 @@ and is still the player's, and the rest of a pile stays on the ground, so refusi
 outright because twelve fit would be inventing a loss. Both say what stayed behind, since asking for
 thirty and getting twelve otherwise reads as a bug.
 
-**An arrow goes into the quiver before the bag sees it** (`CharacterController.tryAddItem` and
-`addWhatFits`, act three phase 12; `docs/decisions.md` 70 and 73). The quiver is
+**An arrow goes into the quiver before the bag sees it** (`CharacterController.tryAddItem`,
+`addWhatFits` and `addMadeItem`, act three phases 12 and 13; `docs/decisions.md` 70, 73 and 79). An
+arrow fletched at the bench is an arrow like one off a body: into a dry quiver, or beside a quiver of
+another kind into the bag, where the next refill reaches for it first if it is the better one. The quiver is
 `CharacterState.quiver` — one kind of arrow and how many — beside the gear rather than in it, since a
 slot holds one item and a quiver holds a stack, and apart from the bag, since quivered arrows weigh
 nothing and cannot be sold or banked. So both acquisition paths ask where a stack would go before

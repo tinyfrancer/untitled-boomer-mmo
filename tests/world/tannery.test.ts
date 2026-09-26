@@ -160,9 +160,8 @@ describe('a camp left in the yard', () => {
    * a vat plus a pack of hides is a tanning camp with nothing stored, nothing
    * equipped and no second button pressed.
    *
-   * Greyford has no mobs and no nodes, so this is also the only thing an
-   * unattended character could possibly do here — which is what would have made
-   * a two-input tanning row a station nobody could camp.
+   * Greyford has no mobs and no nodes, so a station is the only thing an
+   * unattended character could possibly do here.
    */
   it('settles to the vat with nothing in hand', () => {
     const { world, character, until } = tanning();

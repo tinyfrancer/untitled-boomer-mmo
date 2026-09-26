@@ -10,11 +10,12 @@ last phase lands.
 
 ## Where things stand
 
-- **Phases 10, 11 and 12 have landed since this was written** — see
-  [phase 10](#phase-10--loot-that-is-not-lost-landed),
-  [phase 11](#phase-11--the-upper-band-gets-directed-content-landed) and
-  [phase 12](#phase-12--the-ranger-landed). **Next is phase 13**, fletching and willow, and nothing
-  is waiting on the user. The rest of this list is as it stood at the merge of PR #123.
+- **Every phase has landed, and this file is archived** with the plan. Phases 10, 11, 12 and 13
+  landed after it was written — see [phase 10](#phase-10--loot-that-is-not-lost-landed),
+  [phase 11](#phase-11--the-upper-band-gets-directed-content-landed),
+  [phase 12](#phase-12--the-ranger-landed) and
+  [phase 13](#phase-13--fletching-and-willow-landed). The rest of this list is as it stood at the
+  merge of PR #123.
 - **`main` has phases 0-9**: the cleanup (a 17 KB `CLAUDE.md` with the reasoning moved into
   `docs/architecture/`, one counter shell for six roles, one set of dice per zone), the graphics
   (the world carried past its edge, each zone's air, rock standing up, readable names, a fight with
@@ -149,6 +150,18 @@ turned out to be about and decisions 71-75 the forks. What phase 13 inherits:
 
 What follows is the section as it was written before the phase, kept for the reasoning and for
 phase 13's part of it.
+
+## Phase 13 — fletching and willow (landed)
+
+**Landed** on its own PR, after a correction in a commit of its own: this file's claim below that
+"the camp can only settle to a one-of-one recipe" was never true — a camp works any row at a station
+it can supply — and the comments and the tannery test that repeated it were fixed (decision 78).
+Then recipes that make several (`outputQuantity`, fifteen a job on the arrow line), the fletcher's
+bench beside the vat, willow on the millpond, iron and steel heads at the forge, iron and steel
+arrows at the bench, and saves at version 24. Willow turned out to be the steel arrow's shaft and
+nothing else (decision 76); the halves of an arrow have no price (decision 77); and what comes off a
+station now goes through the quiver (decision 79). The plan's phase 13 has what it turned out to be
+about.
 
 ## Phases 12 and 13 — the ranger, then fletching and willow
 

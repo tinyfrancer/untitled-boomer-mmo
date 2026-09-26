@@ -287,6 +287,28 @@ describe('afkCampJob', () => {
     expect(job).toEqual({ kind: 'craft', recipe: RECIPES['tin-bar'] });
   });
 
+  /**
+   * A row with a list of inputs is as good a job as one of one thing. The plan
+   * for the fletcher's bench assumed otherwise — that a camp could only settle
+   * to a single-input row — and it always could: the job is whatever
+   * `canCraft` allows, and a pack holding both halves of an arrow allows it.
+   */
+  it('settles to a row with two inputs as readily as to one', () => {
+    const skills = createInitialSkills();
+    skills.fletching = { level: 3, xp: 0 };
+
+    const job = afkCampJob(
+      surroundings({
+        skills,
+        stations: ['bench'],
+        inventory: { logs: 4, 'arrow-shafts': 15, 'iron-arrowheads': 15 },
+      }),
+    );
+
+    // Iron arrows pay 40 to a shaft's 12, so the richer row wins, list and all.
+    expect(job).toEqual({ kind: 'craft', recipe: RECIPES['iron-arrows'] });
+  });
+
   // The precedence, stated directly: you had to walk to the forge, where the
   // pickaxe is merely what you are holding.
   it('puts the station ahead of the tool in hand', () => {
