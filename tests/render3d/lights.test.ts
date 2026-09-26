@@ -21,6 +21,7 @@ import { RoomLight, Sunlight, castsShadow } from '../../src/render3d/lights';
 import { ATMOSPHERES } from '../../src/render3d/atmosphere';
 import {
   buildCampfire,
+  buildFletchingBench,
   buildForge,
   buildNode,
   buildSignpost,
@@ -278,6 +279,7 @@ describe('what stands in the sun', () => {
     ['a signpost', buildSignpost],
     ['the forge', buildForge],
     ['the tannery', buildTannery],
+    ["the fletcher's bench", buildFletchingBench],
   ])('%s casts a shadow', (_label, build) => {
     expect(shadowCasters(build())).toBeGreaterThan(0);
   });

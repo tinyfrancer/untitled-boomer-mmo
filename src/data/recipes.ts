@@ -9,17 +9,18 @@ import type { GatherSkillId, ItemId, RecipeId } from '../types/ids';
  * keeps "go somewhere and do something" the shape of the game rather than
  * letting crafting become a panel opened from the bag anywhere.
  */
-export type StationId = 'fire' | 'forge' | 'tannery';
+export type StationId = 'fire' | 'forge' | 'tannery' | 'bench';
 
 // Every station there is, for the callers that have to ask about all of them
 // rather than about one — which is a camp reading what is in reach.
-export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge', 'tannery']);
+export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge', 'tannery', 'bench']);
 
 /** What a station is called, wherever one has to be named to the player. */
 export const STATION_LABELS: Record<StationId, string> = {
   fire: 'Campfire',
   forge: 'Forge',
   tannery: 'Tannery',
+  bench: "Fletcher's Bench",
 };
 
 /**
@@ -33,6 +34,7 @@ export const STATION_ACTION_LABELS: Record<StationId, string> = {
   fire: 'Cook',
   forge: 'Smith',
   tannery: 'Tan',
+  bench: 'Fletch',
 };
 
 /**
@@ -48,6 +50,7 @@ export const STATION_SKILLS: Record<StationId, GatherSkillId> = {
   fire: 'cooking',
   forge: 'smithing',
   tannery: 'leatherworking',
+  bench: 'fletching',
 };
 
 /**
@@ -66,6 +69,8 @@ export const STATION_PERSISTS: Record<StationId, boolean> = {
   // Built into the yard at Greyford, like the forge is built into the town: a
   // hide left in the vat overnight is still in it in the morning.
   tannery: true,
+  // Beside the vat, and for the same reason: a bench is part of the yard.
+  bench: true,
 };
 
 export interface RecipeInput {
@@ -265,6 +270,28 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     xpReward: 80,
     durationMs: 4500,
   },
+  /**
+   * An iron bar cut into arrowheads, which is smithing's half of an arrow and
+   * the first row at the forge to make more than one of anything.
+   *
+   * Fifteen to a bar, and gated a level above the bar itself, where the plate
+   * starts: a smith who can smelt iron is one level from being useful to a
+   * ranger. It pays less a bar than the helmet does, because it asks for no tin
+   * and no char — the cheap job pays cheaply, or it would be the way round the
+   * plate tier's secondaries.
+   */
+  'iron-arrowheads': {
+    id: 'iron-arrowheads',
+    name: 'Iron Arrowheads',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'iron-bar', quantity: 1 }],
+    outputItemId: 'iron-arrowheads',
+    outputQuantity: 15,
+    requiredLevel: 5,
+    xpReward: 16,
+    durationMs: 2600,
+  },
 
   /**
    * Hardwood burnt down, and bone char's opposite number one tier up.
@@ -382,6 +409,21 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     xpReward: 200,
     durationMs: 5000,
   },
+  // The same cut one tier up, at the level the steel set opens: a steel bar is
+  // two iron bars and the Deep Cut's coal, so fifteen heads off one is the
+  // dearest ammunition in the game before the willow is even cut.
+  'steel-arrowheads': {
+    id: 'steel-arrowheads',
+    name: 'Steel Arrowheads',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'steel-bar', quantity: 1 }],
+    outputItemId: 'steel-arrowheads',
+    outputQuantity: 15,
+    requiredLevel: 8,
+    xpReward: 40,
+    durationMs: 3000,
+  },
 
   /**
    * The best heal in the game, and the reason the fen is worth the walk twice.
@@ -495,6 +537,83 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     requiredLevel: 8,
     xpReward: 340,
     durationMs: 4600,
+  },
+
+  /**
+   * The fletcher's bench, and the ranger's production line: shafts cut out of
+   * wood here, heads cut out of metal at the forge, and the two put together
+   * here again (decision 64 — fletching for the wood, smithing for the metal).
+   *
+   * Every row makes fifteen, which is what makes the arithmetic of a quiver
+   * work: one log and one bar are fifteen arrows, where one a job would be a
+   * ranger spending an evening on what one fight shoots. A failure keeps the
+   * wood, as it keeps the ore at the forge — nothing here is burnt.
+   *
+   * The two arrows are the rungs above the crude ones the shop sells, and each
+   * is where the loops meet the way the forge's tiers are: an iron arrow is a
+   * tree and the quarry's iron, and a steel one is the millpond's willow, the
+   * quarry's iron and the Deep Cut's coal — three zones, and three skills
+   * beside fletching itself.
+   */
+  'arrow-shafts': {
+    id: 'arrow-shafts',
+    name: 'Arrow Shafts',
+    skill: 'fletching',
+    station: 'bench',
+    inputs: [{ itemId: 'logs', quantity: 1 }],
+    outputItemId: 'arrow-shafts',
+    outputQuantity: 15,
+    requiredLevel: 1,
+    xpReward: 12,
+    durationMs: 2000,
+  },
+  'iron-arrows': {
+    id: 'iron-arrows',
+    name: 'Iron Arrows',
+    skill: 'fletching',
+    station: 'bench',
+    inputs: [
+      { itemId: 'arrow-shafts', quantity: 15 },
+      { itemId: 'iron-arrowheads', quantity: 15 },
+    ],
+    outputItemId: 'iron-arrows',
+    outputQuantity: 15,
+    requiredLevel: 2,
+    xpReward: 40,
+    durationMs: 2400,
+  },
+  /**
+   * What the willow is for (decision 76): straighter, lighter shafts than a
+   * log gives, and the only shaft a steel head is worth fitting to. Gated where
+   * the bench's top half starts, so the level that opens it is earned putting
+   * iron arrows together.
+   */
+  'willow-shafts': {
+    id: 'willow-shafts',
+    name: 'Willow Shafts',
+    skill: 'fletching',
+    station: 'bench',
+    inputs: [{ itemId: 'willow', quantity: 1 }],
+    outputItemId: 'willow-shafts',
+    outputQuantity: 15,
+    requiredLevel: 6,
+    xpReward: 36,
+    durationMs: 2400,
+  },
+  'steel-arrows': {
+    id: 'steel-arrows',
+    name: 'Steel Arrows',
+    skill: 'fletching',
+    station: 'bench',
+    inputs: [
+      { itemId: 'willow-shafts', quantity: 15 },
+      { itemId: 'steel-arrowheads', quantity: 15 },
+    ],
+    outputItemId: 'steel-arrows',
+    outputQuantity: 15,
+    requiredLevel: 8,
+    xpReward: 80,
+    durationMs: 3000,
   },
 };
 

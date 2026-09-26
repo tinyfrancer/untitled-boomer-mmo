@@ -584,6 +584,43 @@ describe('migrateCharacterState', () => {
     expect(migrated?.classId).toBe('wizard');
   });
 
+  /**
+   * v23 -> v24: fletching joins the sheet, spread under what was trained like
+   * every skill before it. The quiver a ranger carried in comes through as it
+   * was, since nothing about arrows changed shape.
+   */
+  it('opens fletching at level 1, touching nothing else', () => {
+    const withoutFletching: Partial<ReturnType<typeof createInitialSkills>> = createInitialSkills();
+    delete withoutFletching.fletching;
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 23,
+      classId: 'ranger',
+      currency: 0,
+      zoneId: 'greyford',
+      afk: null,
+      quests: {},
+      kills: {},
+      visits: {},
+      bounty: null,
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      mastery: {},
+      reforges: {},
+      quiver: { itemId: 'crude-arrows', count: 37 },
+      skills: { ...withoutFletching, woodcutting: { level: 8, xp: 40 } },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.skills.fletching).toEqual({ level: 1, xp: 0 });
+    expect(migrated?.skills.woodcutting).toEqual({ level: 8, xp: 40 });
+    expect(migrated?.quiver).toEqual({ itemId: 'crude-arrows', count: 37 });
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();

@@ -410,6 +410,7 @@ const QUARTERMASTER = "window.world.npcs.find((n) => n.npcId === 'quartermaster'
 // from outside: the counter is behind a wall with a roof drawn over it.
 const GENERAL_STORE = "window.world.buildings.find((b) => b.definition.id === 'general-store')";
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
+const BENCH = "window.world.stations.find((s) => s.station === 'bench')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 const PILE = 'window.world.lootPiles[0]';
 
@@ -3826,6 +3827,98 @@ async function ranger() {
   );
 }
 
+async function fletchersBench() {
+  // --- The fletcher's bench, the third station built into a zone and the only
+  // one in a zone nothing above visits.
+  //
+  // The rules — fifteen a job, arrows into the quiver, the camp settling to two
+  // inputs — are tests/world/fletching.test.ts. What only a browser shows is the
+  // prop drawn and picked by a real click, the panel headed for it and saying
+  // how many a row makes, a real tap running the channel, and the bench handed
+  // back to the GPU when the zone comes down. Walked to, since walking is the
+  // only way into a zone: west to the mill road and north into Greyford. ---
+  if ((await zoneId()) !== 'greyford') {
+    if ((await zoneId()) !== 'old-mill-road') {
+      await park();
+      await page.evaluate(() => {
+        const w = window.world;
+        w.teleport(33, w.worldHeight / 2);
+      });
+      await stepUntilZone('old-mill-road', 'the west road out of town');
+    }
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, 33);
+    });
+    await stepUntilZone('greyford', 'the road north into Greyford');
+  }
+  await sweep();
+  const before = await gpuMemory();
+
+  await page.evaluate(() => {
+    const w = window.world;
+    const bench = w.stations.find((s) => s.station === 'bench');
+    w.clearTarget();
+    w.character.state.inventory = { logs: 2 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+    // Set rather than awarded, for the reason the forge section gives: a run of
+    // level-up toasts is HUD furniture that swallows the taps after it.
+    w.character.state.skills.fletching = { level: 9, xp: 0 };
+    w.teleport(bench?.x ?? 0, (bench?.y ?? 0) + 40);
+  });
+  await step(2);
+  await draw();
+  await clickAt(await screenAt(BENCH));
+  await step(2);
+  const opened = await page.evaluate(() => ({
+    title: document.querySelector('.hud-modal__box--station .hud-modal__title')?.textContent ?? '',
+    note:
+      document.querySelector('.hud-modal__box--station [data-recipe="arrow-shafts"]')?.parentElement
+        ?.lastElementChild?.textContent ?? '',
+  }));
+  check(
+    "a real click on the fletcher's bench opens its list, saying how many a job makes",
+    opened.title === "Fletcher's Bench" && opened.note.includes('makes 15'),
+    `"${opened.title}", "${opened.note}"`,
+  );
+
+  await page.click('.hud-modal__box--station [data-recipe="arrow-shafts"]');
+  await step(12, 200);
+  const cut = await page.evaluate(() => ({
+    logs: window.world.character.state.inventory.logs ?? 0,
+    shafts: window.world.character.state.inventory['arrow-shafts'] ?? 0,
+  }));
+  check(
+    'a tap on a bench row cuts a log into fifteen shafts',
+    cut.shafts === 15 && cut.logs === 1,
+    `${cut.logs} logs, ${cut.shafts} shafts`,
+  );
+  await page.screenshot({ path: `${OUT}/22-fletchers-bench.png` });
+
+  // Off the bench and out of the yard, then back: the bench is built with the
+  // zone, so it has to come down with it and go back up without a leak.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.character.state.inventory = {};
+    window.events.emit('inventory-changed', {});
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('old-mill-road', 'the road south out of Greyford');
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('greyford', 'the road north back into Greyford');
+  await sweep();
+  const after = await gpuMemory();
+  check(
+    'a round trip out of Greyford hands the bench back to the GPU',
+    after.geometries <= before.geometries && after.textures <= before.textures,
+    `${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
+  );
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -3863,6 +3956,7 @@ const SECTIONS = [
   ['offline-camping', offlineCamping],
   ['throttled', throttled],
   ['ranger', ranger],
+  ['fletchers-bench', fletchersBench],
 ];
 
 const known = SECTIONS.map(([name]) => name);

@@ -364,6 +364,64 @@ export function buildTannery(): Group {
   return castsShadow(group);
 }
 
+/**
+ * The fletcher's bench: a plank on two trestles, a bundle of shafts on it, and a
+ * bow stave standing at the back.
+ *
+ * The third built station and the third silhouette, which is the job a station's
+ * look has on a map with no art on it: the forge is a squat hot block, the vat a
+ * dark tub with a hide behind it, and this is a pale, flat, open table — nothing
+ * on it but long thin things and the white of the feathers.
+ */
+export function buildFletchingBench(): Group {
+  const size = TILE_SIZE;
+  const group = new Group();
+
+  const top = new Mesh(
+    new BoxGeometry(size * 0.9, size * 0.07, size * 0.5),
+    new MeshLambertMaterial({ color: PALETTE.benchTop }),
+  );
+  top.position.y = size * 0.4;
+  group.add(top);
+
+  [-1, 1].forEach((side) => {
+    const trestle = new Mesh(
+      new BoxGeometry(size * 0.08, size * 0.37, size * 0.44),
+      new MeshLambertMaterial({ color: PALETTE.wood }),
+    );
+    trestle.position.set(side * size * 0.34, size * 0.185, 0);
+    group.add(trestle);
+  });
+
+  // The shafts, lying lengthways, with their fletched ends together at one end:
+  // one box for the bundle, since at this size a dozen sticks are one shape.
+  const bundle = new Mesh(
+    new BoxGeometry(size * 0.6, size * 0.06, size * 0.14),
+    new MeshLambertMaterial({ color: PALETTE.shaftBundle }),
+  );
+  bundle.position.set(-size * 0.04, size * 0.465, size * 0.06);
+  group.add(bundle);
+
+  const feathers = new Mesh(
+    new BoxGeometry(size * 0.12, size * 0.09, size * 0.16),
+    new MeshLambertMaterial({ color: PALETTE.fletching }),
+  );
+  feathers.position.set(size * 0.28, size * 0.48, size * 0.06);
+  group.add(feathers);
+
+  // The stave, taller than anything else here, stood at the back so the table
+  // is what the camera sees first from the south.
+  const stave = new Mesh(
+    new CylinderGeometry(size * 0.025, size * 0.03, size * 0.95, 6),
+    new MeshLambertMaterial({ color: PALETTE.woodLight }),
+  );
+  stave.position.set(-size * 0.3, size * 0.475, -size * 0.2);
+  stave.rotation.z = 0.12;
+  group.add(stave);
+
+  return castsShadow(group);
+}
+
 /** Crossed logs under a flame. The flicker is decoration; the burn clock is the sim's. */
 /**
  * What a full pack left on the ground: a sack, tied at the neck.

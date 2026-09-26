@@ -19,6 +19,7 @@ import { pickBox, type Pickable } from './picking';
 import { WATER_DEPTH } from './ground';
 import {
   buildCampfire,
+  buildFletchingBench,
   buildForge,
   buildLootSack,
   buildNode,
@@ -496,6 +497,7 @@ export class NpcActor implements Actor, Pickable {
 const STATION_PROPS: Record<Exclude<StationId, 'fire'>, () => Group> = {
   forge: buildForge,
   tannery: buildTannery,
+  bench: buildFletchingBench,
 };
 
 export class StationActor implements Actor, Pickable {

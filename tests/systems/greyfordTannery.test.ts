@@ -89,7 +89,7 @@ describe('the second vertical', () => {
   // A vat that went out overnight would be a campfire wearing a zone's clothes.
   it('is a fact about the zone rather than about the player', () => {
     expect(STATION_PERSISTS.tannery).toBe(true);
-    expect(ZONES.greyford.stationSpawns?.map((spawn) => spawn.station)).toEqual(['tannery']);
+    expect(ZONES.greyford.stationSpawns?.map((spawn) => spawn.station)).toContain('tannery');
   });
 });
 

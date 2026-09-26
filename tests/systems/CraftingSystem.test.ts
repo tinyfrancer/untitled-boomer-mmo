@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RECIPES, STATION_IDS, STATION_SKILLS } from '../../src/data/recipes';
 import {
   advanceCraft,
+  batchSize,
   beginCraft,
   failureChance,
   canCraft,
@@ -158,6 +159,48 @@ describe('rollCraft', () => {
     // A pool that doubled a burnt fish would pay worse the further along it is.
     const result = rollCraft(FISH, 1, 1, () => 0);
     expect(result).toMatchObject({ itemId: 'burnt-fish', quantity: 1, failed: true });
+  });
+});
+
+/**
+ * A recipe that makes several, which the arrow line is the first of: a log is
+ * fifteen shafts. Everything that makes one says nothing and makes one.
+ */
+describe('a batch', () => {
+  const SHAFTS = RECIPES['arrow-shafts'];
+
+  it('is one for any recipe that does not say otherwise', () => {
+    expect(batchSize(FISH)).toBe(1);
+    expect(batchSize(RECIPES['steel-chestplate'])).toBe(1);
+    expect(batchSize(SHAFTS)).toBe(15);
+  });
+
+  it('comes off the bench whole on a success', () => {
+    expect(rollCraft(SHAFTS, 9, 0, () => 0.99)).toEqual({
+      itemId: 'arrow-shafts',
+      quantity: 15,
+      xp: SHAFTS.xpReward,
+      failed: false,
+      consumed: true,
+    });
+  });
+
+  // Twice the batch rather than one more: a pool that paid a sixteenth shaft
+  // would be a pool nobody could see paying.
+  it('doubles whole when the mastery roll lands', () => {
+    const rolls = [0.99, 0.1];
+    expect(rollCraft(SHAFTS, 9, 0.2, () => rolls.shift() ?? 1).quantity).toBe(30);
+  });
+
+  // No failure item, so a bad roll keeps the log — the forge's rule, not the fire's.
+  it('keeps the wood on a failure', () => {
+    expect(rollCraft(SHAFTS, 1, 1, () => 0)).toEqual({
+      itemId: null,
+      quantity: 0,
+      xp: 0,
+      failed: true,
+      consumed: false,
+    });
   });
 });
 

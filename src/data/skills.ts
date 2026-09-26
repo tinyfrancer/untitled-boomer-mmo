@@ -29,6 +29,7 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
     family: 'gathering',
     verb: 'work leather',
   },
+  fletching: { id: 'fletching', name: 'Fletching', family: 'gathering', verb: 'fletch' },
   'one-handed': { id: 'one-handed', name: '1 Handed', family: 'combat', verb: 'fight' },
   archery: { id: 'archery', name: 'Archery', family: 'combat', verb: 'fight' },
   unarmed: { id: 'unarmed', name: 'Fist', family: 'combat', verb: 'fight' },
@@ -39,8 +40,8 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
 
 // Gather-then-make order, so the character sheet reads in the order the loop is
 // actually played rather than alphabetically. The three ways of filling a pack
-// come first and the two things done with a full one come last, which is why
-// mining sits with woodcutting and fishing rather than at the end.
+// come first and the things done with a full one come last, which is why mining
+// sits with woodcutting and fishing rather than at the end.
 export const SKILL_ORDER = exhaustive<GatherSkillId>()([
   'woodcutting',
   'fishing',
@@ -48,6 +49,7 @@ export const SKILL_ORDER = exhaustive<GatherSkillId>()([
   'cooking',
   'smithing',
   'leatherworking',
+  'fletching',
 ]);
 
 // Offense before defense before magic, which is the order they come up in a fight.

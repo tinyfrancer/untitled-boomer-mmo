@@ -3,7 +3,8 @@ import { TILE_SIZE, WORLD_WIDTH_TILES } from '../../src/config/constants';
 import { ENEMIES } from '../../src/data/enemies';
 import { ITEMS } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
-import { OLD_MILL_ROAD_MOB_SPAWNS } from '../../src/data/spawns';
+import { OLD_MILL_ROAD_MOB_SPAWNS, OLD_MILL_ROAD_NODE_SPAWNS } from '../../src/data/spawns';
+import { WATER_TILE } from '../../src/data/tiles';
 import { ZONES } from '../../src/data/zones';
 import { worldMap } from '../../src/systems/MapSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
@@ -185,6 +186,46 @@ describe('the goblins stand in threes', () => {
         `${spawn.dx},${spawn.dy} greets the traveller`,
       ).toBeGreaterThan(AGGRO_REACH);
     });
+  });
+});
+
+/**
+ * The willows, which are the second reason to walk out here and the one a
+ * spawn list could lose without anything noticing: moved off the bank they are
+ * trees in a field, and moved into a knot's reach they are trees nobody fells,
+ * since a channel is broken by being hit.
+ */
+describe('the willows on the millpond', () => {
+  const willows = OLD_MILL_ROAD_NODE_SPAWNS.filter((spawn) => spawn.nodeId === 'willow');
+  const centre = { x: (WORLD_WIDTH_TILES * TILE_SIZE) / 2, y: (ZONE.map.length * TILE_SIZE) / 2 };
+  const reach = (GOBLIN.aggroRadius ?? 0) + GOBLIN.wander.radius;
+
+  it('stand on the bank, within a tile of the water', () => {
+    expect(willows.length).toBeGreaterThan(0);
+    for (const willow of willows) {
+      const x = centre.x + willow.dx;
+      const y = centre.y + willow.dy;
+      const nearWater = ZONE.map.some((row, rowIndex) =>
+        row.some((tile, column) => {
+          if (tile !== WATER_TILE) return false;
+          const tileX = (column + 0.5) * TILE_SIZE;
+          const tileY = (rowIndex + 0.5) * TILE_SIZE;
+          return Math.hypot(tileX - x, tileY - y) <= TILE_SIZE * 1.5;
+        }),
+      );
+      expect(nearWater, `${willow.dx},${willow.dy} is not on the bank`).toBe(true);
+    }
+  });
+
+  it('stand out of every knot’s reach, wherever a goblin has wandered to', () => {
+    for (const willow of willows) {
+      for (const goblin of OLD_MILL_ROAD_MOB_SPAWNS) {
+        expect(
+          between(willow, goblin),
+          `the willow at ${willow.dx},${willow.dy} is in reach of ${goblin.dx},${goblin.dy}`,
+        ).toBeGreaterThan(reach);
+      }
+    }
   });
 });
 

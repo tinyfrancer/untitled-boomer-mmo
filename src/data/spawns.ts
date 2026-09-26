@@ -174,6 +174,19 @@ export const OLD_MILL_ROAD_NODE_SPAWNS: NodeSpawnPoint[] = [
   { dx: 352, dy: -416, nodeId: 'hardwood' },
   { dx: 512, dy: 320, nodeId: 'hardwood' },
   { dx: 640, dy: 224, nodeId: 'hardwood' },
+  /**
+   * The willows, on the millpond's bank: two along the south shore between the
+   * water and the road, and one at the north-east corner behind the mill.
+   *
+   * The far knot is the pond's neighbour to the south, so these are held out of
+   * its reach — its aggro radius and its wander together — rather than merely
+   * out of its spawn points, for the reason the hardwood is: a channel is broken
+   * by being hit, and a willow a goblin can wander up to is one nobody finishes.
+   * `oldMillRoad.test.ts` holds that.
+   */
+  { dx: -704, dy: -128, nodeId: 'willow' },
+  { dx: -576, dy: -128, nodeId: 'willow' },
+  { dx: -448, dy: -384, nodeId: 'willow' },
 ];
 
 /**

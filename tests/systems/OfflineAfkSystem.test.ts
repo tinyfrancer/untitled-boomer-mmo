@@ -472,6 +472,24 @@ describe('a parked making camp', () => {
     expect(report.crafts).toBe(3);
   });
 
+  /**
+   * A job at the fletcher's bench makes fifteen, and the night pays all fifteen
+   * — counted as things rather than jobs, so "made" on the away report agrees
+   * with the shafts it lists, while what was spent is still one log a job.
+   */
+  it('pays a whole batch a job at the bench, and counts the things made', () => {
+    const SHAFTS = RECIPES['arrow-shafts'];
+    const report = resolveOfflineAfk(
+      sessionStartedAgo(SHAFTS.durationMs * 3 + 10, 'greyford', 'bench'),
+      making({ inventory: { logs: 40 } }),
+    );
+
+    expect(report.skill).toBe('fletching');
+    expect(report.consumed.logs).toBe(3);
+    expect(report.drops['arrow-shafts']).toBe(45);
+    expect(report.crafts).toBe(45);
+  });
+
   // The same ceiling the gathering branch is held to, and for the same reason:
   // it is what makes the rest of the arithmetic safe to keep simple.
   it('never earns more than a single skill level, however long the tab was shut', () => {

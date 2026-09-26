@@ -17,7 +17,7 @@ import type { RecipeId } from '../../src/types/ids';
  * today.
  */
 
-const OPEN: StationId[] = ['forge', 'tannery'];
+const OPEN: StationId[] = ['forge', 'tannery', 'bench'];
 
 let modal: StationModal | null = null;
 
@@ -97,5 +97,22 @@ describe('a station panel', () => {
       expect(note?.textContent).toContain(`${input.quantity}`);
     }
     expect(note?.textContent).toContain('1/2');
+  });
+
+  // A row that makes several says how many, since that is most of what tells a
+  // log at the bench from a log on the fire; a row that makes one says nothing.
+  it('says how many a job makes, where it is more than one', () => {
+    const panel = open('bench', { inventory: { logs: 1 } });
+    const noteOf = (id: RecipeId) =>
+      panel.root.querySelector<HTMLElement>(`[data-recipe="${id}"]`)?.parentElement
+        ?.lastElementChild?.textContent;
+
+    expect(noteOf('arrow-shafts')).toContain('makes 15');
+    panel.close();
+    const forge = open('forge');
+    const tin =
+      forge.root.querySelector<HTMLElement>('[data-recipe="tin-bar"]')?.parentElement
+        ?.lastElementChild?.textContent;
+    expect(tin).not.toContain('makes');
   });
 });

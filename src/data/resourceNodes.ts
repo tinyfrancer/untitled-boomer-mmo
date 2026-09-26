@@ -75,6 +75,29 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
     respawnDelayMs: 20000,
     interactRadius: 88,
   },
+  /**
+   * The willows on the millpond's bank, and the rung above hardwood.
+   *
+   * Gated at 8, two short of the cap like the deep pools and the rich seam, and
+   * slower again than hardwood for what it yields. It is drawn as a tree like
+   * the other two: the shape is what a builder costs, and a third body for one
+   * node would be the thing `NodeShapeId` is coarse to avoid.
+   */
+  willow: {
+    id: 'willow',
+    name: 'Willow',
+    body: { width: TILE_SIZE, height: TILE_SIZE * 1.5 },
+    shape: 'tree',
+    blocks: 0.3,
+    skill: 'woodcutting',
+    requiredLevel: 8,
+    yieldItemId: 'willow',
+    xpReward: 30,
+    baseGatherMs: 4400,
+    charges: 3,
+    respawnDelayMs: 22000,
+    interactRadius: 88,
+  },
   'fishing-spot': {
     id: 'fishing-spot',
     name: 'Fishing Spot',

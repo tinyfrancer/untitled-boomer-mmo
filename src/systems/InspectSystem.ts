@@ -246,6 +246,13 @@ const STATION_CARDS: Record<StationId, StationCard> = {
     ],
     note: 'A failed job costs the time and keeps the hide.',
   },
+  bench: {
+    lines: [
+      { label: 'Cuts', value: 'Logs and willow into shafts' },
+      { label: 'Fletches', value: 'Shafts and heads into arrows' },
+    ],
+    note: 'Heads are cut at the forge. A failed job keeps the wood.',
+  },
 };
 
 /** Where a signpost points, and what is over there. */

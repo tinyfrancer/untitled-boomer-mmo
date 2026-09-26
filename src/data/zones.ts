@@ -405,7 +405,13 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     // West end of the yard, well clear of both roads and of the counter: a
     // station is tapped rather than stood at, and a vat on the crossroads would
     // be the mistake the trainer taught in town three tiles up the north road.
-    stationSpawns: [{ dx: -448, dy: -224, station: 'tannery' }],
+    // The fletcher's bench stands beside the vat for the reason the vat is here:
+    // what it works — timber off the road south, bars off the forge — is what
+    // the places around the outpost produce.
+    stationSpawns: [
+      { dx: -448, dy: -224, station: 'tannery' },
+      { dx: -320, dy: -224, station: 'bench' },
+    ],
     exits: [
       { edge: 'south', to: 'old-mill-road' },
       { edge: 'east', to: 'quarry' },
