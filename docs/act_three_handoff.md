@@ -2,7 +2,7 @@
 
 **Written 2026-09-25**, at the merge of PR #123, which carried phases 0-9 of
 [`act_three_plan.md`](act_three_plan.md), and **updated the same day with the user's answers** to
-the questions it left open (decisions 62-65). This is for a fresh session picking up the rest. The
+the questions it left open (decisions 62-65 and 70). This is for a fresh session picking up the rest. The
 plan is still the spec; this file is what the plan does not say: where things stand, how to start,
 where each remaining phase touches the code, and what is still to be asked. Where the two disagree,
 the answers below are newer. Delete this file, or move it to `docs/archive/` with the plan, when the
@@ -52,6 +52,9 @@ Asked at the end of the phase 9 session; each is a decision in `docs/decisions.m
 | Where does a level 1 ranger get arrows?                   | **A shop.** And **humanoid creatures drop them**.                          | 64       |
 | What does an arrow weigh?                                 | **Well under 1**, so a good many can be carried.                           | 64       |
 | How many does one making step make?                       | **Several**: one log makes several shafts, and one iron bar several heads. | 64       |
+| Are bosses left out of "every humanoid drops arrows"?     | **No.** A boss may drop arrows — its own, like a ranger boss's.            | 70       |
+| Does the quiver refill itself from the bag?               | **Yes.** And arrows picked up of the quivered type go into the quiver.     | 70       |
+| Agility: damage, crit, or both?                           | **Both.** The ranger's damage stat, and physical crit on top.              | 70       |
 
 The ranger and the arrows reshape phase 12, which is why this now runs to phase 13: see
 [below](#phases-12-and-13--the-ranger-then-fletching-and-willow).
@@ -60,7 +63,7 @@ The ranger and the arrows reshape phase 12, which is why this now runs to phase 
 
 1. `CLAUDE.md` loads by itself. Then read the plan's phases 10-12 and its "What this plan does not
    do", then the `docs/architecture/` file for every subsystem the phase touches (the table in
-   `CLAUDE.md` says which), then `docs/decisions.md` 54-69.
+   `CLAUDE.md` says which), then `docs/decisions.md` 54-70.
 2. `git log --oneline -15` — the only record that cannot be out of date.
 3. Branch before the first commit. **One PR per phase from here**: PR #123 carried ten phases and
    grew past 100 files, which is more than anyone can review.
@@ -162,7 +165,7 @@ nothing a level.
 
 **What agility does**: it is the ranger's damage stat, and besides that it **adds physical crit
 chance — and for now nothing else** (decision 65 leaves more open for later, so a future use is an
-addition). Crit today is `critChance(weaponSkillLevel)` in `systems/CombatSystem.ts`, capped at
+addition; decision 70 confirms it is both, not crit instead of damage). Crit today is `critChance(weaponSkillLevel)` in `systems/CombatSystem.ts`, capped at
 `MAX_CRIT_CHANCE` (20%), and **the same `resolveAttack` serves swings and spells** —
 `resolveAbilityDamage` routes a fireball through it with the governing skill standing in for weapon
 skill. "Physical" therefore needs saying somewhere it is not said today: agility's share applies to a
@@ -208,9 +211,18 @@ through `tryAddItem`, and a full pack refuses the whole swap rather than droppin
 better quivers come from — the shop, drops, or the tannery, since a quiver is leather — is ordinary
 tier tuning.
 
+**The quiver refills itself from the bag, and an arrow of the quivered type goes into the quiver
+when it is picked up** (decision 70). The second belongs in `tryAddItem`, so every way in — a
+kill's drop, a loot pile, a purchase, a withdrawal through `addWhatFits` — gets it without being
+told: the quiver takes what fits of its own type and the rest goes to the bag. Because a quiver's
+arrows weigh nothing, a full pack never refuses an arrow the quiver has room for, so a loot pile
+will seldom hold the arrows being shot. The first is the shot's business: when the quiver has run
+dry, it draws the same type from the bag before anything falls back to fists.
+
 **An arrow is spent on every shot.** The player's swing is in `CombatDirector` (where it pushes
 `swing` with `by: null`); it takes one from the quiver through `CharacterController` and publishes
-the change. **With the quiver empty the ranger fights with their fists**: `weaponSkillFor`
+the change. **With the quiver empty and nothing in the bag to refill it, the ranger fights with
+their fists**: `weaponSkillFor`
 (`systems/CombatSystem.ts`) answers `'unarmed'` rather than `'archery'`, the reach is a fist's, and
 neither the bow's bonus nor an arrow's should ride along on a punch. `weaponSkillFor` today answers
 `'one-handed'` for anything equippable, so the bow is the first weapon it has to tell apart.
@@ -223,8 +235,12 @@ count, so it has to spend arrows per kill and price the kills after the quiver e
 **The first arrows come from a shop** (`data/shop.ts`, a `ShopStockEntry` on a shelf), **and every
 humanoid creature drops them** — a row in each of their loot tables. `EnemyDefinition.shape` already
 says which: the bandit, the goblin scavenger, the goblin miner, the barrow wight and the fen raider,
-and the two bosses (see below). "Every humanoid drops arrows" is a rule a new enemy row could quietly
-break, so hold it with a test over `ENEMIES` rather than trusting the tables. A bounty paying arrows
+and the two bosses, the bandit chief and the barrow king. **Bosses are not left out** (decision 70):
+a boss may drop arrows, and when it does they are its own — a ranger boss's fine arrows beside its
+fine bow — so `uniqueLoot.test.ts`, which fails any boss drop that can be had anywhere else, holds
+without a change. A boss does not have to drop them. "Every humanoid drops arrows" is a rule a new
+enemy row could quietly break, so hold it with a test over `ENEMIES` rather than trusting the
+tables: every humanoid that is not a boss drops the ordinary kind, and a boss is free either way. A bounty paying arrows
 would be held to the rule that it pays under what the shop charges. A new character starts with 75
 copper and the weapon their class names; a ranger with an empty quiver is a fists class until they
 reach a shop, so **give the class a starting quiver with arrows in it**, the way every class starts
@@ -268,19 +284,14 @@ smithing) — one bump each.
 
 ### Still to put to the user
 
-1. **The two bosses are humanoid.** The bandit chief and the barrow king are both
-   `shape: 'humanoid'`, and `uniqueLoot.test.ts` fails any item a boss drops that can be had anywhere
-   else — so shop arrows on a boss's table break the build. Either bosses are left out of "every
-   humanoid", or that test learns that ammunition is not a trophy. **Recommended: leave bosses out**;
-   their table is what makes them worth the walk.
-2. **Does the quiver refill itself from the bag?** If it does, an empty quiver only happens when the
-   bag is out too, and fists are rare. If loading is something the player does, the quiver's size is
-   a real limit in a long fight, and running dry mid-pull is a thing that happens. The quiver's size
-   as a stat matters much more under the second.
-3. **A reading to confirm**: "agility will just do physical crit chance" is recorded as agility being
-   the ranger's damage stat _and_, besides that, physical crit — because it answered "does agility do
-   anything besides power a bow?". If it meant crit _instead_ of damage, the ranger's damage has to
-   come from somewhere else, and the warrior-with-a-bow problem above comes back.
+Every question the ranger raised has been answered (decisions 64, 65 and 70). Two things remain:
+
+1. **The split.** Phases 12 (the ranger) and 13 (fletching and willow) is still a recommendation;
+   confirm it before rewriting the plan's phase 12.
+2. **A refill when the bag holds a different arrow.** The quiver refills with its own type. If the
+   bag holds only another type — an iron arrow quivered, only steel ones spare — does the quiver
+   take the other type, or does the ranger fall back to fists? Taking it is kinder; the other is
+   more predictable about which arrow is being shot.
 
 ## Things learned this session that are already written down
 

@@ -1297,3 +1297,21 @@ draws that person's quests at the top of whichever counter panel it opens. No pa
 each growing one, which is the hand-kept list phase 2 removed from the HUD's redraws — the next
 giver's panel is the one that forgets; and finding the person from the role through `NPCS`, which
 holds only while no two people share a role.
+
+## 70. Bosses may drop arrows, the quiver refills itself, and agility does both
+
+**2026-09-26 · the user, asked by Claude**
+
+The three questions the ranger still had open after decisions 64 and 65:
+
+- **A boss is not left out of "every humanoid drops arrows."** A boss may drop arrows, and when it
+  does they are its own — a ranger boss with a fine bow might drop fine arrows beside it — so boss
+  drops stay unique and `uniqueLoot.test.ts` holds unchanged. A boss does not have to drop any.
+- **The quiver refills itself from the bag**, and an arrow picked up of the type already in the
+  quiver goes into the quiver rather than the bag.
+- **Agility is both** the ranger's damage stat and a source of physical crit chance, as decision 65
+  was read; not crit instead of damage.
+
+**Rejected:** leaving bosses out of the arrow rule, which Claude recommended — it would have ruled
+out a boss whose trophy is a bow and the arrows for it; a quiver the player has to load by hand;
+and agility as crit alone.

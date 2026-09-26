@@ -8,8 +8,8 @@ rock that stands up (phase 5); names you can read (phase 6); a fight you can see
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
 something on it (phase 8); sound (phase 9); loot that is not lost (phase 10); and the upper band's
 directed content (phase 11). **Next: phase 12** — start from `act_three_handoff.md`, which holds
-the user's answers on the bow (decisions 64-65), the recommended split into a phase 12 (the ranger)
-and a phase 13 (fletching and willow) still to be confirmed, and three questions still to put.
+the user's answers on the bow (decisions 64-65 and 70) and the recommended split into a phase 12
+(the ranger) and a phase 13 (fletching and willow), still to be confirmed.
 Update this line as each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
