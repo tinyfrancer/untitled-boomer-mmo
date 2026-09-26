@@ -2,7 +2,10 @@ import {
   ARMOR_TYPE_CLASSES,
   ARMOR_TYPE_LABELS,
   ITEMS,
+  arrowDamage,
   armorTypeOf,
+  isBow,
+  quiverCapacity,
   consumableFor,
   describeItemName,
   itemValue,
@@ -412,9 +415,23 @@ export function describeItem(itemId: ItemId): InspectPanel {
     if (item.healthBonus) lines.push({ label: 'Health', value: `+${item.healthBonus}` });
     if (item.strengthBonus) lines.push({ label: 'Strength', value: `+${item.strengthBonus}` });
     if (item.intellectBonus) lines.push({ label: 'Intellect', value: `+${item.intellectBonus}` });
+    if (item.agilityBonus) lines.push({ label: 'Agility', value: `+${item.agilityBonus}` });
     if (item.weaponShape) {
       lines.push({ label: 'Reach', value: `${weaponAttackRange(itemId)}` });
     }
+    // The three things a bow is that its numbers do not say: what it is drawn
+    // with, that it needs the other hand, and what it shoots.
+    if (isBow(itemId)) {
+      lines.push({ label: 'Scales with', value: 'Agility' });
+      lines.push({ label: 'Hands', value: 'Both, or one and a quiver' });
+      lines.push({ label: 'Shoots', value: 'Arrows, one a shot' });
+    }
+    const holds = quiverCapacity(itemId);
+    if (holds) lines.push({ label: 'Holds', value: `${holds} arrows` });
+  }
+  if (item.kind === 'ammunition') {
+    lines.push({ label: 'Attack', value: `+${arrowDamage(itemId)} a shot` });
+    lines.push({ label: 'Shot from', value: 'A bow, out of a quiver' });
   }
 
   const tool = toolSkill(itemId);
@@ -445,9 +462,12 @@ function itemSubtitle(itemId: ItemId): string {
   if (!item) return 'Unknown';
   if (item.kind === 'consumable') return 'Food';
   if (item.kind === 'material') return 'Material';
+  if (item.kind === 'ammunition') return 'Arrows';
   if (item.slot === 'weapon') {
+    if (isBow(itemId)) return 'Bow';
     return toolSkill(itemId) ? 'Tool' : 'Weapon';
   }
+  if (quiverCapacity(itemId)) return 'Quiver';
   const armor = armorTypeOf(itemId);
   return armor ? `${ARMOR_TYPE_LABELS[armor]} armour` : 'Armour';
 }

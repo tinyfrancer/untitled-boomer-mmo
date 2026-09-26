@@ -10,11 +10,11 @@ last phase lands.
 
 ## Where things stand
 
-- **Phases 10 and 11 have landed since this was written** — see
-  [phase 10](#phase-10--loot-that-is-not-lost-landed) and
-  [phase 11](#phase-11--the-upper-band-gets-directed-content-landed). **Next is phase 12**, and its
-  first step is putting the split and the three questions [below](#still-to-put-to-the-user) to the
-  user. The rest of this list is as it stood at the merge of PR #123.
+- **Phases 10, 11 and 12 have landed since this was written** — see
+  [phase 10](#phase-10--loot-that-is-not-lost-landed),
+  [phase 11](#phase-11--the-upper-band-gets-directed-content-landed) and
+  [phase 12](#phase-12--the-ranger-landed). **Next is phase 13**, fletching and willow, and nothing
+  is waiting on the user. The rest of this list is as it stood at the merge of PR #123.
 - **`main` has phases 0-9**: the cleanup (a 17 KB `CLAUDE.md` with the reasoning moved into
   `docs/architecture/`, one counter shell for six roles, one set of dice per zone), the graphics
   (the world carried past its edge, each zone's air, rock standing up, readable names, a fight with
@@ -127,6 +127,28 @@ new rank moves what a player who paid can do, not the tuning baseline.
 them as rows keyed by `ClassId` (`CLASS_ABILITIES`, a quest's `gear: Record<ClassId, ItemId>`) and
 the ranger's phase gets a compile error at every one it has to answer, which is the point of keying
 them that way.
+
+## Phase 12 — the ranger (landed)
+
+**Landed** on its own PR, after a bug fix in a commit of its own (`appearanceKey` left the offhand
+out, so a shield or quiver put on mid-zone kept the old hand until the view rebuilt): the rules and
+the simulation, then what the HUD, the view and the ear make of them. The plan's phase 12 has what it
+turned out to be about and decisions 71-75 the forks. What phase 13 inherits:
+
+- **One arrow exists**, `crude-arrows`, the fourth item kind (`ammunition`): sold by the bundle in
+  town, dropped by every humanoid, and the ranger starts with fifty. Iron and steel arrows are phase
+  13's to add, and an arrow's own damage stat already feeds the shot and the quiver's best-first
+  refill, so a better arrow is a row.
+- **Four bows** (`shortbow`, `hunting-bow`, `poachers-bow`, `barrow-longbow`, the last two off the
+  chief and the king) and **three quivers** (`worn-quiver`, `studded-quiver`, `grave-quiver`).
+  "What willow is for" is still open; a willow bow would sit among these.
+- **Saves are at version 23** (`archery` and `CharacterState.quiver`). `fletching` is the next
+  bump.
+- **A recipe still makes exactly one thing.** Several shafts from a log and several heads from a
+  bar is phase 13's first piece.
+
+What follows is the section as it was written before the phase, kept for the reasoning and for
+phase 13's part of it.
 
 ## Phases 12 and 13 — the ranger, then fletching and willow
 

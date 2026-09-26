@@ -168,16 +168,21 @@ export class AfkCamp {
 
     const report = resolveOfflineAfk(session, {
       now: Date.now(),
+      classId: character.state.classId,
       characterLevel: character.state.level,
       inventory: character.state.inventory,
       capacity: character.carryCapacity(),
       gear: character.state.gear,
       skills: character.state.skills,
+      quiver: character.state.quiver,
+      reforges: character.state.reforges,
       rng: this.ctx.rolls,
     });
     if (report.kills <= 0 && report.gathers <= 0 && report.crafts <= 0) {
       this.ctx.persistCharacter();
-      return null;
+      // A bow with nothing to shoot is the one parked camp that earned nothing
+      // for a reason the player can do something about, so it is still news.
+      return report.outOfArrows ? { report, unlocks: [] } : null;
     }
 
     // Spent before handed over, and in that order: a making camp works through
@@ -189,6 +194,9 @@ export class AfkCamp {
     for (const [itemId, quantity] of inventoryEntries(report.drops)) {
       character.addItem(itemId, quantity);
     }
+    // After the drops rather than before, since the report counted the arrows
+    // off each body as arrows to shoot at the next one.
+    character.spendArrows(report.arrowsSpent);
     character.addCurrency(report.copper);
     // A gathering session earns no character XP at all, and awarding zero would
     // still float a "+0 XP" over the boot it was resolved on.

@@ -164,6 +164,14 @@ Neither needed a new channel: a crit is a `crit` flag on the `hit` event the vie
 coloured from `FLOAT_TONE_COLORS` and marked with a bang so it reads on a screen being looked at
 rather than watched.
 
+**Agility is the second source of a crit, on top of the skill's** (`agilityCritChance`, act three
+phase 12; `docs/decisions.md` 72): half a percent a point on a physical hit, capped at 15% on its own
+rather than inside the skill's 20%. Inside it, agility would buy nothing once the skill was trained
+out, and it would move the budget the flat bonus is derived from. **Physical is everything but a
+spell** — every swing and shot, a wand's included, and every ability not governed by Destruction
+(`isSpell`) — so a warrior's or a wizard's one point is half a percent on their swing, which is the
+whole of what agility does for anyone not drawing a bow.
+
 **Armour stops a share of a hit, and a shield is a hand rather than a stat**
 (`armorValue` on an equipment row, curved by `mitigatedDamage` in `systems/CombatSystem.ts`).
 Mitigation is **proportional with diminishing returns** — `armor / (armor + 80)` — rather than flat
@@ -233,3 +241,32 @@ Auto-attack **range comes from the equipped weapon, not the class** (`weaponAtta
 hands are shorter still. Abilities carry their own ranges, so a caster's reach is the spell
 rather than the class. `Player.applyStats()` has to reassign `attackRange` alongside the other
 stats or a weapon swap won't change reach until the view rebuilds.
+
+**The ranger is the third class, and the bow is the one weapon that decides its own stat** (act
+three phase 12; `docs/decisions.md` 64, 65, 70-72). Agility is a third stat every class has and
+only the ranger grows; `computeEffectiveStats` takes the arrow the next shot nocks, and under a bow
+the attack is agility, the bow's bonus and the arrow's `damage`, whoever draws it — so a warrior's
+bow is one point of agility and a bad idea by arithmetic rather than by rule. Everything else in the
+hand swings with its holder's class stat, as it always did. `isBow` is four rules read off one shape:
+two hands, arrows, archery, agility.
+
+**A bow with nothing nocked is a pair of fists.** No arrow in the quiver or the bag, or no quiver
+worn, and the attack is the class's own stat at a fist's reach, training fists, with neither the
+bow's bonus nor an arrow's on the punch (`weaponSkillFor` answers `unarmed`). The body is told what
+it nocks by `WorldContext.publishQuiver`, which every bag change already reaches through
+`publishInventory`, so the frame after the last arrow leaves the string the approach closes to a
+fist's reach. A shot reads the attack before it draws its arrow — the last one drawn is still a shot
+— and spends the arrow whether or not it lands, since it left the string.
+
+**The ranger's four answer the warrior's from range** (`data/abilities.ts`): Aimed Shot (the opener,
+and the kit's one cast: a second of standing still is exactly what kiting has to give up), Rapid Fire
+(a haste, spending arrows as fast), Field Dressing (Mend's heal without the mana) and Piercing Shot
+(the heavy opener), with second ranks at 5-8 on the same rules as everyone's. A `shot` ability needs a
+bow with an arrow at the press and spends its arrow when it goes off, so an aim broken by a step never
+left the string; the auto-attack keeps shooting through the aim. Like the warrior's, they are paid in
+cooldown, since a ranger has no pool.
+
+The duels hold the ranger to the warrior's curve stood still and shooting — beats a level 1 and 2
+rat, loses to a 3; the crab and the camp on the same terms — which is the worst version of its fight,
+since the bow reaches 200 and everything that chases walks slower than the player. That makes it a
+floor rather than the fight a ranger has, and the arrows are what the range is paid for in.

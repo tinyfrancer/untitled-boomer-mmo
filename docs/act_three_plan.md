@@ -1,15 +1,14 @@
 # Act three: sound footing, a world worth looking at, and the upper band filled in
 
-**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-11 landed:** the drift, this
+**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-12 landed:** the drift, this
 plan, decisions 54-57 and a 17 KB `CLAUDE.md` (phase 0); the counter table and the redraw rule,
 which landed together because `refreshOpen()` is one call once there is one counter slot to redraw
 (phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4);
 rock that stands up (phase 5); names you can read (phase 6); a fight you can see, with an enemy's
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
-something on it (phase 8); sound (phase 9); loot that is not lost (phase 10); and the upper band's
-directed content (phase 11). **Next: phase 12** — start from `act_three_handoff.md`, which holds
-the user's answers on the bow (decisions 64, 65 and 70): phase 12 is now the ranger and phase 13
-fletching and willow.
+something on it (phase 8); sound (phase 9); loot that is not lost (phase 10); the upper band's
+directed content (phase 11); and the ranger (phase 12). **Next: phase 13**, fletching and willow —
+start from `act_three_handoff.md`.
 Update this line as each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
@@ -338,6 +337,33 @@ in two. `act_three_handoff.md` says where each piece touches the code.
   their fists.
 - **Arrows are bought first**, from a shop, and **every humanoid drops them**; a boss may drop
   arrows of its own.
+
+**What it turned out to be about.** Built much as the handoff laid it out, in two commits after a
+bug fix: the rules and the simulation, then what the HUD, the view and the ear make of them.
+Decisions 71-75 are the forks; `combat.md` (agility, the bow, the crit), `economy.md` (the quiver,
+arrows into it, the bundle), `afk.md` (the camp's arrows), `content.md` (the handful, the bosses'
+bows), `hud.md` (the bar) and `rendering.md` (the bow, the arrow in flight) say what landed. What
+the section did not say:
+
+- **The bow decides its own stat, and only the bow does** (decision 71). A shot is agility, the
+  bow and the arrow; a bow with nothing nocked — or no quiver — is fists, reach and all, and the
+  sheet says which stat ATK is built on from the weapon. `computeEffectiveStats` takes the arrow
+  the next shot nocks, which the world tells the player's body through the one publisher every
+  bag change already calls.
+- **Agility's crit is on top of the skill's, and "physical" is everything but Destruction**
+  (decision 72), a wand's swing included.
+- **Arrows move with the quiver through every door** (decision 73): into it first when picked up,
+  bought or withdrawn, best-first when it runs dry and on the shot that empties it, and back to
+  the bag when it comes off — refused whole on a full pack.
+- **Offline, a bow stops when its arrows do** (decision 74), rather than being paid for punches as
+  though they were shots.
+- **The price came out of the starter arc** (decision 75): twenty-five for 30c keeps the arc's
+  arrows, priced at level 1, near a third of the coin it pays. The chief and the king each drop a
+  bow as a third weapon; the barrow wights a quiver and the goblins on the road another.
+- **A bug on the way**: `appearanceKey` left the offhand out, so a shield (or now a quiver) put on
+  mid-zone kept the old hand until the view rebuilt. Fixed in its own commit.
+- **The creation screen's three cards overflow a short phone**, and a column centred by
+  `justify-content` clips its top out of reach of the scroll; it is centred by auto margins now.
 
 ### Phase 13 — fletching and willow
 

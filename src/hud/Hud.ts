@@ -17,13 +17,13 @@ import type { Sheet } from './Sheet';
 import { el } from './dom';
 import { bindHudKeys } from './keys';
 import { injectHudStyles } from './styles';
-import { CLASSES } from '../data/classes';
-import { describeItemName } from '../data/items';
+import { describeItemName, quiverCapacity } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { equippableFrom } from '../systems/EquipSystem';
 import { itemsForSlot, type Gear, type Inventory } from '../systems/InventorySystem';
+import { loadedArrow, type Quiver } from '../systems/QuiverSystem';
 import { describeItem } from '../systems/InspectSystem';
 import { actionsForItem, type ItemAction, type ItemActionId } from '../systems/ItemActionsSystem';
 import { xpToNextLevel } from '../systems/LevelingSystem';
@@ -68,6 +68,7 @@ import {
   CHANNEL_STARTED_EVENT,
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
+  QUIVER_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
@@ -148,6 +149,10 @@ interface HudModel {
   maxMana: number;
   gear: Gear;
   inventory: Inventory;
+  // The arrows in the quiver, seeded from the save like the bag: the column's
+  // bar is drawn before the world has taken a shot, and a quiver emptied last
+  // session is still empty.
+  quiver: Quiver | null;
   currency: number;
   skills: Skills;
   combatLog: CombatLogEntry[];
@@ -249,6 +254,7 @@ class Hud {
       maxMana: stats.maxMana,
       gear: character.gear,
       inventory: character.inventory,
+      quiver: character.quiver ?? null,
       currency: character.currency,
       skills: character.skills ?? createInitialSkills(),
       combatLog: [],
@@ -375,6 +381,7 @@ class Hud {
     this.playerColumn.setTitle(this.model.activeTitleId);
     this.playerColumn.setXp(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
     this.playerColumn.setMana(this.model.mana, this.model.maxMana);
+    this.refreshQuiver();
     this.refreshHealth();
     this.refreshQuests();
     this.refreshCharacterSheet();
@@ -437,6 +444,7 @@ class Hud {
     const height = this.root.clientHeight;
     const layout = hudLayout(width, height, {
       hasMana: this.model.maxMana > 0,
+      hasQuiver: quiverCapacity(this.model.gear.offhand) > 0,
       hasTitle: this.model.activeTitleId !== null,
       hasEffects: this.playerColumn.hasEffects(),
       targetWinding: this.targetFrame.isWinding(),
@@ -639,26 +647,39 @@ class Hud {
   }
 
   private refreshCharacterSheet(): void {
+    // With the arrow the next shot nocks, so a bow's ATK is the shot's — and a
+    // bow with nothing to nock shows the punch it has become.
     const stats = computeEffectiveStats(
       this.classId,
       this.model.gear,
       this.model.level,
       this.model.reforges,
+      loadedArrow(this.model.gear, this.model.quiver, this.model.inventory),
     );
     this.characterSheet.update({
       gear: this.model.gear,
       reforges: this.model.reforges,
+      quiver: this.model.quiver,
       stats: {
         hp: Math.min(this.model.hp, stats.maxHp),
         maxHp: stats.maxHp,
         strength: stats.strength,
         intellect: stats.intellect,
+        agility: stats.agility,
         attackPower: stats.attackPower,
-        attackStat: CLASSES[this.classId].baseStats.primaryStat,
+        attackStat: stats.attackStat,
       },
       skills: this.model.skills,
       level: this.model.level,
     });
+  }
+
+  /** The column's arrow bar, off the quiver worn and what is in it. */
+  private refreshQuiver(): void {
+    this.playerColumn.setQuiver(
+      this.model.quiver?.count ?? 0,
+      quiverCapacity(this.model.gear.offhand),
+    );
   }
 
   // Capacity moves with the strength gear and levels buy, so this rides
@@ -817,7 +838,14 @@ class Hud {
     listen(ABILITY_STATE_CHANGED_EVENT, (states) => this.actionBar.update(states));
 
     listen(GEAR_CHANGED_EVENT, (gear) => {
+      // A quiver put on or taken off is a bar more or less in the column, and
+      // so where a sheet starts.
+      const hadQuiver = quiverCapacity(this.model.gear.offhand) > 0;
       this.model.gear = gear;
+      this.refreshQuiver();
+      if (quiverCapacity(gear.offhand) > 0 !== hadQuiver) {
+        this.applyLayout();
+      }
       this.overlays.refreshOpen();
       this.overlays.closeSlotPicker();
       this.refreshCharacterSheet();
@@ -835,6 +863,12 @@ class Hud {
       this.refreshQuests();
       // So is whether a key is in hand, which is what a shut zone's cell says.
       this.mapSheet.refreshAccess();
+    });
+    listen(QUIVER_CHANGED_EVENT, (quiver) => {
+      this.model.quiver = quiver;
+      this.refreshQuiver();
+      // The sheet's ATK is the shot's, and a quiver run dry is a punch's.
+      this.refreshCharacterSheet();
     });
     listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
       this.model.currency = totalCopper;

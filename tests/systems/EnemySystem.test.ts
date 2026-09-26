@@ -179,6 +179,40 @@ function freshWarrior(): Combatant {
   );
 }
 
+// What a ranger walks out of creation holding: the shortbow, the worn quiver,
+// and the crude arrows in it.
+const QUIVERED: Gear = {
+  helmet: null,
+  chest: null,
+  pants: null,
+  weapon: 'shortbow',
+  offhand: 'worn-quiver',
+};
+
+function archer(classId: 'ranger' | 'warrior', gear: Gear, level: number): Combatant {
+  const stats = computeEffectiveStats(classId, gear, level, {}, 'crude-arrows');
+  return {
+    hp: stats.maxHp,
+    attackPower: stats.attackPower,
+    cooldownMs: stats.attackCooldownMs,
+    armor: stats.armor,
+  };
+}
+
+/**
+ * A fresh ranger, modelled the way every duel here is: standing still and
+ * trading shots with something that has walked up to it. That is the worst
+ * version of a ranger's fight — the bow reaches 200 and everything that chases
+ * walks slower than the player — so the curve it holds is a floor rather than
+ * the fight a ranger actually has, which is the argument the wizard's duel was
+ * left out on. What it does hold is that the bow is a different fight rather
+ * than a better one: stood in the same place, the ranger lands where the
+ * warrior does.
+ */
+function freshRanger(): Combatant {
+  return archer('ranger', QUIVERED, 1);
+}
+
 /**
  * The same enemy with a telegraphed ability folded into its damage, either
  * landing every time or dodged every time.
@@ -213,6 +247,37 @@ describe('difficulty curve', () => {
     expect(duel(freshWarrior(), enemyAt('rat', 1))).toBe('player');
     expect(duel(freshWarrior(), enemyAt('rat', 2))).toBe('player');
     expect(duel(freshWarrior(), enemyAt('rat', 3))).toBe('enemy');
+  });
+
+  it('holds a fresh ranger to the same rat contract, stood still and shooting', () => {
+    expect(duel(freshRanger(), enemyAt('rat', 1))).toBe('player');
+    expect(duel(freshRanger(), enemyAt('rat', 2))).toBe('player');
+    expect(duel(freshRanger(), enemyAt('rat', 3))).toBe('enemy');
+  });
+
+  it('gives the ranger the crab and the camp on the terms the warrior gets them', () => {
+    expect(duel(freshRanger(), enemyAt('crab', 2))).toBe('player');
+    expect(duel(freshRanger(), enemyAt('crab', 3))).toBe('enemy');
+    expect(duel(freshRanger(), enemyAt('bandit', 1))).toBe('player');
+    expect(duel(freshRanger(), enemyAt('bandit', 2))).toBe('enemy');
+    // And the camp's own bow, with the leather the camp drops, is what opens it.
+    const geared = archer(
+      'ranger',
+      { ...BROWN_SET, weapon: 'hunting-bow', offhand: 'worn-quiver' },
+      2,
+    );
+    expect(duel(geared, enemyAt('bandit', 2))).toBe('player');
+  });
+
+  /**
+   * A warrior can draw a bow, and it should be a bad idea (decision 65) —
+   * which comes out of the numbers rather than a rule, because a shot is
+   * agility whoever takes it and a warrior has one point of it. The rat a
+   * fresh warrior beats with the sword he started with beats him with a bow.
+   */
+  it('makes the bow a bad idea for a warrior, by arithmetic rather than by rule', () => {
+    expect(duel(freshWarrior(), enemyAt('rat', 2))).toBe('player');
+    expect(duel(archer('warrior', QUIVERED, 1), enemyAt('rat', 2))).toBe('enemy');
   });
 
   // All three zones share the 1-3 band now, so what separates them is the shape
@@ -499,6 +564,9 @@ describe('only humanoids carry gear and coin', () => {
       .forEach((enemy) => {
         const dropped = (tableFor(enemy)?.entries ?? []).map((entry) => ITEMS[entry.itemId].kind);
         expect(dropped).not.toContain('equipment');
+        // Nor arrows: a beast drops the parts it is made of, and nothing with
+        // no pockets is carrying a handful of anything.
+        expect(dropped).not.toContain('ammunition');
       });
   });
 
@@ -512,6 +580,29 @@ describe('only humanoids carry gear and coin', () => {
         true,
       );
     });
+  });
+
+  /**
+   * Every humanoid carries a handful of arrows (decision 64), so a ranger who
+   * fights the things with pockets keeps a quiver going off them. Held over the
+   * data rather than the tables written today, since a new humanoid row is
+   * exactly the thing that would quietly forget. A boss is free either way
+   * (decision 70): what it drops is its own, and `uniqueLoot.test.ts` already
+   * fails an arrow on a boss's table that anything else carries.
+   */
+  it('hands every humanoid that is not a boss a handful of arrows', () => {
+    Object.values(ENEMIES)
+      .filter((enemy) => enemy.family === 'humanoid' && enemy.boss !== true)
+      .forEach((enemy) => {
+        const arrows = (tableFor(enemy)?.entries ?? []).filter(
+          (entry) => ITEMS[entry.itemId].kind === 'ammunition',
+        );
+        expect(arrows.length, `${enemy.id} carries no arrows`).toBeGreaterThan(0);
+        arrows.forEach((entry) => {
+          expect(entry.chance).toBeGreaterThan(0);
+          expect(entry.quantity?.min ?? 1).toBeGreaterThanOrEqual(1);
+        });
+      });
   });
 
   // Cloth is shop-only among craftable gear, so without it on a humanoid table

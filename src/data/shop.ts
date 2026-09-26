@@ -17,7 +17,14 @@ export type StockRequirement =
 // what stops anything here being bought and sold straight back at a profit.
 export interface ShopStockEntry {
   itemId: ItemId;
+  // For the whole of `quantity`, not for one of it.
   price: number;
+  /**
+   * How many one purchase hands over; absent is one. Arrows are sold by the
+   * bundle, because they are spent a shot at a time and a counter that sold
+   * them singly would be a counter tapped forty times.
+   */
+  quantity?: number;
   // Absent means it is on the shelf from the first visit.
   requires?: StockRequirement;
 }
@@ -47,6 +54,12 @@ export const SHOP_STOCK: ShopStockEntry[] = [
   // to a tree or a pond first. One log is one fire.
   { itemId: 'logs', price: 9 },
   { itemId: 'raw-fish', price: 12 },
+  // Where a ranger's first arrows come from after the quiver it starts with
+  // (decision 64), and ungated for the reason the tools are: a gate on arrows
+  // would be a gate on the class. A copper and a fifth each against the one a
+  // counter pays back, which `progression.test.ts` holds to a third or so of
+  // what the starter arc pays in coin.
+  { itemId: 'crude-arrows', price: 30, quantity: 25 },
   // Rations, once there is something to need them for.
   { itemId: 'cooked-fish', price: 24, requires: { kind: 'level', level: 2 } },
   // The twenty the player carried in for the feast, sold back one at a time.

@@ -51,6 +51,7 @@ export function bonusWeight(bonuses: EquipmentBonuses): number {
     bonuses.attackPower * STAT_WEIGHTS.attackPower +
     bonuses.strength * STAT_WEIGHTS.strength +
     bonuses.intellect * STAT_WEIGHTS.intellect +
+    bonuses.agility * STAT_WEIGHTS.agility +
     bonuses.armor * STAT_WEIGHTS.armor +
     bonuses.health * STAT_WEIGHTS.health
   );
@@ -86,8 +87,8 @@ export function reforgedBonuses(itemId: ItemId | null, reforgeId: ReforgeId | nu
  * A reforge moves points it can only move if they are there: `keen` takes three
  * armour, so it has nothing to do to a sword. That is what makes the roll worth
  * anything on a piece with one real stat on it — the eligible set is narrow, so
- * a helmet with four armour is a helmet the counter can do two things to rather
- * than five, and neither of them is nothing.
+ * a helmet with four armour is a helmet the counter can do three things to
+ * rather than six, and none of them is nothing.
  */
 export function eligibleReforges(itemId: ItemId): ReforgeId[] {
   const bonuses = getEquipmentBonuses(itemId);
@@ -215,6 +216,7 @@ const STAT_LABELS: Record<ReforgeStatId, string> = {
   health: 'HP',
   strength: 'STR',
   intellect: 'INT',
+  agility: 'AGI',
 };
 
 /** What a reforged piece is called: "Keen Steel Helmet". */

@@ -7,10 +7,11 @@ import type { ActiveBounty } from '../systems/BountySystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
+import type { Quiver } from '../systems/QuiverSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 22;
+export const CHARACTER_STATE_VERSION = 23;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -24,6 +25,16 @@ export interface CharacterState {
   xp: number;
   gear: Gear;
   inventory: Inventory;
+  /**
+   * The arrows in the quiver, or null for none — an empty quiver, or no quiver
+   * worn at all.
+   *
+   * Beside `gear` rather than in it, since a slot holds one item and a quiver
+   * holds a stack; and apart from `inventory`, since what is quivered weighs
+   * nothing and is not the bag's to sell or bank. Taking the quiver off is what
+   * puts these back in the bag.
+   */
+  quiver: Quiver | null;
   /**
    * Which pieces have been reworked at Greyford, and into what.
    *
@@ -125,15 +136,23 @@ export interface AfkSession {
 
 export function createNewCharacter(name: string, classId: ClassId): CharacterState {
   const now = new Date().toISOString();
+  const definition = CLASSES[classId];
   return {
     version: CHARACTER_STATE_VERSION,
     name,
     classId,
     level: 1,
     xp: 0,
-    gear: { ...NO_GEAR, weapon: CLASSES[classId].startingWeaponId },
+    gear: {
+      ...NO_GEAR,
+      weapon: definition.startingWeaponId,
+      offhand: definition.startingOffhandId ?? null,
+    },
     // Gathering tools come from the shop now, not the starting bag.
     inventory: {},
+    // Already in the quiver the class starts wearing, the way every class starts
+    // holding its weapon rather than finding it in the bag.
+    quiver: definition.startingArrows ? { ...definition.startingArrows } : null,
     reforges: {},
     bank: {},
     bankSlots: STARTING_BANK_SLOTS,

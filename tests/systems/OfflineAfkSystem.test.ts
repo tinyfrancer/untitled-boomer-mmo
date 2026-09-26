@@ -43,11 +43,13 @@ const SWORD_IN_HAND: Gear = {
 function context(overrides: Partial<Parameters<typeof resolveOfflineAfk>[1]> = {}) {
   return {
     now: NOW,
+    classId: 'warrior' as const,
     characterLevel: 1,
     inventory: {},
     capacity: carryCapacity(6),
     gear: SWORD_IN_HAND,
     skills: createInitialSkills(),
+    quiver: null,
     // Everything drops, so loot is deterministic rather than flaky.
     rng: () => 0,
     ...overrides,
@@ -521,5 +523,65 @@ describe('a parked making camp', () => {
     expect(report.crafts).toBe(0);
     expect(report.drops['cooked-fish']).toBeUndefined();
     expect(report.skill).toBe('woodcutting');
+  });
+});
+
+/**
+ * A bow spends an arrow a shot, awake or not. Offline pays a kill a minute
+ * whatever is in hand, so the arrows are what hold a ranger's night: each kill
+ * costs the shots it takes, and a bow with nothing to shoot stops fighting
+ * rather than being paid for punches as though they were shots.
+ */
+describe('a parked ranger', () => {
+  const BOW_AND_QUIVER: Gear = {
+    ...SWORD_IN_HAND,
+    weapon: 'shortbow',
+    offhand: 'worn-quiver',
+  };
+  const ranger = (arrows: number, overrides = {}) =>
+    context({
+      classId: 'ranger',
+      gear: BOW_AND_QUIVER,
+      quiver: arrows > 0 ? { itemId: 'crude-arrows', count: arrows } : null,
+      ...overrides,
+    });
+
+  it('pays for the kills its arrows covered, and says it stopped for want of more', () => {
+    // A level 1 rat is 20 health against a shot of 6 agility, 2 bow and 1
+    // arrow: three shots a rat, so twenty arrows are six rats and change.
+    const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), ranger(20));
+    expect(report.kills).toBe(6);
+    expect(report.arrowsSpent).toBe(18);
+    expect(report.outOfArrows).toBe(true);
+  });
+
+  it('counts the spares in the bag as well as the quiver', () => {
+    const report = resolveOfflineAfk(
+      sessionStartedAgo(HOUR_MS),
+      ranger(20, { inventory: { 'crude-arrows': 10 } }),
+    );
+    expect(report.kills).toBe(10);
+    expect(report.arrowsSpent).toBe(30);
+  });
+
+  it('fights not at all with nothing to shoot', () => {
+    const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), ranger(0));
+    expect(report.kills).toBe(0);
+    expect(report.xp).toBe(0);
+    expect(report.outOfArrows).toBe(true);
+  });
+
+  it('spends nothing and never runs dry holding anything but a bow', () => {
+    const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), context());
+    expect(report.arrowsSpent).toBe(0);
+    expect(report.outOfArrows).toBe(false);
+  });
+
+  it('shoots the arrows it picks up off a body at the next one', () => {
+    // Bandits carry a handful each, and every roll a zero drops every entry at
+    // the least of it: two arrows back per bandit, against the shots one takes.
+    const dry = resolveOfflineAfk(sessionStartedAgo(HOUR_MS, 'bandit-camp'), ranger(30));
+    expect(dry.drops['crude-arrows'] ?? 0).toBeGreaterThan(0);
+    expect(dry.arrowsSpent).toBeGreaterThan(30);
   });
 });

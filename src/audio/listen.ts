@@ -26,6 +26,8 @@ export class MomentEar {
     switch (event.kind) {
       case 'swing':
         return ['swing'];
+      case 'shot':
+        return ['twang'];
       case 'hit':
         if (event.on === 'mob') return [event.crit ? 'crit' : 'hit'];
         // A blow the mana shield ate whole rings off it rather than landing.

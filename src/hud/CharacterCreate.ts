@@ -2,9 +2,12 @@ import { el } from './dom';
 import { weaponPreviewSvg } from './paperdoll';
 import { injectHudStyles } from './styles';
 import { CLASSES } from '../data/classes';
+import { exhaustive } from '../types/exhaustive';
 import type { ClassId } from '../types/ids';
 
-const CLASS_IDS: ClassId[] = ['warrior', 'wizard'];
+// Exhaustive rather than a plain list, so a new class is a compile error here
+// rather than a class nobody is ever offered.
+const CLASS_IDS = exhaustive<ClassId>()(['warrior', 'wizard', 'ranger']);
 const DEFAULT_NAME = 'Adventurer';
 
 export interface CharacterCreateOptions {
@@ -45,7 +48,7 @@ class CharacterCreate {
       card.dataset.class = classId;
       card.append(
         el('div', 'create__card-name', definition.name),
-        weaponPreviewSvg(definition.startingWeaponId),
+        weaponPreviewSvg(definition.startingWeaponId, definition.startingOffhandId ?? null),
         el('div', 'create__card-text', definition.description),
       );
       card.addEventListener('click', () => this.select(classId));

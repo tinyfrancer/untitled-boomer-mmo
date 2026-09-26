@@ -1,10 +1,16 @@
 import { SKILLS } from '../data/skills';
+import { describeItemName } from '../data/items';
 import { saveService } from '../persistence';
-import { logMasteryTier, logSkillLevelUp, type CombatLogEntry } from '../systems/CombatLogSystem';
+import {
+  logMasteryTier,
+  logNotice,
+  logSkillLevelUp,
+  type CombatLogEntry,
+} from '../systems/CombatLogSystem';
 import type { CharacterController } from '../systems/CharacterController';
 import type { Point } from '../systems/MovementSystem';
 import { masteryTarget } from '../systems/MasterySystem';
-import type { MasteryTargetId, SkillId, ZoneId } from '../types/ids';
+import type { ItemId, MasteryTargetId, SkillId, ZoneId } from '../types/ids';
 import {
   COMBAT_LOG_EVENT,
   CURRENCY_CHANGED_EVENT,
@@ -12,6 +18,7 @@ import {
   MASTERY_CHANGED_EVENT,
   MASTERY_TIER_REACHED_EVENT,
   NOTICE_EVENT,
+  QUIVER_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
 } from '../ui/uiEvents';
 import type { Player } from './Player';
@@ -102,8 +109,24 @@ export class WorldContext {
     this.events.emit(NOTICE_EVENT, text);
   }
 
+  /**
+   * The bag, and the quiver with it: an arrow picked up, bought, withdrawn or
+   * taken off a pile goes into the quiver before the bag sees it, so every path
+   * that changes the one may have changed the other.
+   */
   publishInventory(): void {
     this.events.emit(INVENTORY_CHANGED_EVENT, this.character.state.inventory);
+    this.publishQuiver();
+  }
+
+  /**
+   * The quiver, and what the player's bow nocks next: the one place the body
+   * is told, so a quiver run dry turns the bow into a pair of fists — reach and
+   * all — on the same frame the HUD hears it has.
+   */
+  publishQuiver(): void {
+    this.player.setArrow(this.character.loadedArrow());
+    this.events.emit(QUIVER_CHANGED_EVENT, this.character.state.quiver);
   }
 
   publishCurrency(): void {
@@ -154,6 +177,29 @@ export class WorldContext {
     });
     this.log(logMasteryTier(target.name, reached.name));
     this.persistCharacter();
+  }
+
+  /**
+   * Draws the arrow for a shot, whoever is taking it — the swing or an ability —
+   * and says what that did: a quiver refilled off the bag is a line in the log,
+   * and the last arrow anywhere is a toast as well, since a ranger who misses it
+   * is about to walk into melee with their fists. Null for nothing to shoot.
+   */
+  loose(): ItemId | null {
+    const draw = this.character.drawArrow();
+    if (draw.refill) {
+      const { count, itemId } = draw.refill;
+      this.log(logNotice(`You fill your quiver with ${count} ${describeItemName(itemId)}.`));
+      this.publishInventory();
+    } else {
+      this.publishQuiver();
+    }
+    if (draw.lastArrow) {
+      this.notice('You are out of arrows.');
+      this.log(logNotice('That was your last arrow.'));
+      this.float('Out of arrows', 'dim', 20);
+    }
+    return draw.arrow;
   }
 
   persistCharacter(): void {

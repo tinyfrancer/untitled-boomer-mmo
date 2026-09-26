@@ -26,6 +26,10 @@ sack is drawn from `world.lootPiles`, and `LootPiles.leave` pushes `{ kind: 'loo
 ear, which hears it as a low thump — the sound of a full pack, which is worth hearing mid-fight
 because the notice that says so is easy to miss.
 
+**A shot is heard as the string, not as a swing.** The world says `shot` rather than `swing` for an
+arrow loosed, and the ear hears it as `twang` — a plucked note and the hiss of the shaft, shorter than
+a swing's whoosh since a ranger hears one every second.
+
 **The gather's strokes are shared with the view** (`ui/gatherBeat.ts`). The world reports how far
 through its channel a gather is and nothing about strokes, which are presentation; `GatherBeat`
 finds the two beats in that stream, and the view and the ear each hold one, so the axe is heard

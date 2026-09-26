@@ -16,6 +16,16 @@ const HEAVY_FRACTION = 0.85;
 export type EncumbranceLevel = 'ok' | 'heavy' | 'full';
 
 /**
+ * How far a sum of weights may drift from the arithmetic it stands for.
+ *
+ * An arrow weighs a tenth, which no binary float holds exactly: three of them
+ * add to 0.30000000000000004 and three tenths of spare room divided by a tenth
+ * is 2.9999999999999996. Without this a pack with room for exactly three more
+ * arrows would refuse the third.
+ */
+const WEIGHT_EPSILON = 1e-9;
+
+/**
  * What the pack currently holds. Only the bag counts: worn gear has already
  * left the inventory (see equipItem), and coin is not an item.
  */
@@ -44,7 +54,7 @@ export function canCarry(
   if (quantity <= 0) {
     return true;
   }
-  return inventoryWeight(inventory) + itemWeight(itemId) * quantity <= capacity;
+  return inventoryWeight(inventory) + itemWeight(itemId) * quantity <= capacity + WEIGHT_EPSILON;
 }
 
 /**
@@ -67,11 +77,11 @@ export function carryableCount(inventory: Inventory, itemId: ItemId, capacity: n
   const each = itemWeight(itemId);
   // Nothing in ITEMS is weightless (see DEFAULT_ITEM_WEIGHT), but a row that
   // ever set weight to 0 would otherwise divide its way to Infinity here.
-  return each <= 0 ? Number.MAX_SAFE_INTEGER : Math.floor(spare / each);
+  return each <= 0 ? Number.MAX_SAFE_INTEGER : Math.floor(spare / each + WEIGHT_EPSILON);
 }
 
 export function encumbranceLevel(weight: number, capacity: number): EncumbranceLevel {
-  if (weight >= capacity) {
+  if (weight >= capacity - WEIGHT_EPSILON) {
     return 'full';
   }
   return weight >= capacity * HEAVY_FRACTION ? 'heavy' : 'ok';

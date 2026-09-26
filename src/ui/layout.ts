@@ -28,6 +28,9 @@ const WIND_UP_LINE_HEIGHT = 17;
 // carries is printed inside it, so none of the three costs a line of its own.
 const PLAYER_COLUMN_HEIGHT = 60;
 const MANA_BLOCK_HEIGHT = 19;
+// The quiver's bar, which is the mana bar's height for the same reason: it is
+// one more bar with its numbers printed inside it.
+const QUIVER_BLOCK_HEIGHT = MANA_BLOCK_HEIGHT;
 // A worn title gets its own line under the name. "Adventurer, Rat Slayer" on
 // one line overruns the 190px column, and shrinking the name to fit made the
 // thing the player is proudest of the smallest text on screen.
@@ -73,6 +76,8 @@ export interface HudLayout {
 export interface HudLayoutOptions {
   scale?: number;
   hasMana?: boolean;
+  // Whether a quiver is worn, which costs the column the bar that counts it.
+  hasQuiver?: boolean;
   // Whether a title is worn, which costs the player column an extra line.
   hasTitle?: boolean;
   // Whether any buff or debuff is up. How many there are does not matter: they
@@ -103,6 +108,7 @@ export function hudLayout(
   const {
     scale = 1,
     hasMana = false,
+    hasQuiver = false,
     hasTitle = false,
     targetWinding = false,
     hasEffects = false,
@@ -163,6 +169,7 @@ export function hudLayout(
       height: px(
         PLAYER_COLUMN_HEIGHT +
           (hasMana ? MANA_BLOCK_HEIGHT : 0) +
+          (hasQuiver ? QUIVER_BLOCK_HEIGHT : 0) +
           (hasTitle ? TITLE_LINE_HEIGHT : 0) +
           (hasEffects ? EFFECT_ROW_HEIGHT : 0),
         scale,

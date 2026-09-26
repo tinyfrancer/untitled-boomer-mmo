@@ -82,6 +82,12 @@ export interface AbilityDefinition {
   // The skill that governs it, if any. Spells are Destruction; the warrior's
   // abilities are governed by the weapon skill they already train by swinging.
   skill?: CombatSkillId;
+  /**
+   * Loosed off a bow rather than swung or cast: it needs one in hand with an
+   * arrow nocked, spends that arrow when it goes, and is drawn as one in
+   * flight. Absent for everything that is not a ranger's shot.
+   */
+  shot?: boolean;
   // Chance to fizzle before any skill is taken into account. Physical abilities
   // don't fail, so this is 0 for them.
   baseFailureChance: number;
@@ -212,6 +218,75 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     // Not a better Power Slash: 11.3x a swing a minute against its 16.5x. It is
     // the opener and the finisher, where Power Slash is what fills a fight.
     effect: { kind: 'damage', powerMultiplier: 3.4, thrown: false },
+  },
+  /*
+   * The ranger's four, which are the warrior's four answered from range: a shot
+   * for the rotation, a haste, a heal and a heavy opener, all paid in cooldown
+   * rather than mana, since a ranger has no pool. What is its own is that every
+   * shot spends an arrow, and that the opener is aimed — a second of standing
+   * still, which is what a ranger kiting has to give up to take it.
+   */
+  'aimed-shot': {
+    id: 'aimed-shot',
+    name: 'Aimed Shot',
+    description: 'A second spent aiming, for double damage.',
+    classId: 'ranger',
+    manaCost: 0,
+    cooldownMs: 8000,
+    // Past the starter bow's 200 by the margin Fireball has over the wand, so
+    // anything a ranger can shoot at they can aim at.
+    range: 240,
+    // The one cast in the kit. Moving breaks it and a ranger at range is rarely
+    // hit, so what it costs is exactly the step back that kiting is made of.
+    castTimeMs: 1000,
+    baseFailureChance: 0,
+    shot: true,
+    effect: { kind: 'damage', powerMultiplier: 2.2, thrown: true },
+  },
+  'rapid-fire': {
+    id: 'rapid-fire',
+    name: 'Rapid Fire',
+    description: 'Shoot 40% faster for 8 seconds — and spend arrows as fast.',
+    classId: 'ranger',
+    training: { level: 2, cost: 120 },
+    manaCost: 0,
+    cooldownMs: 20000,
+    range: 0,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    effect: { kind: 'haste', cooldownMultiplier: 0.6, durationMs: 8000 },
+  },
+  'field-dressing': {
+    id: 'field-dressing',
+    name: 'Field Dressing',
+    description: 'Bind a wound for 28 health over a short cast.',
+    classId: 'ranger',
+    training: { level: 3, cost: 300 },
+    manaCost: 0,
+    // Mend's numbers without the mana: cast rather than instant, because a
+    // ranger is the one class usually far enough from the swing to stand still
+    // for a second, and being hurt breaks it when they are not.
+    cooldownMs: 18000,
+    range: 0,
+    castTimeMs: 1200,
+    baseFailureChance: 0,
+    effect: { kind: 'heal', amount: 28 },
+  },
+  'piercing-shot': {
+    id: 'piercing-shot',
+    name: 'Piercing Shot',
+    description: 'A heavy draw for over three times the damage.',
+    classId: 'ranger',
+    training: { level: 4, cost: 600 },
+    manaCost: 0,
+    cooldownMs: 18000,
+    range: 240,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    shot: true,
+    // Crushing Blow's ratio to Power Slash, held against Aimed Shot: the opener
+    // and the finisher rather than a better version of the rotation.
+    effect: { kind: 'damage', powerMultiplier: 3.4, thrown: true },
   },
 
   /*
@@ -345,6 +420,64 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     baseFailureChance: 0,
     effect: { kind: 'damage', powerMultiplier: 4.25, thrown: false },
   },
+  'aimed-shot-2': {
+    id: 'aimed-shot-2',
+    name: 'Aimed Shot II',
+    description: 'A second spent aiming, for nearly three times the damage.',
+    classId: 'ranger',
+    training: { level: 5, cost: 800 },
+    rankOf: 'aimed-shot',
+    manaCost: 0,
+    cooldownMs: 8000,
+    range: 240,
+    castTimeMs: 1000,
+    baseFailureChance: 0,
+    shot: true,
+    effect: { kind: 'damage', powerMultiplier: 2.75, thrown: true },
+  },
+  'rapid-fire-2': {
+    id: 'rapid-fire-2',
+    name: 'Rapid Fire II',
+    description: 'Shoot 50% faster for 10 seconds — and spend arrows as fast.',
+    classId: 'ranger',
+    training: { level: 6, cost: 1000 },
+    rankOf: 'rapid-fire',
+    manaCost: 0,
+    cooldownMs: 20000,
+    range: 0,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    effect: { kind: 'haste', cooldownMultiplier: 0.5, durationMs: 10000 },
+  },
+  'field-dressing-2': {
+    id: 'field-dressing-2',
+    name: 'Field Dressing II',
+    description: 'Bind a wound for 45 health over a short cast.',
+    classId: 'ranger',
+    training: { level: 7, cost: 1300 },
+    rankOf: 'field-dressing',
+    manaCost: 0,
+    cooldownMs: 18000,
+    range: 0,
+    castTimeMs: 1200,
+    baseFailureChance: 0,
+    effect: { kind: 'heal', amount: 45 },
+  },
+  'piercing-shot-2': {
+    id: 'piercing-shot-2',
+    name: 'Piercing Shot II',
+    description: 'A heavy draw for over four times the damage.',
+    classId: 'ranger',
+    training: { level: 8, cost: 1600 },
+    rankOf: 'piercing-shot',
+    manaCost: 0,
+    cooldownMs: 18000,
+    range: 240,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    shot: true,
+    effect: { kind: 'damage', powerMultiplier: 4.25, thrown: true },
+  },
 };
 
 /**
@@ -377,5 +510,15 @@ export const CLASS_ABILITIES: Record<ClassId, AbilityId[]> = {
     'mana-shield-2',
     'mend-2',
     'firestorm-2',
+  ],
+  ranger: [
+    'aimed-shot',
+    'rapid-fire',
+    'field-dressing',
+    'piercing-shot',
+    'aimed-shot-2',
+    'rapid-fire-2',
+    'field-dressing-2',
+    'piercing-shot-2',
   ],
 };

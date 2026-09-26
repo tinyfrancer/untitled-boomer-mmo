@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ARMOR_TYPE_CLASSES, ITEMS, armorTypeOf } from '../../src/data/items';
+import { CLASSES } from '../../src/data/classes';
 import { ENEMIES } from '../../src/data/enemies';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { SHOP_STOCK } from '../../src/data/shop';
@@ -75,6 +76,7 @@ const power = (itemId: ItemId): number => {
     (item.attackPowerBonus ?? 0) +
     (item.strengthBonus ?? 0) +
     (item.intellectBonus ?? 0) +
+    (item.agilityBonus ?? 0) +
     (item.healthBonus ?? 0)
   );
 };
@@ -101,17 +103,19 @@ describe('the tables behind a locked door', () => {
 
   /**
    * A fight this long has to be worth something every time, and the guaranteed
-   * drop is the one piece both classes can wear — so the trophy is the same
-   * trophy whoever took it. The two weapons are the chase, one per class.
+   * drop is the one piece every class can wear — so the trophy is the same
+   * trophy whoever took it. The weapons are the chase, one per class.
    */
-  it.each(BOSS_TABLES)('%s always pays out a trophy that fits either class', (tableId) => {
+  it.each(BOSS_TABLES)('%s always pays out a trophy that fits every class', (tableId) => {
     const loot = rollLootTable(tableId, () => 0.99);
     expect(loot.drops).toHaveLength(1);
 
     const trophy = loot.drops[0]?.itemId as ItemId;
     const armorType = armorTypeOf(trophy);
     expect(armorType).not.toBeNull();
-    expect(armorType && ARMOR_TYPE_CLASSES[armorType]).toEqual(['warrior', 'wizard']);
+    expect(armorType && [...ARMOR_TYPE_CLASSES[armorType]].sort()).toEqual(
+      Object.keys(CLASSES).sort(),
+    );
   });
 
   it.each(BOSS_TABLES)(
@@ -120,11 +124,12 @@ describe('the tables behind a locked door', () => {
       const weapons = dropsOf(tableId)
         .map((itemId) => ITEMS[itemId])
         .filter((item) => item.kind === 'equipment' && item.slot === 'weapon');
-      expect(weapons).toHaveLength(2);
+      expect(weapons).toHaveLength(Object.keys(CLASSES).length);
 
       const shapes = weapons.map((item) => (item.kind === 'equipment' ? item.weaponShape : null));
       expect(shapes).toContain('sword');
       expect(shapes).toContain('wand');
+      expect(shapes).toContain('bow');
 
       weapons.forEach((weapon) => {
         const chance = LOOT_TABLES[tableId].entries.find(

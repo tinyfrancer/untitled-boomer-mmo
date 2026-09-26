@@ -42,6 +42,7 @@ import {
   PLAYER_EFFECTS_CHANGED_EVENT,
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
+  QUIVER_CHANGED_EVENT,
   PLAYER_TILE_CHANGED_EVENT,
   QUEST_LOG_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
@@ -97,6 +98,8 @@ const REPORT: OfflineAfkReport = {
   skill: null,
   skillXp: 0,
   masteryTargetId: null,
+  arrowsSpent: 0,
+  outOfArrows: false,
 };
 
 let parent: HTMLElement;
@@ -449,13 +452,57 @@ describe('the player column', () => {
     const bars = [...parent.querySelectorAll('.hud-player .hud-bar')].map(
       (bar) => [...bar.classList].find((name) => name.startsWith('hud-player__')) ?? '',
     );
-    expect(bars).toEqual(['hud-player__hp', 'hud-player__mana', 'hud-player__xp']);
+    expect(bars).toEqual([
+      'hud-player__hp',
+      'hud-player__mana',
+      'hud-player__quiver',
+      'hud-player__xp',
+    ]);
 
     // A warrior is sent a pool of zero, and no bar at all is what that means.
     expect(column('.hud-player__mana')?.classList.contains('hud-hidden')).toBe(true);
     events.emit(PLAYER_MANA_CHANGED_EVENT, { mana: 12, maxMana: 30 });
     expect(column('.hud-player__mana')?.classList.contains('hud-hidden')).toBe(false);
     expect(column('.hud-player__mana .hud-bar__label')?.textContent).toBe('12 / 30 mana');
+  });
+});
+
+describe('the quiver', () => {
+  const column = (selector: string): HTMLElement | null =>
+    parent.querySelector(`.hud-player ${selector}`);
+
+  it('hangs a bar of arrows where a wizard’s mana goes, for a ranger', () => {
+    mount(createNewCharacter('Robin', 'ranger'));
+    expect(column('.hud-player__mana')?.classList.contains('hud-hidden')).toBe(true);
+    expect(column('.hud-player__quiver')?.classList.contains('hud-hidden')).toBe(false);
+    expect(column('.hud-player__quiver .hud-bar__label')?.textContent).toBe('50 / 50 arrows');
+  });
+
+  it('counts down with every shot, and says so when it runs dry', () => {
+    mount(createNewCharacter('Robin', 'ranger'));
+    events.emit(QUIVER_CHANGED_EVENT, { itemId: 'crude-arrows', count: 12 });
+    expect(column('.hud-player__quiver .hud-bar__label')?.textContent).toBe('12 / 50 arrows');
+    events.emit(QUIVER_CHANGED_EVENT, null);
+    expect(column('.hud-player__quiver .hud-bar__label')?.textContent).toBe('Out of arrows');
+  });
+
+  it('draws no bar at all for anybody not wearing one', () => {
+    mount();
+    expect(column('.hud-player__quiver')?.classList.contains('hud-hidden')).toBe(true);
+  });
+
+  it('shows the sheet a shot’s attack, built on agility, and the arrows beside the quiver', () => {
+    mount(createNewCharacter('Robin', 'ranger'));
+    const text = parent.querySelector('[data-sheet="character"]')?.textContent ?? '';
+    expect(text).toContain('AGI 6');
+    expect(text).toContain('ATK 9 (AGI)');
+    expect(text).toContain('Worn Quiver — 50 Crude Arrows');
+
+    // Dry, the bow is a pair of fists, and the sheet says the punch.
+    events.emit(QUIVER_CHANGED_EVENT, null);
+    const dry = parent.querySelector('[data-sheet="character"]')?.textContent ?? '';
+    expect(dry).toContain('ATK 6 (AGI)');
+    expect(dry).toContain('Worn Quiver — empty');
   });
 });
 

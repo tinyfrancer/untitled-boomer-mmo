@@ -15,8 +15,10 @@ import { TIER_COLORS } from './tiers';
 // Who can wear what. Class restrictions hang off the armor type rather than off
 // each item, so a new armor row inherits its rules from the type it names.
 export const ARMOR_TYPE_CLASSES: Record<ArmorTypeId, ClassId[]> = {
-  cloth: ['warrior', 'wizard'],
-  leather: ['warrior'],
+  cloth: ['warrior', 'wizard', 'ranger'],
+  // A ranger wears what a warrior wears short of plate: it is out in the same
+  // weather, and it is never the one standing in front of the swing.
+  leather: ['warrior', 'ranger'],
   plate: ['warrior'],
 };
 
@@ -61,6 +63,14 @@ interface EquipmentItemDefinition extends BaseItemDefinition {
   healthBonus?: number;
   strengthBonus?: number;
   intellectBonus?: number;
+  agilityBonus?: number;
+  /**
+   * How many arrows this holds, which is what makes it a quiver rather than
+   * only something shaped like one. The one stat an offhand has ever had that
+   * is not a bonus: a bigger quiver is worth having for its own sake, since the
+   * arrows in it weigh nothing and only the spares in the bag do.
+   */
+  quiverCapacity?: number;
   // Gathering tools occupy the weapon slot, so holding one means putting your
   // sword away. This is what a resource node checks before letting you gather.
   toolFor?: SkillId;
@@ -103,8 +113,27 @@ interface ConsumableItemDefinition extends BaseItemDefinition {
   icon: ItemIcon;
 }
 
+/**
+ * An arrow, and the fourth kind of item: not worn, not eaten and not made into
+ * anything, but spent a shot at a time out of the quiver it rides in.
+ *
+ * Its own kind rather than a material with a field, because what it carries is
+ * read off the arrow that is nocked rather than off anything worn — and a new
+ * kind is a compile error at every switch over `kind`, which is how the bag,
+ * the inspect card and the sell price were told there is a fourth.
+ */
+interface AmmunitionItemDefinition extends BaseItemDefinition {
+  kind: 'ammunition';
+  // What a shot with this nocked adds, beside the archer's agility and the bow.
+  damage: number;
+  icon: ItemIcon;
+}
+
 export type ItemDefinition =
-  EquipmentItemDefinition | MaterialItemDefinition | ConsumableItemDefinition;
+  | EquipmentItemDefinition
+  | MaterialItemDefinition
+  | ConsumableItemDefinition
+  | AmmunitionItemDefinition;
 
 // The bag's palette. What cooking did to something is read off colour rather
 // than shape — a raw fish, a cooked one and a burnt one are the same outline at
@@ -155,6 +184,8 @@ const ICON_COLOR = {
   // This is the one thing on the shelf that does something to gear, and it has
   // to read as that at thumbnail size rather than as a third ore.
   reforgeStone: 0x7e57c2,
+  // Pale fletching on a dark shaft, so an arrow is not a stick of wood.
+  crudeArrow: 0xd7c8a8,
 } as const;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
@@ -376,6 +407,136 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     attackRange: 240,
     attackPowerBonus: 7,
     intellectBonus: 3,
+  },
+  /**
+   * The ranger's bows, one for every rung a sword and a wand already stand on:
+   * the one it starts with, the one bandits carry, the chief's and the king's.
+   *
+   * A bow is two-handed, shoots arrows and scales with agility whoever draws it
+   * (`isBow`) — so a warrior can hold one and it is a bad idea by arithmetic
+   * rather than by rule. Reach is priced against the wand's, rung for rung: the
+   * same 200 to start and the same 240 at the top, since the difference between
+   * a bow and a wand is the arrow each shot costs rather than the distance.
+   */
+  shortbow: {
+    id: 'shortbow',
+    name: 'Shortbow',
+    value: 10,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0x8d6e63,
+    weaponShape: 'bow',
+    attackRange: 200,
+    attackPowerBonus: 2,
+  },
+  // The brown axe's opposite number: off a bandit, at the axe's rate.
+  'hunting-bow': {
+    id: 'hunting-bow',
+    name: 'Hunting Bow',
+    value: 40,
+    weight: 3,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: TIER_COLORS.brown,
+    tier: 'brown',
+    weaponShape: 'bow',
+    attackRange: 210,
+    attackPowerBonus: 3,
+  },
+  // Taken off a poacher the chief robbed, which is the stolen wand's story told
+  // about the third class — and the third weapon on his table, so a run at him
+  // is worth making whichever of the three took it.
+  'poachers-bow': {
+    id: 'poachers-bow',
+    name: "Poacher's Bow",
+    value: 150,
+    weight: 3,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0x6d4c41,
+    weaponShape: 'bow',
+    attackRange: 220,
+    attackPowerBonus: 4,
+    agilityBonus: 2,
+  },
+  'barrow-longbow': {
+    id: 'barrow-longbow',
+    name: 'Barrow Longbow',
+    value: 260,
+    weight: 4,
+    kind: 'equipment',
+    slot: 'weapon',
+    color: 0xa1887f,
+    weaponShape: 'bow',
+    attackRange: 240,
+    attackPowerBonus: 7,
+    agilityBonus: 3,
+  },
+  /**
+   * The quivers, and the hand a bow leaves free.
+   *
+   * No armour type, so open to anybody the way the bow it serves is: a quiver is
+   * half of a weapon rather than a piece of armour. What each one holds is its
+   * natural stat and the one that grows most rung to rung; the bonuses beside it
+   * are small, because the offhand a ranger gives up is a shield.
+   */
+  'worn-quiver': {
+    id: 'worn-quiver',
+    name: 'Worn Quiver',
+    value: 10,
+    weight: 1,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: 0x795548,
+    offhandShape: 'quiver',
+    quiverCapacity: 50,
+  },
+  // Off the goblins on the road west, beside the studded set it is cut from.
+  'studded-quiver': {
+    id: 'studded-quiver',
+    name: 'Studded Quiver',
+    value: 45,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: TIER_COLORS.studded,
+    tier: 'studded',
+    offhandShape: 'quiver',
+    quiverCapacity: 80,
+    armorValue: 1,
+    agilityBonus: 1,
+  },
+  // What the dead were buried with, beside the shield and the lantern: the
+  // barrow's answer to the offhand, for the third hand that fills one.
+  'grave-quiver': {
+    id: 'grave-quiver',
+    name: 'Grave Quiver',
+    value: 110,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'offhand',
+    color: 0x6b6a5e,
+    offhandShape: 'quiver',
+    quiverCapacity: 120,
+    armorValue: 2,
+    agilityBonus: 3,
+  },
+  /**
+   * The bottom rung of arrow, and the only one there is until fletching: bought
+   * in town by the bundle and carried by everything with pockets.
+   *
+   * A tenth of a point each, so a hundred spares weigh what a helmet does and
+   * the ones in the quiver weigh nothing at all.
+   */
+  'crude-arrows': {
+    id: 'crude-arrows',
+    name: 'Crude Arrows',
+    value: 1,
+    weight: 0.1,
+    kind: 'ammunition',
+    damage: 1,
+    icon: { shape: 'arrow', color: ICON_COLOR.crudeArrow },
   },
   'rat-bones': {
     id: 'rat-bones',
@@ -1240,6 +1401,7 @@ export interface EquipmentBonuses {
   health: number;
   strength: number;
   intellect: number;
+  agility: number;
   attackPower: number;
   armor: number;
 }
@@ -1253,21 +1415,60 @@ export function isShield(itemId: ItemId | null): boolean {
 export function getEquipmentBonuses(itemId: ItemId | null): EquipmentBonuses {
   const item = itemId ? ITEMS[itemId] : undefined;
   if (!item || item.kind !== 'equipment') {
-    return { health: 0, strength: 0, intellect: 0, attackPower: 0, armor: 0 };
+    return { health: 0, strength: 0, intellect: 0, agility: 0, attackPower: 0, armor: 0 };
   }
   return {
     health: item.healthBonus ?? 0,
     strength: item.strengthBonus ?? 0,
     intellect: item.intellectBonus ?? 0,
+    agility: item.agilityBonus ?? 0,
     attackPower: item.attackPowerBonus ?? 0,
     armor: item.armorValue ?? 0,
   };
+}
+
+/**
+ * Whether this is a bow, which is four rules at once: it takes both hands (the
+ * one thing it allows in the other is a quiver), it shoots arrows, it trains
+ * archery, and a shot off it scales with agility whoever draws it.
+ *
+ * Read off the shape rather than a flag per rule, because the four always
+ * travel together — a bow that took one hand, or shot nothing, would be a
+ * different weapon wearing the name.
+ */
+export function isBow(itemId: ItemId | null): boolean {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.kind === 'equipment' && item.weaponShape === 'bow';
+}
+
+/** How many arrows what is in the off hand holds: none, unless it is a quiver. */
+export function quiverCapacity(itemId: ItemId | null): number {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.kind === 'equipment' ? (item.quiverCapacity ?? 0) : 0;
+}
+
+export function isQuiver(itemId: ItemId | null): boolean {
+  return quiverCapacity(itemId) > 0;
+}
+
+export function isArrow(itemId: ItemId | null): boolean {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.kind === 'ammunition';
+}
+
+/** What a shot with this nocked adds; nothing, for no arrow at all. */
+export function arrowDamage(itemId: ItemId | null): number {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.kind === 'ammunition' ? item.damage : 0;
 }
 
 export function describeItemBonuses(itemId: ItemId | null): string {
   const food = consumableFor(itemId);
   if (food) {
     return `Restores ${food.healAmount} HP over ${Math.round(food.healDurationMs / 1000)}s`;
+  }
+  if (isArrow(itemId)) {
+    return `+${arrowDamage(itemId)} ATK a shot, from a quiver`;
   }
   return describeBonuses(getEquipmentBonuses(itemId), itemId);
 }
@@ -1289,6 +1490,11 @@ export function describeBonuses(bonuses: EquipmentBonuses, itemId: ItemId | null
   if (bonuses.health) parts.push(`+${bonuses.health} HP`);
   if (bonuses.strength) parts.push(`+${bonuses.strength} STR`);
   if (bonuses.intellect) parts.push(`+${bonuses.intellect} INT`);
+  if (bonuses.agility) parts.push(`+${bonuses.agility} AGI`);
+
+  const holds = quiverCapacity(itemId);
+  if (holds) parts.push(`Holds ${holds}`);
+  if (isBow(itemId)) parts.push('Two-handed');
 
   const tool = toolSkill(itemId);
   if (tool) parts.push(SKILLS[tool].name);

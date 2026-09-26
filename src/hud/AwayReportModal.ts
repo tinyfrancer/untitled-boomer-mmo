@@ -33,6 +33,9 @@ export class AwayReportModal extends Overlay {
     if (report.masteryTargetId && report.skillXp > 0) {
       lines.push(`${masteryTarget(report.masteryTargetId).name} mastery +${report.skillXp}`);
     }
+    if (report.arrowsSpent > 0) {
+      lines.push(`${report.arrowsSpent} arrows shot`);
+    }
     if (report.copper > 0) {
       lines.push(formatCurrency(report.copper));
     }
@@ -72,6 +75,18 @@ export class AwayReportModal extends Overlay {
             'hud-modal__line hud-modal__missed',
             `${describeItemName(itemId)} x${quantity}`,
           ),
+        ),
+      );
+    }
+
+    // Said in the warning colour, since it is the one line here that is a
+    // reason the night paid less than it could have and a thing to go and fix.
+    if (report.outOfArrows) {
+      body.append(
+        el(
+          'div',
+          'hud-modal__line hud-modal__danger',
+          'Your arrows ran out, and the camp stopped fighting.',
         ),
       );
     }

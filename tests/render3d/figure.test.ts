@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { Box3, Mesh, type MeshLambertMaterial } from 'three';
 import { FIGURE_HEIGHT, buildFigure } from '../../src/render3d/figure';
-import { computeAppearance, stickFigure } from '../../src/systems/AppearanceSystem';
+import {
+  BOWSTRING_COLOR,
+  computeAppearance,
+  stickFigure,
+} from '../../src/systems/AppearanceSystem';
 import type { Appearance } from '../../src/systems/AppearanceSystem';
 import type { Object3D } from 'three';
 
@@ -58,7 +62,7 @@ describe('buildFigure', () => {
   });
 
   it('gives every weapon shape something to hold', () => {
-    (['sword', 'wand', 'pole', 'axe'] as const).forEach((shape) => {
+    (['sword', 'wand', 'pole', 'axe', 'pick', 'bow'] as const).forEach((shape) => {
       const armed = buildFigure({ ...BARE, weapon: { shape, color: 0xabcdef } });
       expect(colors(armed.object)).toContain(0xabcdef);
     });
@@ -111,6 +115,17 @@ describe('the off hand', () => {
     const shielded = new Box3().setFromObject(held({ shape: 'shield', color: 0x8d6e63 }));
 
     expect(shielded.min.x).toBeLessThan(empty.min.x);
+  });
+
+  it('hangs a quiver at the hip with the fletching standing out of it', () => {
+    const quiver = held({ shape: 'quiver', color: 0x795548 });
+    const colors: number[] = [];
+    quiver.traverse((object) => {
+      if (object instanceof Mesh)
+        colors.push((object.material as MeshLambertMaterial).color.getHex());
+    });
+    expect(colors).toContain(0x795548);
+    expect(colors).toContain(BOWSTRING_COLOR);
   });
 
   it('paints it in the colour it is handed', () => {

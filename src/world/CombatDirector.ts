@@ -24,6 +24,7 @@ import {
   mitigatedDamage,
   resolveAttack,
   rollDefense,
+  weaponSkillFor,
 } from '../systems/CombatSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { rollLootTable, type LootDrop } from '../systems/LootSystem';
@@ -31,7 +32,7 @@ import { hasLineOfSight, type CollisionWorld } from '../systems/CollisionSystem'
 import { distance, type Point } from '../systems/MovementSystem';
 import { ENEMY_ABILITIES, type EnemyAbilityDefinition } from '../data/enemyAbilities';
 import { abilityConnects, chooseEnemyAbility } from '../systems/EnemyAbilitySystem';
-import type { EnemyId } from '../types/ids';
+import type { EnemyId, ItemId } from '../types/ids';
 import {
   ACHIEVEMENT_UNLOCKED_EVENT,
   KILLS_CHANGED_EVENT,
@@ -170,9 +171,28 @@ export class CombatDirector {
       return;
     }
 
+    // Read before the arrow is drawn: drawing the last one turns the bow into a
+    // pair of fists, and this shot is still a shot.
+    const attackPower = player.attackPower;
+    // A shot spends its arrow first, since it left the string whether or not it
+    // lands. A bow the body thought was loaded and is not swings nothing this
+    // frame: it is standing at a bow's reach, and a punch from there would land
+    // from across the room. Loosing has already told it, so the next frame
+    // closes to a fist's reach instead.
+    let arrow: ItemId | null = null;
+    if (player.isShooting()) {
+      arrow = this.ctx.loose();
+      if (!arrow) return;
+    }
+
     this.lastAttackAt = this.ctx.now;
-    const weaponSkill = character.activeWeaponSkill();
-    this.ctx.push({ kind: 'swing', by: null, toward: { x: target.x, y: target.y } });
+    const weaponSkill = weaponSkillFor(character.state.gear.weapon, arrow);
+    const toward = { x: target.x, y: target.y };
+    this.ctx.push(
+      arrow
+        ? { kind: 'shot', from: this.ctx.playerPoint(), to: toward }
+        : { kind: 'swing', by: null, toward },
+    );
 
     // Asked before the damage is rolled: a swing that is slipped never happened,
     // and the skill takes no rep for it either.
@@ -191,8 +211,12 @@ export class CombatDirector {
 
     const { damage, crit } = resolveAttack(
       {
-        attackPower: player.attackPower,
+        attackPower,
         weaponSkillLevel: character.skillLevelOf(weaponSkill),
+        // Every swing and every shot is physical, a wand's included, so every one
+        // of them can land hard off agility; a wizard's point or so is a rounding
+        // error, which is what keeps that from being a rule worth an exception.
+        agility: player.agility,
       },
       this.ctx.rolls,
     );

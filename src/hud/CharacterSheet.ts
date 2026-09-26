@@ -8,6 +8,8 @@ import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
 import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
 import { THEME } from '../ui/theme';
 import type { PrimaryStat } from '../data/classes';
+import type { Quiver } from '../systems/QuiverSystem';
+import { isQuiver } from '../data/items';
 import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import { exhaustive, mapKeys } from '../types/exhaustive';
 import type { GearSlotId, SkillId } from '../types/ids';
@@ -26,11 +28,20 @@ export interface DisplayedStats {
   maxHp: number;
   strength: number;
   intellect: number;
+  agility: number;
   attackPower: number;
-  // Which stat the class turns into attack power. Shown beside ATK, because
-  // "do both STR and INT apply?" is otherwise unanswerable from the sheet.
+  // Which stat attack power is built on: the class's own, or agility under a
+  // bow. Shown beside ATK, because "does my strength count?" is otherwise
+  // unanswerable from the sheet — and for a warrior holding a bow the answer
+  // has changed.
   attackStat: PrimaryStat;
 }
+
+const STAT_LABELS: Record<PrimaryStat, string> = {
+  strength: 'STR',
+  intellect: 'INT',
+  agility: 'AGI',
+};
 
 export interface CharacterSheetState {
   gear: Gear;
@@ -39,6 +50,9 @@ export interface CharacterSheetState {
   // reforge actually bought them.
   reforges: Reforges;
   stats: DisplayedStats;
+  // What is in the quiver, which the offhand row says beside the quiver's name
+  // since a slot holds one item and a quiver holds a stack.
+  quiver: Quiver | null;
   skills: Skills;
   // Combat skill caps ride the character's level, so the sheet needs it to know
   // when one of those bars is full.
@@ -75,7 +89,7 @@ export class CharacterSheet extends Sheet {
     this.doll = el('div', 'hud-char__doll');
     this.doll.append(paperdollSvg(this.gear));
     const stats = el('div', 'hud-char__stats');
-    this.statLines = [0, 1, 2, 3].map(() => el('div'));
+    this.statLines = [0, 1, 2, 3, 4].map(() => el('div'));
     stats.append(...this.statLines);
     top.append(this.doll, stats);
     this.body.append(top);
@@ -125,12 +139,13 @@ export class CharacterSheet extends Sheet {
     this.gear = state.gear;
     this.doll.replaceChildren(paperdollSvg(state.gear));
 
-    const { hp, maxHp, strength, intellect, attackPower, attackStat } = state.stats;
+    const { hp, maxHp, strength, intellect, agility, attackPower, attackStat } = state.stats;
     const lines = [
       `HP ${hp} / ${maxHp}`,
       `STR ${strength}`,
       `INT ${intellect}`,
-      `ATK ${attackPower} (${attackStat === 'strength' ? 'STR' : 'INT'})`,
+      `AGI ${agility}`,
+      `ATK ${attackPower} (${STAT_LABELS[attackStat]})`,
     ];
     this.statLines.forEach((line, index) => {
       line.textContent = lines[index] ?? '';
@@ -141,6 +156,12 @@ export class CharacterSheet extends Sheet {
       const row = this.slots[slot];
       const reforgeId = itemId ? (state.reforges[itemId] ?? null) : null;
       row.item.textContent = itemId ? reforgedName(itemId, reforgeId) : describeItemName(itemId);
+      if (isQuiver(itemId)) {
+        const { quiver } = state;
+        row.item.textContent += quiver
+          ? ` — ${quiver.count} ${describeItemName(quiver.itemId)}`
+          : ' — empty';
+      }
       row.item.classList.toggle('is-filled', itemId !== null);
       row.bonuses.textContent = describeBonuses(reforgedBonuses(itemId, reforgeId), itemId);
     }

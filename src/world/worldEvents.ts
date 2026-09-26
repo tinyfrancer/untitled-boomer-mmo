@@ -50,6 +50,12 @@ export type WorldEvent =
    * to fight is still facing wherever it last walked.
    */
   | { kind: 'swing'; by: Mob | null; toward: Point }
+  /**
+   * An arrow loosed by the player, whether or not it lands. It is the shooter's
+   * swing as well — the figure draws for a shot the way it chops for a swing —
+   * and the arrow in flight between the two points, and the string heard.
+   */
+  | { kind: 'shot'; from: Point; to: Point }
   /** The player went up a level, where they stood. */
   | { kind: 'level-up'; at: Point }
   /**

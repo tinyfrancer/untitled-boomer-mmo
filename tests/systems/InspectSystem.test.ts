@@ -215,7 +215,7 @@ describe('describing an item', () => {
     expect(valueOf(panel, 'Strength')).toBe('+1');
     // The line the bag never had room for, and the reason a wizard looting one
     // in the camp is looking at a vendor trash item rather than an upgrade.
-    expect(valueOf(panel, 'Worn by')).toBe('Warrior');
+    expect(valueOf(panel, 'Worn by')).toBe('Warrior, Ranger');
     expect(valueOf(panel, 'Weight')).toBe('6');
     expect(valueOf(panel, 'Value')).toBe('35c');
   });

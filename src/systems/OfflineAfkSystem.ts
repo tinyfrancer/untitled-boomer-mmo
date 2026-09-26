@@ -1,4 +1,5 @@
 import { ENEMIES } from '../data/enemies';
+import { isArrow, isBow } from '../data/items';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { STATION_PERSISTS, type CraftingRecipe, type StationId } from '../data/recipes';
 import { ZONES } from '../data/zones';
@@ -17,7 +18,10 @@ import {
 } from './InventorySystem';
 import { rollLootTable } from './LootSystem';
 import { skillLevel, skillXpToNextLevel, type Skills } from './SkillSystem';
-import type { EnemyId, MasteryTargetId, SkillId } from '../types/ids';
+import { arrowsCarried, loadedArrow, type Quiver } from './QuiverSystem';
+import type { Reforges } from './ReforgeSystem';
+import { computeEffectiveStats } from './StatsSystem';
+import type { ClassId, EnemyId, MasteryTargetId, SkillId } from '../types/ids';
 
 // Nothing accrues past this. A tab closed over a long weekend hands back a
 // night's play, not a finished character.
@@ -46,6 +50,7 @@ const OFFLINE_MAX_LEVEL_FRACTION = 0.5;
 
 export interface OfflineAfkContext {
   now: number;
+  classId: ClassId;
   characterLevel: number;
   inventory: Inventory;
   capacity: number;
@@ -54,6 +59,14 @@ export interface OfflineAfkContext {
   // the awake camp asks every frame.
   gear: Gear;
   skills: Skills;
+  /**
+   * What a bow in hand has to shoot with. A fight holding one is paid only for
+   * the kills its arrows covered — see `arrowsSpent`.
+   */
+  quiver: Quiver | null;
+  // What the fettler did to the gear, which moves how hard a shot lands and so
+  // how many of them a kill takes.
+  reforges?: Reforges;
   rng?: () => number;
 }
 
@@ -106,6 +119,19 @@ export interface OfflineAfkReport {
    * make them disagree.
    */
   masteryTargetId: MasteryTargetId | null;
+  /**
+   * Arrows the session shot, which the caller takes back off the character the
+   * way it takes `consumed` — out of the quiver first, then the bag best-first,
+   * as that many shots would have. Zero for anything not holding a bow.
+   */
+  arrowsSpent: number;
+  /**
+   * Whether the night ended because the arrows did rather than because the
+   * time or the ceiling did. A bow with nothing to shoot is a camp that stops
+   * fighting: it is paid a kill a minute whatever it is holding, so paying a
+   * punch like a shot would be a bow that never runs out (decision 64).
+   */
+  outOfArrows: boolean;
 }
 
 const NOTHING: OfflineAfkReport = {
@@ -122,6 +148,8 @@ const NOTHING: OfflineAfkReport = {
   skill: null,
   skillXp: 0,
   masteryTargetId: null,
+  arrowsSpent: 0,
+  outOfArrows: false,
 };
 
 /**
@@ -252,20 +280,32 @@ export function resolveOfflineAfk(
   if (kills <= 0) {
     return { ...NOTHING, elapsedMs };
   }
-  // Floored rather than rounded, so a session can never come out ahead of the
-  // same kills made awake and camping.
-  const xp = Math.floor(perKillXp * kills);
 
+  const ammo = campAmmo(context, scaleEnemyStats(definition, quarry.level).maxHp);
   let copper = 0;
   let drops: Inventory = {};
   let missed: Inventory = {};
   // Tracked against the pack as it fills, so a bag that ran out of room
   // partway through stops taking drops at exactly that point.
   let carried = context.inventory;
+  let fought = 0;
+  let arrowsSpent = 0;
+  let outOfArrows = false;
 
   for (let kill = 0; kill < kills; kill += 1) {
+    // Paid before the kill is: a bow that cannot finish the next fight does not
+    // start it.
+    if (ammo) {
+      if (ammo.left < ammo.perKill) {
+        outOfArrows = true;
+        break;
+      }
+      ammo.left -= ammo.perKill;
+      arrowsSpent += ammo.perKill;
+    }
+    fought += 1;
     if (!definition.lootTableId) {
-      break;
+      continue;
     }
     const loot = rollLootTable(definition.lootTableId, rng);
     // Coin is weightless, so it keeps coming in however full the pack is.
@@ -277,21 +317,58 @@ export function resolveOfflineAfk(
       if (bag === 'kept') {
         carried = addItemToInventory(carried, drop.itemId, drop.quantity);
         drops = addItemToInventory(drops, drop.itemId, drop.quantity);
+        // Arrows off a body are arrows to shoot, the way they are awake.
+        if (ammo && isArrow(drop.itemId)) {
+          ammo.left += drop.quantity;
+        }
       } else {
         missed = addItemToInventory(missed, drop.itemId, drop.quantity);
       }
     }
   }
 
+  if (fought <= 0) {
+    return { ...NOTHING, elapsedMs, outOfArrows };
+  }
   return {
     ...NOTHING,
     elapsedMs,
-    kills,
+    kills: fought,
     enemyId: quarry.enemyId,
-    xp,
+    // Floored rather than rounded, so a session can never come out ahead of
+    // the same kills made awake and camping.
+    xp: Math.floor(perKillXp * fought),
     copper: Math.floor(copper * OFFLINE_RATE_MULTIPLIER),
     drops,
     missed,
+    arrowsSpent,
+    outOfArrows,
+  };
+}
+
+/**
+ * What a bow in hand had to shoot, and what a kill cost in it: the shots it
+ * takes to put the quarry down at the attack the first arrow nocked gives,
+ * with no crits and no training counted — the direction that spends more
+ * rather than less. Null for anything that is not a bow, which spends nothing.
+ */
+function campAmmo(
+  context: OfflineAfkContext,
+  quarryHp: number,
+): { left: number; perKill: number } | null {
+  if (!isBow(context.gear.weapon)) return null;
+  const arrow = loadedArrow(context.gear, context.quiver, context.inventory);
+  if (!arrow) return { left: 0, perKill: 1 };
+  const { attackPower } = computeEffectiveStats(
+    context.classId,
+    context.gear,
+    context.characterLevel,
+    context.reforges ?? {},
+    arrow,
+  );
+  return {
+    left: arrowsCarried(context.quiver, context.inventory),
+    perKill: Math.max(1, Math.ceil(quarryHp / Math.max(1, attackPower))),
   };
 }
 

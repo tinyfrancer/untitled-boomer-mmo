@@ -62,6 +62,8 @@ export const PALETTE = {
   /** The bolt an ability throws, and the glow around it. */
   bolt: 0xff7043,
   boltGlow: 0xffd54f,
+  /** An arrow in flight: pale, so a thin shaft still reads against any ground. */
+  arrow: 0xf5f0e6,
   /** The ring under the current target. */
   selection: 0xffee58,
   /**

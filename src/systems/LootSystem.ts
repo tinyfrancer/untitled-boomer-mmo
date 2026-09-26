@@ -26,7 +26,12 @@ export function rollLootTable(tableId: LootTableId, rng: () => number = Math.ran
   const drops: LootDrop[] = [];
   for (const entry of table.entries) {
     if (rng() < entry.chance) {
-      drops.push({ itemId: entry.itemId, quantity: 1 });
+      // Only a handful rolls again for how many, so a table of single drops
+      // throws exactly the dice it always did.
+      const quantity = entry.quantity
+        ? entry.quantity.min + Math.floor(rng() * (entry.quantity.max - entry.quantity.min + 1))
+        : 1;
+      drops.push({ itemId: entry.itemId, quantity });
     }
   }
 

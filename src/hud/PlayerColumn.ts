@@ -25,7 +25,11 @@ function gauge(className: string, fillClass: string): Gauge {
 
 /**
  * Who you are and how you are doing: name and level on one line, then health,
- * mana and XP as three bars, then whatever buffs are up.
+ * mana, arrows and XP as bars, then whatever buffs are up.
+ *
+ * Mana and arrows are each there only for somebody who has them: a pool, or a
+ * quiver worn. A ranger has no mana, so the one it does have to watch sits
+ * where a wizard's does.
  *
  * Every number a bar carries is printed *inside* it rather than on a line
  * underneath. Three bars and three captions is six rows of eye travel for three
@@ -38,6 +42,7 @@ export class PlayerColumn {
   private readonly titleLine: HTMLElement;
   private readonly hp: Gauge;
   private readonly mana: Gauge;
+  private readonly quiver: Gauge;
   private readonly xp: Gauge;
   private readonly effects = new EffectBar();
 
@@ -54,6 +59,7 @@ export class PlayerColumn {
     this.titleLine = el('div', 'hud-player__title hud-hidden');
     this.hp = gauge('hud-player__hp', 'hud-bar__fill--hp');
     this.mana = gauge('hud-player__mana hud-hidden', 'hud-bar__fill--mana');
+    this.quiver = gauge('hud-player__quiver hud-hidden', 'hud-bar__fill--quiver');
     this.xp = gauge('hud-player__xp', '');
 
     this.root.append(
@@ -61,6 +67,7 @@ export class PlayerColumn {
       this.titleLine,
       this.hp.root,
       this.mana.root,
+      this.quiver.root,
       this.xp.root,
       this.effects.root,
     );
@@ -101,6 +108,20 @@ export class PlayerColumn {
     }
     this.mana.fill.style.width = fillPercent(barFill(mana, maxMana));
     this.mana.label.textContent = `${mana} / ${maxMana} mana`;
+  }
+
+  /**
+   * Arrows in the quiver against what it holds. No quiver worn is no bar, the
+   * way no pool is no mana bar; a quiver run dry keeps its bar, empty, since an
+   * empty quiver is the one thing about it worth seeing.
+   */
+  setQuiver(count: number, capacity: number): void {
+    this.quiver.root.classList.toggle('hud-hidden', capacity <= 0);
+    if (capacity <= 0) {
+      return;
+    }
+    this.quiver.fill.style.width = fillPercent(barFill(count, capacity));
+    this.quiver.label.textContent = count > 0 ? `${count} / ${capacity} arrows` : 'Out of arrows';
   }
 
   setEffects(effects: ActiveEffect[]): void {

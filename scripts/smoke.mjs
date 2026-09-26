@@ -3706,6 +3706,126 @@ async function throttled() {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
 }
 
+async function ranger() {
+  // --- The ranger: the third card on the creation screen, the arrows in the
+  // corner, and a shot through the real renderer.
+  //
+  // The rules — an arrow a shot, the refill, fists when dry, the two hands, the
+  // shop's bundle — are tests/world/ranger.test.ts. What only a browser shows is
+  // the card actually offered, the quiver's bar laid out beside the target frame
+  // at phone size, and an arrow drawn in flight and handed back when it lands.
+  // Last, since it rerolls the character every section above was written for. ---
+  await tapTab('options');
+  await page.click('.hud-modal [data-action="reset-character"]');
+  await page.click('.hud-modal [data-action="reset-character"]');
+  await page.waitForSelector('.create', { timeout: 20000 });
+  const offered = await page.evaluate(() =>
+    [...document.querySelectorAll('.create__card')].map(
+      (card) => /** @type {HTMLElement} */ (card).dataset.class ?? '',
+    ),
+  );
+  check(
+    'the creation screen offers all three classes',
+    offered.join(',') === 'warrior,wizard,ranger',
+    offered.join(', '),
+  );
+  await page.click('.create__card[data-class="ranger"]');
+  await page.click('.create__begin');
+  await page.waitForFunction(() => window.world != null, null, { timeout: 20000 });
+
+  const corner = () =>
+    page.evaluate(() => {
+      const bar = document.querySelector('.hud-player__quiver');
+      const column = document.querySelector('.hud-player')?.getBoundingClientRect();
+      const target = document.querySelector('.hud-target')?.getBoundingClientRect();
+      return {
+        shown: bar !== null && !bar.classList.contains('hud-hidden'),
+        label: bar?.querySelector('.hud-bar__label')?.textContent ?? '',
+        // The last bar sits inside the column it was laid out for, and the
+        // column stays clear of the target frame across the top row.
+        inside:
+          column !== undefined &&
+          (bar?.getBoundingClientRect().bottom ?? Infinity) <= column.bottom + 1,
+        clear: column !== undefined && target !== undefined && column.right <= target.left,
+        quiver: window.world.character.state.quiver,
+        weapon: window.world.character.state.gear.weapon,
+      };
+    });
+  const start = await corner();
+  check(
+    'a ranger boots holding a bow, with a full quiver counted in the corner',
+    start.weapon === 'shortbow' && start.shown && start.label === '50 / 50 arrows',
+    `${start.weapon}; "${start.label}"`,
+  );
+
+  // Something selected and let go once first, so the ring under a target —
+  // uploaded the first time anything is selected — is counted before the
+  // reading the arrow is measured against rather than after it.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.mobs.forEach((m) => m.disengage());
+    const rat = w.mobs.find((m) => m.isAlive() && m.definition.id === 'rat');
+    if (!rat) throw new Error('town has no rat to shoot');
+    w.setTarget(rat);
+  });
+  await draw();
+  await page.evaluate(() => window.world.clearTarget());
+  await sweep();
+  const settled = async () => {
+    for (let wait = 0; wait < 40 && (await drawnCounts()).fx > 0; wait += 1) {
+      await page.waitForTimeout(100);
+    }
+    await draw();
+    return gpuMemory();
+  };
+  const before = await settled();
+  // Then a rat stood inside the bow's reach and outside a fist's, and made the target.
+  await page.evaluate(() => {
+    const w = window.world;
+    const rat = w.mobs.find((m) => m.isAlive() && m.definition.id === 'rat');
+    if (!rat) throw new Error('town has no rat to shoot');
+    rat.setPosition(w.player.x, w.player.y - 150);
+    w.setTarget(rat);
+  });
+  const shot = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        left: window.world.character.state.quiver?.count ?? 0,
+        label: document.querySelector('.hud-player__quiver .hud-bar__label')?.textContent ?? '',
+      })),
+    (seen) => seen.left < 50,
+    'the ranger to loose an arrow',
+    10000,
+  );
+  await draw();
+  const flying = await drawnCounts();
+  // Read with a target up, since the frame it has to clear is hidden without one.
+  const framed = await corner();
+  check(
+    "the quiver's bar fits the player column and clears the target frame",
+    framed.inside && framed.clear,
+    JSON.stringify({ inside: framed.inside, clear: framed.clear }),
+  );
+  check(
+    'a shot spends an arrow, and the corner counts it',
+    shot.left === 49 && shot.label === '49 / 50 arrows',
+    `${shot.left} left; "${shot.label}"`,
+  );
+  check('and draws the arrow in flight', flying.fx > 0, `${flying.fx} effect(s) drawn`);
+  await page.screenshot({ path: `${OUT}/20-ranger.png` });
+
+  await page.evaluate(() => {
+    window.world.clearTarget();
+    window.world.mobs.forEach((m) => m.disengage());
+  });
+  const after = await settled();
+  check(
+    'an arrow that has landed is handed back to the GPU',
+    after.geometries <= before.geometries && after.textures <= before.textures,
+    `${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
+  );
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -3742,6 +3862,7 @@ const SECTIONS = [
   ['save-resume', saveResume],
   ['offline-camping', offlineCamping],
   ['throttled', throttled],
+  ['ranger', ranger],
 ];
 
 const known = SECTIONS.map(([name]) => name);

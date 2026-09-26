@@ -79,6 +79,9 @@ export interface AbilityContext {
   // cast. Both only rule anything out for a spell with a cast time to spend.
   moving?: boolean;
   casting?: boolean;
+  // Whether a bow is in hand with an arrow to nock, which only rules anything
+  // out for a shot.
+  loaded?: boolean;
 }
 
 /** Whether the ability can be cast right now, and what to say if not. */
@@ -89,6 +92,9 @@ export function canUseAbility(ability: AbilityDefinition, context: AbilityContex
   }
   if (context.mana < ability.manaCost) {
     return { ok: false, reason: 'Not enough mana.' };
+  }
+  if (ability.shot && !context.loaded) {
+    return { ok: false, reason: `${ability.name} needs a bow and an arrow to shoot.` };
   }
   if (ability.range > 0) {
     if (!context.hasTarget) {
@@ -132,15 +138,26 @@ export function rollSpellFailure(
 }
 
 /**
+ * Whether this is magic rather than a blow: an ability governed by Destruction.
+ * Everything else a class does is physical — a swing, a shot, a slash — and
+ * physical is what agility's share of a crit applies to.
+ */
+export function isSpell(ability: AbilityDefinition): boolean {
+  return ability.skill === 'destruction';
+}
+
+/**
  * Damage for a damaging ability. Routed through resolveAttack so an ability
  * inherits the same variance a normal swing has, with the governing skill
- * playing the part weapon skill plays there.
+ * playing the part weapon skill plays there — and, for anything that is not a
+ * spell, the caster's agility playing the part it plays in a swing.
  */
 export function resolveAbilityDamage(
   ability: AbilityDefinition,
   attackPower: number,
   skillLevel: number,
   rng: () => number = Math.random,
+  agility = 0,
 ): AttackResult {
   if (ability.effect.kind !== 'damage') {
     return { damage: 0, crit: false };
@@ -149,6 +166,7 @@ export function resolveAbilityDamage(
     {
       attackPower: attackPower * ability.effect.powerMultiplier,
       weaponSkillLevel: skillLevel,
+      agility: isSpell(ability) ? 0 : agility,
     },
     rng,
   );

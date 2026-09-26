@@ -1,4 +1,5 @@
 import {
+  BOWSTRING_COLOR,
   WEAPON_GEM_COLOR,
   computeAppearance,
   stickFigure,
@@ -74,6 +75,35 @@ export function paperdollSvg(gear: Gear): SVGSVGElement {
 function offhand(shape: OffhandShapeId, color: number, figure: StickFigure): SVGElement[] {
   const x = figure.leftHandX;
   const y = figure.shoulderY + BOX * 0.06;
+  if (shape === 'quiver') {
+    // A tube carried at the hip with the fletching standing out of its mouth,
+    // which is the whole of what tells it from a shield at this size.
+    const width = BOX * 0.07;
+    const height = BOX * 0.2;
+    const mouth = y - height / 2;
+    return [
+      ...[-1, 0, 1].map((step) =>
+        line(
+          x + step * width * 0.3,
+          mouth,
+          x + step * width * 0.45,
+          mouth - BOX * 0.08,
+          BOX * 0.02,
+          0xeceff1,
+        ),
+      ),
+      svgEl('rect', {
+        x: x - width / 2,
+        y: mouth,
+        width,
+        height,
+        rx: BOX * 0.015,
+        fill: cssColor(color),
+        stroke: cssColor(OUTLINE_COLOR),
+        'stroke-width': BOX * 0.025,
+      }),
+    ];
+  }
   if (shape === 'orb') {
     return [
       svgEl('circle', {
@@ -127,6 +157,21 @@ function weapon(
   const out: SVGElement[] = [];
 
   for (const [w, c] of passes) {
+    if (rig.head?.kind === 'bend') {
+      // The stave bows out away from the body, and the string is the straight
+      // line the shaft of every other weapon is drawn as.
+      const bend = rig.head.depth * 2;
+      out.push(
+        svgEl('path', {
+          d: `M ${buttX} ${buttY} Q ${gripX + bend} ${gripY} ${tipX} ${tipY}`,
+          fill: 'none',
+          stroke: cssColor(c),
+          'stroke-width': w,
+          'stroke-linecap': 'round',
+        }),
+      );
+      continue;
+    }
     out.push(line(buttX, buttY, tipX, tipY, w, c));
     if (rig.guard) {
       const guardY = gripY - rig.guard.above;
@@ -157,6 +202,9 @@ function weapon(
         fill: cssColor(WEAPON_GEM_COLOR),
       }),
     );
+  }
+  if (rig.head?.kind === 'bend') {
+    out.push(line(buttX, buttY, tipX, tipY, BOX * 0.012, BOWSTRING_COLOR));
   }
   // The line hanging off a fishing pole, which no mesh in the world draws and
   // which is what says "pole" rather than "staff" at this size.
@@ -194,10 +242,14 @@ function svgEl(tag: string, attributes: Record<string, string | number>): SVGEle
 }
 
 /**
- * A bare figure holding one weapon, for the class previews on the creation
- * screen. Classes look alike apart from what they start holding, so that is the
- * whole of the difference the preview has to show.
+ * A bare figure holding what a class starts with, for the class previews on the
+ * creation screen. Classes look alike apart from what they start holding, so
+ * that is the whole of the difference the preview has to show — and for the
+ * ranger that is a bow and the quiver beside it.
  */
-export function weaponPreviewSvg(weaponItemId: ItemId): SVGSVGElement {
-  return paperdollSvg({ ...NO_GEAR, weapon: weaponItemId });
+export function weaponPreviewSvg(
+  weaponItemId: ItemId,
+  offhandItemId: ItemId | null = null,
+): SVGSVGElement {
+  return paperdollSvg({ ...NO_GEAR, weapon: weaponItemId, offhand: offhandItemId });
 }

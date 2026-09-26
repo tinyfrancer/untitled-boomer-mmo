@@ -92,6 +92,9 @@ export const THEME = {
   xpFill: 0x42a5f5,
   // Deeper than the XP bar's blue, so the two stacked bars stay tellable apart.
   manaFill: 0x3949ab,
+  // Fletching tan, and nothing like the three blues and the green above it: the
+  // quiver's bar sits where a wizard's mana does, and has to read as arrows.
+  quiverFill: 0xb08a4f,
   // The same green the health bar over the player's head is drawn in
   // (`render3d/palette.ts`): the bar in the corner and the bar in the world are
   // one reading of one number, and two greens would suggest otherwise.

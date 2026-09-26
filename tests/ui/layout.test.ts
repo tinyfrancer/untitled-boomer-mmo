@@ -84,6 +84,17 @@ describe('hudLayout', () => {
     expect(wizard).toBeGreaterThan(warrior);
   });
 
+  // A ranger's arrows are a bar of their own, the mana bar's height, and a
+  // wizard who puts a quiver on pays for both.
+  it('makes room for the quiver bar only while one is worn', () => {
+    const plain = layoutFor(PHONE_PORTRAIT).playerColumn.height;
+    const quivered = layoutFor(PHONE_PORTRAIT, { hasQuiver: true }).playerColumn.height;
+    const mana = layoutFor(PHONE_PORTRAIT, { hasMana: true }).playerColumn.height;
+    const both = layoutFor(PHONE_PORTRAIT, { hasMana: true, hasQuiver: true }).playerColumn.height;
+    expect(quivered - plain).toBe(mana - plain);
+    expect(both - plain).toBe(2 * (mana - plain));
+  });
+
   // A worn title takes its own line under the name rather than being appended
   // to it, so the column has to grow by one line when there is one.
   it('makes room for a title only once one is worn', () => {

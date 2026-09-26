@@ -94,8 +94,12 @@ export class ShopModal extends Overlay {
   private stockRow({ entry, access }: StockOffer, currency: number): HTMLElement {
     const gated = access.kind === 'gated';
     const affordable = currency >= entry.price;
+    const bundle = entry.quantity ?? 1;
     const row = listRow({
-      label: describeItemName(entry.itemId),
+      label:
+        bundle > 1
+          ? `${describeItemName(entry.itemId)} x${bundle}`
+          : describeItemName(entry.itemId),
       value: gated ? access.requirement : formatCurrency(entry.price),
       labelColor: !gated && affordable ? THEME.color.equippable : THEME.color.dim,
       valueColor: gated ? THEME.color.muted : THEME.color.levelUp,

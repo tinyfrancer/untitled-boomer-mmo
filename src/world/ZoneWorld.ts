@@ -287,6 +287,7 @@ export class ZoneWorld implements Targeting {
       character.state.name,
       character.state.level,
       character.state.reforges,
+      character.loadedArrow(),
     );
     if (hp !== undefined) {
       this.player.setHp(hp);
@@ -1122,11 +1123,17 @@ export class ZoneWorld implements Targeting {
   }
 
   handleUnequipRequested(slot: GearSlotId): void {
-    this.character.unequip(slot);
+    const check = this.character.unequip(slot);
+    if (!check.ok) {
+      this.ctx.notice(check.reason);
+      return;
+    }
     this.applyGearChange();
   }
 
-  // Gear moves max HP, so the HUD needs the new current HP alongside the gear.
+  // Gear moves max HP, so the HUD needs the new current HP alongside the gear —
+  // and the quiver, which `publishInventory` sends with the bag, since a quiver
+  // taken off or put on moves arrows between the two.
   private applyGearChange(): void {
     this.player.setGear(this.character.state.gear, this.character.state.reforges);
     this.ctx.events.emit(GEAR_CHANGED_EVENT, this.character.state.gear);

@@ -142,6 +142,30 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
         circle(64, 58, BOX * 0.06, color),
         circle(38, 66, BOX * 0.05, color),
       ];
+    case 'bow':
+      return [
+        // A stave bent round from corner to corner, and the string straight
+        // across it, which is what a curve alone would never say.
+        ...curve(`M 26 16 Q 88 26 78 82`, BOX * 0.07, color),
+        ...line(26, 16, 78, 82, BOX * 0.015, 0xeceff1),
+      ];
+    case 'quiver':
+      return [
+        // Three feathers out of the mouth of a leaning tube.
+        ...line(46, 30, 36, 10, BOX * 0.04, 0xeceff1),
+        ...line(54, 30, 52, 8, BOX * 0.04, 0xeceff1),
+        ...line(62, 32, 68, 12, BOX * 0.04, 0xeceff1),
+        path(`M 40 30 L 70 34 L 62 90 L 36 86 Z`, color),
+      ];
+    case 'arrow':
+      return [
+        // A shaft, a head and a fletch. Drawn as one arrow rather than a bundle,
+        // since the count beside it already says how many.
+        ...line(24, 76, 72, 28, BOX * 0.04, 0x8d6e63),
+        path(`M 84 16 L 76 38 L 62 24 Z`, 0xb0bec5),
+        ...line(24, 76, 18, 64, BOX * 0.04, color),
+        ...line(24, 76, 36, 82, BOX * 0.04, color),
+      ];
     case 'bar':
       return [
         // An ingot seen from a corner: the rock is gone and what is left is a
@@ -200,6 +224,19 @@ function line(
     bareLine(x1, y1, x2, y2, width + OUTLINE_WIDTH, OUTLINE),
     bareLine(x1, y1, x2, y2, width, color),
   ];
+}
+
+/** An open curve and its backing, which is `line` for something that bends. */
+function curve(d: string, width: number, color: number): SVGElement[] {
+  const stroke = (strokeWidth: number, strokeColor: number) =>
+    svgEl('path', {
+      d,
+      fill: 'none',
+      stroke: cssColor(strokeColor),
+      'stroke-width': strokeWidth,
+      'stroke-linecap': 'round',
+    });
+  return [stroke(width + OUTLINE_WIDTH, OUTLINE), stroke(width, color)];
 }
 
 function bareLine(

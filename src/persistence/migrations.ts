@@ -166,6 +166,18 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // to do it. Nothing is granted either — a reforge costs a stone and a second
   // piece, and handing one over would be paying a bill nobody ran up.
   21: (state) => ({ ...state, reforges: {} }),
+  // v22 → v23: the ranger arrives, and with it archery and the quiver. Archery
+  // joins the sheet the way mining and leatherworking did — spread under, so
+  // every trained skill survives and only the new one starts where a new
+  // character's would. And nobody was carrying a quiver, because there was none
+  // to carry, so the arrows in it are null: what that character actually had,
+  // which is the v18 `bounty` argument exactly. The class itself needs nothing
+  // here, since every save written before it names one of the two that existed.
+  22: (state) => ({
+    ...state,
+    skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
+    quiver: null,
+  }),
 };
 
 /**
