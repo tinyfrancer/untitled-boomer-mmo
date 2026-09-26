@@ -223,3 +223,31 @@ what makes all-or-nothing the right answer there. The rest of a withdrawal simpl
 and is still the player's, and the rest of a pile stays on the ground, so refusing thirty logs
 outright because twelve fit would be inventing a loss. Both say what stayed behind, since asking for
 thirty and getting twelve otherwise reads as a bug.
+
+**An arrow goes into the quiver before the bag sees it** (`CharacterController.tryAddItem` and
+`addWhatFits`, act three phase 12; `docs/decisions.md` 70 and 73). The quiver is
+`CharacterState.quiver` — one kind of arrow and how many — beside the gear rather than in it, since a
+slot holds one item and a quiver holds a stack, and apart from the bag, since quivered arrows weigh
+nothing and cannot be sold or banked. So both acquisition paths ask where a stack would go before
+asking whether it fits: a dry quiver is topped up from the bag first, then takes its own kind up to
+what it holds (or any kind, empty), and only the rest is weighed. A full pack never refuses an arrow
+the quiver has room for, which is why a pile will seldom hold the arrows being shot. `canCarryItem`
+asks the same question without doing it, so the shop's check before the coin leaves the purse agrees
+with the add after it.
+
+**The arrows go where the quiver goes.** Taking one off puts its arrows in the bag, or refuses the
+whole change on a pack that cannot hold them; swapping quivers carries them over and spills what the
+smaller one cannot hold; one put on dry fills from the bag, best arrow first by the arrow's own
+damage. A bow takes both hands, so drawing one puts a shield or an orb in the bag and taking up either
+puts the bow there — the one thing a bow allows beside it is a quiver. All of it is `wear`, the one
+place gear and quiver change together, which is what refuses as a whole rather than half-applying.
+
+**Arrows are sold by the bundle** (`ShopStockEntry.quantity`): twenty-five for 30c, ungated for the
+reason the tools are, since a gate on arrows would be a gate on the class. The price is priced for a
+whole bundle and the vendor spread is held per arrow. What it is set against is the starter arc —
+`progression.test.ts` holds the arrows the arc shoots, priced at level 1, to well under half the coin
+it pays — so a ranger's range is paid for without being taxed out of the arc.
+
+An arrow weighs a tenth of a point, which no binary float holds exactly, so `EncumbranceSystem`
+compares weights to within `WEIGHT_EPSILON` — three tenths of spare room divided by a tenth is
+2.9999999999999996, and a pack with room for exactly three more would otherwise refuse the third.

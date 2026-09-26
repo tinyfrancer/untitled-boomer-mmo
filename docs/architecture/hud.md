@@ -35,6 +35,14 @@ Max HP is not on the wire — `player-hp-changed` carries the current value alon
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
 
+**Arrows are a bar too, where a wizard's mana goes** (act three phase 12). Anybody wearing a quiver
+gets one — count against capacity, and "Out of arrows" when dry, since an empty quiver is the one
+thing about it worth seeing — and `ui/layout.ts` reserves it as `hasQuiver` the way it reserves mana.
+It is fed by `quiver-changed`, which the world sends with every bag change and every shot, and seeded
+from the save like the bag. The character sheet's ATK is computed with the arrow the next shot nocks,
+names the stat it was built on from the weapon rather than the class, and the offhand row names the
+arrows beside the quiver.
+
 **The map zooms out, and the zoomed-out view is a map you read** (`worldMap()` in
 `systems/MapSystem.ts`). Its whole layout is **derived from the exits already in `ZONES`** — walked
 breadth-first from town, placing each zone one step from its neighbour in the direction the edge

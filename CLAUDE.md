@@ -13,7 +13,8 @@ A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as
 project by a professional software engineer with no prior game-dev experience. v1 is single-player:
 ten zones from a level 1-3 starter band (town, beach, quarry, bandit camp, the locked bandit
 hideout) up through the Old Mill Road, Blackwater Fen, the Deep Cut and Greyford Outpost to the
-locked Sunken Barrow at level 7-8; two classes; three gathering skills and three making ones; gear,
+locked Sunken Barrow at level 7-8; three classes, the third a ranger whose bow spends an arrow a
+shot; three gathering skills and three making ones; gear,
 armour and reforging; two-way combat with telegraphed enemy abilities; a shop, a bank, a trainer, a
 quest chain and a contract board, and a barter counter at Greyford; slayer achievements, titles and
 per-target mastery; an AFK camp that pays out offline; click/tap-to-move with a mobile-first HUD;
@@ -177,7 +178,8 @@ leave nothing behind to count. Keep that split.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
-fail on a full pack — handle the refusal. A kill's refusals become a loot pile where it fell, unless
+fail on a full pack — handle the refusal — and which puts an arrow in the quiver before the bag sees
+it, so `addItem` straight into the bag skips a rule as well as a check. A kill's refusals become a loot pile where it fell, unless
 the player is camping (`docs/architecture/economy.md`).
 
 **Persistence**: import the `saveService` singleton from `src/persistence/index.ts`, never construct
@@ -209,9 +211,11 @@ draws from state still needs a `WorldEvent` if it makes a sound**, since a sound
 and volume are kept per device, not in `CharacterState`.
 
 **Balance is held by simulations, not judgement.** The duels in `EnemySystem.test.ts` hold the
-combat curve (a fresh level 1 beats a level 1 rat comfortably, sweats a 2, loses to a 3), the
+combat curve (a fresh level 1 beats a level 1 rat comfortably, sweats a 2, loses to a 3 — the ranger
+stood still and shooting included, and a warrior's bow losing), the
 progression test holds the starter arc to level 3, the upper band's chain to riding the climb rather
-than making it, and the cap to one level past the richest spawn, `deadEnds.test.ts` holds that
+than making it, the cap to one level past the richest spawn, and the arc's arrows to well under half
+its coin, `deadEnds.test.ts` holds that
 nothing handed out leads nowhere, `uniqueLoot.test.ts` holds boss drops unique, and unattended play
 stays behind active play (half XP, no abilities, an offline cap).
 Change a stat, a table or a curve and retune until those pass rather than eyeballing it.

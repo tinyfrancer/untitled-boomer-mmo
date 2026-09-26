@@ -22,8 +22,17 @@ only, so that table plus the two class-keyed quest rewards is the whole of anyon
 It also carries the hideout key at 3%, which is the rarest thing on any table by a distance and is
 meant to be a run of bandits rather than an errand. The chief's table is the other end of the same
 idea: the trophy always drops because a fight that long has to be worth something every time, and
-it is cloth so it fits either class, while the two weapons behind it are the chase — one per class,
-so the run is worth making whoever you rolled.
+it is cloth so it fits every class, while the weapons behind it are the chase — one per class, a
+bow among them since act three phase 12, so the run is worth making whoever you rolled.
+
+**Every humanoid that is not a boss carries a handful of arrows** (`arrows()` in
+`data/lootTables.ts`; `docs/decisions.md` 64, 75), at even odds and more of them the higher the band,
+since so is what a creature there takes to kill. A table entry may name a `quantity` range for this,
+and only an entry with one rolls again for how many, so every other table throws the dice it always
+did. It is held over `ENEMIES` rather than trusted to the tables — a new humanoid row is exactly the
+thing that would forget — and a beast carries none, for the reason it carries no coin. A boss is free
+either way (decision 70): what it drops is its own, which `uniqueLoot.test.ts` already holds, and the
+two that exist drop a bow rather than arrows.
 
 **The goblin table is the step above that, and the hole it shipped with is closed now.** It pays
 roughly double a bandit's coin — which is most of why anyone walks out west, since three armour rows

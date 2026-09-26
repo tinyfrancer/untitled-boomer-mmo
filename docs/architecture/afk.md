@@ -80,3 +80,13 @@ awake camp runs: the station first, then the tool, then the fight. It is also th
 **spends** anything, so `OfflineAfkReport.consumed` runs the opposite way from `drops` and
 `resolveParked` has to take it back off the character — a payout that only did the second half would
 mint bars out of ore that was never used.
+
+**A bow spends arrows, awake or not** (act three phase 12; `docs/decisions.md` 74). The awake camp
+needs nothing of its own: it swings through `CombatDirector` like anyone, so it spends an arrow a
+shot and fights with its fists the frame they run out, which a camp's pull may not survive. Offline
+there is no fight to model — a kill a minute whatever is in hand — so `resolveOfflineAfk` charges
+each kill the shots it takes at the attack the first nocked arrow gives, counts arrows off each body
+as arrows for the next, and **stops the night** when there are not enough for a kill rather than
+paying punches as though they were shots. `arrowsSpent` runs the way `consumed` does, and
+`resolveParked` takes them off the quiver and then the bag after the drops are in; a bow parked with
+nothing to shoot earns nothing, and the away report says so in the warning colour.

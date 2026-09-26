@@ -238,6 +238,12 @@ of what the player can do about it. It reads `mob.windUp`, which is state, and f
 clock from when it first saw it; it is built on a creature's first wind-up, since most never have one.
 A damage ability says whether it is `thrown` in its effect, the word enemy abilities already used;
 this asked `range > 0` before, which every damage ability has, so a Power Slash threw a magic bolt.
+**A shot is its own moment** (`shot`, act three phase 12): an arrow flown from the player to the
+target, pointing the way it goes and quicker than a bolt, and the figure drawing for it the way it
+swings. The bow is `WEAPON_RIGS.bow`, a stave bent away from its string (`WeaponHead` `bend`) that the
+world draws as a torus cut short and the paperdoll as a curve; the quiver is a tube at the hip with
+the fletching standing out of it. Both are rows in the shared rig, so the sheet and the world hold
+the same bow.
 
 **What is a moment and what is a state are drawn on different clocks** (`render3d/fx.ts`,
 `selection.ts`). A damage number and a bolt come off the `WorldEvent` channel, are handed to

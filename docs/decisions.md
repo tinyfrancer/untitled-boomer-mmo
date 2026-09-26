@@ -1318,3 +1318,106 @@ The questions the ranger still had open after decisions 64 and 65:
 out a boss whose trophy is a bow and the arrows for it; a quiver the player has to load by hand; a
 refill that takes only the type the quiver last held, falling back to fists with other arrows in the
 bag; agility as crit alone; and the ranger and the making chain as one phase.
+
+## 71. A bow decides its own stat, and a bow with nothing nocked is a pair of fists
+
+**2026-09-26 · Claude**
+
+A shot's attack is agility, the bow's bonus and the arrow's, whoever draws it
+(`computeEffectiveStats`, which now takes the arrow the next shot nocks). Every other weapon still
+swings with its holder's class stat. With no arrow to nock — none in the quiver or the bag, or no
+quiver worn at all — the bow is fists: the class's own stat, a fist's reach, archery untrained and
+fists trained, and neither the bow's bonus nor an arrow's on the punch. The character sheet says
+which stat ATK is built on from the weapon rather than the class.
+
+**Rejected:** attack always built on the class's stat, which made a warrior's bow the best weapon in
+the game for the class it suits worst — full strength at a wand's reach; a warrior forbidden a bow,
+which decision 65 ruled out; a bow that shoots nothing and refuses to swing, which decision 64 ruled
+out; and arrows drawn straight from the bag when no quiver is worn, which is the "arrows carried in
+the bag and spent from the stack" that 64 rejected.
+
+**Why:** "it should not be a good idea" had to come out of the numbers, because nothing in the game
+forbids anything by warning. Making the weapon choose the stat is new, but only a bow does it, so no
+existing class moves: a warrior drawing a bow shoots with one point of agility, which
+`EnemySystem.test.ts` holds as losing to the rat his sword beats.
+
+## 72. Agility's crit sits on top of the weapon skill's, and everything but a spell is physical
+
+**2026-09-26 · Claude**
+
+Agility adds half a percent of crit a point to a physical hit, capped at 15% on its own and added to
+the weapon skill's 20% rather than inside it (`agilityCritChance`). Physical is every swing and every
+shot — a wand's included — and every ability that is not governed by Destruction; a spell leaves
+agility out (`isSpell`).
+
+**Rejected:** agility's share under the skill's 20% ceiling, which would make it worth nothing at the
+top of the game for the class whose stat it is, and would move the skill's budget — derived so the
+average at cap is unchanged — out from under it; and a wand's auto-attack counted as magic, which is
+an exception written for a class whose agility is one point.
+
+**Why:** decision 70 said agility is both the ranger's damage and a source of crit, and the one open
+question was where the ceiling sits. A warrior's or a wizard's single point is half a percent, which
+is the whole of what agility does for anyone not drawing a bow — so "physical" needed a definition,
+not a list of exceptions.
+
+## 73. A bow takes both hands, the quiver is half the weapon, and the arrows move with it
+
+**2026-09-26 · Claude**
+
+Drawing a bow puts a shield or an orb in the bag, and taking up a shield or an orb puts the bow there;
+a quiver is the one thing a bow allows beside it. A quiver has no armour type, so anybody may wear one,
+the way anybody may hold the bow. Taking a quiver off puts its arrows in the bag, and a pack that
+cannot hold them refuses the whole change; swapping quivers carries the arrows over and spills what
+the smaller one cannot hold into the bag. A quiver is refilled from the bag, best arrow first, on the
+shot that finds it dry and again on the shot that empties it, and when it is put on dry — so it is only
+ever empty when there is nothing to fill it with — and an arrow picked up goes into it first: its own
+kind up to the room left, or any kind into an empty one.
+
+**Rejected:** refusing the equip in either direction, which is a panel saying no to something the
+player plainly asked for; leather as the quiver's type, which would forbid a wizard the quiver while
+allowing the bow; a refill only on the shot that finds the quiver dry, which leaves the bar in the
+corner saying "empty" with arrows in the bag; and a quiver that takes only the kind it last held,
+which with nothing in it holds no kind at all.
+
+**Why:** decisions 64 and 70 settled what the quiver is and that it refills best-first. What was left
+was every door arrows come and go through, and each one is a rule in `CharacterController` so none of
+them can be half-applied.
+
+## 74. An offline camp at a bow stops fighting when its arrows run out
+
+**2026-09-26 · Claude**
+
+`resolveOfflineAfk` charges each kill the shots it takes at the attack the first nocked arrow gives —
+no crits, no training, the pessimistic way — counts arrows picked up off each body as arrows for the
+next, and stops the night the first time there are not enough for a kill. The report says how many
+were shot and whether they ran out; the caller spends them off the quiver and then the bag, after the
+drops are in. A bow parked with nothing to shoot earns nothing, and the away report still says why.
+
+**Rejected:** pricing the kills after the arrows run out as fist kills, which is what the handoff
+offered first. Offline pays a kill a minute whatever is in hand, so a fist kill would be paid exactly
+as a bow kill that spends nothing — the bow that never runs out, by another name.
+
+**Why:** the awake camp needs nothing new: it swings through `CombatDirector` like anyone, so it
+spends arrows and turns to its fists on the same frame a player would. Offline has no fight to model,
+so stopping is the one answer that keeps a night's pay tied to what was carried into it.
+
+## 75. Arrows are a fourth item kind, sold by the bundle, and carried by the handful
+
+**2026-09-26 · Claude**
+
+`ammunition` joins `equipment`, `material` and `consumable`, carrying the arrow's own damage. One kind
+exists this phase, crude arrows at a tenth of a point each; the shop sells twenty-five for 30c with no
+gate (`ShopStockEntry.quantity`), and every humanoid that is not a boss drops a handful at even odds
+(`LootTableEntry.quantity`, rising with the band). The chief and the king each drop a bow as their
+third weapon, one a class, and no arrows. The ranger reforges into agility off armour (`nimble`, the
+ranger's `arcane`).
+
+**Rejected:** arrows as a material with a damage field, which would have put a number on a row that
+every other material has no use for and reached nothing the compiler could find; a shop that sells
+them one at a time; a price set by eye — `progression.test.ts` holds the starter arc's arrows, priced
+at level 1, to well under half the coin the arc pays; and arrows on a boss's table, which decision 70
+allows but nothing here needed.
+
+**Why:** a kind is a compile error at every switch over `kind`, which is how the bag, the inspect card
+and the sell price were told there is a fourth. The price had to be argued against something, and the
+arc is the only stretch of the game whose coin and kills are both simulated.
