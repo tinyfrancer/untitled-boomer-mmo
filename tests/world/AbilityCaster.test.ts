@@ -367,3 +367,50 @@ describe('how a damage ability is drawn', () => {
     expect(events).toContainEqual(expect.objectContaining({ kind: 'hit', mob: rat }));
   });
 });
+
+/**
+ * A second rank is drawn in the slot of the first, so it is pressed, cooled and
+ * refused as that slot: the rank below is no longer on the bar to be pressed,
+ * and the clock is the line's rather than the rank's.
+ */
+describe('a second rank', () => {
+  function ranked() {
+    const rat = ratAt(40, 0);
+    rat.hp = 10_000;
+    const kit = bar(rat, 'warrior');
+    kit.character.state.level = 5;
+    kit.character.state.learnedAbilities = ['power-slash-2'];
+    return kit;
+  }
+
+  it('goes off in the first rank’s place and runs the first rank’s clock', () => {
+    const kit = ranked();
+
+    kit.caster.cast('power-slash-2');
+
+    expect(kit.caster.lastCastAt.get('power-slash')).toBe(kit.ctx.now);
+    expect(kit.caster.states().map((state) => state.abilityId)).toEqual(['power-slash-2']);
+  });
+
+  it('refuses the rank it replaced, silently — the bar no longer draws that button', () => {
+    const kit = ranked();
+
+    kit.caster.cast('power-slash');
+
+    expect(kit.caster.lastCastAt.has('power-slash')).toBe(false);
+    expect(kit.drain()).toHaveLength(0);
+  });
+
+  // Bought with the first rank still cooling, it is a better button rather than
+  // a fresh one: the trainer is not a way to reset a cooldown.
+  it('inherits a cooldown the first rank started', () => {
+    const kit = ranked();
+    kit.character.state.learnedAbilities = [];
+    kit.caster.cast('power-slash');
+    kit.character.state.learnedAbilities = ['power-slash-2'];
+
+    kit.caster.cast('power-slash-2');
+
+    expect(kit.emissions(NOTICE_EVENT).at(-1)?.[0]).toContain('Power Slash II is not ready');
+  });
+});

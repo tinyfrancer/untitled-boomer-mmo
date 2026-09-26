@@ -343,7 +343,7 @@ export type BountyId =
   'rat-cull' | 'shore-patrol' | 'road-contract' | 'timber-order' | 'ore-order' | 'smith-order';
 
 export type AbilityId =
-  // The two each class opens with, and the two it buys.
+  // The one each class opens with, and the three it buys.
   | 'fireball'
   | 'mana-shield'
   | 'mend'
@@ -351,7 +351,18 @@ export type AbilityId =
   | 'power-slash'
   | 'battle-fury'
   | 'second-wind'
-  | 'crushing-blow';
+  | 'crushing-blow'
+  // The second rank of each, sold at levels 5 to 8. An id of its own rather than
+  // a number on the first rank's, so a save stores a rank bought exactly as it
+  // stores any other lesson and needed no migration to start holding one.
+  | 'fireball-2'
+  | 'mana-shield-2'
+  | 'mend-2'
+  | 'firestorm-2'
+  | 'power-slash-2'
+  | 'battle-fury-2'
+  | 'second-wind-2'
+  | 'crushing-blow-2';
 
 // What an enemy does instead of a swing. Its own union rather than a slice of
 // AbilityId: nothing a creature does is on the player's action bar, and the two

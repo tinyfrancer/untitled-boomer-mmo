@@ -1398,19 +1398,27 @@ async function trainer() {
   await page.screenshot({ path: `${OUT}/10-trainer.png` });
 
   // Earn it, in the two ways a row here opens: the level, and the coin. The
-  // panel redraws off the level-up rather than off the tap that caused it.
+  // panel redraws off the level-up rather than off the tap that caused it. At
+  // the top level every gate a level holds is open, and what is still shut is a
+  // second rank waiting on the rank below it, which says so instead.
   await page.evaluate(() => {
     const w = window.world;
     w.character.state.currency = 1000;
     window.events.emit('currency-changed', 1000);
-    w.character.state.level = 5;
-    window.events.emit('level-up', 5);
+    w.character.state.level = 8;
+    window.events.emit('level-up', 8);
   });
   await step(2);
-  const unlocked = await page.evaluate(() => ({
-    locked: document.querySelectorAll('.hud-modal__box--trainer [data-locked]').length,
-    rows: document.querySelectorAll('.hud-modal__box--trainer .hud-list-row[data-ability]').length,
-  }));
+  const unlocked = await page.evaluate(() => {
+    const locked = [...document.querySelectorAll('.hud-modal__box--trainer [data-locked]')];
+    return {
+      locked: locked.filter((r) =>
+        /^Level /.test(r.querySelector('.hud-list-row__value')?.textContent ?? ''),
+      ).length,
+      rows: document.querySelectorAll('.hud-modal__box--trainer .hud-list-row[data-ability]')
+        .length,
+    };
+  });
   await page.click(`.hud-modal__box--trainer .hud-list-row[data-ability="${lesson}"]`);
   await step(2);
   const taught = await page.evaluate(() => ({
@@ -1432,7 +1440,7 @@ async function trainer() {
   check(
     'a level opens the rows it gates, in the panel already on screen',
     unlocked.locked === 0 && unlocked.rows > 0,
-    `${unlocked.locked}/${unlocked.rows} rows still shut at level 5`,
+    `${unlocked.locked}/${unlocked.rows} rows still shut by a level at level 8`,
   );
   check(
     'buying a lesson adds its button to the bar and marks the row known',

@@ -4,6 +4,7 @@ import {
   canUseAbility,
   knowsAbility,
   knownAbilities,
+  lineOf,
   resolveAbilityDamage,
   rollSpellFailure,
   startHaste,
@@ -69,7 +70,10 @@ interface Cast {
  * both are questions about the moment it lands rather than the moment it began.
  */
 export class AbilityCaster {
-  /** When each ability was last cast, for the cooldown check and the bar's sweep. */
+  /**
+   * When each line was last cast, for the cooldown check and the bar's sweep —
+   * keyed by the first rank, so a rank bought mid-cooldown inherits the clock.
+   */
   readonly lastCastAt = new Map<AbilityId, number>();
 
   private readonly ctx: WorldContext;
@@ -106,7 +110,7 @@ export class AbilityCaster {
     }
 
     if (!player.spendMana(ability.manaCost)) return;
-    this.lastCastAt.set(abilityId, this.ctx.now);
+    this.lastCastAt.set(lineOf(abilityId), this.ctx.now);
     this.deps.stopGathering();
     player.markInCombat();
     this.deps.publishAbilityState();
@@ -213,7 +217,7 @@ export class AbilityCaster {
   // -Infinity rather than 0 for "never cast": the world's clock starts at zero,
   // so a zone's first frame would otherwise read as a cast on its first.
   private elapsedSince(abilityId: AbilityId): number {
-    return this.ctx.now - (this.lastCastAt.get(abilityId) ?? -Infinity);
+    return this.ctx.now - (this.lastCastAt.get(lineOf(abilityId)) ?? -Infinity);
   }
 
   private applyEffect(ability: AbilityDefinition, skillLevel: number): void {
