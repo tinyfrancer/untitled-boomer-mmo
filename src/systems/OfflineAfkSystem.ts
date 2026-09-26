@@ -512,13 +512,15 @@ function resolveOfflineCraft(
       }
     }
     if (result.itemId) {
-      carried = addItemToInventory(carried, result.itemId, 1);
-      drops = addItemToInventory(drops, result.itemId, 1);
+      carried = addItemToInventory(carried, result.itemId, result.quantity);
+      drops = addItemToInventory(drops, result.itemId, result.quantity);
     }
     if (result.failed) {
       continue;
     }
-    crafts += 1;
+    // Things, not jobs: a job at the bench is fifteen shafts, and "12 made"
+    // over a report listing 180 of them would be two numbers disagreeing.
+    crafts += result.quantity;
     skillXp += perCraftXp;
   }
 

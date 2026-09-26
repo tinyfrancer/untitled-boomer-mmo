@@ -216,6 +216,19 @@ export class CharacterController {
     return true;
   }
 
+  /**
+   * Hands over what came off a station, which the pack never refuses: a craft
+   * spends its inputs before it hands anything back, so a bench is the one
+   * place a full pack cannot say no (`resolveOfflineCraft` makes the same
+   * call). Still through the quiver, though, so arrows made at the bench go
+   * where arrows picked up go — into it first, as much as it has room for, and
+   * the rest into the bag.
+   */
+  addMadeItem(itemId: ItemId, quantity: number): void {
+    const plan = this.stowPlan(itemId, quantity);
+    this.stow(plan, itemId, plan.toQuiver, plan.toBag);
+  }
+
   // ---------------------------------------------------------------------------
   // The quiver
   // ---------------------------------------------------------------------------

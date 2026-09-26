@@ -104,6 +104,13 @@ export interface CraftingRecipe {
   station: StationId;
   inputs: RecipeInput[];
   outputItemId: ItemId;
+  /**
+   * How many one job makes. Absent is one, which is every recipe but the arrow
+   * line's: a log is fifteen shafts, a bar fifteen heads, and fifteen of each
+   * are fifteen arrows. A bench that made one arrow a job would have a ranger
+   * spending the evening on what a single fight shoots.
+   */
+  outputQuantity?: number;
   failureItemId?: ItemId;
   requiredLevel: number;
   xpReward: number;
