@@ -401,14 +401,14 @@ export const BARROW_KING_WRAP_COLOR = 0xc9b458;
 // change by comparison rather than by being told about one.
 export function appearanceKey(appearance: Appearance): string {
   const hex = (value: number) => value.toString(16).padStart(6, '0');
-  const weapon = appearance.weapon
-    ? `${appearance.weapon.shape}-${hex(appearance.weapon.color)}`
-    : 'none';
+  const held = (piece: { shape: string; color: number } | null): string =>
+    piece ? `${piece.shape}-${hex(piece.color)}` : 'none';
   return [
     'player',
     hex(appearance.headColor),
     hex(appearance.torsoColor),
     hex(appearance.legColor),
-    weapon,
+    held(appearance.weapon),
+    held(appearance.offhand),
   ].join(':');
 }

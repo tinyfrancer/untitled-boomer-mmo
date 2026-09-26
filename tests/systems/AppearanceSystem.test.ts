@@ -113,10 +113,15 @@ describe('appearanceKey', () => {
     const naked = appearanceKey(computeAppearance(EMPTY_GEAR));
     const helmeted = appearanceKey(computeAppearance({ ...EMPTY_GEAR, helmet: 'brown-helmet' }));
     const armed = appearanceKey(computeAppearance({ ...EMPTY_GEAR, weapon: 'brown-axe' }));
-    expect(new Set([naked, helmeted, armed]).size).toBe(3);
+    // The other hand is drawn too, so a shield put on in the middle of a zone
+    // has to change the key or the figure keeps the empty hand until a rebuild.
+    const shielded = appearanceKey(computeAppearance({ ...EMPTY_GEAR, offhand: 'brown-shield' }));
+    expect(new Set([naked, helmeted, armed, shielded]).size).toBe(4);
   });
 
   it('pads color components so keys stay uniform', () => {
-    expect(appearanceKey(computeAppearance(EMPTY_GEAR))).toBe('player:e0b088:111111:111111:none');
+    expect(appearanceKey(computeAppearance(EMPTY_GEAR))).toBe(
+      'player:e0b088:111111:111111:none:none',
+    );
   });
 });
