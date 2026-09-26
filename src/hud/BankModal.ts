@@ -41,7 +41,7 @@ export interface BankHandlers {
 export class BankModal extends Overlay {
   private readonly slots: HTMLElement;
   private readonly coin: HTMLElement;
-  private readonly body: HTMLElement;
+  readonly body: HTMLElement;
   private readonly handlers: BankHandlers;
 
   constructor(handlers: BankHandlers, onClosed: () => void) {

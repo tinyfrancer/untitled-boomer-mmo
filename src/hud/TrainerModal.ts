@@ -36,7 +36,7 @@ export interface TrainerHandlers {
  */
 export class TrainerModal extends Overlay {
   private readonly coin: HTMLElement;
-  private readonly body: HTMLElement;
+  readonly body: HTMLElement;
   private readonly handlers: TrainerHandlers;
 
   constructor(handlers: TrainerHandlers, onClosed: () => void) {

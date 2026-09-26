@@ -38,7 +38,7 @@ export interface BountyHandlers {
  */
 export class BountyModal extends Overlay {
   private readonly coin: HTMLElement;
-  private readonly body: HTMLElement;
+  readonly body: HTMLElement;
   private readonly handlers: BountyHandlers;
 
   constructor(handlers: BountyHandlers, onClosed: () => void) {

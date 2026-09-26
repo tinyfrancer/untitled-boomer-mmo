@@ -3,24 +3,18 @@ import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName, itemValue } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
-import {
-  questsForNpc,
-  type QuestCounters,
-  type QuestLog,
-  type QuestOffer,
-} from '../systems/QuestSystem';
+import type { QuestLog } from '../systems/QuestSystem';
 import { shopOffers, type StockOffer } from '../systems/ShopSystem';
 import { THEME } from '../ui/theme';
-import type { QuestId } from '../types/ids';
-import { inventoryEntries } from '../systems/InventorySystem';
+import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
 import type { ItemId } from '../types/ids';
 
-// The counters come in whole rather than as a bag, because a quest row shows
-// progress and a quest may now count kills or arrivals instead of items.
-export interface ShopState extends QuestCounters {
+export interface ShopState {
   currency: number;
+  inventory: Inventory;
+  // What the shelf is gated on: a level, or a piece of the shopkeeper's own
+  // work finished.
   quests: QuestLog;
-  // The other half of what the shelf is gated on, beside the quest log.
   level: number;
 }
 
@@ -28,23 +22,23 @@ export interface ShopHandlers {
   onBuy: (itemId: ItemId) => void;
   /** How many to part with: the row taps one, the button beside it the lot. */
   onSell: (itemId: ItemId, quantity: number) => void;
-  onAcceptQuest: (questId: QuestId) => void;
-  onTurnInQuest: (questId: QuestId) => void;
   /** The X: the world owns whether the shop is open, so this asks rather than does. */
   onDismiss: () => void;
 }
 
 /**
- * Everything the shopkeeper does: their quests on top, then their stock, then
- * the sellable half of the bag. One NPC with one interaction radius, so quests
- * are a section here rather than a second panel behind a second conversation.
+ * What the shopkeeper sells, then the sellable half of the bag.
+ *
+ * Their quests are not drawn here: a giver's work goes at the top of whatever
+ * counter they stand at (`counterQuests`), which is where the shop's own
+ * section went once somebody else started giving quests.
  *
  * Deliberately not a scrim — a tap outside it still has to reach the world, or
  * the player could not walk away from the counter.
  */
 export class ShopModal extends Overlay {
+  readonly body: HTMLElement;
   private readonly coin: HTMLElement;
-  private readonly body: HTMLElement;
   private readonly handlers: ShopHandlers;
 
   constructor(handlers: ShopHandlers, onClosed: () => void) {
@@ -69,14 +63,6 @@ export class ShopModal extends Overlay {
   update(state: ShopState): void {
     this.coin.textContent = formatCurrency(state.currency);
     this.body.replaceChildren();
-
-    const offers = questsForNpc('shopkeeper', state.quests, state).filter(
-      (offer) => offer.state !== 'done',
-    );
-    if (offers.length > 0) {
-      this.body.append(sectionHeader('Work going'));
-      offers.forEach((offer) => this.body.append(this.questRow(offer)));
-    }
 
     this.body.append(sectionHeader('For sale'));
     for (const offer of shopOffers({ level: state.level, quests: state.quests })) {
@@ -152,46 +138,6 @@ export class ShopModal extends Overlay {
     pair.all.dataset.sellAll = itemId;
     return pair.root;
   }
-
-  /**
-   * A quest row says what it wants and how far along it is, so the player never
-   * has to open a second panel to decide whether it is worth walking back here.
-   *
-   * One still behind its chain is drawn rather than left out, carrying the quest
-   * it is waiting on where its progress would sit — the same call the shelf
-   * makes for a gated row and the world map for a shut zone. What is not offered
-   * yet is the reason to come back, and hiding it says nothing at all.
-   */
-  private questRow(offer: QuestOffer): HTMLElement {
-    const { definition, state, progress, requirement } = offer;
-    const ready = state === 'ready';
-    const actionable = ready || state === 'available';
-    const row = listRow({
-      label: definition.name,
-      value:
-        state === 'locked'
-          ? (requirement ?? '')
-          : state === 'available'
-            ? 'Accept'
-            : ready
-              ? 'Hand in'
-              : `${progress.have}/${progress.need}`,
-      labelColor: actionable ? THEME.color.levelUp : THEME.color.muted,
-      valueColor: actionable ? THEME.color.levelUp : THEME.color.dim,
-      onClick: () => {
-        if (state === 'available') {
-          this.handlers.onAcceptQuest(definition.id);
-        } else if (ready) {
-          this.handlers.onTurnInQuest(definition.id);
-        }
-      },
-      questId: definition.id,
-    });
-    if (state === 'locked') {
-      row.dataset.locked = definition.id;
-    }
-    return row;
-  }
 }
 
 interface ListRowOptions {
@@ -200,27 +146,20 @@ interface ListRowOptions {
   labelColor: string;
   valueColor: string;
   onClick: () => void;
-  /** A row about an item, which is what earns it a thumbnail. Quests get none. */
-  itemId?: ItemId;
-  questId?: QuestId;
+  itemId: ItemId;
 }
 
 function listRow(options: ListRowOptions): HTMLElement {
-  const { label, value, labelColor, valueColor, onClick, itemId, questId } = options;
+  const { label, value, labelColor, valueColor, onClick, itemId } = options;
   const entry = row({
     className: 'hud-list-row',
     label,
     value,
     valueClass: 'hud-list-row__value',
-    icon: itemId ? itemIconSvg(itemId) : undefined,
+    icon: itemIconSvg(itemId),
     onClick,
   });
-  if (questId) {
-    entry.root.dataset.quest = questId;
-  }
-  if (itemId) {
-    entry.root.dataset.item = itemId;
-  }
+  entry.root.dataset.item = itemId;
   entry.label.style.color = labelColor;
   entry.value.style.color = valueColor;
   return entry.root;

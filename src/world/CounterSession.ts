@@ -38,7 +38,7 @@ export abstract class CounterSession {
   open(npc: WorldNpc): void {
     this.ctx.player.stopMoving();
     this.npc = npc;
-    this.ctx.events.emit(COUNTER_OPENED_EVENT, this.role);
+    this.ctx.events.emit(COUNTER_OPENED_EVENT, this.role, npc.npcId);
     this.opened();
   }
 

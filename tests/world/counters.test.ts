@@ -80,6 +80,6 @@ describe('a quest is taken from the person who gives it', () => {
     standAt(kit, 'shopkeeper');
     kit.bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'rat-bones');
     expect(questStatus(kit.state.quests, 'rat-bones')).toBe('active');
-    expect(kit.emissions(COUNTER_OPENED_EVENT)).toContainEqual(['merchant']);
+    expect(kit.emissions(COUNTER_OPENED_EVENT)).toContainEqual(['merchant', 'shopkeeper']);
   });
 });

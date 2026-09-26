@@ -22,8 +22,10 @@ import { describeEnemy, describeEnemyLoot, describePile } from '../../src/system
 import { THEME } from '../../src/ui/theme';
 import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
-import type { NpcRoleId } from '../../src/data/npcs';
+import { NPCS, type NpcRoleId } from '../../src/data/npcs';
+import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import {
+  ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
@@ -41,6 +43,7 @@ import {
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
   PLAYER_TILE_CHANGED_EVENT,
+  QUEST_LOG_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   BANK_CHANGED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
@@ -48,6 +51,7 @@ import {
   WITHDRAW_ITEM_REQUESTED_EVENT,
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
+  TURN_IN_QUEST_REQUESTED_EVENT,
   ZONE_ENTERED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
@@ -59,6 +63,7 @@ import {
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
+import type { NpcId } from '../../src/types/ids';
 
 /**
  * jsdom lays nothing out, so every element measures zero — which the HUD reads
@@ -580,7 +585,7 @@ describe('the shop', () => {
   it('opens and closes with the world, not with a tab', () => {
     mount();
     expect(shop()).toBeNull();
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     expect(shop()).not.toBeNull();
     events.emit(COUNTER_CLOSED_EVENT, 'merchant');
     expect(shop()).toBeNull();
@@ -588,7 +593,7 @@ describe('the shop', () => {
 
   it('refreshes while open from the bag and the purse it does not own', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     expect(shop()?.textContent).not.toContain('Rat Bones');
 
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
@@ -606,7 +611,7 @@ describe('the shop', () => {
    */
   it('draws a row it has not earned with the requirement where the price goes', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
 
     const row = shop()?.querySelector<HTMLElement>(`.hud-list-row[data-item="${gated.itemId}"]`);
     expect(row?.dataset.locked).toBe(gated.itemId);
@@ -621,7 +626,7 @@ describe('the shop', () => {
    */
   it('puts the row on the shelf the moment the level lands', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     expect(locked()).toContain(gated.itemId);
 
     events.emit(LEVEL_UP_EVENT, gateLevel);
@@ -640,7 +645,7 @@ describe('the shop', () => {
    */
   it('grows a bulk button on a stack, and asks for the whole of it', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 12, 'brown-helmet': 1 });
 
     expect(shop()?.querySelector('[data-sell-all="brown-helmet"]')).toBeNull();
@@ -658,7 +663,7 @@ describe('the bank', () => {
   it('opens and closes with the world, like the other counter', () => {
     mount();
     expect(bank()).toBeNull();
-    events.emit(COUNTER_OPENED_EVENT, 'banker');
+    events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
     expect(bank()).not.toBeNull();
     events.emit(COUNTER_CLOSED_EVENT, 'banker');
     expect(bank()).toBeNull();
@@ -666,7 +671,7 @@ describe('the bank', () => {
 
   it('draws the shelves the world sent and the pack it already holds', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'banker');
+    events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
     events.emit(BANK_CHANGED_EVENT, { contents: { logs: 30 }, slots: 8 });
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
 
@@ -681,7 +686,7 @@ describe('the bank', () => {
    */
   it('sends a row as one and the button beside it as the stack, both ways', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'banker');
+    events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
     events.emit(BANK_CHANGED_EVENT, { contents: { logs: 30 }, slots: 8 });
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 12 });
 
@@ -699,7 +704,7 @@ describe('the bank', () => {
 
   it('offers a slot to rent until there are none left', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'banker');
+    events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
     events.emit(BANK_CHANGED_EVENT, { contents: {}, slots: 8 });
 
     bank()?.querySelector<HTMLButtonElement>('[data-action="buy-bank-slot"]')?.click();
@@ -713,6 +718,11 @@ describe('the bank', () => {
   });
 });
 
+/** Whoever stands behind a role's counter, which the world names beside the role. */
+function personAt(role: NpcRoleId): NpcId {
+  return nth(Object.values(NPCS).filter((npc) => npc.role === role)).id;
+}
+
 describe('every counter is one panel, keyed by who stands behind it', () => {
   const ROLES: NpcRoleId[] = [
     'merchant',
@@ -723,10 +733,14 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     'reforger',
   ];
   const panels = (): Element[] => [...parent.querySelectorAll('.hud-modal--top')];
+  const questRows = (): string[] =>
+    [...parent.querySelectorAll<HTMLElement>('.hud-modal--top [data-quest]')].map(
+      (row) => row.dataset.quest ?? '',
+    );
 
   it.each(ROLES)('puts up the %s counter and takes it down with the world', (role) => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, role);
+    events.emit(COUNTER_OPENED_EVENT, role, personAt(role));
     expect(panels()).toHaveLength(1);
     events.emit(COUNTER_CLOSED_EVENT, role);
     expect(panels()).toHaveLength(0);
@@ -734,8 +748,8 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
 
   it('holds one counter up at a time', () => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
-    events.emit(COUNTER_OPENED_EVENT, 'banker');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
     expect(panels()).toHaveLength(1);
     expect(parent.querySelector('.hud-modal__box--bank')).not.toBeNull();
     // A close meant for the counter that is no longer up takes nothing down.
@@ -745,7 +759,7 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
 
   it.each(ROLES)('asks the world to shut the %s counter from its X', (role) => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, role);
+    events.emit(COUNTER_OPENED_EVENT, role, personAt(role));
     parent.querySelector<HTMLButtonElement>('.hud-modal--top .hud-modal__close')?.click();
     expect(emitted.at(-1)).toEqual({ event: COUNTER_CLOSED_EVENT, args: [role] });
   });
@@ -758,7 +772,7 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
    */
   it.each(ROLES)('redraws the %s counter when the pack, the purse and the level move', (role) => {
     mount({ gear: { ...createNewCharacter('Tester', 'warrior').gear, helmet: 'brown-helmet' } });
-    events.emit(COUNTER_OPENED_EVENT, role);
+    events.emit(COUNTER_OPENED_EVENT, role, personAt(role));
     const before = panels()[0]?.innerHTML;
 
     events.emit(INVENTORY_CHANGED_EVENT, {
@@ -774,6 +788,44 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     events.emit(LEVEL_UP_EVENT, 8);
 
     expect(panels()[0]?.innerHTML).not.toBe(before);
+  });
+
+  /**
+   * A quest is a conversation with the person who gives it, so it goes on
+   * whatever counter they stand behind — asked of every role, since the panel
+   * that forgets to draw them is exactly what this rule is here to rule out.
+   */
+  it.each(ROLES)('draws the work going at the %s counter for whoever gives it', (role) => {
+    mount();
+    const npcId = personAt(role);
+    events.emit(COUNTER_OPENED_EVENT, role, npcId);
+
+    const theirs = QUEST_ORDER.filter((questId) => QUESTS[questId].giverNpcId === npcId);
+    expect(questRows()).toEqual(theirs);
+  });
+
+  it('asks the world to take and hand in a quest from any counter that shows one', () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+
+    parent.querySelector<HTMLButtonElement>('[data-quest="rat-bones"]')?.click();
+    expect(emitted.at(-1)).toEqual({ event: ACCEPT_QUEST_REQUESTED_EVENT, args: ['rat-bones'] });
+
+    events.emit(QUEST_LOG_CHANGED_EVENT, { 'rat-bones': { status: 'active', baseline: 0 } });
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 10 });
+    parent.querySelector<HTMLButtonElement>('[data-quest="rat-bones"]')?.click();
+    expect(emitted.at(-1)).toEqual({
+      event: TURN_IN_QUEST_REQUESTED_EVENT,
+      args: ['rat-bones'],
+    });
+  });
+
+  // Handed in is finished business: a counter that listed it would be a row
+  // with nothing left to say.
+  it('leaves a quest handed in off the counter', () => {
+    mount({ quests: { 'rat-bones': { status: 'done', baseline: 0 } } });
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    expect(questRows()).not.toContain('rat-bones');
   });
 });
 
@@ -846,7 +898,7 @@ describe('the inventory panel forwards its buttons', () => {
     pressAction('raw-fish', 'cook');
     expect(emitted.at(-1)).toEqual({ event: COOK_REQUESTED_EVENT, args: ['raw-fish'] });
 
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     pressAction('cooked-fish', 'sell');
     expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['cooked-fish', 1] });
   });
@@ -854,7 +906,7 @@ describe('the inventory panel forwards its buttons', () => {
   // The bulk half of the same request: one event with a count on it, so the
   // counter has one rule about vendoring rather than two.
   it('asks to sell the whole stack, and offers that only on a stack', () => {
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
 
     pressAction('rat-bones', 'sell-all');
     expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['rat-bones', 12] });
@@ -1094,7 +1146,7 @@ describe('destroy', () => {
     tab('character').click();
     parent.querySelector<HTMLButtonElement>('.hud-slot[data-slot="helmet"]')?.click();
     menuItem('options');
-    events.emit(COUNTER_OPENED_EVENT, 'merchant');
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     expect(parent.querySelector('.hud-picker')).not.toBeNull();
     expect(modals()).toHaveLength(2);
 
@@ -1122,10 +1174,7 @@ describe('every overlay has the same lifecycle', () => {
     }),
     new SlotPicker('helmet', [], new DOMRect(), PHONE, noop, onClosed),
     new AwayReportModal(REPORT, onClosed),
-    new ShopModal(
-      { onBuy: noop, onSell: noop, onAcceptQuest: noop, onTurnInQuest: noop, onDismiss: noop },
-      onClosed,
-    ),
+    new ShopModal({ onBuy: noop, onSell: noop, onDismiss: noop }, onClosed),
     new BankModal(
       { onDeposit: noop, onWithdraw: noop, onBuySlot: noop, onDismiss: noop },
       onClosed,
