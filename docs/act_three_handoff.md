@@ -55,6 +55,8 @@ Asked at the end of the phase 9 session; each is a decision in `docs/decisions.m
 | Are bosses left out of "every humanoid drops arrows"?     | **No.** A boss may drop arrows — its own, like a ranger boss's.            | 70       |
 | Does the quiver refill itself from the bag?               | **Yes.** And arrows picked up of the quivered type go into the quiver.     | 70       |
 | Agility: damage, crit, or both?                           | **Both.** The ranger's damage stat, and physical crit on top.              | 70       |
+| Split phase 12?                                           | **Yes**: 12 is the ranger, 13 is fletching and willow.                     | 70       |
+| A refill when the bag holds other arrows?                 | **Fill from the bag**, the highest-ranked (most damaging) arrow first.     | 70       |
 
 The ranger and the arrows reshape phase 12, which is why this now runs to phase 13: see
 [below](#phases-12-and-13--the-ranger-then-fletching-and-willow).
@@ -132,11 +134,11 @@ them that way.
 with no ammunition. The user has since chosen **a third class, the ranger**, whose weapon is the
 bow and whose stat is **agility** (decision 65 — which reverses the part of decision 55 that
 rejected a third class this round), and **arrows** that are spent, quivered, bought first and made
-later (decision 64). Rewrite the plan's phase 12 to match before building it.
+later (decision 64). The plan's phases 12 and 13 have been rewritten to match.
 
-**Recommended split — confirm it with the user first.** Arrows come from a shop, so a level 1
-ranger does not need the making chain, and the chain can stay the upper-band work the plan
-described, at the bench the plan put in Greyford's yard.
+**The split, confirmed by the user** (decision 70). Arrows come from a shop, so a level 1 ranger
+does not need the making chain, and the chain can stay the upper-band work the plan described, at
+the bench the plan put in Greyford's yard.
 
 - **Phase 12 — the ranger.** The class and agility, a starter bow, the `archery` combat skill, the
   quiver, arrows on a shop's shelf and in a few loot tables, fists when the quiver is empty, the
@@ -217,11 +219,13 @@ kill's drop, a loot pile, a purchase, a withdrawal through `addWhatFits` — get
 told: the quiver takes what fits of its own type and the rest goes to the bag. Because a quiver's
 arrows weigh nothing, a full pack never refuses an arrow the quiver has room for, so a loot pile
 will seldom hold the arrows being shot. The first is the shot's business: when the quiver has run
-dry, it draws the same type from the bag before anything falls back to fists.
+dry, it **fills with the best arrow the bag holds**, highest-ranked first by the arrow's own damage
+stat, whatever type it held before — so a refill never quietly downgrades a ranger carrying better.
+Only with no arrow of any kind left does anything fall back to fists.
 
 **An arrow is spent on every shot.** The player's swing is in `CombatDirector` (where it pushes
 `swing` with `by: null`); it takes one from the quiver through `CharacterController` and publishes
-the change. **With the quiver empty and nothing in the bag to refill it, the ranger fights with
+the change. **With the quiver empty and no arrow of any kind in the bag, the ranger fights with
 their fists**: `weaponSkillFor`
 (`systems/CombatSystem.ts`) answers `'unarmed'` rather than `'archery'`, the reach is a fist's, and
 neither the bow's bonus nor an arrow's should ride along on a punch. `weaponSkillFor` today answers
@@ -284,14 +288,8 @@ smithing) — one bump each.
 
 ### Still to put to the user
 
-Every question the ranger raised has been answered (decisions 64, 65 and 70). Two things remain:
-
-1. **The split.** Phases 12 (the ranger) and 13 (fletching and willow) is still a recommendation;
-   confirm it before rewriting the plan's phase 12.
-2. **A refill when the bag holds a different arrow.** The quiver refills with its own type. If the
-   bag holds only another type — an iron arrow quivered, only steel ones spare — does the quiver
-   take the other type, or does the ranger fall back to fists? Taking it is kinder; the other is
-   more predictable about which arrow is being shot.
+Nothing. Every question the ranger raised has been answered (decisions 64, 65 and 70), including
+the split. A phase 12 session asks only what the build turns up.
 
 ## Things learned this session that are already written down
 

@@ -8,8 +8,8 @@ rock that stands up (phase 5); names you can read (phase 6); a fight you can see
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
 something on it (phase 8); sound (phase 9); loot that is not lost (phase 10); and the upper band's
 directed content (phase 11). **Next: phase 12** — start from `act_three_handoff.md`, which holds
-the user's answers on the bow (decisions 64-65 and 70) and the recommended split into a phase 12
-(the ranger) and a phase 13 (fletching and willow), still to be confirmed.
+the user's answers on the bow (decisions 64, 65 and 70): phase 12 is now the ranger and phase 13
+fletching and willow.
 Update this line as each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
@@ -320,24 +320,34 @@ what landed. What the section did not say:
 - **Firestorm's description was wrong** — "two and a half times a Fireball" at 1.75 of one — and was
   corrected while its second rank was being written.
 
-### Phase 12 — willow, fletching and the bow
+### Phase 12 — the ranger
 
-> **Superseded in part, 2026-09-25.** The user has since chosen a third class, the ranger, whose
-> weapon is the bow and whose stat is agility (decision 65), and arrows that are spent per shot,
-> carried in a quiver, bought first and made later by fletching and smithing (decision 64). A
-> warrior can still draw a bow, but it is no longer the warrior's weapon. So this phase is
-> recommended to split in two: **12, the ranger** (class, agility, bow, archery, quiver, arrows from
-> a shop) and **13, fletching and willow** (this section much as written, plus recipes that make
-> several of a thing). `act_three_handoff.md` has the split, what is still to be asked, and where
-> each piece touches the code. Rewrite this section to match before building it.
+Rewritten 2026-09-26 from the plan's original phase 12 (willow, fletching and a bow for the
+warrior), which the user replaced with a third class and arrows (decisions 64, 65 and 70) and split
+in two. `act_three_handoff.md` says where each piece touches the code.
+
+- **The ranger**, a third class whose weapon is the bow and whose stat is **agility**: its damage,
+  plus physical crit chance. A warrior can still draw a bow, and it should be a bad idea — a bow shot
+  scales with agility whoever draws it.
+- **The bow**, two-handed, trained by a new `archery` combat skill; bows and arrows each carry stats
+  that change a shot's damage. The duels in `EnemySystem.test.ts` gain a ranger, so the bow is a
+  different fight rather than a better one.
+- **The quiver**, an offhand item with stats of its own, replaced while levelling. An arrow is spent
+  per shot. The quiver refills itself from the bag with the best arrow the bag holds, an arrow of
+  the quivered type goes into it when picked up, and with no arrow anywhere the ranger fights with
+  their fists.
+- **Arrows are bought first**, from a shop, and **every humanoid drops them**; a boss may drop
+  arrows of its own.
+
+### Phase 13 — fletching and willow
 
 - **Willow** on the mill road's millpond, a woodcutting node above hardwood.
 - **Fletching**, the fourth making skill, at a fletcher's bench in Greyford's yard — beside the
   tannery, for the reason the tannery is there. Its rows are one-of-one where they can be, so it is a
   job a camp can settle to by the rule `findCraftableFrom` already applies.
-- **The bow**, a two-handed ranged weapon for the warrior, trained by a new `archery` combat skill.
-  Ranged reach without mana is the warrior's trade for giving up the offhand; the duels in
-  `EnemySystem.test.ts` are extended so the bow is a different fight rather than a better one.
+- **Arrows made rather than bought**: shafts at the bench and heads at the forge, several from one
+  log or one iron bar, which is the first recipe to make more than one of anything; the two made into
+  arrows at the bench. Iron and steel heads make arrows worth telling apart.
   `deadEnds.test.ts` holds willow to having a use on the day it lands.
 
 ---

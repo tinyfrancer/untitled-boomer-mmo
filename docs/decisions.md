@@ -1298,20 +1298,23 @@ each growing one, which is the hand-kept list phase 2 removed from the HUD's red
 giver's panel is the one that forgets; and finding the person from the role through `NPCS`, which
 holds only while no two people share a role.
 
-## 70. Bosses may drop arrows, the quiver refills itself, and agility does both
+## 70. Bosses may drop arrows, the quiver fills itself best-first, agility does both, and phase 12 splits
 
 **2026-09-26 · the user, asked by Claude**
 
-The three questions the ranger still had open after decisions 64 and 65:
+The questions the ranger still had open after decisions 64 and 65:
 
 - **A boss is not left out of "every humanoid drops arrows."** A boss may drop arrows, and when it
   does they are its own — a ranger boss with a fine bow might drop fine arrows beside it — so boss
   drops stay unique and `uniqueLoot.test.ts` holds unchanged. A boss does not have to drop any.
-- **The quiver refills itself from the bag**, and an arrow picked up of the type already in the
-  quiver goes into the quiver rather than the bag.
+- **The quiver refills itself from the bag, best arrow first.** When it runs dry it fills with the
+  highest-ranked arrow the bag holds, by the arrow's own damage, whatever type it held before. An
+  arrow picked up of the type already in the quiver goes into the quiver rather than the bag.
 - **Agility is both** the ranger's damage stat and a source of physical crit chance, as decision 65
   was read; not crit instead of damage.
+- **Phase 12 splits in two**: 12 is the ranger, and 13 is fletching and willow.
 
 **Rejected:** leaving bosses out of the arrow rule, which Claude recommended — it would have ruled
-out a boss whose trophy is a bow and the arrows for it; a quiver the player has to load by hand;
-and agility as crit alone.
+out a boss whose trophy is a bow and the arrows for it; a quiver the player has to load by hand; a
+refill that takes only the type the quiver last held, falling back to fists with other arrows in the
+bag; agility as crit alone; and the ranger and the making chain as one phase.
