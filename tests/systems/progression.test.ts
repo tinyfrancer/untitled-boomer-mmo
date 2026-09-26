@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
-import { QUESTS } from '../../src/data/quests';
+import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import { RECIPES } from '../../src/data/recipes';
+import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import {
   BANDIT_CAMP_MOB_SPAWNS,
@@ -18,10 +19,11 @@ import { xpToReachLevel } from '../../src/data/xpTable';
 import { ZONES } from '../../src/data/zones';
 import type { EnemyId, ItemId, LootTableId, QuestId } from '../../src/types/ids';
 
-// The pacing contract for the starter arc, simulated rather than played: a
-// character who does the arc's quests and gears up should arrive at level 3 and
-// stop there. The duel tests hold how hard a fight is; this holds how long the
-// whole thing takes, which is the number the XP curve is actually tuned to.
+// The pacing contract, simulated rather than played: a character who does the
+// starter arc's quests and gears up should arrive at level 3 and stop there, and
+// the upper band's chain should ride the climb from there rather than make it.
+// The duel tests hold how hard a fight is; this holds how long the whole thing
+// takes, which is the number the XP curve is actually tuned to.
 //
 // Everything below is expected-value arithmetic. Drop chances and burn rates
 // are averages, not rolls, so the test is deterministic and a change to any
@@ -132,6 +134,13 @@ function xpToCap(): number {
 
 const everySpawn = () => Object.values(ZONES).flatMap((zone) => zone.mobSpawns);
 
+/** Every place a creature stands, at the level it stands there. */
+const spawnsOf = (enemyId: EnemyId): MobSpawnPoint[] =>
+  everySpawn().filter((spawn) => spawn.enemyId === enemyId);
+
+/** The level a character is at with this much XP from level 1. */
+const levelAt = (xp: number): number => levelAfter(xp).level;
+
 /**
  * The best kill anyone can actually grind. A boss is one key-gated fight at the
  * back of a locked zone, so counting a climb in chiefs would flatter it — the
@@ -239,11 +248,132 @@ describe('the level cap', () => {
    * everything the player had done so far, for six levels with nothing in them.
    */
   it('is a session or two past the quests rather than an evening a level', () => {
-    const remaining = xpToCap() - arcXp(arc);
+    // Every quest the table has, not only the arc's: the ones past it are paid on
+    // the climb too, and counting them is the direction that can only shorten it.
+    const pastTheArc = QUEST_ORDER.filter((questId) => !arc.quests.includes(questId)).reduce(
+      (xp, questId) => xp + QUESTS[questId].reward.xp,
+      0,
+    );
+    const remaining = xpToCap() - arcXp(arc) - pastTheArc;
     const kills = Math.ceil(remaining / richestRepeatableKillXp());
     const arcKills = arc.ratKills + arc.crabKills + arc.banditKills;
 
     expect(kills).toBeGreaterThan(arcKills * 0.5);
     expect(kills).toBeLessThan(arcKills * 3);
+  });
+});
+
+/**
+ * The upper band's pacing, simulated rather than eyeballed, and the other half of
+ * the starter arc's contract pointed the other way. Down there the quests carry
+ * a character most of the way to level 3; up here they are a bonus on a climb
+ * the fighting makes, which is what a band six levels deep with a curve
+ * quadratic in the level has to be — a chain that carried it would be a chain
+ * that paid a level a quest.
+ */
+describe('the upper band', () => {
+  const arc = intendedArc();
+
+  /** The chain Greyford gives, in order, each link held back by the one before. */
+  const CHAIN: QuestId[] = ['goblin-road', 'lurker-hides', 'blackwater-raiders', 'the-barrow-king'];
+  /** Everything in the table past the starter chain: the chain, and its errand. */
+  const upper = QUEST_ORDER.filter(
+    (questId) => !arc.quests.includes(questId) && questId !== 'the-cutthroat',
+  );
+
+  it('is a chain of one line, each link waiting on the one before', () => {
+    expect(CHAIN.every((questId) => upper.includes(questId))).toBe(true);
+    CHAIN.slice(1).forEach((questId, index) => {
+      expect(QUESTS[questId].requires, questId).toEqual([CHAIN[index]]);
+    });
+  });
+
+  /** The kills a quest's objective stands for: a kill, or the kills behind a bag. */
+  function killsBehind(questId: QuestId): { enemyId: EnemyId; kills: number } | null {
+    const objective = QUESTS[questId].objective;
+    if (objective.kind === 'kill') return { enemyId: objective.enemyId, kills: objective.quantity };
+    if (objective.kind !== 'collect') return null;
+    const carrier = Object.values(ENEMIES).find(
+      (enemy) => enemy.lootTableId && chanceOf(enemy.lootTableId, objective.itemId) > 0,
+    );
+    if (!carrier?.lootTableId) return null;
+    return {
+      enemyId: carrier.id,
+      kills: killsFor(objective.quantity, chanceOf(carrier.lootTableId, objective.itemId)),
+    };
+  }
+
+  /**
+   * A kill objective rides a grind the player is already making rather than
+   * starting a second one — the rule `bandit-trouble` is held to, a band up. What
+   * they are already making is the climb through one level of the zone the
+   * creature stands in, at the lowest level it stands there.
+   */
+  it('asks for no more kills than one level of its zone already takes', () => {
+    for (const questId of upper) {
+      const behind = killsBehind(questId);
+      if (!behind || ENEMIES[behind.enemyId].boss) continue;
+      const spawns = spawnsOf(behind.enemyId);
+      const shallowest = Math.min(...spawns.map((spawn) => spawn.level));
+      const perLevel = xpToReachLevel(shallowest + 1) / averageKillXp(spawns, behind.enemyId);
+      expect(behind.kills, questId).toBeLessThanOrEqual(perLevel);
+    }
+  });
+
+  /**
+   * The level a character first meets a quest's work at: the shallowest level
+   * its creature stands at, or for something dug out of a seam, the shallowest
+   * level anything stands at in the zone the seam is in.
+   */
+  function metAt(questId: QuestId): number {
+    const behind = killsBehind(questId);
+    if (behind) return Math.min(...spawnsOf(behind.enemyId).map((spawn) => spawn.level));
+    const objective = QUESTS[questId].objective;
+    const zone = Object.values(ZONES).find((candidate) =>
+      candidate.nodeSpawns.some(
+        (node) =>
+          objective.kind === 'collect' &&
+          RESOURCE_NODES[node.nodeId].yieldItemId === objective.itemId,
+      ),
+    );
+    if (!zone) throw new Error(`${questId} asks for something nothing yields`);
+    return Math.min(...zone.mobSpawns.map((spawn) => spawn.level));
+  }
+
+  /**
+   * Each one pays a share of the level it is met at that is worth the walk to
+   * Greyford, and none pays so much of it that the quest is the level.
+   */
+  it('pays each quest a real share of a level and never most of one', () => {
+    for (const questId of upper) {
+      const level = metAt(questId);
+      const share = QUESTS[questId].reward.xp / xpToReachLevel(level + 1);
+      expect(share, questId).toBeGreaterThanOrEqual(0.1);
+      expect(share, questId).toBeLessThan(1 / 3);
+    }
+  });
+
+  it('pays well under the climb from the end of the arc to the cap', () => {
+    const paid = upper.reduce((xp, questId) => xp + QUESTS[questId].reward.xp, 0);
+    expect(paid / (xpToCap() - arcXp(arc))).toBeLessThan(0.25);
+  });
+
+  /**
+   * And so the capstone is somewhere a character grows into rather than one the
+   * chain walks them up to: the chain's own kills and rewards, on top of the
+   * whole starter arc, stop two levels short of the one the king stands at. The
+   * rest of the way is the grind the kill objectives were riding.
+   */
+  it('leaves the barrow king a level the chain alone never reaches', () => {
+    const chainXp = CHAIN.reduce((xp, questId) => {
+      const behind = killsBehind(questId);
+      const kills = behind
+        ? behind.kills * averageKillXp(spawnsOf(behind.enemyId), behind.enemyId)
+        : 0;
+      return xp + kills + QUESTS[questId].reward.xp;
+    }, 0);
+    const kingLevel = Math.max(...spawnsOf('barrow-king').map((spawn) => spawn.level));
+
+    expect(levelAt(arcXp(arc) + chainXp)).toBeLessThan(kingLevel - 1);
   });
 });
