@@ -15,9 +15,10 @@ door, the Old Mill Road west of town where the goblins are, Blackwater Fen south
 where the eels and the cloth are, the Deep Cut under the quarry where the coal is, the Sunken
 Barrow under the bottom of the fen where the dead are, and Greyford Outpost between the road west and
 the quarry, where a counter trades in materials rather than coin, a tannery works what the fen
-drops, and a fettler reworks gear into what you would rather it was);
+drops, a fletcher's bench turns timber and bars into arrows, and a fettler reworks gear into what you
+would rather it was);
 character creation, leveling, gear,
-two-way combat with death and respawn; three gathering skills and three making ones; currency, vendoring and a bank
+two-way combat with death and respawn; three gathering skills and four making ones; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
 kills and sends you somewhere, a second one a band up across Greyford's two counters that ends on
 the barrow king, plus repeatable contracts off the quartermaster's board that pay for work you were
@@ -30,7 +31,8 @@ back of the hideout is level 4, carries loot that comes off a single creature, a
 starter content is the run-up to. The **Old Mill Road** is the band itself: the
 first zone that is harder rather than merely different, level 4-5, reached by walking west out of
 town with no key and no gate, because the starter band ended by walking and the one above it should
-begin the same way. **Blackwater Fen** is the rung above it, level 5-7 and reached the same way, by
+begin the same way; its hardwood and the willows on its millpond are the two woods the steel tier and
+the steel arrow are made of. **Blackwater Fen** is the rung above it, level 5-7 and reached the same way, by
 walking south off the beach: it is where the food that makes those levels survivable comes from, and
 where a caster finally gets armour of their own. **The Deep Cut** is the third, level 5-6 and reached
 by walking north out of the quarry, and it is the one of the three that is about a skill rather than

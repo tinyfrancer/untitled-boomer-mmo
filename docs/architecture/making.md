@@ -13,12 +13,16 @@ than a curve laid over the same action. `gatherDurationMs` floors the two terms 
 `MIN_GATHER_FRACTION`, because a capped skill holding a steel tool would otherwise gather instantly,
 which is the channel disappearing rather than a reward.
 
-**A recipe is one shape for all three making skills** (`CraftingRecipe` in `data/recipes.ts`, run by
+**A recipe is one shape for all four making skills** (`CraftingRecipe` in `data/recipes.ts`, run by
 `systems/CraftingSystem.ts`). A cooking recipe was already input → output + failure output + level +
 xp + duration, so smithing widened it in place rather than putting a second table beside it: the
 inputs are a **list**, the failure output is **optional**, and each row names the station it is made
 at. Leatherworking arrived third and widened nothing at all, which is what a shape being right looks
-like — a `SKILLS` row, a `StationId`, four `RECIPES` rows and no new mechanism anywhere. **What a failure costs is decided by `failureItemId` alone** — naming one spends the inputs and
+like — a `SKILLS` row, a `StationId`, four `RECIPES` rows and no new mechanism anywhere. Fletching
+arrived fourth and widened it by one optional field, **`outputQuantity`**, since a log is fifteen
+shafts rather than one (`batchSize` reads it, one when absent). A mastery pool that pays doubles the
+whole batch, the offline payout counts things made rather than jobs, and the station's panel says
+"makes 15" under a row that makes more than one. **What a failure costs is decided by `failureItemId` alone** — naming one spends the inputs and
 hands that back, which is what makes levelling cooking worth anything, and leaving it unset spends
 nothing at all, which is right for a bar that took a pack-filling trip of ore to carry home.
 
@@ -28,7 +32,7 @@ kind and every recipe took one of one thing; a list of inputs has no single item
 the tapped item, and anything with a list is asked for by name at its station — a bag cell cannot say
 which of three things four bars were meant to become. That is also what decides where a _new_ recipe
 can go: the fire's whole list is the bag, so a fire recipe has to take one of one thing, and anything
-with a list needs a panel — which the forge and the tannery have and the campfire does not.
+with a list needs a panel — which every built station has and the campfire does not.
 
 **A station's panel is keyed by the station, not written for one** (`hud/StationModal.ts`). It was
 `ForgeModal` while there was one built station in the game, and what that hid is that the title, the
@@ -89,18 +93,43 @@ Four things about it were decided against alternatives:
 - **It stops less than the iron plate a smith of the same standing makes, and takes a deeper level.**
   A warrior may wear cloth and always could, so nothing stops one walking this road; what keeps it
   from being their shortcut is that it ends up behind where their own skill already had them.
-- **The tanning row takes one of one thing**, which is load-bearing rather than tidy: that shape is
-  what `findCraftableFrom` looks for, so it is what makes tanning a job an unattended camp can settle
-  to. A two-input tanning row would have left the tannery a station nobody could ever camp — and
-  `STATION_PERSISTS` saying something about it that nothing read.
+- **The tanning row takes one of one thing**, because a hide is the whole of a cure. This bullet used
+  to say the shape was load-bearing — that `findCraftableFrom` was what let a camp settle to a row —
+  and it never was: a camp works any row at a station it can supply (`bestCraftInReach`, and
+  `hasInputs` offline), lists included, and `findCraftableFrom` is the fire's alone, where the bag is
+  the menu (`docs/decisions.md` 78).
 
 `tests/systems/greyfordTannery.test.ts` traces it the way `deepCut.test.ts` traces steel, and
 `tests/world/tannery.test.ts` drives the vat as a place.
 
+**The arrow line is fletching and smithing together, and the ranger's production vertical** (act
+three phase 13; `docs/decisions.md` 76-79). Fletching is the wood and smithing the metal (decision
+64): shafts are cut at the fletcher's bench, from a log at fletching 1 or from willow at 6; heads are
+cut at the forge, from an iron bar at smithing 5 or a steel bar at 8; and the bench puts fifteen of
+each together into iron arrows (fletching 2) or steel ones (fletching 8). A crude arrow adds 1 to a
+shot, an iron one 2, a steel one 4 — doubling rung to rung, and capped at the chief's bow so the bow
+stays the weapon. The tiers are where the loops meet again: an iron arrow is a tree and the quarry's
+iron, and a steel one is the millpond's willow, the quarry's iron and the Deep Cut's coal, which
+`tests/systems/fletching.test.ts` traces rather than reads back. Four things about it were decided
+against alternatives:
+
+- **Willow is the steel arrow's shaft and nothing else.** A willow bow would have been the first
+  made weapon in the game, wanting a string it has no material for; where a made bow sits against
+  the chief's and the king's is a decision of its own, not a use for a tree.
+- **Every row on the line makes fifteen**, which is what makes a quiver's arithmetic work — one
+  log and one bar are fifteen arrows. **The halves have no price**: fifteen shafts off a
+  three-copper log at even a copper each would be the best trade in the game. The made arrows sell a
+  little over the log and bar behind them, so the bench never makes anyone poorer or rich.
+- **A camp may put arrows together.** It settles to any row it can supply, which the plan got wrong
+  in thinking it could only settle to one of one thing (decision 78).
+- **What comes off the bench goes through the quiver** (`CharacterController.addMadeItem`): into a
+  dry one first, the rest into the bag, and never refused, since the inputs were spent before it was
+  handed over (decision 79).
+
 **A station is a place, and a built one is `Campfire`'s opposite half**: fixed, always there, and part
 of the zone (`ZoneDefinition.stationSpawns`), where a fire is placed by the player and burns out.
-There are two of them — the forge in town and the tannery in Greyford's yard — and which prop is
-drawn is keyed off the id in `actors.ts`, the same bargain `creatures.ts` makes about a `shape`: the
+There are three of them — the forge in town, and the tannery and the fletcher's bench in Greyford's
+yard — and which prop is drawn is keyed off the id in `actors.ts`, the same bargain `creatures.ts` makes about a `shape`: the
 world says what stands there and the renderer says what that looks like. Two rules about a station
 were got wrong first and are worth not re-learning:
 

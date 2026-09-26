@@ -1421,3 +1421,76 @@ allows but nothing here needed.
 **Why:** a kind is a compile error at every switch over `kind`, which is how the bag, the inspect card
 and the sell price were told there is a fourth. The price had to be argued against something, and the
 arc is the only stretch of the game whose coin and kills are both simulated.
+
+## 76. Willow is the steel arrow's shaft, and each made arrow doubles the one below it
+
+**2026-09-26 · Claude**
+
+Willow grows on the millpond's bank at woodcutting 8 and is cut into willow shafts at fletching 6,
+and those are the only shafts a steel head is fitted to. An arrow is shafts and heads, fifteen of
+each: iron arrows are a log's shafts and an iron bar's heads, steel arrows a willow's shafts and a
+steel bar's heads. A crude arrow adds 1 to a shot, an iron one 2 and a steel one 4, which is still no
+more than the chief's bow adds.
+
+**Rejected:** a willow bow, fletched at the bench — it would be the first made weapon in the game,
+wants a bowstring the game has no material for, and where a made bow sits against the chief's and
+the king's is a decision of its own rather than a use for a tree; a willow bow _and_ willow shafts,
+for the same reason; willow as a second log for any shaft, which makes it a faster tree rather than
+a material; and a step of one per tier (1, 2, 3), which left a steel arrow at a steel bar per fifteen
+worth a few percent of a level 8 ranger's shot.
+
+**Why:** the handoff left "what willow is for" as the tier to design. Fletching is the ammunition
+skill (decision 64), and a steel arrow fitted on willow is where three zones meet — the millpond,
+the quarry's iron and the Deep Cut's coal — which is the argument every made tier here has been
+built on. Doubling is what makes the dearest arrow in the game worth its bar; capping it at the
+chief's bow is what keeps the bow the weapon and the arrow what it spends.
+
+## 77. The arrow line makes fifteen a job, and its halves have no price
+
+**2026-09-26 · Claude**
+
+`CraftingRecipe.outputQuantity` is how many one job makes, one when absent. The six arrow-line rows
+make fifteen: shafts from a log or a willow, heads from an iron or a steel bar at the forge, and
+arrows from fifteen of each. A mastery pool that pays doubles the batch rather than adding one. The
+shafts and heads cannot be sold; the made arrows sell a little over the log and the bar behind them.
+
+**Rejected:** one a job, which makes a full quiver fifty jobs at the bench; ten, which with a steel
+bar per batch made steel arrows too dear to shoot; a copper a shaft or a head, which turns a
+three-copper log into fifteen and the forge into a mint; and a mastery roll that paid a sixteenth
+shaft, a reward nobody could see.
+
+**Why:** decision 64 said several from one log and one bar, and fifteen is what makes the
+arithmetic of a quiver work. The halves have no price for the reason the key has none: whatever
+number went on them would be a trade better than anything the game pays for honest work.
+
+## 78. A camp may put arrows together, because a camp settles to any row it can supply
+
+**2026-09-26 · Claude**
+
+A camp at the bench works whichever row it can supply that pays best (`bestCraftInReach`), arrows
+from shafts and heads included. Nothing restricts a camp to a row taking one of one thing.
+
+**Rejected:** holding arrow assembly back from the camp as hands-on work, which the handoff offered
+as the property to choose.
+
+**Why:** the handoff and the plan both said a camp could only settle to a one-of-one recipe
+(`findCraftableFrom`), and the plan shaped the bench around it. That was never true: the awake camp
+asks `canCraft` of every row at a station in reach and the offline payout asks `hasInputs`, so a
+steel helmet was already campable. `findCraftableFrom` is the fire's alone, where the bag is the
+menu. The comments and a tannery test that repeated the claim are corrected. Choosing to forbid it
+now would be a rule for the bench alone, against every other station's behaviour.
+
+## 79. What comes off a station goes through the quiver, and is never refused
+
+**2026-09-26 · Claude**
+
+A finished craft is handed over by `CharacterController.addMadeItem`: an arrow goes into the quiver
+first, as far as the quiver has room for, and the rest into the bag, without asking the pack.
+
+**Rejected:** `tryAddItem`, which would refuse a job's output on a full pack after its inputs were
+spent; and `addItem` straight into the bag, which is what every craft did and which skips the rule
+that an arrived arrow is quivered first (decision 73).
+
+**Why:** a bench spends before it hands back, so it has always been the one acquisition a full pack
+cannot refuse (the offline payout says so too). Arrows made it the first one that also has somewhere
+to go before the bag.

@@ -54,8 +54,11 @@ looks like paid off.** `deadEnds.test.ts` would have failed a hardwood row on th
 landed — the brainstorm asked for one at woodcutting 6, but hardwood exists to be burnt into the
 charcoal the steel tier is worked over, and a gathering skill yielding something no recipe consumes
 is the strictest of the three dead-end rules. So it waited for the Deep Cut, which is the zone that
-gives it a use, and arrived as a `nodeSpawns` list on a `ZONES` row that already existed. Willow is
-the same call still outstanding: it lands with the bow, or it does not land.
+gives it a use, and arrived as a `nodeSpawns` list on a `ZONES` row that already existed. Willow was
+the same call, and it landed with fletching (act three phase 13): three willows on the millpond's
+bank at woodcutting 8, held out of the far knot's reach, whose only use is the shafts the steel arrow
+is fletched on (`docs/decisions.md` 76). The made arrows are on no loot table, no shelf and no
+reward — the bench is the only way to them, which `tests/systems/fletching.test.ts` holds.
 
 **What the Deep Cut's own table pays is coin, a tool and a weapon, and deliberately no ore at all.**
 The zone's whole claim is that everything worth having down there is behind the pick rather than

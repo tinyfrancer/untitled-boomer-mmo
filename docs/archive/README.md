@@ -5,12 +5,13 @@ are the way they are, and they are **not** a description of the present: they we
 the codebase of their day, and several of them talk about the 2D Phaser renderer that PR 20 of
 `3d_port_plan.md` deleted. Where one of these disagrees with the code, the code is right.
 
-Any plan in `docs/` outside this directory is live or still to do. Today that is
-`act_three_plan.md`, which is being worked, and `upgrade_plan.md`, which is blocked upstream. The `feature_N_*.txt` briefs beside it are the
+Any plan in `docs/` outside this directory is live or still to do. Today that is only
+`upgrade_plan.md`, which is blocked upstream. The `feature_N_*.txt` briefs beside it are the
 original prompts, kept as a record rather than as a spec.
 
 | Plan                          | What it was                             | Finished   |
 | ----------------------------- | --------------------------------------- | ---------- |
+| `act_three_plan.md`           | Cleanup, graphics, sound, the ranger    | 2026-09-26 |
 | `interiors_and_light_plan.md` | Interiors, pathfinding and light, 8 PRs | 2026-09-03 |
 | `zones_act_two.md`            | Five zones past the starter band        | 2026-08-18 |
 | `systems_plan.md`             | Arithmetic, economy, crafting, 14 PRs   | 2026-08-16 |
@@ -56,3 +57,10 @@ before touching the renderer at all: the shadow camera is framed on the zone rat
 viewport (phase 1), and the pathfinder asks the collision world about the body rather than keeping a
 rasterised grid of its own (phase 2). It is also the plan that produced `docs/decisions.md` 25-53,
 which is where its arguments live in full.
+
+`act_three_plan.md` is the newest, and it comes with `act_three_handoff.md`, the note one session
+left the next about where each remaining phase touched the code. Read the plan's **"what it turned
+out to be about"** notes first, as with the interiors plan; then the handoff for the questions put to
+the user and the answers they gave, which are decisions 62-65 and 70. The handoff's own phase 12-13
+section is written before either phase and is wrong in one place worth knowing about — it says a
+camp can only settle to a one-of-one recipe, which was never so (decision 78).

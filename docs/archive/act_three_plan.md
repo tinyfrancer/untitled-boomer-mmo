@@ -1,15 +1,15 @@
 # Act three: sound footing, a world worth looking at, and the upper band filled in
 
-**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-12 landed:** the drift, this
+**Status:** finished 2026-09-26, and archived. Opened 2026-09-25 against `5c07204`. **All thirteen
+phases landed:** the drift, this
 plan, decisions 54-57 and a 17 KB `CLAUDE.md` (phase 0); the counter table and the redraw rule,
 which landed together because `refreshOpen()` is one call once there is one counter slot to redraw
 (phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4);
 rock that stands up (phase 5); names you can read (phase 6); a fight you can see, with an enemy's
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
 something on it (phase 8); sound (phase 9); loot that is not lost (phase 10); the upper band's
-directed content (phase 11); and the ranger (phase 12). **Next: phase 13**, fletching and willow —
-start from `act_three_handoff.md`.
-Update this line as each phase lands.
+directed content (phase 11); the ranger (phase 12); and fletching and willow (phase 13). Nothing is
+next: the plan and its handoff went to `docs/archive/` with the phase 13 PR.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
 harness, smoke, and a screenshot of every zone at phone size — asked for as "a full analysis now
@@ -375,6 +375,29 @@ the section did not say:
   log or one iron bar, which is the first recipe to make more than one of anything; the two made into
   arrows at the bench. Iron and steel heads make arrows worth telling apart.
   `deadEnds.test.ts` holds willow to having a use on the day it lands.
+
+**What it turned out to be about.** Built much as written, in two commits after a correction of its own:
+recipes that make several, the bench, willow and the arrow line with their tests, the bench's prop
+and the two new icons, and a smoke section that walks into Greyford and clicks the bench. Decisions
+76-79 are the forks; `making.md` (the arrow line, batches), `afk.md` (the camp at the bench),
+`economy.md` (made arrows into the quiver) and `content.md` (willow) say what landed. What the
+section did not say:
+
+- **The camp was never limited to one of one thing.** The plan and the handoff both said a camp
+  could only settle to a recipe taking a single input (`findCraftableFrom`), and the bench's rows
+  were to be shaped around it. The awake camp asks `canCraft` of every row at a station in reach and
+  the offline payout asks `hasInputs`, so a steel helmet was already campable; `findCraftableFrom`
+  is the fire's alone. The comments and the tannery test that repeated the claim were corrected in
+  a commit of their own, and a camp may put arrows together (decision 78).
+- **What willow is for** was the open question: the steel arrow's shaft and nothing else, with each
+  made arrow doubling the one below (1, 2, 4) and capped at the chief's bow (decision 76). A willow
+  bow would have been the first made weapon in the game and wanted a string.
+- **Fifteen a job, and the halves unpriced** (decision 77): a copper a shaft would make a
+  three-copper log fifteen. A mastery pool doubles the batch, and the offline payout counts things
+  made rather than jobs, so the away report agrees with the shafts it lists.
+- **Crafting had skipped the quiver**: every craft went straight into the bag through `addItem`.
+  `addMadeItem` quivers a made arrow first and still never refuses (decision 79).
+- **Saves are at version 24**, fletching spread under the saved skills like every skill before it.
 
 ---
 
