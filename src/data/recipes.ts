@@ -401,11 +401,10 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
   /**
    * The tannery's first row, and the whole of what a hide is for.
    *
-   * Sole input, which is not a flavour decision: that shape is what makes a
-   * thing tappable from a bag cell and what makes it a job an unattended camp
-   * can pick up (`findCraftableFrom` looks for exactly it), and a station that
-   * could be stood at but never camped would leave `STATION_PERSISTS` saying
-   * something about the tannery that nothing ever read.
+   * Sole input because a hide is the whole of it, not because a camp needs the
+   * shape: a camp settles to any row at a station it can supply
+   * (`bestCraftInReach`), lists of inputs included. Only the fire asks for one
+   * of one thing, since its menu is the bag.
    *
    * It pays far more per action than a smelt does, because what it takes is not
    * a swing at a rock. A hide comes off a long fight in a level 5-7 marsh at
