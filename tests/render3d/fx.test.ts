@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nth } from '../nth';
-import { Sprite, type Material, type Mesh, type Object3D } from 'three';
+import { Sprite, Vector3, type Material, type Mesh, type Object3D } from 'three';
 import { FxLayer } from '../../src/render3d/fx';
 import { FLOAT_TONE_COLORS } from '../../src/ui/theme';
 import { lastPainted, stubCanvas, type Painted } from './canvasStub';
@@ -172,6 +172,22 @@ describe('what a WorldEvent is drawn as', () => {
     fx.update(180 / 2);
     expect(bolt.position.x).toBeCloseTo(AT.x / 2, 3);
     expect(bolt.position.z).toBeCloseTo(AT.y / 2, 3);
+  });
+
+  it('flies an arrow from the shooter to the target, pointing the way it goes', () => {
+    const fx = new FxLayer();
+    fx.update(0);
+    fx.draw({ kind: 'shot', from: { x: 0, y: 0 }, to: AT });
+
+    const arrow = nth(fx.object.children, 0);
+    // A shaft built standing up, laid over to point along the ground at AT.
+    const axis = new Vector3(0, 1, 0).applyQuaternion(arrow.quaternion);
+    expect(Math.abs(axis.y)).toBeLessThan(0.01);
+    fx.update(140 / 2);
+    expect(arrow.position.x).toBeCloseTo(AT.x / 2, 3);
+    expect(arrow.position.z).toBeCloseTo(AT.y / 2, 3);
+    fx.update(140);
+    expect(fx.count()).toBe(0);
   });
 
   // These are either already visible in the state the actors sync to, or the

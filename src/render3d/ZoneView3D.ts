@@ -310,6 +310,10 @@ export class ZoneView3D {
         actor?.swing(event.toward, now);
         return;
       }
+      // Only the player shoots, and the figure draws for it the way it swings.
+      case 'shot':
+        this.player?.swing(event.to, now);
+        return;
       case 'hit':
         if (event.mob) {
           this.mobActorOf.get(event.mob)?.struck(now);

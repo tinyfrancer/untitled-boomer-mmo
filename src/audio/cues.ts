@@ -9,6 +9,7 @@
  */
 export type CueId =
   | 'swing'
+  | 'twang'
   | 'hit'
   | 'crit'
   | 'hurt'
@@ -58,6 +59,16 @@ export interface Cue {
 export const CUES: Record<CueId, Cue> = {
   swing: {
     voices: [{ wave: 'noise', from: 1800, to: 700, ms: 110, gain: 0.16 }],
+    spacingMs: 70,
+  },
+  // A bowstring let go: a plucked note falling away, and the hiss of the shaft
+  // leaving. Shorter and brighter than a swing's whoosh, since a ranger hears
+  // one every second for as long as they fight.
+  twang: {
+    voices: [
+      { wave: 'triangle', from: 330, to: 180, ms: 140, gain: 0.14 },
+      { wave: 'noise', from: 2400, to: 1200, ms: 90, gain: 0.08, filter: 'highpass' },
+    ],
     spacingMs: 70,
   },
   hit: {

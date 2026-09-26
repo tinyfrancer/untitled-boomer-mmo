@@ -104,6 +104,9 @@ function hudCss(): string {
 .hud-bar__fill--mana {
   background: ${cssColor(THEME.manaFill)};
 }
+.hud-bar__fill--quiver {
+  background: ${cssColor(THEME.quiverFill)};
+}
 .hud-bar__fill--hp {
   background: ${cssColor(THEME.hpFill)};
 }
@@ -187,6 +190,7 @@ function hudCss(): string {
   margin-top: 6px;
 }
 .hud-player__mana,
+.hud-player__quiver,
 .hud-player__xp {
   margin-top: 5px;
 }
@@ -1073,7 +1077,10 @@ function hudCss(): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Centred by the auto margins below rather than by justify-content, which
+     centres a column taller than the screen by clipping its top out of reach
+     of the scroll: three class cards overflow a short phone. */
+  justify-content: flex-start;
   gap: ${THEME.margin}px;
   padding: ${THEME.margin}px;
   overflow-y: auto;
@@ -1088,6 +1095,12 @@ function hudCss(): string {
 }
 .create * {
   box-sizing: border-box;
+}
+.create > :first-child {
+  margin-top: auto;
+}
+.create > :last-child {
+  margin-bottom: auto;
 }
 .create__title {
   margin: 0;

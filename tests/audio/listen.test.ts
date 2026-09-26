@@ -52,6 +52,10 @@ describe('MomentEar', () => {
     expect(ear.hear({ kind: 'heal', at: AT, amount: 30 })).toEqual(['heal']);
   });
 
+  it('hears a shot as the string rather than a swing', () => {
+    expect(new MomentEar().hear({ kind: 'shot', from: AT, to: AT })).toEqual(['twang']);
+  });
+
   it('hears the start of a wind-up, which is the warning', () => {
     expect(new MomentEar().hear({ kind: 'wind-up', by: MOB })).toEqual(['wind-up']);
   });

@@ -97,8 +97,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
   ranger: {
     id: 'ranger',
     name: 'Ranger',
-    description:
-      'A hunter who shoots from range with a bow, spending an arrow on every shot. Out of arrows, it fights with its fists.',
+    description: 'A hunter who shoots from range, spending an arrow on every shot.',
     color: 0x2e7d32,
     baseStats: {
       maxHp: 32,

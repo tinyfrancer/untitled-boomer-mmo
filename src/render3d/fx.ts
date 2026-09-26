@@ -10,6 +10,7 @@ import {
   PointsMaterial,
   RingGeometry,
   SphereGeometry,
+  Vector3,
   type Material,
   type Object3D,
 } from 'three';
@@ -53,6 +54,17 @@ const BOLT_RADIUS = 8;
 
 /** Chest height, so a bolt flies between the caster and the target rather than along the floor. */
 const BOLT_HEIGHT = 34;
+
+/**
+ * An arrow's flight: quicker than a bolt, since a bow shoots every second where
+ * a spell waits on its cooldown, and a shaft long and thin enough to read as one
+ * at the distance the camera sits. It flies at the bolt's height for the bolt's
+ * reason.
+ */
+const ARROW_MS = 140;
+const ARROW_LENGTH = 26;
+const ARROW_RADIUS = 1.4;
+const UP = new Vector3(0, 1, 0);
 
 /**
  * A spray of short-lived points: sparks off a crit, chips off a gather. One
@@ -169,6 +181,9 @@ export class FxLayer {
       case 'bolt-cast':
         this.bolt(event.from, event.to);
         return;
+      case 'shot':
+        this.arrow(event.from, event.to);
+        return;
       case 'level-up':
         this.levelUp(event.at);
         return;
@@ -239,6 +254,31 @@ export class FxLayer {
       lifeMs: BOLT_MS,
       play(progress) {
         group.position.lerpVectors(start, end, progress);
+      },
+    });
+  }
+
+  /** An arrow between two points, pointing the way it flies. */
+  arrow(from: Point, to: Point): void {
+    const start = simToWorld(from.x, from.y, BOLT_HEIGHT);
+    const end = simToWorld(to.x, to.y, BOLT_HEIGHT);
+    // Unfogged like a bolt, for the same reason: it is feedback thrown to the
+    // far end of a reach the haze has already started on.
+    const shaft = new Mesh(
+      new CylinderGeometry(ARROW_RADIUS, ARROW_RADIUS, ARROW_LENGTH, 4),
+      new MeshBasicMaterial({ color: PALETTE.arrow, fog: false }),
+    );
+    const heading = end.clone().sub(start);
+    if (heading.lengthSq() > 0) {
+      shaft.quaternion.setFromUnitVectors(UP, heading.normalize());
+    }
+    shaft.position.copy(start);
+    this.add({
+      object: shaft,
+      bornAt: this.now,
+      lifeMs: ARROW_MS,
+      play(progress) {
+        shaft.position.lerpVectors(start, end, progress);
       },
     });
   }
