@@ -350,7 +350,17 @@ export type QuestId =
 // the two lists are read by different counters and have no reason to grow
 // together — a quest is written to be finished, a bounty to be taken again.
 export type BountyId =
-  'rat-cull' | 'shore-patrol' | 'road-contract' | 'timber-order' | 'ore-order' | 'smith-order';
+  | 'rat-cull'
+  | 'shore-patrol'
+  | 'road-contract'
+  | 'timber-order'
+  | 'ore-order'
+  | 'smith-order'
+  // The upper band's: two zones' worth of kills, and two of the Deep Cut's asks.
+  | 'goblin-cull'
+  | 'coal-order'
+  | 'fen-patrol'
+  | 'steel-order';
 
 export type AbilityId =
   // The one each class opens with, and the three it buys.

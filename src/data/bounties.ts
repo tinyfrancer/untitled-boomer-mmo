@@ -64,9 +64,10 @@ export interface BountyDefinition {
  *   spread `SHOP_STOCK` was already built around.
  *
  * The gates are chosen against where the work *is* rather than spread evenly:
- * each kill bounty opens about when its zone stops being dangerous, and the
- * smith's order sits at 4 because a bar behind mining 5 and smithing 4 is the
- * deepest thing anybody can be asked to bring.
+ * each kill bounty opens about when its zone stops being dangerous, and each
+ * order at about the level its making skill tends to be reached — the smith's
+ * iron at 4, and the steel above it at 7, since a steel bar is behind mining 6
+ * and smithing 7 and is the deepest thing anybody can be asked to bring.
  */
 export const BOUNTIES: Record<BountyId, BountyDefinition> = {
   'rat-cull': {
@@ -125,6 +126,49 @@ export const BOUNTIES: Record<BountyId, BountyDefinition> = {
     requiredLevel: 4,
     reward: { copper: 220, xp: 110 },
   },
+
+  // The upper band's, so the board does not stop at the mill road. Two kill
+  // contracts on the two zones above the starter band that anyone can walk into
+  // — the barrow is behind a key, and standing work behind a 3% drop is a row
+  // most players would take and have to give back — and two orders on what the
+  // Deep Cut is for.
+  'goblin-cull': {
+    id: 'goblin-cull',
+    name: 'Goblin Cull',
+    description: 'A dozen goblins off the mill road. Greyford pays me to keep that road open.',
+    postedByNpcId: 'quartermaster',
+    objective: { kind: 'kill', enemyId: 'goblin-scavenger', quantity: 12 },
+    requiredLevel: 4,
+    reward: { copper: 300, xp: 360 },
+  },
+  'coal-order': {
+    id: 'coal-order',
+    name: 'Coal Order',
+    description: 'Ten coal out of the Deep Cut. The forge wants a hotter fire than logs make.',
+    postedByNpcId: 'quartermaster',
+    objective: { kind: 'collect', itemId: 'coal', quantity: 10 },
+    requiredLevel: 5,
+    reward: { copper: 240, xp: 100 },
+  },
+  'fen-patrol': {
+    id: 'fen-patrol',
+    name: 'Fen Patrol',
+    description:
+      'Ten of the raiders in Blackwater. Whatever they take off the beach, they take from me.',
+    postedByNpcId: 'quartermaster',
+    objective: { kind: 'kill', enemyId: 'fen-raider', quantity: 10 },
+    requiredLevel: 6,
+    reward: { copper: 360, xp: 450 },
+  },
+  'steel-order': {
+    id: 'steel-order',
+    name: 'Steel Order',
+    description: 'Three bars of steel, if your hand is up to it. Nobody else in town can make it.',
+    postedByNpcId: 'quartermaster',
+    objective: { kind: 'collect', itemId: 'steel-bar', quantity: 3 },
+    requiredLevel: 7,
+    reward: { copper: 440, xp: 180 },
+  },
 };
 
 /** Board order, so the panel does not reshuffle as levels are reached. */
@@ -135,4 +179,8 @@ export const BOUNTY_ORDER: BountyId[] = [
   'ore-order',
   'road-contract',
   'smith-order',
+  'goblin-cull',
+  'coal-order',
+  'fen-patrol',
+  'steel-order',
 ];

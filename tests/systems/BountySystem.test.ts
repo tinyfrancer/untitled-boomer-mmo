@@ -310,6 +310,16 @@ describe('what the board is allowed to pay', () => {
     expect(open.length).toBeLessThan(contracts.length);
   });
 
+  /**
+   * The gap the upper band's four closed: the board topped out at the mill
+   * road, so from level 5 on it posted nothing that was not starter work. A
+   * character near the cap should still find something up there worth taking.
+   */
+  it('keeps posting work into the top of the band', () => {
+    const highest = Math.max(...contracts.map((contract) => contract.requiredLevel ?? 1));
+    expect(highest).toBeGreaterThanOrEqual(MAX_CHARACTER_LEVEL - 2);
+  });
+
   it('is a complete table with no id spelled two ways', () => {
     expect(new Set(BOUNTY_ORDER).size).toBe(BOUNTY_ORDER.length);
     expect(new Set(BOUNTY_ORDER)).toEqual(new Set(Object.keys(BOUNTIES)));
