@@ -1,15 +1,16 @@
 # Act three: sound footing, a world worth looking at, and the upper band filled in
 
-**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-10 landed:** the drift, this
+**Status:** live. Opened 2026-09-25 against `5c07204`. **Phases 0-11 landed:** the drift, this
 plan, decisions 54-57 and a 17 KB `CLAUDE.md` (phase 0); the counter table and the redraw rule,
 which landed together because `refreshOpen()` is one call once there is one counter slot to redraw
 (phases 1 and 2); the zone's dice (phase 3); the world's edge and the air of each zone (phase 4);
 rock that stands up (phase 5); names you can read (phase 6); a fight you can see, with an enemy's
 wind-up drawn on the ground at the reach it lands at (phase 7); water that moves and ground with
-something on it (phase 8); sound (phase 9); and loot that is not lost (phase 10). **Next: phase
-11** — start from `act_three_handoff.md`, which also holds the user's answers on the bow (decisions
-64-65): phase 12 is now a third class and arrows, and runs on into a phase 13. Update this line as
-each phase lands.
+something on it (phase 8); sound (phase 9); loot that is not lost (phase 10); and the upper band's
+directed content (phase 11). **Next: phase 12** — start from `act_three_handoff.md`, which holds
+the user's answers on the bow (decisions 64-65), the recommended split into a phase 12 (the ranger)
+and a phase 13 (fletching and willow) still to be confirmed, and three questions still to put.
+Update this line as each phase lands.
 
 This plan came out of a full read of the codebase on 2026-09-25 — every module under `src/`, the
 harness, smoke, and a screenshot of every zone at phone size — asked for as "a full analysis now
@@ -296,6 +297,28 @@ say, and `docs/architecture/economy.md` and `rendering.md` now do:
 - **Contracts for the upper band** on the board, held to the same three rules the existing six are.
 - `progression.test.ts` extended past the starter arc, so the upper band's pacing is simulated
   rather than eyeballed.
+
+**What it turned out to be about.** Built much as written, in four pieces; decisions 67-69 are the
+forks, and `combat.md` (ranks), `content.md` (the chain, the board) and `hud.md` (the shell) say
+what landed. What the section did not say:
+
+- **The quest section had not moved.** The plan assumed phase 1 had done it; quests were still drawn
+  only in the shop's panel. They are drawn by `OverlayHost` now, over whichever counter is open, and
+  a counter opening names the person as well as the role, since a quest is a person's (decision 69).
+- **A rank inherits the line's cooldown and requires the rank below**, neither of which the section
+  said, and both of which are what stop the trainer being a way round a clock or a price (decision
+  67). The test fixtures that teach "every ability" now teach every first rank, since a second rank
+  takes the first's place on the bar.
+- **The gear moved off the opener.** A quest reward may weigh no more than what the quest takes in,
+  which a kill never does, and Greyford has no shop or bank to make room at — so the chain pays its
+  chest on a hide collect off the fen's lurkers (decision 68).
+- **The Deep Cut is the errand off the chain, not a link of it.** What it asks for is coal, which
+  is behind mining 6, and a link behind a gathering level would hold the fen and the barrow back
+  from anybody who never picked up a pick.
+- **The board posts nothing behind a key**, so the barrow has no contract; four were added rather
+  than one per zone.
+- **Firestorm's description was wrong** — "two and a half times a Fireball" at 1.75 of one — and was
+  corrected while its second rank was being written.
 
 ### Phase 12 — willow, fletching and the bow
 

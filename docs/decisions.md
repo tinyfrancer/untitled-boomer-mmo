@@ -1251,3 +1251,49 @@ sack vanishes, which leaves a player walking back to it no way to know whether t
 from across the map at a glance, and costs a `visible` flag. Reading it off the world's clock rather
 than the view's means the blink always ends where the world takes the pile away: the sack is never
 seen to come back on after it is gone.
+
+## 67. A higher rank is its own ability, in the slot of the one below it
+
+**2026-09-26 · Claude**
+
+Levels 5 to 8 sell a second rank of each class's four abilities. A rank is a new `AbilityId` that
+names the one it improves on (`rankOf`); it is drawn in that ability's slot on the bar, replaces it
+in the trainer's list, runs its cooldown clock, and is taught only to somebody who knows the rank
+below. It is the rank below made better at the one thing it does, with the cooldown, reach, cast
+time and governing skill unchanged.
+
+**Rejected:** new abilities at 5 to 8, which the four-button bar has no room for; a rank number
+stored beside each learned ability, which is a save migration where a new id is none; selling a
+second rank to somebody who skipped the first, which is a lesson skipped rather than an upgrade and
+a way round the first's price; a cooldown per rank, which makes the trainer a way to reset one;
+and ranks that change what a button is for (a heal that became instant, a nuke with a shorter
+cooldown), which would be a different ability wearing the old one's slot.
+
+## 68. The upper band's chain crosses Greyford's yard, and pays its gear on a collect
+
+**2026-09-26 · Claude**
+
+Five quests above level 3, given at Greyford: the outfitter's goblins, lurker hides and (as the
+errand off the chain) Deep Cut coal, then the fettler's raiders and the barrow king. The fettler's
+first link waits on the outfitter's work. The gear reward — each class's least-dropped chest in its
+own tier — is on the hide collect.
+
+**Rejected:** gear on the goblin kill that opens the chain, which is where the starter arc's shape
+put it — but a quest reward may weigh no more than what the quest takes in, a kill takes in nothing,
+and Greyford has no shop or bank, so a full pack would strand the turn-in a zone's walk from
+anywhere to make room. Coal as a link of the chain, which would hold the fen and the barrow back
+from anybody without mining 6. A level gate on quests, which is a new field for what the objective
+already gates. And every quest from one of the two, which would leave the other with nothing to
+say.
+
+## 69. A giver's quests are drawn by the counter shell, and the opening names the person
+
+**2026-09-26 · Claude**
+
+`COUNTER_OPENED_EVENT` carries the `NpcId` behind the counter beside the role, and `OverlayHost`
+draws that person's quests at the top of whichever counter panel it opens. No panel draws quests.
+
+**Rejected:** the shop's panel keeping its quest section and the outfitter's and fettler's panels
+each growing one, which is the hand-kept list phase 2 removed from the HUD's redraws — the next
+giver's panel is the one that forgets; and finding the person from the role through `NPCS`, which
+holds only while no two people share a role.

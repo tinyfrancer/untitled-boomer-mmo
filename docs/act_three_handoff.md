@@ -10,9 +10,11 @@ last phase lands.
 
 ## Where things stand
 
-- **Phase 10 has landed since this was written** — see
-  [its section](#phase-10--loot-that-is-not-lost-landed). **Next is phase 11.** The rest of this
-  list is as it stood at the merge of PR #123.
+- **Phases 10 and 11 have landed since this was written** — see
+  [phase 10](#phase-10--loot-that-is-not-lost-landed) and
+  [phase 11](#phase-11--the-upper-band-gets-directed-content-landed). **Next is phase 12**, and its
+  first step is putting the split and the three questions [below](#still-to-put-to-the-user) to the
+  user. The rest of this list is as it stood at the merge of PR #123.
 - **`main` has phases 0-9**: the cleanup (a 17 KB `CLAUDE.md` with the reasoning moved into
   `docs/architecture/`, one counter shell for six roles, one set of dice per zone), the graphics
   (the world carried past its edge, each zone's air, rock standing up, readable names, a fight with
@@ -58,7 +60,7 @@ The ranger and the arrows reshape phase 12, which is why this now runs to phase 
 
 1. `CLAUDE.md` loads by itself. Then read the plan's phases 10-12 and its "What this plan does not
    do", then the `docs/architecture/` file for every subsystem the phase touches (the table in
-   `CLAUDE.md` says which), then `docs/decisions.md` 54-65.
+   `CLAUDE.md` says which), then `docs/decisions.md` 54-69.
 2. `git log --oneline -15` — the only record that cannot be out of date.
 3. Branch before the first commit. **One PR per phase from here**: PR #123 carried ten phases and
    grew past 100 files, which is more than anyone can review.
@@ -79,7 +81,17 @@ as a thump. The plan's phase 10 has what it turned out to be about; `docs/archit
 has the rules and `rendering.md` the sack. Tests are `tests/world/lootPiles.test.ts`, the picking
 and actor tests, and smoke's `loot-piles` section.
 
-## Phase 11 — the upper band gets directed content
+## Phase 11 — the upper band gets directed content (landed)
+
+**Landed** on its own PR, a commit a piece: quests drawn by the counter shell
+(`hud/counterQuests.ts`, with the `NpcId` now on `COUNTER_OPENED_EVENT`), second ranks at levels 5-8
+(`rankOf`, `lineOf`), five quests at Greyford, four contracts, and the pacing simulation carried past
+the starter arc. The plan's phase 11 has what it turned out to be about
+and decisions 67-69 the forks. For phase 12, two things from it are already keyed by `ClassId` and
+will be compile errors for the ranger: `CLASS_ABILITIES` (now eight a class, four first ranks then
+four second) and the `lurker-hides` quest's `gear`. The ranger's second ranks go at 5-8 like the
+others', and `TrainerSystem.test.ts` holds every rank to its first rank's cooldown, reach and cast
+time. What follows is the section as it was written before the phase, kept for the reasoning.
 
 **A prerequisite the plan assumed was done.** The plan says the quest section moves out of the shop
 panel and into the counter shell "in phase 1's wake". It did not move: quests are still drawn only
