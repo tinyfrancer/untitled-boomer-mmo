@@ -70,10 +70,12 @@ export interface HarnessOptions {
   level?: number;
   classId?: ClassId;
   /**
-   * What has been bought from the trainer. Defaults to the whole class list,
-   * because almost every test here is about what an ability *does* rather than
-   * about having paid for it — pass `[]` to start from what a new character
-   * actually walks out of creation with.
+   * What has been bought from the trainer. Defaults to every first rank in the
+   * class list, because almost every test here is about what an ability *does*
+   * rather than about having paid for it — pass `[]` to start from what a new
+   * character actually walks out of creation with. Not the second ranks: each
+   * takes its first rank's place on the bar, so a test about what Fireball does
+   * would find Fireball II pressed instead.
    */
   learnedAbilities?: AbilityId[];
   /** Where rats walk. Deterministic by default: see the note on the rng below. */
@@ -92,7 +94,7 @@ export function harness(options: HarnessOptions = {}): Harness {
   state.level = options.level ?? 1;
   state.learnedAbilities =
     options.learnedAbilities ??
-    CLASS_ABILITIES[state.classId].filter((id) => ABILITIES[id].training);
+    CLASS_ABILITIES[state.classId].filter((id) => ABILITIES[id].training && !ABILITIES[id].rankOf);
   const emitted: Emitted[] = [];
   const bus = recordingBus(emitted);
   const character = new CharacterController(state);

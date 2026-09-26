@@ -19,8 +19,9 @@ drops, and a fettler reworks gear into what you would rather it was);
 character creation, leveling, gear,
 two-way combat with death and respawn; three gathering skills and three making ones; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
-kills and sends you somewhere, plus repeatable contracts off the quartermaster's board that pay for
-work you were doing anyway; slayer achievements and the
+kills and sends you somewhere, a second one a band up across Greyford's two counters that ends on
+the barrow king, plus repeatable contracts off the quartermaster's board that pay for work you were
+doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
 mobile-first HUD; and local save/load with versioned migrations. Five of the ten zones are level
 1-3 starter content — what separates those is what they drop, not how hard they are, and the hideout

@@ -36,7 +36,7 @@ export interface TestContextOptions {
   classId?: ClassId;
   level?: number;
   zoneId?: ZoneId;
-  /** Defaults to the whole class list; see the note in `harness.ts`. */
+  /** Defaults to every first rank in the class list; see the note in `harness.ts`. */
   learnedAbilities?: AbilityId[];
   /** The zone's dice; `Math.random` unless a test loads them. */
   rolls?: () => number;
@@ -47,7 +47,7 @@ export function testContext(options: TestContextOptions = {}): TestContext {
   state.level = options.level ?? 1;
   state.learnedAbilities =
     options.learnedAbilities ??
-    CLASS_ABILITIES[state.classId].filter((id) => ABILITIES[id].training);
+    CLASS_ABILITIES[state.classId].filter((id) => ABILITIES[id].training && !ABILITIES[id].rankOf);
   const emitted: Emitted[] = [];
   const bus = recordingBus(emitted);
   const character = new CharacterController(state);

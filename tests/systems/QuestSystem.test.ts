@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { QUESTS } from '../../src/data/quests';
+import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
+import { ZONES } from '../../src/data/zones';
+import { canEquip } from '../../src/systems/EquipSystem';
+import type { ClassId, ItemId } from '../../src/types/ids';
 import {
   acceptQuest,
   activeQuests,
@@ -358,5 +361,94 @@ describe('formatQuestProgress', () => {
 
   it('counts a visit as the one arrival it asks for', () => {
     expect(formatQuestProgress(road, taken('quarry-road'), NONE)).toBe('The Quarry Road  0/1');
+  });
+});
+
+/**
+ * The rules over the table itself, which is hand-written: nothing about a row
+ * stops it naming a giver who stands nowhere, gear its class cannot wear, or a
+ * link later in the chain than itself.
+ */
+describe('the quest table', () => {
+  const quests = QUEST_ORDER.map((questId) => QUESTS[questId]);
+
+  it('is a complete order with no id spelled two ways', () => {
+    expect(new Set(QUEST_ORDER).size).toBe(QUEST_ORDER.length);
+    expect(new Set(QUEST_ORDER)).toEqual(new Set(Object.keys(QUESTS)));
+    for (const [id, quest] of Object.entries(QUESTS)) expect(quest.id).toBe(id);
+  });
+
+  it('is given by people who stand somewhere a player can walk to', () => {
+    const standing = new Set(
+      Object.values(ZONES).flatMap((zone) => zone.npcSpawns.map((spawn) => spawn.npcId)),
+    );
+    for (const quest of quests) expect(standing.has(quest.giverNpcId), quest.id).toBe(true);
+  });
+
+  // Earlier in the order and not merely present, which is what rules a cycle
+  // out: a chain that loops back on itself is a quest nobody can ever take.
+  it('holds a quest back only on ones earlier in the order', () => {
+    for (const quest of quests) {
+      for (const required of quest.requires ?? []) {
+        expect(QUEST_ORDER.indexOf(required), `${quest.id} waits on ${required}`).toBeLessThan(
+          QUEST_ORDER.indexOf(quest.id),
+        );
+      }
+    }
+  });
+
+  it('pays each class gear that class can wear', () => {
+    for (const quest of quests) {
+      for (const [classId, itemId] of Object.entries(quest.reward.gear ?? {}) as [
+        ClassId,
+        ItemId,
+      ][]) {
+        expect(canEquip(itemId, classId).ok, `${quest.id} for a ${classId}`).toBe(true);
+      }
+    }
+  });
+
+  it('sends nobody after a creature that never spawns', () => {
+    const spawned = new Set(
+      Object.values(ZONES).flatMap((zone) => zone.mobSpawns.map((spawn) => spawn.enemyId)),
+    );
+    for (const quest of quests) {
+      if (quest.objective.kind !== 'kill') continue;
+      expect(spawned.has(quest.objective.enemyId), quest.id).toBe(true);
+    }
+  });
+});
+
+describe('the upper band', () => {
+  it('is given at Greyford, by the outfitter and the fettler', () => {
+    expect(questsForNpc('outfitter', {}, NONE).map((offer) => offer.definition.id)).toEqual([
+      'goblin-road',
+      'cut-coal',
+      'lurker-hides',
+    ]);
+    expect(questsForNpc('fettler', {}, NONE).map((offer) => offer.definition.id)).toEqual([
+      'blackwater-raiders',
+      'the-barrow-king',
+    ]);
+  });
+
+  /**
+   * The chain crosses the yard: the fettler's first link waits on the
+   * outfitter's work, so a locked row at one counter names a quest handed in at
+   * the other — and the fettler wears no marker until then.
+   */
+  it('runs across the yard, from one counter to the other', () => {
+    expect(questsForNpc('fettler', {}, NONE).map((offer) => offer.state)).toEqual([
+      'locked',
+      'locked',
+    ]);
+    expect(npcMarker('fettler', {}, NONE)).toBeNull();
+
+    const log = finished('goblin-road', 'lurker-hides');
+    expect(questsForNpc('fettler', log, NONE).map((offer) => offer.state)).toEqual([
+      'available',
+      'locked',
+    ]);
+    expect(npcMarker('fettler', log, NONE)).toBe('available');
   });
 });

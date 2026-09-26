@@ -74,6 +74,15 @@ was asked first.
 `turnInQuest` on `CharacterController` refuses as a whole rather than half-applying — taking the
 objective and finding no room for the reward is the one outcome that can't be undone.
 
+**A giver's quests are drawn by the counter, not by a panel** (`hud/counterQuests.ts`,
+`docs/decisions.md` 69). They were a section of the shop's panel while the shopkeeper was the only
+giver; now a counter opening names who is behind it as well as the role (`COUNTER_OPENED_EVENT`
+carries both), and `OverlayHost` puts that person's work at the top of whichever panel it puts up.
+So anybody who gives quests shows them at whatever counter they stand behind, and no panel can be
+the one that forgot to. The world side needed nothing: `QuestDesk` already asked whether the person
+serving was the quest's giver. The inspect card's quest count moved the same way, onto anybody's
+card who gives one.
+
 **An objective is a tagged union, and what splits the three is what each one _counts_**
 (`QuestObjective` in `data/quests.ts`). `collect` counts the bag, which goes down as well as up and
 is handed over at the counter; `kill` and `visit` count lifetime tallies that only ever climb and
@@ -113,6 +122,12 @@ stranded. `BountyOfferState` carries `busy` for what the rule costs every other 
 cannot be taken and does not say why reads as a bug. Nothing about a contract _finished_ is stored:
 it is posted again the moment it is paid, which is the whole of what repeatable means here.
 
+**The board reaches the upper band** with four more contracts (act three phase 11): a goblin cull
+and a fen patrol on the two zones above the starter band that need no key, and a coal order and a
+steel order on what the Deep Cut is for. Nothing is posted behind a locked door — standing work
+behind a 3% key is a contract most players would take and have to give back — and
+`BountySystem.test.ts` holds that the board keeps posting work within two levels of the cap.
+
 **What the board pays is held by three rules, and the third is the one nothing else in the game
 needed** (`tests/systems/BountySystem.test.ts`). A kill contract pays less XP than the kills it names
 already pay, so it is a bonus on a grind rather than a reason to make a different one. A gather
@@ -122,6 +137,23 @@ logs, so a timber order above the shelf price is coin minted by walking between 
 forty feet apart. It is the same vendor spread `SHOP_STOCK` was already built around, pointed the
 other way. Its XP goes through `ZoneWorld.publishXpGain` rather than `awardXp`, like a quest reward:
 a camp can _finish_ a kill contract unattended, but it cannot walk to town and hand one in.
+
+**The upper band has a chain of its own, given at Greyford** (act three phase 11,
+`docs/decisions.md` 68). It is the starter arc's shape a band up — a chain that ends on a named
+thing behind a rare key, and one errand off it — split across the two people who stand in the
+outpost's yard, so the chain crosses from one counter to the other: the outfitter's goblins on the
+mill road and hides off the fen's lurkers, then the fettler's raiders and the barrow king, with coal
+out of the Deep Cut as the outfitter's errand. The errand is off the chain rather than a link of it
+because coal is behind mining 6, and a link behind a gathering level would hold the fen and the
+barrow back from anybody who never picked up a pick. **The link that pays gear is the hide
+collect, not the goblin kill before it**, because of a rule that was already held
+(`CharacterController.test.ts`): a quest's reward may weigh no more than what it takes in, and a kill
+takes in nothing — which at Greyford, with no shop to sell to and no bank to put anything in,
+would be a full pack stranding a turn-in a zone's walk from anywhere to make room.
+`tests/systems/progression.test.ts` simulates the chain: each kill objective rides one level of its
+zone's grind, each reward is a tenth to a third of the level it is met at, the lot together is
+under a quarter of the climb to the cap, and the chain alone leaves a character two levels short
+of the king.
 
 **A quest may be held back by another** (`QuestDefinition.requires`), the shape
 `ShopStockEntry.requires` and `ZoneDefinition.requiresKey` already use: the table reads as a list of

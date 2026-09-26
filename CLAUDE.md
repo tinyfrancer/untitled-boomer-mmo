@@ -210,9 +210,10 @@ and volume are kept per device, not in `CharacterState`.
 
 **Balance is held by simulations, not judgement.** The duels in `EnemySystem.test.ts` hold the
 combat curve (a fresh level 1 beats a level 1 rat comfortably, sweats a 2, loses to a 3), the
-progression test holds the starter arc to level 3 and the cap to one level past the richest spawn,
-`deadEnds.test.ts` holds that nothing handed out leads nowhere, `uniqueLoot.test.ts` holds boss
-drops unique, and unattended play stays behind active play (half XP, no abilities, an offline cap).
+progression test holds the starter arc to level 3, the upper band's chain to riding the climb rather
+than making it, and the cap to one level past the richest spawn, `deadEnds.test.ts` holds that
+nothing handed out leads nowhere, `uniqueLoot.test.ts` holds boss drops unique, and unattended play
+stays behind active play (half XP, no abilities, an offline cap).
 Change a stat, a table or a curve and retune until those pass rather than eyeballing it.
 
 ## Where the reasoning lives

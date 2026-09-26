@@ -28,7 +28,7 @@ export interface OutfitterHandlers {
  */
 export class OutfitterModal extends Overlay {
   private readonly handlers: OutfitterHandlers;
-  private readonly body: HTMLElement;
+  readonly body: HTMLElement;
 
   constructor(inventory: Inventory, handlers: OutfitterHandlers, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through hud-modal--top', onClosed);

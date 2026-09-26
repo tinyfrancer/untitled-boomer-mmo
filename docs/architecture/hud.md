@@ -14,9 +14,11 @@ port, and nothing drawing the world knows it exists.
 of it. Char / Bag / Quests / Feats / Log are `Sheet` subclasses and one is open at a time — `Hud`
 holds a single `openSheet`, not a visible flag per panel — while Camp and the gear icon are actions
 that open nothing. The shop, the slot picker, the options menu and the away report are overlays
-built on open and removed on close. The options menu also holds the one setting that is not the
-character's — mute and volume, which the HUD is handed at mount and sends back whole on
-`SOUND_SETTINGS_CHANGED_EVENT` (`audio.md`).
+built on open and removed on close. Every counter's panel is its own list with the person's quests
+drawn over the top of it by `OverlayHost` rather than by the panel (`hud/counterQuests.ts`), which
+is why each modal hands the host its scrolling `body`. The options menu also holds the one setting
+that is not the character's — mute and volume, which the HUD is handed at mount and sends back
+whole on `SOUND_SETTINGS_CHANGED_EVENT` (`audio.md`).
 
 **An overlay that takes a key says so.** Escape closes whatever is open and is also the world's
 "drop the target", and the two used to hear it independently, so closing a panel mid-fight dropped

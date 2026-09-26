@@ -9,7 +9,7 @@ _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs
 reached and a price; **absent means the one ability the class opens with**, which is the shape
 `ShopStockEntry.requires` and `ZoneDefinition.requiresKey` both use, so the table reads as a list of
 what is _held back_ rather than of what is free. Each class has four: the opener, then three bought
-at levels 2, 3 and 4.
+at levels 2, 3 and 4 — and a second rank of each, bought at 5, 6, 7 and 8 (below).
 
 `CharacterState.learnedAbilities` stores **only what was paid for** — what a class opens with is a
 fact about `ABILITIES`, and `knownAbilities` derives the bar from the table and the save together.
@@ -28,6 +28,30 @@ The gating levels are chosen against the content rather than spread evenly. The 
 fight, so the level 4 purchases land after it rather than trivialising it, and the duels in
 `tests/systems/EnemySystem.test.ts` still model auto-attacks alone — a bought ability moves what a
 player who spent the coin can do, not the baseline the tuning contract is about.
+
+**Levels 5 to 8 sell a second rank rather than a fifth ability** (`AbilityDefinition.rankOf`, act
+three phase 11; `docs/decisions.md` 67). The bar is four buttons and a fifth would not fit beside
+the signpost a thumb taps, so a rank takes the slot of the one it improves on: `knownAbilities`
+answers the highest rank owned in each line, drawn in the slot its first rank holds, and
+`trainingOffers` leaves the rank below out of the trainer's list once it has been bought past. A
+rank is **its own `AbilityId`** naming the one it replaces, so `learnedAbilities` stores it like any
+other lesson and no save needed a migration to start holding one. Three rules ride on it:
+
+- **A rank is taught only to somebody who knows the rank below.** `trainingAccess` gates it on that
+  after the level, since the level is the longer wait and the more useful thing to be told; the rank
+  above a free opener asks only the level.
+- **The cooldown is the line's, not the rank's** (`lineOf`, which `AbilityCaster` keys `lastCastAt`
+  by), so a rank bought with the first still cooling is a better button rather than a fresh one,
+  and the trainer is not a way to reset a clock.
+- **A rank is its first rank better at the one thing it does and changed in nothing else** — a hit a
+  quarter again as hard, a heal or a shield that holds more, a haste that goes faster — with the
+  cooldown, reach, cast time and governing skill left as they were, since those are what say what a
+  button is _for_. `tests/systems/TrainerSystem.test.ts` holds that over every rank, and so the
+  ratios the first ranks argue for (Crushing Blow is not a better Power Slash) still hold between
+  the second ones.
+
+They are priced near a level's worth of kills each (800 to 1,600), which makes the trainer the
+upper band's third coin sink beside the bank's shelves and the reforging stone.
 
 **A cast time is a window in which standing still is the whole cost**
 (`AbilityDefinition.castTimeMs`, run by `AbilityCaster`). Mana and the cooldown are spent at the

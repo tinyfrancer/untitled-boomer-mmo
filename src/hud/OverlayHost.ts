@@ -11,6 +11,7 @@ import { ReforgeModal, type ReforgePanelState } from './ReforgeModal';
 import type { SoundSettings } from '../audio/settings';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
+import { counterQuests, type QuestPanelState } from './counterQuests';
 import { StationModal, type StationPanelState } from './StationModal';
 import { SlotPicker } from './SlotPicker';
 import {
@@ -39,7 +40,7 @@ import type { InspectPanel } from '../systems/InspectSystem';
 import type { ScreenPoint } from '../ui/uiEvents';
 import type { PendingNotification } from '../world/GameContext';
 import type { EventBus } from '../world/worldEvents';
-import type { GearSlotId, ItemId } from '../types/ids';
+import type { GearSlotId, ItemId, NpcId } from '../types/ids';
 import type { TabId } from '../ui/tabs';
 
 /**
@@ -60,6 +61,8 @@ export interface OverlayPanelState {
   outfitter: () => Inventory;
   /** The gear, the pack and what has been worked, which is the fettler's whole list. */
   reforger: () => ReforgePanelState;
+  /** The log and its tallies, which any counter's person may have work in. */
+  quests: () => QuestPanelState;
   station: () => StationPanelState;
 }
 
@@ -68,10 +71,22 @@ export interface OverlayPanelState {
  * and something to take down. Each role's modal has its own handlers and its
  * own state, and the table in the constructor is the only place that knows
  * which is which.
+ *
+ * `body` is the panel's scrolling list, which its own redraw empties and fills.
+ * What the host adds to the top of it afterwards is the person's quests, which
+ * no panel draws for itself (see `counterQuests`).
  */
 interface CounterPanel {
   readonly root: HTMLElement;
+  readonly body: HTMLElement;
   refresh(): void;
+  close(): void;
+}
+
+/** A role's modal, as far as the host needs to know it. */
+interface CounterModal {
+  readonly root: HTMLElement;
+  readonly body: HTMLElement;
   close(): void;
 }
 
@@ -105,9 +120,10 @@ export class OverlayHost {
   private readonly events: EventBus;
   private readonly counterPanels: Record<NpcRoleId, (onClosed: () => void) => CounterPanel>;
   private readonly stationState: () => StationPanelState;
+  private readonly questState: () => QuestPanelState;
 
   private options: OptionsModal | null = null;
-  private counter: { role: NpcRoleId; panel: CounterPanel } | null = null;
+  private counter: { role: NpcRoleId; npcId: NpcId; panel: CounterPanel } | null = null;
   private station: StationModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
@@ -119,6 +135,7 @@ export class OverlayHost {
     this.root = root;
     this.events = events;
     this.stationState = panels.station;
+    this.questState = panels.quests;
     const emit = events.emit.bind(events);
     // Every X asks rather than does: the world owns whether a counter is open,
     // and closes it with the same event it hears this on.
@@ -129,8 +146,6 @@ export class OverlayHost {
           {
             onBuy: (itemId) => emit(BUY_ITEM_REQUESTED_EVENT, itemId),
             onSell: (itemId, quantity) => emit(SELL_ITEM_REQUESTED_EVENT, itemId, quantity),
-            onAcceptQuest: (questId) => emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
-            onTurnInQuest: (questId) => emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
             onDismiss: dismiss('merchant'),
           },
           onClosed,
@@ -279,13 +294,13 @@ export class OverlayHost {
    * never has two open, and a panel left behind one would be selling from a
    * counter nobody is standing at.
    */
-  openCounter(role: NpcRoleId): void {
+  openCounter(role: NpcRoleId, npcId: NpcId): void {
     this.counter?.panel.close();
     const panel = this.counterPanels[role](() => {
       if (this.counter?.role === role) this.counter = null;
     });
-    this.counter = { role, panel };
-    panel.refresh();
+    this.counter = { role, npcId, panel };
+    this.refreshCounter();
     this.root.append(panel.root);
   }
 
@@ -308,8 +323,26 @@ export class OverlayHost {
    * panel by panel, which is exactly the list a new panel was left out of.
    */
   refreshOpen(): void {
-    this.counter?.panel.refresh();
+    this.refreshCounter();
     this.refreshStation();
+  }
+
+  /**
+   * The counter's own list, then whatever work the person behind it has going
+   * on top of it. Drawn here rather than by each panel, so anybody who gives
+   * quests shows them at whatever counter they stand behind — the shop, the
+   * outfitter's and the fettler's today — and a panel cannot be the one that
+   * forgot to.
+   */
+  private refreshCounter(): void {
+    if (!this.counter) return;
+    const { npcId, panel } = this.counter;
+    panel.refresh();
+    const quests = counterQuests(npcId, this.questState(), {
+      onAccept: (questId) => this.events.emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
+      onTurnIn: (questId) => this.events.emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
+    });
+    if (quests) panel.body.prepend(quests);
   }
 
   /**
@@ -408,9 +441,6 @@ export class OverlayHost {
 }
 
 // A role's modal, as the host holds it.
-function counterPanel(
-  modal: { root: HTMLElement; close(): void },
-  refresh: () => void,
-): CounterPanel {
-  return { root: modal.root, refresh, close: () => modal.close() };
+function counterPanel(modal: CounterModal, refresh: () => void): CounterPanel {
+  return { root: modal.root, body: modal.body, refresh, close: () => modal.close() };
 }

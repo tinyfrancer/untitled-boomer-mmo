@@ -21,14 +21,23 @@ describe('abilitiesFor', () => {
       'mana-shield',
       'mend',
       'firestorm',
+      'fireball-2',
+      'mana-shield-2',
+      'mend-2',
+      'firestorm-2',
     ]);
     expect(abilitiesFor('warrior').map((a) => a.id)).toEqual([
       'power-slash',
       'battle-fury',
       'second-wind',
       'crushing-blow',
+      'power-slash-2',
+      'battle-fury-2',
+      'second-wind-2',
+      'crushing-blow-2',
     ]);
     abilitiesFor('wizard').forEach((a) => expect(a.classId).toBe('wizard'));
+    abilitiesFor('warrior').forEach((a) => expect(a.classId).toBe('warrior'));
   });
 });
 

@@ -271,8 +271,8 @@ class Hud {
     this.root = el('div', 'hud');
     this.overlays = new OverlayHost(this.root, events, {
       merchant: () => ({
-        ...this.questCounters(),
         currency: this.model.currency,
+        inventory: this.model.inventory,
         quests: this.model.quests,
         level: this.model.level,
       }),
@@ -295,6 +295,7 @@ class Hud {
         bounty: this.model.bounty,
         currency: this.model.currency,
       }),
+      quests: () => ({ ...this.questCounters(), quests: this.model.quests }),
       station: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
       reforger: () => ({
         gear: this.model.gear,
@@ -626,9 +627,9 @@ class Hud {
     const counters = this.questCounters();
     this.tracker.update(this.model.quests, this.model.bounty, counters);
     this.questSheet.update(this.model.quests, this.model.bounty, counters);
-    // The board's and the shopkeeper's rows are counted off the same three
-    // tallies, and a kill contract's count moves out in the world with the
-    // panel left up behind the player.
+    // The board's and every giver's rows are counted off the same three
+    // tallies, and a kill count moves out in the world with the panel left up
+    // behind the player.
     this.overlays.refreshOpen();
   }
 
@@ -857,8 +858,8 @@ class Hud {
 
     // Whichever counter the world opened or shut. Opening or shutting the
     // shopkeeper's is also what adds or takes away a Sell button in the bag.
-    listen(COUNTER_OPENED_EVENT, (role) => {
-      this.overlays.openCounter(role);
+    listen(COUNTER_OPENED_EVENT, (role, npcId) => {
+      this.overlays.openCounter(role, npcId);
       this.inventorySheet.refreshActions();
     });
     listen(COUNTER_CLOSED_EVENT, (role) => {

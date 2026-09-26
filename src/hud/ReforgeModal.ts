@@ -41,7 +41,7 @@ export interface ReforgeHandlers {
  */
 export class ReforgeModal extends Overlay {
   private readonly handlers: ReforgeHandlers;
-  private readonly body: HTMLElement;
+  readonly body: HTMLElement;
 
   constructor(state: ReforgePanelState, handlers: ReforgeHandlers, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through hud-modal--top', onClosed);

@@ -13,8 +13,38 @@ export function abilitiesFor(classId: ClassId): AbilityDefinition[] {
 }
 
 /**
+ * The first rank of the line an ability belongs to: the slot it is drawn in on
+ * the bar, and the clock its cooldown runs on — so buying a second rank with
+ * the first still cooling down buys a better button rather than a fresh one.
+ */
+export function lineOf(id: AbilityId): AbilityId {
+  let ability = ABILITIES[id];
+  while (ability.rankOf) {
+    ability = ABILITIES[ability.rankOf];
+  }
+  return ability.id;
+}
+
+/** The one the class opens with is owned by everybody; the rest by paying. */
+function owns(ability: AbilityDefinition, learned: AbilityId[]): boolean {
+  return !ability.training || learned.includes(ability.id);
+}
+
+/**
+ * Whether a rank above this one is owned, which is what takes it off the bar
+ * and out of the trainer's list: the higher rank is drawn in its place.
+ */
+export function isSuperseded(
+  ability: AbilityDefinition,
+  classId: ClassId,
+  learned: AbilityId[],
+): boolean {
+  return abilitiesFor(classId).some((other) => other.rankOf === ability.id && owns(other, learned));
+}
+
+/**
  * What is actually on the bar: the one the class opens with, plus whatever has
- * been paid for.
+ * been paid for, at the highest rank owned in each line, in its line's slot.
  *
  * Derived from the table and the save together rather than read off a stored
  * list, which is what makes the free one impossible to lose — a save holds only
@@ -23,9 +53,10 @@ export function abilitiesFor(classId: ClassId): AbilityDefinition[] {
  * longer exists, fall out here rather than reaching the bar.
  */
 export function knownAbilities(classId: ClassId, learned: AbilityId[]): AbilityDefinition[] {
-  return abilitiesFor(classId).filter(
-    (ability) => !ability.training || learned.includes(ability.id),
-  );
+  const slots = CLASS_ABILITIES[classId];
+  return abilitiesFor(classId)
+    .filter((ability) => owns(ability, learned) && !isSuperseded(ability, classId, learned))
+    .sort((a, b) => slots.indexOf(lineOf(a.id)) - slots.indexOf(lineOf(b.id)));
 }
 
 export function knowsAbility(classId: ClassId, learned: AbilityId[], id: AbilityId): boolean {

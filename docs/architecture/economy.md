@@ -141,7 +141,9 @@ On the HUD side `OverlayHost` holds one table of panel factories keyed by the sa
   and get one answer.
 - **A quest is taken from the person who gives it.** `QuestDesk` is gated on the serving NPC being the
   quest's `giverNpcId`, not on the shop being open — the two were the same question only while the
-  shopkeeper was the only giver.
+  shopkeeper was the only giver. The HUD half is the same rule: `COUNTER_OPENED_EVENT` names the
+  person as well as the role, and `OverlayHost` draws their quests at the top of whatever panel it
+  opens (`content.md`), so the outfitter and the fettler show theirs with no panel told.
 - **Whatever panel is up is a function of the HUD's model**, so any model change redraws it.
   `tests/hud/Hud.test.ts` asks that of every role, since a hand-kept list of refreshes is exactly what
   a new panel gets left out of. A seventh role is now a row in `NPCS`, a session, a panel factory and

@@ -1,5 +1,5 @@
-import { abilitiesFor } from './AbilitySystem';
-import type { AbilityDefinition } from '../data/abilities';
+import { abilitiesFor, isSuperseded } from './AbilitySystem';
+import { ABILITIES, type AbilityDefinition } from '../data/abilities';
 import type { AbilityId, ClassId } from '../types/ids';
 
 /**
@@ -45,12 +45,23 @@ export function trainingAccess(
       reason: `${ability.name} is taught at level ${training.level}.`,
     };
   }
+  // Asked after the level, since the level is the longer wait of the two and
+  // the more useful thing to be told first.
+  const below = ability.rankOf ? ABILITIES[ability.rankOf] : null;
+  if (below?.training && !context.learnedAbilities.includes(below.id)) {
+    return {
+      kind: 'gated',
+      requirement: below.name,
+      reason: `${ability.name} builds on ${below.name}, which you have not learned.`,
+    };
+  }
   return { kind: 'offered', cost: training.cost };
 }
 
 /**
  * The whole syllabus for a class, in table order, with what is already known and
- * what is still out of reach both left in.
+ * what is still out of reach both left in — less a rank somebody has bought
+ * past, which the rank above it replaces here the way it does on the bar.
  *
  * A locked lesson is listed rather than hidden, the same call the shop makes for
  * a gated row and the world map for a shut zone: what a level is *for* is the
@@ -58,8 +69,8 @@ export function trainingAccess(
  * a player nothing about where they are going.
  */
 export function trainingOffers(context: TrainingContext): TrainingOffer[] {
-  return abilitiesFor(context.classId).map((ability) => ({
-    ability,
-    access: trainingAccess(ability, context),
-  }));
+  const { classId, learnedAbilities } = context;
+  return abilitiesFor(classId)
+    .filter((ability) => !isSuperseded(ability, classId, learnedAbilities))
+    .map((ability) => ({ ability, access: trainingAccess(ability, context) }));
 }

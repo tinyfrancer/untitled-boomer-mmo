@@ -54,6 +54,16 @@ export interface AbilityDefinition {
    * from the two together (see `systems/AbilitySystem.ts`).
    */
   training?: TrainingTerms;
+  /**
+   * The ability this is a higher rank of, or absent for a first rank.
+   *
+   * A rank takes the slot of the one below it rather than a slot of its own:
+   * the bar is four buttons, and a fifth would not fit beside the signpost a
+   * thumb taps. So what a rank changes is what that button does — and it is
+   * taught only to somebody who knows the rank below, since a second rank of
+   * something never learned is a lesson skipped rather than an upgrade.
+   */
+  rankOf?: AbilityId;
   manaCost: number;
   cooldownMs: number;
   // 0 means it targets the caster and needs nothing selected.
@@ -131,7 +141,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
   firestorm: {
     id: 'firestorm',
     name: 'Firestorm',
-    description: 'A long cast for two and a half times a Fireball’s power.',
+    description: 'A long cast for nearly twice a Fireball’s power.',
     classId: 'wizard',
     training: { level: 4, cost: 600 },
     manaCost: 18,
@@ -203,15 +213,169 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     // the opener and the finisher, where Power Slash is what fills a fight.
     effect: { kind: 'damage', powerMultiplier: 3.4, thrown: false },
   },
+
+  /*
+   * The second ranks, one a level from 5 to 8 in the order the first ranks were
+   * sold, which is what gives the upper band something to buy: the trainer sold
+   * nothing past level 4. Each is its first rank made better at the one thing it
+   * does and changed in nothing else — a damage rank hits a quarter again as
+   * hard for a little more mana, a heal or a shield holds more — so the
+   * cooldowns, reaches and cast times that say what each button is *for* are
+   * the same button's. The ratios the first ranks argue for (Crushing Blow is
+   * not a better Power Slash, Firestorm is not a better Fireball) still hold
+   * between the second ranks, and that is by construction rather than luck.
+   *
+   * Priced as the upper band's coin sink, near a level's worth of kills each:
+   * the endgame purse had the bank's shelves and the reforging stone, and the
+   * trainer was the counter a player at level 5 had no reason to visit again.
+   */
+  'fireball-2': {
+    id: 'fireball-2',
+    name: 'Fireball II',
+    description: 'Hurls fire at your target, a quarter again as hard.',
+    classId: 'wizard',
+    training: { level: 5, cost: 800 },
+    rankOf: 'fireball',
+    manaCost: 10,
+    cooldownMs: 6000,
+    range: 280,
+    castTimeMs: 1400,
+    skill: 'destruction',
+    baseFailureChance: 0.2,
+    effect: { kind: 'damage', powerMultiplier: 2.5, thrown: true },
+  },
+  'mana-shield-2': {
+    id: 'mana-shield-2',
+    name: 'Mana Shield II',
+    description: 'Soaks the next 45 damage for 20 seconds.',
+    classId: 'wizard',
+    training: { level: 6, cost: 1000 },
+    rankOf: 'mana-shield',
+    manaCost: 16,
+    cooldownMs: 15000,
+    range: 0,
+    castTimeMs: 0,
+    skill: 'destruction',
+    baseFailureChance: 0.1,
+    effect: { kind: 'absorb', amount: 45, durationMs: 20000 },
+  },
+  'mend-2': {
+    id: 'mend-2',
+    name: 'Mend II',
+    description: 'Knits 45 health back over a short cast.',
+    classId: 'wizard',
+    training: { level: 7, cost: 1300 },
+    rankOf: 'mend',
+    manaCost: 18,
+    cooldownMs: 18000,
+    range: 0,
+    castTimeMs: 1200,
+    skill: 'destruction',
+    baseFailureChance: 0.15,
+    effect: { kind: 'heal', amount: 45 },
+  },
+  'firestorm-2': {
+    id: 'firestorm-2',
+    name: 'Firestorm II',
+    description: 'Firestorm, a quarter again as hard.',
+    classId: 'wizard',
+    training: { level: 8, cost: 1600 },
+    rankOf: 'firestorm',
+    manaCost: 22,
+    cooldownMs: 20000,
+    range: 280,
+    castTimeMs: 2400,
+    skill: 'destruction',
+    baseFailureChance: 0.2,
+    effect: { kind: 'damage', powerMultiplier: 4.4, thrown: true },
+  },
+  'power-slash-2': {
+    id: 'power-slash-2',
+    name: 'Power Slash II',
+    description: 'A heavy swing for nearly three times the damage.',
+    classId: 'warrior',
+    training: { level: 5, cost: 800 },
+    rankOf: 'power-slash',
+    manaCost: 0,
+    cooldownMs: 8000,
+    range: 80,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    effect: { kind: 'damage', powerMultiplier: 2.75, thrown: false },
+  },
+  'battle-fury-2': {
+    id: 'battle-fury-2',
+    name: 'Battle Fury II',
+    description: 'Attack 50% faster for 10 seconds.',
+    classId: 'warrior',
+    training: { level: 6, cost: 1000 },
+    rankOf: 'battle-fury',
+    manaCost: 0,
+    cooldownMs: 20000,
+    range: 0,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    effect: { kind: 'haste', cooldownMultiplier: 0.5, durationMs: 10000 },
+  },
+  'second-wind-2': {
+    id: 'second-wind-2',
+    name: 'Second Wind II',
+    description: 'Catch your breath for 50 health.',
+    classId: 'warrior',
+    training: { level: 7, cost: 1300 },
+    rankOf: 'second-wind',
+    manaCost: 0,
+    cooldownMs: 25000,
+    range: 0,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    effect: { kind: 'heal', amount: 50 },
+  },
+  'crushing-blow-2': {
+    id: 'crushing-blow-2',
+    name: 'Crushing Blow II',
+    description: 'A wind-up swing for over four times the damage.',
+    classId: 'warrior',
+    training: { level: 8, cost: 1600 },
+    rankOf: 'crushing-blow',
+    manaCost: 0,
+    cooldownMs: 18000,
+    range: 80,
+    castTimeMs: 0,
+    baseFailureChance: 0,
+    effect: { kind: 'damage', powerMultiplier: 4.25, thrown: false },
+  },
 };
 
 /**
- * Everything a class could ever put on its bar, in the order the bar draws it
- * and the trainer lists it: the attack first, then what is bought in the order
- * the levels open it. Slot 1 is always the one you press in a fight, and it is
+ * Everything a class could ever learn, in the order the trainer lists it: the
+ * attack first, then what is bought in the order the levels open it, second
+ * ranks included. Slot 1 is always the one you press in a fight, and it is
  * always the one nobody had to buy.
+ *
+ * The bar is the first four — one slot per first rank, in this order — and a
+ * second rank is drawn in the slot of the rank it improves on rather than
+ * after them (`knownAbilities`).
  */
 export const CLASS_ABILITIES: Record<ClassId, AbilityId[]> = {
-  warrior: ['power-slash', 'battle-fury', 'second-wind', 'crushing-blow'],
-  wizard: ['fireball', 'mana-shield', 'mend', 'firestorm'],
+  warrior: [
+    'power-slash',
+    'battle-fury',
+    'second-wind',
+    'crushing-blow',
+    'power-slash-2',
+    'battle-fury-2',
+    'second-wind-2',
+    'crushing-blow-2',
+  ],
+  wizard: [
+    'fireball',
+    'mana-shield',
+    'mend',
+    'firestorm',
+    'fireball-2',
+    'mana-shield-2',
+    'mend-2',
+    'firestorm-2',
+  ],
 };

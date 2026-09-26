@@ -333,17 +333,37 @@ export type ZoneSetting = 'open' | 'marsh' | 'underground';
 export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'fettler';
 
 export type QuestId =
-  'rat-bones' | 'quarry-road' | 'crab-feast' | 'bandit-trouble' | 'the-cutthroat';
+  | 'rat-bones'
+  | 'quarry-road'
+  | 'crab-feast'
+  | 'bandit-trouble'
+  | 'the-cutthroat'
+  // The upper band's, given at Greyford: the outfitter's three, then the fettler's.
+  | 'goblin-road'
+  | 'cut-coal'
+  | 'lurker-hides'
+  | 'blackwater-raiders'
+  | 'the-barrow-king';
 
 // Standing work, as opposed to a quest, which is a story told once. Its own
 // union rather than a slice of QuestId for the reason `LootTableId` is its own:
 // the two lists are read by different counters and have no reason to grow
 // together — a quest is written to be finished, a bounty to be taken again.
 export type BountyId =
-  'rat-cull' | 'shore-patrol' | 'road-contract' | 'timber-order' | 'ore-order' | 'smith-order';
+  | 'rat-cull'
+  | 'shore-patrol'
+  | 'road-contract'
+  | 'timber-order'
+  | 'ore-order'
+  | 'smith-order'
+  // The upper band's: two zones' worth of kills, and two of the Deep Cut's asks.
+  | 'goblin-cull'
+  | 'coal-order'
+  | 'fen-patrol'
+  | 'steel-order';
 
 export type AbilityId =
-  // The two each class opens with, and the two it buys.
+  // The one each class opens with, and the three it buys.
   | 'fireball'
   | 'mana-shield'
   | 'mend'
@@ -351,7 +371,18 @@ export type AbilityId =
   | 'power-slash'
   | 'battle-fury'
   | 'second-wind'
-  | 'crushing-blow';
+  | 'crushing-blow'
+  // The second rank of each, sold at levels 5 to 8. An id of its own rather than
+  // a number on the first rank's, so a save stores a rank bought exactly as it
+  // stores any other lesson and needed no migration to start holding one.
+  | 'fireball-2'
+  | 'mana-shield-2'
+  | 'mend-2'
+  | 'firestorm-2'
+  | 'power-slash-2'
+  | 'battle-fury-2'
+  | 'second-wind-2'
+  | 'crushing-blow-2';
 
 // What an enemy does instead of a swing. Its own union rather than a slice of
 // AbilityId: nothing a creature does is on the player's action bar, and the two

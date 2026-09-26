@@ -5,6 +5,7 @@ import type {
   AchievementId,
   MasteryTargetId,
   GearSlotId,
+  NpcId,
   QuestId,
   RecipeId,
   TitleId,
@@ -50,6 +51,10 @@ export const ACTIONS_CHANGED_EVENT = 'actions-changed';
 // One pair for six counters, where there used to be a pair each: the payload is
 // the role, so a seventh is a row in the tables keyed by it rather than two more
 // constants, two more listeners on each side, and a line somebody forgets.
+//
+// An opening also names who is behind the counter, because the role says which
+// panel to draw and not whose quests to put at the top of it: a quest is given
+// by a person, and two people could one day share a role.
 export const COUNTER_OPENED_EVENT = 'counter-opened';
 export const COUNTER_CLOSED_EVENT = 'counter-closed';
 // Greyford's outfitter: the panel sends back the one row that was tapped.
@@ -380,7 +385,7 @@ export interface UiEventMap {
   [COOK_REQUESTED_EVENT]: [itemId: ItemId];
   [LIGHT_FIRE_REQUESTED_EVENT]: [];
   [ACTIONS_CHANGED_EVENT]: [actions: AvailableActions];
-  [COUNTER_OPENED_EVENT]: [role: NpcRoleId];
+  [COUNTER_OPENED_EVENT]: [role: NpcRoleId, npcId: NpcId];
   [COUNTER_CLOSED_EVENT]: [role: NpcRoleId];
   [TRADE_REQUESTED_EVENT]: [itemId: ItemId];
   [BUY_ITEM_REQUESTED_EVENT]: [itemId: ItemId];

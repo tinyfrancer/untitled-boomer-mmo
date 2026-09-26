@@ -267,6 +267,17 @@ export function describeSignpost(exit: ZoneExit): InspectPanel {
  * which of them they have already bought.
  */
 export function describeNpc(npcId: NpcId): InspectPanel {
+  const card = describeCounter(npcId);
+  // Said on anybody's card who gives quests, rather than on the shopkeeper's
+  // alone: a quest belongs to the person, and whichever counter they work is
+  // incidental to it.
+  const quests = Object.values(QUESTS).filter((quest) => quest.giverNpcId === npcId);
+  if (quests.length === 0) return card;
+  return { ...card, lines: [...card.lines, { label: 'Quests', value: String(quests.length) }] };
+}
+
+/** What standing at somebody's counter gets you, by the role behind it. */
+function describeCounter(npcId: NpcId): InspectPanel {
   const title = npcName(npcId);
   switch (npcRole(npcId)) {
     case 'reforger':
@@ -334,8 +345,7 @@ export function describeNpc(npcId: NpcId): InspectPanel {
         // standing across the square with a quest log.
         note: 'A contract handed in is posted again the moment it is paid.',
       };
-    case 'merchant': {
-      const quests = Object.values(QUESTS).filter((quest) => quest.giverNpcId === npcId);
+    case 'merchant':
       return {
         title,
         subtitle: 'Merchant',
@@ -346,11 +356,9 @@ export function describeNpc(npcId: NpcId): InspectPanel {
             label: 'Stocks',
             value: `${STOCKED_FROM_THE_START} to start, up to ${SHOP_STOCK.length}`,
           },
-          { label: 'Quests', value: quests.length > 0 ? String(quests.length) : 'None' },
         ],
         note: 'The rest of the shelf arrives with the levels you gain and the work you finish.',
       };
-    }
   }
 }
 
