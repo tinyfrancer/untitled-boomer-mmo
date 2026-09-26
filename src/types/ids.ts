@@ -333,7 +333,17 @@ export type ZoneSetting = 'open' | 'marsh' | 'underground';
 export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'fettler';
 
 export type QuestId =
-  'rat-bones' | 'quarry-road' | 'crab-feast' | 'bandit-trouble' | 'the-cutthroat';
+  | 'rat-bones'
+  | 'quarry-road'
+  | 'crab-feast'
+  | 'bandit-trouble'
+  | 'the-cutthroat'
+  // The upper band's, given at Greyford: the outfitter's three, then the fettler's.
+  | 'goblin-road'
+  | 'cut-coal'
+  | 'lurker-hides'
+  | 'blackwater-raiders'
+  | 'the-barrow-king';
 
 // Standing work, as opposed to a quest, which is a story told once. Its own
 // union rather than a slice of QuestId for the reason `LootTableId` is its own:

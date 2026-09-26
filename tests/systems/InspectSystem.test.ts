@@ -3,7 +3,7 @@ import { ENEMIES } from '../../src/data/enemies';
 import { describeItemName, itemWeight } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
-import { QUEST_ORDER } from '../../src/data/quests';
+import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import { SHOP_STOCK } from '../../src/data/shop';
 import { ZONES } from '../../src/data/zones';
 import { STARTING_BANK_SLOTS, bankSlotPrice } from '../../src/systems/BankSystem';
@@ -161,11 +161,28 @@ describe('describing the rest of the world', () => {
     expect(panel.title).toBe('Shopkeeper');
     expect(valueOf(panel, 'Sells')).toBe('Tools, food and supplies');
     expect(valueOf(panel, 'Stocks')).toBe(`${stocked} to start, up to ${SHOP_STOCK.length}`);
-    expect(valueOf(panel, 'Quests')).toBe(String(QUEST_ORDER.length));
+    expect(valueOf(panel, 'Quests')).toBe(
+      String(QUEST_ORDER.filter((questId) => QUESTS[questId].giverNpcId === 'shopkeeper').length),
+    );
     expect(panel.note).toContain('the work you finish');
     // No item name appears anywhere on it, gated or not.
     const said = [...panel.lines.map((line) => line.value), panel.note ?? ''].join(' ');
     SHOP_STOCK.forEach((entry) => expect(said).not.toContain(describeItemName(entry.itemId)));
+  });
+
+  /**
+   * A quest is the person's rather than their counter's, so the count is on the
+   * card of anybody who gives one — the two at Greyford as well as the
+   * shopkeeper — and on nobody else's.
+   */
+  it('counts the quests on the card of whoever gives them, whatever their counter', () => {
+    const givers = new Set(QUEST_ORDER.map((questId) => QUESTS[questId].giverNpcId));
+    expect(givers.size).toBeGreaterThan(1);
+    for (const npcId of givers) {
+      const theirs = QUEST_ORDER.filter((questId) => QUESTS[questId].giverNpcId === npcId);
+      expect(valueOf(describeNpc(npcId), 'Quests'), npcId).toBe(String(theirs.length));
+    }
+    expect(valueOf(describeNpc('banker'), 'Quests')).toBeUndefined();
   });
 
   /**

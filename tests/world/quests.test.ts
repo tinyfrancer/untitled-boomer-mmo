@@ -179,3 +179,61 @@ describe('an objective that is not a bag', () => {
     game.destroy();
   });
 });
+
+/**
+ * The upper band's givers stand at Greyford, and the rules are the town's: a
+ * quest is taken from the person who gives it and nobody else, and a chain is
+ * held back until the link before it is handed in — here across the yard, from
+ * the outfitter's counter to the fettler's.
+ */
+describe('at Greyford', () => {
+  function standAt(kit: ReturnType<typeof harness>, npcId: string): void {
+    const npc = kit.world.npcs.find((candidate) => candidate.npcId === npcId);
+    if (!npc) throw new Error(`greyford has no ${npcId}`);
+    kit.world.teleport(npc.x, npc.y + 50);
+    kit.world.approachNpc(npc);
+  }
+
+  it('takes the outfitter’s work at the outfitter’s counter and not the fettler’s', () => {
+    const kit = harness({ zoneId: 'greyford' });
+
+    standAt(kit, 'fettler');
+    kit.bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'goblin-road');
+    expect(kit.state.quests['goblin-road']).toBeUndefined();
+
+    standAt(kit, 'outfitter');
+    kit.bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'goblin-road');
+    expect(questStatus(kit.state.quests, 'goblin-road')).toBe('active');
+  });
+
+  it('holds the fettler’s first link until the outfitter’s are handed in', () => {
+    const kit = harness({ zoneId: 'greyford' });
+    standAt(kit, 'fettler');
+
+    kit.bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'blackwater-raiders');
+    expect(kit.state.quests['blackwater-raiders']).toBeUndefined();
+
+    kit.state.quests['goblin-road'] = { status: 'done', baseline: 0 };
+    kit.state.quests['lurker-hides'] = { status: 'done', baseline: 0 };
+    kit.bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'blackwater-raiders');
+    expect(questStatus(kit.state.quests, 'blackwater-raiders')).toBe('active');
+  });
+
+  it.each(['warrior', 'wizard'] as const)(
+    'hands a %s the chest its own tier drops least often for the hides',
+    (classId) => {
+      const kit = harness({ zoneId: 'greyford', classId });
+      kit.state.quests['goblin-road'] = { status: 'done', baseline: 0 };
+      standAt(kit, 'outfitter');
+      kit.bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'lurker-hides');
+      kit.character.addItem('lurker-hide', 8);
+
+      kit.bus.emit(TURN_IN_QUEST_REQUESTED_EVENT, 'lurker-hides');
+
+      expect(questStatus(kit.state.quests, 'lurker-hides')).toBe('done');
+      expect(kit.character.itemCount('lurker-hide')).toBe(0);
+      const chest = classId === 'warrior' ? 'studded-jerkin' : 'fenweave-robe';
+      expect(kit.character.itemCount(chest)).toBe(1);
+    },
+  );
+});
