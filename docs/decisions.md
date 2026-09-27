@@ -1494,3 +1494,119 @@ that an arrived arrow is quivered first (decision 73).
 **Why:** a bench spends before it hands back, so it has always been the one acquisition a full pack
 cannot refuse (the offline payout says so too). Arrows made it the first one that also has somewhere
 to go before the bag.
+
+## 80. Version 2 is a solo game; the multiplayer vision is dropped
+
+**2026-09-27 · the user**
+
+The game is a solo zero-to-hero from here: power up, beat bigger things, collect. More fun and less
+grindy than it has been, and still a time sink. `docs/initial_design.txt`'s multiplayer is no longer
+the direction, and nothing is built as groundwork for it.
+
+**Rejected:** keeping multiplayer as the long-term vision, which `CLAUDE.md` told every session not
+to assume and every system was still shaped around not ruling out.
+
+## 81. The game goes 2D, top-down 3/4, in pixel art Claude draws as data
+
+**2026-09-27 · the user, asked by Claude**
+
+The renderer changes from Three.js 3D to 2D, viewed top-down at 3/4 (Link to the Past, Stardew,
+classic RuneScape). Its detail comes from pixel art that Claude authors as data in code: pixel grids
+with palette keys, compiled to texture atlases at boot. This reverses `docs/archive/3d_port_plan.md`
+and the half of decision 54 that kept art out of the game. It keeps the other half: the game still
+loads no image or model files, so what the GPU holds is still only what the game builds.
+
+**Rejected:** 2D sprites from free asset packs, which Claude recommended as the biggest jump in
+detail for the least art skill; 3D models from packs; AI images generated in an image tool, by the
+user or anyone else; staying procedural; isometric and side-on views.
+
+**The risk, named when it was chosen:** hand-placed pixels suit tiles, items and icons better than
+characters and animation. The plan's phase B2 is a checkpoint, with one zone and one character
+judged before anything else is converted, so that if it does not hold up the art source is
+re-decided there.
+
+## 82. Old saves retire when the rebuilt world lands
+
+**2026-09-27 · the user, asked by Claude**
+
+Version 2 is a fresh start. When the plan's phase C1 rebuilds the world at a new size,
+`CHARACTER_STATE_VERSION` jumps with no migration from before, and every older save is dropped.
+Before C1 and after it, migrations work as usual.
+
+**Rejected:** migrating every character into the rebuilt world, which Claude recommended; a fresh
+start that leaves the new character a keepsake from the old.
+
+## 83. Production shows version 2 as it is built
+
+**2026-09-27 · the user, asked by Claude**
+
+Each phase goes live as it merges, half-converted or not. The one exception is the art checkpoint
+(B2), reachable by a URL flag for the one phase it takes to judge it, so the live game is never
+drawn by a renderer that can only draw one zone.
+
+**Rejected:** building the 2D renderer behind a switch until it covered everything, which Claude
+recommended; a long-lived release branch with preview deploys.
+
+## 84. The cap goes to 20, with a specialisation at 10
+
+**2026-09-27 · the user, asked by Claude**
+
+Version 2 raises the level cap from 8 to 20. At level 10 each class chooses one of two paths, each
+with its own abilities and ranks; the bar stays four buttons. How many zones and bands 9-20 takes is
+sized after the rebuilt zones have shown how long one takes to make.
+
+**Rejected:** a cap of 15; sizing the cap after the overhaul; more ranks of the same abilities; a
+bar that grows to six.
+
+## 85. Camp becomes Idle, and idle and active each feed the other
+
+**2026-09-27 · the user, asked by Claude**
+
+What the game called camping is **Idle** to the player. Time idle or away banks a **rested** bonus
+that speeds up active XP, and potions brewed in active play **boost idle gains**, so each mode has a
+reason the other does not.
+
+**Rejected:** Autopilot, Rest or Settle, and keeping "camp" with an explanation; boosts in one
+direction only (potions for idle, or rested for active).
+
+## 86. A bigger world to explore, and a skills book that hides nothing
+
+**2026-09-27 · the user, asked by Claude**
+
+Zones grow to about three times the area (roughly 45×32 tiles, from 25×19), with a minimap.
+Creatures path around walls and obstacles, reversing decision 26. The skills book shows every recipe, locked ones greyed with
+their level, inputs, result and stats.
+
+**Rejected:** zones six times the area, and sizes that vary by zone; showing only the next few
+recipes, or only the ones learned.
+
+## 87. The realm has people, a history and a tone
+
+**2026-09-27 · the user, asked by Claude**
+
+- **Dialog moves faction reputation.** Choices and deeds raise or lower standing with factions, and
+  standing opens stock, quests, dialog and titles.
+- **"Whispers of the Realm" is one journal** of rumours (leads to secrets, caches, rare creatures,
+  side quests) and lore (what following them teaches).
+- **The helper is a spirit that floats beside the player and is a character**, with a name and a
+  story, not only a source of tips.
+- **The tone is all of it, blended the way RuneScape blends it.** In the user's words: magical
+  creatures "should feel magical when we encounter" them, and "elves, dwarves etc." should "still be
+  present in the world"; the humour is "cheeky … but not too much and not constant"; and there
+  "should [be] some real stakes/grounded stuff".
+
+**Rejected:** dialog as flavour and leads only, which Claude recommended, and dialog with a few
+branching outcomes; a rumour log alone, a lore codex alone, or dialog with no collection; a helper
+that lives only in the HUD, or one that floats beside you without a story; any one tone on its own.
+
+## 88. A house that grows, a collection log, and a save you can take with you
+
+**2026-09-27 · the user, asked by Claude**
+
+The player gets a house in town to walk into, display trophies from quests, achievements and
+bosses, and grow by buying upgrades. A collection log and bestiary count what has been slain, seen,
+found and earned, and feed what the house displays. The save can be exported to a file and imported
+back.
+
+**Rejected:** a house that is only a place, with no upgrades; a trophy page in a menu rather than a
+place.
