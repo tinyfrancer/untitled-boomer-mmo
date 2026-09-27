@@ -22,12 +22,12 @@ and local save/load with versioned migrations. `docs/architecture/zones.md` has 
 what each zone is for.
 
 **Work in progress is planned in a doc before it is built**, phased into PRs with the argument for
-each decision in it. There is **no live plan** right now — the last one,
-`docs/archive/act_three_plan.md` (cleanup, graphics, sound, loot piles, upper-band content, the
-ranger, fletching and willow), finished on 2026-09-26 and went to `docs/archive/` with its handoff.
-When there is a live one, check its status line before starting anything, since it says which phase
-landed and which is next. Anything big enough to phase gets a new plan doc rather than being started
-against this file alone.
+each decision in it. The **live plan** is `docs/v2_plan.md`: **version 2**, a solo zero-to-hero
+redrawn in 2D pixel art, with bigger zones, people and lore, a house, and a cap of 20 (decisions
+80-88). **Check its status line before starting anything** — it says which phase landed and which is
+next — and its "Starting cold" section. Its parts each end in a review phase that amends the plan,
+so read it as it stands, not as it was. Finished plans go to `docs/archive/`. Anything big enough to
+phase gets a new plan doc rather than being started against this file alone.
 
 **Decisions that closed off a real alternative go in `docs/decisions.md`**, appended and never
 edited. That file is not a duplicate of this one: this describes the shape of the system as it
@@ -38,9 +38,10 @@ beside the code instead.
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
 code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
-them at 1-3, and `spawns.ts` is right). Full long-term vision is in
-`docs/initial_design.txt` (multiplayer, more zones, more skills) — most of it is intentionally
-not built yet, so don't assume features from that doc exist in code.
+them at 1-3, and `spawns.ts` is right). The original long-term vision is in
+`docs/initial_design.txt` (multiplayer, more zones, more skills) — most of it is intentionally not
+built, and **its multiplayer is no longer the direction**: the game is solo (decision 80). Don't
+assume features from that doc exist in code.
 
 ## Commands
 
