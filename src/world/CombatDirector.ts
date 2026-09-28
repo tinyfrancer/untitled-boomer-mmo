@@ -143,10 +143,7 @@ export class CombatDirector {
       achievementId: definition.id,
       name: definition.name,
       titleId: definition.titleId,
-      titleWorn:
-        definition.titleId !== undefined &&
-        worn === null &&
-        character.state.activeTitleId === definition.titleId,
+      titleWorn: worn === null && character.state.activeTitleId === definition.titleId,
     }));
   }
 

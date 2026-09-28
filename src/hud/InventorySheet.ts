@@ -2,10 +2,10 @@ import { Sheet } from './Sheet';
 import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
 import type { ItemId } from '../types/ids';
 import { el, emptyLine } from './dom';
+import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
 import { bindLongPress } from './longPress';
 import { consumableFor, describeItemBonuses, describeItemName, isEquippable } from '../data/items';
-import { formatCurrency } from '../systems/CurrencySystem';
 import { encumbranceLevel } from '../systems/EncumbranceSystem';
 import type { ItemAction, ItemActionId } from '../systems/ItemActionsSystem';
 import type { ScreenPoint } from '../ui/uiEvents';
@@ -37,7 +37,7 @@ export interface InventorySheetHandlers {
  * free — the same bargain the clipping and the drag-versus-tap threshold make.
  */
 export class InventorySheet extends Sheet {
-  private readonly coin: HTMLElement;
+  private readonly purse: Purse;
   private readonly weight: HTMLElement;
   private readonly grid: HTMLElement;
   private readonly detail: HTMLElement;
@@ -50,8 +50,8 @@ export class InventorySheet extends Sheet {
     this.handlers = handlers;
 
     // Coin lives in the header rather than as a cell: currency is not an item.
-    this.coin = el('div', 'hud-coin', formatCurrency(0));
-    this.head.append(this.coin);
+    this.purse = new Purse();
+    this.head.append(this.purse.root);
 
     // The pack's fill level. Coloured rather than merely printed: "full" is the
     // difference between a gather run continuing and stopping.
@@ -65,12 +65,12 @@ export class InventorySheet extends Sheet {
   }
 
   setCurrency(totalCopper: number): void {
-    this.coin.textContent = formatCurrency(totalCopper);
+    this.purse.set(totalCopper);
   }
 
   setEncumbrance(weight: number, capacity: number): void {
     const level = encumbranceLevel(weight, capacity);
-    this.weight.textContent = `${Math.round(weight)} / ${capacity} carried`;
+    this.weight.textContent = `Weight ${Math.round(weight)} / ${capacity}`;
     this.weight.classList.toggle('is-heavy', level === 'heavy');
     this.weight.classList.toggle('is-full', level === 'full');
   }

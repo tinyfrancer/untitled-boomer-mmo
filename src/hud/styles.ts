@@ -452,6 +452,15 @@ function hudCss(): string {
   -webkit-overflow-scrolling: touch;
   padding: 4px ${THEME.padding}px ${THEME.padding}px;
 }
+/* What a page is for, said once at its top: small, and out of the way of the rows. */
+.hud-sheet__intro {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+  padding-bottom: ${THEME.padding}px;
+}
+.hud-sheet__intro p {
+  margin: 0 0 4px;
+}
 
 /* --- Character sheet ----------------------------------------------------- */
 
@@ -529,6 +538,10 @@ function hudCss(): string {
 .hud-coin {
   font-size: ${THEME.font.sm}px;
   color: ${THEME.color.levelUp};
+}
+.hud-coin__label {
+  color: ${THEME.color.muted};
+  margin-right: 0.35em;
 }
 .hud-weight {
   font-size: ${THEME.font.xs}px;
@@ -712,14 +725,25 @@ function hudCss(): string {
 
 .hud-titles {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
   padding: 0 ${THEME.padding}px ${THEME.padding}px;
   flex: 0 0 auto;
 }
+.hud-titles__worn {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.levelUp};
+}
 .hud-titles .hud-button {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
   font-size: ${THEME.font.xs}px;
+}
+.hud-feat-title {
+  color: ${THEME.color.levelUp};
+}
+.hud-feat-title.is-selected {
+  box-shadow: inset 3px 0 0 ${THEME.color.levelUp};
 }
 .hud-feat-group {
   margin-bottom: ${THEME.padding}px;

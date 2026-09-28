@@ -723,10 +723,13 @@ export class CharacterController {
     this.state.kills = recordKill(before, enemyId, count);
     const crossed = crossedAchievements(before, this.state.kills, enemyId);
 
+    // Nothing worn yet: the best rank just reached goes on. The best rather than
+    // the first, since an offline payout can cross two ranks at once and the
+    // lower one is not what anyone has just earned.
     if (this.state.activeTitleId === null) {
-      const firstTitle = crossed.find((definition) => definition.titleId)?.titleId;
-      if (firstTitle) {
-        this.state.activeTitleId = firstTitle;
+      const best = crossed.at(-1);
+      if (best) {
+        this.state.activeTitleId = best.titleId;
       }
     }
     return crossed;

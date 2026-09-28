@@ -1303,7 +1303,7 @@ async function bank() {
   );
   check(
     'the panel redraws from the shelves the world answered with',
-    stored.deposits === 0 && stored.withdraws === 1 && stored.slots === '1/8 slots',
+    stored.deposits === 0 && stored.withdraws === 1 && stored.slots === '1 / 8 slots',
     `${stored.deposits} deposit rows, ${stored.withdraws} withdraw rows, "${stored.slots}"`,
   );
   await page.screenshot({ path: `${OUT}/9-bank.png` });
@@ -1560,7 +1560,7 @@ async function bountyBoard() {
     'taking a contract puts a line on the tracker and a Drop button on its row',
     taken.held === 'rat-cull' &&
       taken.tracked.length === trackedBefore + 1 &&
-      taken.tracked.some((line) => line.includes('Rat Cull') && line.includes('0/15')) &&
+      taken.tracked.some((line) => line.includes('Rat Cull') && line.includes('0 / 15')) &&
       taken.drop === 1 &&
       !taken.heldIsButton,
     `held ${taken.held}, tracker: ${taken.tracked.join(' | ')}, drop ${taken.drop}`,
@@ -1582,7 +1582,7 @@ async function bountyBoard() {
   }));
   check(
     'a kill made away from the counter redraws the row and the strip together',
-    ready.tracked.some((line) => line.includes('15/15')) && ready.values.includes('Hand in'),
+    ready.tracked.some((line) => line.includes('15 / 15')) && ready.values.includes('Hand in'),
     `tracker: ${ready.tracked.join(' | ')}, values: ${ready.values.join(', ')}`,
   );
 
@@ -2515,8 +2515,10 @@ async function achievements() {
     return {
       visible: getComputedStyle(sheet).display !== 'none',
       rat: rows.find((row) => row.startsWith('Rat')) ?? '',
-      earnedTiers: sheet.querySelectorAll('.hud-row--tier.is-earned').length,
-      titles: [...sheet.querySelectorAll('.hud-titles .hud-button')].map((n) => n.textContent),
+      earnedTiers: sheet.querySelectorAll('.hud-feat-title.is-earned').length,
+      titles: [...sheet.querySelectorAll('.hud-feat-title')].map(
+        (n) => /** @type {HTMLElement} */ (n).dataset.title,
+      ),
     };
   });
   check(
@@ -2525,8 +2527,8 @@ async function achievements() {
     `${unlockedTiers} tier(s) unlocked, sheet shows "${slayer.rat}"`,
   );
   check(
-    'a completed chain offers its title in the picker',
-    slayer.titles.includes('Rat Slayer'),
+    'a completed chain offers every one of its ranks as a title to wear',
+    ['rat-culler', 'rat-hunter', 'rat-slayer'].every((title) => slayer.titles.includes(title)),
     slayer.titles.join(', '),
   );
   await page.screenshot({ path: `${OUT}/11-achievements.png` });
@@ -2542,7 +2544,7 @@ async function achievements() {
       ),
     );
   const beforeTitle = await columnHeight();
-  await page.click('.hud-titles .hud-button[data-title="rat-slayer"]');
+  await page.click('.hud-feat-title[data-title="rat-slayer"]');
   await page.waitForTimeout(250);
   const wornTitle = await page.evaluate(() => {
     const line = /** @type {HTMLElement} */ (document.querySelector('.hud-player__title'));
@@ -2603,6 +2605,7 @@ async function achievements() {
       visible: getComputedStyle(sheet).display !== 'none',
       count: rows.length,
       tree: rows.find((row) => row.startsWith('Tree')) ?? '',
+      intro: sheet.querySelector('.hud-sheet__intro')?.textContent ?? '',
     };
   });
   check(
@@ -2612,8 +2615,13 @@ async function achievements() {
   );
   check(
     'and a pool that crossed a rung says which one it stands on',
-    pools.tree.includes('Apprentice') && pools.tree.includes('2/5'),
+    pools.tree.includes('Apprentice') && pools.tree.includes('rank 2 / 5'),
     `tree row: "${pools.tree}"`,
+  );
+  check(
+    'and the page says what mastery is and what its ranks pay',
+    pools.intro.includes('mastery of its own') && pools.intro.includes('Master 30%'),
+    `"${pools.intro.slice(0, 60)}…"`,
   );
   await page.screenshot({ path: `${OUT}/13-mastery.png` });
 }

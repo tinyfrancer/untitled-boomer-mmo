@@ -356,12 +356,12 @@ describe('the redraws that are derived rather than sent', () => {
       createNewCharacter('T', 'warrior').gear,
       1,
     ).strength;
-    expect(weightLine()).toBe(`0 / ${carryCapacity(strength)} carried`);
+    expect(weightLine()).toBe(`Weight 0 / ${carryCapacity(strength)}`);
 
     const bag = { 'rat-bones': 3 };
     events.emit(INVENTORY_CHANGED_EVENT, bag);
     expect(weightLine()).toBe(
-      `${Math.round(inventoryWeight(bag))} / ${carryCapacity(strength)} carried`,
+      `Weight ${Math.round(inventoryWeight(bag))} / ${carryCapacity(strength)}`,
     );
   });
 
@@ -375,7 +375,7 @@ describe('the redraws that are derived rather than sent', () => {
       createNewCharacter('T', 'warrior').gear,
       5,
     ).strength;
-    expect(weightLine()).toBe(`0 / ${carryCapacity(strength)} carried`);
+    expect(weightLine()).toBe(`Weight 0 / ${carryCapacity(strength)}`);
   });
 
   it('moves capacity with the strength gear carries', () => {
@@ -494,14 +494,14 @@ describe('the quiver', () => {
   it('shows the sheet a shot’s attack, built on agility, and the arrows beside the quiver', () => {
     mount(createNewCharacter('Robin', 'ranger'));
     const text = parent.querySelector('[data-sheet="character"]')?.textContent ?? '';
-    expect(text).toContain('AGI 6');
-    expect(text).toContain('ATK 9 (AGI)');
+    expect(text).toContain('Agility 6');
+    expect(text).toContain('Attack 9 (Agility)');
     expect(text).toContain('Worn Quiver — 50 Crude Arrows');
 
     // Dry, the bow is a pair of fists, and the sheet says the punch.
     events.emit(QUIVER_CHANGED_EVENT, null);
     const dry = parent.querySelector('[data-sheet="character"]')?.textContent ?? '';
-    expect(dry).toContain('ATK 6 (AGI)');
+    expect(dry).toContain('Attack 6 (Agility)');
     expect(dry).toContain('Worn Quiver — empty');
   });
 });
@@ -724,7 +724,7 @@ describe('the bank', () => {
 
     expect(bank()?.textContent).toContain('Logs');
     expect(bank()?.textContent).toContain('Rat Bones');
-    expect(bank()?.textContent).toContain('1/8 slots');
+    expect(bank()?.textContent).toContain('1 / 8 slots');
   });
 
   /**
@@ -1282,6 +1282,27 @@ describe('the map', () => {
     expect(
       parent.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent,
     ).toBe('Town');
+  });
+
+  /**
+   * The keepers of the counters stand inside the buildings they work from, so a
+   * name drawn under the markers had a dot through it. Every name comes after
+   * every marker, and nothing but the player's own dot comes after the names.
+   */
+  it('draws every building name over the markers', () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    const drawn = [...(svg()?.children ?? [])];
+    const lastMarker = drawn.reduce(
+      (last, node, index) => (node.hasAttribute('data-marker') ? index : last),
+      -1,
+    );
+    const names = drawn.flatMap((node, index) =>
+      node.hasAttribute('data-building-name') ? [index] : [],
+    );
+    expect(names.length).toBeGreaterThan(0);
+    expect(Math.min(...names)).toBeGreaterThan(lastMarker);
+    expect(drawn.at(-1)).toBe(dot());
   });
 
   // A dot parked in the corner would read as a position rather than as an

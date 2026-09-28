@@ -69,7 +69,7 @@ function questRow(offer: QuestOffer, handlers: QuestHandlers): HTMLElement {
           ? 'Accept'
           : ready
             ? 'Hand in'
-            : `${progress.have}/${progress.need}`,
+            : `${progress.have} / ${progress.need}`,
     valueClass: 'hud-list-row__value',
     onClick: () => {
       if (state === 'available') {

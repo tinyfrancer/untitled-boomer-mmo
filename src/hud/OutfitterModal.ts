@@ -79,7 +79,7 @@ export class OutfitterModal extends Overlay {
       const cost = row({
         className: 'hud-row hud-row--tier',
         label: describeItemName(line.itemId),
-        value: `${line.have}/${line.quantity}`,
+        value: `${line.have} / ${line.quantity} in bag`,
         valueClass: 'hud-muted',
       });
       cost.root.classList.toggle('is-earned', line.met);

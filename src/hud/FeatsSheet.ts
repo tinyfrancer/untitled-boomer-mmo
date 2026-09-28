@@ -1,6 +1,7 @@
 import { Sheet } from './Sheet';
 import { el, emptyLine, row } from './dom';
 import { ENEMIES } from '../data/enemies';
+import type { AchievementDefinition } from '../data/achievements';
 import {
   allAchievements,
   earnedTitles,
@@ -12,48 +13,54 @@ import { THEME } from '../ui/theme';
 import type { EnemyId, TitleId } from '../types/ids';
 
 /**
- * The slayer chains, grouped by creature, plus the picker for which earned
- * title to wear.
+ * The slayer chains, grouped by creature, and which earned title is worn.
  *
- * The picker sits above the scrolling body rather than inside it: it is the
- * only interactive thing here, and pinning it means the scrolling region holds
- * nothing but text.
+ * Every rank pays a title, so an earned rank's row is the button that wears it:
+ * a picker of its own would be up to three buttons a creature pinned above the
+ * list. What stays pinned is the one line saying what is worn, and the way to
+ * take it off, since that is the only thing on the sheet that is not a row.
  */
 export class FeatsSheet extends Sheet {
-  private readonly picker: HTMLElement;
+  private readonly worn: HTMLElement;
   private readonly onSetTitle: (titleId: TitleId | null) => void;
 
   constructor(onSetTitle: (titleId: TitleId | null) => void) {
     super('Achievements', THEME.panelWidth.character);
     this.onSetTitle = onSetTitle;
-    this.picker = el('div', 'hud-titles');
-    this.root.insertBefore(this.picker, this.body);
+    this.worn = el('div', 'hud-titles');
+    this.root.insertBefore(this.worn, this.body);
   }
 
   update(kills: KillCounts, activeTitleId: TitleId | null): void {
-    this.buildPicker(kills, activeTitleId);
-    this.buildRows(kills);
+    this.buildWorn(kills, activeTitleId);
+    this.buildRows(kills, activeTitleId);
   }
 
-  private buildPicker(kills: KillCounts, activeTitleId: TitleId | null): void {
-    this.picker.replaceChildren();
-    const earned = earnedTitles(kills);
-    if (earned.length === 0) {
-      this.picker.append(emptyLine('Slay 100 of a creature to earn its title.'));
+  private buildWorn(kills: KillCounts, activeTitleId: TitleId | null): void {
+    this.worn.replaceChildren();
+    if (earnedTitles(kills).length === 0) {
+      this.worn.append(emptyLine('Every rank below is a title to wear, the first at 25 slain.'));
       return;
     }
-    const choices: (TitleId | null)[] = [null, ...earned];
-    for (const titleId of choices) {
-      const button = el('button', 'hud-button', titleId ? titleName(titleId) : 'None');
-      button.type = 'button';
-      button.dataset.title = titleId ?? 'none';
-      button.classList.toggle('is-selected', activeTitleId === titleId);
-      button.addEventListener('click', () => this.onSetTitle(titleId));
-      this.picker.append(button);
+    this.worn.append(
+      el(
+        'div',
+        'hud-titles__worn',
+        activeTitleId
+          ? `Title: ${titleName(activeTitleId)}`
+          : 'No title worn. Tap a rank to wear it.',
+      ),
+    );
+    if (activeTitleId) {
+      const off = el('button', 'hud-button', 'Take off');
+      off.type = 'button';
+      off.dataset.title = 'none';
+      off.addEventListener('click', () => this.onSetTitle(null));
+      this.worn.append(off);
     }
   }
 
-  private buildRows(kills: KillCounts): void {
+  private buildRows(kills: KillCounts, activeTitleId: TitleId | null): void {
     this.body.replaceChildren();
     for (const enemyId of Object.keys(ENEMIES) as EnemyId[]) {
       const slain = killCount(kills, enemyId);
@@ -62,18 +69,41 @@ export class FeatsSheet extends Sheet {
 
       for (const definition of allAchievements()) {
         if (definition.enemyId !== enemyId) continue;
-        const done = slain >= definition.threshold;
-        const line = featRow(
-          'hud-row hud-row--tier',
-          done ? `✓ ${definition.name}` : definition.name,
-          done ? 'earned' : `${slain}/${definition.threshold}`,
-        );
-        line.root.classList.toggle('is-earned', done);
-        group.append(line.root);
+        group.append(tierRow(definition, slain, activeTitleId, this.onSetTitle));
       }
       this.body.append(group);
     }
   }
+}
+
+function tierRow(
+  definition: AchievementDefinition,
+  slain: number,
+  activeTitleId: TitleId | null,
+  onSetTitle: (titleId: TitleId | null) => void,
+): HTMLElement {
+  if (slain < definition.threshold) {
+    const line = featRow(
+      'hud-row hud-row--tier',
+      definition.name,
+      `${slain} / ${definition.threshold} slain`,
+    );
+    return line.root;
+  }
+  const worn = activeTitleId === definition.titleId;
+  const line = row({
+    className: 'hud-list-row hud-feat-title',
+    label: `✓ ${definition.name}`,
+    value: worn ? 'Worn' : 'Wear',
+    valueClass: 'hud-muted',
+    // Tapping the worn rank takes it off, so the row is a toggle like the
+    // button that sits pinned above.
+    onClick: () => onSetTitle(worn ? null : definition.titleId),
+  });
+  line.root.dataset.title = definition.titleId;
+  line.root.classList.add('is-earned');
+  line.root.classList.toggle('is-selected', worn);
+  return line.root;
 }
 
 function featRow(className: string, label: string, value: string) {

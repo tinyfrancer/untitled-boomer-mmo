@@ -1,5 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
+import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName } from '../data/items';
 import { MAX_BANK_SLOTS, bankSlotPrice, bankSlotsUsed } from '../systems/BankSystem';
@@ -40,7 +41,7 @@ export interface BankHandlers {
  */
 export class BankModal extends Overlay {
   private readonly slots: HTMLElement;
-  private readonly coin: HTMLElement;
+  private readonly purse: Purse;
   readonly body: HTMLElement;
   private readonly handlers: BankHandlers;
 
@@ -52,12 +53,12 @@ export class BankModal extends Overlay {
     const head = el('div', 'hud-modal__head');
     head.append(el('div', 'hud-modal__title', 'Bank'));
     this.slots = el('div', 'hud-bank__slots');
-    this.coin = el('div', 'hud-coin');
+    this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
     close.dataset.action = 'close-bank';
     close.addEventListener('click', () => handlers.onDismiss());
-    head.append(this.slots, this.coin, close);
+    head.append(this.slots, this.purse.root, close);
 
     this.body = el('div', 'hud-modal__body');
     box.append(head, this.body);
@@ -66,10 +67,10 @@ export class BankModal extends Overlay {
 
   update(state: BankPanelState): void {
     const used = bankSlotsUsed(state.contents);
-    this.slots.textContent = `${used}/${state.slots} slots`;
+    this.slots.textContent = `${used} / ${state.slots} slots`;
     // The one number worth colouring: a full vault is why a deposit refuses.
     this.slots.style.color = used >= state.slots ? THEME.color.playerDamage : THEME.color.muted;
-    this.coin.textContent = formatCurrency(state.currency);
+    this.purse.set(state.currency);
     this.body.replaceChildren();
 
     const stored = entriesOf(state.contents);

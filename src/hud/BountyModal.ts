@@ -1,5 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
+import { Purse } from './purse';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { bountyOffers, type BountyOffer } from '../systems/BountySystem';
 import { describeObjective, type QuestCounters } from '../systems/QuestSystem';
@@ -37,7 +38,7 @@ export interface BountyHandlers {
  * order would bury the only row that can be acted on among five that cannot.
  */
 export class BountyModal extends Overlay {
-  private readonly coin: HTMLElement;
+  private readonly purse: Purse;
   readonly body: HTMLElement;
   private readonly handlers: BountyHandlers;
 
@@ -48,12 +49,12 @@ export class BountyModal extends Overlay {
 
     const head = el('div', 'hud-modal__head');
     head.append(el('div', 'hud-modal__title', 'Bounties'));
-    this.coin = el('div', 'hud-coin');
+    this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
     close.dataset.action = 'close-bounty';
     close.addEventListener('click', () => handlers.onDismiss());
-    head.append(this.coin, close);
+    head.append(this.purse.root, close);
 
     this.body = el('div', 'hud-modal__body');
     box.append(head, this.body);
@@ -61,7 +62,7 @@ export class BountyModal extends Overlay {
   }
 
   update(state: BountyPanelState): void {
-    this.coin.textContent = formatCurrency(state.currency);
+    this.purse.set(state.currency);
     this.body.replaceChildren();
 
     const offers = bountyOffers('quartermaster', state);
@@ -105,7 +106,7 @@ export class BountyModal extends Overlay {
           : state === 'ready'
             ? 'Hand in'
             : state === 'taken'
-              ? `${progress.have}/${progress.need}`
+              ? `${progress.have} / ${progress.need}`
               : pay,
       valueClass: 'hud-list-row__value',
       /*

@@ -40,7 +40,7 @@ export class QuestTracker {
     if (bounty) {
       const definition = bountyById(bounty.bountyId);
       const { have, need, met } = bountyProgress(definition, bounty, counters);
-      lines.push({ text: `${definition.name}  ${have}/${need}`, met });
+      lines.push({ text: `${definition.name}  ${have} / ${need}`, met });
     }
     for (const definition of activeQuests(log)) {
       const { met } = questProgress(definition, log, counters);

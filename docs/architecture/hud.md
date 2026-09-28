@@ -78,6 +78,12 @@ identical tiles (`terrainBands`), which takes a 475-tile zone down to 65 rectang
 they wander, so drawing them means a moving position per frame, and a map of where the rats were a
 second ago is worse than a map with no rats on it. No tap-to-travel either.
 
+**A building's name is drawn over the markers, and its ground under them.** The keepers of the
+counters stand inside the buildings they work from (the interiors plan moved them in), so a name
+drawn before the dots had an NPC's dot through it. Names go after every marker and before only the
+player's dot; the label outline (`.hud-map__label`) keeps a name readable over whatever it crosses.
+`Hud.test.ts` holds the order.
+
 **The two top corners share the row rather than stacking**: who you are top-left, what you are
 fighting top-right. The column starts at the margin, not a target frame and a margin down the
 screen. The frame takes the width _left beside_ the column rather than `THEME.panelWidth.target`
@@ -156,3 +162,17 @@ than shipping an untappable button.
 are the same shape — something you are in the middle of, with a duration and something that can
 break it — and no two of them can be running at once, since starting any one gives up whatever was
 already going and a hit breaks all three. One widget rather than three stacked in the same place.
+
+**Every number says what it counts, in a word or two** (decision 89). "Not hand-holding, not
+obscure": a skill row reads `Lv 3 · 40 / 96 XP`, the bag `Weight 12 / 88`, a station's input
+`Iron Ore ×2 (3 in bag)` — the recipe's amount first and what you hold after, since `3/2` said
+neither — and a counter `3 / 10`, where its own label already names the thing counted. The player's
+money is one element everywhere it shows (`hud/purse.ts`, labelled **Coins**): it sits in a header
+beside prices, and a bare figure in the corner of a shop reads as well as the price of something as
+the coin in hand. A page that explains a system does it once, at its top, from the data it explains:
+the mastery page builds its rank list from `MASTERY_TIERS`, so a retune moves the words with it.
+
+**Every earned slayer rank is a title, and its row is the button that wears it** (`FeatsSheet`).
+Three ranks a creature would have been up to thirty-three buttons pinned above the list; what is
+pinned instead is the one line saying what is worn and a Take off. Tapping the worn rank's row takes
+it off, so the row is a toggle like the button above it.

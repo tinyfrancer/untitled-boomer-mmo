@@ -271,5 +271,5 @@ export function formatQuestProgress(
   counters: QuestCounters,
 ): string {
   const { have, need } = questProgress(definition, log, counters);
-  return `${definition.name}  ${have}/${need}`;
+  return `${definition.name}  ${have} / ${need}`;
 }

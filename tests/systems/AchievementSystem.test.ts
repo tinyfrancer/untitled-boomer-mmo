@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
-import {
-  ACHIEVEMENTS,
-  ACHIEVEMENT_ORDER,
-  SLAYER_TIERS,
-  TITLES,
-  TITLE_TIER,
-} from '../../src/data/achievements';
+import { ACHIEVEMENTS, ACHIEVEMENT_ORDER, SLAYER_TIERS, TITLES } from '../../src/data/achievements';
 import {
   achievementProgress,
   allAchievements,
@@ -40,20 +34,30 @@ describe('the achievement grid', () => {
     }
   });
 
-  it('pays a title at the top tier and nowhere else', () => {
+  /**
+   * Every rank, so a player can wear the rank they like rather than only the
+   * last one reached — and each the title its own name promises.
+   */
+  it('pays a title at every tier, named for the rank', () => {
     for (const definition of allAchievements()) {
-      if (definition.threshold === TITLE_TIER) {
-        expect(definition.titleId).toBe(`${definition.enemyId}-slayer`);
-      } else {
-        expect(definition.titleId).toBeUndefined();
-      }
+      expect(TITLES[definition.titleId].name).toBe(definition.name);
     }
+    expect(Object.keys(TITLES)).toHaveLength(enemyIds.length * SLAYER_TIERS.length);
   });
 
   it('names every title after the creature it was earned on', () => {
     for (const enemyId of enemyIds) {
-      expect(TITLES[`${enemyId}-slayer`].name).toBe(`${ENEMIES[enemyId].name} Slayer`);
+      const name = ENEMIES[enemyId].name;
+      expect(TITLES[`${enemyId}-culler`].name).toBe(`${name} Culler`);
+      expect(TITLES[`${enemyId}-hunter`].name).toBe(`${name} Hunter`);
+      expect(TITLES[`${enemyId}-slayer`].name).toBe(`${name} Slayer`);
     }
+  });
+
+  // The top rank's id is the one there was before every rank paid a title, so
+  // a save already wearing it loads unchanged, with no migration to write.
+  it('keeps the id a worn Slayer title was saved under', () => {
+    expect(ACHIEVEMENTS['rat-slayer-100'].titleId).toBe('rat-slayer');
   });
 });
 
@@ -140,21 +144,29 @@ describe('crossedAchievements', () => {
 });
 
 describe('earnedTitles', () => {
-  it('gives nothing until the top tier is reached', () => {
-    expect(earnedTitles({ rat: 99 })).toEqual([]);
+  it('gives nothing until the first rank is reached', () => {
+    expect(earnedTitles({ rat: 24 })).toEqual([]);
   });
 
-  it('gives the creature’s title at the top tier', () => {
-    expect(earnedTitles({ rat: 100 })).toEqual(['rat-slayer']);
+  it('gives each rank’s title as it is reached, keeping the ones below', () => {
+    expect(earnedTitles({ rat: 25 })).toEqual(['rat-culler']);
+    expect(earnedTitles({ rat: 60 })).toEqual(['rat-culler', 'rat-hunter']);
+    expect(earnedTitles({ rat: 100 })).toEqual(['rat-culler', 'rat-hunter', 'rat-slayer']);
   });
 
-  it('accumulates a title per creature', () => {
-    expect(earnedTitles({ rat: 100, bandit: 250 })).toEqual(['rat-slayer', 'bandit-slayer']);
+  it('accumulates titles across creatures', () => {
+    expect(earnedTitles({ rat: 25, bandit: 250 })).toEqual([
+      'rat-culler',
+      'bandit-culler',
+      'bandit-hunter',
+      'bandit-slayer',
+    ]);
   });
 
   it('refuses a title the kills do not back', () => {
     expect(hasEarnedTitle({ rat: 99 }, 'rat-slayer')).toBe(false);
-    expect(hasEarnedTitle({ rat: 100 }, 'crab-slayer')).toBe(false);
+    expect(hasEarnedTitle({ rat: 99 }, 'rat-hunter')).toBe(true);
+    expect(hasEarnedTitle({ rat: 100 }, 'crab-culler')).toBe(false);
   });
 });
 

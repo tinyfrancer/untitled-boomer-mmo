@@ -27,7 +27,7 @@ export class MasterySheet extends Sheet {
   }
 
   update(mastery: MasteryXp): void {
-    this.body.replaceChildren();
+    this.body.replaceChildren(masteryIntro());
     let drew = false;
 
     for (const skillId of SKILL_ORDER) {
@@ -46,8 +46,8 @@ export class MasterySheet extends Sheet {
           className: 'hud-skill__line',
           label: target.name,
           value: progress.maxed
-            ? `${progress.tier.name} (${masteryXp(mastery, target.id)} XP)`
-            : `${progress.tier.name} · ${progress.tier.rank}/${MASTERY_TIERS.length}`,
+            ? `${progress.tier.name} · ${masteryXp(mastery, target.id)} XP`
+            : `${progress.tier.name} · rank ${progress.tier.rank} / ${MASTERY_TIERS.length}`,
         });
         const bar = el('div', 'hud-bar hud-skill__bar');
         const fill = el('div', 'hud-bar__fill');
@@ -64,4 +64,30 @@ export class MasterySheet extends Sheet {
       this.body.append(emptyLine('Work or make something to start a pool.'));
     }
   }
+}
+
+/**
+ * What mastery is, said once at the top of the page, from the rung table
+ * itself so a retune cannot leave the words behind. The first rung is left out
+ * of the list because it pays nothing, and naming it would only say so.
+ */
+function masteryIntro(): HTMLElement {
+  const paying = MASTERY_TIERS.filter((tier) => tier.bonusChance > 0)
+    .map((tier) => `${tier.name} ${Math.round(tier.bonusChance * 100)}%`)
+    .join(', ');
+  const intro = el('div', 'hud-sheet__intro');
+  intro.append(
+    el(
+      'p',
+      undefined,
+      'Every tree, vein, fishing spot and recipe has a mastery of its own. Each success at it ' +
+        'adds the XP its skill earns; a failure adds nothing.',
+    ),
+    el(
+      'p',
+      undefined,
+      `Higher ranks give a chance of a second one from the same action: ${paying}.`,
+    ),
+  );
+  return intro;
 }
