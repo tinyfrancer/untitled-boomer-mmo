@@ -172,8 +172,9 @@ describe('a building in the world', () => {
    * there is no pixel a thumb can put on them from outside — so this is that
    * answer driven through the world: from the middle of town, round the corner
    * of the shop, in through the door and up to the counter. The assertion that
-   * matters is *where the player is standing* when the shop opens. Everything
-   * before this phase could be satisfied by being served in the street.
+   * matters is *where the player is standing* when the conversation opens.
+   * Everything before this phase could be satisfied by being served in the
+   * street.
    */
   it('walks the player in through its door and serves them at the counter', () => {
     const { world, until } = harness();
@@ -184,7 +185,7 @@ describe('a building in the world', () => {
     expect(isInside(store, shopkeeper), 'the shopkeeper works out of the store').toBe(true);
 
     world.tap({ kind: 'npc', npc: shopkeeper });
-    until(() => world.counterNpc('merchant') !== null, 'the player to reach the shopkeeper', 20000);
+    until(() => world.counterNpc('talk') !== null, 'the player to reach the shopkeeper', 20000);
 
     expect(isInside(store, world.player), 'the player is served inside the shop').toBe(true);
     expect(

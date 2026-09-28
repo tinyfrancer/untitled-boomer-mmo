@@ -19,17 +19,17 @@ export interface QuestHandlers {
 }
 
 /**
- * The work a person behind a counter has going, drawn at the top of whichever
- * counter they stand at — or nothing, for somebody who gives none.
+ * The work a person has going, drawn in the conversation with them — or
+ * nothing, for somebody who gives none.
  *
- * It belongs to the counter rather than to any one panel because a quest is a
- * conversation with the person who gives it: it was a section of the shop's
- * panel while the shopkeeper was the only giver, and a second giver behind a
- * different counter is exactly where that stopped being the same thing.
- * `OverlayHost` puts it on every counter it opens, so a person who starts
- * giving quests shows them without their panel being told.
+ * It belongs to the conversation rather than to any counter because a quest is
+ * a conversation with the person who gives it. It was a section of the shop's
+ * panel while the shopkeeper was the only giver, then something the host put at
+ * the top of every counter once a second giver stood behind a different one;
+ * the talk panel is what every person has, so a person who starts giving quests
+ * shows them without any counter being told.
  */
-export function counterQuests(
+export function talkQuests(
   npcId: NpcId,
   state: QuestPanelState,
   handlers: QuestHandlers,
@@ -37,7 +37,7 @@ export function counterQuests(
   const offers = questsForNpc(npcId, state.quests, state).filter((offer) => offer.state !== 'done');
   if (offers.length === 0) return null;
 
-  const section = el('div', 'hud-counter-quests');
+  const section = el('div', 'hud-talk__quests');
   section.dataset.giver = npcId;
   section.append(sectionHeader('Work going'));
   for (const offer of offers) {

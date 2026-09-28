@@ -37,6 +37,8 @@ export interface TrainerHandlers {
  */
 export class TrainerModal extends Overlay {
   private readonly purse: Purse;
+  /** Where the host puts the way back to the conversation (`OverlayHost`). */
+  readonly head: HTMLElement;
   readonly body: HTMLElement;
   private readonly handlers: TrainerHandlers;
 
@@ -46,6 +48,7 @@ export class TrainerModal extends Overlay {
     const box = el('div', 'hud-modal__box hud-modal__box--trainer');
 
     const head = el('div', 'hud-modal__head');
+    this.head = head;
     head.append(el('div', 'hud-modal__title', 'Trainer'));
     this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');

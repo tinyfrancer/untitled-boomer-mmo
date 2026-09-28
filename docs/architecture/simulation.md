@@ -30,7 +30,7 @@ add to it:
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
-through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `ShopSession`, `BankSession`, `TrainerSession`, `BountySession`, `QuestDesk`,
+through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `TalkSession` and the counter sessions beside it (`ShopSession`, `BankSession`, `TrainerSession`, `BountySession` and the rest, `economy.md`), `QuestDesk`,
 `ContextMenuSession` (what a press held is about, and what was chosen from it), and `ApproachDriver`
 (all three click-to-move walks, and the only thing that asks for a route). Each owns its own state,
 is constructed by `ZoneWorld` and reaches the rest of the zone through two things and no others: the

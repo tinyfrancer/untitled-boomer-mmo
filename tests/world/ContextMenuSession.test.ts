@@ -90,19 +90,33 @@ describe('what a menu offers', () => {
   });
 
   /**
-   * The line an NPC offers is a fact about the person and not about their being
-   * an NPC. Before the banker existed every one of them said "Shop", which the
-   * second person to stand in a town would have inherited.
+   * The counter an NPC offers is a fact about the person and not about their
+   * being an NPC. Before the banker existed every one of them said "Shop",
+   * which the second person to stand in a town would have inherited. Talking
+   * comes first, since it is what a tap does.
    */
-  it('offers each counter its own line rather than the shop twice', () => {
+  it('offers Talk, then each counter its own line rather than the shop twice', () => {
     const { menu } = session();
 
     expect(menu.open({ kind: 'npc', npc: KEEPER })?.actions).toEqual([
+      { id: 'talk', label: 'Talk' },
       { id: 'shop', label: 'Shop' },
     ]);
     expect(menu.open({ kind: 'npc', npc: TELLER })?.actions).toEqual([
+      { id: 'talk', label: 'Talk' },
       { id: 'bank', label: 'Bank' },
     ]);
+  });
+
+  // The board was renamed Contracts in A3 everywhere but this line.
+  it('calls the board Contracts', () => {
+    const { menu } = session();
+    const board: WorldNpc = { x: 0, y: 0, npcId: 'quartermaster' };
+
+    expect(menu.open({ kind: 'npc', npc: board })?.actions).toContainEqual({
+      id: 'bounty',
+      label: 'Contracts',
+    });
   });
 
   // A creature has no drop table until it is a creature; a tree is not one.
@@ -159,6 +173,17 @@ describe('answering a menu', () => {
 
     menu.open({ kind: 'npc', npc: TELLER });
     menu.run('bank');
+    expect(perform).toHaveBeenCalledWith({ kind: 'npc', npc: TELLER, counter: 'banker' });
+  });
+
+  // Talk is what a tap on a person already does, so it goes as a plain tap and
+  // names no counter.
+  it('talks to a person exactly as a tap on them would', () => {
+    const { menu, perform } = session();
+
+    menu.open({ kind: 'npc', npc: TELLER });
+    menu.run('talk');
+
     expect(perform).toHaveBeenCalledWith({ kind: 'npc', npc: TELLER });
   });
 

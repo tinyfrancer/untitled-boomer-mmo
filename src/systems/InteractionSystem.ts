@@ -2,6 +2,7 @@ import { distance, type Point } from './MovementSystem';
 
 export type InteractionKind =
   | 'gather'
+  | 'talk'
   | 'shop'
   | 'bank'
   | 'train'

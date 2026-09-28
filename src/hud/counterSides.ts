@@ -10,9 +10,6 @@ import { counterLayout } from '../ui/layout';
  * portrait phone, where they stand one over the other, the bag is in view
  * without scrolling past the whole shelf to find it. `counterLayout` decides
  * which way they stand, from the width alone.
- *
- * The keeper's side is the panel's `body`, so the quests `OverlayHost` puts at
- * the top of every counter land on it: they are the keeper's too.
  */
 export class CounterSides {
   readonly root: HTMLElement;

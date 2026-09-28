@@ -971,6 +971,41 @@ function hudCss(): string {
   line-height: 14px;
   white-space: nowrap;
 }
+/* A conversation: nobody's colour, since it is the one panel every person has,
+   and the width of the counters that carry a line under each row, which its
+   buttons do. */
+.hud-modal__box--talk {
+  width: 320px;
+  gap: 4px;
+}
+/* What they say, set apart from everything that is a button by being the one
+   thing in the HUD in italics — and in their quotation marks. */
+.hud-talk__greeting {
+  margin: 4px 0 ${THEME.padding}px;
+  padding: 0 4px;
+  font-size: ${THEME.font.md}px;
+  font-style: italic;
+  line-height: 1.4;
+  color: ${THEME.color.text};
+}
+/* A counter of theirs: the word for it, and what it is for under it, said once
+   here where the choice is made. A thumb's height, and across the panel. */
+.hud-talk__service {
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px ${THEME.padding}px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+.hud-talk__service-label {
+  font-weight: bold;
+}
+.hud-talk__blurb {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+}
 /* A station's list, in the ember colour the forge's coals are drawn in — one
    look for both, since what tells a vat from an anvil is the name over it and
    the rows under it rather than a second border colour. Same width as the
@@ -1011,6 +1046,20 @@ function hudCss(): string {
   font-size: ${THEME.font.sm}px;
   border-color: ${cssColor(THEME.panelStroke)};
   background: ${cssColor(THEME.buttonBg)};
+}
+/* The way back to the conversation, at the front of every counter's head: the
+   close button's size and look, and the title after it takes the slack, so the
+   pair reads left to right and the purse and the X keep the right-hand end. */
+.hud-modal__back {
+  flex: none;
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: ${THEME.font.sm}px;
+  border-color: ${cssColor(THEME.panelStroke)};
+  background: ${cssColor(THEME.buttonBg)};
+}
+.hud-modal__back + .hud-modal__title {
+  margin-right: auto;
 }
 .hud-modal__danger {
   color: ${THEME.color.playerDamage};

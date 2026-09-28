@@ -37,7 +37,7 @@ function atTheBoard(options: { level?: number } = {}) {
   const kit = harness({ level: options.level ?? 1 });
   const npc = npcNamed(kit.world, 'quartermaster');
   kit.world.teleport(npc.x, npc.y + 50);
-  kit.world.approachNpc(npc);
+  kit.world.approachNpc(npc, 'quartermaster');
   return { ...kit, npc };
 }
 
@@ -65,7 +65,7 @@ describe('the quartermaster', () => {
     const npc = npcNamed(kit.world, 'quartermaster');
     kit.world.teleport(npc.x, npc.y + NPC_INTERACT_RADIUS * 3);
 
-    kit.world.approachNpc(npc);
+    kit.world.approachNpc(npc, 'quartermaster');
     expect(kit.world.counterNpc('quartermaster')).toBeNull();
 
     kit.until(

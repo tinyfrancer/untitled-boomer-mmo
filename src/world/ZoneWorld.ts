@@ -8,6 +8,7 @@ import {
   ACTIONS_CHANGED_EVENT,
   AFK_TOGGLE_REQUESTED_EVENT,
   COUNTER_CLOSED_EVENT,
+  COUNTER_REQUESTED_EVENT,
   REFORGE_REQUESTED_EVENT,
   TRADE_REQUESTED_EVENT,
   BUY_BANK_SLOT_REQUESTED_EVENT,
@@ -53,7 +54,7 @@ import { effectElapsed } from '../systems/EffectSystem';
 import { zoneAccess } from '../systems/ZoneAccessSystem';
 import { tileOf, toTile } from '../systems/MapSystem';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
-import { NPC_INTERACT_RADIUS, npcRole, type NpcRoleId } from '../data/npcs';
+import { NPC_INTERACT_RADIUS, worksCounter, type CounterId } from '../data/npcs';
 import { STATION_RADIUS } from '../data/recipes';
 import type { InteractionKind } from '../systems/InteractionSystem';
 import type { GatherState } from '../systems/GatherSystem';
@@ -100,6 +101,7 @@ import { GatherSession } from './GatherSession';
 import { AfkCamp, type ParkedAfkResult } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
 import { ShopSession } from './ShopSession';
+import { TalkSession } from './TalkSession';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
@@ -136,35 +138,42 @@ export type { ParkedAfkResult };
 export type WorldTap =
   | { kind: 'node'; node: ResourceNode }
   | { kind: 'signpost'; signpost: WorldSignpost }
-  | { kind: 'npc'; npc: WorldNpc }
+  /**
+   * A person. Talking to them is what a tap asks for; a held finger's menu may
+   * name one of their counters instead, which is the same walk ending at a
+   * different panel.
+   */
+  | { kind: 'npc'; npc: WorldNpc; counter?: CounterId }
   | { kind: 'station'; station: WorldStation }
   | { kind: 'mob'; mob: Mob }
   | { kind: 'pile'; pile: LootPile }
   | { kind: 'ground'; point: Point };
 
 /**
- * What the walk toward each role's counter is called.
+ * What the walk toward each counter is called.
  *
- * Keyed by `NpcRoleId` so a seventh person in a town is a compile error here
- * until someone says what walking up to them is — the same argument
- * `NPC_APPEARANCES` makes for what they look like, and `Counters` below makes
- * for what standing at them does.
+ * Keyed by `CounterId` so a new counter is a compile error here until someone
+ * says what walking up to it is — the same argument `NPC_APPEARANCES` makes for
+ * what a person looks like, and `Counters` below makes for what standing at
+ * them does.
  */
 const COUNTER_WALKS = {
+  talk: 'talk',
   merchant: 'shop',
   banker: 'bank',
   trainer: 'train',
   quartermaster: 'bounty',
   outfitter: 'outfit',
   reforger: 'reforge',
-} as const satisfies Record<NpcRoleId, InteractionKind>;
+} as const satisfies Record<CounterId, InteractionKind>;
 
 /**
- * The session behind each role's counter. Typed per role rather than as a bare
- * `Record<NpcRoleId, CounterSession>`, so the listener for a sale can reach the
- * shop's `sell` without a cast — and it still has to name every role.
+ * The session behind each counter. Typed per counter rather than as a bare
+ * `Record<CounterId, CounterSession>`, so the listener for a sale can reach the
+ * shop's `sell` without a cast — and it still has to name every one.
  */
-interface Counters extends Record<NpcRoleId, CounterSession> {
+interface Counters extends Record<CounterId, CounterSession> {
+  talk: TalkSession;
   merchant: ShopSession;
   banker: BankSession;
   trainer: TrainerSession;
@@ -402,6 +411,7 @@ export class ZoneWorld implements Targeting {
     });
     this.loot = new LootPiles(this.ctx);
     this.counters = {
+      talk: new TalkSession(this.ctx),
       merchant: new ShopSession(this.ctx),
       banker: new BankSession(this.ctx),
       trainer: new TrainerSession(this.ctx, {
@@ -492,7 +502,8 @@ export class ZoneWorld implements Targeting {
     listen(LIGHT_FIRE_REQUESTED_EVENT, () => this.gathering.lightFire());
     const { counters } = this;
     // A panel's close button, which the world hears as the counter already shut.
-    listen(COUNTER_CLOSED_EVENT, (role) => counters[role].closedByUi());
+    listen(COUNTER_CLOSED_EVENT, (counter) => counters[counter].closedByUi());
+    listen(COUNTER_REQUESTED_EVENT, (counter) => this.switchCounter(counter));
     listen(BUY_ITEM_REQUESTED_EVENT, (itemId) => counters.merchant.buy(itemId));
     listen(SELL_ITEM_REQUESTED_EVENT, (itemId, quantity) =>
       counters.merchant.sell(itemId, quantity),
@@ -635,7 +646,7 @@ export class ZoneWorld implements Targeting {
         this.approachSignpost(target.signpost);
         return;
       case 'npc':
-        this.approachNpc(target.npc);
+        this.approachNpc(target.npc, target.counter);
         return;
       case 'station':
         this.approachStation(target.station);
@@ -695,30 +706,48 @@ export class ZoneWorld implements Targeting {
   }
 
   /**
-   * Walk up to whoever was tapped and open their counter.
+   * Walk up to whoever was tapped and talk to them — or, when a held finger's
+   * menu named one, open that counter of theirs instead.
    *
-   * Which counter is a fact about the person and not about the tap, which is
-   * exactly what this used to assume: every NPC in the game opened the shop,
-   * and the second one to exist would have sold tools from behind the bank's
-   * desk. The role decides, so a third counter is a case here and a row in
-   * `NPCS` rather than another silent assumption.
+   * Which counter a person has is a fact about them and not about the tap,
+   * which is exactly what this used to assume: every NPC in the game opened the
+   * shop, and the second one to exist would have sold tools from behind the
+   * bank's desk. Everybody talks and the role decides the rest, so a counter
+   * nobody behind this one works is refused rather than opened.
    */
-  approachNpc(npc: WorldNpc): void {
-    // Both keyed by the same role: which counter to open and what the walk
-    // toward it is called are the same fact about the person, and the two
-    // drifting apart is exactly how a walk ends at the wrong desk.
-    const role = npcRole(npc.npcId);
-    // One counter at a time, which is what lets the HUD hold one counter panel
-    // and the quest desk ask "who am I talking to" and get one answer.
-    const serve = (): void => {
-      this.closeCounters();
-      this.counters[role].open(npc);
-    };
+  approachNpc(npc: WorldNpc, counter: CounterId = 'talk'): void {
+    if (!worksCounter(npc.npcId, counter)) return;
+    // Both keyed by the same counter: which one to open and what the walk
+    // toward it is called are the same fact, and the two drifting apart is
+    // exactly how a walk ends at the wrong desk.
+    const serve = (): void => this.serveAt(npc, counter);
     if (withinRadius(this.player, npc, NPC_INTERACT_RADIUS)) {
       serve();
       return;
     }
-    this.approach.walkTo({ kind: COUNTER_WALKS[role], radius: NPC_INTERACT_RADIUS }, npc, serve);
+    this.approach.walkTo({ kind: COUNTER_WALKS[counter], radius: NPC_INTERACT_RADIUS }, npc, serve);
+  }
+
+  /**
+   * A button across from somebody asking for another of their counters: Shop
+   * from the conversation, or Back to it from the shop.
+   *
+   * Asked of whoever is being served rather than walked to, since the player is
+   * already standing there — the one open counter's range is what keeps it
+   * honest. With nobody served, or a counter this person does not work, it
+   * answers nothing.
+   */
+  private switchCounter(counter: CounterId): void {
+    const npc = this.openCounter()?.npc;
+    if (!npc || !worksCounter(npc.npcId, counter)) return;
+    this.serveAt(npc, counter);
+  }
+
+  // One counter at a time, which is what lets the HUD hold one counter panel
+  // and the quest desk ask "who am I talking to" and get one answer.
+  private serveAt(npc: WorldNpc, counter: CounterId): void {
+    this.closeCounters();
+    this.counters[counter].open(npc);
   }
 
   /**
@@ -842,13 +871,13 @@ export class ZoneWorld implements Targeting {
   }
 
   // ---------------------------------------------------------------------------
-  // The counters: vendoring, the bank, the trainer, the board, the outfitter
-  // and the fettler
+  // The counters: talking, vendoring, the bank, the trainer, the board, the
+  // outfitter and the fettler
   // ---------------------------------------------------------------------------
 
-  /** Who is behind that role's counter while it is open; null when it is shut. */
-  counterNpc(role: NpcRoleId): WorldNpc | null {
-    return this.counters[role].npc;
+  /** Who is behind that counter while it is open; null when it is shut. */
+  counterNpc(counter: CounterId): WorldNpc | null {
+    return this.counters[counter].npc;
   }
 
   /** The one counter that is open, if any is. */

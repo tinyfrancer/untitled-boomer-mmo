@@ -42,6 +42,8 @@ export interface ReforgeHandlers {
  */
 export class ReforgeModal extends Overlay {
   private readonly handlers: ReforgeHandlers;
+  /** Where the host puts the way back to the conversation (`OverlayHost`). */
+  readonly head: HTMLElement;
   readonly body: HTMLElement;
 
   constructor(state: ReforgePanelState, handlers: ReforgeHandlers, onClosed: () => void) {
@@ -50,6 +52,7 @@ export class ReforgeModal extends Overlay {
 
     const box = el('div', 'hud-modal__box');
     const head = el('div', 'hud-modal__head');
+    this.head = head;
     head.append(el('div', 'hud-modal__title', 'Fettler'));
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';

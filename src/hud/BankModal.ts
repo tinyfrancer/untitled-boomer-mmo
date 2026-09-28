@@ -44,6 +44,8 @@ export interface BankHandlers {
 export class BankModal extends Overlay {
   private readonly slots: HTMLElement;
   private readonly purse: Purse;
+  /** Where the host puts the way back to the conversation (`OverlayHost`). */
+  readonly head: HTMLElement;
   readonly body: HTMLElement;
   private readonly bag: HTMLElement;
   private readonly sides: CounterSides;
@@ -55,6 +57,7 @@ export class BankModal extends Overlay {
     const box = el('div', 'hud-modal__box hud-modal__box--bank');
 
     const head = el('div', 'hud-modal__head');
+    this.head = head;
     head.append(el('div', 'hud-modal__title', 'Bank'));
     this.slots = el('div', 'hud-bank__slots');
     this.purse = new Purse();

@@ -29,6 +29,8 @@ export interface OutfitterHandlers {
  */
 export class OutfitterModal extends Overlay {
   private readonly handlers: OutfitterHandlers;
+  /** Where the host puts the way back to the conversation (`OverlayHost`). */
+  readonly head: HTMLElement;
   readonly body: HTMLElement;
 
   constructor(inventory: Inventory, handlers: OutfitterHandlers, onClosed: () => void) {
@@ -37,6 +39,7 @@ export class OutfitterModal extends Overlay {
 
     const box = el('div', 'hud-modal__box');
     const head = el('div', 'hud-modal__head');
+    this.head = head;
     head.append(el('div', 'hud-modal__title', 'Outfitter'));
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';

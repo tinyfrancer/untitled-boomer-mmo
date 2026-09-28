@@ -1,4 +1,5 @@
 import { AwayReportModal } from './AwayReportModal';
+import { el } from './dom';
 import { BankModal, type BankPanelState } from './BankModal';
 import { ContextMenu, type ContextMenuEntry } from './ContextMenu';
 import { InspectModal } from './InspectModal';
@@ -11,7 +12,8 @@ import { ReforgeModal, type ReforgePanelState } from './ReforgeModal';
 import type { SoundSettings } from '../audio/settings';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
-import { counterQuests, type QuestPanelState } from './counterQuests';
+import type { QuestPanelState } from './talkQuests';
+import { TalkModal } from './TalkModal';
 import { StationModal, type StationPanelState } from './StationModal';
 import { SlotPicker } from './SlotPicker';
 import {
@@ -19,6 +21,7 @@ import {
   ACCEPT_BOUNTY_REQUESTED_EVENT,
   ACCEPT_QUEST_REQUESTED_EVENT,
   COUNTER_CLOSED_EVENT,
+  COUNTER_REQUESTED_EVENT,
   TRADE_REQUESTED_EVENT,
   REFORGE_REQUESTED_EVENT,
   TURN_IN_BOUNTY_REQUESTED_EVENT,
@@ -34,7 +37,7 @@ import {
   CRAFT_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
 } from '../ui/uiEvents';
-import type { NpcRoleId } from '../data/npcs';
+import type { CounterId } from '../data/npcs';
 import type { StationId } from '../data/recipes';
 import type { InspectPanel } from '../systems/InspectSystem';
 import type { ScreenPoint } from '../ui/uiEvents';
@@ -44,13 +47,14 @@ import type { GearSlotId, ItemId, NpcId } from '../types/ids';
 import type { TabId } from '../ui/tabs';
 
 /**
- * How the panels read the HUD's model: one getter per counter role, and one for
- * whichever station is up.
+ * How the panels read the HUD's model: one getter per counter role, one for the
+ * quest log a conversation draws its work from, and one for whichever station
+ * is up.
  *
  * Getters rather than copies handed over once: the bag, the purse, the quest
  * log, the shelves and what has been learned are the HUD's own state, and each
  * panel is a view of some of it that happens to be open sometimes. Keyed by role
- * so a seventh counter is a compile error here until it says what it draws from.
+ * so a new counter is a compile error here until it says what it draws from.
  */
 export interface OverlayPanelState {
   merchant: () => ShopState;
@@ -61,37 +65,35 @@ export interface OverlayPanelState {
   outfitter: () => Inventory;
   /** The gear, the pack and what has been worked, which is the fettler's whole list. */
   reforger: () => ReforgePanelState;
-  /** The log and its tallies, which any counter's person may have work in. */
+  /** The log and its tallies, which anybody talked to may have work in. */
   quests: () => QuestPanelState;
   station: () => StationPanelState;
 }
 
 /**
  * What a counter's panel is to the host: something to redraw from the model,
- * and something to take down. Each role's modal has its own handlers and its
+ * and something to take down. Each counter's modal has its own handlers and its
  * own state, and the table in the constructor is the only place that knows
  * which is which.
- *
- * `body` is the panel's scrolling list, which its own redraw empties and fills.
- * What the host adds to the top of it afterwards is the person's quests, which
- * no panel draws for itself (see `counterQuests`).
  */
 interface CounterPanel {
   readonly root: HTMLElement;
-  readonly body: HTMLElement;
   refresh(): void;
   layout(viewportWidth: number): void;
   close(): void;
 }
 
 /**
- * A role's modal, as far as the host needs to know it. `layout` is for the
- * two that deal both ways (`CounterSides`), which stand their sides across or
- * one over the other by the width they are opened at.
+ * A role's modal, as far as the host needs to know it. `head` is where the host
+ * puts the way back to the conversation, which no panel draws for itself — the
+ * same argument that kept quests off every panel while they were drawn on top
+ * of each. `layout` is for the two that deal both ways (`CounterSides`), which
+ * stand their sides across or one over the other by the width they are opened
+ * at.
  */
 interface CounterModal {
   readonly root: HTMLElement;
-  readonly body: HTMLElement;
+  readonly head: HTMLElement;
   layout?(viewportWidth: number): void;
   close(): void;
 }
@@ -124,13 +126,15 @@ export interface ContextMenuSpec {
 export class OverlayHost {
   private readonly root: HTMLElement;
   private readonly events: EventBus;
-  private readonly counterPanels: Record<NpcRoleId, (onClosed: () => void) => CounterPanel>;
+  private readonly counterPanels: Record<
+    CounterId,
+    (npcId: NpcId, onClosed: () => void) => CounterPanel
+  >;
   private readonly stationState: () => StationPanelState;
-  private readonly questState: () => QuestPanelState;
   private viewportWidth = 0;
 
   private options: OptionsModal | null = null;
-  private counter: { role: NpcRoleId; npcId: NpcId; panel: CounterPanel } | null = null;
+  private counter: { id: CounterId; panel: CounterPanel } | null = null;
   private station: StationModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
@@ -142,13 +146,32 @@ export class OverlayHost {
     this.root = root;
     this.events = events;
     this.stationState = panels.station;
-    this.questState = panels.quests;
     const emit = events.emit.bind(events);
     // Every X asks rather than does: the world owns whether a counter is open,
-    // and closes it with the same event it hears this on.
-    const dismiss = (role: NpcRoleId) => () => emit(COUNTER_CLOSED_EVENT, role);
+    // and closes it with the same event it hears this on. Back asks the same
+    // way, for the conversation across the same counter.
+    const dismiss = (counter: CounterId) => () => emit(COUNTER_CLOSED_EVENT, counter);
+    const back = () => emit(COUNTER_REQUESTED_EVENT, 'talk');
     this.counterPanels = {
-      merchant: (onClosed) => {
+      talk: (npcId, onClosed) => {
+        const modal = new TalkModal(
+          npcId,
+          {
+            onServe: (role) => emit(COUNTER_REQUESTED_EVENT, role),
+            onAccept: (questId) => emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
+            onTurnIn: (questId) => emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
+            onDismiss: dismiss('talk'),
+          },
+          onClosed,
+        );
+        return {
+          root: modal.root,
+          refresh: () => modal.update(panels.quests()),
+          layout: () => {},
+          close: () => modal.close(),
+        };
+      },
+      merchant: (_npcId, onClosed) => {
         const modal = new ShopModal(
           {
             onBuy: (itemId) => emit(BUY_ITEM_REQUESTED_EVENT, itemId),
@@ -157,9 +180,9 @@ export class OverlayHost {
           },
           onClosed,
         );
-        return counterPanel(modal, () => modal.update(panels.merchant()));
+        return counterPanel(modal, () => modal.update(panels.merchant()), back);
       },
-      banker: (onClosed) => {
+      banker: (_npcId, onClosed) => {
         const modal = new BankModal(
           {
             onDeposit: (itemId, quantity) => emit(DEPOSIT_ITEM_REQUESTED_EVENT, itemId, quantity),
@@ -169,9 +192,9 @@ export class OverlayHost {
           },
           onClosed,
         );
-        return counterPanel(modal, () => modal.update(panels.banker()));
+        return counterPanel(modal, () => modal.update(panels.banker()), back);
       },
-      trainer: (onClosed) => {
+      trainer: (_npcId, onClosed) => {
         const modal = new TrainerModal(
           {
             onLearn: (abilityId) => emit(LEARN_ABILITY_REQUESTED_EVENT, abilityId),
@@ -179,9 +202,9 @@ export class OverlayHost {
           },
           onClosed,
         );
-        return counterPanel(modal, () => modal.update(panels.trainer()));
+        return counterPanel(modal, () => modal.update(panels.trainer()), back);
       },
-      quartermaster: (onClosed) => {
+      quartermaster: (_npcId, onClosed) => {
         const modal = new BountyModal(
           {
             onAccept: (bountyId) => emit(ACCEPT_BOUNTY_REQUESTED_EVENT, bountyId),
@@ -191,9 +214,9 @@ export class OverlayHost {
           },
           onClosed,
         );
-        return counterPanel(modal, () => modal.update(panels.quartermaster()));
+        return counterPanel(modal, () => modal.update(panels.quartermaster()), back);
       },
-      outfitter: (onClosed) => {
+      outfitter: (_npcId, onClosed) => {
         const modal = new OutfitterModal(
           panels.outfitter(),
           {
@@ -202,9 +225,9 @@ export class OverlayHost {
           },
           onClosed,
         );
-        return counterPanel(modal, () => modal.update(panels.outfitter()));
+        return counterPanel(modal, () => modal.update(panels.outfitter()), back);
       },
-      reforger: (onClosed) => {
+      reforger: (_npcId, onClosed) => {
         const modal = new ReforgeModal(
           panels.reforger(),
           {
@@ -213,7 +236,7 @@ export class OverlayHost {
           },
           onClosed,
         );
-        return counterPanel(modal, () => modal.update(panels.reforger()));
+        return counterPanel(modal, () => modal.update(panels.reforger()), back);
       },
     };
   }
@@ -297,18 +320,18 @@ export class OverlayHost {
   }
 
   /**
-   * Puts up a role's counter, taking down whichever one was up — the world
-   * never has two open, and a panel left behind one would be selling from a
-   * counter nobody is standing at.
+   * Puts up a counter — a conversation or a role's — taking down whichever one
+   * was up: the world never has two open, and a panel left behind one would be
+   * selling from a counter nobody is standing at.
    */
-  openCounter(role: NpcRoleId, npcId: NpcId): void {
+  openCounter(counter: CounterId, npcId: NpcId): void {
     this.counter?.panel.close();
-    const panel = this.counterPanels[role](() => {
-      if (this.counter?.role === role) this.counter = null;
+    const panel = this.counterPanels[counter](npcId, () => {
+      if (this.counter?.id === counter) this.counter = null;
     });
-    this.counter = { role, npcId, panel };
+    this.counter = { id: counter, panel };
     panel.layout(this.viewportWidth);
-    this.refreshCounter();
+    panel.refresh();
     this.root.append(panel.root);
   }
 
@@ -322,14 +345,14 @@ export class OverlayHost {
     this.counter?.panel.layout(viewportWidth);
   }
 
-  /** Takes down that role's counter if it is the one up. */
-  closeCounter(role: NpcRoleId): void {
-    if (this.counter?.role === role) this.counter.panel.close();
+  /** Takes down that counter if it is the one up. */
+  closeCounter(counter: CounterId): void {
+    if (this.counter?.id === counter) this.counter.panel.close();
   }
 
   /** Which counter is up, or null. */
-  openCounterRole(): NpcRoleId | null {
-    return this.counter?.role ?? null;
+  openCounterId(): CounterId | null {
+    return this.counter?.id ?? null;
   }
 
   /**
@@ -341,26 +364,8 @@ export class OverlayHost {
    * panel by panel, which is exactly the list a new panel was left out of.
    */
   refreshOpen(): void {
-    this.refreshCounter();
+    this.counter?.panel.refresh();
     this.refreshStation();
-  }
-
-  /**
-   * The counter's own list, then whatever work the person behind it has going
-   * on top of it. Drawn here rather than by each panel, so anybody who gives
-   * quests shows them at whatever counter they stand behind — the shop, the
-   * outfitter's and the fettler's today — and a panel cannot be the one that
-   * forgot to.
-   */
-  private refreshCounter(): void {
-    if (!this.counter) return;
-    const { npcId, panel } = this.counter;
-    panel.refresh();
-    const quests = counterQuests(npcId, this.questState(), {
-      onAccept: (questId) => this.events.emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
-      onTurnIn: (questId) => this.events.emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
-    });
-    if (quests) panel.body.prepend(quests);
   }
 
   /**
@@ -458,11 +463,16 @@ export class OverlayHost {
   }
 }
 
-// A role's modal, as the host holds it.
-function counterPanel(modal: CounterModal, refresh: () => void): CounterPanel {
+// A role's modal, as the host holds it: with the way back to the conversation
+// put at the front of its head, where every panel gets one and none can forget.
+function counterPanel(modal: CounterModal, refresh: () => void, onBack: () => void): CounterPanel {
+  const back = el('button', 'hud-button hud-modal__back', '\u2039 Back');
+  back.type = 'button';
+  back.dataset.action = 'back-to-talk';
+  back.addEventListener('click', onBack);
+  modal.head.prepend(back);
   return {
     root: modal.root,
-    body: modal.body,
     refresh,
     layout: (viewportWidth) => modal.layout?.(viewportWidth),
     close: () => modal.close(),

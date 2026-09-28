@@ -3,10 +3,11 @@
 **Status:** live. Opened 2026-09-27 against `ca12279`, the merge of act three. **Landed: phase 0**
 (this document, decisions 80-88, `CLAUDE.md` pointing here), **A1** (every number labelled, every
 slayer rank a title, mastery explained, map names over the markers; decision 89), **A2** (every
-item says what it is for, on a tap and on a card any item row opens; decision 90) **and A3** (the
+item says what it is for, on a tap and on a card any item row opens; decision 90), **A3** (the
 shop and the bank in two sides, contracts marked repeatable, Abandon apart and asking twice;
-decision 91). **Next: A4**, talk first. Update this line as each phase lands: which phase, and
-which is next.
+decision 91) **and A4** (a tap on a person talks first: a greeting, their counter as a button, their
+quests; decision 92). **Next: A5**, the skills book. Update this line as each phase lands: which
+phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -142,8 +143,13 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   is its own button under the contract in hand**, a gap below the row that hands it in, and **asks
   twice** the way Reset Character does. Every counter stops above the tab bar and scrolls instead.
   Decision 91 has the forks.
-- **A4 — Talk first.** Tapping an NPC opens a menu of what they do: Talk, Trade, Quests, Train,
-  Contracts, Bank. Each NPC gets a greeting line. This is the shell Part D's dialog fills.
+- **A4 — Talk first. (Landed.)** A tap on a person walks up and opens a **talk panel** where the
+  counters hang: their name, a one-line greeting (naming no place or person, for D1 to rewrite), a
+  button for the counter they work with a line saying what it is for, and **their quests**, which
+  left the counters for it. The button puts the counter up in its place and every counter's head
+  has a **Back**; a right click or a held finger offers Talk and the counter, and the counter there
+  goes straight to it. Talking is a seventh counter (`CounterId` `'talk'`), so everything that shuts
+  a counter shuts it. This is the shell Part D's dialog fills. Decision 92 has the forks.
 - **A5 — The skills book.** A page per skill: level, an XP bar, what training does, and **every
   recipe and node** with its level, inputs, result and the result's stats, locked ones greyed.
   Mastery shows beside each recipe and node it belongs to.
@@ -237,8 +243,9 @@ zones need fast travel back, having taken it out once (decision in PR #111)?
 
 ## Part D — People and the realm
 
-- **D1 — Dialog.** NPC conversations as data: greetings, topics, answers that lead to more, and an
-  NPC who remembers what you have asked. A writing pass over every existing NPC in the lore's voice.
+- **D1 — Dialog.** NPC conversations as data, in the talk panel A4 built: topics, answers that
+  lead to more, and an NPC who remembers what you have asked (state for `TalkSession`). A writing
+  pass over every existing NPC in the lore's voice, their greetings first.
 - **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
   creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
   of what is found.

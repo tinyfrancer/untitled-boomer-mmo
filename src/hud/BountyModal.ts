@@ -43,6 +43,8 @@ const BOARD_RULE =
  */
 export class BountyModal extends Overlay {
   private readonly purse: Purse;
+  /** Where the host puts the way back to the conversation (`OverlayHost`). */
+  readonly head: HTMLElement;
   readonly body: HTMLElement;
   private readonly handlers: BountyHandlers;
   /**
@@ -58,6 +60,7 @@ export class BountyModal extends Overlay {
     const box = el('div', 'hud-modal__box hud-modal__box--bounty');
 
     const head = el('div', 'hud-modal__head');
+    this.head = head;
     head.append(el('div', 'hud-modal__title', 'Contracts'));
     this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');
