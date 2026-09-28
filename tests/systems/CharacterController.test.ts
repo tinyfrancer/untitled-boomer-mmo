@@ -416,7 +416,16 @@ describe('CharacterController achievements', () => {
       need: 50,
       met: false,
     });
-    expect(character.earnedTitles()).toEqual([]);
+    // Thirty is past the first rank, which is a title of its own.
+    expect(character.earnedTitles()).toEqual(['crab-culler']);
+  });
+
+  // A camp session can cross two ranks in one payout. What goes on is the rank
+  // just earned at the top, not the one it passed on the way.
+  it('wears the best rank a single payout crossed', () => {
+    const character = makeController();
+    character.recordKill('crab', 60);
+    expect(character.state.activeTitleId).toBe('crab-hunter');
   });
 });
 

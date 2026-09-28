@@ -2515,8 +2515,10 @@ async function achievements() {
     return {
       visible: getComputedStyle(sheet).display !== 'none',
       rat: rows.find((row) => row.startsWith('Rat')) ?? '',
-      earnedTiers: sheet.querySelectorAll('.hud-row--tier.is-earned').length,
-      titles: [...sheet.querySelectorAll('.hud-titles .hud-button')].map((n) => n.textContent),
+      earnedTiers: sheet.querySelectorAll('.hud-feat-title.is-earned').length,
+      titles: [...sheet.querySelectorAll('.hud-feat-title')].map(
+        (n) => /** @type {HTMLElement} */ (n).dataset.title,
+      ),
     };
   });
   check(
@@ -2525,8 +2527,8 @@ async function achievements() {
     `${unlockedTiers} tier(s) unlocked, sheet shows "${slayer.rat}"`,
   );
   check(
-    'a completed chain offers its title in the picker',
-    slayer.titles.includes('Rat Slayer'),
+    'a completed chain offers every one of its ranks as a title to wear',
+    ['rat-culler', 'rat-hunter', 'rat-slayer'].every((title) => slayer.titles.includes(title)),
     slayer.titles.join(', '),
   );
   await page.screenshot({ path: `${OUT}/11-achievements.png` });
@@ -2542,7 +2544,7 @@ async function achievements() {
       ),
     );
   const beforeTitle = await columnHeight();
-  await page.click('.hud-titles .hud-button[data-title="rat-slayer"]');
+  await page.click('.hud-feat-title[data-title="rat-slayer"]');
   await page.waitForTimeout(250);
   const wornTitle = await page.evaluate(() => {
     const line = /** @type {HTMLElement} */ (document.querySelector('.hud-player__title'));

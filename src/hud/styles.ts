@@ -716,14 +716,25 @@ function hudCss(): string {
 
 .hud-titles {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
   padding: 0 ${THEME.padding}px ${THEME.padding}px;
   flex: 0 0 auto;
 }
+.hud-titles__worn {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.levelUp};
+}
 .hud-titles .hud-button {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
   font-size: ${THEME.font.xs}px;
+}
+.hud-feat-title {
+  color: ${THEME.color.levelUp};
+}
+.hud-feat-title.is-selected {
+  box-shadow: inset 3px 0 0 ${THEME.color.levelUp};
 }
 .hud-feat-group {
   margin-bottom: ${THEME.padding}px;

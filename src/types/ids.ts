@@ -441,4 +441,9 @@ export type SlayerTier = 25 | 50 | 100;
 
 export type AchievementId = `${EnemyId}-slayer-${SlayerTier}`;
 
-export type TitleId = `${EnemyId}-slayer`;
+// A title per rank rather than per creature, so any rank earned can be worn. The
+// top rank's id is the one there always was, which is what lets a save wearing
+// it load unchanged.
+export type SlayerRank = 'culler' | 'hunter' | 'slayer';
+
+export type TitleId = `${EnemyId}-${SlayerRank}`;

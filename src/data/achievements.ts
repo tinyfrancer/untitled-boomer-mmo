@@ -1,5 +1,5 @@
 import { ENEMIES } from './enemies';
-import type { AchievementId, EnemyId, SlayerTier, TitleId } from '../types/ids';
+import type { AchievementId, EnemyId, SlayerRank, SlayerTier, TitleId } from '../types/ids';
 
 export interface AchievementDefinition {
   id: AchievementId;
@@ -7,8 +7,9 @@ export interface AchievementDefinition {
   threshold: SlayerTier;
   name: string;
   description: string;
-  // Only the last tier pays a title; the first two are their own reward.
-  titleId?: TitleId;
+  // Every rank pays the title it is named for, so a player can wear the rank
+  // they like rather than only the last one reached.
+  titleId: TitleId;
 }
 
 export interface TitleDefinition {
@@ -16,24 +17,26 @@ export interface TitleDefinition {
   name: string;
 }
 
-// The rank word each tier earns. The top one matches the title it grants, so
-// completing "Rat Slayer" is what makes you a Rat Slayer.
+// The rank word each tier earns, which is also the title it grants: completing
+// "Rat Culler" is what makes you a Rat Culler.
 const TIER_RANKS: Record<SlayerTier, string> = {
   25: 'Culler',
   50: 'Hunter',
   100: 'Slayer',
 };
 
-export const SLAYER_TIERS: SlayerTier[] = [25, 50, 100];
+const TIER_KEYS: Record<SlayerTier, SlayerRank> = {
+  25: 'culler',
+  50: 'hunter',
+  100: 'slayer',
+};
 
-// The tier that pays out a title. Kept as a named constant because two places
-// need to agree on it: the row builder below and the test that guards the grid.
-export const TITLE_TIER: SlayerTier = 100;
+export const SLAYER_TIERS: SlayerTier[] = [25, 50, 100];
 
 const ENEMY_IDS = Object.keys(ENEMIES) as EnemyId[];
 
-function titleIdFor(enemyId: EnemyId): TitleId {
-  return `${enemyId}-slayer`;
+function titleIdFor(enemyId: EnemyId, threshold: SlayerTier): TitleId {
+  return `${enemyId}-${TIER_KEYS[threshold]}`;
 }
 
 function achievementIdFor(enemyId: EnemyId, threshold: SlayerTier): AchievementId {
@@ -51,7 +54,7 @@ function buildAchievement(enemyId: EnemyId, threshold: SlayerTier): AchievementD
     // A name that doesn't take a bare "s" wants a plural on EnemyDefinition
     // rather than a special case here.
     description: `Defeat ${threshold} ${enemyName.toLowerCase()}s.`,
-    titleId: threshold === TITLE_TIER ? titleIdFor(enemyId) : undefined,
+    titleId: titleIdFor(enemyId, threshold),
   };
 }
 
@@ -73,8 +76,13 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDefinition> = Object
 ) as Record<AchievementId, AchievementDefinition>;
 
 export const TITLES: Record<TitleId, TitleDefinition> = Object.fromEntries(
-  ENEMY_IDS.map((enemyId) => [
-    titleIdFor(enemyId),
-    { id: titleIdFor(enemyId), name: `${ENEMIES[enemyId].name} Slayer` },
-  ]),
+  ENEMY_IDS.flatMap((enemyId) =>
+    SLAYER_TIERS.map((threshold) => [
+      titleIdFor(enemyId, threshold),
+      {
+        id: titleIdFor(enemyId, threshold),
+        name: `${ENEMIES[enemyId].name} ${TIER_RANKS[threshold]}`,
+      },
+    ]),
+  ),
 ) as Record<TitleId, TitleDefinition>;
