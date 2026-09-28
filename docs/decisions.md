@@ -1630,3 +1630,29 @@ Three forks settled at the start of version 2's phase A1:
 read and wordier on every read after; keeping the terse labels with a tap-to-explain, which a player
 has to know to tap; titles at the top rank only, with a clearer picker; mastery keeping a page of
 its own, or both a page and a place in the book.
+
+## 90. An item says what it is for on a tap, and any row that shows one opens its card
+
+**2026-09-28 · the user, asked by Claude**
+
+Three forks settled at the start of version 2's phase A2:
+
+- **The bag's strip lists every use on the tap that selects an item**, the lines the card prints,
+  derived from every table that names the item. Rat meat away from a fire had said "(nothing to do
+  with this)", which read as junk; the strip is what a player sees without knowing any gesture.
+- **Every row that stands for an item opens its card** on a right click or a held finger: the
+  shop, the bank, a station's recipes, the slot picker, the outfitter, the fettler, a worn gear
+  slot, a creature's drops and a loot pile's heap. What a Reforging Stone is for is worth knowing
+  before it is bought.
+- **Food's line says "Camping eats this"** while the tab is still called Camp, and phase A7's
+  rename of every "camp" string carries it to Idle.
+
+Claude's, alongside them: a quest handed in drops off the card, since it wants nothing any more,
+where a contract stays because it is posted again; and the card says what an item is for and what
+it is made from but not what drops it or where it grows, which is the collection log's (phase F3).
+
+**Rejected:** one line on the tap with an About button for the rest, which keeps the grid its room
+and puts the full answer a tap further off; uses on the long-press card only, which a player has
+to know to ask for (the argument decision 89 made about numbers); the card from the bag alone,
+leaving the shop and the counters to add it when they are rebuilt; "Idle" on the card before the
+tab says it.

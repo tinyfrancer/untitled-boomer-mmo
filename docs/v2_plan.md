@@ -1,10 +1,10 @@
 # Version 2: a solo zero-to-hero, drawn, with people in it
 
 **Status:** live. Opened 2026-09-27 against `ca12279`, the merge of act three. **Landed: phase 0**
-(this document, decisions 80-88, `CLAUDE.md` pointing here) **and A1** (every number labelled,
-every slayer rank a title, mastery explained, map names over the markers; decision 89). **Next: A2**,
-items saying what they are for. Update this line as each phase lands: which phase, and which is
-next.
+(this document, decisions 80-88, `CLAUDE.md` pointing here), **A1** (every number labelled, every
+slayer rank a title, mastery explained, map names over the markers; decision 89) **and A2** (every
+item says what it is for, on a tap and on a card any item row opens; decision 90). **Next: A3**,
+counters that read clearly. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -123,9 +123,13 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   it. **Every slayer rank is a title** (Culler, Hunter, Slayer), and an earned rank's row wears it.
   The mastery page says what mastery is and what its ranks pay, from the rank table. The **map
   sheet** draws building names over the markers. Decision 89 has the forks.
-- **A2 — Items say what they are for.** An item card derives its uses from the data: "Cook at a
-  campfire → Cooked Rat", "Used in: …", "Made from: …", "Sells for …", "Idle eats this". Rat meat is
-  answered here, and so is every future "is this junk?".
+- **A2 — Items say what they are for. (Landed.)** Every item's uses are derived from the tables
+  that name it (`systems/ItemUseSystem.ts`): "Cook at a campfire → Cooked Rat", "Used in: …, at the
+  Forge (Town)", the quest and contract that want it, the outfitter's and the fettler's trades, the
+  door a key opens, "Camping eats this when hurt, weakest food first", "Made from: …" and "Sells
+  for …"; burnt food says nothing uses it. The bag's strip lists them **on a tap**, and a held
+  finger or a right click on **any item row** (shop, bank, station, picker, counters, worn slots,
+  drop lists) opens the full card. Decision 90 has the forks.
 - **A3 — Counters that read clearly.** The shop splits **their stock** from **your bag** into two
   panes, buying on one side and selling on the other. The contract board marks what is
   **repeatable** and says how often. **Hand in and Abandon move apart**, and abandoning asks twice.
@@ -136,7 +140,8 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   Mastery shows beside each recipe and node it belongs to.
 - **A6 — Show what is training.** An on-screen bar for the skill last trained, with its XP, kept
   clear of the tab bar by `ui/layout.ts`.
-- **A7 — Idle.** "Camp" becomes **Idle** in every player-facing string (decision 85). The idle panel
+- **A7 — Idle.** "Camp" becomes **Idle** in every player-facing string (decision 85), the item
+  card's "Camping eats this" among them (`ItemUseSystem.ts`, left as Camp by A2). The idle panel
   says what idle will do before it starts: the job, the food it will eat and in what order, the
   arrows it will spend, half XP, the offline cap. The away report uses the same words.
 - **A8 — Save export and import.** Download the save as a file; load one back through the same
@@ -266,6 +271,9 @@ nodes and drops? Does rested XP come only from idle, or from being away too?
   workbench. A long goal and a coin sink, priced by simulation like everything else.
 - **F3 — Collection log and bestiary.** Creatures slain and the drops seen from each, lore found,
   trophies earned, each with completion counts; what is collected here is what the house displays.
+  An item's card learns where the item comes from (what drops it, what node yields it), which A2
+  left to this phase: A2's card says what a thing is for and what it is made from, not where it
+  grows.
 - **F4 — Part F review.**
 
 **Open questions for Part F**: does the house hold only trophies, or also working stations? Can a
