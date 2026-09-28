@@ -46,6 +46,22 @@ from the save like the bag. The character sheet's ATK is computed with the arrow
 names the stat it was built on from the weapon rather than the class, and the offhand row names the
 arrows beside the quiver.
 
+**The skill being trained is a bar too, under XP** (decision 94, `hud/TrainingBar.ts`), reserved by
+`ui/layout.ts` as `hasTraining`. It is put up by a skill's XP when the player earned it by doing
+something — a gather, a make, a swing, a cast — and never by Block or Parry (`isDefenseSkill` in
+`systems/CombatSystem.ts`), which train on what is swung at the player and would flip the bar
+between themselves and the weapon every few seconds of a fight. It fades half a minute after the
+last XP into its skill, on a **timer of the HUD's own**, as a held finger's is: the HUD has no game
+time, and a bar in the corner is not worth publishing one for. That is why it is the one piece of
+the column that tells `Hud` it has gone (`onTrainingHidden`, which re-runs the layout) rather than
+being told, why `Hud.test.ts` holds the fade against a fake clock, and why smoke never waits for it
+and measures the column's height with the bar taken back off (`columnHeightBesideTraining`) wherever
+it compares the column across a stretch of play. A character level redraws it, since a combat skill
+at its ceiling reads `(max)` until the level raises that. It is a button, opening the skills book at
+its skill's page, and its top padding is the gap the bars above take as a margin, so a thumb has the
+gap as well as the bar. Where the longest name meets the largest XP, the name gives way to an
+ellipsis before the level and XP do.
+
 **The map zooms out, and the zoomed-out view is a map you read** (`worldMap()` in
 `systems/MapSystem.ts`). Its whole layout is **derived from the exits already in `ZONES`** — walked
 breadth-first from town, placing each zone one step from its neighbour in the direction the edge
@@ -94,6 +110,13 @@ flat — at 375px a full-width one and the 190px column meet in the middle, and 
 the deeper they overlap. A desktop sheet opens in the right-hand column, which is the frame's own
 corner now, so `sheetRect` starts it below `topRowBottom` rather than below the player column alone;
 the column being the taller of the two today is a coincidence between two tuned heights, not a rule.
+
+**The quest tracker steps right of the column where the two would meet.** It sits over the ability
+bar at the full width, and on a portrait phone or a desktop the column never comes near it. A
+landscape phone is 390px tall for both, and the tallest column there (a wizard wearing a quiver,
+titled, buffed and training) hangs below the top of two tracked lines, so `hudLayout` starts the
+tracker a padding right of the column whenever the column's bottom would reach it.
+`tests/ui/layout.test.ts` holds the two apart at every viewport it names.
 
 **What buffs are up is derived, not tracked** (`systems/EffectSystem.ts`). `world/Player` keeps its
 mana shield, its haste and its meal private and `activeEffects()` builds the list off them each time

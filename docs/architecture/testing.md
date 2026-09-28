@@ -48,6 +48,13 @@ block for the HUD rules that differ on a roomy screen). Five things in it exist 
 - **A CPU-throttled pass at `rate: 8`, cranked at 140ms a frame** — see "Reproducing a
   frame-rate-dependent bug" below for why that is two questions rather than one.
 
+**The HUD's own clocks are not on the crank either.** The training bar fades half a minute after
+the last XP into its skill, on a timer of the HUD's own (decision 94), so smoke never waits for it:
+`tests/hud/Hud.test.ts` holds the fade against vitest's fake timers. It also means the bar can come
+or go between any two readings of the player column, so a smoke check comparing the column across a
+stretch of play measures it with the bar taken off (`columnHeightBesideTraining`), or it would pass
+or fail on how long the run took to get there.
+
 It reaches the game through three dev-only handles, one per channel:
 
 - **`window.world`** — the live `ZoneWorld`, re-set on every zone change since each builds a new

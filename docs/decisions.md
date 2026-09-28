@@ -1754,3 +1754,37 @@ every other item row prints, with the full card a held finger away, as on every 
 inside the character sheet with no menu seat; a strip of skill chips across the top of one page at
 a time, thirteen of them scrolling sideways on a phone; every skill on one long scroll; pages for
 gathering and making only; leaving where a node grows to exploration and the collection log (F3).
+
+## 94. The training bar hangs in the player column, follows what the player does, and fades
+
+**2026-09-28 · the user, asked by Claude**
+
+Four forks settled at the start of version 2's phase A6:
+
+- **The skill last trained is one more bar in the player column**, under the XP bar, with its
+  numbers inside it: `Woodcutting Lv 3 · 40 / 96 XP`. It is in the same place on every screen,
+  which answered the plan's question about a landscape phone: there it costs the column one bar's
+  height, as mana and arrows do.
+- **It follows what the player does**: a gather, a make, and the weapon or spell skill a swing or a
+  cast trains. Block and Parry, which train when something is swung at the player, never take it,
+  since a fight would flip it between them and the weapon every few seconds.
+- **It fades half a minute after the last XP into its skill**, and comes back whole on the next. A
+  save keeps nothing up.
+- **A tap on it opens the skills book at that skill's page**, as that skill's row on the character
+  sheet does.
+
+Claude's, alongside them: the fade runs on a timer of the HUD's own, as a held finger's does, rather
+than on game time the world would have to publish, so smoke does not wait for it and the checks that
+compare the column's height across a stretch of play measure it with the bar taken off; the bar is
+not saved, so a reload starts without it until the next gain; its fill is a teal of its own, since
+it touches the XP bar's blue; where the longest name meets the largest XP the name gives way to an
+ellipsis before the level and XP do; the button is the bar and the gap above it, so a thumb has more
+than the bar's own height to land on; and on a landscape phone, where the tallest column (a wizard
+wearing a quiver, titled, buffed and training) reaches the quest tracker's two lines, the tracker
+steps right of the column. That collision was already 3px deep on a 375px-tall screen before the bar
+added its height.
+
+**Rejected:** the bar bottom right, opposite the ability buttons, which a portrait phone with four
+abilities leaves about 130px for; the bar under the player, beneath the gather bar; every skill,
+Block and Parry included; gathering and making only; a bar that stays until another skill takes it,
+which Claude recommended; a bar that only shows and does nothing on a tap.
