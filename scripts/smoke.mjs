@@ -2605,6 +2605,7 @@ async function achievements() {
       visible: getComputedStyle(sheet).display !== 'none',
       count: rows.length,
       tree: rows.find((row) => row.startsWith('Tree')) ?? '',
+      intro: sheet.querySelector('.hud-sheet__intro')?.textContent ?? '',
     };
   });
   check(
@@ -2614,8 +2615,13 @@ async function achievements() {
   );
   check(
     'and a pool that crossed a rung says which one it stands on',
-    pools.tree.includes('Apprentice') && pools.tree.includes('2/5'),
+    pools.tree.includes('Apprentice') && pools.tree.includes('rank 2 / 5'),
     `tree row: "${pools.tree}"`,
+  );
+  check(
+    'and the page says what mastery is and what its ranks pay',
+    pools.intro.includes('mastery of its own') && pools.intro.includes('Master 30%'),
+    `"${pools.intro.slice(0, 60)}…"`,
   );
   await page.screenshot({ path: `${OUT}/13-mastery.png` });
 }

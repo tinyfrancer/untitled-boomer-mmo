@@ -452,6 +452,15 @@ function hudCss(): string {
   -webkit-overflow-scrolling: touch;
   padding: 4px ${THEME.padding}px ${THEME.padding}px;
 }
+/* What a page is for, said once at its top: small, and out of the way of the rows. */
+.hud-sheet__intro {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+  padding-bottom: ${THEME.padding}px;
+}
+.hud-sheet__intro p {
+  margin: 0 0 4px;
+}
 
 /* --- Character sheet ----------------------------------------------------- */
 
