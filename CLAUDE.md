@@ -178,7 +178,9 @@ are stored — kills, zone visits and mastery XP — because a corpse, an arriva
 leave nothing behind to count. Keep that split. **What an item is for is derived too**
 (`systems/ItemUseSystem.ts`) from every table that takes items; a new kind of table that takes
 them — a counter, a stand, a trade — is taught to it in the same change, or every card it touches
-goes quiet about it.
+goes quiet about it. **So is what a skill's level buys** (`systems/SkillBookSystem.ts`, the skills
+book): it reads the functions the rolls call, so a new rate goes behind an exported function the
+book can read rather than inline in a roll, or the book goes on saying the old number.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can

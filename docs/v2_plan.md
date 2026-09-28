@@ -5,9 +5,10 @@
 slayer rank a title, mastery explained, map names over the markers; decision 89), **A2** (every
 item says what it is for, on a tap and on a card any item row opens; decision 90), **A3** (the
 shop and the bank in two sides, contracts marked repeatable, Abandon apart and asking twice;
-decision 91) **and A4** (a tap on a person talks first: a greeting, their counter as a button, their
-quests; decision 92). **Next: A5**, the skills book. Update this line as each phase lands: which
-phase, and which is next.
+decision 91), **A4** (a tap on a person talks first: a greeting, their counter as a button, their
+quests; decision 92) **and A5** (the skills book: a page per skill, every node and recipe with its
+mastery beside it, the mastery page gone; decision 93). **Next: A6**, the training bar. Update this
+line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -150,9 +151,14 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   has a **Back**; a right click or a held finger offers Talk and the counter, and the counter there
   goes straight to it. Talking is a seventh counter (`CounterId` `'talk'`), so everything that shuts
   a counter shuts it. This is the shell Part D's dialog fills. Decision 92 has the forks.
-- **A5 — The skills book.** A page per skill: level, an XP bar, what training does, and **every
-  recipe and node** with its level, inputs, result and the result's stats, locked ones greyed.
-  Mastery shows beside each recipe and node it belongs to.
+- **A5 — The skills book. (Landed.)** **Skills** takes Mastery's seat in the menu and opens on an
+  index of every skill; a tap, or a tap on the skill's row on the character sheet, turns to its
+  page: level and XP bar, how it trains, what a level buys at yours and at the most, and **every
+  node and recipe** in level order with its inputs, result, the result's stats, XP and where it
+  is (a node's zones, a station's zone), locked ones greyed and naming their level. Each pool sits
+  beside its row, the mastery page is gone, and the six combat skills get pages that say what they
+  buy. Everything is derived (`systems/SkillBookSystem.ts`) from the tables and the functions the
+  rolls call. Decision 93 has the forks.
 - **A6 — Show what is training.** An on-screen bar for the skill last trained, with its XP, kept
   clear of the tab bar by `ui/layout.ts`.
 - **A7 — Idle.** "Camp" becomes **Idle** in every player-facing string (decision 85), the item
