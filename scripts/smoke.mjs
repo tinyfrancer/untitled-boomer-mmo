@@ -1575,6 +1575,18 @@ async function bountyBoard() {
       opened.panel,
     `board: ${opened.board}, shop: ${opened.shop}, bank: ${opened.bank}, trainer: ${opened.trainer}`,
   );
+  // Ten contracts, each a row and a line, is the longest list any counter
+  // draws — the one that ran down over the tab bar and took its taps.
+  const boardClear = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--bounty')?.getBoundingClientRect();
+    const bar = document.querySelector('.hud-tabs')?.getBoundingClientRect();
+    return box && bar ? { bottom: box.bottom, bar: bar.top } : null;
+  });
+  check(
+    'the longest counter stops above the tab bar and scrolls instead',
+    boardClear !== null && boardClear.bottom <= boardClear.bar,
+    JSON.stringify(boardClear),
+  );
   check(
     'the board draws what it is holding back as well as what it is posting',
     opened.rows > 0 && opened.notes === opened.rows && opened.locked.length > 0,

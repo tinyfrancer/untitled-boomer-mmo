@@ -807,9 +807,16 @@ function hudCss(): string {
 .hud-modal--pass-through > * {
   pointer-events: auto;
 }
+/* A counter hangs from the top and stops short of the tab bar, by the menu's
+   offset: a long list used to run down over the bar and take the taps meant for
+   it, the Bag tab among them. What does not fit scrolls. */
 .hud-modal--top {
   align-items: flex-start;
   padding-top: 60px;
+  padding-bottom: ${THEME.touchMin + THEME.padding * 3}px;
+}
+.hud-modal--top > .hud-modal__box {
+  max-height: 100%;
 }
 /* The menu opens against the bar that opened it. The offset is the tab bar's
    own height — touchMin plus its padding either side — so the box rests on top
