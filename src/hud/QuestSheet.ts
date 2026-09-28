@@ -64,7 +64,7 @@ export class QuestSheet extends Sheet {
         'hud-quest__line',
         done
           ? 'Handed in.'
-          : `${describeObjective(quest.objective)}  ${have}/${need}${
+          : `${describeObjective(quest.objective)}  ${have} / ${need}${
               state === 'ready' ? '  — ready to hand in' : ''
             }`,
       );
@@ -89,7 +89,7 @@ export class QuestSheet extends Sheet {
     const progress = el(
       'div',
       'hud-quest__line',
-      `${describeObjective(definition.objective)}  ${have}/${need}${
+      `${describeObjective(definition.objective)}  ${have} / ${need}${
         met ? '  — ready to hand in' : ''
       }`,
     );

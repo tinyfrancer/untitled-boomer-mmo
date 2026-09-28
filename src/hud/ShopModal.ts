@@ -1,5 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
+import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
 import { describeItemName, itemValue } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -38,7 +39,7 @@ export interface ShopHandlers {
  */
 export class ShopModal extends Overlay {
   readonly body: HTMLElement;
-  private readonly coin: HTMLElement;
+  private readonly purse: Purse;
   private readonly handlers: ShopHandlers;
 
   constructor(handlers: ShopHandlers, onClosed: () => void) {
@@ -48,12 +49,12 @@ export class ShopModal extends Overlay {
 
     const head = el('div', 'hud-modal__head');
     head.append(el('div', 'hud-modal__title', 'General Store'));
-    this.coin = el('div', 'hud-coin');
+    this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
     close.dataset.action = 'close-shop';
     close.addEventListener('click', () => handlers.onDismiss());
-    head.append(this.coin, close);
+    head.append(this.purse.root, close);
 
     this.body = el('div', 'hud-modal__body');
     box.append(head, this.body);
@@ -61,7 +62,7 @@ export class ShopModal extends Overlay {
   }
 
   update(state: ShopState): void {
-    this.coin.textContent = formatCurrency(state.currency);
+    this.purse.set(state.currency);
     this.body.replaceChildren();
 
     this.body.append(sectionHeader('For sale'));

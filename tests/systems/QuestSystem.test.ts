@@ -356,11 +356,11 @@ describe('formatQuestProgress', () => {
   it('reads as a tracker line', () => {
     expect(
       formatQuestProgress(bones, taken('rat-bones'), counters({ inventory: { 'rat-bones': 4 } })),
-    ).toBe('Bones for the Broth  4/10');
+    ).toBe('Bones for the Broth  4 / 10');
   });
 
   it('counts a visit as the one arrival it asks for', () => {
-    expect(formatQuestProgress(road, taken('quarry-road'), NONE)).toBe('The Quarry Road  0/1');
+    expect(formatQuestProgress(road, taken('quarry-road'), NONE)).toBe('The Quarry Road  0 / 1');
   });
 });
 

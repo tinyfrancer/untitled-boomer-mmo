@@ -1,5 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader } from './dom';
+import { Purse } from './purse';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { trainingOffers, type TrainingOffer } from '../systems/TrainerSystem';
 import { THEME } from '../ui/theme';
@@ -35,7 +36,7 @@ export interface TrainerHandlers {
  * make choosing between two of them a matter of memory.
  */
 export class TrainerModal extends Overlay {
-  private readonly coin: HTMLElement;
+  private readonly purse: Purse;
   readonly body: HTMLElement;
   private readonly handlers: TrainerHandlers;
 
@@ -46,12 +47,12 @@ export class TrainerModal extends Overlay {
 
     const head = el('div', 'hud-modal__head');
     head.append(el('div', 'hud-modal__title', 'Trainer'));
-    this.coin = el('div', 'hud-coin');
+    this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
     close.dataset.action = 'close-trainer';
     close.addEventListener('click', () => handlers.onDismiss());
-    head.append(this.coin, close);
+    head.append(this.purse.root, close);
 
     this.body = el('div', 'hud-modal__body');
     box.append(head, this.body);
@@ -59,7 +60,7 @@ export class TrainerModal extends Overlay {
   }
 
   update(state: TrainerState): void {
-    this.coin.textContent = formatCurrency(state.currency);
+    this.purse.set(state.currency);
     this.body.replaceChildren();
 
     const offers = trainingOffers({

@@ -1303,7 +1303,7 @@ async function bank() {
   );
   check(
     'the panel redraws from the shelves the world answered with',
-    stored.deposits === 0 && stored.withdraws === 1 && stored.slots === '1/8 slots',
+    stored.deposits === 0 && stored.withdraws === 1 && stored.slots === '1 / 8 slots',
     `${stored.deposits} deposit rows, ${stored.withdraws} withdraw rows, "${stored.slots}"`,
   );
   await page.screenshot({ path: `${OUT}/9-bank.png` });
@@ -1560,7 +1560,7 @@ async function bountyBoard() {
     'taking a contract puts a line on the tracker and a Drop button on its row',
     taken.held === 'rat-cull' &&
       taken.tracked.length === trackedBefore + 1 &&
-      taken.tracked.some((line) => line.includes('Rat Cull') && line.includes('0/15')) &&
+      taken.tracked.some((line) => line.includes('Rat Cull') && line.includes('0 / 15')) &&
       taken.drop === 1 &&
       !taken.heldIsButton,
     `held ${taken.held}, tracker: ${taken.tracked.join(' | ')}, drop ${taken.drop}`,
@@ -1582,7 +1582,7 @@ async function bountyBoard() {
   }));
   check(
     'a kill made away from the counter redraws the row and the strip together',
-    ready.tracked.some((line) => line.includes('15/15')) && ready.values.includes('Hand in'),
+    ready.tracked.some((line) => line.includes('15 / 15')) && ready.values.includes('Hand in'),
     `tracker: ${ready.tracked.join(' | ')}, values: ${ready.values.join(', ')}`,
   );
 

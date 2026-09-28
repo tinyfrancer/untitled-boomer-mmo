@@ -38,9 +38,9 @@ export interface DisplayedStats {
 }
 
 const STAT_LABELS: Record<PrimaryStat, string> = {
-  strength: 'STR',
-  intellect: 'INT',
-  agility: 'AGI',
+  strength: 'Strength',
+  intellect: 'Intellect',
+  agility: 'Agility',
 };
 
 export interface CharacterSheetState {
@@ -141,11 +141,11 @@ export class CharacterSheet extends Sheet {
 
     const { hp, maxHp, strength, intellect, agility, attackPower, attackStat } = state.stats;
     const lines = [
-      `HP ${hp} / ${maxHp}`,
-      `STR ${strength}`,
-      `INT ${intellect}`,
-      `AGI ${agility}`,
-      `ATK ${attackPower} (${STAT_LABELS[attackStat]})`,
+      `Health ${hp} / ${maxHp}`,
+      `${STAT_LABELS.strength} ${strength}`,
+      `${STAT_LABELS.intellect} ${intellect}`,
+      `${STAT_LABELS.agility} ${agility}`,
+      `Attack ${attackPower} (${STAT_LABELS[attackStat]})`,
     ];
     this.statLines.forEach((line, index) => {
       line.textContent = lines[index] ?? '';
@@ -171,7 +171,9 @@ export class CharacterSheet extends Sheet {
       const row = this.skills[skillId];
       const xpToNext = skillXpToNextLevel(skillId, skill.level, state.level);
       row.value.textContent =
-        xpToNext > 0 ? `${skill.xp}/${xpToNext} · Lv ${skill.level}` : `Lv ${skill.level} (Max)`;
+        xpToNext > 0
+          ? `Lv ${skill.level} · ${skill.xp} / ${xpToNext} XP`
+          : `Lv ${skill.level} (max)`;
       // A capped skill has no next level to fill toward, and reads as full.
       row.fill.style.width = fillPercent(xpToNext > 0 ? barFill(skill.xp, xpToNext) : 1);
     }

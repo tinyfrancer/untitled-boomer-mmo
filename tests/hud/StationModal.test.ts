@@ -96,7 +96,7 @@ describe('a station panel', () => {
     for (const input of RECIPES[cowl].inputs) {
       expect(note?.textContent).toContain(`${input.quantity}`);
     }
-    expect(note?.textContent).toContain('1/2');
+    expect(note?.textContent).toContain('Cured Leather ×2 (1 in bag)');
   });
 
   // A row that makes several says how many, since that is most of what tells a

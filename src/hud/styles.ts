@@ -530,6 +530,10 @@ function hudCss(): string {
   font-size: ${THEME.font.sm}px;
   color: ${THEME.color.levelUp};
 }
+.hud-coin__label {
+  color: ${THEME.color.muted};
+  margin-right: 0.35em;
+}
 .hud-weight {
   font-size: ${THEME.font.xs}px;
   color: ${THEME.color.muted};

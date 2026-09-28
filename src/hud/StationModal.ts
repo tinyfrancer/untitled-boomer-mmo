@@ -116,7 +116,7 @@ export class StationModal extends Overlay {
     const cost = recipe.inputs
       .map((input) => {
         const held = state.inventory[input.itemId] ?? 0;
-        return `${describeItemName(input.itemId)} ${held}/${input.quantity}`;
+        return `${describeItemName(input.itemId)} ×${input.quantity} (${held} in bag)`;
       })
       .join(', ');
     // How many a job makes, for the rows that make more than one — which is
