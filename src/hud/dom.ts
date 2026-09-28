@@ -147,9 +147,17 @@ export function emptyLine(text: string): HTMLElement {
   return el('div', 'hud-empty', text);
 }
 
-/** The heading over a group of rows. */
-export function sectionHeader(text: string): HTMLElement {
-  return el('div', 'hud-section', text);
+/**
+ * The heading over a group of rows, and what a tap on one of them does when
+ * that is the thing a reader could get wrong — the two sides of a counter,
+ * where the same tap buys on one and sells on the other.
+ */
+export function sectionHeader(text: string, hint?: string): HTMLElement {
+  const header = el('div', 'hud-section', text);
+  if (hint) {
+    header.append(el('span', 'hud-section__hint', hint));
+  }
+  return header;
 }
 
 /** A 0-1 ratio as the CSS length a bar's fill is drawn at. */

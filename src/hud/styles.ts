@@ -518,6 +518,11 @@ function hudCss(): string {
   color: ${THEME.color.muted};
   margin: ${THEME.padding}px 0 4px;
 }
+.hud-section__hint {
+  font-weight: normal;
+  color: ${THEME.color.dim};
+  margin-left: 6px;
+}
 .hud-skill {
   margin-top: 4px;
 }
@@ -848,17 +853,47 @@ function hudCss(): string {
 .hud-menu__item {
   min-height: ${THEME.touchMin}px;
 }
+/* Its width is \`counterLayout\`'s, set inline: it depends on whether the two
+   sides stand across or one over the other. */
 .hud-modal__box--shop {
-  width: 300px;
   border-color: ${THEME.color.levelUp};
   gap: 4px;
 }
 /* The shop's shape in the banker's colour, so which counter is open is
    answerable without reading the title. */
 .hud-modal__box--bank {
-  width: 300px;
   border-color: ${THEME.color.skillUp};
   gap: 4px;
+}
+/* A counter that deals both ways, as two framed panes that scroll on their own:
+   the keeper's and yours. One over the other, each starting at the height of
+   its list and giving it up in proportion when the two do not fit — so a short
+   bag under a long shelf keeps its rows — and never below a couple of rows. */
+.hud-sides {
+  display: flex;
+  flex-direction: column;
+  gap: ${THEME.padding}px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.hud-side {
+  flex: 1 1 auto;
+  min-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 4px 4px;
+  border: 1px solid ${cssColor(THEME.panelStroke)};
+  background: rgba(0, 0, 0, 0.18);
+}
+/* Across, each side takes half and the whole height, which is what a landscape
+   phone has least of. */
+.hud-sides.is-side-by-side {
+  flex-direction: row;
+}
+.hud-sides.is-side-by-side > .hud-side {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
 }
 /* And the third counter in a third colour, for the same reason. Wider than the
    other two: every row here carries a line of prose under it, and the two that

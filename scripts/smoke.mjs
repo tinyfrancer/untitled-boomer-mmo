@@ -1084,7 +1084,84 @@ async function feedback() {
     one === 11 && sold.left === 0 && sold.currency > purse && !sold.button,
     `12 -> ${one} -> ${sold.left} bones, ${purse} -> ${sold.currency} copper`,
   );
+
+  // The stock and the bag are two sides, and which way they stand is a
+  // question about real pixels: one over the other on this phone with both in
+  // view at once — the point of splitting them, since the bag used to be below
+  // the whole shelf — and across once it is turned on its side. The bag gets a
+  // stack back so its side has a row to find.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.inventory = { ...w.character.state.inventory, 'rat-bones': 4 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+  });
+  const shopSides = () =>
+    page.evaluate(() => {
+      /** @param {string} selector */
+      const rect = (selector) => {
+        const box = document.querySelector(selector)?.getBoundingClientRect();
+        return box ? { left: box.left, right: box.right, top: box.top, bottom: box.bottom } : null;
+      };
+      return {
+        theirs: rect('.hud-modal__box--shop .hud-side[data-side="theirs"]'),
+        yours: rect('.hud-modal__box--shop .hud-side[data-side="yours"]'),
+        stock: rect('.hud-modal__box--shop .hud-side[data-side="theirs"] [data-item]'),
+        bag: rect('.hud-modal__box--shop .hud-side[data-side="yours"] [data-item="rat-bones"]'),
+        box: rect('.hud-modal__box--shop'),
+        tabBar: rect('.hud-tabs'),
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+    });
+  const stacked = await shopSides();
+  check(
+    "the shop's stock and bag stand one over the other on a portrait phone, both in view",
+    stacked.theirs !== null &&
+      stacked.yours !== null &&
+      stacked.stock !== null &&
+      stacked.bag !== null &&
+      stacked.theirs.bottom <= stacked.yours.top &&
+      Math.abs(stacked.theirs.left - stacked.yours.left) < 1 &&
+      stacked.stock.bottom <= stacked.theirs.bottom &&
+      stacked.bag.bottom <= stacked.yours.bottom &&
+      stacked.box !== null &&
+      stacked.tabBar !== null &&
+      stacked.box.bottom <= stacked.tabBar.top,
+    JSON.stringify({ theirs: stacked.theirs, yours: stacked.yours, bag: stacked.bag }),
+  );
   await page.screenshot({ path: `${OUT}/8-shop.png` });
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForFunction(
+    () => document.querySelector('.hud-sides.is-side-by-side') !== null,
+    undefined,
+    { timeout: 5000 },
+  );
+  await step(2);
+  const across = await shopSides();
+  check(
+    "a phone turned on its side stands the shop's two sides across it, clear of the tab bar",
+    across.theirs !== null &&
+      across.yours !== null &&
+      across.box !== null &&
+      across.bag !== null &&
+      across.tabBar !== null &&
+      across.theirs.right <= across.yours.left &&
+      Math.abs(across.theirs.top - across.yours.top) < 1 &&
+      across.box.left >= 0 &&
+      across.box.right <= across.width &&
+      across.box.bottom <= across.tabBar.top &&
+      across.bag.bottom <= across.yours.bottom,
+    JSON.stringify({ theirs: across.theirs, yours: across.yours, box: across.box }),
+  );
+  await page.screenshot({ path: `${OUT}/8b-shop-landscape.png` });
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForFunction(
+    () => document.querySelector('.hud-sides:not(.is-side-by-side)') !== null,
+    undefined,
+    { timeout: 5000 },
+  );
+  await step(2);
 
   // A finger held on a row asks what the thing is for rather than buying it —
   // which is a clock and a release, so only a real touch can say the release

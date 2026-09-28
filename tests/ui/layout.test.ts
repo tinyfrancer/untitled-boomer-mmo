@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_TRACKED_QUESTS,
   channelBarTop,
+  counterLayout,
   hudLayout,
   isNarrowViewport,
   menuPosition,
@@ -259,6 +260,27 @@ describe('sheetRect', () => {
     expect(sheetRect(tracked, PHONE_PORTRAIT.width, 210).height).toBeLessThan(
       sheetRect(bare, PHONE_PORTRAIT.width, 210).height,
     );
+  });
+});
+
+describe('counterLayout', () => {
+  // Both phones are narrow to `hudLayout`, and they come out on opposite sides
+  // of this: it asks whether two lists fit across, which is exactly what a
+  // landscape phone has and a portrait one lacks.
+  it('stands the two sides one over the other on a portrait phone', () => {
+    for (const phone of [PHONE_PORTRAIT, SMALL_PHONE]) {
+      const layout = counterLayout(phone.width);
+      expect(layout.sideBySide).toBe(false);
+      expect(layout.width).toBeLessThanOrEqual(phone.width - THEME.margin * 2);
+    }
+  });
+
+  it('stands them side by side on a landscape phone and a desktop', () => {
+    for (const screen of [PHONE_LANDSCAPE, DESKTOP]) {
+      const layout = counterLayout(screen.width);
+      expect(layout.sideBySide).toBe(true);
+      expect(layout.width).toBeLessThanOrEqual(screen.width - THEME.margin * 2);
+    }
   });
 });
 
