@@ -1686,3 +1686,39 @@ contract has been paid, which would be a fourth stored tally for a number nothin
 daily reset per contract, a balance change with a timestamp to store and migrate; giving a
 contract back from the quest log rather than the board; a confirmation box rather than a second
 tap.
+
+## 92. A tap on a person talks first, and the conversation holds their quests
+
+**2026-09-28 · the user, asked by Claude**
+
+Four forks settled at the start of version 2's phase A4:
+
+- **A tap on a person walks up and opens a talk panel**, hanging where the counters hang: their
+  name, their greeting, a button for the counter they work with a line saying what it is for, and
+  the work they have going. The button puts their counter up in its place, and every counter's
+  head gains a **Back** to the conversation. Part D's dialog goes in this panel.
+- **A person's quests are in the conversation and on none of their counters.** This reverses the
+  half of decision 69 that had `OverlayHost` draw them at the top of every counter panel; the
+  other half, that the opening names the person, is what the talk panel is drawn from.
+- **Every visit talks first.** A right click or a held finger on a person offers **Talk** and their
+  counter, and the counter there goes straight to it — the same walk a tap makes, ending at a
+  different panel. RuneScape's Talk-to on a click and Bank on a right click.
+- **A greeting is one line, naming no place and no person**, since the lore bible (C2) has named
+  nobody yet and D1 rewrites every line in its voice.
+
+Claude's, alongside them: talking is a seventh counter rather than a new kind of thing — a
+`CounterId` of `'talk'` beside the six roles, a `TalkSession` behind it, the same pair of events and
+the same panel slot — so walking off, one open at a time, a zone change, a death and a camp all shut
+it with no line written for it, and the quest desk's "who is the player standing at" answers for it.
+The menu line for the board says **Contracts**, the last place it still said Bounties. The merchant's
+button stays **Shop** and the outfitter's **Trade**, the distinction the counters already drew
+between coin and barter. And the release after a held finger is swallowed on the window rather than
+on the row, because a card opened by the press can be what is under the finger when it lifts; a
+shop row that no longer sat under the card's box opened it and closed it again.
+
+**Rejected:** a menu at the tap (Talk, Shop, Quests) before walking, which is the held finger's job;
+the counter with a greeting over it, which leaves no panel for Part D to fill; quests behind a
+Quests button of their own, a tap further off; quests in both places, drawn twice; skipping the
+conversation for someone with one thing to do, or after the first visit of a session, which makes
+the same tap mean two things; each person named now for C2 to adopt; a few greetings rotated per
+visit.

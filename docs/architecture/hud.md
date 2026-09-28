@@ -14,9 +14,12 @@ port, and nothing drawing the world knows it exists.
 of it. Char / Bag / Quests / Feats / Log are `Sheet` subclasses and one is open at a time — `Hud`
 holds a single `openSheet`, not a visible flag per panel — while Camp and the gear icon are actions
 that open nothing. The shop, the slot picker, the options menu and the away report are overlays
-built on open and removed on close. Every counter's panel is its own list with the person's quests
-drawn over the top of it by `OverlayHost` rather than by the panel (`hud/counterQuests.ts`), which
-is why each modal hands the host its scrolling `body`. The options menu also holds the one setting
+built on open and removed on close. A tap on a person puts up the **talk panel** (`hud/TalkModal.ts`)
+in the slot every counter uses: their greeting, a button for the counter they work, and their
+quests (`hud/talkQuests.ts`), which no counter draws any more. Every role counter's panel is its own
+list with a **Back** to the conversation put at the front of its head by `OverlayHost` rather than
+by the panel, which is why each modal hands the host its `head` (`economy.md`). The options menu
+also holds the one setting
 that is not the character's — mute and volume, which the HUD is handed at mount and sends back
 whole on `SOUND_SETTINGS_CHANGED_EVENT` (`audio.md`).
 
@@ -205,9 +208,13 @@ Eight panels draw item rows and the card opens in one place, and every panel and
 under the HUD's root, so `bindItemCard` dispatches a bubbling `hud-item-card` DOM event and the
 root opens the card for it. A panel says only which item a row is about, or hands a getter for the
 one row that changes what it shows without being rebuilt (a gear slot). It is bound after the
-row's own click, which is safe: `bindLongPress` swallows the release with a capture listener, and
-on the target a capture listener runs before the plain ones whichever was bound first — so a finger
-held on a shop row opens the card and does not buy. A drop or a heap on the card itself opens its
+row's own click, which is safe: `bindLongPress` swallows the release with a capture listener on the
+**window**, which runs before anything under the finger whichever was bound first — so a finger
+held on a shop row opens the card and does not buy. It is the window rather than the row because
+the release lands wherever the finger is, and by then the card may be what is there: a shop row
+outside the card's box opened it and closed it again on its scrim, which went unnoticed only while
+the quests over the stock kept the row smoke holds under the box. One click is swallowed, and the
+next press disarms it in case the release made none. A drop or a heap on the card itself opens its
 item's card in place of the list, since there is one card at a time; smoke holds by real touch
 that the release after that press does not reach the new card's scrim. The card is the one modal
 opened over other panels, so its box is opaque where the rest let the world through.

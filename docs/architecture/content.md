@@ -86,14 +86,17 @@ was asked first.
 `turnInQuest` on `CharacterController` refuses as a whole rather than half-applying — taking the
 objective and finding no room for the reward is the one outcome that can't be undone.
 
-**A giver's quests are drawn by the counter, not by a panel** (`hud/counterQuests.ts`,
-`docs/decisions.md` 69). They were a section of the shop's panel while the shopkeeper was the only
-giver; now a counter opening names who is behind it as well as the role (`COUNTER_OPENED_EVENT`
-carries both), and `OverlayHost` puts that person's work at the top of whichever panel it puts up.
-So anybody who gives quests shows them at whatever counter they stand behind, and no panel can be
-the one that forgot to. The world side needed nothing: `QuestDesk` already asked whether the person
-serving was the quest's giver. The inspect card's quest count moved the same way, onto anybody's
-card who gives one.
+**A giver's quests are drawn in the conversation with them, not by any counter**
+(`hud/talkQuests.ts`, drawn by `hud/TalkModal.ts`; `docs/decisions.md` 69 and 92). They were a
+section of the shop's panel while the shopkeeper was the only giver, then something `OverlayHost`
+put at the top of every counter once a second giver stood behind a different one — which is why a
+counter opening names who is behind it as well as which counter it is (`COUNTER_OPENED_EVENT`
+carries both). Version 2's phase A4 made a tap on a person talk first, and the talk panel is the
+one panel every person has, so the work moved there and off the counters: anybody who gives quests
+shows them when talked to, and no panel can be the one that forgot to. The world side needed
+nothing either time: `QuestDesk` asks whether the person the player is standing at — talking to,
+or served by — is the quest's giver. The inspect card's quest count moved the same way, onto
+anybody's card who gives one.
 
 **An objective is a tagged union, and what splits the three is what each one _counts_**
 (`QuestObjective` in `data/quests.ts`). `collect` counts the bag, which goes down as well as up and
