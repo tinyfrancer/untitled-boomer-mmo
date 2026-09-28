@@ -1084,7 +1084,84 @@ async function feedback() {
     one === 11 && sold.left === 0 && sold.currency > purse && !sold.button,
     `12 -> ${one} -> ${sold.left} bones, ${purse} -> ${sold.currency} copper`,
   );
+
+  // The stock and the bag are two sides, and which way they stand is a
+  // question about real pixels: one over the other on this phone with both in
+  // view at once — the point of splitting them, since the bag used to be below
+  // the whole shelf — and across once it is turned on its side. The bag gets a
+  // stack back so its side has a row to find.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.inventory = { ...w.character.state.inventory, 'rat-bones': 4 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+  });
+  const shopSides = () =>
+    page.evaluate(() => {
+      /** @param {string} selector */
+      const rect = (selector) => {
+        const box = document.querySelector(selector)?.getBoundingClientRect();
+        return box ? { left: box.left, right: box.right, top: box.top, bottom: box.bottom } : null;
+      };
+      return {
+        theirs: rect('.hud-modal__box--shop .hud-side[data-side="theirs"]'),
+        yours: rect('.hud-modal__box--shop .hud-side[data-side="yours"]'),
+        stock: rect('.hud-modal__box--shop .hud-side[data-side="theirs"] [data-item]'),
+        bag: rect('.hud-modal__box--shop .hud-side[data-side="yours"] [data-item="rat-bones"]'),
+        box: rect('.hud-modal__box--shop'),
+        tabBar: rect('.hud-tabs'),
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+    });
+  const stacked = await shopSides();
+  check(
+    "the shop's stock and bag stand one over the other on a portrait phone, both in view",
+    stacked.theirs !== null &&
+      stacked.yours !== null &&
+      stacked.stock !== null &&
+      stacked.bag !== null &&
+      stacked.theirs.bottom <= stacked.yours.top &&
+      Math.abs(stacked.theirs.left - stacked.yours.left) < 1 &&
+      stacked.stock.bottom <= stacked.theirs.bottom &&
+      stacked.bag.bottom <= stacked.yours.bottom &&
+      stacked.box !== null &&
+      stacked.tabBar !== null &&
+      stacked.box.bottom <= stacked.tabBar.top,
+    JSON.stringify({ theirs: stacked.theirs, yours: stacked.yours, bag: stacked.bag }),
+  );
   await page.screenshot({ path: `${OUT}/8-shop.png` });
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForFunction(
+    () => document.querySelector('.hud-sides.is-side-by-side') !== null,
+    undefined,
+    { timeout: 5000 },
+  );
+  await step(2);
+  const across = await shopSides();
+  check(
+    "a phone turned on its side stands the shop's two sides across it, clear of the tab bar",
+    across.theirs !== null &&
+      across.yours !== null &&
+      across.box !== null &&
+      across.bag !== null &&
+      across.tabBar !== null &&
+      across.theirs.right <= across.yours.left &&
+      Math.abs(across.theirs.top - across.yours.top) < 1 &&
+      across.box.left >= 0 &&
+      across.box.right <= across.width &&
+      across.box.bottom <= across.tabBar.top &&
+      across.bag.bottom <= across.yours.bottom,
+    JSON.stringify({ theirs: across.theirs, yours: across.yours, box: across.box }),
+  );
+  await page.screenshot({ path: `${OUT}/8b-shop-landscape.png` });
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForFunction(
+    () => document.querySelector('.hud-sides:not(.is-side-by-side)') !== null,
+    undefined,
+    { timeout: 5000 },
+  );
+  await step(2);
 
   // A finger held on a row asks what the thing is for rather than buying it —
   // which is a clock and a release, so only a real touch can say the release
@@ -1575,6 +1652,18 @@ async function bountyBoard() {
       opened.panel,
     `board: ${opened.board}, shop: ${opened.shop}, bank: ${opened.bank}, trainer: ${opened.trainer}`,
   );
+  // Ten contracts, each a row and a line, is the longest list any counter
+  // draws — the one that ran down over the tab bar and took its taps.
+  const boardClear = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--bounty')?.getBoundingClientRect();
+    const bar = document.querySelector('.hud-tabs')?.getBoundingClientRect();
+    return box && bar ? { bottom: box.bottom, bar: bar.top } : null;
+  });
+  check(
+    'the longest counter stops above the tab bar and scrolls instead',
+    boardClear !== null && boardClear.bottom <= boardClear.bar,
+    JSON.stringify(boardClear),
+  );
   check(
     'the board draws what it is holding back as well as what it is posting',
     opened.rows > 0 && opened.notes === opened.rows && opened.locked.length > 0,
@@ -1617,15 +1706,63 @@ async function bountyBoard() {
       ) !== null,
   }));
   check(
-    'taking a contract puts a line on the tracker and a Drop button on its row',
+    'taking a contract puts a line on the tracker and an Abandon button under it',
     taken.held === 'rat-cull' &&
       taken.tracked.length === trackedBefore + 1 &&
       taken.tracked.some((line) => line.includes('Rat Cull') && line.includes('0 / 15')) &&
       taken.drop === 1 &&
       !taken.heldIsButton,
-    `held ${taken.held}, tracker: ${taken.tracked.join(' | ')}, drop ${taken.drop}`,
+    `held ${taken.held}, tracker: ${taken.tracked.join(' | ')}, abandon ${taken.drop}`,
   );
   await page.screenshot({ path: `${OUT}/10b-bounty.png` });
+
+  // Abandon used to sit against the row that hands the work in, a thumb's
+  // width from it. It is under the contract now, a clear gap down and not
+  // beside the row at all — a question about where things are drawn, which is
+  // the browser's.
+  const apart = await page.evaluate(() => {
+    const row = document
+      .querySelector('.hud-modal__box--bounty .hud-list-row[data-bounty="rat-cull"]')
+      ?.getBoundingClientRect();
+    const button = document
+      .querySelector('.hud-modal__box--bounty [data-abandon-bounty]')
+      ?.getBoundingClientRect();
+    return row && button ? { gap: button.top - row.bottom } : null;
+  });
+  check(
+    'Abandon stands under the contract in hand, a clear gap below the row that hands it in',
+    apart !== null && apart.gap >= 20,
+    `gap ${apart?.gap.toFixed(1)}px`,
+  );
+
+  // It asks twice, by real taps: the first arms it and gives nothing back, the
+  // second gives the contract up and takes its line off the tracker.
+  await page.click('.hud-modal__box--bounty [data-abandon-bounty]');
+  await step(2);
+  const armed = await page.evaluate(() => ({
+    held: window.world.character.state.bounty?.bountyId ?? null,
+    says: document.querySelector('.hud-modal__box--bounty [data-abandon-bounty]')?.textContent,
+  }));
+  await page.click('.hud-modal__box--bounty [data-abandon-bounty]');
+  await step(2);
+  const givenBack = await page.evaluate(() => ({
+    held: window.world.character.state.bounty,
+    tracked: document.querySelectorAll('.hud-tracker__line').length,
+    button: document.querySelector('.hud-modal__box--bounty [data-abandon-bounty]') !== null,
+  }));
+  check(
+    'abandoning asks twice: one tap arms it, the second gives the contract back',
+    armed.held === 'rat-cull' &&
+      armed.says === 'Tap again to abandon' &&
+      givenBack.held === null &&
+      givenBack.tracked === trackedBefore &&
+      !givenBack.button,
+    `after one tap: ${armed.held}, "${armed.says}"; after two: ${JSON.stringify(givenBack.held)}`,
+  );
+
+  // Taken again, since the rest of this section hands it in.
+  await page.click('.hud-modal__box--bounty .hud-list-row[data-bounty="rat-cull"]');
+  await step(2);
 
   // Finish it out in the world. The board publishes no progress of its own —
   // every row is derived from the tallies the HUD already holds — so a kill

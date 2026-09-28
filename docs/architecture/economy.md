@@ -91,6 +91,15 @@ it wearing a longer name. The bank's two directions are the same widget: a move 
 is reversible where a sale is not, so the safety argument is weaker there — but the two panels are
 read the same way, and a player should never have to remember which of them a row empties.
 
+**A counter that deals both ways has two sides** (`hud/counterSides.ts`, version 2 phase A3;
+`docs/decisions.md` 91). The shop drew its stock and the bag as one list under two headings, so
+every row asked whether a tap on it bought or sold, and on a phone the bag was below the whole
+shelf. Now the keeper's side and yours are framed panes that scroll on their own, headed with what a
+tap does there, and the bank does the same with the vault on the banker's side and the price of a
+shelf under it. Which way they stand is `counterLayout`'s (`hud.md`). The keeper's side is the
+panel's `body`, which is what `OverlayHost` prepends a giver's quests to, so the shopkeeper's work
+sits over the stock without either panel knowing.
+
 **The bank is weightless and limited by _kinds_, not by weight** (`systems/BankSystem.ts`, run by
 `world/BankSession.ts`, stored as `CharacterState.bank` and `bankSlots`). One slot per item id,
 however deep the stack on it — a stack of one and a stack of two hundred cost the same shelf — so

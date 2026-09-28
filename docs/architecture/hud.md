@@ -111,6 +111,15 @@ Three rules the old Phaser HUD arranged by hand come free from CSS, and are wort
 - A touch drag on a list scrolls it and the browser suppresses the click that would follow, which
   is the drag-versus-tap threshold those panels each had their own copy of.
 
+**A counter's two sides stand across or one over the other by width alone** (`counterLayout` in
+`ui/layout.ts`, applied by `CounterSides`). That is not the `narrow` breakpoint, and must not
+become it: a landscape phone is narrow to `hudLayout` and is exactly the screen that wants the two
+lists side by side, since one over the other would leave each a couple of rows of its 390px. The
+host is handed the width on every `applyLayout` (`OverlayHost.layout`), so turning a phone with the
+shop up moves it, and a counter opened later starts from the width already known. Every counter
+hangs from the top and **stops above the tab bar** by the menu's offset, scrolling rather than
+running over the bar — the board's ten contracts had covered it and taken the taps meant for it.
+
 **Layout arithmetic still lives in the engine-free `ui/layout.ts`**, applied as inline styles rather
 than left to CSS: it is unit-tested at viewport sizes nobody sits down and tries by hand, and
 `worldViewportHeight()` is derived from the same numbers. Put new HUD geometry there. The breakpoint

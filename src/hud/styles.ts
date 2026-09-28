@@ -518,6 +518,11 @@ function hudCss(): string {
   color: ${THEME.color.muted};
   margin: ${THEME.padding}px 0 4px;
 }
+.hud-section__hint {
+  font-weight: normal;
+  color: ${THEME.color.dim};
+  margin-left: 6px;
+}
 .hud-skill {
   margin-top: 4px;
 }
@@ -807,9 +812,16 @@ function hudCss(): string {
 .hud-modal--pass-through > * {
   pointer-events: auto;
 }
+/* A counter hangs from the top and stops short of the tab bar, by the menu's
+   offset: a long list used to run down over the bar and take the taps meant for
+   it, the Bag tab among them. What does not fit scrolls. */
 .hud-modal--top {
   align-items: flex-start;
   padding-top: 60px;
+  padding-bottom: ${THEME.touchMin + THEME.padding * 3}px;
+}
+.hud-modal--top > .hud-modal__box {
+  max-height: 100%;
 }
 /* The menu opens against the bar that opened it. The offset is the tab bar's
    own height — touchMin plus its padding either side — so the box rests on top
@@ -841,17 +853,47 @@ function hudCss(): string {
 .hud-menu__item {
   min-height: ${THEME.touchMin}px;
 }
+/* Its width is \`counterLayout\`'s, set inline: it depends on whether the two
+   sides stand across or one over the other. */
 .hud-modal__box--shop {
-  width: 300px;
   border-color: ${THEME.color.levelUp};
   gap: 4px;
 }
 /* The shop's shape in the banker's colour, so which counter is open is
    answerable without reading the title. */
 .hud-modal__box--bank {
-  width: 300px;
   border-color: ${THEME.color.skillUp};
   gap: 4px;
+}
+/* A counter that deals both ways, as two framed panes that scroll on their own:
+   the keeper's and yours. One over the other, each starting at the height of
+   its list and giving it up in proportion when the two do not fit — so a short
+   bag under a long shelf keeps its rows — and never below a couple of rows. */
+.hud-sides {
+  display: flex;
+  flex-direction: column;
+  gap: ${THEME.padding}px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.hud-side {
+  flex: 1 1 auto;
+  min-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 4px 4px;
+  border: 1px solid ${cssColor(THEME.panelStroke)};
+  background: rgba(0, 0, 0, 0.18);
+}
+/* Across, each side takes half and the whole height, which is what a landscape
+   phone has least of. */
+.hud-sides.is-side-by-side {
+  flex-direction: row;
+}
+.hud-sides.is-side-by-side > .hud-side {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
 }
 /* And the third counter in a third colour, for the same reason. Wider than the
    other two: every row here carries a line of prose under it, and the two that
@@ -886,16 +928,48 @@ function hudCss(): string {
   gap: 4px;
 }
 /* A contract is its row and the line describing what it wants, kept together the
-   way a lesson is — including when the row has grown a Drop button beside it,
-   which is why this wraps the stack rather than the row. */
+   way a lesson is. */
 .hud-contract {
   display: flex;
   flex-direction: column;
   margin-bottom: 6px;
 }
-.hud-contract > .hud-list-row,
-.hud-contract > .hud-stack {
+.hud-contract > .hud-list-row {
   margin-bottom: 0;
+}
+/* How often, said once over the whole board rather than on every row. */
+.hud-board__rule {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+  padding: 2px ${THEME.padding}px 0;
+}
+/* Giving the contract back: under it and a clear gap below the row that hands it
+   in, across the panel, and no taller than that row, since it is the one of the
+   two a mis-tap costs something. Filled once armed, so the second press is
+   plainly a different thing from the first. */
+.hud-contract__abandon {
+  width: 100%;
+  min-height: 34px;
+  margin: ${THEME.padding * 1.5}px 0 ${THEME.padding}px;
+  font-size: ${THEME.font.sm}px;
+  border-color: ${THEME.color.playerDamage};
+}
+.hud-contract__abandon.is-armed {
+  background: ${THEME.color.playerDamage};
+  color: ${THEME.color.text};
+}
+/* A word marking what kind of thing a row is, kept off the words around it. */
+.hud-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid ${THEME.color.quartermaster};
+  border-radius: 2px;
+  color: ${THEME.color.quartermaster};
+  font-size: ${THEME.font.xs}px;
+  font-weight: normal;
+  line-height: 14px;
+  white-space: nowrap;
 }
 /* A station's list, in the ember colour the forge's coals are drawn in — one
    look for both, since what tells a vat from an anvil is the name over it and

@@ -1,5 +1,5 @@
 import { Overlay } from './Overlay';
-import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
+import { el, emptyLine, row, sectionHeader, tag } from './dom';
 import { Purse } from './purse';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { bountyOffers, type BountyOffer } from '../systems/BountySystem';
@@ -23,6 +23,10 @@ export interface BountyHandlers {
   onDismiss: () => void;
 }
 
+/** The board's one rule about how often, said once at its top. */
+const BOARD_RULE =
+  'Every contract is posted again the moment it is paid: take any of them as often as you like, one at a time.';
+
 /**
  * The board: standing work, what each contract pays, and the one in hand.
  *
@@ -41,6 +45,12 @@ export class BountyModal extends Overlay {
   private readonly purse: Purse;
   readonly body: HTMLElement;
   private readonly handlers: BountyHandlers;
+  /**
+   * The contract a first press of Abandon was for. Kept here rather than on
+   * the button, since every change to the model redraws the list, and a kill
+   * landing between the two presses must not quietly disarm it.
+   */
+  private armedFor: BountyId | null = null;
 
   constructor(handlers: BountyHandlers, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through hud-modal--top', onClosed);
@@ -48,7 +58,7 @@ export class BountyModal extends Overlay {
     const box = el('div', 'hud-modal__box hud-modal__box--bounty');
 
     const head = el('div', 'hud-modal__head');
-    head.append(el('div', 'hud-modal__title', 'Bounties'));
+    head.append(el('div', 'hud-modal__title', 'Contracts'));
     this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
@@ -63,14 +73,17 @@ export class BountyModal extends Overlay {
 
   update(state: BountyPanelState): void {
     this.purse.set(state.currency);
-    this.body.replaceChildren();
+    this.body.replaceChildren(el('div', 'hud-board__rule', BOARD_RULE));
 
     const offers = bountyOffers('quartermaster', state);
     const held = offers.find((offer) => offer.state === 'taken' || offer.state === 'ready');
+    if (this.armedFor !== held?.definition.id) {
+      this.armedFor = null;
+    }
 
     if (held) {
       this.body.append(sectionHeader('In hand'));
-      this.body.append(this.contractRow(held));
+      this.body.append(this.contractRow(held), this.abandonButton(held.definition.id));
     }
 
     this.body.append(sectionHeader(held ? 'Also posted' : 'Posted'));
@@ -134,29 +147,52 @@ export class BountyModal extends Overlay {
     }
 
     // What it asks for, and what it pays, on the line under the row: a contract
-    // is weighed on both at once, and the value column has room for one.
+    // is weighed on both at once, and the value column has room for one. It is
+    // marked as coming back the way it is in the quest log, where a quest that
+    // does not stands beside it.
     const asked = `${describeObjective(definition.objective)} x${progress.need}`;
     const note = el(
       'div',
       'hud-list-row__note',
       state === 'taken' || state === 'ready' ? `${asked} — pays ${pay}` : asked,
     );
+    note.append(tag('Repeatable'));
 
     const wrapper = el('div', 'hud-contract');
-    // Giving one back is a button beside the row rather than the row growing a
-    // second meaning, which is the rule the bag's "sell all" already follows —
-    // and the smaller of the two, because abandoning is never what was meant.
-    if (state === 'taken' || state === 'ready') {
-      const pair = stackRow(entry.root, {
-        label: 'Drop',
-        title: `Give back ${definition.name}`,
-        onClick: () => this.handlers.onAbandon(),
-      });
-      pair.all.dataset.abandonBounty = definition.id;
-      wrapper.append(pair.root, note);
-    } else {
-      wrapper.append(entry.root, note);
-    }
+    wrapper.append(entry.root, note);
     return wrapper;
+  }
+
+  /**
+   * Giving the contract back, as a button of its own under the contract rather
+   * than beside it. It sat against the row that hands the work in, which made
+   * the two a thumb's width apart, and abandoning is never what was meant by a
+   * tap there.
+   *
+   * It asks twice, the way resetting a character does: the first press arms it
+   * and says so, the second gives the work back. Nothing is lost by giving it
+   * back but the count, which is exactly what a mis-tap should not be able to
+   * throw away.
+   */
+  private abandonButton(bountyId: BountyId): HTMLElement {
+    const button = el('button', 'hud-button hud-modal__danger hud-contract__abandon');
+    button.type = 'button';
+    button.dataset.abandonBounty = bountyId;
+    const draw = (): void => {
+      const armed = this.armedFor === bountyId;
+      button.textContent = armed ? 'Tap again to abandon' : 'Abandon contract';
+      button.classList.toggle('is-armed', armed);
+    };
+    button.addEventListener('click', () => {
+      if (this.armedFor !== bountyId) {
+        this.armedFor = bountyId;
+        draw();
+        return;
+      }
+      this.armedFor = null;
+      this.handlers.onAbandon();
+    });
+    draw();
+    return button;
   }
 }

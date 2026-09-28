@@ -269,6 +269,37 @@ export function menuPosition(
   };
 }
 
+// A counter with two sides draws each this wide when they stand side by side:
+// room for an icon, "Reforging Stone x25", a price and the stack's All button.
+const COUNTER_SIDE_WIDTH = 272;
+// One side over the other: the width the shop and the bank had before they had
+// two, plus the room a pane's frame takes, so a row is no narrower than it was.
+const COUNTER_STACKED_WIDTH = 320;
+
+export interface CounterLayout {
+  /** The keeper's side left of yours, rather than above it. */
+  sideBySide: boolean;
+  /** The box's width; the stylesheet still holds it inside the viewport. */
+  width: number;
+}
+
+/**
+ * How a counter with two sides — the shop's stock and your bag, the vault and
+ * your bag — lays them out.
+ *
+ * Side by side wherever two full-width sides fit, which is a landscape phone
+ * as much as a desktop: that is the screen short of height, where one list
+ * over another would leave each a couple of rows. Otherwise one over the other,
+ * each scrolling on its own, so a portrait phone sees both at once rather than
+ * scrolling past the whole shelf to find the bag.
+ */
+export function counterLayout(viewportWidth: number): CounterLayout {
+  const sideBySideWidth = COUNTER_SIDE_WIDTH * 2 + THEME.padding * 3 + 2;
+  return viewportWidth >= sideBySideWidth + THEME.margin * 2
+    ? { sideBySide: true, width: sideBySideWidth }
+    : { sideBySide: false, width: COUNTER_STACKED_WIDTH };
+}
+
 /**
  * Where an open panel goes. Only one is open at a time — that is what the tab
  * bar means — so a sheet gets the whole column rather than sharing it.

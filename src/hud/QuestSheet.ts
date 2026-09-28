@@ -1,5 +1,5 @@
 import { Sheet } from './Sheet';
-import { el, emptyLine, sectionHeader } from './dom';
+import { el, emptyLine, sectionHeader, tag } from './dom';
 import { bountyById, bountyProgress, type ActiveBounty } from '../systems/BountySystem';
 import { QUESTS, QUEST_ORDER, type QuestReward } from '../data/quests';
 import { describeItemName } from '../data/items';
@@ -79,13 +79,18 @@ export class QuestSheet extends Sheet {
     }
   }
 
-  /** The one contract in hand, drawn as a quest block with no chain behind it. */
+  /**
+   * The one contract in hand, drawn as a quest block with no chain behind it,
+   * and marked as the one thing in the log that comes back once it is done.
+   */
   private contractBlock(bounty: ActiveBounty, counters: QuestCounters): HTMLElement {
     const definition = bountyById(bounty.bountyId);
     const { have, need, met } = bountyProgress(definition, bounty, counters);
 
     const block = el('div', 'hud-quest');
-    block.append(el('div', 'hud-quest__name', definition.name));
+    const name = el('div', 'hud-quest__name', definition.name);
+    name.append(tag('Repeatable'));
+    block.append(name);
     const progress = el(
       'div',
       'hud-quest__line',

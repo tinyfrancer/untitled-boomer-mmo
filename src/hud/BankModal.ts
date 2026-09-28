@@ -1,4 +1,5 @@
 import { Overlay } from './Overlay';
+import { CounterSides } from './counterSides';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
@@ -28,8 +29,8 @@ export interface BankHandlers {
 }
 
 /**
- * The vault, from the player's side: the shelves on top, the pack under them,
- * and the price of one more shelf at the bottom.
+ * The vault on the banker's side of the counter, with the price of one more
+ * shelf under it, and the bag on yours (`CounterSides`).
  *
  * It is the shop's twin deliberately, down to the row parting with one and a
  * smaller button beside it taking the stack. A bank move is reversible where a
@@ -44,6 +45,8 @@ export class BankModal extends Overlay {
   private readonly slots: HTMLElement;
   private readonly purse: Purse;
   readonly body: HTMLElement;
+  private readonly bag: HTMLElement;
+  private readonly sides: CounterSides;
   private readonly handlers: BankHandlers;
 
   constructor(handlers: BankHandlers, onClosed: () => void) {
@@ -61,9 +64,15 @@ export class BankModal extends Overlay {
     close.addEventListener('click', () => handlers.onDismiss());
     head.append(this.slots, this.purse.root, close);
 
-    this.body = el('div', 'hud-modal__body');
-    box.append(head, this.body);
+    this.sides = new CounterSides(box);
+    this.body = this.sides.theirs;
+    this.bag = this.sides.yours;
+    box.append(head, this.sides.root);
     this.root.append(box);
+  }
+
+  layout(viewportWidth: number): void {
+    this.sides.layout(viewportWidth);
   }
 
   update(state: BankPanelState): void {
@@ -72,27 +81,25 @@ export class BankModal extends Overlay {
     // The one number worth colouring: a full vault is why a deposit refuses.
     this.slots.style.color = used >= state.slots ? THEME.color.playerDamage : THEME.color.muted;
     this.purse.set(state.currency);
-    this.body.replaceChildren();
 
     const stored = entriesOf(state.contents);
-    this.body.append(sectionHeader('In the bank'));
+    this.body.replaceChildren(sectionHeader('In the bank', 'tap to take'));
     if (stored.length === 0) {
       this.body.append(emptyLine('(the shelves are empty)'));
     }
     for (const [itemId, quantity] of stored) {
       this.body.append(this.moveRow('withdraw', itemId, quantity));
     }
+    this.body.append(sectionHeader('More room'), this.slotRow(state));
 
     const carried = entriesOf(state.inventory);
-    this.body.append(sectionHeader('In your pack'));
+    this.bag.replaceChildren(sectionHeader('Your bag', 'tap to store'));
     if (carried.length === 0) {
-      this.body.append(emptyLine('(nothing to store)'));
+      this.bag.append(emptyLine('(nothing to store)'));
     }
     for (const [itemId, quantity] of carried) {
-      this.body.append(this.moveRow('deposit', itemId, quantity));
+      this.bag.append(this.moveRow('deposit', itemId, quantity));
     }
-
-    this.body.append(sectionHeader('More room'), this.slotRow(state));
   }
 
   /**

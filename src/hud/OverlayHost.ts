@@ -80,13 +80,19 @@ interface CounterPanel {
   readonly root: HTMLElement;
   readonly body: HTMLElement;
   refresh(): void;
+  layout(viewportWidth: number): void;
   close(): void;
 }
 
-/** A role's modal, as far as the host needs to know it. */
+/**
+ * A role's modal, as far as the host needs to know it. `layout` is for the
+ * two that deal both ways (`CounterSides`), which stand their sides across or
+ * one over the other by the width they are opened at.
+ */
 interface CounterModal {
   readonly root: HTMLElement;
   readonly body: HTMLElement;
+  layout?(viewportWidth: number): void;
   close(): void;
 }
 
@@ -121,6 +127,7 @@ export class OverlayHost {
   private readonly counterPanels: Record<NpcRoleId, (onClosed: () => void) => CounterPanel>;
   private readonly stationState: () => StationPanelState;
   private readonly questState: () => QuestPanelState;
+  private viewportWidth = 0;
 
   private options: OptionsModal | null = null;
   private counter: { role: NpcRoleId; npcId: NpcId; panel: CounterPanel } | null = null;
@@ -300,8 +307,19 @@ export class OverlayHost {
       if (this.counter?.role === role) this.counter = null;
     });
     this.counter = { role, npcId, panel };
+    panel.layout(this.viewportWidth);
     this.refreshCounter();
     this.root.append(panel.root);
+  }
+
+  /**
+   * The HUD's width, from the same resize the rest of its furniture is laid
+   * out on — so a phone turned on its side with the shop open stands the
+   * shop's two sides across it.
+   */
+  layout(viewportWidth: number): void {
+    this.viewportWidth = viewportWidth;
+    this.counter?.panel.layout(viewportWidth);
   }
 
   /** Takes down that role's counter if it is the one up. */
@@ -442,5 +460,11 @@ export class OverlayHost {
 
 // A role's modal, as the host holds it.
 function counterPanel(modal: CounterModal, refresh: () => void): CounterPanel {
-  return { root: modal.root, body: modal.body, refresh, close: () => modal.close() };
+  return {
+    root: modal.root,
+    body: modal.body,
+    refresh,
+    layout: (viewportWidth) => modal.layout?.(viewportWidth),
+    close: () => modal.close(),
+  };
 }

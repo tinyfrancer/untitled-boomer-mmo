@@ -469,6 +469,7 @@ class Hud {
     for (const sheet of Object.values(this.sheets)) {
       sheet.layout(layout, width);
     }
+    this.overlays.layout(width);
 
     // Only a real crossing of the breakpoint moves the open sheet — a phone
     // rotated into landscape is wide by any measure and has less vertical room,

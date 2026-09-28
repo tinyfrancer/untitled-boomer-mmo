@@ -409,6 +409,24 @@ describe('the redraws that are derived rather than sent', () => {
   });
 });
 
+describe('the quest log', () => {
+  // A contract sits in the same log as the quests, and what sets it apart is
+  // that it comes back — so it wears the board's mark and a quest does not.
+  it('marks the contract in hand repeatable and no quest beside it', () => {
+    mount({
+      bounty: { bountyId: 'rat-cull', baseline: 0 },
+      quests: { 'rat-bones': { status: 'active', baseline: 0 } },
+    });
+    tab('quests').click();
+
+    const names = [...parent.querySelectorAll<HTMLElement>('.hud-quest__name')];
+    const marked = names.filter((name) => name.querySelector('.hud-tag'));
+    expect(names).toHaveLength(2);
+    expect(marked).toHaveLength(1);
+    expect(marked[0]?.textContent).toBe('Rat CullRepeatable');
+  });
+});
+
 /**
  * The top-left corner, which is read at a glance mid-fight or not at all.
  *
@@ -704,6 +722,60 @@ describe('the shop', () => {
     shop()?.querySelector<HTMLButtonElement>('.hud-list-row[data-item="rat-bones"]')?.click();
     expect(emitted.at(-1)).toEqual({ event: SELL_ITEM_REQUESTED_EVENT, args: ['rat-bones', 1] });
   });
+
+  /**
+   * Which way a tap trades is said by which side the row is on. The keeper's
+   * quests go on the keeper's side, above the stock, since the host puts them
+   * at the top of the panel's body and that side is the body.
+   */
+  it("draws the stock on the keeper's side, the bag on yours, and their quests over the stock", () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
+
+    const theirs = shop()?.querySelector<HTMLElement>('.hud-side[data-side="theirs"]');
+    const yours = shop()?.querySelector<HTMLElement>('.hud-side[data-side="yours"]');
+    expect(theirs?.querySelector(`[data-item="${nth(SHOP_STOCK).itemId}"]`)).not.toBeNull();
+    expect(theirs?.querySelector('[data-item="rat-bones"]')).toBeNull();
+    expect(yours?.querySelector('[data-item="rat-bones"]')).not.toBeNull();
+    expect(yours?.querySelectorAll('[data-item]')).toHaveLength(1);
+
+    expect(theirs?.firstElementChild?.matches('.hud-counter-quests')).toBe(true);
+    expect(yours?.querySelector('.hud-counter-quests')).toBeNull();
+    expect(yours?.querySelector('.hud-section__hint')?.textContent).toBe('tap to sell');
+  });
+
+  // A bag row's price is per item, and says so once there is more than one.
+  it('prices a stack in the bag each, and a single one plainly', () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 12, 'brown-helmet': 1 });
+
+    const value = (itemId: string): string | null | undefined =>
+      shop()?.querySelector(`[data-item="${itemId}"] .hud-list-row__value`)?.textContent;
+    expect(value('rat-bones')).toMatch(/ each$/);
+    expect(value('brown-helmet')).not.toMatch(/each/);
+  });
+
+  /**
+   * Across on a landscape phone, where height is short and one list over the
+   * other would leave each a couple of rows; one over the other on a portrait
+   * one. A relayout reaches a counter already open, so turning the phone with
+   * the shop up moves it.
+   */
+  it('stands its sides across a landscape phone and one over the other on a portrait one', () => {
+    const sides = (): Element | null | undefined => shop()?.querySelector('.hud-sides');
+    setViewport(844, 390);
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    expect(sides()?.classList.contains('is-side-by-side')).toBe(true);
+
+    setViewport(PHONE.width, PHONE.height);
+    // Anything that re-runs the layout will do; a resize observer is what does
+    // it in a browser, and jsdom has none.
+    events.emit(QUEST_LOG_CHANGED_EVENT, {});
+    expect(sides()?.classList.contains('is-side-by-side')).toBe(false);
+  });
 });
 
 describe('the bank', () => {
@@ -727,6 +799,23 @@ describe('the bank', () => {
     expect(bank()?.textContent).toContain('Logs');
     expect(bank()?.textContent).toContain('Rat Bones');
     expect(bank()?.textContent).toContain('1 / 8 slots');
+  });
+
+  // The shop's two sides, for the reason the two panels have always been read
+  // the same way: the vault and the price of more of it on the banker's, the
+  // bag on yours.
+  it("keeps the vault on the banker's side and the bag on yours", () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
+    events.emit(BANK_CHANGED_EVENT, { contents: { logs: 30 }, slots: 8 });
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
+
+    const theirs = bank()?.querySelector('.hud-side[data-side="theirs"]');
+    const yours = bank()?.querySelector('.hud-side[data-side="yours"]');
+    expect(theirs?.querySelector('[data-bank="withdraw"][data-item="logs"]')).not.toBeNull();
+    expect(theirs?.querySelector('[data-action="buy-bank-slot"]')).not.toBeNull();
+    expect(yours?.querySelector('[data-bank="deposit"][data-item="rat-bones"]')).not.toBeNull();
+    expect(yours?.querySelector('[data-bank="withdraw"]')).toBeNull();
   });
 
   /**

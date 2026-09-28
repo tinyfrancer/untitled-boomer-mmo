@@ -1,4 +1,5 @@
 import { Overlay } from './Overlay';
+import { CounterSides } from './counterSides';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
@@ -29,17 +30,20 @@ export interface ShopHandlers {
 }
 
 /**
- * What the shopkeeper sells, then the sellable half of the bag.
+ * What the shopkeeper sells on their side, and the sellable half of the bag on
+ * yours (`CounterSides`), so which way a tap trades is said by where the row is.
  *
  * Their quests are not drawn here: a giver's work goes at the top of whatever
- * counter they stand at (`counterQuests`), which is where the shop's own
- * section went once somebody else started giving quests.
+ * counter they stand at (`counterQuests`), which lands on their side, above the
+ * stock.
  *
  * Deliberately not a scrim — a tap outside it still has to reach the world, or
  * the player could not walk away from the counter.
  */
 export class ShopModal extends Overlay {
   readonly body: HTMLElement;
+  private readonly bag: HTMLElement;
+  private readonly sides: CounterSides;
   private readonly purse: Purse;
   private readonly handlers: ShopHandlers;
 
@@ -57,16 +61,21 @@ export class ShopModal extends Overlay {
     close.addEventListener('click', () => handlers.onDismiss());
     head.append(this.purse.root, close);
 
-    this.body = el('div', 'hud-modal__body');
-    box.append(head, this.body);
+    this.sides = new CounterSides(box);
+    this.body = this.sides.theirs;
+    this.bag = this.sides.yours;
+    box.append(head, this.sides.root);
     this.root.append(box);
+  }
+
+  layout(viewportWidth: number): void {
+    this.sides.layout(viewportWidth);
   }
 
   update(state: ShopState): void {
     this.purse.set(state.currency);
-    this.body.replaceChildren();
 
-    this.body.append(sectionHeader('For sale'));
+    this.body.replaceChildren(sectionHeader('Their stock', 'tap to buy'));
     for (const offer of shopOffers({ level: state.level, quests: state.quests })) {
       this.body.append(this.stockRow(offer, state.currency));
     }
@@ -74,12 +83,12 @@ export class ShopModal extends Overlay {
     const sellable = inventoryEntries(state.inventory).filter(
       ([itemId, quantity]) => quantity > 0 && itemValue(itemId) !== null,
     );
-    this.body.append(sectionHeader('Sell from your bag'));
+    this.bag.replaceChildren(sectionHeader('Your bag', 'tap to sell'));
     if (sellable.length === 0) {
-      this.body.append(emptyLine('(nothing worth selling)'));
+      this.bag.append(emptyLine('(nothing worth selling)'));
     }
     for (const [itemId, quantity] of sellable) {
-      this.body.append(this.sellRow(itemId, quantity));
+      this.bag.append(this.sellRow(itemId, quantity));
     }
   }
 
@@ -129,7 +138,7 @@ export class ShopModal extends Overlay {
     const unit = itemValue(itemId) ?? 0;
     const row = listRow({
       label: `${describeItemName(itemId)} x${quantity}`,
-      value: formatCurrency(unit),
+      value: quantity > 1 ? `${formatCurrency(unit)} each` : formatCurrency(unit),
       labelColor: THEME.color.text,
       valueColor: THEME.color.levelUp,
       onClick: () => this.handlers.onSell(itemId, 1),
