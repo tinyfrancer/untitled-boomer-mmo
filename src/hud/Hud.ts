@@ -25,6 +25,8 @@ import { equippableFrom } from '../systems/EquipSystem';
 import { itemsForSlot, type Gear, type Inventory } from '../systems/InventorySystem';
 import { loadedArrow, type Quiver } from '../systems/QuiverSystem';
 import { describeItem } from '../systems/InspectSystem';
+import { itemUses } from '../systems/ItemUseSystem';
+import { ITEM_CARD_EVENT } from './itemCard';
 import { actionsForItem, type ItemAction, type ItemActionId } from '../systems/ItemActionsSystem';
 import { xpToNextLevel } from '../systems/LevelingSystem';
 import {
@@ -335,6 +337,7 @@ class Hud {
     });
     this.inventorySheet = new InventorySheet({
       actionsFor: (itemId) => this.itemActions(itemId),
+      usesFor: (itemId) => itemUses(itemId, { quests: this.model.quests }),
       onAction: (actionId, itemId) => this.dispatchItemAction(actionId, itemId),
       onInspect: (itemId, at) => this.openItemMenu(itemId, at),
     });
@@ -374,6 +377,11 @@ class Hud {
       this.tabBar.root,
     );
     parent.append(this.root);
+    // Every row that stands for an item asks for its card this way, from
+    // whichever panel it is in (`hud/itemCard.ts`).
+    this.root.addEventListener(ITEM_CARD_EVENT, (event) =>
+      this.openItemCard((event as CustomEvent<ItemId>).detail),
+    );
 
     // A phone starts with the playfield clear; a roomy screen can afford the
     // character sheet.
@@ -596,9 +604,14 @@ class Hud {
     }));
     entries.push({
       label: 'Inspect',
-      onSelect: () => this.overlays.openInspect(describeItem(itemId)),
+      onSelect: () => this.openItemCard(itemId),
     });
     this.overlays.openContextMenu({ title: describeItemName(itemId), entries, at });
+  }
+
+  /** An item's card, told which quests are behind the player so it drops their asks. */
+  private openItemCard(itemId: ItemId): void {
+    this.overlays.openInspect(describeItem(itemId, { quests: this.model.quests }));
   }
 
   // ---------------------------------------------------------------------------
@@ -955,6 +968,9 @@ class Hud {
     listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
       this.model.quests = quests;
       this.refreshQuests();
+      // A quest handed in stops wanting whatever it asked for, and the bag's
+      // strip says what wants an item.
+      this.inventorySheet.refreshActions();
       // How many tracker lines there are is a layout input for everything
       // stacked above it.
       this.applyLayout();

@@ -1,6 +1,7 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row } from './dom';
 import { itemIconSvg } from './itemIcon';
+import { bindItemCard } from './itemCard';
 import { ITEMS } from '../data/items';
 import { REFORGES } from '../data/reforges';
 import {
@@ -116,6 +117,7 @@ export class ReforgeModal extends Overlay {
       value: worn ? 'Worn' : '',
       valueClass: 'hud-muted',
     });
+    bindItemCard(head.root, itemId);
     block.append(head.root);
 
     // What it already carries, or what it could take. A piece already worked is

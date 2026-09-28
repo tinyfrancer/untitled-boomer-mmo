@@ -1,6 +1,7 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row } from './dom';
 import { itemIconSvg } from './itemIcon';
+import { bindItemCard } from './itemCard';
 import { describeItemBonuses, describeItemName } from '../data/items';
 import { outfitterRows, type OutfitterRow } from '../systems/OutfitterSystem';
 import type { Inventory } from '../systems/InventorySystem';
@@ -70,6 +71,7 @@ export class OutfitterModal extends Overlay {
       value: describeItemBonuses(offer.itemId),
       valueClass: 'hud-muted',
     });
+    bindItemCard(head.root, offer.itemId);
     block.append(head.root);
 
     // The price, a line per material, each saying how much of it is in the bag.
@@ -83,6 +85,7 @@ export class OutfitterModal extends Overlay {
         valueClass: 'hud-muted',
       });
       cost.root.classList.toggle('is-earned', line.met);
+      bindItemCard(cost.root, line.itemId);
       block.append(cost.root);
     }
 

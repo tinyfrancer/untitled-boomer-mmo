@@ -52,6 +52,13 @@ with. Burnt food is the exception the first two are shaped around — worth less
 the trade it ruined, and deliberately not rescuable by any recipe, since a burnt fish that could be
 turned back into something would stop being a reason to level cooking.
 
+**And the card says where** (`systems/ItemUseSystem.ts`, decision 90). An item's card reads the
+same rows the sweep does — recipes, quests, contracts, the outfitter, the reforge stone, keys — and
+`tests/systems/ItemUseSystem.test.ts` holds that no card says "Nothing uses it" except a ruined
+job's. The two fail differently: the sweep catches an item with nowhere to go, the card's catches
+a new kind of sink the derivation was never taught, which would pass the sweep and leave its
+item's card calling it junk.
+
 **The plate tier is where the loops meet, and its secondaries are what make that true.** A piece
 takes iron bars, a tin bar and bone char, so a finished helmet has both quarry veins, a tree and a
 rat behind it. Each of the three is a dead end that was: bone char is rat bones and a log burnt down

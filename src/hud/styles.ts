@@ -610,11 +610,20 @@ function hudCss(): string {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* Pinned under the scrolling grid rather than inside it — see InventorySheet. */
+/* Pinned under the scrolling grid rather than inside it — see InventorySheet.
+   It may shrink and scroll itself, which the grid's floor below is what forces:
+   a long list of uses on a landscape phone would otherwise squeeze the grid to
+   nothing, and the item being read about with it. */
 .hud-item-detail {
-  flex: none;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px ${THEME.padding}px ${THEME.padding}px;
   border-top: 1px solid ${cssRgba(THEME.panelStroke, 0.6)};
+}
+.hud-bag-body {
+  min-height: ${THEME.bagCell.icon + 2 * THEME.font.xs + 16}px;
 }
 .hud-item-detail__name {
   font-size: ${THEME.font.sm}px;
@@ -634,7 +643,17 @@ function hudCss(): string {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 4px 0 6px 6px;
+  padding: 4px 0 2px 6px;
+}
+/* What an item is for, a sentence a line, in the bag's strip and on its card
+   alike. Muted so the name and the buttons stay what the eye lands on first. */
+.hud-item-uses {
+  padding-top: 2px;
+}
+.hud-item-uses__line {
+  font-size: ${THEME.font.xs}px;
+  line-height: ${THEME.font.xs + 5}px;
+  color: ${THEME.color.muted};
 }
 .hud-item-actions .hud-button {
   min-height: 30px;
@@ -1061,9 +1080,13 @@ function hudCss(): string {
   margin-top: 2px;
 }
 
+/* Opaque, where every other box lets the world show through: this is the one
+   panel opened over other panels — an item asked about from the shop's shelf —
+   and a shelf row read through its lines is two panels at once. */
 .hud-modal__box--inspect {
   width: 300px;
   gap: 4px;
+  background: ${cssColor(THEME.panelBg)};
 }
 .hud-inspect__subtitle {
   font-size: ${THEME.font.xs}px;
@@ -1084,6 +1107,17 @@ function hudCss(): string {
 /* A drop row is read, not pressed — unlike every other row this shape. */
 .hud-inspect__drop {
   cursor: default;
+}
+/* Set apart from the numbers above: those are what it is, these what it is for. */
+.hud-inspect__uses {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid ${cssRgba(THEME.panelStroke, 0.6)};
+}
+.hud-inspect__uses .hud-item-uses__line {
+  font-size: ${THEME.font.sm}px;
+  line-height: ${THEME.font.sm + 6}px;
+  color: ${THEME.color.text};
 }
 .hud-inspect__note {
   margin-top: 6px;

@@ -2,6 +2,7 @@ import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
+import { bindItemCard } from './itemCard';
 import { describeItemName } from '../data/items';
 import { MAX_BANK_SLOTS, bankSlotPrice, bankSlotsUsed } from '../systems/BankSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -115,6 +116,7 @@ export class BankModal extends Overlay {
     });
     entry.root.dataset.item = itemId;
     entry.root.dataset.bank = direction;
+    bindItemCard(entry.root, itemId);
     entry.value.style.color = THEME.color.muted;
     if (quantity < 2) return entry.root;
 

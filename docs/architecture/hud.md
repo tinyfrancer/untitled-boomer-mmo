@@ -176,3 +176,29 @@ the mastery page builds its rank list from `MASTERY_TIERS`, so a retune moves th
 Three ranks a creature would have been up to thirty-three buttons pinned above the list; what is
 pinned instead is the one line saying what is worn and a Take off. Tapping the worn rank's row takes
 it off, so the row is a toggle like the button above it.
+
+**An item says what it is for, and every row that shows one can be asked** (decision 90). The
+uses are derived, never written per item (`systems/ItemUseSystem.ts`): every recipe that takes it
+(one line with the station's verb for a recipe of one input, one "Used in" line per station for
+the rest), the quests and contracts that collect it, what the outfitter and the fettler take it
+for, the door a key opens, what a camp does with food, what it is made from, and what it sells
+for. A built station or a counter is named with the zone it stands in, read off the zone that
+spawns it. Both the bag's strip and the card print the same lines, which is why a use is a
+sentence rather than a label and a value — the strip has no column for a label — and the card
+alone keeps the numbers (weight, bonuses) as label-and-value lines above them. The only thing
+either reads off the player is the quest log: a quest handed in wants nothing any more, so its
+line goes, where a contract's stays. The strip sits outside the grid's scrolling body and may
+shrink and scroll itself, while `.hud-bag-body` holds the grid to a row; a long list on a landscape
+phone would otherwise squeeze the grid, and the item being read about with it, to nothing.
+
+**A row asks for an item's card by raising an event, not through a handler** (`hud/itemCard.ts`).
+Eight panels draw item rows and the card opens in one place, and every panel and overlay mounts
+under the HUD's root, so `bindItemCard` dispatches a bubbling `hud-item-card` DOM event and the
+root opens the card for it. A panel says only which item a row is about, or hands a getter for the
+one row that changes what it shows without being rebuilt (a gear slot). It is bound after the
+row's own click, which is safe: `bindLongPress` swallows the release with a capture listener, and
+on the target a capture listener runs before the plain ones whichever was bound first — so a finger
+held on a shop row opens the card and does not buy. A drop or a heap on the card itself opens its
+item's card in place of the list, since there is one card at a time; smoke holds by real touch
+that the release after that press does not reach the new card's scrim. The card is the one modal
+opened over other panels, so its box is opaque where the rest let the world through.

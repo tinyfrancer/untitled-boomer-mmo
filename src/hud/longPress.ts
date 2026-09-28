@@ -12,9 +12,10 @@ import type { ScreenPoint } from '../ui/uiEvents';
  * cancels it. `ui/gestures.ts` is what keeps a bag cell and a rat answering to
  * the same press.
  *
- * Bind this **before** any click listener on the same element: a press that
- * became a menu is not also a tap, and stopping the click that follows it
- * depends on this listener having been registered first.
+ * A press that became a menu is not also a tap, so the click that follows it
+ * is stopped here — by a capture listener, which on the element itself runs
+ * before its plain click listeners whichever was bound first. That is what lets
+ * a row built with its click already on it (`row()` in `dom.ts`) take one after.
  */
 export function bindLongPress(
   element: HTMLElement,

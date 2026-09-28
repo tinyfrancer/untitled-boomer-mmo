@@ -2,6 +2,7 @@ import { Sheet } from './Sheet';
 import { el, fillPercent, row, sectionHeader } from './dom';
 import { barFill } from '../systems/math';
 import { paperdollSvg } from './paperdoll';
+import { bindItemCard } from './itemCard';
 import { describeBonuses, describeItemName } from '../data/items';
 import { reforgedBonuses, reforgedName, type Reforges } from '../systems/ReforgeSystem';
 import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
@@ -105,6 +106,9 @@ export class CharacterSheet extends Sheet {
       });
       const item = el('div', 'hud-slot__item');
       button.append(head.root, item);
+      // Read when asked rather than bound to a piece, since the button outlives
+      // everything worn in it; an empty slot has nothing to ask about.
+      bindItemCard(button, () => this.gear[slot]);
       button.addEventListener('click', () => onSlotClicked(slot, this.gear[slot] === null));
       this.body.append(button);
       return { button, item, bonuses: head.value };

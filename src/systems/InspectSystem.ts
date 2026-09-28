@@ -1,5 +1,4 @@
 import {
-  ARMOR_TYPE_CLASSES,
   ARMOR_TYPE_LABELS,
   ITEMS,
   arrowDamage,
@@ -8,7 +7,6 @@ import {
   quiverCapacity,
   consumableFor,
   describeItemName,
-  itemValue,
   itemWeight,
   toolItemFor,
   toolSkill,
@@ -16,7 +14,6 @@ import {
 } from '../data/items';
 import { ABILITIES } from '../data/abilities';
 import { BOUNTIES, BOUNTY_ORDER } from '../data/bounties';
-import { CLASSES } from '../data/classes';
 import { LOOT_TABLES } from '../data/lootTables';
 import { npcName, npcRole } from '../data/npcs';
 import { STATION_LABELS, STATION_SKILLS, type StationId } from '../data/recipes';
@@ -26,6 +23,7 @@ import { ZONES, type ZoneExit } from '../data/zones';
 import { QUESTS } from '../data/quests';
 import { MAX_BANK_SLOTS, STARTING_BANK_SLOTS, bankSlotPrice } from './BankSystem';
 import { formatCurrency } from './CurrencySystem';
+import { itemUses, type ItemUseContext } from './ItemUseSystem';
 import { LOOT_PILE_LIFETIME_MS } from './LootSystem';
 import { scaleEnemyStats } from './EnemySystem';
 import type { EnemyDefinition } from '../data/enemies';
@@ -70,6 +68,8 @@ export interface InspectPanel {
   drops?: InspectDrop[];
   /** Present only on a loot pile's card: what is lying in it. */
   held?: InspectStack[];
+  /** Present only on an item's card: what it is for, a line of English each. */
+  uses?: string[];
   /** One sentence of English under the numbers, where numbers alone mislead. */
   note?: string;
 }
@@ -395,14 +395,19 @@ const STOCKED_FROM_THE_START = SHOP_STOCK.filter((entry) => !entry.requires).len
 const BANK_SLOT_FROM = bankSlotPrice(STARTING_BANK_SLOTS) ?? 0;
 
 /**
- * Everything an item is, which is more than the bag's one-line summary of it.
+ * Everything an item is, and everything it is for.
  *
- * Built out of the same accessors `describeItemBonuses` uses rather than
- * reading `ITEMS` a second way — that line is the version that has to fit
- * beside an icon, and this is the version with room to say what it left out:
- * what it weighs, what it sells for, and who is allowed to wear it.
+ * Two halves, and they split on a question rather than on a layout. The lines
+ * are what the item *is* — its numbers, built out of the same accessors
+ * `describeItemBonuses` uses rather than reading `ITEMS` a second way. The uses
+ * are what it is *for*, from `itemUses`, which is the same list the bag's strip
+ * prints on a tap: the card is the version with room for the weight as well.
+ *
+ * The one card in here that reads the player, and only their quest log: a quest
+ * handed in wants nothing any more, and a card still asking for ten rat bones on
+ * its behalf would be the card lying.
  */
-export function describeItem(itemId: ItemId): InspectPanel {
+export function describeItem(itemId: ItemId, context: ItemUseContext = {}): InspectPanel {
   const item = ITEMS[itemId];
   if (!item) {
     return { title: itemId, subtitle: 'Unknown', lines: [] };
@@ -419,6 +424,7 @@ export function describeItem(itemId: ItemId): InspectPanel {
 
   if (item.kind === 'equipment') {
     if (item.attackPowerBonus) lines.push({ label: 'Attack', value: `+${item.attackPowerBonus}` });
+    if (item.armorValue) lines.push({ label: 'Armour', value: `+${item.armorValue}` });
     if (item.healthBonus) lines.push({ label: 'Health', value: `+${item.healthBonus}` });
     if (item.strengthBonus) lines.push({ label: 'Strength', value: `+${item.strengthBonus}` });
     if (item.intellectBonus) lines.push({ label: 'Intellect', value: `+${item.intellectBonus}` });
@@ -438,27 +444,16 @@ export function describeItem(itemId: ItemId): InspectPanel {
   }
   if (item.kind === 'ammunition') {
     lines.push({ label: 'Attack', value: `+${arrowDamage(itemId)} a shot` });
-    lines.push({ label: 'Shot from', value: 'A bow, out of a quiver' });
-  }
-
-  const tool = toolSkill(itemId);
-  if (tool) {
-    lines.push({ label: 'Gathers', value: SKILLS[tool].name });
-  }
-
-  const armor = armorTypeOf(itemId);
-  if (armor) {
-    lines.push({
-      label: 'Worn by',
-      value: ARMOR_TYPE_CLASSES[armor].map((classId) => CLASSES[classId].name).join(', '),
-    });
   }
 
   lines.push({ label: 'Weight', value: String(itemWeight(itemId)) });
-  const value = itemValue(itemId);
-  lines.push({ label: 'Value', value: value === null ? 'Cannot be sold' : formatCurrency(value) });
 
-  return { title: item.name, subtitle: itemSubtitle(itemId), lines };
+  return {
+    title: item.name,
+    subtitle: itemSubtitle(itemId),
+    lines,
+    uses: itemUses(itemId, context),
+  };
 }
 
 // What kind of thing this is, in the fewest words that distinguish it from the

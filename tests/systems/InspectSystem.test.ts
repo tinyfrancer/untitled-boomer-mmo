@@ -211,20 +211,33 @@ describe('describing an item', () => {
     const panel = describeItem('brown-chestplate');
 
     expect(panel.subtitle).toBe('Leather armour');
+    expect(valueOf(panel, 'Armour')).toBe('+4');
     expect(valueOf(panel, 'Health')).toBe('+1');
     expect(valueOf(panel, 'Strength')).toBe('+1');
-    // The line the bag never had room for, and the reason a wizard looting one
-    // in the camp is looking at a vendor trash item rather than an upgrade.
-    expect(valueOf(panel, 'Worn by')).toBe('Warrior, Ranger');
     expect(valueOf(panel, 'Weight')).toBe('6');
-    expect(valueOf(panel, 'Value')).toBe('35c');
+    // Who may wear it and what it fetches are what it is *for*, so they are
+    // uses rather than numbers — the reason a wizard looting one in the camp is
+    // looking at something to sell rather than an upgrade.
+    expect(panel.uses).toContain('Worn by: Warrior, Ranger');
+    expect(panel.uses).toContain('Sells for 35c');
   });
 
   it('reads a wand as a weapon and a pole as a tool', () => {
     expect(describeItem('apprentice-wand').subtitle).toBe('Weapon');
     expect(valueOf(describeItem('apprentice-wand'), 'Reach')).toBe('200');
     expect(describeItem('fishing-pole').subtitle).toBe('Tool');
-    expect(valueOf(describeItem('fishing-pole'), 'Gathers')).toBe('Fishing');
+    expect(describeItem('fishing-pole').uses).toContain('Equip it to fish');
+  });
+
+  // The card and the bag's strip print one list, so the card is told the same
+  // thing about the quest log the strip is.
+  it('carries the same uses the bag prints, quests handed in and all', () => {
+    const done = { quests: { 'rat-bones': { status: 'done' as const, baseline: 0 } } };
+    expect(describeItem('rat-bones').uses).toContain('Quest: Bones for the Broth wants 10');
+    expect(describeItem('rat-bones', done).uses).toEqual([
+      'Used in: Bone Char, at the Forge (Town)',
+      'Sells for 2c',
+    ]);
   });
 
   it('says what food is worth eating rather than what it is worth wearing', () => {

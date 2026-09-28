@@ -60,6 +60,8 @@ import {
   COUNTER_OPENED_EVENT,
   COUNTER_CLOSED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
+  BUY_ITEM_REQUESTED_EVENT,
+  STATION_OPENED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -971,6 +973,125 @@ describe('the inventory panel forwards its buttons', () => {
 });
 
 /**
+ * What the strip under the bag says about the item tapped, beyond what can be
+ * done with it here. Rat meat away from a fire used to say "(nothing to do with
+ * this)", which read as junk; `ItemUseSystem.test.ts` holds the lines, and this
+ * holds that the strip prints them and keeps them true.
+ */
+describe('the bag says what an item is for', () => {
+  const strip = (): string[] =>
+    [...parent.querySelectorAll<HTMLElement>('.hud-item-detail .hud-item-uses__line')].map(
+      (line) => line.textContent ?? '',
+    );
+  const select = (itemId: string): void => {
+    parent.querySelector<HTMLButtonElement>(`.hud-item[data-item="${itemId}"]`)?.click();
+  };
+
+  beforeEach(() => {
+    mount({ inventory: { 'rat-meat': 3, 'rat-bones': 4 } });
+    tab('inventory').click();
+  });
+
+  it('answers rat meat away from any fire with what it cooks into', () => {
+    select('rat-meat');
+
+    expect(strip()).toEqual(['Cook at a campfire → Cooked Rat', 'Sells for 3c']);
+    expect(parent.querySelector('.hud-item-detail')?.textContent).not.toContain('nothing to do');
+  });
+
+  it('drops a quest from the strip the moment it is handed in', () => {
+    select('rat-bones');
+    expect(strip()).toContain('Quest: Bones for the Broth wants 10');
+
+    events.emit(QUEST_LOG_CHANGED_EVENT, { 'rat-bones': { status: 'done', baseline: 0 } });
+
+    expect(strip()).not.toContain('Quest: Bones for the Broth wants 10');
+    expect(strip()).toContain('Used in: Bone Char, at the Forge (Town)');
+  });
+});
+
+/**
+ * The same card, asked for from any row that stands for an item rather than
+ * from the bag alone: what a stone on the shelf is for is worth knowing before
+ * it is bought. A right click here is the held finger; `longPress.test.ts` holds
+ * that the two are one question and that the row's own tap is not also taken.
+ */
+describe('every row that stands for an item opens its card', () => {
+  const card = (): HTMLElement | null => parent.querySelector('.hud-modal__box--inspect');
+  const title = (): string | null | undefined =>
+    card()?.querySelector('.hud-modal__title')?.textContent;
+  const uses = (): (string | null)[] =>
+    [...(card()?.querySelectorAll('.hud-item-uses__line') ?? [])].map((line) => line.textContent);
+  const ask = (selector: string): void => {
+    const row = parent.querySelector<HTMLElement>(selector);
+    if (!row) throw new Error(`no ${selector}`);
+    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 40, clientY: 60 }));
+  };
+
+  it('answers a shelf row, locked or not, and buys nothing', () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    ask('.hud-list-row[data-item="reforging-stone"]');
+
+    expect(title()).toBe('Reforging Stone');
+    expect(uses()).toContain('Used in: reforging gear, at the Fettler (Greyford Outpost)');
+    expect(emitted.some((e) => e.event === BUY_ITEM_REQUESTED_EVENT)).toBe(false);
+  });
+
+  it('answers a row of the bank with the thing on the shelf', () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
+    events.emit(BANK_CHANGED_EVENT, { contents: { 'crab-meat': 4 }, slots: 8 });
+    ask('.hud-list-row[data-bank="withdraw"][data-item="crab-meat"]');
+
+    expect(uses()).toContain('Cook at a campfire → Cooked Crab');
+  });
+
+  it('answers a station row with what it makes', () => {
+    mount();
+    events.emit(ACTIONS_CHANGED_EVENT, { nearFire: false, nearStations: ['forge'] });
+    events.emit(STATION_OPENED_EVENT, 'forge');
+    ask('.hud-list-row[data-recipe="iron-helmet"]');
+
+    expect(title()).toBe('Iron Helmet');
+    expect(uses()).toContain('Made from: Iron Bar ×2, Tin Bar, Bone Char, at the Forge (Town)');
+  });
+
+  it('answers a worn slot with what is in it, and an empty one not at all', () => {
+    mount();
+    tab('character').click();
+    ask('.hud-slot[data-slot="weapon"]');
+    expect(title()).toBe('Rusty Sword');
+
+    press('Escape');
+    ask('.hud-slot[data-slot="helmet"]');
+    expect(card()).toBeNull();
+    expect(emitted.some((e) => e.event === UNEQUIP_SLOT_REQUESTED_EVENT)).toBe(false);
+  });
+
+  // From one card to another: the drop list is where "what is this for?" is
+  // asked about something before it has ever been carried.
+  it("goes from a creature's drops to the card of one of them", () => {
+    mount();
+    events.emit(CONTEXT_MENU_REQUESTED_EVENT, {
+      title: 'Rat (1)',
+      actions: [],
+      details: describeEnemy(ENEMIES.rat, 1),
+      loot: describeEnemyLoot(ENEMIES.rat),
+      at: { x: 120, y: 200 },
+    });
+    parent
+      .querySelector<HTMLButtonElement>('.hud-context__row[data-context-action="Loot"]')
+      ?.click();
+    ask('.hud-inspect__drop[data-item="rat-meat"]');
+
+    expect(parent.querySelectorAll('.hud-modal__box--inspect')).toHaveLength(1);
+    expect(title()).toBe('Rat Meat');
+    expect(uses()).toContain('Cook at a campfire → Cooked Rat');
+  });
+});
+
+/**
  * The right click, and the finger held on a phone. Two menus meet here and are
  * deliberately one component: what the world found under the pointer arrives on
  * the wire, and what a bag cell offers the HUD works out itself.
@@ -1110,8 +1231,11 @@ describe('the context menu', () => {
       line('Inspect').click();
 
       expect(card()?.textContent).toContain('Leather armour');
-      expect(card()?.textContent).toContain('Warrior');
-      expect(card()?.textContent).toContain('25c');
+      const uses = [...(card()?.querySelectorAll('.hud-item-uses__line') ?? [])].map(
+        (use) => use.textContent,
+      );
+      expect(uses).toContain('Worn by: Warrior, Ranger');
+      expect(uses).toContain('Sells for 25c');
     });
   });
 });

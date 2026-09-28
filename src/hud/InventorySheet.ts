@@ -1,7 +1,7 @@
 import { Sheet } from './Sheet';
 import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
 import type { ItemId } from '../types/ids';
-import { el, emptyLine } from './dom';
+import { el } from './dom';
 import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
 import { bindLongPress } from './longPress';
@@ -13,6 +13,8 @@ import { THEME } from '../ui/theme';
 
 export interface InventorySheetHandlers {
   actionsFor: (itemId: ItemId) => ItemAction[];
+  /** What it is for, a line each — the same lines as the card behind Inspect. */
+  usesFor: (itemId: ItemId) => string[];
   onAction: (actionId: ItemActionId, itemId: ItemId) => void;
   /** A right click or a held finger on a cell, and where it landed. */
   onInspect: (itemId: ItemId, at: ScreenPoint) => void;
@@ -23,7 +25,8 @@ export interface InventorySheetHandlers {
  * selected. Tapping a cell selects the item and unfolds its actions — Equip,
  * Eat, Light Fire, Cook, Sell — supplied by whoever built the sheet from
  * ItemActionsSystem, so what an item can do lives in one place and this only
- * draws it.
+ * draws it. Under the actions go its uses, which answer the question the
+ * actions cannot: what this is *for* when there is nothing to do with it here.
  *
  * The detail strip sits **outside** the scrolling body, pinned under it. In a
  * list the actions could unfold beneath the row they belonged to and stay
@@ -59,6 +62,7 @@ export class InventorySheet extends Sheet {
     this.root.insertBefore(this.weight, this.body);
 
     this.grid = el('div', 'hud-bag');
+    this.body.classList.add('hud-bag-body');
     this.body.append(this.grid);
     this.detail = el('div', 'hud-item-detail hud-hidden');
     this.root.append(this.detail);
@@ -140,13 +144,23 @@ export class InventorySheet extends Sheet {
     if (bonuses) {
       this.detail.append(el('div', 'hud-item__bonuses', bonuses));
     }
-    this.detail.append(this.actionRow(itemId));
+    const actions = this.actionRow(itemId);
+    if (actions) {
+      this.detail.append(actions);
+    }
+    // No line saying there is nothing to do: that was what rat meat said away
+    // from a fire, and it read as "this is junk". The uses say what it is for.
+    const uses = el('div', 'hud-item-uses');
+    for (const use of this.handlers.usesFor(itemId)) {
+      uses.append(el('div', 'hud-item-uses__line', use));
+    }
+    this.detail.append(uses);
   }
 
-  private actionRow(itemId: ItemId): HTMLElement {
+  private actionRow(itemId: ItemId): HTMLElement | null {
     const actions = this.handlers.actionsFor(itemId);
     if (actions.length === 0) {
-      return emptyLine('(nothing to do with this)');
+      return null;
     }
     const buttons = el('div', 'hud-item-actions');
     for (const action of actions) {

@@ -1,12 +1,15 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row } from './dom';
 import { itemIconSvg } from './itemIcon';
+import { bindItemCard } from './itemCard';
 import { describeItemName } from '../data/items';
 import { formatChance, type InspectPanel } from '../systems/InspectSystem';
 
 /**
  * What something *is*, spelled out: a stat block, a drop table with the chance
- * beside every line, or what is lying in a loot pile.
+ * beside every line, what is lying in a loot pile, or an item and what it is
+ * for. An item row in any panel opens the last (`itemCard.ts`), this one's own
+ * drops and heaps included, so a card can be replaced by the card of a line on it.
  *
  * One component for both because they are the same card with different rows —
  * `InspectSystem` decides what is worth saying about a rat, a tree, a signpost
@@ -42,6 +45,16 @@ export class InspectModal extends Overlay {
       );
     }
 
+    // Sentences rather than label and value, because they are the lines the
+    // bag's strip prints on a tap, and a strip has no column for a label.
+    if (panel.uses) {
+      const uses = el('div', 'hud-item-uses hud-inspect__uses');
+      for (const use of panel.uses) {
+        uses.append(el('div', 'hud-item-uses__line', use));
+      }
+      body.append(uses);
+    }
+
     // Only a loot panel carries drops at all, and one that carries an empty
     // list is a creature with nothing on it — which is worth saying, since the
     // player asked.
@@ -58,6 +71,7 @@ export class InspectModal extends Overlay {
           icon: itemIconSvg(drop.itemId),
         });
         entry.root.dataset.item = drop.itemId;
+        bindItemCard(entry.root, drop.itemId);
         body.append(entry.root);
       }
     }
@@ -71,6 +85,7 @@ export class InspectModal extends Overlay {
         icon: itemIconSvg(stack.itemId),
       });
       entry.root.dataset.item = stack.itemId;
+      bindItemCard(entry.root, stack.itemId);
       body.append(entry.root);
     }
 
