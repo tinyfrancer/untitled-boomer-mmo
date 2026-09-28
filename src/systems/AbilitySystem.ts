@@ -5,7 +5,7 @@ import type { AbilityId, ClassId } from '../types/ids';
 // How much a point of the governing skill shaves off a spell's failure chance,
 // and the floor it can never go below — a spell always has some chance to fizzle.
 const FAILURE_REDUCTION_PER_SKILL = 0.0015;
-const MIN_FAILURE_CHANCE = 0.02;
+export const MIN_FAILURE_CHANCE = 0.02;
 
 /** Everything the class could ever hold, which is the trainer's whole list. */
 export function abilitiesFor(classId: ClassId): AbilityDefinition[] {
@@ -125,8 +125,12 @@ export function spellFailureChance(ability: AbilityDefinition, skillLevel: numbe
   if (ability.baseFailureChance <= 0) {
     return 0;
   }
-  const reduced = ability.baseFailureChance - Math.max(0, skillLevel) * FAILURE_REDUCTION_PER_SKILL;
-  return Math.max(MIN_FAILURE_CHANCE, reduced);
+  return Math.max(MIN_FAILURE_CHANCE, ability.baseFailureChance - fizzleReduction(skillLevel));
+}
+
+/** How much the governing skill has taken off every spell's chance to fizzle. */
+export function fizzleReduction(skillLevel: number): number {
+  return Math.max(0, skillLevel) * FAILURE_REDUCTION_PER_SKILL;
 }
 
 export function rollSpellFailure(
