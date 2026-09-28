@@ -25,7 +25,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-function atTheShop(): ReturnType<typeof harness> {
+function talkingToTheShopkeeper(): ReturnType<typeof harness> {
   const kit = harness();
   const npc = nth(kit.world.npcs, 0);
   kit.world.teleport(npc.x, npc.y + 50);
@@ -43,7 +43,7 @@ describe('taking a quest', () => {
   });
 
   it('goes into the log, and the HUD is told', () => {
-    const { bus, state, emissions } = atTheShop();
+    const { bus, state, emissions } = talkingToTheShopkeeper();
 
     bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'rat-bones');
 
@@ -52,7 +52,7 @@ describe('taking a quest', () => {
   });
 
   it('starts at zero of what it asks for', () => {
-    const { bus, character } = atTheShop();
+    const { bus, character } = talkingToTheShopkeeper();
 
     bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'rat-bones');
 
@@ -62,7 +62,7 @@ describe('taking a quest', () => {
 
 describe('handing one in', () => {
   function taken(): ReturnType<typeof harness> {
-    const kit = atTheShop();
+    const kit = talkingToTheShopkeeper();
     kit.bus.emit(ACCEPT_QUEST_REQUESTED_EVENT, 'rat-bones');
     return kit;
   }
@@ -184,7 +184,7 @@ describe('an objective that is not a bag', () => {
  * The upper band's givers stand at Greyford, and the rules are the town's: a
  * quest is taken from the person who gives it and nobody else, and a chain is
  * held back until the link before it is handed in — here across the yard, from
- * the outfitter's counter to the fettler's.
+ * the outfitter to the fettler.
  */
 describe('at Greyford', () => {
   function standAt(kit: ReturnType<typeof harness>, npcId: string): void {
@@ -194,7 +194,7 @@ describe('at Greyford', () => {
     kit.world.approachNpc(npc);
   }
 
-  it('takes the outfitter’s work at the outfitter’s counter and not the fettler’s', () => {
+  it('takes the outfitter’s work from the outfitter and not the fettler', () => {
     const kit = harness({ zoneId: 'greyford' });
 
     standAt(kit, 'fettler');

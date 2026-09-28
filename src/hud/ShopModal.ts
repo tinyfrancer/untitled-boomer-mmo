@@ -33,14 +33,15 @@ export interface ShopHandlers {
  * What the shopkeeper sells on their side, and the sellable half of the bag on
  * yours (`CounterSides`), so which way a tap trades is said by where the row is.
  *
- * Their quests are not drawn here: a giver's work goes at the top of whatever
- * counter they stand at (`counterQuests`), which lands on their side, above the
- * stock.
+ * Their quests are not drawn here: a giver's work is offered in the
+ * conversation (`TalkModal`), which is where a tap on them starts.
  *
  * Deliberately not a scrim — a tap outside it still has to reach the world, or
  * the player could not walk away from the counter.
  */
 export class ShopModal extends Overlay {
+  /** Where the host puts the way back to the conversation (`OverlayHost`). */
+  readonly head: HTMLElement;
   readonly body: HTMLElement;
   private readonly bag: HTMLElement;
   private readonly sides: CounterSides;
@@ -53,6 +54,7 @@ export class ShopModal extends Overlay {
     const box = el('div', 'hud-modal__box hud-modal__box--shop');
 
     const head = el('div', 'hud-modal__head');
+    this.head = head;
     head.append(el('div', 'hud-modal__title', 'General Store'));
     this.purse = new Purse();
     const close = el('button', 'hud-button hud-modal__close', 'X');

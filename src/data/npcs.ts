@@ -13,6 +13,18 @@ import type { NpcId } from '../types/ids';
 export type NpcRoleId =
   'merchant' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'reforger';
 
+/**
+ * What can be open across from a person: the conversation everybody has, or the
+ * counter their role works.
+ *
+ * Talking is a counter in every sense the world and the HUD care about — it is
+ * opened by walking up, shut by walking off or by its X, and one of them is open
+ * at a time — so it rides the same session, the same pair of events and the same
+ * panel slot. What it is not is a role: nobody's job is to talk, which is why it
+ * is its own member here rather than a seventh `NpcRoleId`.
+ */
+export type CounterId = 'talk' | NpcRoleId;
+
 export interface NpcDefinition {
   id: NpcId;
   /**
@@ -23,12 +35,33 @@ export interface NpcDefinition {
    */
   name: string;
   role: NpcRoleId;
+  /**
+   * What they open a conversation with: one line, in their own voice. It names
+   * no place and no person, since the lore that will name them is not written
+   * yet, and a greeting is the first thing a rewrite in that voice replaces.
+   */
+  greeting: string;
 }
 
 export const NPCS: Record<NpcId, NpcDefinition> = {
-  shopkeeper: { id: 'shopkeeper', name: 'Shopkeeper', role: 'merchant' },
-  banker: { id: 'banker', name: 'Banker', role: 'banker' },
-  trainer: { id: 'trainer', name: 'Trainer', role: 'trainer' },
+  shopkeeper: {
+    id: 'shopkeeper',
+    name: 'Shopkeeper',
+    role: 'merchant',
+    greeting: "Come in, and mind the rats. They've been at the flour again.",
+  },
+  banker: {
+    id: 'banker',
+    name: 'Banker',
+    role: 'banker',
+    greeting: "Whatever you leave with me stays exactly where you left it. That's the whole job.",
+  },
+  trainer: {
+    id: 'trainer',
+    name: 'Trainer',
+    role: 'trainer',
+    greeting: 'Talent is cheap. Knowing what to do with it costs a little more.',
+  },
   // The fourth counter, and the one the plan called a board. A board would have
   // been a second kind of tappable furniture — a pick priority, a prop, a map
   // marker and an inspect card of its own — where `NpcRoleId` is the seam this
@@ -39,7 +72,13 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
   // holds: it asks for raiders put down *and* for timber, ore and worked iron
   // brought in, and a quartermaster is the one person in a town who plausibly
   // wants both.
-  quartermaster: { id: 'quartermaster', name: 'Quartermaster', role: 'quartermaster' },
+  quartermaster: {
+    id: 'quartermaster',
+    name: 'Quartermaster',
+    role: 'quartermaster',
+    greeting:
+      "Always more work than hands. Take something off the board; it goes back up the moment you're paid.",
+  },
   /**
    * The fifth counter, out at Greyford, and the first that does not want money.
    *
@@ -49,7 +88,13 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
    * rather than town in a different colour — and what makes the ore and timber
    * already in the pack worth something other than a vendor line.
    */
-  outfitter: { id: 'outfitter', name: 'Outfitter', role: 'outfitter' },
+  outfitter: {
+    id: 'outfitter',
+    name: 'Outfitter',
+    role: 'outfitter',
+    greeting:
+      "Coin's no use to me out here. Bring me ore and timber and I'll see you properly kitted.",
+  },
   /**
    * The sixth counter, and a person rather than a station for the reason the
    * bounty board is one.
@@ -68,7 +113,12 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
    * forge in town has nobody behind it — but calling this one a smith would
    * still say "makes things", which is the one thing they do not do.
    */
-  fettler: { id: 'fettler', name: 'Fettler', role: 'reforger' },
+  fettler: {
+    id: 'fettler',
+    name: 'Fettler',
+    role: 'reforger',
+    greeting: "I don't make anything. I take what somebody else made and make it yours.",
+  },
 };
 
 /** What an NPC is called, for the map's marker and for anyone examining them. */
@@ -79,6 +129,29 @@ export function npcName(npcId: NpcId): string {
 export function npcRole(npcId: NpcId): NpcRoleId {
   return NPCS[npcId].role;
 }
+
+/** Whether that counter is one this person can open: their own, or talking to them. */
+export function worksCounter(npcId: NpcId, counter: CounterId): boolean {
+  return counter === 'talk' || npcRole(npcId) === counter;
+}
+
+/**
+ * What each role's counter is called, on the button that opens it from a
+ * conversation and the line that opens it from a held finger, and what it is
+ * for, said under that button once.
+ */
+export const ROLE_SERVICES: Record<NpcRoleId, { label: string; blurb: string }> = {
+  merchant: { label: 'Shop', blurb: 'Buy tools and supplies, sell what you carry' },
+  banker: { label: 'Bank', blurb: 'Keep anything here, at no weight' },
+  trainer: { label: 'Train', blurb: "Learn your class's abilities, for coin" },
+  quartermaster: { label: 'Contracts', blurb: 'Paid work, as often as you like, one at a time' },
+  // Trade rather than Shop: the word the other counter uses means coin, and
+  // this one does not take any.
+  outfitter: { label: 'Trade', blurb: 'Steel tools, for ore, coal and hardwood' },
+  // Not Trade either: what happens here is work done to something you already
+  // own, and nothing changes hands but a stone.
+  reforger: { label: 'Reforge', blurb: "Move a piece of gear's power between stats" },
+};
 
 /**
  * How close the player has to stand to be served: a tile, which is the width of

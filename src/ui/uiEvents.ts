@@ -12,7 +12,7 @@ import type {
   ZoneId,
 } from '../types/ids';
 import type { SoundSettings } from '../audio/settings';
-import type { NpcRoleId } from '../data/npcs';
+import type { CounterId } from '../data/npcs';
 import type { StationId } from '../data/recipes';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
@@ -49,19 +49,25 @@ export const COOK_REQUESTED_EVENT = 'cook-requested';
 export const LIGHT_FIRE_REQUESTED_EVENT = 'light-fire-requested';
 export const ACTIONS_CHANGED_EVENT = 'actions-changed';
 // Every counter, whoever stands behind it. The world owns whether one is open
-// (it knows about range) and says so with the role; the HUD puts up that role's
+// (it knows about range) and says which it is; the HUD puts up that counter's
 // panel and forwards the rows tapped back as requests. A close button sends the
 // same closed event the other way, which is the world's cue to drop its state.
 //
-// One pair for six counters, where there used to be a pair each: the payload is
-// the role, so a seventh is a row in the tables keyed by it rather than two more
-// constants, two more listeners on each side, and a line somebody forgets.
+// One pair for every counter, where there used to be a pair each: the payload is
+// which counter, so a new one is a row in the tables keyed by it rather than two
+// more constants, two more listeners on each side, and a line somebody forgets.
+// Talking to somebody is one of them (`CounterId`).
 //
-// An opening also names who is behind the counter, because the role says which
-// panel to draw and not whose quests to put at the top of it: a quest is given
-// by a person, and two people could one day share a role.
+// An opening also names who is behind the counter, because the counter says
+// which panel to draw and not whose greeting and quests to put in it: a quest is
+// given by a person, and two people could one day share a role.
 export const COUNTER_OPENED_EVENT = 'counter-opened';
 export const COUNTER_CLOSED_EVENT = 'counter-closed';
+// A button across from somebody asking for another of their counters: the
+// talk panel's Shop, or a counter's Back to the talk. It names only the
+// counter, since who is being served is the world's to know, and a person asked
+// for a counter they do not work answers nothing.
+export const COUNTER_REQUESTED_EVENT = 'counter-requested';
 // Greyford's outfitter: the panel sends back the one row that was tapped.
 export const TRADE_REQUESTED_EVENT = 'trade-requested';
 export const BUY_ITEM_REQUESTED_EVENT = 'buy-item-requested';
@@ -295,6 +301,7 @@ export interface TilePoint {
  */
 export type ContextActionId =
   | 'attack'
+  | 'talk'
   | 'gather'
   | 'travel'
   | 'shop'
@@ -391,8 +398,9 @@ export interface UiEventMap {
   [COOK_REQUESTED_EVENT]: [itemId: ItemId];
   [LIGHT_FIRE_REQUESTED_EVENT]: [];
   [ACTIONS_CHANGED_EVENT]: [actions: AvailableActions];
-  [COUNTER_OPENED_EVENT]: [role: NpcRoleId, npcId: NpcId];
-  [COUNTER_CLOSED_EVENT]: [role: NpcRoleId];
+  [COUNTER_OPENED_EVENT]: [counter: CounterId, npcId: NpcId];
+  [COUNTER_CLOSED_EVENT]: [counter: CounterId];
+  [COUNTER_REQUESTED_EVENT]: [counter: CounterId];
   [TRADE_REQUESTED_EVENT]: [itemId: ItemId];
   [BUY_ITEM_REQUESTED_EVENT]: [itemId: ItemId];
   [SELL_ITEM_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];

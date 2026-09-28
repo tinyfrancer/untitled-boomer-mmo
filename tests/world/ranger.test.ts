@@ -139,7 +139,7 @@ describe('arrows coming back', () => {
     const kit = harness({ classId: 'ranger' });
     const keeper = nth(kit.world.npcs, 0);
     kit.world.teleport(keeper.x, keeper.y + 50);
-    kit.world.approachNpc(keeper);
+    kit.world.approachNpc(keeper, 'merchant');
     kit.state.quiver = { itemId: 'crude-arrows', count: 40 };
 
     kit.world.handleBuyRequested('crude-arrows');

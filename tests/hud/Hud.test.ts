@@ -22,7 +22,7 @@ import { describeEnemy, describeEnemyLoot, describePile } from '../../src/system
 import { THEME } from '../../src/ui/theme';
 import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
-import { NPCS, type NpcRoleId } from '../../src/data/npcs';
+import { NPCS, ROLE_SERVICES, type CounterId, type NpcRoleId } from '../../src/data/npcs';
 import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -59,6 +59,7 @@ import {
   type ContextMenuRequest,
   COUNTER_OPENED_EVENT,
   COUNTER_CLOSED_EVENT,
+  COUNTER_REQUESTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   STATION_OPENED_EVENT,
@@ -728,7 +729,7 @@ describe('the shop', () => {
    * quests go on the keeper's side, above the stock, since the host puts them
    * at the top of the panel's body and that side is the body.
    */
-  it("draws the stock on the keeper's side, the bag on yours, and their quests over the stock", () => {
+  it("draws the stock on the keeper's side and the bag on yours, and no quests", () => {
     mount();
     events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 2 });
@@ -740,8 +741,8 @@ describe('the shop', () => {
     expect(yours?.querySelector('[data-item="rat-bones"]')).not.toBeNull();
     expect(yours?.querySelectorAll('[data-item]')).toHaveLength(1);
 
-    expect(theirs?.firstElementChild?.matches('.hud-counter-quests')).toBe(true);
-    expect(yours?.querySelector('.hud-counter-quests')).toBeNull();
+    // The shopkeeper's work is offered in the conversation, not over the stock.
+    expect(shop()?.querySelector('.hud-talk__quests')).toBeNull();
     expect(yours?.querySelector('.hud-section__hint')?.textContent).toBe('tap to sell');
   });
 
@@ -870,36 +871,62 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     'outfitter',
     'reforger',
   ];
+  const COUNTERS: CounterId[] = ['talk', ...ROLES];
   const panels = (): Element[] => [...parent.querySelectorAll('.hud-modal--top')];
   const questRows = (): string[] =>
     [...parent.querySelectorAll<HTMLElement>('.hud-modal--top [data-quest]')].map(
       (row) => row.dataset.quest ?? '',
     );
+  // Talking is everybody's, so any person will do for it.
+  const someoneAt = (counter: CounterId): NpcId =>
+    counter === 'talk' ? 'shopkeeper' : personAt(counter);
 
-  it.each(ROLES)('puts up the %s counter and takes it down with the world', (role) => {
+  it.each(COUNTERS)('puts up the %s counter and takes it down with the world', (counter) => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, role, personAt(role));
+    events.emit(COUNTER_OPENED_EVENT, counter, someoneAt(counter));
     expect(panels()).toHaveLength(1);
-    events.emit(COUNTER_CLOSED_EVENT, role);
+    events.emit(COUNTER_CLOSED_EVENT, counter);
     expect(panels()).toHaveLength(0);
   });
 
-  it('holds one counter up at a time', () => {
+  it('holds one counter up at a time, the conversation among them', () => {
     mount();
+    events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
     events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
     events.emit(COUNTER_OPENED_EVENT, 'banker', 'banker');
     expect(panels()).toHaveLength(1);
     expect(parent.querySelector('.hud-modal__box--bank')).not.toBeNull();
     // A close meant for the counter that is no longer up takes nothing down.
     events.emit(COUNTER_CLOSED_EVENT, 'merchant');
+    events.emit(COUNTER_CLOSED_EVENT, 'talk');
     expect(panels()).toHaveLength(1);
   });
 
-  it.each(ROLES)('asks the world to shut the %s counter from its X', (role) => {
+  it.each(COUNTERS)('asks the world to shut the %s counter from its X', (counter) => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, counter, someoneAt(counter));
+    parent.querySelector<HTMLButtonElement>('.hud-modal--top .hud-modal__close')?.click();
+    expect(emitted.at(-1)).toEqual({ event: COUNTER_CLOSED_EVENT, args: [counter] });
+  });
+
+  /**
+   * The way back to the conversation is put on every role's counter by the
+   * host rather than by each panel, so this asks it of all of them at once.
+   */
+  it.each(ROLES)('asks the world to talk again from the %s counter', (role) => {
     mount();
     events.emit(COUNTER_OPENED_EVENT, role, personAt(role));
-    parent.querySelector<HTMLButtonElement>('.hud-modal--top .hud-modal__close')?.click();
-    expect(emitted.at(-1)).toEqual({ event: COUNTER_CLOSED_EVENT, args: [role] });
+    const head = parent.querySelector('.hud-modal--top .hud-modal__head');
+    const back = head?.querySelector<HTMLButtonElement>('[data-action="back-to-talk"]');
+    expect(head?.firstElementChild).toBe(back);
+    back?.click();
+    expect(emitted.at(-1)).toEqual({ event: COUNTER_REQUESTED_EVENT, args: ['talk'] });
+  });
+
+  it('puts no way back on the conversation itself', () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'talk', 'banker');
+    expect(parent.querySelector('[data-action="back-to-talk"]')).toBeNull();
   });
 
   /**
@@ -928,23 +955,67 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     expect(panels()[0]?.innerHTML).not.toBe(before);
   });
 
-  /**
-   * A quest is a conversation with the person who gives it, so it goes on
-   * whatever counter they stand behind — asked of every role, since the panel
-   * that forgets to draw them is exactly what this rule is here to rule out.
-   */
-  it.each(ROLES)('draws the work going at the %s counter for whoever gives it', (role) => {
+  // The conversation's moving part is the work: taking a quest turns its row
+  // from an offer into a count, and the pack filling moves the count.
+  it('redraws the conversation when the quest log and the pack move', () => {
     mount();
-    const npcId = personAt(role);
-    events.emit(COUNTER_OPENED_EVENT, role, npcId);
+    events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+    const row = (): string | undefined =>
+      parent.querySelector('[data-quest="rat-bones"] .hud-list-row__value')?.textContent ?? '';
+    expect(row()).toBe('Accept');
 
-    const theirs = QUEST_ORDER.filter((questId) => QUESTS[questId].giverNpcId === npcId);
-    expect(questRows()).toEqual(theirs);
+    events.emit(QUEST_LOG_CHANGED_EVENT, { 'rat-bones': { status: 'active', baseline: 0 } });
+    expect(row()).toBe('0 / 10');
+    events.emit(INVENTORY_CHANGED_EVENT, { 'rat-bones': 4 });
+    expect(row()).toBe('4 / 10');
   });
 
-  it('asks the world to take and hand in a quest from any counter that shows one', () => {
+  /**
+   * A conversation is who somebody is before it is what they sell: their own
+   * line, in their own quotation marks, and a button for the counter they work
+   * that says what it is for. Asked of everybody, since a person added without
+   * a greeting or a counter is what this is here to catch.
+   */
+  it.each(Object.values(NPCS))('greets as $name and offers their counter', (npc) => {
     mount();
-    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    events.emit(COUNTER_OPENED_EVENT, 'talk', npc.id);
+
+    const box = parent.querySelector('.hud-modal__box--talk');
+    expect(box?.querySelector('.hud-modal__title')?.textContent).toBe(npc.name);
+    expect(box?.querySelector('.hud-talk__greeting')?.textContent).toBe(
+      `\u201c${npc.greeting}\u201d`,
+    );
+
+    const services = [...(box?.querySelectorAll<HTMLButtonElement>('.hud-talk__service') ?? [])];
+    expect(services.map((button) => button.dataset.counter)).toEqual([npc.role]);
+    expect(nth(services).textContent).toContain(ROLE_SERVICES[npc.role].label);
+    expect(nth(services).textContent).toContain(ROLE_SERVICES[npc.role].blurb);
+
+    nth(services).click();
+    expect(emitted.at(-1)).toEqual({ event: COUNTER_REQUESTED_EVENT, args: [npc.role] });
+  });
+
+  /**
+   * A quest is a conversation with the person who gives it, so it goes in the
+   * conversation with them and on none of their counters — asked of everybody,
+   * since the one that forgets is what this rule is here to rule out.
+   */
+  it.each(Object.values(NPCS))(
+    'draws the work $name has going when talked to, and only then',
+    (npc) => {
+      mount();
+      events.emit(COUNTER_OPENED_EVENT, 'talk', npc.id);
+      const theirs = QUEST_ORDER.filter((questId) => QUESTS[questId].giverNpcId === npc.id);
+      expect(questRows()).toEqual(theirs);
+
+      events.emit(COUNTER_OPENED_EVENT, npc.role, npc.id);
+      expect(questRows()).toEqual([]);
+    },
+  );
+
+  it('asks the world to take and hand in a quest from the conversation', () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
 
     parent.querySelector<HTMLButtonElement>('[data-quest="rat-bones"]')?.click();
     expect(emitted.at(-1)).toEqual({ event: ACCEPT_QUEST_REQUESTED_EVENT, args: ['rat-bones'] });
@@ -958,11 +1029,11 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     });
   });
 
-  // Handed in is finished business: a counter that listed it would be a row
-  // with nothing left to say.
-  it('leaves a quest handed in off the counter', () => {
+  // Handed in is finished business: a conversation that listed it would be a
+  // row with nothing left to say.
+  it('leaves a quest handed in out of the conversation', () => {
     mount({ quests: { 'rat-bones': { status: 'done', baseline: 0 } } });
-    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
     expect(questRows()).not.toContain('rat-bones');
   });
 });

@@ -459,6 +459,30 @@ const standSouthOf = async (what, back = 150) => {
   await draw();
 };
 /**
+ * The conversation a tap on a person opens, and the one button on it that goes
+ * on to the counter they work — pressed for real, the way a player asks.
+ *
+ * Answers whom the conversation was with, since which person a ray reached is
+ * the point of every section that calls this with three others standing close.
+ *
+ * @param {import('../src/data/npcs').NpcRoleId} role
+ * @param {string} who
+ * @returns {Promise<string | null>}
+ */
+const talkThenOpen = async (role, who) => {
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk') !== null),
+    `the tapped ${who} to talk`,
+  );
+  const talkedTo = await page.evaluate(() => window.world.counterNpc('talk')?.npcId ?? null);
+  await page.click(`.hud-modal__box--talk .hud-talk__service[data-counter="${role}"]`);
+  await stepUntil(
+    () => page.evaluate((counter) => window.world.counterNpc(counter) !== null, role),
+    `the ${who}'s counter to open from the conversation`,
+  );
+  return talkedTo;
+};
+/**
  * Where it is drawn — the feet, which is what a player aims at.
  *
  * @param {string} what
@@ -939,8 +963,8 @@ async function feedback() {
   await standSouthOf(GENERAL_STORE, 320);
   await clickAt(await screenAt(GENERAL_STORE));
   await stepUntil(
-    () => page.evaluate(() => window.world.counterNpc('merchant') !== null),
-    'the tapped shopfront to walk the player in and open the shop',
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'shopkeeper'),
+    'the tapped shopfront to walk the player in and talk to the shopkeeper',
   );
   /** @type {{ x: number; y: number; store: { x: number; y: number; width: number; height: number } }} */
   const served = await page.evaluate(`(() => {
@@ -953,7 +977,7 @@ async function feedback() {
     };
   })()`);
   check(
-    'a real click on a shopfront walks in through its door and opens the counter inside',
+    'a real click on a shopfront walks in through its door and talks to the keeper inside',
     Math.abs(served.x - served.store.x) < served.store.width / 2 &&
       Math.abs(served.y - served.store.y) < served.store.height / 2,
     `served at ${Math.round(served.x)},${Math.round(served.y)} for a shop at ${served.store.x},${served.store.y}`,
@@ -965,13 +989,43 @@ async function feedback() {
   await standSouthOf(SHOPKEEPER);
   await clickAt(await screenAt(SHOPKEEPER));
   await stepUntil(
-    () => page.evaluate(() => window.world.counterNpc('merchant') !== null),
-    'the tapped shopkeeper to open the shop',
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'shopkeeper'),
+    'the tapped shopkeeper to talk',
   );
-  check('a real click on the shopkeeper walks over and opens the shop', true);
+  // Talk first: a tap on a person opens a conversation with them — their
+  // greeting, the counter they work as a button saying what it is for, and the
+  // work they have going — rather than their counter.
+  const talk = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--talk');
+    const rect = box?.getBoundingClientRect();
+    const bar = document.querySelector('.hud-tabs')?.getBoundingClientRect();
+    return {
+      title: box?.querySelector('.hud-modal__title')?.textContent ?? '',
+      greeting: box?.querySelector('.hud-talk__greeting')?.textContent ?? '',
+      services: [...(box?.querySelectorAll('.hud-talk__service') ?? [])].map(
+        (b) => /** @type {HTMLElement} */ (b).dataset.counter ?? '',
+      ),
+      quests: box?.querySelectorAll('[data-quest]').length ?? 0,
+      shop: window.world.counterNpc('merchant') !== null,
+      clear:
+        rect && bar ? rect.bottom <= bar.top && rect.left >= 0 && rect.right <= innerWidth : false,
+    };
+  });
+  check(
+    'a real click on the shopkeeper talks first: a greeting, the Shop button and their work, clear of the tab bar',
+    talk.title === 'Shopkeeper' &&
+      /^\u201c.+\u201d$/.test(talk.greeting) &&
+      talk.services.length === 1 &&
+      talk.services[0] === 'merchant' &&
+      talk.quests > 0 &&
+      !talk.shop &&
+      talk.clear,
+    JSON.stringify(talk),
+  );
+  await page.screenshot({ path: `${OUT}/8-talk.png` });
 
-  // The shop is a DOM panel, so this is the row the player actually taps rather
-  // than the event behind it. The quest rules themselves are covered in
+  // The conversation is a DOM panel, so this is the row the player actually taps
+  // rather than the event behind it. The quest rules themselves are covered in
   // tests/world/quests.test.ts; what needs a browser is the round trip — a tap
   // on the panel, the world deciding, and the tracker redrawing off the answer.
   await page.click('.hud-modal .hud-list-row[data-quest="rat-bones"]');
@@ -1004,26 +1058,36 @@ async function feedback() {
     lockedQuest.drawn && lockedQuest.locked && !lockedQuest.taken,
     lockedQuest.says,
   );
-  // The shop's stock and its sell list get the bag's icons; its quest rows
-  // deliberately do not, since a quest is not an item.
+  // A quest row deliberately has no icon, since a quest is not an item.
+  const questIcons = await page.evaluate(
+    () => document.querySelectorAll('.hud-modal__box--talk [data-quest] .hud-icon').length,
+  );
+
+  // On from the conversation to the counter, by its button, and the work stays
+  // behind in the conversation it belongs to.
+  await page.click('.hud-modal__box--talk .hud-talk__service[data-counter="merchant"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('merchant') !== null),
+    'the Shop button to open the shop',
+  );
+  // The shop's stock and its sell list get the bag's icons.
   const shopIcons = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('.hud-modal .hud-list-row')];
     return {
       items: rows.filter((r) => /** @type {HTMLElement} */ (r).dataset.item).length,
       withIcon: rows.filter((r) => r.querySelector('.hud-icon')).length,
       quests: rows.filter((r) => /** @type {HTMLElement} */ (r).dataset.quest).length,
-      questIcons: rows.filter(
-        (r) => /** @type {HTMLElement} */ (r).dataset.quest && r.querySelector('.hud-icon'),
-      ).length,
+      talking: document.querySelector('.hud-modal__box--talk') !== null,
     };
   });
   check(
-    'the shop draws an icon on every item row and none on a quest row',
+    'Shop opens the shop in place of the conversation, an icon on every item row and no quests',
     shopIcons.items > 0 &&
       shopIcons.withIcon === shopIcons.items &&
-      shopIcons.quests > 0 &&
-      shopIcons.questIcons === 0,
-    `${shopIcons.withIcon}/${shopIcons.items} item rows, ${shopIcons.questIcons}/${shopIcons.quests} quest rows`,
+      shopIcons.quests === 0 &&
+      !shopIcons.talking &&
+      questIcons === 0,
+    `${shopIcons.withIcon}/${shopIcons.items} item rows, ${shopIcons.quests} quest rows, ${questIcons} quest icons`,
   );
   // Half the shelf is earned. A locked row is drawn like any other and tapped
   // like any other — what needs a browser is the same round trip the locked zone
@@ -1231,6 +1295,29 @@ async function feedback() {
     `${cleared} markers with every quest done, ${restored} with one to take`,
   );
 
+  // Back to the conversation from the shop's head, and on again from it: the
+  // way back is the host's, so one panel standing for all of them is enough.
+  await page.click('.hud-modal__box--shop [data-action="back-to-talk"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'shopkeeper'),
+    'Back to return to the conversation',
+  );
+  const backed = await page.evaluate(() => ({
+    shop: window.world.counterNpc('merchant') !== null,
+    panel: document.querySelector('.hud-modal__box--shop') !== null,
+    talk: document.querySelector('.hud-modal__box--talk') !== null,
+  }));
+  check(
+    "Back on the shop's head goes back to talking to the shopkeeper",
+    !backed.shop && !backed.panel && backed.talk,
+    JSON.stringify(backed),
+  );
+  await page.click('.hud-modal__box--talk .hud-talk__service[data-counter="merchant"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('merchant') !== null),
+    'the Shop button to open the shop again',
+  );
+
   // Closing from the panel's own X, which asks the world rather than telling it.
   await page.click('.hud-modal [data-action="close-shop"]');
   await stepUntil(
@@ -1391,19 +1478,16 @@ async function bank() {
   // standing next to them. ---
   await standSouthOf(BANKER);
   await clickAt(await screenAt(BANKER));
-  await stepUntil(
-    () => page.evaluate(() => window.world.counterNpc('banker') !== null),
-    'the tapped banker to open the bank',
-  );
+  const bankTalk = await talkThenOpen('banker', 'banker');
   const opened = await page.evaluate(() => ({
     bank: window.world.counterNpc('banker')?.npcId ?? null,
     shop: window.world.counterNpc('merchant')?.npcId ?? null,
     panel: document.querySelector('.hud-modal__box--bank') !== null,
   }));
   check(
-    'a click on the banker opens the bank and not the shop standing beside it',
-    opened.bank === 'banker' && opened.shop === null && opened.panel,
-    `bank: ${opened.bank}, shop: ${opened.shop}`,
+    'a click on the banker talks to the banker, whose Bank opens the bank and not the shop beside it',
+    bankTalk === 'banker' && opened.bank === 'banker' && opened.shop === null && opened.panel,
+    `talked to: ${bankTalk}, bank: ${opened.bank}, shop: ${opened.shop}`,
   );
 
   // The panel round trip: a real click on a real row, the world deciding, and
@@ -1473,6 +1557,42 @@ async function bank() {
     'the bank panel closes the counter it was opened by',
     (await page.evaluate(() => document.querySelector('.hud-modal__box--bank') === null)) === true,
   );
+
+  // The other way to a counter, for somebody visited every trip: a right click
+  // on the person offers Talk and their counter, and the counter goes straight
+  // there with no conversation on the way — the same walk a tap makes, ending
+  // at a different panel.
+  await standSouthOf(BANKER);
+  const teller = await screenAt(BANKER);
+  await page.mouse.move(teller.x, teller.y);
+  await page.mouse.click(teller.x, teller.y, { button: 'right' });
+  await draw();
+  const menu = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-context__row')].map((n) => n.textContent),
+  );
+  await page.click('.hud-context__row[data-context-action="Bank"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('banker') !== null),
+    "the menu's Bank to open the bank",
+  );
+  const straight = await page.evaluate(() => ({
+    talked:
+      window.world.counterNpc('talk') !== null ||
+      document.querySelector('.hud-modal__box--talk') !== null,
+    bank: document.querySelector('.hud-modal__box--bank') !== null,
+  }));
+  check(
+    'a right click on the banker offers Talk and Bank, and Bank opens the bank with no conversation first',
+    JSON.stringify(menu) === JSON.stringify(['Talk', 'Bank', 'Inspect']) &&
+      straight.bank &&
+      !straight.talked,
+    `${menu.join(', ')}; ${JSON.stringify(straight)}`,
+  );
+  await page.click('.hud-modal [data-action="close-bank"]');
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('banker') === null),
+    'the bank panel to close the counter',
+  );
 }
 
 async function trainer() {
@@ -1487,10 +1607,7 @@ async function trainer() {
   // assertion can see. ---
   await standSouthOf(TRAINER);
   await clickAt(await screenAt(TRAINER));
-  await stepUntil(
-    () => page.evaluate(() => window.world.counterNpc('trainer') !== null),
-    'the tapped trainer to open the syllabus',
-  );
+  const trainerTalk = await talkThenOpen('trainer', 'trainer');
   const opened = await page.evaluate(() => ({
     trainer: window.world.counterNpc('trainer')?.npcId ?? null,
     shop: window.world.counterNpc('merchant')?.npcId ?? null,
@@ -1498,9 +1615,13 @@ async function trainer() {
     panel: document.querySelector('.hud-modal__box--trainer') !== null,
   }));
   check(
-    'a click on the trainer opens the trainer and neither counter beside it',
-    opened.trainer === 'trainer' && opened.shop === null && opened.bank === null && opened.panel,
-    `trainer: ${opened.trainer}, shop: ${opened.shop}, bank: ${opened.bank}`,
+    'a click on the trainer talks to the trainer, whose Train opens the trainer and neither counter beside it',
+    trainerTalk === 'trainer' &&
+      opened.trainer === 'trainer' &&
+      opened.shop === null &&
+      opened.bank === null &&
+      opened.panel,
+    `talked to: ${trainerTalk}, trainer: ${opened.trainer}, shop: ${opened.shop}, bank: ${opened.bank}`,
   );
 
   // A level 1 character has not earned anything on this list, so every row on
@@ -1626,10 +1747,7 @@ async function bountyBoard() {
   // means. ---
   await standSouthOf(QUARTERMASTER);
   await clickAt(await screenAt(QUARTERMASTER));
-  await stepUntil(
-    () => page.evaluate(() => window.world.counterNpc('quartermaster') !== null),
-    'the tapped quartermaster to open the board',
-  );
+  const boardTalk = await talkThenOpen('quartermaster', 'quartermaster');
   const opened = await page.evaluate(() => ({
     board: window.world.counterNpc('quartermaster')?.npcId ?? null,
     shop: window.world.counterNpc('merchant')?.npcId ?? null,
@@ -1644,13 +1762,14 @@ async function bountyBoard() {
     ),
   }));
   check(
-    'a click on the quartermaster opens the board and none of the three counters beside it',
-    opened.board === 'quartermaster' &&
+    'a click on the quartermaster talks to them, whose Contracts opens the board and none of the three counters beside it',
+    boardTalk === 'quartermaster' &&
+      opened.board === 'quartermaster' &&
       opened.shop === null &&
       opened.bank === null &&
       opened.trainer === null &&
       opened.panel,
-    `board: ${opened.board}, shop: ${opened.shop}, bank: ${opened.bank}, trainer: ${opened.trainer}`,
+    `talked to: ${boardTalk}, board: ${opened.board}, shop: ${opened.shop}, bank: ${opened.bank}, trainer: ${opened.trainer}`,
   );
   // Ten contracts, each a row and a line, is the longest list any counter
   // draws — the one that ran down over the tab bar and took its taps.

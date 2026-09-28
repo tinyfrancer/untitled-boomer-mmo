@@ -553,7 +553,7 @@ class Hud {
       nearFire: this.model.actions.nearFire,
       // Selling is a thing done across the shopkeeper's counter, so the Sell
       // button is there exactly while that counter is up.
-      shopOpen: this.overlays.openCounterRole() === 'merchant',
+      shopOpen: this.overlays.openCounterId() === 'merchant',
       classId: this.classId,
       stackSize: this.stackSize(itemId),
     });
@@ -904,14 +904,15 @@ class Hud {
       }
     });
 
-    // Whichever counter the world opened or shut. Opening or shutting the
-    // shopkeeper's is also what adds or takes away a Sell button in the bag.
-    listen(COUNTER_OPENED_EVENT, (role, npcId) => {
-      this.overlays.openCounter(role, npcId);
+    // Whichever counter the world opened or shut, a conversation included.
+    // Opening or shutting the shopkeeper's is also what adds or takes away a
+    // Sell button in the bag.
+    listen(COUNTER_OPENED_EVENT, (counter, npcId) => {
+      this.overlays.openCounter(counter, npcId);
       this.inventorySheet.refreshActions();
     });
-    listen(COUNTER_CLOSED_EVENT, (role) => {
-      this.overlays.closeCounter(role);
+    listen(COUNTER_CLOSED_EVENT, (counter) => {
+      this.overlays.closeCounter(counter);
       this.inventorySheet.refreshActions();
     });
 

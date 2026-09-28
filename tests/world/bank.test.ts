@@ -26,7 +26,7 @@ function atTheBank(): ReturnType<typeof harness> {
   const kit = harness();
   const npc = npcNamed(kit.world, 'banker');
   kit.world.teleport(npc.x, npc.y + 50);
-  kit.world.approachNpc(npc);
+  kit.world.approachNpc(npc, 'banker');
   return kit;
 }
 
@@ -46,7 +46,7 @@ describe('the bank', () => {
 
     const keeper = npcNamed(world, 'shopkeeper');
     world.teleport(keeper.x, keeper.y + 50);
-    world.approachNpc(keeper);
+    world.approachNpc(keeper, 'merchant');
 
     expect(world.counterNpc('merchant')).not.toBeNull();
     expect(emissions(COUNTER_OPENED_EVENT).filter(([r]) => r === 'merchant')).toHaveLength(1);

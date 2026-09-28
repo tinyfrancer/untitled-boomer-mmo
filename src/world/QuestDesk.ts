@@ -9,7 +9,7 @@ import type { WorldContext } from './WorldContext';
 /** What the desk needs from the rest of the zone, and the whole of it. */
 export interface QuestDeskDeps {
   /**
-   * Whoever is behind the counter the player is standing at, or null.
+   * Whoever the player is standing at — talking to, or served by — or null.
    *
    * A quest is taken from and handed to the person who gives it, so this is
    * asked rather than whether a particular window is open: while the shopkeeper
@@ -27,9 +27,10 @@ export interface QuestDeskDeps {
 /**
  * Taking a quest, handing one in, and choosing which earned title to wear.
  *
- * Offered across a counter rather than from a panel of its own: a quest is a
- * conversation with the person who gives it, so it is open exactly while their
- * counter is.
+ * Offered in a conversation rather than from a panel of its own: a quest is
+ * taken from the person who gives it, so it is open exactly while the player is
+ * standing at them. The talk panel is where the HUD draws it; the world asks
+ * only who, so a counter of theirs answers the same.
  *
  * Progress is not tracked here and is not tracked anywhere — `QuestSystem`
  * counts a "bring me N of X" off the bag on read, which is what makes looting,

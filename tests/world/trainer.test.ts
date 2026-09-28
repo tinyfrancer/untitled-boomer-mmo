@@ -34,7 +34,7 @@ function atTheTrainer(options: { level?: number; currency?: number } = {}) {
   kit.state.currency = options.currency ?? 1000;
   const npc = npcNamed(kit.world, 'trainer');
   kit.world.teleport(npc.x, npc.y + 50);
-  kit.world.approachNpc(npc);
+  kit.world.approachNpc(npc, 'trainer');
   return kit;
 }
 
@@ -66,7 +66,7 @@ describe('the trainer', () => {
     const npc = npcNamed(kit.world, 'trainer');
     kit.world.teleport(npc.x, npc.y + NPC_INTERACT_RADIUS * 3);
 
-    kit.world.approachNpc(npc);
+    kit.world.approachNpc(npc, 'trainer');
     expect(kit.world.counterNpc('trainer')).toBeNull();
 
     kit.until(() => kit.world.counterNpc('trainer') !== null, 'the player reaches the trainer');

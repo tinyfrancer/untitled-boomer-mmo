@@ -1,4 +1,4 @@
-import { NPC_CLOSE_RADIUS, type NpcRoleId } from '../data/npcs';
+import { NPC_CLOSE_RADIUS, type CounterId } from '../data/npcs';
 import { withinRadius } from '../systems/MovementSystem';
 import { COUNTER_CLOSED_EVENT, COUNTER_OPENED_EVENT } from '../ui/uiEvents';
 import type { WorldContext } from './WorldContext';
@@ -12,23 +12,24 @@ import type { WorldNpc } from './zoneEntities';
  * the trainer, the board, the outfitter and the fettler each wrote out the same
  * five members, and each had its own pair of opened and closed events for the
  * one idea. What differs is only what can be done while it is open, which is
- * what a subclass adds. The window is gated on being open rather than on a
+ * what a subclass adds. Talking to somebody is the seventh, and the one every
+ * person has (`TalkSession`). The window is gated on being open rather than on a
  * distance, because the window closing is what walking away from a counter
  * means, and `updateRange` is what makes walking away close it.
  *
- * Both events carry the role, which is how the HUD knows which panel to put up
- * and the world knows which session a close button meant.
+ * Both events carry which counter it is, which is how the HUD knows which panel
+ * to put up and the world knows which session a close button meant.
  */
 export abstract class CounterSession {
   /** Who is behind the counter while it is open; null when it is shut. */
   npc: WorldNpc | null = null;
 
-  readonly role: NpcRoleId;
+  readonly id: CounterId;
   protected readonly ctx: WorldContext;
 
-  constructor(ctx: WorldContext, role: NpcRoleId) {
+  constructor(ctx: WorldContext, id: CounterId) {
     this.ctx = ctx;
-    this.role = role;
+    this.id = id;
   }
 
   isOpen(): boolean {
@@ -38,14 +39,14 @@ export abstract class CounterSession {
   open(npc: WorldNpc): void {
     this.ctx.player.stopMoving();
     this.npc = npc;
-    this.ctx.events.emit(COUNTER_OPENED_EVENT, this.role, npc.npcId);
+    this.ctx.events.emit(COUNTER_OPENED_EVENT, this.id, npc.npcId);
     this.opened();
   }
 
   close(): void {
     if (!this.npc) return;
     this.npc = null;
-    this.ctx.events.emit(COUNTER_CLOSED_EVENT, this.role);
+    this.ctx.events.emit(COUNTER_CLOSED_EVENT, this.id);
   }
 
   /** The panel's close button already tore it down; just drop the state. */

@@ -1,4 +1,4 @@
-import { npcRole, type NpcRoleId } from '../data/npcs';
+import { npcRole, ROLE_SERVICES, type NpcRoleId } from '../data/npcs';
 import { STATION_ACTION_LABELS, STATION_LABELS } from '../data/recipes';
 import { SKILLS } from '../data/skills';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
@@ -22,7 +22,7 @@ import type { WorldNpc, WorldSignpost, WorldStation } from './zoneEntities';
 /** Everything a context menu can be about: a tap's subject, less the ground. */
 type Subject = Exclude<WorldTap, { kind: 'ground' }>;
 
-/** Which world action each kind of subject offers. One each, so far. */
+/** Which world action each kind of subject offers. One each, but a person. */
 const SUBJECT_ACTIONS = {
   mob: 'attack',
   node: 'gather',
@@ -31,29 +31,27 @@ const SUBJECT_ACTIONS = {
   pile: 'take',
 } as const satisfies Record<Exclude<Subject['kind'], 'npc'>, ContextActionId>;
 
-/** What each counter is called, on the one line a menu gives it. */
+/** The line each role's counter is asked for by; what it says is `ROLE_SERVICES`. */
 const ROLE_ACTIONS = {
-  merchant: { id: 'shop', label: 'Shop' },
-  banker: { id: 'bank', label: 'Bank' },
-  trainer: { id: 'train', label: 'Train' },
-  // Trade rather than Shop: the word the other counter uses means coin, and
-  // this one does not take any.
-  outfitter: { id: 'outfit', label: 'Trade' },
-  quartermaster: { id: 'bounty', label: 'Bounties' },
-  // Not 'Trade' either: what happens here is work done to something you already
-  // own, and nothing changes hands but a stone.
-  reforger: { id: 'reforge', label: 'Reforge' },
-} as const satisfies Record<NpcRoleId, ContextAction>;
+  merchant: 'shop',
+  banker: 'bank',
+  trainer: 'train',
+  outfitter: 'outfit',
+  quartermaster: 'bounty',
+  reforger: 'reforge',
+} as const satisfies Record<NpcRoleId, ContextActionId>;
 
 /**
- * The single action a subject offers. An NPC is the one kind whose answer is
- * not a fact about the kind: two people stand still in town and only one of
- * them sells anything, so this reads the role rather than assuming the shop.
+ * The actions a subject offers. A person is the one kind with two, and the one
+ * whose answer is not a fact about the kind: everybody talks, which is what a
+ * tap does, and the counter they work is the line a held finger adds — read off
+ * the role rather than assuming the shop, since two people stand still in town
+ * and only one of them sells anything.
  */
-function subjectAction(subject: Subject): ContextActionId {
+function subjectActions(subject: Subject): ContextActionId[] {
   return subject.kind === 'npc'
-    ? ROLE_ACTIONS[npcRole(subject.npc.npcId)].id
-    : SUBJECT_ACTIONS[subject.kind];
+    ? ['talk', ROLE_ACTIONS[npcRole(subject.npc.npcId)]]
+    : [SUBJECT_ACTIONS[subject.kind]];
 }
 
 export interface ContextMenuDeps {
@@ -63,7 +61,8 @@ export interface ContextMenuDeps {
    * One hook rather than four, and deliberately the *same* one a tap goes
    * through: Attack means what tapping a rat means, down to giving up the
    * gather it interrupts and the camp it ends. A menu is a slower way of saying
-   * the same thing, not a second set of rules about attacking and gathering.
+   * the same thing, not a second set of rules about attacking and gathering. A
+   * person's counter is a tap that names it (`WorldTap`'s `counter`).
    */
   perform: (subject: Subject) => void;
 }
@@ -146,12 +145,18 @@ export class ContextMenuSession {
   run(actionId: ContextActionId): void {
     const subject = this.subject;
     this.subject = null;
-    if (!subject || subjectAction(subject) !== actionId) return;
+    if (!subject || !subjectActions(subject).includes(actionId)) return;
     // The corpse case: a mob may die between the menu opening and a line being
     // chosen, and a walk to attack one would end standing over it.
     if (subject.kind === 'mob' && !subject.mob.isAlive()) return;
     // Its twin: a pile can lapse, or be emptied by a tap, while the menu is up.
     if (subject.kind === 'pile' && subject.pile.isGone()) return;
+    // A person's counter, named, is the one line that is not a plain tap: the
+    // same walk, ending at their counter rather than at a conversation.
+    if (subject.kind === 'npc' && actionId !== 'talk') {
+      this.deps.perform({ ...subject, counter: npcRole(subject.npc.npcId) });
+      return;
+    }
     this.deps.perform(subject);
   }
 
@@ -204,10 +209,10 @@ export class ContextMenuSession {
   }
 
   private npcMenu(npc: WorldNpc): ContextSubject {
-    const offer = ROLE_ACTIONS[npcRole(npc.npcId)];
+    const role = npcRole(npc.npcId);
     return {
       title: describeNpc(npc.npcId).title,
-      actions: [action(offer.id, offer.label)],
+      actions: [action('talk', 'Talk'), action(ROLE_ACTIONS[role], ROLE_SERVICES[role].label)],
       details: describeNpc(npc.npcId),
     };
   }

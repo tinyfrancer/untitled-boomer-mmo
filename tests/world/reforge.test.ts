@@ -32,14 +32,14 @@ function atTheFettler(options: { level?: number } = {}) {
 function kitted(kit: ReturnType<typeof atTheFettler>) {
   kit.state.gear = { ...kit.state.gear, helmet: 'steel-helmet' };
   kit.state.inventory = { 'brown-helmet': 1, 'reforging-stone': 1 };
-  kit.world.approachNpc(kit.fettler);
+  kit.world.approachNpc(kit.fettler, 'reforger');
   kit.tick(1);
 }
 
 describe('the counter', () => {
   it('opens on a tap and shuts when the player walks off', () => {
     const kit = atTheFettler();
-    kit.world.approachNpc(kit.fettler);
+    kit.world.approachNpc(kit.fettler, 'reforger');
     kit.tick(1);
     expect(kit.world.counterNpc('reforger')).not.toBeNull();
 
@@ -121,7 +121,7 @@ describe('the counter', () => {
     const kit = atTheFettler();
     kit.state.gear = { ...kit.state.gear, helmet: 'steel-helmet' };
     kit.state.inventory = { 'brown-helmet': 1 };
-    kit.world.approachNpc(kit.fettler);
+    kit.world.approachNpc(kit.fettler, 'reforger');
     kit.tick(1);
 
     kit.world.handleReforgeRequested('steel-helmet');
@@ -135,7 +135,7 @@ describe('the counter', () => {
     const kit = atTheFettler();
     kit.state.gear = { ...kit.state.gear, helmet: 'steel-helmet' };
     kit.state.inventory = { 'reforging-stone': 1 };
-    kit.world.approachNpc(kit.fettler);
+    kit.world.approachNpc(kit.fettler, 'reforger');
     kit.tick(1);
 
     kit.world.handleReforgeRequested('steel-helmet');
@@ -170,7 +170,7 @@ describe('the counter', () => {
     const kit = atTheFettler();
     kit.state.gear = { ...kit.state.gear, helmet: 'barrow-crown' };
     kit.state.inventory = { 'barrow-crown': 1, 'reforging-stone': 1 };
-    kit.world.approachNpc(kit.fettler);
+    kit.world.approachNpc(kit.fettler, 'reforger');
     kit.tick(1);
 
     kit.world.handleReforgeRequested('barrow-crown');
@@ -192,7 +192,7 @@ describe('the counter', () => {
       'barrow-crown': 1,
       'reforging-stone': 1,
     };
-    kit.world.approachNpc(kit.fettler);
+    kit.world.approachNpc(kit.fettler, 'reforger');
     kit.tick(1);
 
     kit.world.handleReforgeRequested('steel-helmet');

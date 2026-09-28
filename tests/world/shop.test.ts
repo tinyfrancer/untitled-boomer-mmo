@@ -16,7 +16,7 @@ function atTheShop(): ReturnType<typeof harness> {
   const kit = harness();
   const npc = nth(kit.world.npcs, 0);
   kit.world.teleport(npc.x, npc.y + 50);
-  kit.world.approachNpc(npc);
+  kit.world.approachNpc(npc, 'merchant');
   return kit;
 }
 
