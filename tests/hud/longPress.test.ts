@@ -96,6 +96,24 @@ describe('a finger', () => {
     element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(clicks).toBe(1);
   });
+
+  // A row built by `row()` has its click on it before anything else can be
+  // bound, and a held finger on a shop row must not also buy.
+  it('swallows it from a click listener that was there first', () => {
+    const row = document.createElement('button');
+    document.body.append(row);
+    let bought = 0;
+    row.addEventListener('click', () => bought++);
+    const unbindRow = bindLongPress(row, () => {});
+
+    row.dispatchEvent(pointer('pointerdown', 40, 60));
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(bought).toBe(0);
+
+    unbindRow();
+    row.remove();
+  });
 });
 
 describe('a mouse', () => {

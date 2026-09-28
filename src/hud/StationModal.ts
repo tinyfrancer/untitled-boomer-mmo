@@ -1,6 +1,7 @@
 import { Overlay } from './Overlay';
 import { el, row, sectionHeader } from './dom';
 import { itemIconSvg } from './itemIcon';
+import { bindItemCard } from './itemCard';
 import { describeItemName } from '../data/items';
 import { batchSize, recipesAt } from '../systems/CraftingSystem';
 import { STATION_LABELS, STATION_SKILLS, type StationId } from '../data/recipes';
@@ -104,6 +105,9 @@ export class StationModal extends Overlay {
       onClick: () => this.handlers.onMake(id),
     });
     entry.root.dataset.recipe = id;
+    // Asked about, a row is the thing it makes: what a helmet is worth wearing
+    // is the question somebody at a forge has before spending the bars on one.
+    bindItemCard(entry.root, recipe.outputItemId);
     entry.label.style.color = !locked && !short ? THEME.color.equippable : THEME.color.dim;
     entry.value.style.color = locked ? THEME.color.muted : THEME.color.levelUp;
     if (locked) {

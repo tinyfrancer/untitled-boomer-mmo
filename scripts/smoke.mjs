@@ -825,6 +825,30 @@ async function contextMenu() {
     drops.map((d) => d.text).join(' | '),
   );
   await page.screenshot({ path: `${OUT}/6b-loot.png` });
+
+  // And from a drop to what the drop is for. The row that was held is inside
+  // the card that the new one replaces, so the release lands on a page it has
+  // left — which is where the new card's scrim could hear it as a tap outside
+  // and shut before it was read.
+  const meatRow = await page.evaluate(() => {
+    const box = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-inspect__drop[data-item="rat-meat"]')
+    ).getBoundingClientRect();
+    return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+  });
+  await touch('touchStart', [meatRow]);
+  await page.waitForTimeout(700);
+  await touch('touchEnd', []);
+  await draw();
+  const meatCard = await page.evaluate(() => ({
+    cards: document.querySelectorAll('.hud-modal__box--inspect').length,
+    title: document.querySelector('.hud-modal__box--inspect .hud-modal__title')?.textContent,
+  }));
+  check(
+    "a finger held on a drop opens that item's card in place of the drop list, and it stays",
+    meatCard.cards === 1 && meatCard.title === 'Rat Meat',
+    `${meatCard.cards} cards, showing ${meatCard.title}`,
+  );
   // Closed by its own button rather than by Escape, which a phone does not
   // have — and which the *world* also hears as clear-target, off a queue it
   // drains on the next step rather than when the key was pressed.
@@ -1061,6 +1085,42 @@ async function feedback() {
     `12 -> ${one} -> ${sold.left} bones, ${purse} -> ${sold.currency} copper`,
   );
   await page.screenshot({ path: `${OUT}/8-shop.png` });
+
+  // A finger held on a row asks what the thing is for rather than buying it —
+  // which is a clock and a release, so only a real touch can say the release
+  // was swallowed. Logs, because a tap on them would buy some.
+  const logsRow = await page.evaluate(() => {
+    const box = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-modal__box--shop .hud-list-row[data-item="logs"]')
+    ).getBoundingClientRect();
+    return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+  });
+  const before = await page.evaluate(() => ({
+    logs: window.world.character.state.inventory.logs ?? 0,
+    currency: window.world.character.state.currency,
+  }));
+  await touch('touchStart', [logsRow]);
+  await page.waitForTimeout(700);
+  await touch('touchEnd', []);
+  await step(2);
+  const asked = await page.evaluate(() => ({
+    title: document.querySelector('.hud-modal__box--inspect .hud-modal__title')?.textContent,
+    uses: [...document.querySelectorAll('.hud-modal__box--inspect .hud-item-uses__line')].map(
+      (line) => line.textContent ?? '',
+    ),
+    logs: window.world.character.state.inventory.logs ?? 0,
+    currency: window.world.character.state.currency,
+  }));
+  check(
+    'a finger held on a shop row opens what the item is for, and buys nothing',
+    asked.title === 'Logs' &&
+      asked.uses.includes('Lights a campfire, one a fire') &&
+      asked.logs === before.logs &&
+      asked.currency === before.currency,
+    `${asked.title}: ${asked.uses.length} uses, logs ${before.logs} -> ${asked.logs}`,
+  );
+  await page.screenshot({ path: `${OUT}/8a-shop-item-card.png` });
+  await page.click('[data-action="close-inspect"]');
 
   // The marker over that shopkeeper is *polled* off the character rather than
   // pushed by an event, because what moves it is a quest finishing or an item
@@ -2779,6 +2839,41 @@ async function bagSheet() {
     return cells.filter((cell) => Math.abs(cell.getBoundingClientRect().top - top) < 2).length;
   });
   check('the bag lays its cells out several to a row', columns >= 2, `${columns} columns`);
+
+  // What an item is for, on the tap that selects it. Rat meat away from a fire
+  // used to read "(nothing to do with this)"; what needs a browser is that the
+  // longest list any of these has still leaves the grid a row and the sheet
+  // clear of the tab bar, since the strip sits outside the scrolling body.
+  const strip = () =>
+    page.evaluate(() => {
+      const sheet = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="inventory"]')
+      );
+      return {
+        uses: [...sheet.querySelectorAll('.hud-item-detail .hud-item-uses__line')].map(
+          (line) => line.textContent ?? '',
+        ),
+        bottom: Math.round(sheet.getBoundingClientRect().bottom),
+        grid: Math.round(
+          /** @type {HTMLElement} */ (sheet.querySelector('.hud-sheet__body')).clientHeight,
+        ),
+      };
+    });
+  await page.click('.hud-sheet[data-sheet="inventory"] .hud-item[data-item="rat-meat"]');
+  const ratMeat = await strip();
+  check(
+    'tapping rat meat says what it cooks into rather than that it is junk',
+    ratMeat.uses.includes('Cook at a campfire → Cooked Rat'),
+    ratMeat.uses.join(' | '),
+  );
+  await page.click('.hud-sheet[data-sheet="inventory"] .hud-item[data-item="logs"]');
+  const logs = await strip();
+  check(
+    'a long list of uses leaves the grid a row and the bag clear of the tab bar',
+    logs.uses.length >= 4 && logs.grid >= 60 && logs.bottom <= (await tabBarTop()),
+    `${logs.uses.length} lines, grid ${logs.grid}px, bottom ${logs.bottom}`,
+  );
+  await page.screenshot({ path: `${OUT}/13a-item-uses.png` });
 
   // A tap selects and unfolds the row's actions. Whether a scroll drag also
   // counts as a tap is the browser's business — a touch drag scrolls the list

@@ -26,6 +26,7 @@ import { itemsForSlot, type Gear, type Inventory } from '../systems/InventorySys
 import { loadedArrow, type Quiver } from '../systems/QuiverSystem';
 import { describeItem } from '../systems/InspectSystem';
 import { itemUses } from '../systems/ItemUseSystem';
+import { ITEM_CARD_EVENT } from './itemCard';
 import { actionsForItem, type ItemAction, type ItemActionId } from '../systems/ItemActionsSystem';
 import { xpToNextLevel } from '../systems/LevelingSystem';
 import {
@@ -376,6 +377,11 @@ class Hud {
       this.tabBar.root,
     );
     parent.append(this.root);
+    // Every row that stands for an item asks for its card this way, from
+    // whichever panel it is in (`hud/itemCard.ts`).
+    this.root.addEventListener(ITEM_CARD_EVENT, (event) =>
+      this.openItemCard((event as CustomEvent<ItemId>).detail),
+    );
 
     // A phone starts with the playfield clear; a roomy screen can afford the
     // character sheet.

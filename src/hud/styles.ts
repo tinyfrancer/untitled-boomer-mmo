@@ -1080,9 +1080,13 @@ function hudCss(): string {
   margin-top: 2px;
 }
 
+/* Opaque, where every other box lets the world show through: this is the one
+   panel opened over other panels — an item asked about from the shop's shelf —
+   and a shelf row read through its lines is two panels at once. */
 .hud-modal__box--inspect {
   width: 300px;
   gap: 4px;
+  background: ${cssColor(THEME.panelBg)};
 }
 .hud-inspect__subtitle {
   font-size: ${THEME.font.xs}px;

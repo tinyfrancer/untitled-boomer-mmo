@@ -2,6 +2,7 @@ import { Overlay } from './Overlay';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { Purse } from './purse';
 import { itemIconSvg } from './itemIcon';
+import { bindItemCard } from './itemCard';
 import { describeItemName, itemValue } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
 import type { QuestLog } from '../systems/QuestSystem';
@@ -165,6 +166,7 @@ function listRow(options: ListRowOptions): HTMLElement {
     onClick,
   });
   entry.root.dataset.item = itemId;
+  bindItemCard(entry.root, itemId);
   entry.label.style.color = labelColor;
   entry.value.style.color = valueColor;
   return entry.root;
