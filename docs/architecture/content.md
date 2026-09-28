@@ -191,6 +191,12 @@ a kill there, not at a call site. Achievement ids are a template literal over `E
 `SlayerTier` and the rows are generated from `ENEMIES`, so a new enemy gets its whole 25/50/100
 chain by construction; a test still asserts the grid is complete.
 
+**Every rank pays a title** (Culler, Hunter, Slayer; decision 89), so a player wears the rank they
+like rather than only the last one reached. The top rank's `TitleId` is the one it was when only the
+top rank paid a title (`rat-slayer`), which is why a save already wearing one loads with no
+migration. With nothing worn, a kill that crosses a rank puts on the **best** rank it crossed, not the
+first: an offline payout can clear two ranks at once, and the lower one is not what was just earned.
+
 **Mastery is the third stored counter, and it is stored for the reason the other two are**
 (`data/mastery.ts`, `systems/MasterySystem.ts`): a chopped tree leaves nothing in the bag to count
 it off. `CharacterState.mastery` holds XP per _target_ — one flat `Partial<Record<MasteryTargetId,

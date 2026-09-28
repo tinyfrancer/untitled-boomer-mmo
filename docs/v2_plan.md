@@ -1,8 +1,10 @@
 # Version 2: a solo zero-to-hero, drawn, with people in it
 
-**Status:** live. Opened 2026-09-27 against `ca12279`, the merge of act three. **Phase 0 is this
-document** (with decisions 80-88 and `CLAUDE.md` pointing here). **Next: A1**, labelling every
-number. Update this line as each phase lands: which phase, and which is next.
+**Status:** live. Opened 2026-09-27 against `ca12279`, the merge of act three. **Landed: phase 0**
+(this document, decisions 80-88, `CLAUDE.md` pointing here) **and A1** (every number labelled,
+every slayer rank a title, mastery explained, map names over the markers; decision 89). **Next: A2**,
+items saying what they are for. Update this line as each phase lands: which phase, and which is
+next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -115,11 +117,12 @@ direction replacing `initial_design.txt`'s multiplayer as the long-term vision. 
 All HUD and data. The HUD is HTML and engine-free, so nothing here is thrown away when the renderer
 changes in Part B. Each phase ends with the thing it fixes explained **once, in place**.
 
-- **A1 — Label every number.** Skill rows read as XP toward the next level ("XP 0 / 96 to level
-  2"), the bag reads as weight ("Weight 0 / 88"), coin is named wherever it shows (the purse in
-  the bag's header, the shop, the bank). The mastery page opens with what mastery is, how it grows
-  and what its rungs give. **Titles**: any earned rung can be worn, not only the highest. The
-  **map sheet** stops drawing icons over building names.
+- **A1 — Label every number. (Landed.)** Every number carries its unit in a word or two: skill rows
+  read `Lv 3 · 40 / 96 XP`, the bag `Weight 12 / 88`, a station's input `Iron Ore ×2 (3 in bag)`,
+  stats in full. The player's money is one labelled element, **Coins**, in every panel that shows
+  it. **Every slayer rank is a title** (Culler, Hunter, Slayer), and an earned rank's row wears it.
+  The mastery page says what mastery is and what its ranks pay, from the rank table. The **map
+  sheet** draws building names over the markers. Decision 89 has the forks.
 - **A2 — Items say what they are for.** An item card derives its uses from the data: "Cook at a
   campfire → Cooked Rat", "Used in: …", "Made from: …", "Sells for …", "Idle eats this". Rat meat is
   answered here, and so is every future "is this junk?".
@@ -143,8 +146,8 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   spirit is drawn in D5 they arrive as HUD toasts **in the spirit's voice**.
 - **A10 — Part A review.**
 
-**Open questions for Part A**: does mastery fold into the skills book entirely, or keep its own
-page? Should the player choose idle's food order, or is "weakest first, said plainly" enough? Where
+**Open questions for Part A** (A1 answered the first: mastery folds into the skills book, and
+its own page goes; decision 89): Should the player choose idle's food order, or is "weakest first, said plainly" enough? Where
 does the training bar sit on a landscape phone?
 
 ---

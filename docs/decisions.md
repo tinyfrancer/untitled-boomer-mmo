@@ -1610,3 +1610,23 @@ back.
 
 **Rejected:** a house that is only a place, with no upgrades; a trophy page in a menu rather than a
 place.
+
+## 89. Numbers carry a unit, every slayer rank is a title, and mastery joins the skills book
+
+**2026-09-28 · the user, asked by Claude**
+
+Three forks settled at the start of version 2's phase A1:
+
+- **Every number says what it counts, in a word or two**: `Lv 3 · 40 / 96 XP`, `Weight 12 / 88`,
+  `Coins 1s 20c`, stats named in full rather than abbreviated. The user's brief was "not handholdy,
+  but not obscure".
+- **Every rank of a slayer chain is a title to wear** (Rat Culler at 25, Rat Hunter at 50, Rat Slayer
+  at 100), not only the last. The user's words: "when title is unlocked we should be able to set any
+  tier not just highest".
+- **Mastery folds into the skills book** that phase A5 builds, beside the recipe or node each pool
+  belongs to, and its own page goes. A1 explains it on the page it has now; A5 moves the explanation.
+
+**Rejected:** labels spelled out in full ("40 of 96 XP to level 4"), which are clearest on a first
+read and wordier on every read after; keeping the terse labels with a tap-to-explain, which a player
+has to know to tap; titles at the top rank only, with a clearer picker; mastery keeping a page of
+its own, or both a page and a place in the book.
