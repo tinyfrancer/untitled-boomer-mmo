@@ -1284,6 +1284,27 @@ describe('the map', () => {
     ).toBe('Town');
   });
 
+  /**
+   * The keepers of the counters stand inside the buildings they work from, so a
+   * name drawn under the markers had a dot through it. Every name comes after
+   * every marker, and nothing but the player's own dot comes after the names.
+   */
+  it('draws every building name over the markers', () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    const drawn = [...(svg()?.children ?? [])];
+    const lastMarker = drawn.reduce(
+      (last, node, index) => (node.hasAttribute('data-marker') ? index : last),
+      -1,
+    );
+    const names = drawn.flatMap((node, index) =>
+      node.hasAttribute('data-building-name') ? [index] : [],
+    );
+    expect(names.length).toBeGreaterThan(0);
+    expect(Math.min(...names)).toBeGreaterThan(lastMarker);
+    expect(drawn.at(-1)).toBe(dot());
+  });
+
   // A dot parked in the corner would read as a position rather than as an
   // absence, so it waits for a tile of its own.
   it('shows the player only once it has been told where they are', () => {

@@ -177,7 +177,7 @@ function buildMarker(marker: MapMarker, columns: number): SVGElement[] {
  * one that proves it. A footprint too small for a name at all is left unnamed —
  * the hover title still answers, and an illegible smear is worse than a shape.
  */
-function buildFootprint(building: MapBuilding): SVGElement[] {
+function buildFootprint(building: MapBuilding): { ground: SVGElement; name: SVGElement | null } {
   const rect = svgEl('rect', {
     x: building.x,
     y: building.y,
@@ -191,7 +191,7 @@ function buildFootprint(building: MapBuilding): SVGElement[] {
   const title = svgEl('title', {});
   title.textContent = building.label;
   rect.append(title);
-  if (building.height < BUILDING_NAME_MIN_TILES) return [rect];
+  if (building.height < BUILDING_NAME_MIN_TILES) return { ground: rect, name: null };
 
   const label = text(
     building.label,
@@ -202,7 +202,8 @@ function buildFootprint(building: MapBuilding): SVGElement[] {
   );
   label.setAttribute('textLength', String(building.width * 0.86));
   label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-  return [rect, label];
+  label.setAttribute('data-building-name', building.label);
+  return { ground: rect, name: label };
 }
 
 function svgEl<K extends keyof SVGElementTagNameMap>(
@@ -442,16 +443,22 @@ export class MapSheet extends Sheet {
       );
     }
 
-    // Between the terrain and the markers: a building sits on the ground and a
-    // counter stands at its door, so drawing it over the bands and under the
-    // dots is the only order in which both stay visible.
+    // A building's ground goes between the terrain and the markers, and its name
+    // over the markers. The people who keep counters stand inside the buildings
+    // they work from, so a name drawn under the dots is a name with a dot
+    // through it; over them, its outline keeps it readable across whatever it
+    // crosses, and the dot still shows round its edges.
+    const names: SVGElement[] = [];
     for (const building of map.buildings) {
-      svg.append(...buildFootprint(building));
+      const { ground, name } = buildFootprint(building);
+      svg.append(ground);
+      if (name) names.push(name);
     }
 
     for (const marker of map.markers) {
       svg.append(...buildMarker(marker, map.columns));
     }
+    svg.append(...names);
 
     // Last, so nothing is ever drawn over the one thing that moves. Hidden
     // until a tile actually arrives: a dot parked in the map's corner would
