@@ -35,7 +35,8 @@ import {
   type QuestLog,
   type ZoneVisits,
 } from '../systems/QuestSystem';
-import { createInitialSkills, type Skills } from '../systems/SkillSystem';
+import { createInitialSkills, skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
+import { isDefenseSkill } from '../systems/CombatSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import { DEFAULT_SOUND, type SoundSettings } from '../audio/settings';
 import { knownAbilities } from '../systems/AbilitySystem';
@@ -317,7 +318,12 @@ class Hud {
         unlockedZones: this.model.unlockedZones,
       }),
     });
-    this.playerColumn = new PlayerColumn(character.name);
+    this.playerColumn = new PlayerColumn(character.name, {
+      onOpenSkill: (skillId) => this.openSkillPage(skillId),
+      // The one thing in the column that goes on a clock rather than on an
+      // event, so it has to say when it has left.
+      onTrainingHidden: () => this.applyLayout(),
+    });
     this.actionBar = new ActionBar((abilityId) =>
       this.events.emit(ABILITY_REQUESTED_EVENT, abilityId),
     );
@@ -431,6 +437,7 @@ class Hud {
 
   destroy(): void {
     this.subscriptions.clear();
+    this.playerColumn.destroy();
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.unbindKeys();
@@ -457,6 +464,7 @@ class Hud {
       hasMana: this.model.maxMana > 0,
       hasQuiver: quiverCapacity(this.model.gear.offhand) > 0,
       hasTitle: this.model.activeTitleId !== null,
+      hasTraining: this.playerColumn.hasTraining(),
       hasEffects: this.playerColumn.hasEffects(),
       targetWinding: this.targetFrame.isWinding(),
       trackedQuests: this.trackedLines(),
@@ -714,6 +722,22 @@ class Hud {
     });
   }
 
+  /**
+   * The training bar's skill, drawn again from the model: a level raises a
+   * combat skill's ceiling, so one that read as capped has a next level again.
+   */
+  private refreshTraining(): void {
+    const skillId = this.playerColumn.trainingSkill();
+    if (!skillId) return;
+    const { level, xp } = this.model.skills[skillId];
+    this.playerColumn.redrawTraining({
+      skillId,
+      level,
+      xp,
+      xpToNext: skillXpToNextLevel(skillId, level, this.model.level),
+    });
+  }
+
   /** The column's arrow bar, off the quiver worn and what is in it. */
   private refreshQuiver(): void {
     this.playerColumn.setQuiver(
@@ -775,8 +799,10 @@ class Hud {
     listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
       this.refreshCharacterSheet();
-      // A level raises every combat skill's cap, which the book says.
+      // A level raises every combat skill's cap, which the book says, and so
+      // may the training bar.
       this.refreshSkillsBook();
+      this.refreshTraining();
       // A level raises the ceiling the bar is drawn against.
       this.refreshHealth();
       // A level buys strength, which buys capacity.
@@ -825,6 +851,17 @@ class Hud {
       this.refreshSkillsBook();
       // A making level opens rows on the list the player is stood in front of.
       this.overlays.refreshOpen();
+      // The training bar follows what the player does. Block and Parry train on
+      // what is swung at them, and taking the bar for those would flip it
+      // between them and the weapon every few seconds of a fight.
+      if (!isDefenseSkill(progress.skillId)) {
+        const hadBar = this.playerColumn.hasTraining();
+        this.playerColumn.train(progress);
+        // Whether it is up is what costs the column a bar, as the buff row does.
+        if (!hadBar) {
+          this.applyLayout();
+        }
+      }
       if (progress.leveledUp) {
         this.toast.show(
           `${SKILLS[progress.skillId].name} Level ${progress.level}!`,
