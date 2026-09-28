@@ -13,9 +13,12 @@ import type { ScreenPoint } from '../ui/uiEvents';
  * the same press.
  *
  * A press that became a menu is not also a tap, so the click that follows it
- * is stopped here — by a capture listener, which on the element itself runs
- * before its plain click listeners whichever was bound first. That is what lets
- * a row built with its click already on it (`row()` in `dom.ts`) take one after.
+ * is stopped here — by a capture listener on the window, which runs before
+ * anything under the finger hears it, whichever was bound first. That is what
+ * lets a row built with its click already on it (`row()` in `dom.ts`) take one
+ * after, and it is on the window rather than the element because the release
+ * does not always land on the element: what the press opened may be standing
+ * under the finger by then, and an item card's surround closes on a click.
  */
 export function bindLongPress(
   element: HTMLElement,
@@ -23,7 +26,6 @@ export function bindLongPress(
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let from: ScreenPoint | null = null;
-  let fired = false;
 
   const stop = (): void => {
     if (timer !== null) {
@@ -33,15 +35,28 @@ export function bindLongPress(
     from = null;
   };
 
+  // The release after a long press still arrives as a click, and would toggle
+  // whatever is under the finger on top of the menu that has just opened. Only
+  // that one click: the next press disarms it, in case the release made none.
+  const swallow = (event: MouseEvent): void => {
+    disarm();
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  const disarm = (): void => {
+    window.removeEventListener('click', swallow, true);
+    window.removeEventListener('pointerdown', disarm, true);
+  };
+
   const onPointerDown = (event: PointerEvent): void => {
     // A mouse has a second button and uses it; only a touch has to wait.
     if (event.pointerType === 'mouse') return;
     stop();
-    fired = false;
     from = { x: event.clientX, y: event.clientY };
     timer = setTimeout(() => {
       timer = null;
-      fired = true;
+      window.addEventListener('click', swallow, true);
+      window.addEventListener('pointerdown', disarm, true);
       if (from) onRequest(from);
     }, LONG_PRESS_MS);
   };
@@ -59,17 +74,6 @@ export function bindLongPress(
     onRequest({ x: event.clientX, y: event.clientY });
   };
 
-  // The release after a long press still reaches the element as a click, and
-  // would toggle whatever the element does on top of the menu that has just
-  // opened over it.
-  const onClick = (event: MouseEvent): void => {
-    if (!fired) return;
-    fired = false;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  };
-
-  element.addEventListener('click', onClick, true);
   element.addEventListener('pointerdown', onPointerDown);
   element.addEventListener('pointermove', onPointerMove);
   element.addEventListener('pointerup', stop);
@@ -78,7 +82,7 @@ export function bindLongPress(
 
   return () => {
     stop();
-    element.removeEventListener('click', onClick, true);
+    disarm();
     element.removeEventListener('pointerdown', onPointerDown);
     element.removeEventListener('pointermove', onPointerMove);
     element.removeEventListener('pointerup', stop);

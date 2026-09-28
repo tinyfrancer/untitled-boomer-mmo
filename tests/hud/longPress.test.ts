@@ -97,6 +97,42 @@ describe('a finger', () => {
     expect(clicks).toBe(1);
   });
 
+  /**
+   * The release lands wherever the finger is, and by then the press may have
+   * put something there: an item card's surround, which closes on a click. A
+   * finger held on a shop row low on the screen opened the card and closed it
+   * again on the way up.
+   */
+  it('swallows it wherever it lands, on what the press opened included', () => {
+    const scrim = document.createElement('div');
+    let closed = 0;
+    scrim.addEventListener('click', () => closed++);
+
+    element.dispatchEvent(pointer('pointerdown', 40, 60));
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    document.body.append(scrim);
+    scrim.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(closed).toBe(0);
+
+    scrim.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(closed).toBe(1);
+    scrim.remove();
+  });
+
+  // A release that made no click must not leave the next tap swallowed.
+  it('forgets the release at the next press, if it never came', () => {
+    let clicks = 0;
+    element.addEventListener('click', () => clicks++);
+
+    element.dispatchEvent(pointer('pointerdown', 40, 60));
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    element.dispatchEvent(pointer('pointerdown', 40, 60));
+    element.dispatchEvent(pointer('pointerup', 40, 60));
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(clicks).toBe(1);
+  });
+
   // A row built by `row()` has its click on it before anything else can be
   // bound, and a held finger on a shop row must not also buy.
   it('swallows it from a click listener that was there first', () => {
