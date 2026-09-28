@@ -42,6 +42,16 @@ export class InspectModal extends Overlay {
       );
     }
 
+    // Sentences rather than label and value, because they are the lines the
+    // bag's strip prints on a tap, and a strip has no column for a label.
+    if (panel.uses) {
+      const uses = el('div', 'hud-item-uses hud-inspect__uses');
+      for (const use of panel.uses) {
+        uses.append(el('div', 'hud-item-uses__line', use));
+      }
+      body.append(uses);
+    }
+
     // Only a loot panel carries drops at all, and one that carries an empty
     // list is a creature with nothing on it — which is worth saying, since the
     // player asked.

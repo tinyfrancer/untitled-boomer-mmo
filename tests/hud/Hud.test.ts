@@ -971,6 +971,44 @@ describe('the inventory panel forwards its buttons', () => {
 });
 
 /**
+ * What the strip under the bag says about the item tapped, beyond what can be
+ * done with it here. Rat meat away from a fire used to say "(nothing to do with
+ * this)", which read as junk; `ItemUseSystem.test.ts` holds the lines, and this
+ * holds that the strip prints them and keeps them true.
+ */
+describe('the bag says what an item is for', () => {
+  const strip = (): string[] =>
+    [...parent.querySelectorAll<HTMLElement>('.hud-item-detail .hud-item-uses__line')].map(
+      (line) => line.textContent ?? '',
+    );
+  const select = (itemId: string): void => {
+    parent.querySelector<HTMLButtonElement>(`.hud-item[data-item="${itemId}"]`)?.click();
+  };
+
+  beforeEach(() => {
+    mount({ inventory: { 'rat-meat': 3, 'rat-bones': 4 } });
+    tab('inventory').click();
+  });
+
+  it('answers rat meat away from any fire with what it cooks into', () => {
+    select('rat-meat');
+
+    expect(strip()).toEqual(['Cook at a campfire → Cooked Rat', 'Sells for 3c']);
+    expect(parent.querySelector('.hud-item-detail')?.textContent).not.toContain('nothing to do');
+  });
+
+  it('drops a quest from the strip the moment it is handed in', () => {
+    select('rat-bones');
+    expect(strip()).toContain('Quest: Bones for the Broth wants 10');
+
+    events.emit(QUEST_LOG_CHANGED_EVENT, { 'rat-bones': { status: 'done', baseline: 0 } });
+
+    expect(strip()).not.toContain('Quest: Bones for the Broth wants 10');
+    expect(strip()).toContain('Used in: Bone Char, at the Forge (Town)');
+  });
+});
+
+/**
  * The right click, and the finger held on a phone. Two menus meet here and are
  * deliberately one component: what the world found under the pointer arrives on
  * the wire, and what a bag cell offers the HUD works out itself.
@@ -1110,8 +1148,11 @@ describe('the context menu', () => {
       line('Inspect').click();
 
       expect(card()?.textContent).toContain('Leather armour');
-      expect(card()?.textContent).toContain('Warrior');
-      expect(card()?.textContent).toContain('25c');
+      const uses = [...(card()?.querySelectorAll('.hud-item-uses__line') ?? [])].map(
+        (use) => use.textContent,
+      );
+      expect(uses).toContain('Worn by: Warrior, Ranger');
+      expect(uses).toContain('Sells for 25c');
     });
   });
 });
