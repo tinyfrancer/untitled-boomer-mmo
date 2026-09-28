@@ -62,6 +62,24 @@ export const COMBAT_SKILL_ORDER = exhaustive<CombatSkillId>()([
   'destruction',
 ]);
 
+/**
+ * What earns a combat skill its XP, for the skills book to say.
+ *
+ * Written down per skill where a gathering or making skill's is derived, since
+ * a combat skill is trained by something that happens in a fight rather than by
+ * a row in a table — and which weapon counts as which is `weaponSkillFor`, the
+ * one place the sentences have to be kept in step with. Each finishes "Trained
+ * by …", so it is a clause rather than a sentence.
+ */
+export const COMBAT_SKILL_TRAINING: Record<CombatSkillId, string> = {
+  'one-handed': 'every hit you land with anything in hand but a bow',
+  archery: 'every shot you land with a bow and an arrow nocked',
+  unarmed: 'every hit you land with empty hands, or with a bow and nothing to nock',
+  block: 'every hit you block',
+  parry: 'every hit you parry, which takes a weapon in hand',
+  destruction: 'every spell you cast, whether it goes off or fizzles',
+};
+
 export function skillFamily(skillId: SkillId): SkillFamily {
   return SKILLS[skillId].family;
 }
