@@ -283,7 +283,7 @@ const tabBarTop = () =>
 
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
 const BAR_TABS = ['character', 'inventory', 'quests', 'camp', 'menu'];
-/** How many the Menu opens: Map, Feats, Mastery, Combat Log, Options. */
+/** How many the Menu opens: Map, Feats, Skills, Combat Log, Options. */
 const MENU_TAB_COUNT = 5;
 
 /**
@@ -2897,12 +2897,20 @@ async function achievements() {
     `${withTitle.titles} -> ${withoutTitle.titles} titles, labels steady at ${withTitle.labels}`,
   );
   await page.screenshot({ path: `${OUT}/12-title-worn.png` });
+}
 
-  // --- Mastery: the other sheet behind the menu that is drawn from a stored
-  // counter. What the pools *pay* is arithmetic and lives in
-  // tests/systems/MasterySystem.test.ts; what needs a browser is that the sheet
-  // is reachable behind the menu and redraws off the event rather than off a
-  // copy taken when it was built. ---
+async function skillsBook() {
+  // --- The skills book, where mastery lives now. What a page *says* is derived
+  // and held in tests/systems/SkillBookSystem.test.ts; what needs a browser is
+  // that the book is behind the menu, that a real tap on a skill's row on the
+  // character sheet opens its page, that a page redraws off the event rather
+  // than off a copy taken when it was built, and that a long page stops above
+  // the tab bar and scrolls inside itself on a portrait phone. The viewport is
+  // put back afterwards, since the bag's section is written against the one
+  // the sheets' section left. ---
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
   await page.evaluate(() => {
     const w = window.world;
     // Set and then published on the HUD channel, which is the pair the world
@@ -2911,35 +2919,81 @@ async function achievements() {
     w.character.state.mastery = { tree: 600 };
     window.events.emit('mastery-changed', w.character.state.mastery);
   });
-  await tapTab('mastery');
-  const pools = await page.evaluate(() => {
-    const sheet = /** @type {HTMLElement} */ (
-      document.querySelector('.hud-sheet[data-sheet="mastery"]')
-    );
-    const rows = [...sheet.querySelectorAll('.hud-skill__line')].map((n) => n.textContent ?? '');
-    return {
-      visible: getComputedStyle(sheet).display !== 'none',
-      count: rows.length,
-      tree: rows.find((row) => row.startsWith('Tree')) ?? '',
-      intro: sheet.querySelector('.hud-sheet__intro')?.textContent ?? '',
-    };
-  });
+
+  const book = () =>
+    page.evaluate(() => {
+      const sheet = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="skills"]')
+      );
+      const body = /** @type {HTMLElement} */ (sheet.querySelector('.hud-sheet__body'));
+      const box = sheet.getBoundingClientRect();
+      const bar = /** @type {HTMLElement} */ (document.querySelector('.hud-tabs'));
+      /** @param {string} id */
+      const entry = (id) => sheet.querySelector(`.hud-book-entry[data-entry="${id}"]`);
+      return {
+        visible: getComputedStyle(sheet).display !== 'none',
+        page: sheet.dataset.page ?? '',
+        title: sheet.querySelector('.hud-sheet__title')?.textContent ?? '',
+        skills: sheet.querySelectorAll('.hud-skill[data-skill]').length,
+        tree: entry('tree')?.querySelector('.hud-book-entry__mastery')?.textContent ?? '',
+        willowLocked: entry('willow')?.classList.contains('is-locked') ?? false,
+        willow: entry('willow')?.textContent ?? '',
+        entries: sheet.querySelectorAll('.hud-book-entry').length,
+        aboveBar: box.bottom <= bar.getBoundingClientRect().top + 0.5,
+        scrolls: body.scrollHeight > body.clientHeight,
+      };
+    });
+
+  await tapTab('skills');
+  const index = await book();
   check(
-    'the Mastery tab opens a sheet with a pool per node and recipe',
-    pools.visible && pools.count >= 13,
-    `${pools.count} pool(s) drawn`,
+    'the Skills tab opens the book on an index of every skill',
+    index.visible && index.page === '' && index.skills === 13,
+    `${index.skills} skill(s), page "${index.page}"`,
+  );
+  await tapTab('skills');
+
+  await tapTab('character');
+  await page.click('.hud-sheet[data-sheet="character"] .hud-skill[data-skill="woodcutting"]');
+  await page.waitForTimeout(150);
+  const woodcutting = await book();
+  check(
+    "a skill's row on the character sheet opens the book at that skill's page",
+    woodcutting.visible &&
+      woodcutting.page === 'woodcutting' &&
+      woodcutting.title === 'Woodcutting',
+    `page "${woodcutting.page}", titled "${woodcutting.title}"`,
   );
   check(
-    'and a pool that crossed a rung says which one it stands on',
-    pools.tree.includes('Apprentice') && pools.tree.includes('rank 2 / 5'),
-    `tree row: "${pools.tree}"`,
+    'and a pool beside its row says which rank it stands on',
+    woodcutting.tree.includes('Apprentice') && woodcutting.tree.includes('rank 2 / 5'),
+    `tree: "${woodcutting.tree}"`,
   );
   check(
-    'and the page says what mastery is and what its ranks pay',
-    pools.intro.includes('mastery of its own') && pools.intro.includes('Master 30%'),
-    `"${pools.intro.slice(0, 60)}…"`,
+    'and a row out of reach is drawn greyed, naming the level it waits on',
+    woodcutting.willowLocked && woodcutting.willow.includes('Needs Woodcutting 8'),
+    `willow: "${woodcutting.willow.slice(0, 60)}"`,
   );
-  await page.screenshot({ path: `${OUT}/13-mastery.png` });
+  await page.screenshot({ path: `${OUT}/13-skills-book.png` });
+
+  await page.click('.hud-sheet[data-sheet="skills"] [data-action="skills-back"]');
+  await page.waitForTimeout(80);
+  const back = await book();
+  check('and Back goes to the index', back.page === '' && back.skills === 13, `"${back.page}"`);
+
+  await page.click('.hud-sheet[data-sheet="skills"] .hud-skill[data-skill="smithing"]');
+  await page.waitForTimeout(150);
+  const smithing = await book();
+  check(
+    'a long page stops above the tab bar and scrolls inside itself',
+    smithing.page === 'smithing' && smithing.aboveBar && smithing.scrolls,
+    `${smithing.entries} recipes, above the bar ${smithing.aboveBar}, scrolls ${smithing.scrolls}`,
+  );
+  await tapTab('skills');
+  if (viewport) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(300);
+  }
 }
 
 async function bagSheet() {
@@ -4306,6 +4360,7 @@ const SECTIONS = [
   ['player-column', playerColumn],
   ['sheets', sheets],
   ['achievements', achievements],
+  ['skills-book', skillsBook],
   ['bag', bagSheet],
   ['character-sheet', characterSheet],
   ['zone-map', zoneMapSheet],

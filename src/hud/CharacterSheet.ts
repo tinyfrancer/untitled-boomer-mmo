@@ -1,6 +1,6 @@
 import { Sheet } from './Sheet';
-import { el, fillPercent, row, sectionHeader } from './dom';
-import { barFill } from '../systems/math';
+import { el, row, sectionHeader } from './dom';
+import { setSkillProgress, skillRow, type SkillRow } from './skillRows';
 import { paperdollSvg } from './paperdoll';
 import { bindItemCard } from './itemCard';
 import { describeBonuses, describeItemName } from '../data/items';
@@ -66,15 +66,11 @@ interface SlotRow {
   bonuses: HTMLElement;
 }
 
-interface SkillRow {
-  value: HTMLElement;
-  fill: HTMLElement;
-}
-
 /**
  * The character sheet: paperdoll, stats, the four gear slots and the skill
  * lists. Clicking a filled slot unequips it; clicking an empty one asks for a
- * picker, so the sheet is self-sufficient without the bag open.
+ * picker, so the sheet is self-sufficient without the bag open. A skill's row
+ * opens its page in the skills book, which is where what it does is said.
  */
 export class CharacterSheet extends Sheet {
   private readonly doll: HTMLElement;
@@ -83,7 +79,10 @@ export class CharacterSheet extends Sheet {
   private readonly skills: Record<SkillId, SkillRow>;
   private gear: Gear = NO_GEAR;
 
-  constructor(onSlotClicked: (slot: GearSlotId, isEmpty: boolean) => void) {
+  constructor(
+    onSlotClicked: (slot: GearSlotId, isEmpty: boolean) => void,
+    onSkillClicked: (skillId: SkillId) => void,
+  ) {
     super('Character', THEME.panelWidth.character);
 
     const top = el('div', 'hud-char__top');
@@ -117,25 +116,22 @@ export class CharacterSheet extends Sheet {
     // Two blocks, one record: the spread is what makes the pair cover SkillId,
     // and each list covers its own half by construction.
     this.skills = {
-      ...this.buildSkillBlock('Skills', SKILL_ORDER),
-      ...this.buildSkillBlock('Combat Skills', COMBAT_SKILL_ORDER),
+      ...this.buildSkillBlock('Skills', SKILL_ORDER, onSkillClicked),
+      ...this.buildSkillBlock('Combat Skills', COMBAT_SKILL_ORDER, onSkillClicked),
     };
   }
 
   private buildSkillBlock<K extends SkillId>(
     title: string,
     skillIds: readonly K[],
+    onSkillClicked: (skillId: SkillId) => void,
   ): Record<K, SkillRow> {
     this.body.append(sectionHeader(title));
     return mapKeys(skillIds, (skillId) => {
-      const block = el('div', 'hud-skill');
-      const line = row({ className: 'hud-skill__line', label: SKILLS[skillId].name });
-      const bar = el('div', 'hud-bar hud-skill__bar');
-      const fill = el('div', 'hud-bar__fill');
-      bar.append(fill);
-      block.append(line.root, bar);
-      this.body.append(block);
-      return { value: line.value, fill };
+      const skill = skillRow(SKILLS[skillId].name, () => onSkillClicked(skillId));
+      skill.root.dataset.skill = skillId;
+      this.body.append(skill.root);
+      return skill;
     });
   }
 
@@ -172,14 +168,8 @@ export class CharacterSheet extends Sheet {
 
     for (const skillId of [...SKILL_ORDER, ...COMBAT_SKILL_ORDER]) {
       const skill = state.skills[skillId] ?? { level: 1, xp: 0 };
-      const row = this.skills[skillId];
       const xpToNext = skillXpToNextLevel(skillId, skill.level, state.level);
-      row.value.textContent =
-        xpToNext > 0
-          ? `Lv ${skill.level} · ${skill.xp} / ${xpToNext} XP`
-          : `Lv ${skill.level} (max)`;
-      // A capped skill has no next level to fill toward, and reads as full.
-      row.fill.style.width = fillPercent(xpToNext > 0 ? barFill(skill.xp, xpToNext) : 1);
+      setSkillProgress(this.skills[skillId], skill.level, skill.xp, xpToNext);
     }
   }
 
