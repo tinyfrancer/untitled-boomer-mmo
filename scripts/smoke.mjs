@@ -1706,15 +1706,63 @@ async function bountyBoard() {
       ) !== null,
   }));
   check(
-    'taking a contract puts a line on the tracker and a Drop button on its row',
+    'taking a contract puts a line on the tracker and an Abandon button under it',
     taken.held === 'rat-cull' &&
       taken.tracked.length === trackedBefore + 1 &&
       taken.tracked.some((line) => line.includes('Rat Cull') && line.includes('0 / 15')) &&
       taken.drop === 1 &&
       !taken.heldIsButton,
-    `held ${taken.held}, tracker: ${taken.tracked.join(' | ')}, drop ${taken.drop}`,
+    `held ${taken.held}, tracker: ${taken.tracked.join(' | ')}, abandon ${taken.drop}`,
   );
   await page.screenshot({ path: `${OUT}/10b-bounty.png` });
+
+  // Abandon used to sit against the row that hands the work in, a thumb's
+  // width from it. It is under the contract now, a clear gap down and not
+  // beside the row at all — a question about where things are drawn, which is
+  // the browser's.
+  const apart = await page.evaluate(() => {
+    const row = document
+      .querySelector('.hud-modal__box--bounty .hud-list-row[data-bounty="rat-cull"]')
+      ?.getBoundingClientRect();
+    const button = document
+      .querySelector('.hud-modal__box--bounty [data-abandon-bounty]')
+      ?.getBoundingClientRect();
+    return row && button ? { gap: button.top - row.bottom } : null;
+  });
+  check(
+    'Abandon stands under the contract in hand, a clear gap below the row that hands it in',
+    apart !== null && apart.gap >= 20,
+    `gap ${apart?.gap.toFixed(1)}px`,
+  );
+
+  // It asks twice, by real taps: the first arms it and gives nothing back, the
+  // second gives the contract up and takes its line off the tracker.
+  await page.click('.hud-modal__box--bounty [data-abandon-bounty]');
+  await step(2);
+  const armed = await page.evaluate(() => ({
+    held: window.world.character.state.bounty?.bountyId ?? null,
+    says: document.querySelector('.hud-modal__box--bounty [data-abandon-bounty]')?.textContent,
+  }));
+  await page.click('.hud-modal__box--bounty [data-abandon-bounty]');
+  await step(2);
+  const givenBack = await page.evaluate(() => ({
+    held: window.world.character.state.bounty,
+    tracked: document.querySelectorAll('.hud-tracker__line').length,
+    button: document.querySelector('.hud-modal__box--bounty [data-abandon-bounty]') !== null,
+  }));
+  check(
+    'abandoning asks twice: one tap arms it, the second gives the contract back',
+    armed.held === 'rat-cull' &&
+      armed.says === 'Tap again to abandon' &&
+      givenBack.held === null &&
+      givenBack.tracked === trackedBefore &&
+      !givenBack.button,
+    `after one tap: ${armed.held}, "${armed.says}"; after two: ${JSON.stringify(givenBack.held)}`,
+  );
+
+  // Taken again, since the rest of this section hands it in.
+  await page.click('.hud-modal__box--bounty .hud-list-row[data-bounty="rat-cull"]');
+  await step(2);
 
   // Finish it out in the world. The board publishes no progress of its own —
   // every row is derived from the tallies the HUD already holds — so a kill

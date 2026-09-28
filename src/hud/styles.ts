@@ -928,16 +928,48 @@ function hudCss(): string {
   gap: 4px;
 }
 /* A contract is its row and the line describing what it wants, kept together the
-   way a lesson is — including when the row has grown a Drop button beside it,
-   which is why this wraps the stack rather than the row. */
+   way a lesson is. */
 .hud-contract {
   display: flex;
   flex-direction: column;
   margin-bottom: 6px;
 }
-.hud-contract > .hud-list-row,
-.hud-contract > .hud-stack {
+.hud-contract > .hud-list-row {
   margin-bottom: 0;
+}
+/* How often, said once over the whole board rather than on every row. */
+.hud-board__rule {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+  padding: 2px ${THEME.padding}px 0;
+}
+/* Giving the contract back: under it and a clear gap below the row that hands it
+   in, across the panel, and no taller than that row, since it is the one of the
+   two a mis-tap costs something. Filled once armed, so the second press is
+   plainly a different thing from the first. */
+.hud-contract__abandon {
+  width: 100%;
+  min-height: 34px;
+  margin: ${THEME.padding * 1.5}px 0 ${THEME.padding}px;
+  font-size: ${THEME.font.sm}px;
+  border-color: ${THEME.color.playerDamage};
+}
+.hud-contract__abandon.is-armed {
+  background: ${THEME.color.playerDamage};
+  color: ${THEME.color.text};
+}
+/* A word marking what kind of thing a row is, kept off the words around it. */
+.hud-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid ${THEME.color.quartermaster};
+  border-radius: 2px;
+  color: ${THEME.color.quartermaster};
+  font-size: ${THEME.font.xs}px;
+  font-weight: normal;
+  line-height: 14px;
+  white-space: nowrap;
 }
 /* A station's list, in the ember colour the forge's coals are drawn in — one
    look for both, since what tells a vat from an anvil is the name over it and

@@ -142,6 +142,11 @@ export interface StackRow {
   all: HTMLButtonElement;
 }
 
+/** A word or two marking what kind of thing a row is: a contract's "Repeatable". */
+export function tag(text: string): HTMLElement {
+  return el('span', 'hud-tag', text);
+}
+
 /** What a panel says instead of a list when it has nothing to list. */
 export function emptyLine(text: string): HTMLElement {
   return el('div', 'hud-empty', text);

@@ -409,6 +409,24 @@ describe('the redraws that are derived rather than sent', () => {
   });
 });
 
+describe('the quest log', () => {
+  // A contract sits in the same log as the quests, and what sets it apart is
+  // that it comes back — so it wears the board's mark and a quest does not.
+  it('marks the contract in hand repeatable and no quest beside it', () => {
+    mount({
+      bounty: { bountyId: 'rat-cull', baseline: 0 },
+      quests: { 'rat-bones': { status: 'active', baseline: 0 } },
+    });
+    tab('quests').click();
+
+    const names = [...parent.querySelectorAll<HTMLElement>('.hud-quest__name')];
+    const marked = names.filter((name) => name.querySelector('.hud-tag'));
+    expect(names).toHaveLength(2);
+    expect(marked).toHaveLength(1);
+    expect(marked[0]?.textContent).toBe('Rat CullRepeatable');
+  });
+});
+
 /**
  * The top-left corner, which is read at a glance mid-fight or not at all.
  *
