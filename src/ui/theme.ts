@@ -26,6 +26,9 @@ export const THEME = {
     inventory: 260,
     target: 160,
     combatLog: 300,
+    // The combat log's width, for the same reason: a recipe's line is its
+    // inputs and its result, and the plate tier's are four names long.
+    skills: 300,
     // Wider than the rest: the zone it draws is 25 tiles across and 19 down,
     // and a map narrow enough to fit the other panels' column would leave each
     // tile too few pixels to tell a fishing spot from the pond it sits in.

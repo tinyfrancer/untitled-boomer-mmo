@@ -63,8 +63,18 @@ export function gatherDurationMs(
   level: number,
   toolSpeedBonus = 0,
 ): number {
-  const speedup = 1 - SPEED_PER_LEVEL * (level - 1) - Math.max(0, toolSpeedBonus);
+  const speedup = 1 - gatherSpeedBonus(level) - Math.max(0, toolSpeedBonus);
   return Math.round(node.baseGatherMs * Math.max(MIN_GATHER_FRACTION, speedup));
+}
+
+/** How much of a swing's base time the skill alone has shaved off, as a fraction. */
+export function gatherSpeedBonus(level: number): number {
+  return SPEED_PER_LEVEL * (level - 1);
+}
+
+/** The skill's own chance of a second one off a gather, before any mastery. */
+export function skillYieldChance(level: number): number {
+  return BONUS_YIELD_PER_LEVEL * (level - 1);
 }
 
 export function beginGather(
@@ -121,5 +131,5 @@ export function rollGatherQuantity(
   masteryChance = 0,
   rng: () => number = Math.random,
 ): number {
-  return rng() < BONUS_YIELD_PER_LEVEL * (level - 1) + masteryChance ? 2 : 1;
+  return rng() < skillYieldChance(level) + masteryChance ? 2 : 1;
 }

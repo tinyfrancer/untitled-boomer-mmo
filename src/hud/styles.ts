@@ -537,6 +537,67 @@ function hudCss(): string {
   height: 3px;
   margin-top: 2px;
 }
+/* A skill's row that opens its page in the book: the gear slot's look, and a
+   list row's height, since a row of text and a 3px bar is no target at all. */
+.hud-skill.is-button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 6px;
+  margin-top: 2px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* --- Skills book --------------------------------------------------------- */
+
+/* Back to the index, in front of the page's title the way a counter's Back
+   sits in front of its own. */
+.hud-sheet__back {
+  flex: none;
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: ${THEME.font.sm}px;
+  border-color: ${cssColor(THEME.panelStroke)};
+  background: ${cssColor(THEME.buttonBg)};
+}
+.hud-sheet__back + .hud-sheet__title {
+  margin-right: auto;
+}
+/* What mastery is, said once over a page's rows. */
+.hud-book__rule {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+  padding: 0 0 6px;
+}
+/* A node or recipe is its row, the lines under it and its mastery, kept together
+   the way a lesson is. Asked about, not tapped, so it keeps no pointer. */
+.hud-book-entry {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 6px;
+}
+.hud-book-entry > .hud-list-row {
+  margin-bottom: 0;
+  cursor: default;
+}
+.hud-book-entry > .hud-list-row .hud-list-row__value {
+  color: ${THEME.color.muted};
+}
+.hud-book-entry__mastery {
+  padding: 0 ${THEME.padding}px;
+}
+/* Out of reach: drawn, and greyed, rather than hidden (decision 86). */
+.hud-book-entry.is-locked {
+  opacity: 0.5;
+}
 
 /* --- Bag ----------------------------------------------------------------- */
 

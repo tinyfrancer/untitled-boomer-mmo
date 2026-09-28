@@ -56,7 +56,7 @@ const MAX_AVOIDANCE = 0.25;
  * multiplier re-slopes the flat part instead of quietly moving the total.
  */
 const MAX_CRIT_CHANCE = 0.2;
-const CRIT_MULTIPLIER = 2;
+export const CRIT_MULTIPLIER = 2;
 const CRIT_AVERAGE_BONUS = 1 + MAX_CRIT_CHANCE * (CRIT_MULTIPLIER - 1);
 const MAX_WEAPON_SKILL_DAMAGE_BONUS = (1 + MAX_WEAPON_SKILL_DAMAGE) / CRIT_AVERAGE_BONUS - 1;
 const TOP_COMBAT_SKILL = combatSkillCap(MAX_CHARACTER_LEVEL);
@@ -147,6 +147,14 @@ export function avoidanceChance(skillLevel: number): number {
   return Math.min(MAX_AVOIDANCE, Math.max(0, skillLevel) * AVOIDANCE_PER_SKILL);
 }
 
+/** Block's share of turning a hit aside, with or without a shield to do it with. */
+export function blockChance(skillLevel: number, hasShield = false): number {
+  return Math.min(
+    MAX_AVOIDANCE,
+    avoidanceChance(skillLevel) * (hasShield ? SHIELD_BLOCK_BONUS : 1),
+  );
+}
+
 export interface DefenseContext {
   blockLevel: number;
   parryLevel: number;
@@ -179,9 +187,7 @@ export function rollDefense(
   if (context.hasWeapon && rng() < avoidanceChance(context.parryLevel)) {
     return { avoided: true, skillId: 'parry' };
   }
-  const blockChance =
-    avoidanceChance(context.blockLevel) * (context.hasShield ? SHIELD_BLOCK_BONUS : 1);
-  if (rng() < Math.min(MAX_AVOIDANCE, blockChance)) {
+  if (rng() < blockChance(context.blockLevel, context.hasShield)) {
     return { avoided: true, skillId: 'block' };
   }
   return { avoided: false, skillId: null };

@@ -150,7 +150,7 @@ function stationWork(itemId: ItemId): string[] {
     if (recipe.inputs.length !== 1 || !only) continue;
     const verb = STATION_ACTION_LABELS[recipe.station];
     const count = only.quantity > 1 ? ` ${only.quantity}` : '';
-    lines.push(`${verb}${count} at ${stationPlace(recipe.station)} → ${made(recipe)}`);
+    lines.push(`${verb}${count} at ${stationPlace(recipe.station)} → ${recipeOutput(recipe)}`);
   }
 
   for (const station of STATION_IDS) {
@@ -231,7 +231,8 @@ function madeFrom(itemId: ItemId): string[] {
   return lines;
 }
 
-function made(recipe: CraftingRecipe): string {
+// "15 Arrow Shafts", or the name alone for a recipe that makes one.
+export function recipeOutput(recipe: CraftingRecipe): string {
   const batch = batchSize(recipe);
   const name = describeItemName(recipe.outputItemId);
   return batch > 1 ? `${batch} ${name}` : name;
@@ -239,7 +240,7 @@ function made(recipe: CraftingRecipe): string {
 
 // "Iron Bar ×2, Tin Bar, Bone Char": a count only where there is more than one,
 // since "×1" on every other ingredient is a number that says nothing.
-function ingredients(inputs: readonly RecipeInput[]): string {
+export function ingredients(inputs: readonly RecipeInput[]): string {
   return inputs
     .map(({ itemId, quantity }) =>
       quantity > 1 ? `${describeItemName(itemId)} ×${quantity}` : describeItemName(itemId),
@@ -255,7 +256,7 @@ function ingredients(inputs: readonly RecipeInput[]): string {
  * zone that spawns it: a lurker hide picked up in the fen is no use to somebody
  * who has never heard of Greyford.
  */
-function stationPlace(station: StationId): string {
+export function stationPlace(station: StationId): string {
   if (station === 'fire') return 'a campfire';
   const zone = Object.values(ZONES).find((candidate) =>
     candidate.stationSpawns?.some((spawn) => spawn.station === station),

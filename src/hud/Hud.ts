@@ -5,11 +5,11 @@ import { FeatsSheet } from './FeatsSheet';
 import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
-import { MasterySheet } from './MasterySheet';
 import { OverlayHost } from './OverlayHost';
 import { PlayerColumn } from './PlayerColumn';
 import { QuestSheet } from './QuestSheet';
 import { QuestTracker } from './QuestTracker';
+import { SkillsSheet } from './SkillsSheet';
 import { TabBar } from './TabBar';
 import { TargetFrame } from './TargetFrame';
 import { Toast } from './Toast';
@@ -106,7 +106,7 @@ import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { AbilityId, ItemId, TitleId, ZoneId } from '../types/ids';
+import type { AbilityId, ItemId, SkillId, TitleId, ZoneId } from '../types/ids';
 
 /**
  * Which request each of the inventory panel's buttons is. Two are not simply
@@ -169,9 +169,9 @@ interface HudModel {
   // move out in the zone rather than in a panel.
   kills: KillCounts;
   visits: ZoneVisits;
-  // Every pool, seeded from the save for the reason the bag is: the sheet can
-  // be opened before a single swing has been taken in this session, and a pool
-  // filled last night has to be there when it is.
+  // Every pool, seeded from the save for the reason the bag is: the skills book
+  // can be opened before a single swing has been taken in this session, and a
+  // pool filled last night has to be there when it is.
   mastery: MasteryXp;
   activeTitleId: TitleId | null;
   unlockedZones: ZoneId[];
@@ -225,7 +225,7 @@ class Hud {
   private readonly featsSheet: FeatsSheet;
   private readonly combatLogSheet: CombatLogSheet;
   private readonly mapSheet: MapSheet;
-  private readonly masterySheet: MasterySheet;
+  private readonly skillsSheet: SkillsSheet;
   private readonly sheets: Partial<Record<TabId, Sheet>>;
 
   private readonly overlays: OverlayHost;
@@ -324,17 +324,20 @@ class Hud {
     this.refreshActionBar();
     this.tabBar = new TabBar((tab) => this.selectTab(tab));
 
-    this.characterSheet = new CharacterSheet((slot, isEmpty) => {
-      if (isEmpty) {
-        this.overlays.openSlotPicker(
-          slot,
-          equippableFrom(itemsForSlot(this.model.inventory, slot), this.classId),
-          this.characterSheet.slotBounds(slot),
-        );
-      } else {
-        this.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot);
-      }
-    });
+    this.characterSheet = new CharacterSheet(
+      (slot, isEmpty) => {
+        if (isEmpty) {
+          this.overlays.openSlotPicker(
+            slot,
+            equippableFrom(itemsForSlot(this.model.inventory, slot), this.classId),
+            this.characterSheet.slotBounds(slot),
+          );
+        } else {
+          this.events.emit(UNEQUIP_SLOT_REQUESTED_EVENT, slot);
+        }
+      },
+      (skillId) => this.openSkillPage(skillId),
+    );
     this.inventorySheet = new InventorySheet({
       actionsFor: (itemId) => this.itemActions(itemId),
       usesFor: (itemId) => itemUses(itemId, { quests: this.model.quests }),
@@ -346,7 +349,7 @@ class Hud {
       this.events.emit(SET_TITLE_REQUESTED_EVENT, titleId),
     );
     this.combatLogSheet = new CombatLogSheet();
-    this.masterySheet = new MasterySheet();
+    this.skillsSheet = new SkillsSheet();
     this.sheets = {
       character: this.characterSheet,
       inventory: this.inventorySheet,
@@ -354,7 +357,7 @@ class Hud {
       feats: this.featsSheet,
       log: this.combatLogSheet,
       map: this.mapSheet,
-      mastery: this.masterySheet,
+      skills: this.skillsSheet,
     };
     for (const [id, sheet] of Object.entries(this.sheets)) {
       sheet.root.dataset.sheet = id;
@@ -373,7 +376,7 @@ class Hud {
       this.featsSheet.root,
       this.combatLogSheet.root,
       this.mapSheet.root,
-      this.masterySheet.root,
+      this.skillsSheet.root,
       this.tabBar.root,
     );
     parent.append(this.root);
@@ -398,7 +401,7 @@ class Hud {
     this.refreshEncumbrance();
     this.featsSheet.update(this.model.kills, this.model.activeTitleId);
     this.combatLogSheet.update(this.model.combatLog);
-    this.masterySheet.update(this.model.mastery);
+    this.refreshSkillsBook();
     this.setOpenSheet(this.narrow ? null : 'character');
     this.applyLayout();
 
@@ -519,7 +522,18 @@ class Hud {
       this.overlays.openOptions(this.model.sound);
       return;
     }
+    // Reached from the menu or a key, the book opens on its index: a page is
+    // what a skill's row on the character sheet asks for.
+    if (tab === 'skills' && this.openSheet !== 'skills') {
+      this.skillsSheet.showIndex();
+    }
     this.setOpenSheet(this.openSheet === tab ? null : tab);
+  }
+
+  /** A skill's row on the character sheet: the book, open at that skill's page. */
+  private openSkillPage(skillId: SkillId): void {
+    this.skillsSheet.showPage(skillId);
+    this.setOpenSheet('skills');
   }
 
   private setOpenSheet(sheet: TabId | null): void {
@@ -688,6 +702,18 @@ class Hud {
     });
   }
 
+  /**
+   * The skills book, off the three things its pages read: the skills, the
+   * level a combat skill's cap rides, and the mastery pools beside every row.
+   */
+  private refreshSkillsBook(): void {
+    this.skillsSheet.update({
+      skills: this.model.skills,
+      level: this.model.level,
+      mastery: this.model.mastery,
+    });
+  }
+
   /** The column's arrow bar, off the quiver worn and what is in it. */
   private refreshQuiver(): void {
     this.playerColumn.setQuiver(
@@ -749,6 +775,8 @@ class Hud {
     listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
       this.refreshCharacterSheet();
+      // A level raises every combat skill's cap, which the book says.
+      this.refreshSkillsBook();
       // A level raises the ceiling the bar is drawn against.
       this.refreshHealth();
       // A level buys strength, which buys capacity.
@@ -794,6 +822,7 @@ class Hud {
         [progress.skillId]: { level: progress.level, xp: progress.xp },
       };
       this.refreshCharacterSheet();
+      this.refreshSkillsBook();
       // A making level opens rows on the list the player is stood in front of.
       this.overlays.refreshOpen();
       if (progress.leveledUp) {
@@ -819,7 +848,7 @@ class Hud {
     });
     listen(MASTERY_CHANGED_EVENT, (mastery) => {
       this.model.mastery = mastery;
-      this.masterySheet.update(mastery);
+      this.refreshSkillsBook();
     });
     // The rung rather than the XP, which is the pair the kill counts make with
     // an achievement: the totals redraw a sheet quietly, and crossing is the

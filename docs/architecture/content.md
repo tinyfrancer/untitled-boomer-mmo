@@ -240,6 +240,7 @@ whatever is being mastered — an iron chestplate is eight trees of work and rea
 eighth of the actions. Master sits just under the XP it takes to cap a gathering skill outright, so
 a pool is the thing still climbing once the skill behind it has stopped; `MASTERY_TARGETS` is
 generated from `RESOURCE_NODES` and `RECIPES` the way `ACHIEVEMENTS` is generated from `ENEMIES`, so
-a node or recipe added later gets its pool by construction. `hud/MasterySheet.ts` draws them grouped
-by skill, which is the only comparison a player makes — which tree to chop, never a tree against a
-bar.
+a node or recipe added later gets its pool by construction. The skills book draws each pool beside
+the node or recipe it belongs to, on that skill's page (`hud/SkillsSheet.ts`, decision 93), which is
+the only comparison a player makes — which tree to chop, never a tree against a bar. It had a page
+of its own until the book (decision 89).

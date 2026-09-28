@@ -11,7 +11,7 @@ renderer-independent by construction: the same tree sat unchanged over both canv
 port, and nothing drawing the world knows it exists.
 
 `Hud.ts` owns the model and the subscriptions; everything else in `hud/` is a piece that draws part
-of it. Char / Bag / Quests / Feats / Log are `Sheet` subclasses and one is open at a time — `Hud`
+of it. Char / Bag / Quests / Feats / Skills / Map / Log are `Sheet` subclasses and one is open at a time — `Hud`
 holds a single `openSheet`, not a visible flag per panel — while Camp and the gear icon are actions
 that open nothing. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close. A tap on a person puts up the **talk panel** (`hud/TalkModal.ts`)
@@ -181,8 +181,27 @@ obscure": a skill row reads `Lv 3 · 40 / 96 XP`, the bag `Weight 12 / 88`, a st
 neither — and a counter `3 / 10`, where its own label already names the thing counted. The player's
 money is one element everywhere it shows (`hud/purse.ts`, labelled **Coins**): it sits in a header
 beside prices, and a bare figure in the corner of a shop reads as well as the price of something as
-the coin in hand. A page that explains a system does it once, at its top, from the data it explains:
-the mastery page builds its rank list from `MASTERY_TIERS`, so a retune moves the words with it.
+the coin in hand. A page that explains a system does it once, in place, from the data it explains:
+the skills book builds its mastery line from `MASTERY_TIERS`, so a retune moves the words with it.
+
+**The skills book hides nothing and writes nothing per row** (decision 93, `hud/SkillsSheet.ts`
+drawing `systems/SkillBookSystem.ts`). It opens on an index of every skill, and a tap turns to that
+skill's page: its level, how it trains, what a level buys at this character's level and at the most
+there is, and — for a gathering or making skill — every node or recipe in level order, the ones out
+of reach greyed and saying the level they wait on, each with what goes in and comes out, the
+result's numbers, its XP, where it is, and its mastery. Mastery lives there, beside the row each
+pool fills, and has no page of its own (decision 89); a locked row draws no pool, since a level is
+never lost and so nothing out of reach can have started one. **What a level buys is read off the
+functions the rolls call** (`gatherSpeedBonus`, `failureChance`, `critChance`, `blockChance`,
+`fizzleReduction` and the rest), never a second copy of a rate, which is why those are exported
+from their systems; a rate inlined in a roll would leave the book saying the old number. The one
+hand-written sentence a skill has is what earns a combat skill its XP (`COMBAT_SKILL_TRAINING`),
+which follows `weaponSkillFor` rather than any table. It is one sheet with two views rather than a
+sheet a skill, because a page is reached from two places — the index, and that skill's row on the
+character sheet, which is a button now — and Back always goes to the index. The menu and its key
+open the index; the character sheet opens the page. It draws only while it is showing, since a
+combat skill gains XP on every hit and a hidden page redrawn each time is work nobody sees, and a
+redraw of the page being read keeps its place rather than jumping back to the top on every swing.
 
 **Every earned slayer rank is a title, and its row is the button that wears it** (`FeatsSheet`).
 Three ranks a creature would have been up to thirty-three buttons pinned above the list; what is

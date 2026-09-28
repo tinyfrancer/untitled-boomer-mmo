@@ -1722,3 +1722,35 @@ Quests button of their own, a tap further off; quests in both places, drawn twic
 conversation for someone with one thing to do, or after the first visit of a session, which makes
 the same tap mean two things; each person named now for C2 to adopt; a few greetings rotated per
 visit.
+
+## 93. The skills book opens on an index, is reached from the character sheet too, and says where
+
+**2026-09-28 · the user, asked by Claude**
+
+Four forks settled at the start of version 2's phase A5:
+
+- **Skills takes Mastery's seat in the menu, and a skill's row on the character sheet opens the
+  book at that skill's page.** The character sheet keeps its skill rows as the summary it was, and
+  each is a button now. The mastery page goes, as decision 89 said it would.
+- **The book opens on an index, and a tap turns to a page** whose head has a Back to the index. The
+  menu and its key open the index; the character sheet opens a page.
+- **The six combat skills get pages** with no list under them: how each is trained, and what it
+  buys at the character's level and at the most there is — damage and a critical chance for a
+  weapon skill, the chance to turn a hit aside for Block and Parry, and a spell's fizzle as well
+  for Destruction.
+- **The book says where**: a node row names the zones that spawn it ("Found in: Blackwater Fen"),
+  and a making skill's page names its station and the zone it stands in ("Worked at the Forge
+  (Town)"), the way an item's card already names a station.
+
+Claude's, alongside them: everything on a page is derived (`systems/SkillBookSystem.ts`), what a
+level buys from the functions the rolls call, which are exported for it rather than copied; a
+locked row draws no mastery, since a level is never lost and nothing out of reach can have started
+a pool; what mastery is and what its ranks pay is said once over a page's rows, where the rows it
+explains are; a row is titled with the job's name, as the station's list and the mastery toast
+title it ("Raw Fish", with "Raw Fish → Cooked Fish" under it); and a row's stats are the short line
+every other item row prints, with the full card a held finger away, as on every other row.
+
+**Rejected:** the book in the menu with the skill rows taken off the character sheet; the book
+inside the character sheet with no menu seat; a strip of skill chips across the top of one page at
+a time, thirteen of them scrolling sideways on a phone; every skill on one long scroll; pages for
+gathering and making only; leaving where a node grows to exploration and the collection log (F3).

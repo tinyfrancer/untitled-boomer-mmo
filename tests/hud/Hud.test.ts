@@ -63,6 +63,8 @@ import {
   SOUND_SETTINGS_CHANGED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   STATION_OPENED_EVENT,
+  MASTERY_CHANGED_EVENT,
+  SKILL_XP_GAINED_EVENT,
 } from '../../src/ui/uiEvents';
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -1038,6 +1040,69 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
   });
 });
 
+/**
+ * The skills book is reached two ways: from the menu, where it opens on its
+ * index, and from a skill's row on the character sheet, where it opens at that
+ * skill's page. Either way it is the one sheet open.
+ */
+describe('the skills book', () => {
+  const page = (): string | undefined =>
+    parent.querySelector<HTMLElement>('.hud-sheet[data-sheet="skills"]')?.dataset.page;
+  const bookText = (): string =>
+    parent.querySelector('.hud-sheet[data-sheet="skills"] .hud-sheet__body')?.textContent ?? '';
+
+  it('opens on its index from the menu, where Mastery used to be', () => {
+    mount();
+    menuItem('skills');
+    expect(openSheets()).toEqual(['skills']);
+    expect(page()).toBe('');
+    expect(parent.querySelector('[data-menu-tab="mastery"]')).toBeNull();
+  });
+
+  it('opens at a skill’s page from that skill’s row on the character sheet', () => {
+    mount();
+    tab('character').click();
+    parent
+      .querySelector<HTMLButtonElement>('.hud-sheet[data-sheet="character"] [data-skill="mining"]')
+      ?.click();
+    expect(openSheets()).toEqual(['skills']);
+    expect(page()).toBe('mining');
+    expect(bookText()).toContain('Tin Vein');
+  });
+
+  it('goes back to the index when reached from the menu after a page', () => {
+    mount();
+    tab('character').click();
+    parent.querySelector<HTMLButtonElement>('[data-skill="mining"]')?.click();
+    menuItem('skills');
+    expect(openSheets()).toEqual([]);
+    menuItem('skills');
+    expect(page()).toBe('');
+  });
+
+  it('answers its key', () => {
+    mount();
+    press('k');
+    expect(openSheets()).toEqual(['skills']);
+  });
+
+  it('redraws an open page off the skill and mastery events', () => {
+    mount();
+    tab('character').click();
+    parent.querySelector<HTMLButtonElement>('[data-skill="woodcutting"]')?.click();
+    events.emit(SKILL_XP_GAINED_EVENT, {
+      skillId: 'woodcutting',
+      level: 4,
+      xp: 12,
+      xpToNext: 200,
+      leveledUp: true,
+    });
+    expect(bookText()).toContain('At level 4:');
+    events.emit(MASTERY_CHANGED_EVENT, { tree: 600 });
+    expect(bookText()).toContain('Apprentice');
+  });
+});
+
 describe('the character sheet asks for what it cannot do itself', () => {
   it('opens a picker on an empty slot and asks to unequip a filled one', () => {
     mount();
@@ -1215,6 +1280,15 @@ describe('every row that stands for an item opens its card', () => {
 
     expect(title()).toBe('Iron Helmet');
     expect(uses()).toContain('Made from: Iron Bar ×2, Tin Bar, Bone Char, at the Forge (Town)');
+  });
+
+  it('answers a row of the skills book with what it makes', () => {
+    mount();
+    tab('character').click();
+    parent.querySelector<HTMLButtonElement>('[data-skill="smithing"]')?.click();
+    ask('.hud-book-entry[data-entry="steel-chestplate"]');
+
+    expect(title()).toBe('Steel Chestplate');
   });
 
   it('answers a worn slot with what is in it, and an empty one not at all', () => {
