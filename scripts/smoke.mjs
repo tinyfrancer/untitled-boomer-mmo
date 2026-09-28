@@ -431,7 +431,20 @@ const GENERAL_STORE = "window.world.buildings.find((b) => b.definition.id === 'g
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const BENCH = "window.world.stations.find((s) => s.station === 'bench')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
-const TREE = "window.world.nodes.find((n) => n.definition.id === 'tree' && n.isAvailable())";
+
+/**
+ * Each gathering skill's first tool, and the name the HUD gives the skill.
+ *
+ * @type {Record<'woodcutting' | 'fishing' | 'mining', {
+ *   tool: import('../src/types/ids').ItemId;
+ *   name: string;
+ * }>}
+ */
+const GATHERING = {
+  woodcutting: { tool: 'felling-axe', name: 'Woodcutting' },
+  fishing: { tool: 'fishing-pole', name: 'Fishing' },
+  mining: { tool: 'pickaxe', name: 'Mining' },
+};
 const PILE = 'window.world.lootPiles[0]';
 
 /**
@@ -2746,26 +2759,46 @@ async function trainingBar() {
   // is not waited for: it runs on the HUD's own half-minute clock, which the
   // hand crank does not turn. ---
   //
-  // A tree is felled with an axe in the weapon hand, so one is put there the
-  // way the bag does it, and the weapon it replaced goes back afterwards.
-  const weapon = await page.evaluate(() => {
+  // Gathered in whichever zone the run has walked to by now (the beach, after
+  // the touch section), so the node is whatever that zone grows. Its skill is
+  // raised to the node's level by setting it rather than awarding it, as the
+  // forge section does with smithing, and the tool goes in the weapon hand the
+  // way the bag puts one there. The tap that starts a gather is not what this
+  // is about, so the gather is asked of the world directly.
+  const { held: weapon, skill } = await page.evaluate((gathering) => {
     const w = window.world;
+    const node = w.nodes.find((n) => n.isAvailable() && n.definition.skill in gathering);
+    if (!node) throw new Error(`nothing to gather in ${w.zone.id}`);
+    const skill = /** @type {keyof typeof gathering} */ (node.definition.skill);
     const held = w.character.state.gear.weapon;
-    w.character.state.inventory = { 'felling-axe': 1 };
+    if (w.character.state.skills[skill].level < node.definition.requiredLevel) {
+      w.character.state.skills[skill] = { level: node.definition.requiredLevel, xp: 0 };
+    }
+    const tool = gathering[skill].tool;
+    w.character.state.inventory = { [tool]: 1 };
     window.events.emit('inventory-changed', w.character.state.inventory);
-    window.events.emit('equip-item-requested', 'felling-axe');
-    return held;
-  });
-  await standSouthOf(TREE, 60);
-  await clickAt(await screenAt(TREE));
+    window.events.emit('equip-item-requested', tool);
+    return { held, skill };
+  }, GATHERING);
+  await park();
   await stepUntil(
     () =>
       page.evaluate(
-        () =>
-          document.querySelector('.hud-player__training .hud-training__name')?.textContent ===
-          'Woodcutting',
+        ({ skill, name }) => {
+          const w = window.world;
+          const shown = document.querySelector('.hud-player__training .hud-training__name');
+          if (shown?.textContent === name) return true;
+          // Started again whenever nothing is under way: a hit breaks a
+          // gather, and whatever lives here may have come over to deliver one.
+          if (!w.gatherState && !w.player.hasMoveTarget()) {
+            const node = w.nodes.find((n) => n.isAvailable() && n.definition.skill === skill);
+            if (node) w.approachAndGather(node);
+          }
+          return false;
+        },
+        { skill, name: GATHERING[skill].name },
       ),
-    'a chop to land',
+    'a gather to land',
   );
   await page.evaluate(() => window.world.stopGathering());
   await step(2);
@@ -2792,7 +2825,7 @@ async function trainingBar() {
     });
   const portrait = await training();
   check(
-    'a real chop puts Woodcutting on a bar under the XP bar, inside the column',
+    'a real gather puts its skill on a bar under the XP bar, inside the column',
     portrait.bar !== null &&
       portrait.xp !== null &&
       portrait.column !== null &&
@@ -2844,7 +2877,7 @@ async function trainingBar() {
   });
   check(
     'and a touch on it opens the skills book at that skill’s page',
-    opened.visible && opened.page === 'woodcutting',
+    opened.visible && opened.page === skill,
     `page "${opened.page}"`,
   );
   await tapTab('skills');
