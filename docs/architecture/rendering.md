@@ -255,6 +255,11 @@ layer and the selection ring outlive a zone, like the camera and the lights, so 
 them instead of taking them out of the scene. Effects play from a 0-1 progress rather than a delta,
 which is what makes a dropped frame invisible; `drawnCounts().fx` is how many are in flight, and it
 is the one thing in `DrawnCounts` a browser is genuinely needed for (jsdom cannot bake the text).
+**An effect's clock starts on the first frame that draws it**, not on the last frame before it was
+born. Effects arrive from the tick between two renders, and the gap was taken for a millisecond; on
+a phone taking 150ms a frame it is longer than an arrow's whole 140ms flight, so an arrow dated to
+the frame before was retired without ever being drawn. CI's smoke runner found it first, where the
+ranger's arrow-in-flight check read nothing; `fx.test.ts` now asks for the slow frame directly.
 
 **A tap is picked against boxes, not against the meshes** (`render3d/picking.ts`). Each actor
 answers `pickBox()` with the box a ray has to cross — its collision footprint, standing as tall as

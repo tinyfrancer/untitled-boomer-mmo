@@ -113,7 +113,8 @@ const LEVEL_UP_COLUMN = 150;
  */
 interface Effect {
   readonly object: Object3D;
-  readonly bornAt: number;
+  // Null until the first frame that draws it, which is when its clock starts.
+  bornAt: number | null;
   readonly lifeMs: number;
   play(progress: number): void;
 }
@@ -138,9 +139,6 @@ interface Effect {
 export class FxLayer {
   readonly object = new Group();
   private effects: Effect[] = [];
-  // The last frame's clock. An effect born between frames is born at the one
-  // before it, which is a millisecond nobody can see.
-  private now = 0;
 
   /**
    * One moment, turned into something you can see.
@@ -212,7 +210,7 @@ export class FxLayer {
     sprite.position.copy(start);
     this.add({
       object: sprite,
-      bornAt: this.now,
+      bornAt: null,
       lifeMs: FLOAT_MS,
       play(progress) {
         sprite.position.y = start.y + FLOAT_RISE * progress;
@@ -250,7 +248,7 @@ export class FxLayer {
     group.position.copy(start);
     this.add({
       object: group,
-      bornAt: this.now,
+      bornAt: null,
       lifeMs: BOLT_MS,
       play(progress) {
         group.position.lerpVectors(start, end, progress);
@@ -275,7 +273,7 @@ export class FxLayer {
     shaft.position.copy(start);
     this.add({
       object: shaft,
-      bornAt: this.now,
+      bornAt: null,
       lifeMs: ARROW_MS,
       play(progress) {
         shaft.position.lerpVectors(start, end, progress);
@@ -314,7 +312,7 @@ export class FxLayer {
     const seconds = style.lifeMs / 1000;
     this.add({
       object: points,
-      bornAt: this.now,
+      bornAt: null,
       lifeMs: style.lifeMs,
       play(progress) {
         const t = progress * seconds;
@@ -366,7 +364,7 @@ export class FxLayer {
     group.position.copy(simToWorld(at.x, at.y));
     this.add({
       object: group,
-      bornAt: this.now,
+      bornAt: null,
       lifeMs: LEVEL_UP_MS,
       play(progress) {
         const spread = 10 + LEVEL_UP_RING * Math.sqrt(progress);
@@ -383,9 +381,13 @@ export class FxLayer {
    * clock — the same one the walk cycles and the campfire's flicker run on.
    */
   update(elapsedMs: number): void {
-    this.now = elapsedMs;
     if (this.effects.length === 0) return;
     this.effects = this.effects.filter((effect) => {
+      // Timed from the first frame that draws it, not the last one before it
+      // was born. That gap was taken for a millisecond nobody could see, and on
+      // a phone taking 150ms a frame it is longer than an arrow's whole flight:
+      // an arrow dated to the frame before was retired without being drawn.
+      effect.bornAt ??= elapsedMs;
       const progress = (elapsedMs - effect.bornAt) / effect.lifeMs;
       if (progress >= 1) {
         disposeTree(effect.object);

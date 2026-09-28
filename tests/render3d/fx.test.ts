@@ -25,8 +25,8 @@ describe('FxLayer', () => {
 
   it('floats a number that rises and fades, and hands it back when it is done', () => {
     const fx = new FxLayer();
-    fx.update(0);
     fx.float(AT, '-7', 'damage');
+    fx.update(0);
 
     const sprite = nth(fx.object.children, 0);
     expect(fx.count()).toBe(1);
@@ -54,8 +54,8 @@ describe('FxLayer', () => {
   // forty. This is the 7fps phone, asked for rather than throttled into being.
   it('draws an effect where its clock says, however few frames it gets', () => {
     const fx = new FxLayer();
-    fx.update(1000);
     fx.bolt({ x: 0, y: 0 }, { x: 180, y: 0 });
+    fx.update(1000);
     const bolt = nth(fx.object.children, 0);
 
     fx.update(1090);
@@ -65,6 +65,24 @@ describe('FxLayer', () => {
     // Landed and gone, in a single 140ms frame rather than the ten it would
     // have taken at 60fps.
     fx.update(1230);
+    expect(fx.count()).toBe(0);
+  });
+
+  /**
+   * The clock starts on the frame that first draws an effect, not on the last
+   * frame before it was born. A phone taking 150ms a frame would otherwise date
+   * an arrow — a 140ms flight — to the frame before, and retire it unseen.
+   */
+  it('draws an effect born between two slow frames from its start', () => {
+    const fx = new FxLayer();
+    fx.update(0);
+    fx.draw({ kind: 'shot', from: { x: 0, y: 0 }, to: AT });
+
+    fx.update(150);
+    expect(fx.count()).toBe(1);
+    expect(nth(fx.object.children, 0).position.x).toBeCloseTo(0, 3);
+
+    fx.update(150 + 140);
     expect(fx.count()).toBe(0);
   });
 
@@ -164,8 +182,8 @@ describe('what a WorldEvent is drawn as', () => {
 
   it('throws a bolt from the caster to the target', () => {
     const fx = new FxLayer();
-    fx.update(0);
     fx.draw({ kind: 'bolt-cast', abilityId: 'fireball', from: { x: 0, y: 0 }, to: AT });
+    fx.update(0);
 
     const bolt = nth(fx.object.children, 0);
     expect(bolt.position.x).toBe(0);
@@ -176,8 +194,8 @@ describe('what a WorldEvent is drawn as', () => {
 
   it('flies an arrow from the shooter to the target, pointing the way it goes', () => {
     const fx = new FxLayer();
-    fx.update(0);
     fx.draw({ kind: 'shot', from: { x: 0, y: 0 }, to: AT });
+    fx.update(0);
 
     const arrow = nth(fx.object.children, 0);
     // A shaft built standing up, laid over to point along the ground at AT.

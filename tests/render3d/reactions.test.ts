@@ -125,10 +125,10 @@ describe('the moments a fight throws off', () => {
 
   it('knocks chips off every kind of node, and hands them back when they land', () => {
     const fx = new FxLayer();
-    fx.update(0);
     for (const nodeId of Object.keys(RESOURCE_NODES) as ResourceNodeId[]) {
       fx.gatherChips(AT, nodeId);
     }
+    fx.update(0);
     expect(fx.count()).toBe(Object.keys(RESOURCE_NODES).length);
     fx.update(5000);
     expect(fx.count()).toBe(0);
@@ -137,8 +137,8 @@ describe('the moments a fight throws off', () => {
 
   it('marks a level where the player stood, and is gone in about a second', () => {
     const fx = new FxLayer();
-    fx.update(0);
     fx.draw({ kind: 'level-up', at: AT });
+    fx.update(0);
     expect(fx.count()).toBe(1);
     const burst = fx.object.children[0];
     expect(burst?.position.x).toBe(AT.x);
