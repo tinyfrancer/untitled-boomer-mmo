@@ -2,9 +2,11 @@
 
 **Status:** live. Opened 2026-09-27 against `ca12279`, the merge of act three. **Landed: phase 0**
 (this document, decisions 80-88, `CLAUDE.md` pointing here), **A1** (every number labelled, every
-slayer rank a title, mastery explained, map names over the markers; decision 89) **and A2** (every
-item says what it is for, on a tap and on a card any item row opens; decision 90). **Next: A3**,
-counters that read clearly. Update this line as each phase lands: which phase, and which is next.
+slayer rank a title, mastery explained, map names over the markers; decision 89), **A2** (every
+item says what it is for, on a tap and on a card any item row opens; decision 90) **and A3** (the
+shop and the bank in two sides, contracts marked repeatable, Abandon apart and asking twice;
+decision 91). **Next: A4**, talk first. Update this line as each phase lands: which phase, and
+which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -130,9 +132,16 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   for …"; burnt food says nothing uses it. The bag's strip lists them **on a tap**, and a held
   finger or a right click on **any item row** (shop, bank, station, picker, counters, worn slots,
   drop lists) opens the full card. Decision 90 has the forks.
-- **A3 — Counters that read clearly.** The shop splits **their stock** from **your bag** into two
-  panes, buying on one side and selling on the other. The contract board marks what is
-  **repeatable** and says how often. **Hand in and Abandon move apart**, and abandoning asks twice.
+- **A3 — Counters that read clearly. (Landed.)** The shop draws **their stock** and **your bag**
+  as two framed sides that scroll on their own (`hud/counterSides.ts`), headed "tap to buy" and
+  "tap to sell", and the bank does the same with the vault; `counterLayout` in `ui/layout.ts`
+  stands them **across** where two fit (a landscape phone, a desktop) and **one over the other**
+  on a portrait phone, both in view. A bag stack is priced "each". The board is **Contracts**,
+  says once at its top that a contract is posted again the moment it is paid, as often as you
+  like, one at a time, and tags every contract **Repeatable** there and in the quest log. **Abandon
+  is its own button under the contract in hand**, a gap below the row that hands it in, and **asks
+  twice** the way Reset Character does. Every counter stops above the tab bar and scrolls instead.
+  Decision 91 has the forks.
 - **A4 — Talk first.** Tapping an NPC opens a menu of what they do: Talk, Trade, Quests, Train,
   Contracts, Bank. Each NPC gets a greeting line. This is the shell Part D's dialog fills.
 - **A5 — The skills book.** A page per skill: level, an XP bar, what training does, and **every

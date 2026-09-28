@@ -134,6 +134,15 @@ stranded. `BountyOfferState` carries `busy` for what the rule costs every other 
 cannot be taken and does not say why reads as a bug. Nothing about a contract _finished_ is stored:
 it is posted again the moment it is paid, which is the whole of what repeatable means here.
 
+**The board says so, and giving one back stands apart from handing it in** (version 2 phase
+A3, `docs/decisions.md` 91). The rule is one line at the top of the board rather than a line per
+row, and every contract wears a Repeatable tag on the board and in the quest log, which is where a
+quest that does not come back stands beside it. Abandon was a small button against the row that
+hands the work in; it is a button of its own under the contract in hand now, and the first press
+only arms it (`BountyModal.armedFor`). That is the HUD's alone — the world's `abandon` is unchanged
+— and it survives the redraw every kill makes, since a count landing between the two presses is not
+the player changing their mind.
+
 **The board reaches the upper band** with four more contracts (act three phase 11): a goblin cull
 and a fen patrol on the two zones above the starter band that need no key, and a coal order and a
 steel order on what the Deep Cut is for. Nothing is posted behind a locked door — standing work

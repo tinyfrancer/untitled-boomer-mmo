@@ -1656,3 +1656,33 @@ and puts the full answer a tap further off; uses on the long-press card only, wh
 to know to ask for (the argument decision 89 made about numbers); the card from the bag alone,
 leaving the shop and the counters to add it when they are rebuilt; "Idle" on the card before the
 tab says it.
+
+## 91. A counter that deals both ways shows two sides, and a contract says it comes back
+
+**2026-09-28 · the user, asked by Claude**
+
+Four forks settled at the start of version 2's phase A3:
+
+- **The shop's stock and your bag are two sides, side by side where they fit and one over the
+  other where they do not.** Each is framed and scrolls on its own, so a portrait phone sees the
+  bag without scrolling past the whole shelf, and a landscape phone, short of height, gets two
+  full-height lists across it. The bank is the shop's twin and does the same with the vault.
+- **Repeatable is said as the rule already stands**: every contract is posted again the moment it
+  is paid, as often as you like, one at a time. The board says so once at its top and every
+  contract wears a Repeatable tag, on the board and in the quest log, where a quest that does not
+  come back stands beside it.
+- **Abandon is its own button under the contract in hand**, across the panel and a clear gap
+  below the row that hands the work in, rather than squeezed beside it.
+- **It asks twice by a second tap** ("Tap again to abandon"), the pattern Reset Character already
+  used, and stays armed through a redraw of the same contract.
+
+Claude's, alongside them: the board is titled **Contracts**, the one place it was still called
+"Bounties"; a bag stack's price says "each"; and every counter stops above the tab bar and scrolls,
+where a long list had run down over the bar and taken its taps.
+
+**Rejected:** Buy and Sell tabs, one side at a time, which keep rows full width and hide the bag
+while the stock is read; two narrow columns even on a portrait phone; a count of how many times a
+contract has been paid, which would be a fourth stored tally for a number nothing yet reads; a
+daily reset per contract, a balance change with a timestamp to store and migrate; giving a
+contract back from the quest log rather than the board; a confirmation box rather than a second
+tap.
