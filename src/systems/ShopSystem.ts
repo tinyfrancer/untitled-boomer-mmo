@@ -43,7 +43,7 @@ export function stockAccess(entry: ShopStockEntry, context: StockContext): Stock
     }
     return {
       kind: 'gated',
-      requirement: `Level ${requires.level}`,
+      requirement: `Needs Level ${requires.level}`,
       reason: `The shopkeeper keeps that for level ${requires.level} and up.`,
     };
   }
@@ -54,7 +54,7 @@ export function stockAccess(entry: ShopStockEntry, context: StockContext): Stock
   const questName = QUESTS[requires.questId].name;
   return {
     kind: 'gated',
-    requirement: questName,
+    requirement: `Needs ${questName}`,
     reason: `The shopkeeper will stock that once you have finished ${questName}.`,
   };
 }

@@ -1104,7 +1104,10 @@ async function feedback() {
   });
   check(
     'a locked quest is drawn with what it waits on, and a tap on it takes nothing on',
-    lockedQuest.drawn && lockedQuest.locked && !lockedQuest.taken,
+    lockedQuest.drawn &&
+      lockedQuest.locked &&
+      lockedQuest.says.includes('Needs Bones for the Broth') &&
+      !lockedQuest.taken,
     lockedQuest.says,
   );
   // A quest row deliberately has no icon, since a quest is not an item.

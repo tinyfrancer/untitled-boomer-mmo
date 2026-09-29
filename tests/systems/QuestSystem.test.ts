@@ -199,9 +199,10 @@ describe('a chain', () => {
   });
 
   // Drawn rather than hidden, so the row needs the name of what it waits on —
-  // the same thing a gated shelf row carries where its price would be.
+  // the same thing a gated shelf row carries where its price would be, and
+  // saying it is a need, since a quest's name alone reads as a place or a note.
   it('names what a locked quest is waiting on', () => {
-    expect(blockingRequirement(feast, {})).toBe(bones.name);
+    expect(blockingRequirement(feast, {})).toBe(`Needs ${bones.name}`);
     expect(blockingRequirement(feast, finished('rat-bones'))).toBe(null);
     expect(blockingRequirement(bones, {})).toBe(null);
   });

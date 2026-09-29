@@ -41,7 +41,7 @@ export function trainingAccess(
   if (context.level < training.level) {
     return {
       kind: 'gated',
-      requirement: `Level ${training.level}`,
+      requirement: `Needs Level ${training.level}`,
       reason: `${ability.name} is taught at level ${training.level}.`,
     };
   }
@@ -51,7 +51,7 @@ export function trainingAccess(
   if (below?.training && !context.learnedAbilities.includes(below.id)) {
     return {
       kind: 'gated',
-      requirement: below.name,
+      requirement: `Needs ${below.name}`,
       reason: `${ability.name} builds on ${below.name}, which you have not learned.`,
     };
   }

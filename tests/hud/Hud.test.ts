@@ -1153,7 +1153,9 @@ describe('the shop', () => {
 
     const row = shop()?.querySelector<HTMLElement>(`.hud-list-row[data-item="${gated.itemId}"]`);
     expect(row?.dataset.locked).toBe(gated.itemId);
-    expect(row?.querySelector('.hud-list-row__value')?.textContent).toBe(`Level ${gateLevel}`);
+    expect(row?.querySelector('.hud-list-row__value')?.textContent).toBe(
+      `Needs Level ${gateLevel}`,
+    );
   });
 
   /**
@@ -1776,7 +1778,7 @@ describe('every row that stands for an item opens its card', () => {
   it("goes from a creature's drops to the card of one of them", () => {
     mount();
     events.emit(CONTEXT_MENU_REQUESTED_EVENT, {
-      title: 'Rat (1)',
+      title: 'Rat (Lv 1)',
       actions: [],
       details: describeEnemy(ENEMIES.rat, 1),
       loot: describeEnemyLoot(ENEMIES.rat),
@@ -1800,7 +1802,7 @@ describe('every row that stands for an item opens its card', () => {
  */
 describe('the context menu', () => {
   const RAT: ContextMenuRequest = {
-    title: 'Rat (2)',
+    title: 'Rat (Lv 2)',
     titleColor: THEME.color.con.high,
     actions: [{ id: 'attack', label: 'Attack' }],
     details: describeEnemy(ENEMIES.rat, 2),
@@ -1833,7 +1835,9 @@ describe('the context menu', () => {
 
     it('offers what the world can do, then the two panels it was handed', () => {
       expect(lines()).toEqual(['Attack', 'Inspect', 'Loot']);
-      expect(parent.querySelector<HTMLElement>('.hud-context__title')?.textContent).toBe('Rat (2)');
+      expect(parent.querySelector<HTMLElement>('.hud-context__title')?.textContent).toBe(
+        'Rat (Lv 2)',
+      );
     });
 
     // The only thing that goes back is which line was pressed: the world is
@@ -1900,7 +1904,7 @@ describe('the context menu', () => {
     });
 
     it('replaces itself rather than stacking a second menu', () => {
-      events.emit(CONTEXT_MENU_REQUESTED_EVENT, { ...RAT, title: 'Rat (1)' });
+      events.emit(CONTEXT_MENU_REQUESTED_EVENT, { ...RAT, title: 'Rat (Lv 1)' });
       expect(parent.querySelectorAll('.hud-context')).toHaveLength(1);
     });
   });

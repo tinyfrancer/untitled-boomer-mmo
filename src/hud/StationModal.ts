@@ -99,7 +99,7 @@ export class StationModal extends Overlay {
     const entry = row({
       className: 'hud-list-row',
       label: name,
-      value: locked ? `${SKILLS[recipe.skill].name} ${recipe.requiredLevel}` : 'Make',
+      value: locked ? `Needs ${SKILLS[recipe.skill].name} ${recipe.requiredLevel}` : 'Make',
       valueClass: 'hud-list-row__value',
       icon: itemIconSvg(recipe.outputItemId),
       onClick: () => this.handlers.onMake(id),

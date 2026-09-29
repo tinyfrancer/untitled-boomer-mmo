@@ -74,7 +74,7 @@ export function bountyAccess(
   }
   return {
     kind: 'gated',
-    requirement: `Level ${required}`,
+    requirement: `Needs Level ${required}`,
     reason: `${definition.name} is posted at level ${required}.`,
   };
 }
