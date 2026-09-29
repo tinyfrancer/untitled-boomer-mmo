@@ -1983,3 +1983,27 @@ leave the live game unclear for the whole of Parts B and C; a grind pass now, be
 tuned again after the rebuild; a grind pass with G1 across the whole climb to 20, and no pass at all;
 the lore bible (C2) before Part B, which the art does not wait on; Part E before Part B, which puts
 the checkpoint behind three more phases.
+
+## 100. Tiles are 32 pixels, the world gets a pixel font, every creature faces four ways, and the palette is warm
+
+**2026-09-29 · the user, asked by Claude**
+
+The four forks settled at the start of version 2's phase B1, the style guide:
+
+- **A tile is 32 pixels square.** Claude recommended 16, the size Link to the Past and Stardew use,
+  because there are a quarter as many pixels to author per frame, and characters and animation were
+  the risk decision 81 named. The user chose the detail: a face, armour trim and the ore in a vein
+  can be told apart at 32, and the animation budget is what keeps the frame count from growing.
+- **The HUD keeps a readable system font, and the world gets a pixel font drawn as data.** The HUD is
+  HTML, dense with the numbers Part A labelled, and a pixel font there would have to be a font
+  file. What the world writes (a nameplate, a damage number, a sign) is already baked onto a canvas,
+  so a font drawn as data costs no file.
+- **Every creature faces four ways**: up, down, left and right. Claude recommended two, side-on and
+  mirrored, for the beasts, which would have halved their frames. The user chose the convincing one.
+- **The palette is warm and bright**, saturated greens and warm light in the way of Stardew and Link
+  to the Past, with the marsh and underground darker for their setting. It is the one that suits
+  pillar 4 and a cheeky tone, and it reads at a glance on a small screen.
+
+**Rejected:** 16-pixel tiles; a pixel font everywhere, and a system font everywhere; two mirrored
+directions for beasts; a muted, earthy palette in the way of classic RuneScape, and a strict retro
+palette of about 32 colours shared by everything.
