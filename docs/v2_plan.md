@@ -10,10 +10,11 @@ quests; decision 92), **A5** (the skills book: a page per skill, every node and 
 mastery beside it, the mastery page gone; decision 93), **A6** (the training bar: the skill last
 trained, in the player column, following what you do and fading half a minute after; decision 94)
 **A7** (Idle: a panel that says what idle will do and starts and stops it, the food order and
-Keep the player sets, the away report in the panel's words; decision 96) **and A8** (the save out
+Keep the player sets, the away report in the panel's words; decision 96), **A8** (the save out
 as a file or a code and back, in Options and on the creation screen, with a preview and a second
-tap before it replaces anybody; decision 97). **Next: A9**, tips. Update this line as each phase
-lands: which phase, and which is next.
+tap before it replaces anybody; decision 97) **and A9** (twelve tips in the spirit's voice, each
+heard once per character, on a card that waits for a tap; decision 98). **Next: A10**, the Part A
+review. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -192,12 +193,17 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   saying which one is wrong; a hand-edited but well-formed save loads. A **preview** puts the
   character in the save beside the one playing now, and **Replace asks twice**. A parked night is
   never carried in. Decision 97 has the forks.
-- **A9 — Tips.** A tip engine in plain TypeScript: tips fire off derived state (first raw food held,
-  first full pack, first contract, first idle), each shown once, silenceable for good. Until the
-  spirit is drawn in D4 they arrive in the HUD **in the spirit's voice**. Settled at its start
-  (decision 98): a **card that waits for a tap** (Got it, No more tips), held while a panel is
-  open, one at a time; what was heard is **kept on the character**; tips for **survival, gestures,
-  growth and making** as well as the four; and a character from before A9 hears each as it comes.
+- **A9 — Tips. (Landed.)** Twelve tips (`systems/TipSystem.ts`), each a rule over the character
+  that answers its line or nothing, the line read off the tables it names: food when hurt, the
+  first death and what it cost, a full pack, raw food, going idle, the first contract, a first tool
+  and a first material, holding a finger on anything, the first level and its lesson, the first
+  title, the first mastery rank. The world offers one at a time (`world/TipDesk.ts`), quiet for the
+  first seconds of a zone and for forty after each, so a character from before A9 hears each as it
+  comes. The HUD shows it as a **card that waits for a tap** (`hud/TipCard.ts`) with **Got it**
+  and **No more tips**, at the top between the corners or under them on a portrait phone, hidden
+  while an overlay (or a sheet on a phone) covers the playfield; Options has the switch back. What
+  was heard and whether tips are off is **kept on the character** (`CharacterState.tips`, save
+  version 26). Until the spirit is drawn in D4 the card is its voice. Decision 98 has the forks.
 - **A10 — Part A review.**
 
 **Open questions for Part A**: none left. A1 answered the first (mastery folds into the skills book,

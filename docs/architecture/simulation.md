@@ -31,7 +31,8 @@ add to it:
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
 through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `TalkSession` and the counter sessions beside it (`ShopSession`, `BankSession`, `TrainerSession`, `BountySession` and the rest, `economy.md`), `QuestDesk`,
-`ContextMenuSession` (what a press held is about, and what was chosen from it), and `ApproachDriver`
+`ContextMenuSession` (what a press held is about, and what was chosen from it), `TipDesk` (the
+spirit's tips: which to offer, and hearing the answer), and `ApproachDriver`
 (all three click-to-move walks, and the only thing that asks for a route). Each owns its own state,
 is constructed by `ZoneWorld` and reaches the rest of the zone through two things and no others: the
 `WorldContext` they all share — the clock, the character, the player, both channels out of the
@@ -280,3 +281,18 @@ onto a tree freezes it there for good), and the world-bounds clamp uses the name
 `PLAYER_HALF_EXTENT`, which **must stay below `EXIT_MARGIN`** — the clamp stops the player exactly
 that far from the edge, so a half-extent that grew past the margin would silently stop zone
 transitions firing with nothing to show for it.
+
+**A tip is offered by the world, read off derived state, and heard once per character** (decision
+98). `systems/TipSystem.ts` holds the twelve tips in the order they are offered — staying alive,
+then what is in the bag, then what the player is doing, then how to ask about anything, and growing
+last — each a rule over the character that answers its line or nothing. A line is written from the
+tables the way the item card and the skills book are (the fee, the trainer's lesson and price, the
+station and its zone, idle's share and ceiling), so a retune cannot leave a tip saying the old
+number. `world/TipDesk.ts` asks once a second, offers one tip at a time on `tip-offered`, and
+offers nothing more until it is heard; it keeps quiet for the first eight seconds of a world and
+forty seconds after a tip, which is what makes a character from before tips hear them one at a time
+rather than as a queue. What was heard, and whether tips are off, is `CharacterState.tips` (save
+version 26), set through the controller. What is on offer and the clock are the zone's, and start
+again in the next one; the HUD outlives the world, so an answer is taken for any tip, not only the
+one this world offered. A death leaves nothing in the save to derive a tip from, so `ZoneWorld`
+tells the desk what getting up cost, and the desk holds it until that tip is heard.
