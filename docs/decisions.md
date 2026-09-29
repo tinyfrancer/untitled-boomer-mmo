@@ -1788,3 +1788,36 @@ added its height.
 abilities leaves about 130px for; the bar under the player, beneath the gather bar; every skill,
 Block and Parry included; gathering and making only; a bar that stays until another skill takes it,
 which Claude recommended; a bar that only shows and does nothing on a tap.
+
+## 95. CI runs on pull requests, on one Node version, smoke when ready, and only main deploys
+
+**2026-09-29 · the user, asked by Claude**
+
+The repo is private, so GitHub Actions minutes are metered: 2,000 Linux minutes a month on the free
+plan. September had used about 600 by the 29th, 430 of them in the five days since version 2
+began, a pace of about 2,500 a month. A pull request's run cost about 13 minutes (two gate jobs of
+about 3 and the browser smoke of about 7, each rounded up to the minute) and every merge about 6
+more. Vercel's Hobby plan allows 100 deployments a day, and it had built a preview of every push to
+every branch. Four forks:
+
+- **Only `main` deploys** (`vercel.json`, `git.deploymentEnabled`). A branch builds no preview;
+  production already shows the work as it lands (decision 83).
+- **CI does not run on the merge**, which tested again the head the pull request had just passed.
+  It runs on pull requests, and by hand from the Actions tab.
+- **The gates run on Node 25 alone.** The cloud sessions run every gate on Node 22 before they
+  push, so both versions are still seen on every change.
+- **A draft skips the browser smoke**, and marking it ready for review runs it. A draft cannot be
+  merged, so the check that blocks merges still runs on whatever is merged.
+
+Claude's, alongside them: every job has a timeout (10 minutes for the gates, 20 for smoke), since
+GitHub's default of six hours let one hung smoke run spend a sixth of the month; the gates stay a
+matrix of one, so the check keeps the name a required status check knows it by; and `CLAUDE.md`
+asks for a phase to be pushed once it is green locally rather than commit by commit, and for a CI
+fix to be batched rather than guessed at a push at a time. A pull request opened ready now costs
+about 10 minutes, and each push to a draft about 3.
+
+**Rejected:** previews on request from `preview/…` branches; previews on every push, as before;
+keeping the run on merge; both Node versions, or 22 alone; smoke on every push to a pull request,
+which Claude recommended; smoke only when a label asks for it. Also not done: skipping CI for a
+change that touches only docs, since a required check that never reports holds its pull request
+open for good.

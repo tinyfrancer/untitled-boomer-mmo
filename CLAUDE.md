@@ -63,10 +63,11 @@ Run a single test file: `npx vitest run tests/systems/CombatSystem.test.ts`
 Run tests matching a name: `npx vitest run -t "isCooldownReady"`
 Run part of smoke: `node scripts/smoke.mjs --section=bag,sheets` (an unknown name lists them all).
 
-CI runs on every PR (`.github/workflows/ci.yml`): `gates (node 22)` and `gates (node 25)` run
-lint/format/typecheck/coverage/build on both Node versions, and `browser smoke` runs the real
-Playwright check. **The smoke job blocks merges**, so run `npm run smoke` locally before opening a
-PR rather than finding out from CI. Don't commit on a red suite, including failures that pre-date
+CI runs on pull requests, not on the merge (`.github/workflows/ci.yml`): `gates (node 25)` runs
+lint/format/typecheck/coverage/build, and `browser smoke` runs the real Playwright check on a PR
+that is ready for review, never on a draft. Node 22, the LTS floor, is covered by running the gates
+locally in the cloud sessions, which run on it. **The smoke job blocks merges**, so run
+`npm run smoke` locally before opening a PR rather than finding out from CI. Don't commit on a red suite, including failures that pre-date
 your change; fixing a broken test _environment_ is in scope, not a distraction.
 
 **Coverage is reported and never gated** — no thresholds, on purpose. It uses istanbul rather than
@@ -85,7 +86,17 @@ Keep commits separable when a change has genuinely independent parts (a test-env
 feature itself, docs) — PRs here are merged with a merge commit rather than squashed, so that
 structure survives in history and stays reviewable later.
 
-Merging to `main` triggers a Vercel production deploy, so a merge publishes.
+Merging to `main` triggers a Vercel production deploy, so a merge publishes. Nothing else deploys:
+`vercel.json` turns off the preview a branch push used to build.
+
+**CI minutes and deploys are metered, so spend them where they decide something** (decision 95).
+The repo is private, and Actions has 2,000 Linux minutes a month on the free plan: a PR's run costs
+about 10 of them (the gates about 3, smoke about 7), and a hung job is stopped by its
+`timeout-minutes` rather than GitHub's six hours. Vercel's Hobby plan allows 100 deployments a day.
+So run every gate locally, smoke included, before a phase's first push; push a phase when it is
+green rather than commit by commit; open its PR when it is done, or as a draft while it is still
+moving, since a draft runs the gates alone and marking it ready is what runs smoke; and batch a CI
+fix rather than pushing one guess at a time.
 
 ## Verifying a change
 
