@@ -1916,3 +1916,27 @@ Claude's, alongside them:
 first put it; a checksum that refuses an edited save; a code of raw JSON; a code compressed before
 encoding, which is asynchronous in a browser for a save of a few kilobytes; checking item ids, which
 would refuse saves the game plays happily; carrying a parked night in.
+
+## 98. A tip is a card that waits for a tap, heard once per character, in the spirit's voice
+
+**2026-09-29 · the user, asked by Claude**
+
+The forks settled at the start of version 2's phase A9, the tips:
+
+- **A tip is a card**, under the top corners, with the spirit's line and two buttons, **Got it** and
+  **No more tips**. It stays until tapped, so a tip that lands in a fight is not lost; it waits while
+  a panel or a counter is open, and only one shows at a time.
+- **What has been heard, and whether tips are off, is kept on the character**: it rides the save
+  (and an exported save) and a new character hears the tips again. The spirit is a character in the
+  story (decision 87), and what it has told you is part of that.
+- **Beyond the plan's four** (raw food held, a full pack, the first contract, going idle), the tips
+  cover **survival** (low health with food in the bag; the first death and what it cost),
+  **gestures** (holding a finger, or a right click, on anything shows more), **growth** (the first
+  level and the trainer, the first title and Feats, the first mastery rank and what it pays) and
+  **making** (a first material and the station it goes to; a first tool and tapping a node).
+- **A character from before A9 hears each tip as it comes**, one at a time with a gap between, rather
+  than being marked as having heard them all.
+
+**Rejected:** a long toast that fades on its own, and a card that fades if ignored, since either can
+be missed mid-fight and a tip is heard once; keeping what was heard on the device, alone or with the
+off switch; the plan's four tips alone; marking every tip heard for a save made before A9.

@@ -194,7 +194,10 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   never carried in. Decision 97 has the forks.
 - **A9 — Tips.** A tip engine in plain TypeScript: tips fire off derived state (first raw food held,
   first full pack, first contract, first idle), each shown once, silenceable for good. Until the
-  spirit is drawn in D5 they arrive as HUD toasts **in the spirit's voice**.
+  spirit is drawn in D4 they arrive in the HUD **in the spirit's voice**. Settled at its start
+  (decision 98): a **card that waits for a tap** (Got it, No more tips), held while a panel is
+  open, one at a time; what was heard is **kept on the character**; tips for **survival, gestures,
+  growth and making** as well as the four; and a character from before A9 hears each as it comes.
 - **A10 — Part A review.**
 
 **Open questions for Part A**: none left. A1 answered the first (mastery folds into the skills book,
