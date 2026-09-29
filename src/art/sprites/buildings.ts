@@ -41,6 +41,13 @@ export const BUILDING_LEGEND: Readonly<Record<string, ColourRef>> = {
   Z: 'gold.3',
   H: 'green.0',
   I: 'green.1',
+  M: 'metal.1',
+  N: 'metal.2',
+  O: 'metal.3',
+  P: 'metal.4',
+  T: 'linen.2',
+  U: 'linen.3',
+  V: 'linen.4',
 };
 
 /**
@@ -75,8 +82,17 @@ export const COURSES_LIT: readonly Grid[] = [
 `),
 ];
 
-/** The same courses on the slope that faces the viewer, a step down the ramp. */
+/**
+ * The same courses on the slope that faces the viewer, its highlights taken
+ * down a step, and further down again toward the eave: the fall of the light
+ * down the slope is what reads a roof as pitched rather than paved, and the
+ * front slope is most of what a town is seen as (decision 104).
+ */
 export const COURSES_SHADED: readonly Grid[] = COURSES_LIT.map((course) =>
+  rekeyed(course, { '4': '3' }),
+);
+
+export const COURSES_EAVE: readonly Grid[] = COURSES_LIT.map((course) =>
   rekeyed(course, { '4': '3', '3': '2', '2': '1', '1': '0' }),
 );
 
@@ -219,6 +235,197 @@ export const POST = grid(`
   yyx
   yyx
   yxw
+`);
+
+/**
+ * A board hung by a building's door with its trade on it, so a shop says what
+ * it sells before its name is read: from a bracket, on two chains, framed in
+ * dark wood.
+ */
+export const SIGNS = {
+  // The bank.
+  coin: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyxxxGGGGxxxxw
+    wyxxGYZZYGxxxw
+    wyxGYZYYZYGxxw
+    wyxGZYGGYZGxxw
+    wyxGYZYYZYGxxw
+    wyxxGYYYYGxxxw
+    wyxxxGGGGxxxxw
+    wyxxxxxxxxxxxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+  // A store.
+  sack: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyxxxxVVxxxxxw
+    wyxxxkUUkxxxxw
+    wyxxxxTTxxxxxw
+    wyxxTUVVUTxxxw
+    wyxTUVVVVUTxxw
+    wyxTUUVVUUTxxw
+    wyxTTUUUUTTxxw
+    wyxxTTTTTTxxxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+  // A training hall.
+  swords: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyOxxxxxxxxOxw
+    wyxPOxxxxOPxxw
+    wyxxPOxxOPxxxw
+    wyxxxPOOPxxxxw
+    wyxxxNPPNxxxxw
+    wyxxYNOONYxxxw
+    wyxYxwxxwxYxxw
+    wywxxxxxxxxwxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+  // A quartermaster.
+  shield: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyxggggggggxxw
+    wyxghhYYhhgxxw
+    wyxghhYYhhgxxw
+    wyxgYYYYYYgxxw
+    wyxghhYYhhgxxw
+    wyxxghYYhgxxxw
+    wyxxxghhgxxxxw
+    wyxxxxggxxxxxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+  // A smithy.
+  anvil: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyxxxxxxxxxxxw
+    wyxMNNNNNNOxxw
+    wyMNOOOOOONMxw
+    wyxxMNNNNMxxxw
+    wyxxxMNNMxxxxw
+    wyxxxMNNMxxxxw
+    wyxxMNNNNMxxxw
+    wyxMMMMMMMMxxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+  // An inn.
+  tankard: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyxxVVVVVxxxxw
+    wyxVVVVVVxxxxw
+    wyxwyzyyxwxxxw
+    wyxwyzyyxwxwxw
+    wyxwyzyyxwxxxw
+    wyxwyzyyxwxwxw
+    wyxwyzyyxwxxxw
+    wyxwwwwwwwxxxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+  // A mill.
+  wheat: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyxZxxYxxZxxxw
+    wyxYZxZxZYxxxw
+    wyxxYZYZYxxxxw
+    wyxxxYYYxxxxxw
+    wyxxxxYxxxxxxw
+    wyxxxGYGxxxxxw
+    wyxxxxYxxxxxxw
+    wyxxxGYGxxxxxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+  // A trading post.
+  scales: grid(`
+    zyyyyyyyyyyyyx
+    ..k........k..
+    ..k........k..
+    wwwwwwwwwwwwww
+    wzyyyyyyyyyyyx
+    wyxxxxYxxxxxxw
+    wyxGYYZYYGxxxw
+    wyxGxxYxxGxxxw
+    wyGYGxYxGYGxxw
+    wyYZYxYxYZYxxw
+    wyxxxxYxxxxxxw
+    wyxxxGYGxxxxxw
+    wyxxGYYYGxxxxw
+    wxxxxxxxxxxxxw
+    vwwwwwwwwwwwwv
+  `),
+} as const;
+
+export type SignId = keyof typeof SIGNS;
+
+/**
+ * Seen through an open doorway: the room's shadowed back wall with a lantern
+ * lit on it, and its boards coming forward into the light at the threshold.
+ * One row of keys a line, top first; the back wall's rows are a seam every few
+ * pixels, the floor's are planks.
+ */
+export const DOORWAY_TOP = ['k', 'k', 'l', 'v'];
+export const DOORWAY_BACK_WALL = 'wwwwwwwv';
+export const DOORWAY_SKIRTING = 'v';
+export const DOORWAY_FLOOR = [
+  'v',
+  'w',
+  'w',
+  'w',
+  'v',
+  'w',
+  'x',
+  'x',
+  'v',
+  'x',
+  'x',
+  'y',
+  'v',
+  'x',
+  'y',
+  'y',
+];
+export const LANTERN = grid(`
+  ...k...
+  ..GYG..
+  .GYZYG.
+  GYZZZYG
+  .GZZZG.
+  ..GYG..
+  ...G...
 `);
 
 /**

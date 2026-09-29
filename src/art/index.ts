@@ -1,6 +1,7 @@
 import type { SpriteDef } from './format';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
+import { SIGNPOST } from './sprites/props';
 import { RAT } from './sprites/rat';
 import { RANGER, SHOPKEEPER, WARRIOR, WIZARD } from './sprites/people';
 
@@ -17,6 +18,7 @@ export const SPRITES: readonly SpriteDef[] = [
   RANGER,
   SHOPKEEPER,
   RAT,
+  SIGNPOST,
 ];
 
 export { PLACEHOLDERS } from './sprites/placeholders';

@@ -1,6 +1,7 @@
 import { classSprite, creatureSprite, npcSprite } from '../art/cast';
 import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { PLACEHOLDERS } from '../art/index';
+import { SIGNPOST } from '../art/sprites/props';
 import { TILE_SIZE } from '../config/constants';
 import { ABILITIES } from '../data/abilities';
 import { occupant } from '../data/buildings';
@@ -412,6 +413,7 @@ export class ZoneView2D implements ZoneView {
       y: number,
       animation: 'still' | 'spent' | 'loop',
       alpha = 1,
+      sprite = PROP,
     ): Standing => ({
       baseY: y,
       draw: () => {
@@ -422,7 +424,7 @@ export class ZoneView2D implements ZoneView {
           index: animation === 'loop' ? frameIndex(PLACEHOLDERS.prop, 'loop', now) : 0,
         };
         context.globalAlpha = alpha;
-        sheet.draw(context, PROP, pose, p.x, p.y);
+        sheet.draw(context, sprite, pose, p.x, p.y);
         context.globalAlpha = 1;
       },
     });
@@ -432,7 +434,7 @@ export class ZoneView2D implements ZoneView {
     }
     for (const signpost of world.signposts) {
       shadowAt(signpost.x, signpost.y, 20);
-      standing.push(still(signpost.x, signpost.y, 'still'));
+      standing.push(still(signpost.x, signpost.y, 'still', 1, SIGNPOST.id));
     }
     for (const station of world.stations) {
       shadowAt(station.x, station.y, 20);
@@ -527,7 +529,7 @@ export class ZoneView2D implements ZoneView {
       this.plate(
         signpost.x,
         signpost.y,
-        sheet.drawnHeight(PROP),
+        sheet.drawnHeight(SIGNPOST.id),
         signpost.label,
         THEME.color.levelUp,
       );

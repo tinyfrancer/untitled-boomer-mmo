@@ -1,24 +1,32 @@
 import { WALL_THICKNESS, buildingRect, doorGap, type BuildingDefinition } from '../data/buildings';
-import type { BuildingShapeId, ZoneEdge } from '../types/ids';
+import type { BuildingId, BuildingShapeId, ZoneEdge } from '../types/ids';
 import { ART_PIXEL } from './budget';
 import { compileFrame } from './compile';
 import { composed, type Grid, type Placed, type Recolour, type SpriteDef } from './format';
 import {
   BUILDING_LEGEND,
   CHIMNEY,
+  COURSES_EAVE,
   COURSES_LIT,
   COURSES_SHADED,
+  DOORWAY_BACK_WALL,
+  DOORWAY_FLOOR,
+  DOORWAY_SKIRTING,
+  DOORWAY_TOP,
   EAVE,
   FLOOR,
   GABLE_LEFT,
   GABLE_RIGHT,
+  LANTERN,
   MOSS,
   POST,
   RIDGE,
+  SIGNS,
   WALL,
   WALL_HEIGHT,
   WALL_TOP,
   WINDOW,
+  type SignId,
 } from './sprites/buildings';
 
 /**
@@ -51,6 +59,26 @@ const WINDOW_AT = 8;
 const PANEL = 16;
 const PANEL_INSET = 3;
 
+/**
+ * What hangs by each building's door: its trade, so a counter says what it is
+ * for before its name is read (decision 104). A house nobody works in has none.
+ */
+export const BUILDING_SIGNS: Readonly<Record<BuildingId, SignId | null>> = {
+  'general-store': 'sack',
+  'bank-house': 'coin',
+  'training-hall': 'swords',
+  'quartermasters-post': 'shield',
+  smithy: 'anvil',
+  inn: 'tankard',
+  cottage: null,
+  mill: 'wheat',
+  'trading-post': 'scales',
+  longhouse: null,
+};
+
+/** How far down the front wall a sign's bracket is fixed, under the beam. */
+const SIGN_AT = 4;
+
 /** What each shape of building is made of: the kit's slate and plaster, recoloured. */
 export const BUILDING_LOOKS: Readonly<Record<BuildingShapeId, Recolour>> = {
   hall: {},
@@ -67,6 +95,7 @@ export interface BuildingPlan {
   /** The opening, measured along the door wall from its west or north end. */
   gap: { from: number; to: number };
   shape: BuildingShapeId;
+  sign: SignId | null;
 }
 
 /** A building where a zone put it, turned into art pixels. */
@@ -89,6 +118,7 @@ export function buildingPlan(building: {
       to: Math.round((gap.to - start) / ART_PIXEL),
     },
     shape: building.definition.shape,
+    sign: BUILDING_SIGNS[building.definition.id],
   };
 }
 
@@ -145,8 +175,12 @@ function roof(width: number, height: number): Grid {
   for (let y = 0; y < ridge; y += course, row += 1) {
     parts.push({ grid: tiled(laid(COURSES_LIT), width, course), x: 0, y });
   }
+  // Down the front slope the light falls away: its first half-slope a step
+  // down from the lit one, and its last third, under the eave, a step more.
+  const slope = height - EAVE_DROP - ridge;
   for (let y = ridge; y < height - EAVE_DROP; y += course, row += 1) {
-    parts.push({ grid: tiled(laid(COURSES_SHADED), width, course), x: 0, y });
+    const courses = y - ridge < slope * 0.6 ? COURSES_SHADED : COURSES_EAVE;
+    parts.push({ grid: tiled(laid(courses), width, course), x: 0, y });
   }
   parts.push({ grid: tiled(RIDGE, width, RIDGE.length), x: 0, y: ridge - 2 });
   // Moss where the rain sits, placed off the roof's size so a building is the
@@ -165,14 +199,53 @@ function roof(width: number, height: number): Grid {
 }
 
 /**
- * A wall's face, `width` long: plaster between a beam and a sill, a post at
- * each end, an opening where `gap` says, and windows in whatever is left that
- * has room for one.
+ * An open doorway, seen into: the room's back wall in shadow with a lantern lit
+ * on it, and its boards coming forward into the light at the threshold. What
+ * reads as a way in, where a hole of ink read as a hole.
  */
-function wallFace(width: number, gap: { from: number; to: number } | null): Grid {
+function doorway(width: number, height: number): Grid {
+  const floorRows = Math.min(DOORWAY_FLOOR.length, Math.round(height * 0.4));
+  const floor = DOORWAY_FLOOR.slice(DOORWAY_FLOOR.length - floorRows);
+  const wallRows = height - DOORWAY_TOP.length - 1 - floorRows;
+  const rows: string[] = [
+    ...DOORWAY_TOP.map((key) => key.repeat(width)),
+    ...Array.from({ length: wallRows }, () =>
+      Array.from(
+        { length: width },
+        (_, x) => DOORWAY_BACK_WALL[x % DOORWAY_BACK_WALL.length] ?? 'l',
+      ).join(''),
+    ),
+    DOORWAY_SKIRTING.repeat(width),
+    ...floor.map((key) => key.repeat(width)),
+  ];
+  const lanternX = Math.round(width / 2) - Math.floor((LANTERN[0]?.length ?? 0) / 2);
+  return composed(width, height, [
+    { grid: rows, x: 0, y: 0 },
+    ...(width > (LANTERN[0]?.length ?? 0) + 4
+      ? [{ grid: LANTERN, x: lanternX, y: DOORWAY_TOP.length + 1 }]
+      : []),
+  ]);
+}
+
+/**
+ * A wall's face, `width` long: plaster between a beam and a sill, a post at
+ * each end, an opening where `gap` says, windows in whatever is left that has
+ * room for one, and the building's sign by its door.
+ */
+function wallFace(
+  width: number,
+  gap: { from: number; to: number } | null,
+  sign: SignId | null = null,
+): Grid {
   const parts: Placed[] = [{ grid: tiled(WALL, width, WALL_HEIGHT), x: 0, y: 0 }];
   const post = tiled(POST, POST[0]?.length ?? 3, WALL_HEIGHT);
   const postWidth = post[0]?.length ?? 3;
+  // Hung just inside the doorway from its west post, over the dark of the
+  // room; on a wall with no door, in the middle of it.
+  const board = sign ? SIGNS[sign] : null;
+  const boardWidth = board?.[0]?.length ?? 0;
+  const signX = gap ? gap.from + 1 : Math.round((width - boardWidth) / 2);
+  const signSpan: [number, number] | null = board ? [signX, signX + boardWidth] : null;
   const solidSpans: [number, number][] = gap
     ? [
         [0, gap.from],
@@ -185,20 +258,22 @@ function wallFace(width: number, gap: { from: number; to: number } | null): Grid
     for (let x = PANEL_INSET; x + WINDOW_WIDTH <= width; x += PANEL) {
       if (x < from || x + WINDOW_WIDTH > to - (gap && to === gap.from ? postWidth : 0)) continue;
       if (x - last < WINDOW_SPACING) continue;
+      if (signSpan && x < signSpan[1] && x + WINDOW_WIDTH > signSpan[0]) continue;
       parts.push({ grid: WINDOW, x, y: WINDOW_AT });
       last = x;
     }
   }
   if (gap) {
-    // The way in, dark, the beam over it left as a lintel and the floor inside
-    // just catching the light.
+    // The way in, the beam over it left as a lintel, and a sill at the foot.
     const opening = gap.to - gap.from;
-    parts.push({ grid: solid('k', opening, WALL_HEIGHT - 5), x: gap.from, y: 3 });
-    parts.push({ grid: solid('l', opening, 2), x: gap.from, y: WALL_HEIGHT - 2 });
+    parts.push({ grid: doorway(opening, WALL_HEIGHT - 5), x: gap.from, y: 3 });
+    parts.push({ grid: solid('y', opening, 1), x: gap.from, y: WALL_HEIGHT - 2 });
+    parts.push({ grid: solid('w', opening, 1), x: gap.from, y: WALL_HEIGHT - 1 });
     parts.push({ grid: post, x: Math.max(0, gap.from - postWidth), y: 0 });
     parts.push({ grid: post, x: Math.min(width - postWidth, gap.to), y: 0 });
   }
   parts.push({ grid: post, x: 0, y: 0 }, { grid: post, x: width - postWidth, y: 0 });
+  if (board) parts.push({ grid: board, x: signX, y: SIGN_AT });
   return composed(width, WALL_HEIGHT, parts);
 }
 
@@ -217,7 +292,7 @@ function compile(grid: Grid, outlined: boolean, shape: BuildingShapeId): Uint8Cl
 
 /** The three pictures a building is drawn as. */
 export function buildingArt(plan: BuildingPlan): BuildingArt {
-  const { width, depth, wall, door, gap, shape } = plan;
+  const { width, depth, wall, door, gap, shape, sign } = plan;
   const tall = WALL_HEIGHT + ROOF_RISE;
 
   // Outside: the front wall, and the roof over it and the rest of the
@@ -241,7 +316,7 @@ export function buildingArt(plan: BuildingPlan): BuildingArt {
         ];
   const outside = composed(outsideWidth, outsideHeight, [
     {
-      grid: wallFace(width, door === 'south' ? gap : null),
+      grid: wallFace(width, door === 'south' ? gap : null, sign),
       x: 1 + OVERHANG,
       y: roofTop + ROOF_RISE + depth,
     },
