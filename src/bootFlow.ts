@@ -31,6 +31,15 @@ function beginSession(host: GameHost, character: CharacterState): void {
   host.startZone();
 }
 
+/**
+ * Starts the game with a character brought back from a save file or code, which
+ * becomes the save — the other way a session starts with no save to resume.
+ */
+export function beginLoadedCharacter(host: GameHost, character: CharacterState): void {
+  saveService.save(character);
+  beginSession(host, character);
+}
+
 /** Shows the creation screen and starts the game with whatever it produces. */
 export function showCharacterCreate(host: GameHost): void {
   mountCharacterCreate({
@@ -40,6 +49,10 @@ export function showCharacterCreate(host: GameHost): void {
       saveService.save(character);
       unmountCharacterCreate();
       beginSession(host, character);
+    },
+    onLoad: (character) => {
+      unmountCharacterCreate();
+      beginLoadedCharacter(host, character);
     },
   });
 }

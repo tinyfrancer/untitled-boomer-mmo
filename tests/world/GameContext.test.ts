@@ -13,10 +13,13 @@ import { createNewCharacter, saveService, type CharacterState } from '../../src/
 import {
   AFK_STATE_CHANGED_EVENT,
   AFK_SET_REQUESTED_EVENT,
+  SAVE_EXPORT_REQUESTED_EVENT,
+  SAVE_EXPORTED_EVENT,
   type UiEventMap,
   type UiEventName,
 } from '../../src/ui/uiEvents';
 import { zoneWorldSize } from '../../src/systems/ZoneSystem';
+import { readSave, type SaveExport } from '../../src/persistence/saveFile';
 
 /**
  * The session that outlives a zone. What matters here is what a scene restart
@@ -277,5 +280,44 @@ describe('notifications for a HUD that is not listening yet', () => {
     walkOut(game, 'north');
     expect(first).not.toEqual([]);
     expect(game.takeNotifications()).toEqual([]);
+  });
+});
+
+describe('taking the save away', () => {
+  function exported(bus: EventBus, kind: 'file' | 'code'): SaveExport[] {
+    const answers: SaveExport[] = [];
+    bus.on(SAVE_EXPORTED_EVENT, (saved) => answers.push(saved));
+    bus.emit(SAVE_EXPORT_REQUESTED_EVENT, kind);
+    return answers;
+  }
+
+  it('answers with the character as it stands, where it stands, saved first', () => {
+    const { context: game, bus } = context();
+    game.currentWorld.player.setPosition(700, 300);
+    game.character.state.currency = 321;
+
+    const answers = exported(bus, 'file');
+
+    expect(answers).toHaveLength(1);
+    const file = nth(answers, 0);
+    const read = readSave(file.text);
+    expect(read.ok && read.character.position).toEqual({ x: 700, y: 300 });
+    expect(read.ok && read.character.currency).toBe(321);
+    // What leaves and what the browser holds are the same save.
+    expect(saveService.load()).toEqual(read.ok && read.character);
+  });
+
+  it('answers a code request with a code', () => {
+    const { bus } = context();
+    const answer = nth(exported(bus, 'code'), 0);
+    expect(answer.kind).toBe('code');
+    expect(readSave(answer.text).ok).toBe(true);
+  });
+
+  it('answers once, however many zones the session has loaded', () => {
+    const { context: game, bus } = context();
+    walkOut(game, 'south');
+    walkOut(game, 'north');
+    expect(exported(bus, 'file')).toHaveLength(1);
   });
 });

@@ -1866,3 +1866,53 @@ would have revisited with potions; an order with no Keep; Keep with no order; th
 first time, with the tab starting and stopping idle after that, which makes the same tap mean two
 things; the panel to start and a tap on the lit tab to stop, which leaves nowhere to read what idle is
 doing while it runs.
+
+## 97. The save leaves as a file or a code, comes back in Options or at creation, and shows who it replaces
+
+**2026-09-29 · the user, asked by Claude**
+
+Four forks settled at the start of version 2's phase A8:
+
+- **Export and import are in Options, and the creation screen offers import too.** Options is where
+  Reset Character already was, the other thing about the character as a whole; a new phone or
+  browser opens on the creation screen, and a player moving devices should not have to make a
+  character only to replace it.
+- **Loading shows a preview and asks twice**: the character in the save beside the one playing now
+  (name, class, level, zone, and when the save was made), then Replace, which arms on the first tap
+  the way Reset Character does. On the creation screen nobody is playing, so one tap loads.
+- **A save travels as a file and as a code.** The file is a download; the code is the idle-game
+  convention, text to paste through a message or a note, which moves a save from a phone to a
+  desktop without a file changing hands.
+- **The save is readable, editable JSON.** Loading checks that it is well formed, every field of the
+  right kind and every id one the game can look up, so a bad file cannot break the game; a
+  hand-edited level or purse loads. It is a solo game, and a checksum stops nobody who reads the
+  source.
+
+Claude's, alongside them:
+
+- **The code is base64 of the file's JSON**, not the JSON itself: notes and messages curl straight
+  quotes and wrap long lines, and base64 has neither to lose. The paste box reads a file's JSON as
+  well, and a wrapped code.
+- **The file names the game, the character, their level and the day**, and is indented, since a
+  file is the form somebody might open. Both forms carry `{ game, character }`, so a stray JSON file
+  is "not a save from this game" rather than "damaged".
+- **A refusal says which field is wrong** ("classId should be a class (warrior, wizard, ranger)"), for
+  whoever edited it. **Item ids and the keys of the kill, visit and mastery tallies are not checked**,
+  because the game already reads past a retired item and an honest save can hold one; refusing
+  them would turn away real saves. Ids the game looks up and would break on (class, zone, ability,
+  quest, contract, title, reforge) are.
+- **A parked night is never carried in**: the same file can be loaded any number of times, and each
+  would pay that night again.
+- **The session writes the save and the HUD does what a page does with it.** `GameContext` answers the
+  ask on the same call stack, having persisted first so the file and the browser agree, because a
+  browser grants the clipboard and a download only inside the tap that asked. The host loads a new
+  character by ending the session before saving the new one, so the one leaving cannot write itself
+  back over it.
+- **A code is shown as well as copied**, since the clipboard is refused over plain http, which is how
+  a phone reaches the dev server; and Options now scrolls, and stops above the tab bar, since a
+  landscape phone is shorter than its list.
+
+**Rejected:** import in Options only; a second tap with no preview; a file alone, as decision 88
+first put it; a checksum that refuses an edited save; a code of raw JSON; a code compressed before
+encoding, which is asynchronous in a browser for a save of a few kilobytes; checking item ids, which
+would refuse saves the game plays happily; carrying a parked night in.

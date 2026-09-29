@@ -20,6 +20,19 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/** A button named for what it does, which is also how smoke and the tests find it. */
+export function actionButton(
+  label: string,
+  action: string,
+  onClick: () => void,
+): HTMLButtonElement {
+  const node = el('button', 'hud-button', label);
+  node.type = 'button';
+  node.dataset.action = action;
+  node.addEventListener('click', onClick);
+  return node;
+}
+
 /**
  * Pins an element to one of `ui/layout.ts`'s rects.
  *

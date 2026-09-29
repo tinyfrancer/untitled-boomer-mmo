@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import { bootIntoGame, showCharacterCreate, type GameHost } from '../../src/bootFlow';
 import { unmountCharacterCreate } from '../../src/hud/CharacterCreate';
 import { createNewCharacter, saveService } from '../../src/persistence';
+import { writeSaveExport } from '../../src/persistence/saveFile';
 import { endGame, gameContext } from '../../src/world/GameContext';
 import { recordingBus, type Emitted } from '../world/harness';
 
@@ -110,6 +111,26 @@ describe('bootIntoGame', () => {
 
     // A tab closed on the spawn point still has a character to come back to.
     expect(saveService.load()).toMatchObject({ name: 'Newcomer', classId: 'warrior' });
+  });
+
+  it('loads a save instead, which becomes the save, with no character made first', () => {
+    bootIntoGame(host);
+    document.querySelector<HTMLButtonElement>('.create [data-action="open-load-save"]')?.click();
+    const box = document.querySelector<HTMLTextAreaElement>('[data-action="save-code-input"]');
+    if (!box) throw new Error('the load panel has no code box');
+    box.value = writeSaveExport('code', {
+      ...createNewCharacter('Traveller', 'ranger'),
+      level: 5,
+    }).text;
+    box.dispatchEvent(new Event('input'));
+    document.querySelector<HTMLButtonElement>('[data-action="load-save-code"]')?.click();
+    document.querySelector<HTMLButtonElement>('[data-action="confirm-load-save"]')?.click();
+
+    expect(createScreen()).toBeNull();
+    expect(document.querySelector('.hud-modal')).toBeNull();
+    expect(startZone).toHaveBeenCalledOnce();
+    expect(gameContext()?.character.state).toMatchObject({ name: 'Traveller', level: 5 });
+    expect(saveService.load()).toMatchObject({ name: 'Traveller', level: 5 });
   });
 
   it('starts nothing until a class is chosen', () => {

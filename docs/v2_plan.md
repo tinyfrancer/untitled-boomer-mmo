@@ -9,9 +9,11 @@ decision 91), **A4** (a tap on a person talks first: a greeting, their counter a
 quests; decision 92), **A5** (the skills book: a page per skill, every node and recipe with its
 mastery beside it, the mastery page gone; decision 93), **A6** (the training bar: the skill last
 trained, in the player column, following what you do and fading half a minute after; decision 94)
-**and A7** (Idle: a panel that says what idle will do and starts and stops it, the food order and
-Keep the player sets, the away report in the panel's words; decision 96). **Next: A8**, save export
-and import. Update this line as each phase lands: which phase, and which is next.
+**A7** (Idle: a panel that says what idle will do and starts and stops it, the food order and
+Keep the player sets, the away report in the panel's words; decision 96) **and A8** (the save out
+as a file or a code and back, in Options and on the creation screen, with a preview and a second
+tap before it replaces anybody; decision 97). **Next: A9**, tips. Update this line as each phase
+lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -182,8 +184,14 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   `offlineJob`, which the payout now branches on too. **The player sets the food order and marks
   food Keep** (`CharacterState.idleFood`, save version 25). The away report names the creature,
   the hours that count and the ceiling when a night reached it. Decision 96 has the forks.
-- **A8 — Save export and import.** Download the save as a file; load one back through the same
-  migration chain, with a confirmation before overwriting.
+- **A8 — Save export and import. (Landed.)** Options has **Download Save** (indented JSON, named
+  for the character, their level and the day), **Copy Save Code** (the same JSON in base64, shown
+  as well as copied) and **Load a Save**, which the creation screen offers too, so a new device
+  loads without making a character first. Loading reads a file or a pasted code through the same
+  migration chain a stored save takes and **checks every field** (`persistence/saveFile.ts`),
+  saying which one is wrong; a hand-edited but well-formed save loads. A **preview** puts the
+  character in the save beside the one playing now, and **Replace asks twice**. A parked night is
+  never carried in. Decision 97 has the forks.
 - **A9 — Tips.** A tip engine in plain TypeScript: tips fire off derived state (first raw food held,
   first full pack, first contract, first idle), each shown once, silenceable for good. Until the
   spirit is drawn in D5 they arrive as HUD toasts **in the spirit's voice**.

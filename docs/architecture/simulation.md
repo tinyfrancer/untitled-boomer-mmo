@@ -53,7 +53,8 @@ be shown before one exists.
 
 **A host is what a renderer owes the boot flow**: an `events` channel plus `startZone()`, and
 beyond that everything that has to happen around a zone without drawing it — the frame loop, the
-keyboard binding, the pointer, mounting the HUD, and the reset that ends a session. `ThreeHost` in
+keyboard binding, the pointer, mounting the HUD, the reset that ends a session, and the load that
+replaces one with a character read from a save file. `ThreeHost` in
 `render3d/start3d.ts` is the only one now, but the split is what let the renderer be replaced under
 the game, so new host duties belong there rather than leaking into the world or the HUD.
 
@@ -227,6 +228,29 @@ indirection is the intended swap point for a future networked backend. `Characte
 `version` field: when you change the shape, bump `CHARACTER_STATE_VERSION` and add a step to
 `persistence/migrations.ts` so existing saves upgrade on load instead of being wiped — a save
 with no chain of steps to the current version is dropped.
+
+**A save travels as a file or a code** (decision 97, `persistence/saveFile.ts`): one envelope,
+`{ game, character }`, written as indented JSON for a file and as base64 of the same JSON for a
+code, since a code goes through notes and messages that curl a straight quote and wrap a long line.
+Taking one away is an ask and an answer on the HUD channel: `GameContext` hears
+`SAVE_EXPORT_REQUESTED_EVENT`, persists (so what leaves is where the player stands, and the browser
+holds the same), and answers `SAVE_EXPORTED_EVENT` on the same call stack, because the HUD does
+what a page does with it — a download, the clipboard — and a browser grants both only inside the
+tap. The session answers rather than the host because a save is the whole character and outlives
+every zone; it is the session's one subscription, cleared in `destroy()` with the world's.
+
+Bringing one back is `readSave`: either form, the envelope's `game` (so "not a save" and "a damaged
+save" are two different things to be told), the version (newer is refused, older runs **the same
+migration chain** a stored save does), then **a check of every field** against `FIELDS`, a record
+over `CharacterState`'s keys so a new field is a compile error there. Ids are checked where the game
+looks one up and would break on one it cannot find — class, zone, ability, quest, contract, title,
+reforge — and **item ids and the tallies' keys are not**, since the game already reads past a
+retired item (`tests/staleIds.ts`) and an honest save can hold one. A parked night is never carried
+in: the same file can be loaded again and again. The HUD reads the save, because its preview needs
+the character before anything is decided; the host is handed one already checked
+(`SAVE_IMPORT_REQUESTED_EVENT`) and does a reset that ends somewhere else — `endGame()` **before**
+the new character is saved, so the one leaving has no frame and no unload left to write itself back
+over it, then `beginLoadedCharacter` in `bootFlow.ts`, which the creation screen calls too.
 
 `CharacterState.position` is **honoured on load**: a save resumes at the spot it names, and only
 when `zoneId` matches the zone being entered. `null` means "no particular spot" — a new character,

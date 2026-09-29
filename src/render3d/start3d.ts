@@ -1,21 +1,34 @@
 import { SoundBoard } from '../audio/SoundBoard';
 import { loadSoundSettings, saveSoundSettings, type SoundSettings } from '../audio/settings';
 import { manualLoopRequested } from '../config/flags';
-import { bootIntoGame, showCharacterCreate, type GameHost } from '../bootFlow';
+import {
+  beginLoadedCharacter,
+  bootIntoGame,
+  showCharacterCreate,
+  type GameHost,
+} from '../bootFlow';
 import { hudMounted, mountHud, unmountHud } from '../hud/Hud';
 import { uiRoot } from '../hud/dom';
 import { bindKeyboard } from '../systems/InputState';
 import {
   CONTEXT_MENU_REQUESTED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
+  SAVE_IMPORT_REQUESTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import { createEventBus } from '../world/eventBus';
-import { bindUnloadPersist, gameContext, resetGame, type GameContext } from '../world/GameContext';
+import {
+  bindUnloadPersist,
+  endGame,
+  gameContext,
+  resetGame,
+  type GameContext,
+} from '../world/GameContext';
 import { LONG_PRESS_MS } from '../ui/gestures';
 import { FrameTimer } from './frameTimer';
 import { OrbitGesture } from './orbit';
 import { ZoneView3D } from './ZoneView3D';
+import type { CharacterState } from '../persistence';
 import type { DebugView, DrawnCounts } from '../types/debugView';
 import type { EventBus } from '../world/worldEvents';
 import type { ZoneWorld } from '../world/ZoneWorld';
@@ -138,6 +151,7 @@ class ThreeHost implements GameHost {
     this.unbindKeyboard = bindKeyboard(context.input, window);
     this.unbindUnloadPersist = bindUnloadPersist(context, window);
     this.events.on(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter);
+    this.events.on(SAVE_IMPORT_REQUESTED_EVENT, this.loadCharacter);
     // An observer rather than a window resize event, for the same reason the
     // HUD uses one: an iOS toolbar retracting changes the box with no resize
     // to hear.
@@ -317,6 +331,7 @@ class ThreeHost implements GameHost {
       this.frameHandle = null;
     }
     this.events.off(RESET_CHARACTER_REQUESTED_EVENT, this.resetCharacter);
+    this.events.off(SAVE_IMPORT_REQUESTED_EVENT, this.loadCharacter);
     const canvas = this.view?.canvas;
     canvas?.removeEventListener('pointerdown', this.handlePointerDown);
     canvas?.removeEventListener('pointermove', this.handlePointerMove);
@@ -353,6 +368,18 @@ class ThreeHost implements GameHost {
     this.stopZone();
     unmountHud();
     showCharacterCreate(this);
+  };
+
+  /**
+   * A reset that starts again as somebody rather than as nobody. The session is
+   * ended before the new character is saved, so the one leaving has no frame
+   * and no unload left to write itself back over the one arriving.
+   */
+  private readonly loadCharacter = (character: CharacterState): void => {
+    endGame();
+    this.stopZone();
+    unmountHud();
+    beginLoadedCharacter(this, character);
   };
 
   // ---------------------------------------------------------------------------

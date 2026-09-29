@@ -8,6 +8,9 @@ import { AwayReportModal } from '../../src/hud/AwayReportModal';
 import { ContextMenu } from '../../src/hud/ContextMenu';
 import { InspectModal } from '../../src/hud/InspectModal';
 import { OptionsModal } from '../../src/hud/OptionsModal';
+import { LoadSaveModal } from '../../src/hud/LoadSaveModal';
+import { copyText, downloadFile } from '../../src/hud/saveTransfer';
+import { writeSaveExport } from '../../src/persistence/saveFile';
 import { DEFAULT_SOUND } from '../../src/audio/settings';
 import type { Overlay } from '../../src/hud/Overlay';
 import { BankModal } from '../../src/hud/BankModal';
@@ -69,6 +72,9 @@ import {
   COUNTER_CLOSED_EVENT,
   COUNTER_REQUESTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
+  SAVE_EXPORT_REQUESTED_EVENT,
+  SAVE_EXPORTED_EVENT,
+  SAVE_IMPORT_REQUESTED_EVENT,
   BUY_ITEM_REQUESTED_EVENT,
   STATION_OPENED_EVENT,
   MASTERY_CHANGED_EVENT,
@@ -78,6 +84,13 @@ import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/Offline
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
 import type { NpcId, SkillId } from '../../src/types/ids';
+
+// A page's downloads and clipboard, which jsdom has neither of. What the HUD
+// hands them is what is asserted.
+vi.mock('../../src/hud/saveTransfer', () => ({
+  downloadFile: vi.fn(),
+  copyText: vi.fn(async () => true),
+}));
 
 /**
  * jsdom lays nothing out, so every element measures zero — which the HUD reads
@@ -406,6 +419,108 @@ describe("the options menu's sound", () => {
     slider.value = '40';
     slider.dispatchEvent(new Event('input'));
     expect(sent()).toEqual([{ muted: false, volume: 0.4 }]);
+  });
+});
+
+/**
+ * The save in Options (decision 97): the HUD asks the session for it and does
+ * what a page does with the answer, and loading one opens a panel that names
+ * who is playing now.
+ */
+describe("the options menu's save", () => {
+  const action = (name: string): HTMLButtonElement => {
+    const found = parent.querySelector<HTMLButtonElement>(`[data-action="${name}"]`);
+    if (!found) throw new Error(`no ${name}`);
+    return found;
+  };
+  const sent = (event: string) => emitted.filter((e) => e.event === event).map((e) => e.args);
+  // The session's half, which answers on the same call stack the ask came in on.
+  const answerAsTheSession = (character: CharacterState): void => {
+    events.on(SAVE_EXPORT_REQUESTED_EVENT, (kind) => {
+      events.emit(SAVE_EXPORTED_EVENT, writeSaveExport(kind, character));
+    });
+  };
+
+  beforeEach(() => {
+    vi.mocked(downloadFile).mockClear();
+    vi.mocked(copyText).mockClear();
+  });
+
+  it('asks the session for a file and hands its answer to the downloads', () => {
+    const character = mount();
+    answerAsTheSession(character);
+    menuItem('options');
+    action('download-save').click();
+
+    expect(sent(SAVE_EXPORT_REQUESTED_EVENT)).toEqual([['file']]);
+    const [fileName, text] = vi.mocked(downloadFile).mock.calls[0] ?? [];
+    expect(fileName).toMatch(/^untitled-boomer-mmo-tester-level-1-.*\.json$/);
+    expect(JSON.parse(text ?? '').character.name).toBe('Tester');
+    expect(parent.textContent).toContain(`Sent to your downloads: ${fileName}`);
+  });
+
+  it('copies a code, and shows it too for when the clipboard says no', async () => {
+    const character = mount();
+    answerAsTheSession(character);
+    menuItem('options');
+    action('copy-save-code').click();
+
+    const code = writeSaveExport('code', character).text;
+    expect(vi.mocked(copyText)).toHaveBeenCalledWith(code);
+    const box = parent.querySelector<HTMLTextAreaElement>('[data-action="save-code-output"]');
+    expect(box?.hidden).toBe(false);
+    expect(box?.value).toBe(code);
+    await vi.waitFor(() => expect(parent.textContent).toContain('Copied.'));
+  });
+
+  it('says to copy by hand when the clipboard refuses', async () => {
+    const character = mount();
+    answerAsTheSession(character);
+    vi.mocked(copyText).mockResolvedValueOnce(false);
+    menuItem('options');
+    action('copy-save-code').click();
+    await vi.waitFor(() => expect(parent.textContent).toContain('Copy the code below'));
+  });
+
+  it('opens the load panel in place of the menu, naming who is playing now', () => {
+    mount({ level: 4 });
+    events.emit(ZONE_ENTERED_EVENT, 'beach');
+    menuItem('options');
+    action('open-load-save').click();
+
+    expect(parent.querySelector('[data-action="reset-character"]')).toBeNull();
+    expect(parent.textContent).toContain('It replaces Tester.');
+    const box = parent.querySelector<HTMLTextAreaElement>('[data-action="save-code-input"]');
+    if (!box) throw new Error('no code box');
+    box.value = writeSaveExport('code', createNewCharacter('Aria', 'ranger')).text;
+    box.dispatchEvent(new Event('input'));
+    action('load-save-code').click();
+    expect(parent.textContent).toContain('Warrior · Level 4 · Beach');
+  });
+
+  it('asks the host to load the character once the second tap confirms it', () => {
+    mount();
+    menuItem('options');
+    action('open-load-save').click();
+    const box = parent.querySelector<HTMLTextAreaElement>('[data-action="save-code-input"]');
+    if (!box) throw new Error('no code box');
+    box.value = writeSaveExport('code', createNewCharacter('Aria', 'ranger')).text;
+    box.dispatchEvent(new Event('input'));
+    action('load-save-code').click();
+    action('confirm-load-save').click();
+    action('confirm-load-save').click();
+
+    const [[loaded] = []] = sent(SAVE_IMPORT_REQUESTED_EVENT);
+    expect(loaded).toMatchObject({ name: 'Aria', classId: 'ranger' });
+    expect(modals()).toHaveLength(0);
+  });
+
+  it('closes on Escape like the menu it came from', () => {
+    mount();
+    menuItem('options');
+    action('open-load-save').click();
+    press('Escape');
+    expect(modals()).toHaveLength(0);
   });
 });
 
@@ -1859,9 +1974,12 @@ describe('every overlay has the same lifecycle', () => {
     new OptionsModal({
       sound: DEFAULT_SOUND,
       onSoundChanged: noop,
+      onExport: noop,
+      onOpenLoad: noop,
       onResetCharacter: noop,
       onClose: onClosed,
     }),
+    new LoadSaveModal({ current: null, onLoad: noop, onClose: onClosed }),
     new SlotPicker('helmet', [], new DOMRect(), PHONE, noop, onClosed),
     new AwayReportModal(REPORT, onClosed),
     new ShopModal({ onBuy: noop, onSell: noop, onDismiss: noop }, onClosed),
