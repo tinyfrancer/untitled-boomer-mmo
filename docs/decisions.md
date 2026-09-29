@@ -2208,3 +2208,38 @@ mock-up; wiring armour to what the player wears now, which is B4's layered figur
 sprite per class, armour kind and tier cannot mix a steel helm with studded legs); a door drawn
 narrower than the collision's gap, which would put wall where a player walks through; and a
 redesign of the town's layout, which the user put off.
+
+## 105. A new character starts plain, the grand looks are armour worn later, and a figure is one silhouette
+
+**2026-09-29 · the user, judging B2's third pass; Claude's under it**
+
+The user's third look: the armour looks good, but **a new character's default outfit should not
+look as cool** as the three classes had been drawn, and **those looks can be armour for later**.
+The figures **seemed a little disjointed**, so take another pass at the adventurers to clean them
+up. Asked whether the wizard should wear a hat or a hood: **both, as options**. B3 waits on this
+(the user: answer the first point, then see).
+
+What Claude made of it:
+
+- **A class starts plain**: bare-headed, in a tunic or a robe of its colour, carrying what it
+  fights with, which is what a character sheet with an empty helmet, chest and pants slot already
+  said. The warrior's blue tunic and dark breeches, the wizard's plain violet robe tied with a cord
+  and an apprentice's staff of bare wood, the ranger's green tunic with the quiver slung across it.
+  Zero to hero (pillar 2) needs a zero to climb from, and a starting look that is already the best
+  in the game has nowhere to go.
+- **What they wore becomes the lookbook's later looks**: the gambeson, spaulders and cloak; the
+  violet robe trimmed in brass under a hood, and under a pointed hat, with the crystal staff; the
+  hood and mantle over a leather jerkin. Plate is worn over the gambeson and under the cloak;
+  studded leather over a starting tunic, as the first armour a warrior buys. The robe comes in its
+  tiers under a hat and under a hood, the hood and the cloth hat being headgear the game has.
+- **The figure is one silhouette.** It read as a stack of blocks for three reasons, each mended: the
+  torso was a straight box, and is a tunic narrowing to a belted waist with its skirt over the
+  thighs; each arm stood off the body across a clear pixel the compiler outlined into a line, and
+  now hangs against it, parted by its own inner edge a step darker; and light breeches cut a band
+  between the coat and the boots, where dark ones now run into them. The armour was refitted to the
+  new silhouette rather than laid over the old one.
+
+**Rejected:** keeping the grand looks as the start and adding plainer ones nobody would wear;
+choosing between the hat and the hood, which the user asked to keep both of; drawing each class
+with its own face or hair, which nobody asked for and which B4's layered figure can offer as a
+choice; and a thicker outline round the arms, which is the disjointed look itself.

@@ -173,7 +173,11 @@ drew the first figures, to **heroic proportions**: a head over a body three time
 lean sewer rat with red eyes rather than a mouse.
 
 **Every person is one figure, dressed and armed** (`sprites/figure.ts`, decision 104): a head, a
-body without arms, legs by stance, and **two arms that are parts of their own, in poses**. A pose
+body without arms, legs by stance, and **two arms that are parts of their own, in poses**. **The
+body is one silhouette every garment is drawn on** (decision 105): a tunic that narrows to a
+belted waist and whose skirt comes down over the thighs, the legs going into it; an arm hangs
+against it and is parted from it by its own inner edge a step darker, not by an outline, since a
+clear pixel between arm and body is outlined into a line that draws the figure as sticks. A pose
 knows where its hand closes, and a thing held (a sword, a staff, a bow, an arrow) knows which of its
 pixels the hand closes on, so the two are laid together there: a sword comes out of the fist in
 every frame, a wind-up lifts the arm that holds it, and a blow carries the blade across with the
@@ -182,21 +186,27 @@ hand that is one. Facing away, what is held out ahead is beyond the body and dra
 sideways, the far arm is the near one's pose a shoulder back and a step darker, drawn behind the
 body. A figure's grids name **roles, not ramps** (the garment, the cloak, leather, metal, wood, a
 glow, gear), and a sprite's `Materials` says which ramp each role is, so one arm is a blue, violet
-or linen sleeve; the legend is read off the keys the frames use. `sprites/people.ts` dresses it four
-ways: **the warrior** (a gambeson, spaulders, a crimson cloak, the sword carried low), **the
-wizard** (a hooded robe in violet trimmed with brass, a staff taller than they are whose crystal
-flares as a spell leaves it, the other palm lit to cast), **the ranger** (a forest-green hood and
-mantle over a leather jerkin and linen sleeves, a quiver on the back, a bow in the left hand drawn
-to the cheek) and **the shopkeeper** (the coat in ochre under a leather apron). A figure plays
-`cast` and `shoot` where it has drawn them, and swings where it has not.
+or linen sleeve; the legend is read off the keys the frames use. **A class starts plain**
+(`sprites/people.ts`, decision 105), since zero to hero has to start somewhere: bare-headed, in a
+tunic or a robe of its colour, carrying what it fights with. **The warrior** in a blue tunic and
+dark breeches with the rusty sword carried low; **the wizard** in a plain violet robe tied with a
+cord, with an apprentice's staff of bare wood that a spell still flares from, the other palm lit
+to cast; **the ranger** in a green tunic with a quiver slung across it and a bow in the left hand
+drawn to the cheek; and **the shopkeeper** in ochre under a leather apron. A figure plays `cast`
+and `shoot` where it has drawn them, and swings where it has not.
 
-**Armour is drawn once, in the neutral `tier` ramp, and a tier is a recolour of it**
-(`sprites/armour.ts`): plate (a breastplate with a lit ridge, faulds, round pauldrons, a nasal helm,
-and the arms and legs to gauntlets and sabatons), studded leather (a jerkin, a strap skirt, guards
-and a cap) and a cloth robe under a pointed hat, each the figure's own dress with pieces laid over
-it. They are the **`LOOKBOOK`**, drawn for the user to judge before B4 wires a figure to what it has
-on: held by the sprite tests with everything else, and not in `SPRITES`, so the atlas the game
-compiles at boot does not carry figures nothing wears yet.
+**What is worn later is the `LOOKBOOK`** (`sprites/armour.ts`), drawn for the user to judge before
+B4 wires a figure to what it has on: held by the sprite tests with everything else, and not in
+`SPRITES`, so the atlas the game compiles at boot does not carry figures nothing wears yet. Two
+kinds. **Later looks** are what the classes wore before they started plain: the warrior's quilted
+gambeson, leather spaulders and crimson cloak; the wizard's violet robe trimmed in brass, **under a
+hood or a pointed hat** (both are headgear the game has: a hood and a cloth hat), with a staff
+whose crystal flares; the ranger's hood and mantle over a leather jerkin. **Armour by tier is drawn
+once, in the neutral `tier` ramp, and a tier is a recolour of it**: plate (a breastplate with a lit
+ridge, faulds, round pauldrons, a nasal helm, and the arms and legs to gauntlets and sabatons) over
+the gambeson and under the cloak, studded leather (a jerkin, a strap skirt, guards and a cap) over a
+starting tunic, the hunter's leathers, and a cloth robe under a hat or a hood, each the figure's own
+dress with pieces laid over it and fitted to its silhouette.
 
 **Who is drawn with what** is one file (`art/cast.ts`): a table a class, a person and a creature,
 anything not in it falling back on its kind's placeholder, a creature's kind read off its `shape`.

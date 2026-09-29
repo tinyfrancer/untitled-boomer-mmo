@@ -19,10 +19,12 @@ four leftovers mended in place, a grind pass added to Part C as C10, Part B kept
 budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101) **and B2** (the
 checkpoint slice: town in pixel art behind `?renderer=2d`, with edges between grounds, the warrior,
 the shopkeeper, the rat and a building kit drawn for real; decision 102; redrawn heroic and
-weathered after the user's first look found it "farmvilley", decision 103; and after their second,
-which kept the style, a figure whose arms hold what it carries, the wizard and the ranger, an armour
-lookbook, and a town that says what each place is, decision 104). **Next: the user judges the third
-pass of B2's slice**, and B3 if it holds up; if it does not, the art source is re-decided before B3
+weathered after the user's first look found it "farmvilley", decision 103; after their second, which
+kept the style, a figure whose arms hold what it carries, the wizard and the ranger, an armour
+lookbook, and a town that says what each place is, decision 104; and after their third, plain
+starting outfits with the grand looks kept as armour for later, a hat and a hood both, and a figure
+cleaned up into one silhouette, decision 105). **Next: the user judges the fourth pass of B2's
+figures**, and B3 once they hold up; if they do not, the art source is re-decided before B3
 (decision 81). Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
@@ -291,6 +293,10 @@ discovered at the end.
   **armour drawn once in the `tier` ramp** and recoloured per tier, as a lookbook B4 builds on;
   doorways drawn as rooms seen into, a trade sign by every door somebody works behind, roofs whose
   light falls away down the slope, and the signpost drawn.
+  **The third look** liked the armour, and asked for a plainer start and a cleaner figure (decision
+  105): each class now starts bare-headed in a tunic or robe of its colour, what they wore is armour
+  for later in the lookbook (the wizard's under a hood or a hat, both kept), and the figure is one
+  silhouette, a tunic tapering to a belted waist with the arms hanging against it.
 - **B3 — Every zone drawable, and the switch.** All terrain and all three settings (the lantern
   underground), water and ground scatter. Anything not yet drawn shows a placeholder sprite. **2D
   becomes the default**; 3D stays reachable for one phase as a fallback.
