@@ -92,7 +92,10 @@ why Part A exists and comes first.
   `docs/architecture/` file for what moved. Part of the phase, not paperwork after it.
 - **Open questions are asked when their phase starts**, not before. Each phase lists its own.
 - **Production shows work in progress** (decision 83). Every merge deploys, so every phase must
-  leave the game playable, even where it is half-converted.
+  leave the game playable, even where it is half-converted. Nothing but a merge deploys.
+- **CI and deploys are metered** (decision 95): 2,000 Actions minutes a month, and 100 Vercel
+  deployments a day. A phase is pushed once its gates pass locally, not commit by commit, and its
+  PR opened when it is done; a draft runs the gates alone, and marking it ready runs smoke.
 - **Saves**: normal migrations until **C1**, which starts the version 2 save era and retires every
   older save (decision 82). From C1 on, migrations are normal again, so a test character survives
   the rest of the release.
