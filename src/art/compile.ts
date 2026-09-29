@@ -158,6 +158,20 @@ export function compileFrame(
   return pixels;
 }
 
+/**
+ * How tall a sprite is drawn, from its feet to the top of what is drawn in its
+ * standing frame: where a nameplate hangs and how tall a thumb's target is,
+ * rather than the empty air at the top of a frame a sword swings through.
+ */
+export function drawnHeight(def: SpriteDef): number {
+  const frames =
+    def.animations.idle ?? def.animations.still ?? def.animations.loop ?? def.animations.play;
+  if (!frames) return def.height;
+  const grid: Grid | undefined = isFacingFrames(frames) ? frames.down[0] : frames[0];
+  const top = grid?.findIndex((row) => row.replaceAll(TRANSPARENT, '') !== '') ?? -1;
+  return top < 0 ? def.height : def.height - top;
+}
+
 export interface CompiledFrame {
   key: string;
   width: number;
