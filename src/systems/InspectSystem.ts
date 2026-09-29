@@ -418,7 +418,7 @@ export function describeItem(itemId: ItemId, context: ItemUseContext = {}): Insp
   if (food) {
     lines.push({
       label: 'Restores',
-      value: `${food.healAmount} HP over ${Math.round(food.healDurationMs / 1000)}s`,
+      value: `${food.healAmount} Health over ${Math.round(food.healDurationMs / 1000)}s`,
     });
   }
 

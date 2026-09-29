@@ -784,6 +784,7 @@ class Hud {
         agility: stats.agility,
         attackPower: stats.attackPower,
         attackStat: stats.attackStat,
+        armor: stats.armor,
       },
       skills: this.model.skills,
       level: this.model.level,

@@ -1,11 +1,5 @@
-import { ITEMS, getEquipmentBonuses, type EquipmentBonuses } from '../data/items';
-import {
-  REFORGES,
-  REFORGE_IDS,
-  REFORGE_STONE_ITEM_ID,
-  STAT_WEIGHTS,
-  type ReforgeStatId,
-} from '../data/reforges';
+import { BONUS_NAMES, ITEMS, getEquipmentBonuses, type EquipmentBonuses } from '../data/items';
+import { REFORGES, REFORGE_IDS, REFORGE_STONE_ITEM_ID, STAT_WEIGHTS } from '../data/reforges';
 import type { ItemId, ReforgeId } from '../types/ids';
 import type { Inventory } from './InventorySystem';
 
@@ -206,18 +200,8 @@ export function rollReforge(itemId: ItemId, rng: () => number = Math.random): Re
 /** What a reforge did, in the words the toast and the bag row both use. */
 export function describeReforge(reforgeId: ReforgeId): string {
   const { take, give, from, to } = REFORGES[reforgeId];
-  return `-${take} ${STAT_LABELS[from]}, +${give} ${STAT_LABELS[to]}`;
+  return `-${take} ${BONUS_NAMES[from]}, +${give} ${BONUS_NAMES[to]}`;
 }
-
-/** The short names the bag already uses for these, kept in step with them. */
-const STAT_LABELS: Record<ReforgeStatId, string> = {
-  attackPower: 'ATK',
-  armor: 'ARM',
-  health: 'HP',
-  strength: 'STR',
-  intellect: 'INT',
-  agility: 'AGI',
-};
 
 /** What a reforged piece is called: "Keen Steel Helmet". */
 export function reforgedName(itemId: ItemId, reforgeId: ReforgeId | null | undefined): string {

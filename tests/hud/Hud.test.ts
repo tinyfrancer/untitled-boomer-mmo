@@ -21,6 +21,8 @@ import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { recordingBus, type Emitted } from '../world/harness';
 import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSystem';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
+import { damageReduction } from '../../src/systems/CombatSystem';
+import { NO_GEAR, type Gear } from '../../src/systems/InventorySystem';
 import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
 import { SHOP_STOCK } from '../../src/data/shop';
@@ -866,6 +868,30 @@ describe('the quiver', () => {
     const dry = parent.querySelector('[data-sheet="character"]')?.textContent ?? '';
     expect(dry).toContain('Attack 6 (Agility)');
     expect(dry).toContain('Worn Quiver — empty');
+  });
+});
+
+describe('the character sheet’s armour', () => {
+  const sheet = (): string => parent.querySelector('[data-sheet="character"]')?.textContent ?? '';
+
+  // Every piece's largest number went into a total no panel showed; the sheet
+  // shows it with what it buys, off the curve a hit is actually cut by.
+  it('adds up what is worn and says the share of a hit it stops', () => {
+    const gear: Gear = { ...createNewCharacter('Tester', 'warrior').gear, helmet: 'brown-helmet' };
+    mount({ gear });
+    const { armor } = computeEffectiveStats('warrior', gear, 1);
+    const share = Math.round(damageReduction(armor) * 100);
+
+    expect(armor).toBeGreaterThan(0);
+    expect(sheet()).toContain(`Armour ${armor} (stops ${share}% of a hit)`);
+    // The helmet's row says the same stats in the same words, not ARM and HP.
+    expect(sheet()).toContain('+2 Armour, +1 Health, Leather');
+  });
+
+  it('says a bare total rather than a share of nothing', () => {
+    mount({ gear: NO_GEAR });
+    expect(sheet()).toContain('Armour 0');
+    expect(sheet()).not.toContain('stops');
   });
 });
 

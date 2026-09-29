@@ -244,6 +244,6 @@ describe('describing an item', () => {
     const panel = describeItem('cooked-crab');
 
     expect(panel.subtitle).toBe('Food');
-    expect(valueOf(panel, 'Restores')).toBe('25 HP over 10s');
+    expect(valueOf(panel, 'Restores')).toBe('25 Health over 10s');
   });
 });
