@@ -224,6 +224,10 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
     (value) => isRecord(value) && listOf(isString)(value.order) && listOf(isString)(value.keep),
     'an order and a keep list',
   ],
+  tips: [
+    (value) => isRecord(value) && listOf(isString)(value.heard) && typeof value.off === 'boolean',
+    'a list of tips heard, and whether tips are off',
+  ],
   quests: [
     (value) =>
       isRecord(value) &&

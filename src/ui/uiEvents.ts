@@ -8,6 +8,7 @@ import type {
   NpcId,
   QuestId,
   RecipeId,
+  TipId,
   TitleId,
   ZoneId,
 } from '../types/ids';
@@ -28,6 +29,7 @@ import type { InspectPanel } from '../systems/InspectSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
+import type { OfferedTip } from '../systems/TipSystem';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -188,6 +190,14 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 export const IDLE_FOOD_MOVE_REQUESTED_EVENT = 'idle-food-move-requested';
 export const IDLE_FOOD_KEEP_REQUESTED_EVENT = 'idle-food-keep-requested';
 export const IDLE_FOOD_CHANGED_EVENT = 'idle-food-changed';
+// The spirit's tips (decision 98). The world offers one at a time, carrying the
+// line already written, since what it says is read off the character; the card
+// answers with the tip heard. On or off is asked for, saying which, from the
+// card's No more tips and from Options, and the answer is what the save holds.
+export const TIP_OFFERED_EVENT = 'tip-offered';
+export const TIP_HEARD_EVENT = 'tip-heard';
+export const TIPS_SET_REQUESTED_EVENT = 'tips-set-requested';
+export const TIPS_STATE_CHANGED_EVENT = 'tips-state-changed';
 // What a camp earned while the tab was closed is not an event: the load that
 // resolves a parked session is necessarily earlier than the HUD, so it queues
 // on the GameContext and the HUD drains it on mount.
@@ -457,6 +467,10 @@ export interface UiEventMap {
   [IDLE_FOOD_MOVE_REQUESTED_EVENT]: [itemId: ItemId, move: IdleFoodMove];
   [IDLE_FOOD_KEEP_REQUESTED_EVENT]: [itemId: ItemId, keep: boolean];
   [IDLE_FOOD_CHANGED_EVENT]: [choice: IdleFoodChoice];
+  [TIP_OFFERED_EVENT]: [tip: OfferedTip];
+  [TIP_HEARD_EVENT]: [tipId: TipId];
+  [TIPS_SET_REQUESTED_EVENT]: [on: boolean];
+  [TIPS_STATE_CHANGED_EVENT]: [on: boolean];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
   [UNLOCKED_ZONES_CHANGED_EVENT]: [zoneIds: ZoneId[]];
   [VISITS_CHANGED_EVENT]: [visits: ZoneVisits];

@@ -9,6 +9,7 @@ import {
   pickerPosition,
   playerColumnBottom,
   sheetRect,
+  tipCardRect,
   toastTop,
   topRowBottom,
   type HudLayout,
@@ -405,5 +406,41 @@ describe('menuPosition', () => {
     const { x, y } = menuPosition({ x: 10, y: 10 }, BOX, tight);
     expect(x).toBe(0);
     expect(y).toBe(0);
+  });
+});
+
+describe('tipCardRect', () => {
+  const TALLEST = {
+    hasMana: true,
+    hasQuiver: true,
+    hasTitle: true,
+    hasTraining: true,
+    hasEffects: true,
+  };
+
+  // Between the corners wherever the gap is wide enough to read in, and never
+  // over either of them.
+  it('sits between the two top corners on a landscape phone and a desktop', () => {
+    for (const viewport of [PHONE_LANDSCAPE, DESKTOP]) {
+      const layout = layoutFor(viewport, TALLEST);
+      const card = tipCardRect(layout, viewport.width);
+      expect(card.y).toBe(layout.margin);
+      expect(card.x).toBeGreaterThanOrEqual(layout.playerColumn.x + layout.playerColumn.width);
+      expect(card.x + card.width).toBeLessThanOrEqual(layout.targetFrame.x);
+    }
+  });
+
+  // At a portrait phone's width the two corners all but meet, so the card
+  // drops below the taller of them, across the screen and inside its margins.
+  it('drops below the whole top row on a portrait phone', () => {
+    for (const viewport of [PHONE_PORTRAIT, SMALL_PHONE]) {
+      for (const options of [{}, TALLEST]) {
+        const layout = layoutFor(viewport, options);
+        const card = tipCardRect(layout, viewport.width);
+        expect(card.y).toBeGreaterThan(topRowBottom(layout));
+        expect(card.x).toBeGreaterThanOrEqual(layout.margin);
+        expect(card.x + card.width).toBeLessThanOrEqual(viewport.width - layout.margin);
+      }
+    }
   });
 });

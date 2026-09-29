@@ -79,6 +79,10 @@ import {
   STATION_OPENED_EVENT,
   MASTERY_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
+  TIP_HEARD_EVENT,
+  TIP_OFFERED_EVENT,
+  TIPS_SET_REQUESTED_EVENT,
+  TIPS_STATE_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -419,6 +423,97 @@ describe("the options menu's sound", () => {
     slider.value = '40';
     slider.dispatchEvent(new Event('input'));
     expect(sent()).toEqual([{ muted: false, volume: 0.4 }]);
+  });
+});
+
+/**
+ * The spirit's tip card (decision 98): shown when the world offers one, waiting
+ * for a tap, holding while something covers the playfield, and answering with
+ * the tip heard or with tips off.
+ */
+describe("the spirit's tips", () => {
+  const TIP = { tipId: 'raw-food', text: "Rat Meat won't mend you raw." } as const;
+  const card = (): HTMLElement => {
+    const found = parent.querySelector<HTMLElement>('.hud-tip');
+    if (!found) throw new Error('no tip card');
+    return found;
+  };
+  const showing = (): boolean => !card().classList.contains('hud-hidden');
+  const answer = (action: string): void =>
+    card().querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.click();
+  const sent = (event: string) => emitted.filter((e) => e.event === event).map((e) => e.args);
+  // Overlays are heard coming and going through a MutationObserver, whose
+  // callbacks run a microtask after the tree changes.
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('shows the tip the world offers, and hears it back on Got it', () => {
+    mount();
+    expect(showing()).toBe(false);
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    expect(showing()).toBe(true);
+    expect(card().textContent).toContain(TIP.text);
+
+    answer('tip-heard');
+    expect(sent(TIP_HEARD_EVENT)).toEqual([['raw-food']]);
+    expect(showing()).toBe(false);
+  });
+
+  it('asks for tips off on No more tips, and goes', () => {
+    mount();
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    answer('tips-off');
+    expect(sent(TIPS_SET_REQUESTED_EVENT)).toEqual([[false]]);
+    expect(sent(TIP_HEARD_EVENT)).toEqual([]);
+    expect(showing()).toBe(false);
+  });
+
+  it('waits out a sheet on a phone, and an overlay anywhere', async () => {
+    mount();
+    tab('inventory').click();
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    expect(showing()).toBe(false);
+    tab('inventory').click();
+    expect(showing()).toBe(true);
+
+    menuItem('options');
+    await settle();
+    expect(showing()).toBe(false);
+    press('Escape');
+    await settle();
+    expect(showing()).toBe(true);
+  });
+
+  // A roomy screen's sheet stands in its own column under the top row, and
+  // the character sheet is open there from the start.
+  it('does not wait out a sheet on a roomy screen', () => {
+    setViewport(DESKTOP.width, DESKTOP.height);
+    mount();
+    expect(openSheets()).toEqual(['character']);
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    expect(showing()).toBe(true);
+  });
+
+  it('shows nothing while tips are off, from the save or from the world', () => {
+    mount({ tips: { heard: [], off: true } });
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    expect(showing()).toBe(false);
+
+    events.emit(TIPS_STATE_CHANGED_EVENT, true);
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    expect(showing()).toBe(true);
+    events.emit(TIPS_STATE_CHANGED_EVENT, false);
+    expect(showing()).toBe(false);
+  });
+
+  it('puts the switch in Options, on what the save says', () => {
+    mount({ tips: { heard: [], off: true } });
+    menuItem('options');
+    const button = parent.querySelector<HTMLButtonElement>('[data-action="toggle-tips"]');
+    expect(button?.textContent).toBe('Tips: Off');
+    button?.click();
+    expect(button?.textContent).toBe('Tips: On');
+    expect(button?.getAttribute('aria-pressed')).toBe('true');
+    expect(sent(TIPS_SET_REQUESTED_EVENT)).toEqual([[true]]);
   });
 });
 
@@ -1974,6 +2069,8 @@ describe('every overlay has the same lifecycle', () => {
     new OptionsModal({
       sound: DEFAULT_SOUND,
       onSoundChanged: noop,
+      tipsOn: true,
+      onTipsChanged: noop,
       onExport: noop,
       onOpenLoad: noop,
       onResetCharacter: noop,

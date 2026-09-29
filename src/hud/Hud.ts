@@ -13,6 +13,7 @@ import { QuestTracker } from './QuestTracker';
 import { SkillsSheet } from './SkillsSheet';
 import { TabBar } from './TabBar';
 import { TargetFrame } from './TargetFrame';
+import { TipCard } from './TipCard';
 import { Toast } from './Toast';
 import type { Sheet } from './Sheet';
 import { el } from './dom';
@@ -47,7 +48,7 @@ import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
-import { hudLayout } from '../ui/layout';
+import { hudLayout, tipCardRect } from '../ui/layout';
 import { THEME } from '../ui/theme';
 import type { TabId } from '../ui/tabs';
 import {
@@ -109,6 +110,10 @@ import {
   type UiEventName,
   SAVE_EXPORTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
+  TIP_HEARD_EVENT,
+  TIP_OFFERED_EVENT,
+  TIPS_SET_REQUESTED_EVENT,
+  TIPS_STATE_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
@@ -203,6 +208,9 @@ interface HudModel {
   zoneId: ZoneId;
   afkActive: boolean;
   idleFood: IdleFoodChoice;
+  // Whether the spirit's tips are on, for the options menu's switch. Seeded
+  // from the save, where it is kept, and kept current by the world.
+  tipsOn: boolean;
 }
 
 /**
@@ -232,6 +240,7 @@ class Hud {
   private readonly actionBar: ActionBar;
   private readonly channelBar = new ChannelBar();
   private readonly toast = new Toast();
+  private readonly tipCard: TipCard;
   private readonly tabBar: TabBar;
 
   private readonly characterSheet: CharacterSheet;
@@ -247,6 +256,9 @@ class Hud {
   private readonly overlays: OverlayHost;
   private readonly unbindKeys: () => void;
   private resizeObserver: ResizeObserver | null = null;
+  // Overlays come and go as children of the root, each closing itself; this is
+  // how the tip card hears that one has, without every one of them saying so.
+  private overlayObserver: MutationObserver | null = null;
 
   private openSheet: TabId | null = null;
   private narrow: boolean;
@@ -295,6 +307,7 @@ class Hud {
       // idle is never already on when it is.
       afkActive: false,
       idleFood: character.idleFood ?? { order: [], keep: [] },
+      tipsOn: !(character.tips?.off ?? false),
     };
 
     injectHudStyles();
@@ -350,6 +363,10 @@ class Hud {
     );
     this.refreshActionBar();
     this.tabBar = new TabBar((tab) => this.selectTab(tab));
+    this.tipCard = new TipCard({
+      onHeard: (tipId) => this.events.emit(TIP_HEARD_EVENT, tipId),
+      onSilence: () => this.events.emit(TIPS_SET_REQUESTED_EVENT, false),
+    });
 
     this.characterSheet = new CharacterSheet(
       (slot, isEmpty) => {
@@ -407,6 +424,10 @@ class Hud {
       this.tracker.root,
       this.actionBar.root,
       this.channelBar.root,
+      // Under the toast, which may print across it on a short screen and is the
+      // more urgent of the two, and under every sheet and overlay, which it
+      // waits out rather than covers.
+      this.tipCard.root,
       this.toast.root,
       this.characterSheet.root,
       this.inventorySheet.root,
@@ -447,6 +468,7 @@ class Hud {
 
     this.subscribe();
     this.observeResize();
+    this.observeOverlays();
     this.unbindKeys = bindHudKeys({
       onEscape: () => this.overlays.closeDismissable(),
       onTab: (tab) => this.selectTab(tab),
@@ -474,6 +496,8 @@ class Hud {
     this.playerColumn.destroy();
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
+    this.overlayObserver?.disconnect();
+    this.overlayObserver = null;
     this.unbindKeys();
     this.overlays.closeAll();
     this.root.remove();
@@ -510,6 +534,7 @@ class Hud {
     this.actionBar.layout(layout.actionBar);
     this.channelBar.layout(height);
     this.toast.layout(height);
+    this.tipCard.layout(tipCardRect(layout, width));
     this.tabBar.root.style.height = `${layout.tabBar.height}px`;
     for (const sheet of Object.values(this.sheets)) {
       sheet.layout(layout, width);
@@ -526,6 +551,7 @@ class Hud {
       if (layout.narrow && this.openSheet !== null) {
         this.setOpenSheet(null);
       }
+      this.holdTip();
     }
   }
 
@@ -537,6 +563,24 @@ class Hud {
     }
     this.resizeObserver = new ResizeObserver(() => this.applyLayout());
     this.resizeObserver.observe(this.root);
+  }
+
+  private observeOverlays(): void {
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+    this.overlayObserver = new MutationObserver(() => this.holdTip());
+    this.overlayObserver.observe(this.root, { childList: true });
+  }
+
+  /**
+   * A tip waits while something covers the playfield: any overlay, and a sheet
+   * on a phone, where it is the whole screen. A roomy screen's sheet stands in
+   * its own column below the top row, clear of the card, and holding for it
+   * would hold every tip for as long as the character sheet was left open.
+   */
+  private holdTip(): void {
+    this.tipCard.hold((this.narrow && this.openSheet !== null) || this.overlays.isAnyOpen());
   }
 
   // ---------------------------------------------------------------------------
@@ -557,7 +601,7 @@ class Hud {
       return;
     }
     if (tab === 'options') {
-      this.overlays.openOptions(this.model.sound, {
+      this.overlays.openOptions(this.model.sound, this.model.tipsOn, {
         name: this.name,
         classId: this.classId,
         level: this.model.level,
@@ -588,6 +632,7 @@ class Hud {
     if (sheet !== 'character') {
       this.overlays.closeSlotPicker();
     }
+    this.holdTip();
   }
 
   private dispatchItemAction(actionId: ItemActionId, itemId: ItemId): void {
@@ -1095,6 +1140,15 @@ class Hud {
       this.model.sound = settings;
     });
     listen(SAVE_EXPORTED_EVENT, (saved) => this.overlays.saveExported(saved));
+    listen(TIP_OFFERED_EVENT, (tip) => {
+      if (!this.model.tipsOn) return;
+      this.tipCard.offer(tip);
+      this.holdTip();
+    });
+    listen(TIPS_STATE_CHANGED_EVENT, (on) => {
+      this.model.tipsOn = on;
+      if (!on) this.tipCard.clear();
+    });
 
     listen(AFK_STATE_CHANGED_EVENT, (active) => {
       this.model.afkActive = active;

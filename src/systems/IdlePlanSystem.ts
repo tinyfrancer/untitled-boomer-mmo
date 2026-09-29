@@ -285,7 +285,7 @@ function stationName(station: StationId): string {
 
 // A share of something, in the words a person would use for the ones the game
 // has, and a percentage for any a retune adds.
-function share(fraction: number, noun: string): string {
+export function share(fraction: number, noun: string): string {
   if (fraction === 1) return `all the ${noun}`;
   if (fraction === 0.5) return `half the ${noun}`;
   if (fraction === 0.25) return `a quarter of the ${noun}`;

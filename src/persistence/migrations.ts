@@ -189,6 +189,9 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // placed and nothing kept is the rule every older save was eating by, weakest
   // first with everything fair game, so this changes no one's next meal.
   24: (state) => ({ ...state, idleFood: { order: [], keep: [] } }),
+  // v25 → v26: the spirit's tips, heard once each. A save from before them has
+  // heard none, and hears each as it comes rather than all at once (decision 98).
+  25: (state) => ({ ...state, tips: { heard: [], off: false } }),
 };
 
 /**

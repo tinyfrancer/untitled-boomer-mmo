@@ -447,3 +447,19 @@ export type AchievementId = `${EnemyId}-slayer-${SlayerTier}`;
 export type SlayerRank = 'culler' | 'hunter' | 'slayer';
 
 export type TitleId = `${EnemyId}-${SlayerRank}`;
+
+// A tip the spirit gives once per character (decision 98), in the order
+// `TIP_ORDER` checks them.
+export type TipId =
+  | 'hurt-with-food'
+  | 'first-death'
+  | 'pack-full'
+  | 'raw-food'
+  | 'going-idle'
+  | 'first-contract'
+  | 'first-tool'
+  | 'first-material'
+  | 'hold-to-inspect'
+  | 'first-level'
+  | 'first-title'
+  | 'first-mastery';

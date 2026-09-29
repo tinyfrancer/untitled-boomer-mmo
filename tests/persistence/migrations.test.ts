@@ -655,6 +655,40 @@ describe('migrateCharacterState', () => {
     expect(migrated?.inventory).toEqual({ 'cooked-eel': 4, 'cooked-rat': 2 });
   });
 
+  /**
+   * v25 -> v26: the spirit's tips. A character from before them has heard
+   * none, and hears each as it comes rather than being marked as having heard
+   * them all (decision 98).
+   */
+  it('has heard no tips, with tips on', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 25,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+      kills: { rat: 40 },
+      visits: {},
+      bounty: null,
+      activeTitleId: 'rat-culler',
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      mastery: {},
+      reforges: {},
+      quiver: null,
+      skills: createInitialSkills(),
+      idleFood: { order: [], keep: [] },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.tips).toEqual({ heard: [], off: false });
+    expect(migrated?.activeTitleId).toBe('rat-culler');
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();

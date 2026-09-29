@@ -45,6 +45,8 @@ import {
   ZONE_ENTERED_EVENT,
   ABILITY_STATE_CHANGED_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
+  TIP_HEARD_EVENT,
+  TIPS_SET_REQUESTED_EVENT,
   type AchievementUnlock,
   type ContextSubject,
 } from '../ui/uiEvents';
@@ -104,6 +106,7 @@ import { AfkCamp, type ParkedAfkResult } from './AfkCamp';
 import { QuestDesk } from './QuestDesk';
 import { ShopSession } from './ShopSession';
 import { TalkSession } from './TalkSession';
+import { TipDesk } from './TipDesk';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
@@ -245,6 +248,7 @@ export class ZoneWorld implements Targeting {
   private readonly approach: ApproachDriver;
   private readonly quests: QuestDesk;
   private readonly contextMenu: ContextMenuSession;
+  private readonly tips: TipDesk;
   private readonly loot: LootPiles;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -463,6 +467,7 @@ export class ZoneWorld implements Targeting {
     this.contextMenu = new ContextMenuSession(this.ctx, {
       perform: (subject) => this.tap(subject),
     });
+    this.tips = new TipDesk(this.ctx, { isIdle: () => this.afk.active });
 
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt by a zone
@@ -532,6 +537,8 @@ export class ZoneWorld implements Targeting {
     listen(TURN_IN_QUEST_REQUESTED_EVENT, (questId) => this.quests.turnIn(questId));
     listen(SET_TITLE_REQUESTED_EVENT, (titleId) => this.quests.wearTitle(titleId));
     listen(CONTEXT_ACTION_REQUESTED_EVENT, (actionId) => this.contextMenu.run(actionId));
+    listen(TIP_HEARD_EVENT, (tipId) => this.tips.heard(tipId));
+    listen(TIPS_SET_REQUESTED_EVENT, (on) => this.tips.set(on));
   }
 
   /** Drops every subscription. The host calls this before building the next world. */
@@ -581,6 +588,7 @@ export class ZoneWorld implements Targeting {
     this.publishVisits();
     this.publishUnlockedZones();
     this.publishPlayerTile();
+    this.tips.update();
     this.updateNpcRange();
     this.checkZoneExit();
     return this.ctx.drain();
@@ -1060,7 +1068,7 @@ export class ZoneWorld implements Targeting {
     // this zone, and a pile is still the player's to walk back to.
     this.ctx.log(logNotice('You have died.'));
     this.ctx.events.emit(PLAYER_DIED_EVENT);
-    this.chargeDeathToll();
+    this.tips.noteDeath(this.chargeDeathToll());
 
     // Back on your feet where you fell, rather than carried home. Being moved
     // to town for nothing made dying the fastest way to travel and a free heal
@@ -1079,14 +1087,15 @@ export class ZoneWorld implements Targeting {
   /**
    * The fee, taken on the way back up. Never refused for want of coin: a purse
    * too thin pays what it has, since a character who cannot afford to die is
-   * the one who can least afford to stay dead.
+   * the one who can least afford to stay dead. Answers what was paid.
    */
-  private chargeDeathToll(): void {
+  private chargeDeathToll(): number {
     const { paid } = deathToll(this.character.state.level, this.character.state.currency);
-    if (paid <= 0) return;
+    if (paid <= 0) return 0;
     this.character.spendCurrency(paid);
     this.ctx.log(logDeathToll(paid));
     this.ctx.publishCurrency();
+    return paid;
   }
 
   /** Everything a corpse is worth. Both kill paths end here. */

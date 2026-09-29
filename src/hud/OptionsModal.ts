@@ -9,6 +9,10 @@ export interface OptionsModalHandlers {
   sound: SoundSettings;
   /** The whole setting, every time it moves; whoever keeps it applies it. */
   onSoundChanged: (settings: SoundSettings) => void;
+  /** Whether the spirit's tips are on, which the switch opens on. */
+  tipsOn: boolean;
+  /** Asks for tips on or off; the character keeps the answer. */
+  onTipsChanged: (on: boolean) => void;
   /** Asks for the save as a file or a code; the answer comes back to `exported`. */
   onExport: (kind: SaveExportKind) => void;
   onOpenLoad: () => void;
@@ -28,6 +32,10 @@ export interface OptionsModalHandlers {
  * The volume is greyed out while muted rather than hidden, so it keeps its place
  * and says what unmuting will come back at.
  *
+ * Tips are here too, although they are kept on the character rather than the
+ * device (decision 98): this is where a player who tapped No more tips looks
+ * to have them back.
+ *
  * The save is here for the reason Reset is: it is about the character as a
  * whole rather than anything in play. A code is shown as well as copied,
  * since the clipboard is refused over plain http and the text on screen is
@@ -37,16 +45,19 @@ export class OptionsModal extends Overlay {
   private readonly resetButton: HTMLButtonElement;
   private readonly soundButton: HTMLButtonElement;
   private readonly volume: HTMLInputElement;
+  private readonly tipsButton: HTMLButtonElement;
   private readonly saveStatus: HTMLElement;
   private readonly codeBox: HTMLTextAreaElement;
   private readonly handlers: OptionsModalHandlers;
   private sound: SoundSettings;
+  private tipsOn: boolean;
   private confirmingReset = false;
 
   constructor(handlers: OptionsModalHandlers) {
     super('hud-modal hud-modal--above-bar', handlers.onClose);
     this.handlers = handlers;
     this.sound = handlers.sound;
+    this.tipsOn = handlers.tipsOn;
     const box = el('div', 'hud-modal__box');
     box.append(el('div', 'hud-modal__title', 'Options'));
 
@@ -69,6 +80,12 @@ export class OptionsModal extends Overlay {
     this.volume.addEventListener('input', () =>
       this.setSound({ ...this.sound, volume: Number(this.volume.value) / 100 }),
     );
+
+    this.tipsButton = actionButton('', 'toggle-tips', () => {
+      this.tipsOn = !this.tipsOn;
+      this.drawTips();
+      handlers.onTipsChanged(this.tipsOn);
+    });
 
     const download = actionButton('Download Save', 'download-save', () =>
       handlers.onExport('file'),
@@ -100,6 +117,7 @@ export class OptionsModal extends Overlay {
       this.soundButton,
       el('div', 'hud-modal__line', 'Volume'),
       this.volume,
+      this.tipsButton,
       el('div', 'hud-save__heading', 'Your save'),
       el(
         'div',
@@ -116,6 +134,7 @@ export class OptionsModal extends Overlay {
     box.append(body, close);
     this.root.append(box);
     this.drawSound();
+    this.drawTips();
     // A tap on the dimmed surround closes; the target check is what keeps a tap
     // inside the box from closing it too.
     this.root.addEventListener('click', (event) => {
@@ -136,6 +155,11 @@ export class OptionsModal extends Overlay {
     this.soundButton.setAttribute('aria-pressed', String(!this.sound.muted));
     this.volume.value = String(Math.round(this.sound.volume * 100));
     this.volume.disabled = this.sound.muted;
+  }
+
+  private drawTips(): void {
+    this.tipsButton.textContent = this.tipsOn ? 'Tips: On' : 'Tips: Off';
+    this.tipsButton.setAttribute('aria-pressed', String(this.tipsOn));
   }
 
   /** The session's answer to `onExport`, still inside the tap that asked for it. */

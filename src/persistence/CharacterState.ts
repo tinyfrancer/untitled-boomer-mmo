@@ -9,10 +9,10 @@ import type { MasteryXp } from '../systems/MasterySystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
-import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
+import type { AbilityId, ClassId, TipId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 25;
+export const CHARACTER_STATE_VERSION = 26;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -82,6 +82,12 @@ export interface CharacterState {
    * somebody wanted saved for the barrow.
    */
   idleFood: IdleFoodChoice;
+  /**
+   * The spirit's tips this character has heard, and whether they are off.
+   * Stored because a tip is heard once (decision 98): nothing in the world
+   * says a card was read and tapped away.
+   */
+  tips: TipsHeard;
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -123,6 +129,11 @@ export interface CharacterState {
   unlockedZones: ZoneId[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TipsHeard {
+  heard: TipId[];
+  off: boolean;
 }
 
 export interface AfkSession {
@@ -172,6 +183,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     position: null,
     afk: null,
     idleFood: { order: [], keep: [] },
+    tips: { heard: [], off: false },
     quests: {},
     bounty: null,
     kills: {},

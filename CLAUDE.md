@@ -151,7 +151,7 @@ and collision bodies are data (`EnemyDefinition.body`), never measured off anyth
 
 **The rules are `ZoneWorld`'s collaborators, one per subsystem** (`CombatDirector`,
 `GatherSession`, `AbilityCaster`, `AfkCamp`, the counter sessions, `QuestDesk`, `LootPiles`,
-`ContextMenuSession`, `ApproachDriver`). Each owns its state and reaches the zone through the shared
+`ContextMenuSession`, `TipDesk`, `ApproachDriver`). Each owns its state and reaches the zone through the shared
 `WorldContext` and a small `Deps` interface of its own — never a reference to the world. A new rule
 belongs in the collaborator that owns the state it reads. What stays in `ZoneWorld` is the entities,
 the tick order, what is selected, the publishers that speak only on change, and the three things
@@ -194,7 +194,10 @@ book): it reads the functions the rolls call, so a new rate goes behind an expor
 book can read rather than inline in a roll, or the book goes on saying the old number. **So is what
 idle will do** (`systems/IdlePlanSystem.ts`, the idle panel): it reads `afkCampJob` and
 `offlineJob`, the function the payout branches on, so a new rule in the camp or the payout goes
-behind those, or the panel goes on promising the old night.
+behind those, or the panel goes on promising the old night. **So is when a tip applies, and
+what it says** (`systems/TipSystem.ts`): each tip is a rule over the character, and its line reads
+the fee, the price or the ceiling it names off the table or constant that holds it. What has been
+heard is stored (`CharacterState.tips`), since hearing leaves nothing else behind.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can

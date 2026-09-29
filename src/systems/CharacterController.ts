@@ -79,6 +79,7 @@ import type {
   QuestId,
   ReforgeId,
   SkillId,
+  TipId,
   TitleId,
   ZoneId,
 } from '../types/ids';
@@ -734,6 +735,16 @@ export class CharacterController {
       }
     }
     return crossed;
+  }
+
+  /** A tip heard once is heard for good: the card never comes back for it. */
+  markTipHeard(tipId: TipId): void {
+    if (this.state.tips.heard.includes(tipId)) return;
+    this.state.tips = { ...this.state.tips, heard: [...this.state.tips.heard, tipId] };
+  }
+
+  setTipsOff(off: boolean): void {
+    this.state.tips = { ...this.state.tips, off };
   }
 
   setActiveTitle(titleId: TitleId | null): boolean {

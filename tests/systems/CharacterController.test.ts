@@ -455,6 +455,29 @@ describe('CharacterController idle food', () => {
   });
 });
 
+describe('CharacterController tips', () => {
+  it('starts having heard none, with tips on', () => {
+    expect(makeController().state.tips).toEqual({ heard: [], off: false });
+  });
+
+  it('marks a tip heard once, however often it is told', () => {
+    const character = makeController();
+    character.markTipHeard('raw-food');
+    character.markTipHeard('raw-food');
+    character.markTipHeard('pack-full');
+    expect(character.state.tips.heard).toEqual(['raw-food', 'pack-full']);
+  });
+
+  it('switches tips off and on without forgetting what was heard', () => {
+    const character = makeController();
+    character.markTipHeard('raw-food');
+    character.setTipsOff(true);
+    expect(character.state.tips).toEqual({ heard: ['raw-food'], off: true });
+    character.setTipsOff(false);
+    expect(character.state.tips.off).toBe(false);
+  });
+});
+
 describe('CharacterController locked zones', () => {
   it('starts with every door still shut', () => {
     const character = makeController();

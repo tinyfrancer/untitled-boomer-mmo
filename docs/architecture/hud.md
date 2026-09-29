@@ -286,3 +286,19 @@ minimum, ▲, ▼ and Keep, which ask the world and redraw from the choice it an
 (`idle-food-changed`); the top row's ▲ and the bottom row's ▼ are disabled rather than hidden, so
 the buttons stay in columns. Smoke measures them at a portrait phone's width, where a row is
 tightest.
+
+**A tip is a card that waits for a tap** (decision 98, `hud/TipCard.ts`). The world offers one at a
+time on `tip-offered`, carrying the spirit's line already written (`simulation.md`), and the card
+holds it until **Got it** (`tip-heard`) or **No more tips** (`tips-set-requested`, off); Options
+has the switch to bring them back, opened on what the save says. It **waits out anything covering
+the playfield**: any overlay, and a sheet on a phone, where the sheet is the screen. A roomy
+screen's sheet stands in its own column below the top row, clear of the card, and holding for it
+would hold every tip for as long as the character sheet was left open. Overlays come and go as
+children of the root, each closing itself, so `Hud` hears them through a `MutationObserver` on the
+root rather than a hook in every one; `OverlayHost.isAnyOpen()` says whether one is up. It sits
+at the top (`tipCardRect` in `ui/layout.ts`): between the two corners wherever that gap is wide
+enough to read in, which is a landscape phone and anything roomier, and under the whole top row on
+a portrait phone, where the corners all but meet. In the DOM it goes under the toast, which may
+print across it on a short screen and is the more urgent of the two, and under every sheet and
+overlay. Smoke switches tips off for every character it makes except in its own `tips` section, since
+a card nobody answers would sit over whatever the next section taps.
