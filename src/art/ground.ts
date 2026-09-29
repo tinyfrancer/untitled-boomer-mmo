@@ -5,7 +5,7 @@ import type { SpriteDef } from './format';
 import { parseColourRef, rampIn, type RampId } from './palette';
 import { EDGES, SIDES, type EdgeInk, type EdgeStyle, type Side } from './sprites/edges';
 import { PLACEHOLDERS } from './sprites/placeholders';
-import { TERRAIN_SPRITES, TILE_SPRITES } from './sprites/terrain';
+import { TERRAIN_SPRITES, TILE_SPRITES, TILE_VARIANTS } from './sprites/terrain';
 
 /**
  * A zone's ground as the renderer draws it: a tile sprite in every cell, and
@@ -87,10 +87,28 @@ export function reachAt(style: EdgeStyle, side: Side, line: number, along: numbe
   return Math.max(1, Math.round(style.reach + style.wander * (from + (to - from) * eased)) + grain);
 }
 
-/** The terrain sprite a map tile is drawn with. */
+const TERRAIN_BY_ID = new Map(TERRAIN_SPRITES.map((def) => [def.id, def]));
+
+/** The terrain sprite a map tile is drawn with, plainly. */
 function tileSprite(tile: number): SpriteDef {
-  const id = TILE_SPRITES[tile];
-  return TERRAIN_SPRITES.find((def) => def.id === id) ?? PLACEHOLDERS.tile;
+  return TERRAIN_BY_ID.get(TILE_SPRITES[tile] ?? '') ?? PLACEHOLDERS.tile;
+}
+
+/** How often a cell is its tile's plain sprite rather than one with something in it. */
+const PLAIN_SHARE = 0.55;
+
+/**
+ * The sprite one cell of a tile is drawn with: the plain one most of the time,
+ * and otherwise one of its variants, picked by where the cell is so a zone is
+ * drawn the same every time it is built.
+ */
+export function cellSprite(tile: number, col: number, row: number): SpriteDef {
+  const variants = TILE_VARIANTS[tile];
+  if (!variants || variants.length < 2) return tileSprite(tile);
+  const roll = hash(col, row, 77);
+  if (roll < PLAIN_SHARE) return tileSprite(tile);
+  const pick = 1 + Math.floor(((roll - PLAIN_SHARE) / (1 - PLAIN_SHARE)) * (variants.length - 1));
+  return TERRAIN_BY_ID.get(variants[Math.min(pick, variants.length - 1)] ?? '') ?? tileSprite(tile);
 }
 
 /** The ramp a tile is written in, which is what `lower.2` and `upper.3` name. */
@@ -103,9 +121,8 @@ function tileAnimated(tile: number): boolean {
   return tileSprite(tile).animations.loop !== undefined;
 }
 
-/** A tile's frames in a setting: its one still, or the four of its loop. */
-function compileTile(tile: number, setting: ZoneSetting): Uint8ClampedArray[] {
-  const def = tileSprite(tile);
+/** A tile sprite's frames in a setting: its one still, or the four of its loop. */
+function compileTile(def: SpriteDef, setting: ZoneSetting): Uint8ClampedArray[] {
   const frames = def.animations.loop ?? def.animations.still ?? [];
   return (Array.isArray(frames) ? frames : []).map((grid) => compileFrame(def, grid, setting));
 }
@@ -314,12 +331,12 @@ export function composeGround(
     }
   }
 
-  const tiles = new Map<number, Uint8ClampedArray[]>();
-  const framesOf = (tile: number): Uint8ClampedArray[] => {
-    let frames = tiles.get(tile);
+  const tiles = new Map<string, Uint8ClampedArray[]>();
+  const framesOf = (def: SpriteDef): Uint8ClampedArray[] => {
+    let frames = tiles.get(def.id);
     if (!frames) {
-      frames = compileTile(tile, setting);
-      tiles.set(tile, frames);
+      frames = compileTile(def, setting);
+      tiles.set(def.id, frames);
     }
     return frames;
   };
@@ -328,11 +345,12 @@ export function composeGround(
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < cols; c += 1) {
       const own = clampedTile(map, c - apron, r - apron);
+      const sprite = cellSprite(own, c - apron, r - apron);
       if (!reachingAt[r * cols + c]) {
-        cells.push({ kind: 'tile', sprite: tileSprite(own).id, animated: tileAnimated(own) });
+        cells.push({ kind: 'tile', sprite: sprite.id, animated: tileAnimated(own) });
         continue;
       }
-      cells.push(composeEdgeCell(cover, width, height, c, r, own, setting, framesOf));
+      cells.push(composeEdgeCell(cover, width, height, c, r, own, sprite, setting, framesOf));
     }
   }
   return { cols, rows, apron, cells };
@@ -350,12 +368,16 @@ function composeEdgeCell(
   c: number,
   r: number,
   own: number,
+  ownSprite: SpriteDef,
   setting: ZoneSetting,
-  framesOf: (tile: number) => Uint8ClampedArray[],
+  framesOf: (def: SpriteDef) => Uint8ClampedArray[],
 ): EdgeCell {
   const shown = new Uint8Array(T * T);
   const ink = new Int32Array(T * T).fill(-1);
-  let frameCount = framesOf(own).length;
+  // The cell's own ground in the variant it was dealt, and whatever reaches in
+  // in its plain one, which is what keeps a tuft from being cut by a seam.
+  const spriteOf = (tile: number): SpriteDef => (tile === own ? ownSprite : tileSprite(tile));
+  let frameCount = framesOf(ownSprite).length;
 
   for (let y = 0; y < T; y += 1) {
     for (let x = 0; x < T; x += 1) {
@@ -364,7 +386,7 @@ function composeEdgeCell(
       const here = cover[gy * width + gx] ?? own;
       const i = y * T + x;
       shown[i] = here;
-      frameCount = Math.max(frameCount, framesOf(here).length);
+      frameCount = Math.max(frameCount, framesOf(spriteOf(here)).length);
 
       if (here !== own) {
         // The upper ground's last pixel before the lower one: its lip.
@@ -415,7 +437,7 @@ function composeEdgeCell(
         pixels[at + 3] = 0xff;
         continue;
       }
-      const source = framesOf(shown[i] ?? own);
+      const source = framesOf(spriteOf(shown[i] ?? own));
       const frame = source[f % source.length];
       if (frame) pixels.set(frame.subarray(at, at + 4), at);
     }

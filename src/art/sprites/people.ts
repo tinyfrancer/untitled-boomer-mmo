@@ -14,11 +14,13 @@ import {
  * People: the warrior and the shopkeeper, the first two drawn for real, and
  * the ones phase B2's checkpoint judges. They are one figure dressed two ways.
  *
- * The warrior wears the class's blue tunic, linen trousers, a leather belt and
- * boots, and carries the rusty sword every warrior starts with: a figure that
- * walks, swings, flinches and falls, four ways round. The shopkeeper wears the
- * amber of the 3D view's shopkeeper under an apron, and only stands and
- * breathes, since a person behind a counter does nothing else.
+ * Drawn to heroic proportions rather than a toy's (decision 103): a head over
+ * a body three times its height, broad in the shoulder. The warrior wears a
+ * quilted gambeson in the class's blue, leather spaulders, bracers and boots,
+ * a crimson cloak, and carries the rusty sword every warrior starts with: a
+ * figure that walks, swings, flinches and falls, four ways round. The
+ * shopkeeper is a grey-bearded merchant in ochre under an apron, and only
+ * stands and breathes, since a person behind a counter does nothing else.
  *
  * Put together from parts the way the mannequin is (`placeholders.ts`): a
  * stride is the same head and body over different legs, and a blow is the same
@@ -31,118 +33,150 @@ import {
  */
 
 // ---------------------------------------------------------------------------
-// Heads. Hair is i (and j, k lit, h shaded); skin is c (d lit, b and a shaded).
+// Heads. Hair is i (and j, k lit, h shaded, which is also the stubble on a
+// jaw); skin is c (d lit, b and a shaded); e is an eye.
 // ---------------------------------------------------------------------------
 
 const HEAD_DOWN = grid(`
-  .....iiii.....
-  ...iijjjjiii..
-  ..ijjkkjjjiih.
-  .ijjkjjjjiiihh
-  .ijjjjjiiiiihh
-  ijjjjiiiiiiihh
-  iijiiiiiiiiihh
-  iiddcccccccbhh
-  ihdccccccccbhh
-  ihccecccceccbh
-  .hccecccceccb.
-  ..bccccccccb..
-  ..bbcccaacbb..
-  ....bbbbbb....
+  ..iiiiii..
+  .ijjkjjii.
+  ijjkkjjiih
+  iijjjiiihh
+  iiiiiiiihh
+  idcccccbih
+  hcdecceb.h
+  hccecceba.
+  .cccbcbba.
+  .icbbbbih.
+  .hiaaaaih.
+  ..hibbih..
 `);
 
 const HEAD_UP = grid(`
-  .....iiii.....
-  ...iijjjjiii..
-  ..ijjkkjjjiih.
-  .ijjkjjjjiiihh
-  .ijjjjjiiiiihh
-  ijjjjiiiiiiihh
-  ijjiiiiiiiiihh
-  ijiiiiiiiiihhh
-  iiiiiiiiiiihhh
-  iiiiiiiiiihhhh
-  .hiiiiiiihhhh.
-  ..hhiiihhhhh..
-  ..bbhhhhhhbb..
-  ....bbbbbb....
+  ..iiiiii..
+  .ijjkjjii.
+  ijjkkjjiih
+  iijjjiiihh
+  iiiiiiiihh
+  iiiiiiiihh
+  hiiiiiiihh
+  hiiiiiihhh
+  .hiiiihhh.
+  .bhhhhhhb.
+  .abhhhhba.
+  ..abbbba..
 `);
 
 const HEAD_RIGHT = grid(`
-  ....iiiii.....
-  ..iijjjjjii...
-  .ijjkkjjjjii..
-  ijjkjjjjjjiii.
-  ijjjjjjjiiiiii
-  iijjjiiiiiicd.
-  iiiiiiiiiicdd.
-  hiiiiibbiccec.
-  hhiiiabbcccccc
-  hhhiiaccccccb.
-  .hhhiibccccab.
-  ..hhhbbcccbb..
-  ...bbbbbbbb...
-  ....bbbbbb....
+  ..iiiii...
+  .ijjjjii..
+  ijjkkjjii.
+  ijjjjjiiih
+  iiijiiicdh
+  iiiiiiccce
+  hiiiicccec
+  hbbiicccc.
+  hbaiicccc.
+  .hbiiccib.
+  .hhhiiiia.
+  ..hhbbbb..
 `);
 
 // ---------------------------------------------------------------------------
-// Bodies: the tunic (1-4, 0 deepest), the belt (l m n, and its buckle g), and
-// the arms with their hands, which hang at the sides.
+// Bodies: a quilted coat (1-4, 0 deepest) to mid-thigh, a belt (l m n, and its
+// buckle g), and the arms with their leather bracers and hands at the sides.
 // ---------------------------------------------------------------------------
 
 const TORSO_DOWN = grid(`
-  ....33332222....
-  ..3333333222221.
-  .34333333222221.
-  .33.33332222.10.
-  .33.33322222.10.
-  .32.32222221.10.
-  .32.nmmmgmml.10.
-  .dc.22222221.ba.
-  .bb.12222111.aa.
-  ....11111111....
+  ......cbbc......
+  ...3444333322...
+  .234443333322221
+  .344.3433322.221
+  .332.3433322.221
+  .333.3333222.211
+  .332.3432221.211
+  .322.3333222.211
+  .322.3322221.211
+  .l22.2322221.2l0
+  .lnm.lmmgmml.ml.
+  .lml.2322221.ml.
+  .dcb.2222221.ba.
+  .cba.2222221.aa.
+  .....2222211....
+  .....1111111....
 `);
 
 const TORSO_UP = grid(`
-  ....33332222....
-  ..3333333222221.
-  .34333333222221.
-  .33.33332222.10.
-  .33.33322222.10.
-  .32.32222221.10.
-  .32.nmmmmmml.10.
-  .dc.22222221.ba.
-  .bb.12222111.aa.
-  ....11111111....
+  ......bbbb......
+  ...3444333322...
+  .234443333322221
+  .344.3333322.221
+  .332.3333322.221
+  .333.3333222.211
+  .332.3332221.211
+  .322.3322222.211
+  .322.3322221.211
+  .l22.2322221.2l0
+  .lnm.lmmmmml.ml.
+  .lml.2222221.ml.
+  .dcb.2222221.ba.
+  .cba.2222221.aa.
+  .....2222211....
+  .....1111111....
 `);
 
 const TORSO_RIGHT = grid(`
-  ...333222...
-  ..33333222..
+  ....bcb.....
+  ..3443332...
+  .344333322..
+  .3433333221.
   .3333332221.
   .3333322221.
   .3332222221.
   .3322222211.
-  .nmmmmmmmll.
+  .3322222211.
   .3222222211.
-  .1222222111.
-  ..11111111..
+  .lnmmmmmmll.
+  .3222222211.
+  .2222222211.
+  .2222222211.
+  ..1222221...
+  ..1111111...
 `);
 
-// The near arm, over the side of the body: a sleeve and a fist.
+// The near arm, over the side of the body: a sleeve, a bracer and a fist.
 const ARM_RIGHT = grid(`
-  433
-  332
-  332
-  322
-  221
-  dcb
-  cbb
+  434.
+  333.
+  333.
+  332.
+  332.
+  322.
+  222.
+  221.
+  lnm.
+  lml.
+  dcb.
+  cbb.
+`);
+
+// Leather over the shoulders, laid over the coat: what makes a fighter's
+// shoulders broader than a merchant's.
+const SPAULDERS = grid(`
+  ................
+  .mnnm.......mmml
+  lnnnm.......mmml
+  lmml.........lll
+`);
+
+const SPAULDER_SIDE = grid(`
+  nnm.
+  mml.
 `);
 
 // ---------------------------------------------------------------------------
-// Legs: trousers (u, t shaded) into boots (n m l). A lifted one is a foot off
-// the ground, mid-stride.
+// Legs: trousers (u, t shaded) into tall boots (n m l). A lifted one is a foot
+// off the ground, mid-stride.
 // ---------------------------------------------------------------------------
 
 const LEG = grid(`
@@ -150,18 +184,30 @@ const LEG = grid(`
   uuut
   uutt
   uutt
+  uutt
+  uuut
+  uutt
+  nnml
   nnml
   nnml
   nmml
+  nmml
+  mmll
   mmll
 `);
 
 const LEG_LIFTED = grid(`
   uuut
   uutt
+  uutt
+  uuut
+  uutt
+  nnml
   nnml
   nnml
   nmml
+  nmml
+  mmll
   mmll
 `);
 
@@ -171,15 +217,80 @@ const LEG_SIDE = grid(`
   uuut.
   uutt.
   uutt.
+  uutt.
+  uuut.
+  uutt.
+  nnml.
   nnml.
   nnml.
   nnmml
+  nnmml
+  nmmml
   mmmll
 `);
 
 // ---------------------------------------------------------------------------
+// The cloak (5-7, 9 in its folds): over the back seen from behind, its edges
+// past the shoulders from in front, and trailing behind seen from the side.
+// ---------------------------------------------------------------------------
+
+const CLOAK_BACK = grid(`
+  ...76666655...
+  ..7766665555..
+  .776666655555.
+  .776666655555.
+  .776666655555.
+  7766666655555.
+  7766666655555.
+  7666666555559.
+  7666666555559.
+  7666666555559.
+  7666666555559.
+  7666665555599.
+  7666665555599.
+  7666665555599.
+  7666665555599.
+  766665555599..
+  66666555599...
+  .66655559.....
+`);
+
+const CLOAK_FRONT_EDGES = grid(`
+  ..6..........5..
+  .76..........55.
+  .76..........55.
+  76............59
+  76............59
+  76............59
+  76............59
+  76............59
+  6.............59
+  6..............9
+  6..............9
+`);
+
+const CLOAK_SIDE = grid(`
+  .77..
+  7766.
+  7766.
+  7665.
+  7665.
+  7665.
+  7665.
+  6655.
+  6655.
+  6655.
+  6655.
+  6655.
+  6559.
+  6559.
+  559..
+  59...
+`);
+
+// ---------------------------------------------------------------------------
 // The sword: a rusty blade (v, w lit, x its edge), a crossguard and pommel in
-// plain dark metal (s), and a leather grip the fist hides.
+// plain dark metal (s) with a brass knot (g), and a grip the fist hides.
 // ---------------------------------------------------------------------------
 
 // Held low at the side, point down: how it is carried walking.
@@ -187,7 +298,8 @@ const SWORD_DOWN = grid(`
   .s.
   ...
   ...
-  sss
+  sgs
+  .xw
   .xw
   .xw
   .xw
@@ -206,7 +318,7 @@ const SWORD_RAISED = grid(`
   .xw.
   .xw.
   .xv.
-  sssv
+  sgsv
   ..s.
 `);
 
@@ -223,7 +335,7 @@ const SWORD_SLASH = grid(`
 // Thrust out ahead at the chest: the blow facing right.
 const SWORD_THRUST = grid(`
   .s.........
-  ssxxxxxxxx.
+  sgxxxxxxxx.
   .swwwwwwwvv
   .s.........
 `);
@@ -237,7 +349,7 @@ const SWORD_UP = grid(`
   xw.
   xw.
   xv.
-  sss
+  sgs
 `);
 
 // ---------------------------------------------------------------------------
@@ -249,12 +361,13 @@ const APRON_DOWN = grid(`
   .o....o.
   .fooooy.
   .fooooy.
+  .fooooy.
   ffoooooy
-  fooooooy
   fooooooy
   fooooooy
   foooooyy
   ooooooyy
+  oooooyyy
   .oooooy.
   ..yyyy..
 `);
@@ -273,6 +386,7 @@ const APRON_RIGHT = grid(`
   oy
   oy
   oy
+  oy
   .y
 `);
 
@@ -283,10 +397,10 @@ const APRON_RIGHT = grid(`
 const WIDTH = 32;
 const HEIGHT = 48;
 // The boots' last row stands on the third row from the bottom: the outline and
-// a pixel of air go under it.
-const LEGS_AT = 38;
-const TORSO_AT = 29;
-const HEAD_AT = 16;
+// a pixel of air go under it. The coat's skirt comes down over the thighs.
+const LEGS_AT = HEIGHT - 2 - LEG.length;
+const TORSO_AT = LEGS_AT - TORSO_DOWN.length + 4;
+const HEAD_AT = TORSO_AT - HEAD_DOWN.length + 1;
 
 type Drawn = 'down' | 'up' | 'right' | 'left';
 type Stance = 'stand' | 'stride' | 'crossed';
@@ -330,54 +444,74 @@ const SWORD_AT: Readonly<
   Record<Drawn, Readonly<Record<Blow, { grid: Grid; x: number; y: number; over: boolean }>>>
 > = {
   down: {
-    rest: { grid: SWORD_DOWN, x: 8, y: 35, over: true },
-    raised: { grid: SWORD_RAISED, x: 6, y: 21, over: false },
-    struck: { grid: SWORD_SLASH, x: 11, y: 36, over: true },
+    rest: { grid: SWORD_DOWN, x: 7, y: TORSO_AT + 10, over: true },
+    raised: { grid: SWORD_RAISED, x: 5, y: TORSO_AT - 7, over: false },
+    struck: { grid: SWORD_SLASH, x: 11, y: TORSO_AT + 12, over: true },
   },
   up: {
-    rest: { grid: SWORD_DOWN, x: 21, y: 34, over: false },
-    raised: { grid: flipped(SWORD_RAISED), x: 22, y: 21, over: false },
-    struck: { grid: SWORD_UP, x: 20, y: 8, over: false },
+    rest: { grid: SWORD_DOWN, x: 22, y: TORSO_AT + 10, over: false },
+    raised: { grid: flipped(SWORD_RAISED), x: 22, y: TORSO_AT - 7, over: false },
+    struck: { grid: SWORD_UP, x: 20, y: HEAD_AT - 7, over: false },
   },
   right: {
-    rest: { grid: SWORD_DOWN, x: 16, y: 34, over: true },
-    raised: { grid: flipped(SWORD_RAISED), x: 7, y: 19, over: false },
-    struck: { grid: SWORD_THRUST, x: 18, y: 32, over: true },
+    rest: { grid: SWORD_DOWN, x: 15, y: TORSO_AT + 10, over: true },
+    raised: { grid: flipped(SWORD_RAISED), x: 7, y: TORSO_AT - 9, over: false },
+    struck: { grid: SWORD_THRUST, x: 18, y: TORSO_AT + 10, over: true },
   },
   left: {
-    rest: { grid: SWORD_DOWN, x: 13, y: 33, over: false },
-    raised: { grid: SWORD_RAISED, x: 21, y: 19, over: false },
-    struck: { grid: flipped(SWORD_THRUST), x: 3, y: 32, over: true },
+    rest: { grid: SWORD_DOWN, x: 14, y: TORSO_AT + 10, over: false },
+    raised: { grid: SWORD_RAISED, x: 21, y: TORSO_AT - 9, over: false },
+    struck: { grid: flipped(SWORD_THRUST), x: 3, y: TORSO_AT + 10, over: true },
   },
 };
-
-/** The body facing a way: head, torso and arms, without the legs or the sword. */
-function upperBody(facing: Drawn, bob: number): Placed[] {
-  if (facing === 'down' || facing === 'up') {
-    return [
-      { grid: facing === 'down' ? TORSO_DOWN : TORSO_UP, x: 8, y: TORSO_AT + bob },
-      { grid: facing === 'down' ? HEAD_DOWN : HEAD_UP, x: 9, y: HEAD_AT + bob },
-    ];
-  }
-  return [
-    { grid: TORSO_RIGHT, x: 10, y: TORSO_AT + bob },
-    { grid: HEAD_RIGHT, x: 9, y: HEAD_AT + bob },
-  ];
-}
 
 /** What a figure is wearing and carrying beyond the body every person has. */
 interface Outfit {
   sword: boolean;
   apron: boolean;
+  cloak: boolean;
+  spaulders: boolean;
 }
 
-const WARRIOR_OUTFIT: Outfit = { sword: true, apron: false };
-const SHOPKEEPER_OUTFIT: Outfit = { sword: false, apron: true };
+const WARRIOR_OUTFIT: Outfit = { sword: true, apron: false, cloak: true, spaulders: true };
+const SHOPKEEPER_OUTFIT: Outfit = { sword: false, apron: true, cloak: false, spaulders: false };
 
-function apron(facing: Drawn, bob: number): Placed[] {
-  if (facing === 'down') return [{ grid: APRON_DOWN, x: 12, y: TORSO_AT + 3 + bob }];
-  if (facing === 'up') return [{ grid: APRON_UP, x: 12, y: TORSO_AT + 6 + bob }];
-  return [{ grid: APRON_RIGHT, x: 19, y: TORSO_AT + 3 + bob }];
+/** The body facing down, up or right, with what it wears, without the legs or the sword. */
+function upperBody(outfit: Outfit, facing: 'down' | 'up' | 'right', bob: number): Placed[] {
+  const torsoAt = TORSO_AT + bob;
+  const headAt = HEAD_AT + bob;
+  if (facing === 'down') {
+    return [
+      { grid: TORSO_DOWN, x: 8, y: torsoAt },
+      ...(outfit.spaulders ? [{ grid: SPAULDERS, x: 8, y: torsoAt }] : []),
+      ...(outfit.apron ? [{ grid: APRON_DOWN, x: 12, y: torsoAt + 3 }] : []),
+      { grid: HEAD_DOWN, x: 11, y: headAt },
+    ];
+  }
+  if (facing === 'up') {
+    return [
+      { grid: TORSO_UP, x: 8, y: torsoAt },
+      ...(outfit.spaulders ? [{ grid: SPAULDERS, x: 8, y: torsoAt }] : []),
+      ...(outfit.apron ? [{ grid: APRON_UP, x: 12, y: torsoAt + 10 }] : []),
+      ...(outfit.cloak ? [{ grid: CLOAK_BACK, x: 9, y: torsoAt + 2 }] : []),
+      { grid: HEAD_UP, x: 11, y: headAt },
+    ];
+  }
+  return [
+    { grid: TORSO_RIGHT, x: 10, y: torsoAt },
+    ...(outfit.apron ? [{ grid: APRON_RIGHT, x: 19, y: torsoAt + 3 }] : []),
+    { grid: HEAD_RIGHT, x: 11, y: headAt },
+    { grid: ARM_RIGHT, x: 15, y: torsoAt + 1 },
+    ...(outfit.spaulders ? [{ grid: SPAULDER_SIDE, x: 15, y: torsoAt + 1 }] : []),
+  ];
+}
+
+/** What hangs behind the body before it is drawn: the cloak's edges, from the front or the side. */
+function behindBody(outfit: Outfit, facing: 'down' | 'up' | 'right', bob: number): Placed[] {
+  if (!outfit.cloak || facing === 'up') return [];
+  return facing === 'down'
+    ? [{ grid: CLOAK_FRONT_EDGES, x: 8, y: TORSO_AT + 2 + bob }]
+    : [{ grid: CLOAK_SIDE, x: 8, y: TORSO_AT + 2 + bob }];
 }
 
 function figure(
@@ -393,9 +527,11 @@ function figure(
   // The left is the right turned round, so it is drawn as the right and
   // flipped, the sword put in after the flip so it stays in the right hand.
   const bodyFacing = facing === 'left' ? 'right' : facing;
-  const arm: Placed[] = side ? [{ grid: ARM_RIGHT, x: 15, y: TORSO_AT + 1 + bob }] : [];
-  const worn = outfit.apron ? apron(bodyFacing, bob) : [];
-  let body = composed(WIDTH, HEIGHT, [...legs, ...upperBody(bodyFacing, bob), ...worn, ...arm]);
+  let body = composed(WIDTH, HEIGHT, [
+    ...behindBody(outfit, bodyFacing, bob),
+    ...legs,
+    ...upperBody(outfit, bodyFacing, bob),
+  ]);
   if (facing === 'left') body = flipped(body);
   if (lean !== 0) body = side ? shifted(body, facing === 'left' ? -lean : lean, 0) : body;
   if (!outfit.sword) return body;
@@ -415,30 +551,34 @@ function figure(
 
 // A hurt frame is the figure flushed red, every material to the same step.
 const HURT: Readonly<Record<string, string>> = {
-  a: 'p',
-  b: 'q',
-  c: 'r',
-  d: 'z',
-  e: 'p',
-  h: 'p',
-  i: 'q',
-  j: 'r',
-  k: 'z',
-  '0': 'p',
-  '1': 'p',
-  '2': 'q',
-  '3': 'r',
-  '4': 'z',
-  l: 'p',
-  m: 'q',
-  n: 'r',
-  g: 'z',
-  t: 'q',
-  u: 'r',
-  s: 'p',
-  v: 'q',
-  w: 'r',
-  x: 'z',
+  a: 'P',
+  b: 'Q',
+  c: 'R',
+  d: 'S',
+  e: 'P',
+  h: 'P',
+  i: 'Q',
+  j: 'R',
+  k: 'S',
+  '0': 'P',
+  '1': 'P',
+  '2': 'Q',
+  '3': 'R',
+  '4': 'S',
+  '5': 'P',
+  '6': 'Q',
+  '7': 'R',
+  '9': 'P',
+  l: 'P',
+  m: 'Q',
+  n: 'R',
+  g: 'S',
+  t: 'Q',
+  u: 'R',
+  s: 'P',
+  v: 'Q',
+  w: 'R',
+  x: 'S',
 };
 
 const DRAWN: readonly Drawn[] = ['down', 'up', 'right', 'left'];
@@ -483,18 +623,18 @@ function fourWays(draw: (facing: Drawn) => Record<string, Grid[]>): Record<strin
   );
 }
 
-// Seen from above, lying where they fell: head to the left, the sword dropped
-// beside them.
+// Seen from above, lying where they fell: head to the left, the cloak spread
+// under them, the sword dropped beside.
 const FALLEN = grid(`
-  ......................ss.
-  ..iiii...........xxxxwwv.
-  .ijjkii.33332222222......
-  ijjjjii333333222221uuutnn
-  iiiiiih333322222221uuutnm
-  iiihhhbc3222222211.uutnnm
-  .hhhhhcc32nmmmgml1.uuutml
-  ..hhhbcb1122222111.ttttll
-  ....bbbb.111111....tt..ll
+  .......................ss..
+  ..iiii..666666555....xxxxwv
+  .ijjkii6333322222255.......
+  ijjjjii6333333222221uuutnn.
+  iiiiiih6333322222221uuutnm.
+  iiihhhbc632222222211uutnnm.
+  .hhhhhcc632nmmmgml1.uuutml.
+  ..hhhbcb61122222111.ttttll.
+  ....bbbb.66111111...tt..ll.
 `);
 
 export const WARRIOR: SpriteDef = {
@@ -508,37 +648,40 @@ export const WARRIOR: SpriteDef = {
     c: 'skin.3',
     d: 'skin.4',
     e: 'ink.0',
-    h: 'hair.1',
-    i: 'hair.2',
-    j: 'hair.3',
-    k: 'hair.4',
+    h: 'hair.0',
+    i: 'hair.1',
+    j: 'hair.2',
+    k: 'hair.3',
     '0': 'blue.0',
     '1': 'blue.1',
     '2': 'blue.2',
     '3': 'blue.3',
     '4': 'blue.4',
+    '5': 'crimson.1',
+    '6': 'crimson.2',
+    '7': 'crimson.3',
+    '9': 'crimson.0',
     l: 'leather.1',
     m: 'leather.2',
     n: 'leather.3',
-    g: 'gold.3',
+    g: 'gold.2',
     t: 'linen.1',
     u: 'linen.2',
     s: 'metal.1',
     v: 'metal.2',
     w: 'metal.3',
     x: 'metal.4',
-    p: 'red.1',
-    q: 'red.2',
-    r: 'red.3',
-    // `s` is the sword's metal, so the brightest red takes the next free key.
-    z: 'red.4',
+    P: 'red.1',
+    Q: 'red.2',
+    R: 'red.3',
+    S: 'red.4',
   },
   animations: {
     ...fourWays(warriorFrames),
     death: [
       figure(WARRIOR_OUTFIT, 'down', 'stand', 0, 'rest'),
       figure(WARRIOR_OUTFIT, 'down', 'stand', 3, 'rest'),
-      composed(WIDTH, HEIGHT, [{ grid: FALLEN, x: 3, y: 36 }]),
+      composed(WIDTH, HEIGHT, [{ grid: FALLEN, x: 2, y: 36 }]),
     ],
   },
 };
@@ -558,11 +701,11 @@ export const SHOPKEEPER: SpriteDef = {
     i: 'hairGrey.2',
     j: 'hairGrey.3',
     k: 'hairGrey.4',
-    '0': 'yellow.0',
-    '1': 'yellow.1',
-    '2': 'yellow.2',
-    '3': 'yellow.3',
-    '4': 'yellow.4',
+    '0': 'ochre.0',
+    '1': 'ochre.1',
+    '2': 'ochre.2',
+    '3': 'ochre.3',
+    '4': 'ochre.4',
     l: 'leather.1',
     m: 'leather.2',
     n: 'leather.3',

@@ -5,12 +5,14 @@ import { compileFrame } from './compile';
 import { composed, type Grid, type Placed, type Recolour, type SpriteDef } from './format';
 import {
   BUILDING_LEGEND,
-  COURSE_LIT,
-  COURSE_SHADED,
+  CHIMNEY,
+  COURSES_LIT,
+  COURSES_SHADED,
   EAVE,
   FLOOR,
   GABLE_LEFT,
   GABLE_RIGHT,
+  MOSS,
   POST,
   RIDGE,
   WALL,
@@ -35,15 +37,19 @@ import {
  */
 
 /** How far the ridge stands over the top of the walls, in art pixels. */
-export const ROOF_RISE = 12;
+export const ROOF_RISE = 16;
 /** How far the roof runs past the walls at either end. */
 export const OVERHANG = 4;
 /** How far the eave hangs down over the front wall. */
 const EAVE_DROP = EAVE.length;
-/** A window wants this much wall either side of it. */
-const WINDOW_ROOM = WINDOW[0]?.length ?? 0;
-/** How far down the wall a window sits, under the beam. */
-const WINDOW_AT = 11;
+/** How wide a window is, and how far apart two are at the least. */
+const WINDOW_WIDTH = WINDOW[0]?.length ?? 0;
+const WINDOW_SPACING = 32;
+/** How far down the wall a window sits, under the beam and over the rail. */
+const WINDOW_AT = 8;
+/** The frame's panels start a post's width into each half of a length of wall. */
+const PANEL = 16;
+const PANEL_INSET = 3;
 
 /** What each shape of building is made of: the kit's slate and plaster, recoloured. */
 export const BUILDING_LOOKS: Readonly<Record<BuildingShapeId, Recolour>> = {
@@ -124,19 +130,34 @@ function strip(pattern: string, length: number, across: boolean): Grid {
   return Array.from({ length }, () => pattern);
 }
 
+/** Where the ridge runs across a roof this tall: nearer the top, the far slope being foreshortened. */
+function ridgeOf(height: number): number {
+  return Math.round(height * 0.4);
+}
+
 /** The roof over a footprint, from its ridge to the eave, boards up either end. */
 function roof(width: number, height: number): Grid {
-  const ridge = Math.round(height * 0.4);
-  const course = COURSE_LIT.length;
+  const ridge = ridgeOf(height);
+  const course = COURSES_LIT[0]?.length ?? 6;
   const parts: Placed[] = [];
   let row = 0;
+  const laid = (courses: readonly Grid[]): Grid => courses[row % courses.length] ?? [];
   for (let y = 0; y < ridge; y += course, row += 1) {
-    parts.push({ grid: tiled(COURSE_LIT, width, course, (row % 2) * 8), x: 0, y });
+    parts.push({ grid: tiled(laid(COURSES_LIT), width, course), x: 0, y });
   }
   for (let y = ridge; y < height - EAVE_DROP; y += course, row += 1) {
-    parts.push({ grid: tiled(COURSE_SHADED, width, course, (row % 2) * 8), x: 0, y });
+    parts.push({ grid: tiled(laid(COURSES_SHADED), width, course), x: 0, y });
   }
   parts.push({ grid: tiled(RIDGE, width, RIDGE.length), x: 0, y: ridge - 2 });
+  // Moss where the rain sits, placed off the roof's size so a building is the
+  // same every time it is built.
+  for (const [fx, fy] of [
+    [0.22, 0.3],
+    [0.68, 0.62],
+    [0.4, 0.84],
+  ] as const) {
+    parts.push({ grid: MOSS, x: Math.round(width * fx), y: Math.round(height * fy) });
+  }
   parts.push({ grid: tiled(EAVE, width, EAVE_DROP), x: 0, y: height - EAVE_DROP });
   parts.push({ grid: strip(GABLE_LEFT, height, false), x: 0, y: 0 });
   parts.push({ grid: strip(GABLE_RIGHT, height, false), x: width - GABLE_RIGHT.length, y: 0 });
@@ -158,12 +179,14 @@ function wallFace(width: number, gap: { from: number; to: number } | null): Grid
         [gap.to, width],
       ]
     : [[0, width]];
+  // Windows sit in the frame's panels, never nearer each other than a tile.
+  let last = -Infinity;
   for (const [from, to] of solidSpans) {
-    const room = to - from - postWidth * 2;
-    const windows = Math.floor(room / (WINDOW_ROOM + 8));
-    for (let i = 0; i < windows; i += 1) {
-      const x = from + postWidth + Math.round(((i + 0.5) * room) / windows - WINDOW_ROOM / 2);
+    for (let x = PANEL_INSET; x + WINDOW_WIDTH <= width; x += PANEL) {
+      if (x < from || x + WINDOW_WIDTH > to - (gap && to === gap.from ? postWidth : 0)) continue;
+      if (x - last < WINDOW_SPACING) continue;
       parts.push({ grid: WINDOW, x, y: WINDOW_AT });
+      last = x;
     }
   }
   if (gap) {
@@ -202,13 +225,28 @@ export function buildingArt(plan: BuildingPlan): BuildingArt {
   const outsideWidth = width + OVERHANG * 2 + 2;
   const outsideHeight = depth + tall + 2;
   const roofHeight = depth - WALL_HEIGHT + EAVE_DROP + tall;
+  const roofTop = 1;
+  // A chimney standing up out of the far slope, a third of the way in from the
+  // right, where the hearth is: on everything but a workshop, whose fire is
+  // outdoors.
+  const chimney: Placed[] =
+    shape === 'workshop'
+      ? []
+      : [
+          {
+            grid: CHIMNEY,
+            x: 1 + Math.round(((width + OVERHANG * 2) * 2) / 3),
+            y: roofTop + Math.max(0, ridgeOf(roofHeight) - CHIMNEY.length + 2),
+          },
+        ];
   const outside = composed(outsideWidth, outsideHeight, [
     {
       grid: wallFace(width, door === 'south' ? gap : null),
       x: 1 + OVERHANG,
-      y: 1 + ROOF_RISE + depth,
+      y: roofTop + ROOF_RISE + depth,
     },
-    { grid: roof(width + OVERHANG * 2, roofHeight), x: 1, y: 1 },
+    { grid: roof(width + OVERHANG * 2, roofHeight), x: 1, y: roofTop },
+    ...chimney,
   ]);
 
   // Indoors, the ground: boards, and the walls' tops round them, open at the door.

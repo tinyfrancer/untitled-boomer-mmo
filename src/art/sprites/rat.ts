@@ -11,100 +11,99 @@ import {
 
 /**
  * The rat: town's first creature, and the one every character fights first.
- * Brown fur (d lit down to a in shade), pink ears, feet and tail (p, and q
- * darker), and a black eye. Drawn facing down, up and right; the left is the
- * right mirrored, since a rat holds nothing in one paw that a flip would move.
+ * A sewer rat rather than a field mouse (decision 103): lean and hunched,
+ * scruffy along the spine, grey-brown fur (d lit down to a in shade), small
+ * ears, feet and a long tail in dark pink (p, and q darker), a red eye (o) and
+ * a pair of yellowed fangs (w). Drawn facing down, up and right; the left is
+ * the right mirrored, since a rat holds nothing a flip would move.
  */
 
-// Facing down, toward the viewer: its back humped up behind a face with the
-// ears either side, the snout at the bottom.
+// Facing down, toward the viewer: its back humped up behind a narrow face,
+// the snout pointing down at you.
 const BODY_DOWN = grid(`
-  .....cccccccc.....
-  ...ccddddcccccb...
-  ..cddddcccccccbb..
-  .cdccccccccccccba.
-  .cccccccccccccccba
-  bccccccccccccccbba
-  bbccccccccccccbbba
-  .bbbbbbbbbbbbbbaa.
+  ....a.aa.a....
+  ..aaccddccaa..
+  .acccddccccca.
+  acccccccccccca
+  acccccccccccba
+  .abbccccccbba.
+  ..aaaaaaaaaa..
 `);
 
 const HEAD_DOWN = grid(`
-  .ppp........ppp.
-  pqqqp......pqqqp
-  pqqqpccccccpqqqp
-  .pppcddcccccppp.
-  ...cddccccccb...
-  ..ccccccccccbb..
-  ..cceccccccecb..
-  ..bccccccccccb..
-  ...bcccccccbb...
-  ....bbcccbba....
-  .....abqqba.....
-  ......aqqa......
+  ..p........p..
+  .pq.a....a.qp.
+  .qqaccccccaqq.
+  ..acddcccccaa.
+  ..acdcccccca..
+  ..acocccocca..
+  ..abccccccba..
+  ...abcccbba...
+  ...abcccba....
+  ....awqwa.....
+  .....aqa......
 `);
 
 // Facing up, away: the rump nearest, the tail laid out toward the viewer, and
 // the back of the head and its ears beyond.
 const BODY_UP = grid(`
-  .pp........pp.
-  pqqp.cccc.pqqp
-  pqqpcddcccpqqp
-  .ppcddcccccbp.
-  ..ccccccccccb.
-  .ccccccccccccb
-  cdccccccccccbb
-  ccccccccccccba
-  bcccccccccccba
-  bbccccccccbbba
-  .bbbbbbbbbbba.
+  ..p........p..
+  .pq.a.aa.a.qp.
+  .qqaccccccaqq.
+  ...acddccca...
+  ...acccccca...
+  ..acccccccca..
+  .acddcccccccb.
+  acccccccccccba
+  acccccccccccba
+  abccccccccccba
+  .abbccccccbba.
   ..aabbbbbbaa..
+  ....aaaaaa....
 `);
 
 const TAIL_UP = grid(`
-  pp.
-  .pp
-  .pp
-  pp.
-  p..
+  .p.
+  .p.
+  .pq
+  ..p
+  ..p
+  .pq
+  .p.
 `);
 
-// Facing right: long and low, the snout ahead and the tail trailing behind.
+// Facing right: long and low, the back arched, the snout ahead and the tail
+// trailing behind.
 const BODY_RIGHT = grid(`
-  ..............pp......
-  .......cccc..pqqp.....
-  .....ccddddccpqqpc....
-  ...cccdddccccppcccc...
-  ..cccccccccccccccecc..
-  .bccccccccccccccccccc.
-  .bbccccccccccccccccccq
-  .bbbbcccccccccccbbbbb.
-  ..abbbbbbbbbbbbbbbba..
-  ...aabbbbbbbbbbbaaa...
-  .....aaaaaaaaaaaa.....
+  .......a.a.aa.a.........
+  .....aaccdddcaa.........
+  ...aaccddddcccca....pq..
+  ..acccccccccccccca.aqqa.
+  .accccccccccccccccacdca.
+  acccccccccccccccccccocca
+  abcccccccccccccccccccccq
+  .abbccccccccccccbbbbbww.
+  ..aabbbbbbbbbbbbba......
+  .....aaaaaaaaaaaa.......
 `);
 
 const TAIL_RIGHT = grid(`
-  ......pp
-  ....pp..
-  ..pp....
-  pp......
+  .........pp
+  ......ppq..
+  ...ppq.....
+  .pq........
+  q..........
 `);
 
-// A paw from the front or behind, and one from the side.
+// A paw: a dark foot and its pink toes.
 const PAW = grid(`
-  bb
-  pp
-`);
-
-const PAW_SIDE = grid(`
-  ab
-  pp
+  aa
+  qq
 `);
 
 const SIZE = 32;
 // The paws stand on the third row from the bottom.
-const PAWS_AT = 28;
+const PAWS_AT = SIZE - 4;
 
 type Drawn = 'down' | 'up' | 'right';
 type Stance = 'stand' | 'stride' | 'crossed';
@@ -140,22 +139,22 @@ const PAWS: Readonly<Record<Drawn, Readonly<Record<Stance, readonly Placed[]>>>>
   },
   right: {
     stand: [
-      { grid: PAW_SIDE, x: 10, y: PAWS_AT },
-      { grid: PAW_SIDE, x: 13, y: PAWS_AT },
-      { grid: PAW_SIDE, x: 20, y: PAWS_AT },
-      { grid: PAW_SIDE, x: 23, y: PAWS_AT },
+      { grid: PAW, x: 9, y: PAWS_AT },
+      { grid: PAW, x: 12, y: PAWS_AT },
+      { grid: PAW, x: 19, y: PAWS_AT },
+      { grid: PAW, x: 22, y: PAWS_AT },
     ],
     stride: [
-      { grid: PAW_SIDE, x: 8, y: PAWS_AT },
-      { grid: PAW_SIDE, x: 14, y: PAWS_AT - 1 },
-      { grid: PAW_SIDE, x: 19, y: PAWS_AT - 1 },
-      { grid: PAW_SIDE, x: 25, y: PAWS_AT },
+      { grid: PAW, x: 7, y: PAWS_AT },
+      { grid: PAW, x: 13, y: PAWS_AT - 1 },
+      { grid: PAW, x: 18, y: PAWS_AT - 1 },
+      { grid: PAW, x: 24, y: PAWS_AT },
     ],
     crossed: [
-      { grid: PAW_SIDE, x: 11, y: PAWS_AT - 1 },
-      { grid: PAW_SIDE, x: 12, y: PAWS_AT },
-      { grid: PAW_SIDE, x: 21, y: PAWS_AT },
-      { grid: PAW_SIDE, x: 22, y: PAWS_AT - 1 },
+      { grid: PAW, x: 10, y: PAWS_AT - 1 },
+      { grid: PAW, x: 11, y: PAWS_AT },
+      { grid: PAW, x: 20, y: PAWS_AT },
+      { grid: PAW, x: 21, y: PAWS_AT - 1 },
     ],
   },
 };
@@ -165,21 +164,21 @@ function ratFrame(facing: Drawn, stance: Stance, bob: number): Grid {
   if (facing === 'down') {
     return composed(SIZE, SIZE, [
       ...paws,
-      { grid: BODY_DOWN, x: 7, y: 13 + bob },
-      { grid: HEAD_DOWN, x: 8, y: 16 + bob },
+      { grid: BODY_DOWN, x: 9, y: 15 + bob },
+      { grid: HEAD_DOWN, x: 9, y: 17 + bob },
     ]);
   }
   if (facing === 'up') {
     return composed(SIZE, SIZE, [
       ...paws,
       { grid: BODY_UP, x: 9, y: 15 + bob },
-      { grid: TAIL_UP, x: 15, y: 26 },
+      { grid: TAIL_UP, x: 15, y: 24 },
     ]);
   }
   return composed(SIZE, SIZE, [
     { grid: TAIL_RIGHT, x: 2, y: 21 + bob },
     ...paws,
-    { grid: BODY_RIGHT, x: 7, y: 17 + bob },
+    { grid: BODY_RIGHT, x: 5, y: 19 + bob },
   ]);
 }
 
@@ -190,7 +189,7 @@ function leant(facing: Drawn, stance: Stance, amount: number): Grid {
 }
 
 // Flushed red, step for step, when something lands on it.
-const HURT = { a: 'r', b: 's', c: 't', d: 'u', p: 't', q: 's', e: 'r' };
+const HURT = { a: 'R', b: 'S', c: 'T', d: 'U', p: 'T', q: 'S', o: 'U', w: 'U' };
 
 function ratFacing(facing: Drawn): Record<string, Grid[]> {
   const at = (stance: Stance, bob: number) => ratFrame(facing, stance, bob);
@@ -221,12 +220,12 @@ function fourWays(): Record<string, FacingFrames> {
 
 // On its back, feet in the air: a death seen from above.
 const FALLEN = grid(`
-  ...........p.p..pp.....
-  ....cccccccpbpbpqqp....
-  ..ccbbbbbbbbbbbbpqqp...
-  pcbbbbbbbbbbbbbbbbpp...
-  pbbbaaaaaaaabbbbbbccq..
-  .pbbbbbbbbbbbbbbbbbe...
+  ...........p.p..pq.....
+  ....aaaaaaaqbqbqaqq....
+  ..aabbbbbbbbbbbbbacca..
+  paabbbbbbbbbbbbbbbccq..
+  pbbbaaaaaaaabbbbbbcww..
+  .pbbbbbbbbbbbbbbbbbo...
   ..aaabbbbbbbbbbbbaa....
   .....aaaaaaaaaaaa......
 `);
@@ -241,13 +240,14 @@ export const RAT: SpriteDef = {
     b: 'fur.2',
     c: 'fur.3',
     d: 'fur.4',
-    e: 'ink.0',
-    p: 'skin.3',
-    q: 'skin.2',
-    r: 'red.1',
-    s: 'red.2',
-    t: 'red.3',
-    u: 'red.4',
+    o: 'red.3',
+    w: 'bone.3',
+    p: 'skin.2',
+    q: 'skin.1',
+    R: 'red.1',
+    S: 'red.2',
+    T: 'red.3',
+    U: 'red.4',
   },
   animations: {
     ...fourWays(),

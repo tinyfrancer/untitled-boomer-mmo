@@ -1,4 +1,4 @@
-import { grid, rekeyed } from '../format';
+import { grid, rekeyed, type Grid } from '../format';
 import type { ColourRef } from '../palette';
 
 /**
@@ -32,24 +32,53 @@ export const BUILDING_LEGEND: Readonly<Record<string, ColourRef>> = {
   h: 'blue.3',
   k: 'ink.0',
   l: 'ink.1',
+  A: 'masonry.0',
+  B: 'masonry.1',
+  C: 'masonry.2',
+  D: 'masonry.3',
+  G: 'gold.1',
+  Y: 'gold.2',
+  Z: 'gold.3',
+  H: 'green.0',
+  I: 'green.1',
 };
 
 /**
- * One row of slates, which repeats along the roof and is laid a course at a
- * time down it, every other course half a slate over. Lit, for the slope that
- * faces up the screen and toward the light.
+ * Rows of slates, each split its own way and chipped, which repeat along the
+ * roof and are laid a course at a time down it, the three in turn so no two
+ * joints line up. Lit, for the slope that faces up the screen and the light.
  */
-export const COURSE_LIT = grid(`
-  44444443444444434444444344444443
-  33333332343333323333333233433332
-  33333332333333323343333233333332
-  33333332333333323333333233333332
-  33332332333333323333323233333332
-  22221122222222112222222221122222
-`);
+export const COURSES_LIT: readonly Grid[] = [
+  grid(`
+  14444441444444431444441444444443
+  14322331433333331432231433333333
+  14323331433333331433331433323333
+  13332231333333321333331333333322
+  13333321333333331333331323333323
+  11111111111111111222221111111111
+`),
+  grid(`
+  14334144444441444444444414444344
+  14333142333331433333333314233333
+  14333143333331433333333214233333
+  13333133333331333333233313333333
+  13333133333331333333333313333333
+  12221111111111121212121212122221
+`),
+  grid(`
+  14444334413444414444431444444444
+  14333333314333314332331433333333
+  14333332314333314333321433323323
+  13332333313333313323331332333333
+  13333333313333313333321322333333
+  11111111111111112112211111111111
+`),
+];
 
-/** The same course on the slope that faces the viewer, a step down the ramp. */
-export const COURSE_SHADED = rekeyed(COURSE_LIT, { '4': '3', '3': '2', '2': '1', '1': '0' });
+/** The same courses on the slope that faces the viewer, a step down the ramp. */
+export const COURSES_SHADED: readonly Grid[] = COURSES_LIT.map((course) =>
+  rekeyed(course, { '4': '3', '3': '2', '2': '1', '1': '0' }),
+);
 
 /** The cap along the top, where the two slopes meet. */
 export const RIDGE = grid(`
@@ -71,69 +100,115 @@ export const GABLE_LEFT = 'zyx';
 export const GABLE_RIGHT = 'xww';
 
 /**
- * A length of the front wall, as tall as a wall stands: a beam along the top
- * with the eave's shadow under it, plaster, and a sill along the ground.
+ * A length of the front wall, as tall as a wall stands and a head over the
+ * tallest person: dark oak framing (posts, a rail at hand height, a brace in
+ * each lower panel) over weathered plaster, a beam under the eave with its
+ * shadow, and a plinth of dressed stone along the ground (decision 103).
  */
 export const WALL = grid(`
   yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
-  qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
-  qqqrqqqqqqqqqqqqqqrqqqqqqqqqqqqq
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrsrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrsrrr
-  rrrsrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrqrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrqrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrsrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrsrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrsrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrqrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrqrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrsrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrsrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrqrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrqr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrsrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrsrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-  qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
-  pppppppppppppppppppppppppppppppp
-  zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
+  xwvpppppppppppppxwvppppppppppppp
+  xwvqqqqqqqqqqqqqxwvqqqqqqqqqqqqq
+  xwvrrrrrrrrrrrrrxwvrrrrrrrrrrrrr
+  xwvrsrrrrrrsrrqrxwvsrrrrrrsrrrrr
+  xwvqrrrrrrrrrrrrxwvrrsrrrrrrrrrr
+  xwvrrrrrrrrrrrrrxwvrsrrrrrrrrrrr
+  xwvrrrrrrrrrrrsrxwvrsrrrrrrrrrrr
+  xwvrrrrrrrrrrrrrxwvrrrsrrrrsrrrr
+  xwvrrrrrrsrrqqrrxwvrrrrrqrrrrrrr
+  xwvrrrrrrrrrqrqrxwvrrrsrqrrrrrrr
+  xwvrrrrrrrrrrrrrxwvrqsrsrrrsrrrr
+  xwvrrrrrrrrrrrsrxwvrrrrrrrrrrsrq
+  xwvrrrrrrrrrrrrsxwvsrrrrqqrrrqrq
+  xwvrrqsrrrrrqrrrxwvrsrrrrrrrrrrr
+  xwvrrrrqrqrrrqrsxwvqrrrrrrrrrrrr
+  xwvrrrqrrrrqrrsqxwvrrrrrrsrrrqrr
+  xwvrrrrrrrrrrrrrxwvrsrrrrrrrrrrr
+  xwvrrrrrrrsrqrrrxwvrrrrsrrrrrsrr
+  xwvrrrrrrrrrrrrqxwvrrrrrrqrrrrrr
+  xwvrrrrrrsrrrrrrxwvrrrrrrrrrrrrr
+  xwvrrrrrrrrrrrsrxwvrrrrrqrrrrrrr
   yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+  xwvxwrrrrrrrrrrrxwvxwrrrrrrrqrrr
+  xwvxwrrrrsrrrrrrxwvxwrrrrrrrrrrr
+  xwvrxwrrrrqrsrrsxwvrxwrrrrrrrqrr
+  xwvrxwrrrrrrqqrrxwvrxwrrrrrrrrrr
+  xwvrsxwrrsrrrrrrxwvrqxwrrrqrrrrr
+  xwvrrrxwrrrqrqrrxwvrrrxwrrrrrrrr
+  xwvrrrxwrrrrrrrrxwvrrrxwrrqqrrrq
+  xwvrrrrxwsrrrrrrxwvrrqrxwrrrrrrr
+  xwvrrrrxwrrrrrrrxwvrrrrxwrrrqrrr
+  xwvrrrqrxwrrrrrrxwvrrrrrxwrsrrrr
+  xwvrrrrrrxwsrrrsxwvrrrrrrxwrrsrr
+  xwvrrrrrrxwrrrqsxwvrrrrsrxwrrrrr
+  xwvrqrrrqrxwrrrrxwvrrrrsrrxwrrrr
+  xwvrrrrrrrxwrrrrxwvrrsrrrsxwrrrq
+  xwvrrrrrrrrxwrrrxwvrrrrqrrrxwrrr
+  xwvrrsrrrrrrxwrrxwvrqrrqrrrrxwrr
+  xwvrrrrrrrrrxwrrxwvrrrrrrrrsxwrq
+  xwvrsrrrrrrrrxwrxwvrrrrrrrrrrxwr
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  ADCCCCCCCCADCCCCCCCCADCCCCCCCCAD
+  ABBBBBBBBBABBBBBBBBBABBBBBBBBBAB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  CCCCCADCCCCCCCCADCCCCCCCCADCCCCC
+  BBBBBABBBBBBBBBABBBBBBBBBABBBBBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 `);
 
 /** How tall a wall stands, in art pixels: a head over the tallest person. */
 export const WALL_HEIGHT = WALL.length;
 
-/** A four-paned window, set into a wall where the door is not. */
+/** A leaded window, lit from inside, set into a panel of the frame. */
 export const WINDOW = grid(`
+  xxxxxxxxxxxx
+  xwwwwwwwwwwx
+  xwZYYwwYYZwx
+  xwYYYwwYYYwx
+  xwYGYwwYGYwx
+  xwwwwwwwwwwx
+  xwZYYwwYYZwx
+  xwYYYwwYYYwx
+  xwYGYwwYGYwx
+  xwYYYwwYYYwx
+  xwwwwwwwwwwx
   yyyyyyyyyyyy
-  ygghgyygghgw
-  yghggyyghggw
-  yggggyyggggw
-  yggggyyggggw
-  yyyyyyyyyyyw
-  ygghgyygghgw
-  yggggyyggggw
-  yggggyyggggw
-  yggggyyggggw
-  ywwwwwwwwwww
-  qxxxxxxxxxxq
+  wwwwwwwwwwww
+`);
+
+/** A stone chimney standing out of the roof, capped. */
+export const CHIMNEY = grid(`
+  .BBBBBBBBBB.
+  BDDDDDDDDDDB
+  BCCCCCCCCCCB
+  .AAAAAAAAAA.
+  .ADCCCADCCA.
+  .ACBBBACBBA.
+  .AAAAAAAAAA.
+  .ACCADCCCCA.
+  .ABBACBBBBA.
+  .AAAAAAAAAA.
+  .ADCCCADCCA.
+  .ACBBBACBBA.
+  .AAAAAAAAAA.
+  .ACCADCCCCA.
+  .ABBACBBBBA.
+  .AAAAAAAAAA.
+  .ADCCCADCCA.
+  .ABBBBBBBBA.
+`);
+
+/** A patch of moss on the slates, where the rain sits. */
+export const MOSS = grid(`
+  ..HH....
+  .HIIH.H.
+  HIIIIHIH
+  .HIIIIH.
+  ..HHH...
 `);
 
 /** A post up a corner or either side of a doorway, as tall as the wall. */

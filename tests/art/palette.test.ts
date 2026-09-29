@@ -45,7 +45,7 @@ describe('the settings', () => {
     }
   });
 
-  // Decision 100: the open country bright, the marsh and underground darker
+  // Decisions 100 and 103: the open country lightest, the marsh and underground darker
   // for their setting. Held on the step a player names a colour by.
   it.each(TERRAIN_RAMP_IDS)('draw %s no lighter away from the open, darkest underground', (id) => {
     const light = (setting: ZoneSetting) => luminance(SETTING_PALETTES[setting].terrain[id][2]);
