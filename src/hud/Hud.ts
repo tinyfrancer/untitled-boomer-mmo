@@ -486,7 +486,7 @@ class Hud {
     const unlocked = notifications.find((item) => item.kind === 'achievements')?.unlocks.at(-1);
     this.overlays.showAwayReport(notifications, () => {
       if (unlocked) {
-        this.toast.show(`Achievement: ${unlocked.name}`, THEME.color.skillUp);
+        this.toast.show(`Feat: ${unlocked.name}`, THEME.color.skillUp);
       }
     });
   }
@@ -979,7 +979,7 @@ class Hud {
       }
     });
     listen(ACHIEVEMENT_UNLOCKED_EVENT, (unlock) =>
-      this.toast.show(`Achievement: ${unlock.name}`, THEME.color.skillUp),
+      this.toast.show(`Feat: ${unlock.name}`, THEME.color.skillUp),
     );
     listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;

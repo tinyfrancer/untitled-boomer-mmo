@@ -4139,7 +4139,7 @@ async function reset() {
     armed:
       /** @type {HTMLElement} */ (
         document.querySelector('.hud-modal [data-action="reset-character"]')
-      ).textContent === 'Tap again to confirm',
+      ).textContent === 'Tap again to reset',
     // The save's own key rather than "anything stored": sound settings sit in
     // the same storage and would make a deleted save look intact.
     saveIntact: localStorage.getItem('untitled-boomer-mmo:character:v1') !== null,

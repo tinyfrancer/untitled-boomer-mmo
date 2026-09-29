@@ -22,6 +22,7 @@ import { recordingBus, type Emitted } from '../world/harness';
 import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSystem';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import { damageReduction } from '../../src/systems/CombatSystem';
+import { ALL_TABS, isMenuTab } from '../../src/ui/tabs';
 import { NO_GEAR, type Gear } from '../../src/systems/InventorySystem';
 import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
@@ -238,6 +239,20 @@ describe('one sheet is open at a time', () => {
     expect(modals()).toHaveLength(0);
     expect(openSheets()).toEqual(['feats']);
   });
+
+  // A panel is called what its tab calls it: Bag had opened "Inventory (I)"
+  // and Feats "Achievements", and a tip pointing at Feats found neither. A
+  // label may abbreviate the title (Char, Character), never rename it. The map
+  // is left out because its title names the zone it draws.
+  it.each(ALL_TABS.filter((definition) => definition.kind === 'sheet' && definition.id !== 'map'))(
+    'titles the $id sheet with its tab’s own word',
+    ({ id, label }) => {
+      if (isMenuTab(id)) menuItem(id);
+      else tab(id).click();
+      const title = parent.querySelector(`[data-sheet="${id}"] .hud-sheet__title`)?.textContent;
+      expect(title?.startsWith(label)).toBe(true);
+    },
+  );
 
   it('closes the open sheet when its own tab is tapped again', () => {
     tab('inventory').click();

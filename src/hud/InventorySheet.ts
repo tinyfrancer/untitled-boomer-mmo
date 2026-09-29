@@ -49,7 +49,7 @@ export class InventorySheet extends Sheet {
   private selectedItemId: ItemId | null = null;
 
   constructor(handlers: InventorySheetHandlers) {
-    super('Inventory (I)', THEME.panelWidth.inventory);
+    super('Bag', THEME.panelWidth.inventory);
     this.handlers = handlers;
 
     // Coin lives in the header rather than as a cell: currency is not an item.

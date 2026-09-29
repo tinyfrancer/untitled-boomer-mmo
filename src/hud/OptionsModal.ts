@@ -186,7 +186,7 @@ export class OptionsModal extends Overlay {
   private pressReset(): void {
     if (!this.confirmingReset) {
       this.confirmingReset = true;
-      this.resetButton.textContent = 'Tap again to confirm';
+      this.resetButton.textContent = 'Tap again to reset';
       return;
     }
     this.handlers.onResetCharacter();
