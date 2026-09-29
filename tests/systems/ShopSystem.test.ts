@@ -88,11 +88,12 @@ describe('the gate', () => {
       throw new Error('both of these are meant to be shut at level 1 with nothing finished');
     }
 
-    expect(level.requirement).toMatch(/^Level \d+$/);
-    expect(level.reason).toContain(level.requirement.toLowerCase());
+    expect(level.requirement).toMatch(/^Needs Level \d+$/);
+    expect(level.reason).toContain(level.requirement.replace('Needs Level', 'level'));
     // A quest names itself, so the player is told which errand opens the row.
-    expect(Object.values(QUESTS).map((quest) => quest.name)).toContain(quest.requirement);
-    expect(quest.reason).toContain(quest.requirement);
+    const questName = quest.requirement.replace(/^Needs /, '');
+    expect(Object.values(QUESTS).map((quest) => quest.name)).toContain(questName);
+    expect(quest.reason).toContain(questName);
   });
 
   // Gated rows are drawn rather than hidden: what is not on the shelf yet is

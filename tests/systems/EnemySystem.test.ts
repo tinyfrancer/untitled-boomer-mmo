@@ -73,8 +73,8 @@ describe('conColor', () => {
 });
 
 describe('enemyDisplayName', () => {
-  it('appends the level to the enemy name', () => {
-    expect(enemyDisplayName(ENEMIES.rat, 3)).toBe('Rat (3)');
+  it('appends the level to the enemy name, saying it is one', () => {
+    expect(enemyDisplayName(ENEMIES.rat, 3)).toBe('Rat (Lv 3)');
   });
 });
 

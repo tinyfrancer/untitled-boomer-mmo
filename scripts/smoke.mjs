@@ -1104,7 +1104,10 @@ async function feedback() {
   });
   check(
     'a locked quest is drawn with what it waits on, and a tap on it takes nothing on',
-    lockedQuest.drawn && lockedQuest.locked && !lockedQuest.taken,
+    lockedQuest.drawn &&
+      lockedQuest.locked &&
+      lockedQuest.says.includes('Needs Bones for the Broth') &&
+      !lockedQuest.taken,
     lockedQuest.says,
   );
   // A quest row deliberately has no icon, since a quest is not an item.
@@ -3042,6 +3045,48 @@ async function achievements() {
   );
   await page.screenshot({ path: `${OUT}/11-achievements.png` });
 
+  // A rank is one line, its title on the left and its count whole on the
+  // right, where a long name had split both halves into two ragged columns.
+  // Only real text measures this, so it is asked of the sheet at the width it
+  // opens at here and on a portrait phone, the narrowest the game is laid for.
+  const rankLines = () =>
+    page.evaluate(() => {
+      const ranks = [
+        ...document.querySelectorAll(
+          '.hud-sheet[data-sheet="feats"] :is(.hud-row--tier, .hud-feat-title)',
+        ),
+      ];
+      const broken = ranks.filter((rank) =>
+        [...rank.children].some((half) => {
+          const style = getComputedStyle(half);
+          const line = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.3;
+          return half.getBoundingClientRect().height > line * 1.5;
+        }),
+      );
+      return { ranks: ranks.length, broken: broken.map((rank) => rank.textContent) };
+    });
+  const roomy = await rankLines();
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.waitForTimeout(200);
+  const narrow = await rankLines();
+  if (viewport) await page.setViewportSize(viewport);
+  await page.waitForTimeout(200);
+  // Growing back to a roomy screen hands it the character sheet, so the ranks
+  // are opened again for the title the rest of this section wears.
+  const featsShut = await page.evaluate(
+    () =>
+      document.querySelector('.hud-sheet[data-sheet="feats"]')?.classList.contains('hud-hidden') ??
+      true,
+  );
+  if (featsShut) await tapTab('feats');
+  check(
+    'every rank on the Feats sheet is one line, here and on a portrait phone',
+    roomy.ranks > 0 && roomy.broken.length === 0 && narrow.broken.length === 0,
+    `${roomy.ranks} ranks; broken here: ${roomy.broken.join(' | ') || 'none'}; ` +
+      `on a phone: ${narrow.broken.join(' | ') || 'none'}`,
+  );
+
   // The title has to survive the round trip the picker actually uses: the HUD
   // asks, the world re-checks the kills back it, and the player column redraws.
   // It gets its own line there, so the column has to grow to hold it.
@@ -4136,7 +4181,7 @@ async function reset() {
     armed:
       /** @type {HTMLElement} */ (
         document.querySelector('.hud-modal [data-action="reset-character"]')
-      ).textContent === 'Tap again to confirm',
+      ).textContent === 'Tap again to reset',
     // The save's own key rather than "anything stored": sound settings sit in
     // the same storage and would make a deleted save look intact.
     saveIntact: localStorage.getItem('untitled-boomer-mmo:character:v1') !== null,

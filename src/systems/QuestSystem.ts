@@ -145,10 +145,10 @@ export function prerequisitesMet(definition: QuestDefinition, log: QuestLog): bo
   return (definition.requires ?? []).every((questId) => isQuestDone(log, questId));
 }
 
-/** The prerequisite a locked quest is waiting on, named, or null once it is open. */
+/** The prerequisite a locked quest is waiting on, as its row says it, or null once it is open. */
 export function blockingRequirement(definition: QuestDefinition, log: QuestLog): string | null {
   const waiting = (definition.requires ?? []).find((questId) => !isQuestDone(log, questId));
-  return waiting ? QUESTS[waiting].name : null;
+  return waiting ? `Needs ${QUESTS[waiting].name}` : null;
 }
 
 export function questState(

@@ -178,7 +178,8 @@ Mitigation is **proportional with diminishing returns** — `armor / (armor + 80
 subtraction, because at these damage numbers a rat hits for 3 and any flat reduction worth wearing
 is immunity inside one tier. Nothing can reach 1, so armour never becomes immunity however much is
 stacked, and `MIN_DAMAGE` still floors a blow at 1 underneath it. A full brown set with the shield
-sits near 15%.
+sits near 15%. The character sheet says the share beside the total (decision 99), off the same
+`damageReduction` the hit is cut by, so a retune of the curve moves the sheet with it.
 
 It is **player-side only**, deliberately: a field on `EnemyDefinition` that every row leaves unset
 is the kind of dead data this codebase does not keep. It is applied in `CombatDirector.strike`,

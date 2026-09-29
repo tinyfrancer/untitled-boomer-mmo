@@ -60,7 +60,7 @@ describe('trainingAccess', () => {
     const access = trainingAccess(ABILITIES['battle-fury'], context);
     expect(access.kind).toBe('gated');
     if (access.kind !== 'gated') return;
-    expect(access.requirement).toBe('Level 2');
+    expect(access.requirement).toBe('Needs Level 2');
     expect(access.reason).toContain('level 2');
   });
 
@@ -135,7 +135,7 @@ describe('ranks', () => {
     const access = trainingAccess(ABILITIES['battle-fury-2'], context);
     expect(access.kind).toBe('gated');
     if (access.kind !== 'gated') return;
-    expect(access.requirement).toBe('Battle Fury');
+    expect(access.requirement).toBe('Needs Battle Fury');
     expect(access.reason).toContain('Battle Fury');
   });
 
@@ -157,7 +157,7 @@ describe('ranks', () => {
   // The longer of the two waits is the one worth being told first.
   it('names the level before the rank when both are missing', () => {
     const access = trainingAccess(ABILITIES['battle-fury-2'], { ...context, level: 5 });
-    expect(access.kind === 'gated' && access.requirement).toBe('Level 6');
+    expect(access.kind === 'gated' && access.requirement).toBe('Needs Level 6');
   });
 
   it('takes a rank bought past out of the trainer’s list, the way it leaves the bar', () => {

@@ -53,7 +53,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     id: 'warrior',
     name: 'Warrior',
     description:
-      'A stalwart melee fighter with high HP and a mighty swing, but must close to melee range.',
+      'A stalwart melee fighter with high health and a mighty swing, but must close to melee range.',
     color: 0x3d5afe,
     baseStats: {
       maxHp: 40,
@@ -70,7 +70,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
   wizard: {
     id: 'wizard',
     name: 'Wizard',
-    description: 'A fragile spellcaster who strikes from a distance, trading HP for reach.',
+    description: 'A fragile spellcaster who strikes from a distance, trading health for reach.',
     color: 0x7c3aed,
     baseStats: {
       maxHp: 24,

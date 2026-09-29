@@ -28,5 +28,5 @@ export function conColor(playerLevel: number, enemyLevel: number): string {
 }
 
 export function enemyDisplayName(definition: EnemyDefinition, level: number): string {
-  return `${definition.name} (${level})`;
+  return `${definition.name} (Lv ${level})`;
 }

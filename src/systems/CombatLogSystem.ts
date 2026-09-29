@@ -138,7 +138,7 @@ export function logBountyAbandoned(bountyName: string): CombatLogEntry {
 }
 
 export function logAchievement(achievementName: string): CombatLogEntry {
-  return { text: `Achievement earned: ${achievementName}!`, color: THEME.color.levelUp };
+  return { text: `Feat earned: ${achievementName}!`, color: THEME.color.levelUp };
 }
 
 export function logTitleEarned(titleName: string): CombatLogEntry {

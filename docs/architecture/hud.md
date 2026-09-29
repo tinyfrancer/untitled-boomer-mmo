@@ -54,9 +54,11 @@ level both have to refresh it.
 gets one — count against capacity, and "Out of arrows" when dry, since an empty quiver is the one
 thing about it worth seeing — and `ui/layout.ts` reserves it as `hasQuiver` the way it reserves mana.
 It is fed by `quiver-changed`, which the world sends with every bag change and every shot, and seeded
-from the save like the bag. The character sheet's ATK is computed with the arrow the next shot nocks,
-names the stat it was built on from the weapon rather than the class, and the offhand row names the
-arrows beside the quiver.
+from the save like the bag. The character sheet's Attack is computed with the arrow the next shot
+nocks, names the stat it was built on from the weapon rather than the class, and the offhand row names
+the arrows beside the quiver. Under it the sheet adds up **Armour** and says the share of a hit it
+stops, read off `damageReduction`, the curve `CombatDirector` cuts a hit by (decision 99): it was
+the largest number on most armour and went into a total no panel showed.
 
 **The skill being trained is a bar too, under XP** (decision 94, `hud/TrainingBar.ts`), reserved by
 `ui/layout.ts` as `hasTraining`. It is put up by a skill's XP when the player earned it by doing
@@ -220,6 +222,17 @@ beside prices, and a bare figure in the corner of a shop reads as well as the pr
 the coin in hand. A page that explains a system does it once, in place, from the data it explains:
 the skills book builds its mastery line from `MASTERY_TIERS`, so a retune moves the words with it.
 
+The Part A review (decision 99) carried that to the places A1 had not reached. **A stat is named in
+full wherever an item is described** ("+3 Armour, +1 Health, +1 Strength"), off one table,
+`BONUS_NAMES` in `data/items.ts`, which the item line, the reforge text and the character sheet all
+read, so a new place that names a stat reads it too rather than abbreviating again. **A creature's
+level says it is one** ("Rat (Lv 1)", `enemyDisplayName`) on its nameplate, the right-click menu and
+the target frame. **A locked row says what it needs** ("Needs A Feast of Crab", "Needs Level 2",
+"Needs Smithing 9"): the words sit in the `requirement` the shelf, the syllabus, the board and the
+quest desk hand back, and a station's row and the skills book write the same shape. And **a panel is
+called what its tab calls it** — a label may shorten a title (Char, Character) but never rename it,
+which `Hud.test.ts` holds for every sheet but the map, whose title is its zone.
+
 **The skills book hides nothing and writes nothing per row** (decision 93, `hud/SkillsSheet.ts`
 drawing `systems/SkillBookSystem.ts`). It opens on an index of every skill, and a tap turns to that
 skill's page: its level, how it trains, what a level buys at this character's level and at the most
@@ -242,7 +255,11 @@ redraw of the page being read keeps its place rather than jumping back to the to
 **Every earned slayer rank is a title, and its row is the button that wears it** (`FeatsSheet`).
 Three ranks a creature would have been up to thirty-three buttons pinned above the list; what is
 pinned instead is the one line saying what is worn and a Take off. Tapping the worn rank's row takes
-it off, so the row is a toggle like the button above it.
+it off, so the row is a toggle like the button above it. **A rank is one line**, its title left and
+its count right (decision 99): the sheet has a width of its own (`THEME.panelWidth.feats`) that the
+longest rank, a boss's Slayer at 0 / 100 slain, fits, and a count never wraps, so a title too long
+for some narrower screen wraps on its own side. Only real text measures that, so smoke does, at a
+roomy screen and a 375px phone; a new creature with a longer name is what would move the width.
 
 **An item says what it is for, and every row that shows one can be asked** (decision 90). The
 uses are derived, never written per item (`systems/ItemUseSystem.ts`): every recipe that takes it

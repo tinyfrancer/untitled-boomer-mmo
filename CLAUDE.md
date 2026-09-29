@@ -223,7 +223,10 @@ overlay is `pointer-events: none` with furniture opting back in, so no tap is ev
 against it. Geometry is computed in `ui/layout.ts` (unit-tested at real sizes), styling is one
 stylesheet interpolated from `ui/theme.ts`. **The bar holds five tabs; a new surface goes behind
 Menu** (`MENU_TABS`), and **nothing in the world may be drawn under the tab bar** — the camera's
-framing holds that, measured in `tests/render3d/camera.test.ts` and in smoke.
+framing holds that, measured in `tests/render3d/camera.test.ts` and in smoke. **Every number says
+what it counts** (decisions 89 and 99): a stat is named in full off `BONUS_NAMES` in `data/items.ts`
+rather than abbreviated where it is drawn, a locked row says what it Needs, and a panel is titled
+with its tab's own word. Nothing but the panel titles is held by a test, so a new surface keeps it.
 
 **The renderer loads no files.** Every mesh is primitives, terrain is one vertex-coloured mesh, and
 the only textures are text baked onto a canvas (`docs/decisions.md` 54 keeps it that way). A tap is

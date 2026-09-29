@@ -92,7 +92,7 @@ describe('the fettler panel', () => {
   it('shows what a piece could turn into', () => {
     const row = open().root.querySelector<HTMLElement>('[data-piece="steel-helmet"]');
     expect(row?.textContent).toContain(REFORGES.keen.name);
-    expect(row?.textContent).toContain('ATK');
+    expect(row?.textContent).toContain('Attack');
   });
 
   /**

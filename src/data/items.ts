@@ -1499,6 +1499,20 @@ export interface EquipmentBonuses {
   armor: number;
 }
 
+/**
+ * What each bonus is called wherever an item or a stat is described: in full,
+ * because the character sheet already said Strength over gear rows saying STR,
+ * and ARM was the largest number on most armour (decision 99).
+ */
+export const BONUS_NAMES: Record<keyof EquipmentBonuses, string> = {
+  attackPower: 'Attack',
+  armor: 'Armour',
+  health: 'Health',
+  strength: 'Strength',
+  intellect: 'Intellect',
+  agility: 'Agility',
+};
+
 /** Whether what is in the off hand is a shield, which is what Block reads. */
 export function isShield(itemId: ItemId | null): boolean {
   const item = itemId ? ITEMS[itemId] : undefined;
@@ -1558,10 +1572,10 @@ export function arrowDamage(itemId: ItemId | null): number {
 export function describeItemBonuses(itemId: ItemId | null): string {
   const food = consumableFor(itemId);
   if (food) {
-    return `Restores ${food.healAmount} HP over ${Math.round(food.healDurationMs / 1000)}s`;
+    return `Restores ${food.healAmount} ${BONUS_NAMES.health} over ${Math.round(food.healDurationMs / 1000)}s`;
   }
   if (isArrow(itemId)) {
-    return `+${arrowDamage(itemId)} ATK a shot, from a quiver`;
+    return `+${arrowDamage(itemId)} ${BONUS_NAMES.attackPower} a shot, from a quiver`;
   }
   return describeBonuses(getEquipmentBonuses(itemId), itemId);
 }
@@ -1577,13 +1591,17 @@ export function describeItemBonuses(itemId: ItemId | null): string {
  * that.
  */
 export function describeBonuses(bonuses: EquipmentBonuses, itemId: ItemId | null): string {
-  const parts: string[] = [];
-  if (bonuses.attackPower) parts.push(`+${bonuses.attackPower} ATK`);
-  if (bonuses.armor) parts.push(`+${bonuses.armor} ARM`);
-  if (bonuses.health) parts.push(`+${bonuses.health} HP`);
-  if (bonuses.strength) parts.push(`+${bonuses.strength} STR`);
-  if (bonuses.intellect) parts.push(`+${bonuses.intellect} INT`);
-  if (bonuses.agility) parts.push(`+${bonuses.agility} AGI`);
+  const order: (keyof EquipmentBonuses)[] = [
+    'attackPower',
+    'armor',
+    'health',
+    'strength',
+    'intellect',
+    'agility',
+  ];
+  const parts = order
+    .filter((stat) => bonuses[stat])
+    .map((stat) => `+${bonuses[stat]} ${BONUS_NAMES[stat]}`);
 
   const holds = quiverCapacity(itemId);
   if (holds) parts.push(`Holds ${holds}`);

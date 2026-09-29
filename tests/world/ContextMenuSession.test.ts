@@ -50,7 +50,7 @@ describe('what a menu offers', () => {
 
     const subject = menu.open({ kind: 'mob', mob: rat(3) });
 
-    expect(subject?.title).toBe('Rat (3)');
+    expect(subject?.title).toBe('Rat (Lv 3)');
     expect(subject?.titleColor).toBe(THEME.color.con.deadly);
     expect(subject?.actions).toEqual([{ id: 'attack', label: 'Attack' }]);
   });

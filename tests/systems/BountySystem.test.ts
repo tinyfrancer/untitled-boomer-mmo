@@ -40,7 +40,7 @@ describe('bountyAccess', () => {
     const access = bountyAccess(bounty('road-contract'), { level: 1 });
 
     expect(access.kind).toBe('gated');
-    expect(access.kind === 'gated' && access.requirement).toBe('Level 3');
+    expect(access.kind === 'gated' && access.requirement).toBe('Needs Level 3');
     // The full sentence, which is the only version a phone with no tooltip gets.
     expect(access.kind === 'gated' && access.reason).toContain('level 3');
   });

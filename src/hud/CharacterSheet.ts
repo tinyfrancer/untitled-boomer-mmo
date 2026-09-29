@@ -3,10 +3,11 @@ import { el, row, sectionHeader } from './dom';
 import { setSkillProgress, skillRow, type SkillRow } from './skillRows';
 import { paperdollSvg } from './paperdoll';
 import { bindItemCard } from './itemCard';
-import { describeBonuses, describeItemName } from '../data/items';
+import { BONUS_NAMES, describeBonuses, describeItemName } from '../data/items';
 import { reforgedBonuses, reforgedName, type Reforges } from '../systems/ReforgeSystem';
 import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
 import { skillXpToNextLevel, type Skills } from '../systems/SkillSystem';
+import { damageReduction } from '../systems/CombatSystem';
 import { THEME } from '../ui/theme';
 import type { PrimaryStat } from '../data/classes';
 import type { Quiver } from '../systems/QuiverSystem';
@@ -36,13 +37,10 @@ export interface DisplayedStats {
   // unanswerable from the sheet — and for a warrior holding a bow the answer
   // has changed.
   attackStat: PrimaryStat;
+  // Everything worn, added up. It was the largest number on most armour and
+  // appeared on no panel, so what a helmet's +2 went into could not be read.
+  armor: number;
 }
-
-const STAT_LABELS: Record<PrimaryStat, string> = {
-  strength: 'Strength',
-  intellect: 'Intellect',
-  agility: 'Agility',
-};
 
 export interface CharacterSheetState {
   gear: Gear;
@@ -89,7 +87,7 @@ export class CharacterSheet extends Sheet {
     this.doll = el('div', 'hud-char__doll');
     this.doll.append(paperdollSvg(this.gear));
     const stats = el('div', 'hud-char__stats');
-    this.statLines = [0, 1, 2, 3, 4].map(() => el('div'));
+    this.statLines = [0, 1, 2, 3, 4, 5].map(() => el('div'));
     stats.append(...this.statLines);
     top.append(this.doll, stats);
     this.body.append(top);
@@ -139,13 +137,14 @@ export class CharacterSheet extends Sheet {
     this.gear = state.gear;
     this.doll.replaceChildren(paperdollSvg(state.gear));
 
-    const { hp, maxHp, strength, intellect, agility, attackPower, attackStat } = state.stats;
+    const { hp, maxHp, strength, intellect, agility, attackPower, attackStat, armor } = state.stats;
     const lines = [
-      `Health ${hp} / ${maxHp}`,
-      `${STAT_LABELS.strength} ${strength}`,
-      `${STAT_LABELS.intellect} ${intellect}`,
-      `${STAT_LABELS.agility} ${agility}`,
-      `Attack ${attackPower} (${STAT_LABELS[attackStat]})`,
+      `${BONUS_NAMES.health} ${hp} / ${maxHp}`,
+      `${BONUS_NAMES.strength} ${strength}`,
+      `${BONUS_NAMES.intellect} ${intellect}`,
+      `${BONUS_NAMES.agility} ${agility}`,
+      `${BONUS_NAMES.attackPower} ${attackPower} (${BONUS_NAMES[attackStat]})`,
+      armourLine(armor),
     ];
     this.statLines.forEach((line, index) => {
       line.textContent = lines[index] ?? '';
@@ -177,4 +176,16 @@ export class CharacterSheet extends Sheet {
   slotBounds(slot: GearSlotId): DOMRect {
     return this.slots[slot].button.getBoundingClientRect();
   }
+}
+
+/**
+ * Armour with what it buys, off the curve a hit is cut by, since a total alone
+ * says nothing: 12 stops an eighth of a blow, and twice that is not twice as
+ * much.
+ */
+function armourLine(armor: number): string {
+  const share = Math.round(damageReduction(armor) * 100);
+  return share > 0
+    ? `${BONUS_NAMES.armor} ${armor} (stops ${share}% of a hit)`
+    : `${BONUS_NAMES.armor} ${armor}`;
 }

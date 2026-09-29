@@ -113,7 +113,7 @@ export class IdleSheet extends Sheet {
     const text = el('div', 'hud-row__text');
     text.append(
       el('div', 'hud-idle-food__name', `${describeItemName(food.itemId)} ×${food.count}`),
-      el('div', 'hud-list-row__sub', food.keep ? 'Kept' : `Heals ${food.healAmount} HP`),
+      el('div', 'hud-list-row__sub', food.keep ? 'Kept' : `Heals ${food.healAmount} Health`),
     );
     item.append(itemIconSvg(food.itemId), text);
     bindItemCard(item, food.itemId);

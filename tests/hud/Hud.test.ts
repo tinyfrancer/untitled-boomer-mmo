@@ -21,6 +21,9 @@ import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { recordingBus, type Emitted } from '../world/harness';
 import { carryCapacity, inventoryWeight } from '../../src/systems/EncumbranceSystem';
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
+import { damageReduction } from '../../src/systems/CombatSystem';
+import { ALL_TABS, isMenuTab } from '../../src/ui/tabs';
+import { NO_GEAR, type Gear } from '../../src/systems/InventorySystem';
 import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
 import { SHOP_STOCK } from '../../src/data/shop';
@@ -236,6 +239,20 @@ describe('one sheet is open at a time', () => {
     expect(modals()).toHaveLength(0);
     expect(openSheets()).toEqual(['feats']);
   });
+
+  // A panel is called what its tab calls it: Bag had opened "Inventory (I)"
+  // and Feats "Achievements", and a tip pointing at Feats found neither. A
+  // label may abbreviate the title (Char, Character), never rename it. The map
+  // is left out because its title names the zone it draws.
+  it.each(ALL_TABS.filter((definition) => definition.kind === 'sheet' && definition.id !== 'map'))(
+    'titles the $id sheet with its tab’s own word',
+    ({ id, label }) => {
+      if (isMenuTab(id)) menuItem(id);
+      else tab(id).click();
+      const title = parent.querySelector(`[data-sheet="${id}"] .hud-sheet__title`)?.textContent;
+      expect(title?.startsWith(label)).toBe(true);
+    },
+  );
 
   it('closes the open sheet when its own tab is tapped again', () => {
     tab('inventory').click();
@@ -869,6 +886,30 @@ describe('the quiver', () => {
   });
 });
 
+describe('the character sheet’s armour', () => {
+  const sheet = (): string => parent.querySelector('[data-sheet="character"]')?.textContent ?? '';
+
+  // Every piece's largest number went into a total no panel showed; the sheet
+  // shows it with what it buys, off the curve a hit is actually cut by.
+  it('adds up what is worn and says the share of a hit it stops', () => {
+    const gear: Gear = { ...createNewCharacter('Tester', 'warrior').gear, helmet: 'brown-helmet' };
+    mount({ gear });
+    const { armor } = computeEffectiveStats('warrior', gear, 1);
+    const share = Math.round(damageReduction(armor) * 100);
+
+    expect(armor).toBeGreaterThan(0);
+    expect(sheet()).toContain(`Armour ${armor} (stops ${share}% of a hit)`);
+    // The helmet's row says the same stats in the same words, not ARM and HP.
+    expect(sheet()).toContain('+2 Armour, +1 Health, Leather');
+  });
+
+  it('says a bare total rather than a share of nothing', () => {
+    mount({ gear: NO_GEAR });
+    expect(sheet()).toContain('Armour 0');
+    expect(sheet()).not.toContain('stops');
+  });
+});
+
 describe('the buff row', () => {
   const icons = (): string[] =>
     [...parent.querySelectorAll<HTMLElement>('.hud-effect')].map(
@@ -1153,7 +1194,9 @@ describe('the shop', () => {
 
     const row = shop()?.querySelector<HTMLElement>(`.hud-list-row[data-item="${gated.itemId}"]`);
     expect(row?.dataset.locked).toBe(gated.itemId);
-    expect(row?.querySelector('.hud-list-row__value')?.textContent).toBe(`Level ${gateLevel}`);
+    expect(row?.querySelector('.hud-list-row__value')?.textContent).toBe(
+      `Needs Level ${gateLevel}`,
+    );
   });
 
   /**
@@ -1776,7 +1819,7 @@ describe('every row that stands for an item opens its card', () => {
   it("goes from a creature's drops to the card of one of them", () => {
     mount();
     events.emit(CONTEXT_MENU_REQUESTED_EVENT, {
-      title: 'Rat (1)',
+      title: 'Rat (Lv 1)',
       actions: [],
       details: describeEnemy(ENEMIES.rat, 1),
       loot: describeEnemyLoot(ENEMIES.rat),
@@ -1800,7 +1843,7 @@ describe('every row that stands for an item opens its card', () => {
  */
 describe('the context menu', () => {
   const RAT: ContextMenuRequest = {
-    title: 'Rat (2)',
+    title: 'Rat (Lv 2)',
     titleColor: THEME.color.con.high,
     actions: [{ id: 'attack', label: 'Attack' }],
     details: describeEnemy(ENEMIES.rat, 2),
@@ -1833,7 +1876,9 @@ describe('the context menu', () => {
 
     it('offers what the world can do, then the two panels it was handed', () => {
       expect(lines()).toEqual(['Attack', 'Inspect', 'Loot']);
-      expect(parent.querySelector<HTMLElement>('.hud-context__title')?.textContent).toBe('Rat (2)');
+      expect(parent.querySelector<HTMLElement>('.hud-context__title')?.textContent).toBe(
+        'Rat (Lv 2)',
+      );
     });
 
     // The only thing that goes back is which line was pressed: the world is
@@ -1900,7 +1945,7 @@ describe('the context menu', () => {
     });
 
     it('replaces itself rather than stacking a second menu', () => {
-      events.emit(CONTEXT_MENU_REQUESTED_EVENT, { ...RAT, title: 'Rat (1)' });
+      events.emit(CONTEXT_MENU_REQUESTED_EVENT, { ...RAT, title: 'Rat (Lv 1)' });
       expect(parent.querySelectorAll('.hud-context')).toHaveLength(1);
     });
   });
