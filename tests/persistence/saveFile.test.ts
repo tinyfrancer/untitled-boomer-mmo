@@ -158,6 +158,7 @@ describe('refusing what cannot be loaded', () => {
       [{ ...state, activeTitleId: 'emperor' }, /activeTitleId/],
       [{ ...state, learnedAbilities: ['fly'] }, /learnedAbilities/],
       [{ ...state, inventory: { logs: 'lots' } }, /inventory should be a count for each item/],
+      [{ ...state, tips: { heard: [], off: 'no' } }, /tips should be a list of tips heard/],
       [nameless, /name is missing/],
     ];
     for (const [character, reason] of cases) {
