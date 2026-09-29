@@ -12,7 +12,7 @@ import type { EventBus } from '../../src/world/worldEvents';
 import { createNewCharacter, saveService, type CharacterState } from '../../src/persistence';
 import {
   AFK_STATE_CHANGED_EVENT,
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
   type UiEventMap,
   type UiEventName,
 } from '../../src/ui/uiEvents';
@@ -175,7 +175,7 @@ describe('the worlds a session leaves behind', () => {
     walkOut(game, 'north');
 
     bus.emitted.length = 0;
-    bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    bus.emit(AFK_SET_REQUESTED_EVENT, true);
     const answers = bus.emitted.filter((event) => event === AFK_STATE_CHANGED_EVENT);
     expect(answers).toHaveLength(1);
     expect(game.currentWorld.afkActive).toBe(true);

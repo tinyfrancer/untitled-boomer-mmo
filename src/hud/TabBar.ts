@@ -34,18 +34,16 @@ export class TabBar {
   setSelected(tab: TabId | null): void {
     const lit = tab !== null && isMenuTab(tab) ? 'menu' : tab;
     this.buttons.forEach((button, id) => {
-      // Camp is lit by whether it is running, not by what sheet is open.
-      if (id !== 'camp') {
-        button.classList.toggle('is-selected', id === lit);
-      }
+      button.classList.toggle('is-selected', id === lit);
     });
   }
 
   /**
-   * Camping is otherwise invisible — a character fighting on their own looks
-   * the same as the player fighting — so the tab stays lit while it runs.
+   * Idle is otherwise invisible — a character fighting on their own looks the
+   * same as the player fighting — so its tab stays lit while it runs, whether
+   * or not its panel is the one open.
    */
-  setCamping(camping: boolean): void {
-    this.buttons.get('camp')?.classList.toggle('is-lit', camping);
+  setIdle(active: boolean): void {
+    this.buttons.get('idle')?.classList.toggle('is-lit', active);
   }
 }

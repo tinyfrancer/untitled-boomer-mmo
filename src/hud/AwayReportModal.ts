@@ -1,22 +1,33 @@
 import { Overlay } from './Overlay';
 import { el } from './dom';
+import { ENEMIES } from '../data/enemies';
 import { describeItemName } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { inventoryEntries } from '../systems/InventorySystem';
 import { masteryTarget } from '../systems/MasterySystem';
-import { formatAwayDuration, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
+import { awayCeilingReached } from '../systems/IdlePlanSystem';
+import {
+  OFFLINE_CAP_MS,
+  formatAwayDuration,
+  type OfflineAfkReport,
+} from '../systems/OfflineAfkSystem';
 
 /**
- * What a camp earned while the tab was closed, shown once on the load that
+ * What idle earned while the game was closed, shown once on the load that
  * resolved it. Modal-ish rather than a toast: it is the only time the player
  * ever sees this, and a line that faded after a second would be worse than not
  * reporting it at all.
+ *
+ * It speaks in the idle panel's words, since the panel is where the player was
+ * told what a closed game would pay: the creature it named, the hours that
+ * count, and the ceiling, said here when the night reached it.
  */
 export class AwayReportModal extends Overlay {
   constructor(report: OfflineAfkReport, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through', onClosed);
-    const lines: string[] = [`Away for ${formatAwayDuration(report.elapsedMs)}`];
+    const away = `Away for ${formatAwayDuration(report.elapsedMs)}`;
+    const lines = [report.elapsedMs >= OFFLINE_CAP_MS ? `${away}, the most that counts` : away];
     // A session is one of the three, never two — which is what the station
     // underfoot and the tool in hand decided between them when they settled in.
     if (report.skill && report.crafts > 0) {
@@ -24,7 +35,11 @@ export class AwayReportModal extends Overlay {
     } else if (report.skill) {
       lines.push(`${report.gathers} gathered, ${report.skillXp} ${SKILLS[report.skill].name} XP`);
     } else {
-      lines.push(`${report.kills} kills, ${report.xp} XP`);
+      const quarry = report.enemyId ? `${ENEMIES[report.enemyId].name} ` : '';
+      lines.push(`${report.kills} ${quarry}kills, ${report.xp} XP`);
+    }
+    if (report.capped) {
+      lines.push(awayCeilingReached(report.skill));
     }
     // Which pool the night filled, named because it is the one thing a session
     // earns that the sheet behind this report does not say out loud: a skill XP
@@ -86,7 +101,7 @@ export class AwayReportModal extends Overlay {
         el(
           'div',
           'hud-modal__line hud-modal__danger',
-          'Your arrows ran out, and the camp stopped fighting.',
+          'Your arrows ran out, and idle stopped fighting.',
         ),
       );
     }

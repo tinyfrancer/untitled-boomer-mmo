@@ -2,6 +2,7 @@ import { ActionBar } from './ActionBar';
 import { CharacterSheet } from './CharacterSheet';
 import { CombatLogSheet } from './CombatLogSheet';
 import { FeatsSheet } from './FeatsSheet';
+import { IdleSheet } from './IdleSheet';
 import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
@@ -26,6 +27,8 @@ import { itemsForSlot, type Gear, type Inventory } from '../systems/InventorySys
 import { loadedArrow, type Quiver } from '../systems/QuiverSystem';
 import { describeItem } from '../systems/InspectSystem';
 import { itemUses } from '../systems/ItemUseSystem';
+import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
+import { idlePlan } from '../systems/IdlePlanSystem';
 import { ITEM_CARD_EVENT } from './itemCard';
 import { actionsForItem, type ItemAction, type ItemActionId } from '../systems/ItemActionsSystem';
 import { xpToNextLevel } from '../systems/LevelingSystem';
@@ -52,8 +55,11 @@ import {
   ABILITY_STATE_CHANGED_EVENT,
   ACHIEVEMENT_UNLOCKED_EVENT,
   ACTIONS_CHANGED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
   AFK_STATE_CHANGED_EVENT,
-  AFK_TOGGLE_REQUESTED_EVENT,
+  IDLE_FOOD_CHANGED_EVENT,
+  IDLE_FOOD_KEEP_REQUESTED_EVENT,
+  IDLE_FOOD_MOVE_REQUESTED_EVENT,
   BANK_CHANGED_EVENT,
   BOUNTY_CHANGED_EVENT,
   REFORGES_CHANGED_EVENT,
@@ -190,6 +196,12 @@ interface HudModel {
   learnedAbilities: AbilityId[];
   actions: AvailableActions;
   sound: SoundSettings;
+  // The three things the idle panel reads that nothing else in the HUD does:
+  // which zone it is standing in (seeded from the save, since the world says so
+  // only on its first frame), whether idle is on, and the food choice.
+  zoneId: ZoneId;
+  afkActive: boolean;
+  idleFood: IdleFoodChoice;
 }
 
 /**
@@ -227,6 +239,7 @@ class Hud {
   private readonly combatLogSheet: CombatLogSheet;
   private readonly mapSheet: MapSheet;
   private readonly skillsSheet: SkillsSheet;
+  private readonly idleSheet: IdleSheet;
   private readonly sheets: Partial<Record<TabId, Sheet>>;
 
   private readonly overlays: OverlayHost;
@@ -274,6 +287,11 @@ class Hud {
       learnedAbilities: character.learnedAbilities,
       actions: { nearFire: false, nearStations: [] },
       sound,
+      zoneId: character.zoneId,
+      // A parked session is paid out and cleared before the HUD is built, so
+      // idle is never already on when it is.
+      afkActive: false,
+      idleFood: character.idleFood ?? { order: [], keep: [] },
     };
 
     injectHudStyles();
@@ -356,6 +374,16 @@ class Hud {
     );
     this.combatLogSheet = new CombatLogSheet();
     this.skillsSheet = new SkillsSheet();
+    this.idleSheet = new IdleSheet({
+      onSet: (active) => {
+        this.events.emit(AFK_SET_REQUESTED_EVENT, active);
+        // Started, the panel gets out of the way of the character it set going;
+        // the lit tab is what says idle is on from there.
+        if (active) this.setOpenSheet(null);
+      },
+      onMoveFood: (itemId, move) => this.events.emit(IDLE_FOOD_MOVE_REQUESTED_EVENT, itemId, move),
+      onKeepFood: (itemId, keep) => this.events.emit(IDLE_FOOD_KEEP_REQUESTED_EVENT, itemId, keep),
+    });
     this.sheets = {
       character: this.characterSheet,
       inventory: this.inventorySheet,
@@ -364,6 +392,7 @@ class Hud {
       log: this.combatLogSheet,
       map: this.mapSheet,
       skills: this.skillsSheet,
+      idle: this.idleSheet,
     };
     for (const [id, sheet] of Object.entries(this.sheets)) {
       sheet.root.dataset.sheet = id;
@@ -383,6 +412,7 @@ class Hud {
       this.combatLogSheet.root,
       this.mapSheet.root,
       this.skillsSheet.root,
+      this.idleSheet.root,
       this.tabBar.root,
     );
     parent.append(this.root);
@@ -408,6 +438,7 @@ class Hud {
     this.featsSheet.update(this.model.kills, this.model.activeTitleId);
     this.combatLogSheet.update(this.model.combatLog);
     this.refreshSkillsBook();
+    this.refreshIdle();
     this.setOpenSheet(this.narrow ? null : 'character');
     this.applyLayout();
 
@@ -520,10 +551,6 @@ class Hud {
   private selectTab(tab: TabId): void {
     if (tab === 'menu') {
       this.overlays.openMenu((selected) => this.selectTab(selected));
-      return;
-    }
-    if (tab === 'camp') {
-      this.events.emit(AFK_TOGGLE_REQUESTED_EVENT);
       return;
     }
     if (tab === 'options') {
@@ -723,6 +750,29 @@ class Hud {
   }
 
   /**
+   * The idle panel, off everything its plan reads: what is in hand and in the
+   * bag, the skills and level that open nodes and recipes, the stations in
+   * reach, the zone, and the food choice. The sheet draws only while it shows.
+   */
+  private refreshIdle(): void {
+    this.idleSheet.update(
+      idlePlan({
+        classId: this.classId,
+        level: this.model.level,
+        gear: this.model.gear,
+        skills: this.model.skills,
+        inventory: this.model.inventory,
+        quiver: this.model.quiver,
+        reforges: this.model.reforges,
+        idleFood: this.model.idleFood,
+        stations: this.model.actions.nearStations,
+        zoneId: this.model.zoneId,
+      }),
+      this.model.afkActive,
+    );
+  }
+
+  /**
    * The training bar's skill, drawn again from the model: a level raises a
    * combat skill's ceiling, so one that read as capped has a next level again.
    */
@@ -807,6 +857,8 @@ class Hud {
       this.refreshHealth();
       // A level buys strength, which buys capacity.
       this.refreshEncumbrance();
+      // And it moves the ceiling a closed game is paid to.
+      this.refreshIdle();
       // And it opens rows on the shelf, the trainer's list and the board — and a
       // quest or a contract handed in pays XP, so a level can land with any of
       // them open in front of the player.
@@ -831,6 +883,8 @@ class Hud {
     // constructor, so they arrive on the first frame after this HUD is mounted
     // and on every zone crossing after that.
     listen(ZONE_ENTERED_EVENT, (zoneId) => {
+      this.model.zoneId = zoneId;
+      this.refreshIdle();
       this.mapSheet.setZone(zoneId);
       // The HUD outlives the world; a menu about something in the last zone
       // does not.
@@ -849,6 +903,7 @@ class Hud {
       };
       this.refreshCharacterSheet();
       this.refreshSkillsBook();
+      this.refreshIdle();
       // A making level opens rows on the list the player is stood in front of.
       this.overlays.refreshOpen();
       // The training bar follows what the player does. Block and Parry train on
@@ -932,6 +987,8 @@ class Hud {
       // Armour raises max HP, so the bar's ceiling moves with a swap.
       this.refreshHealth();
       this.refreshEncumbrance();
+      // What is in hand is most of what idle's job is.
+      this.refreshIdle();
     });
     listen(INVENTORY_CHANGED_EVENT, (inventory) => {
       this.model.inventory = inventory;
@@ -943,12 +1000,15 @@ class Hud {
       this.refreshQuests();
       // So is whether a key is in hand, which is what a shut zone's cell says.
       this.mapSheet.refreshAccess();
+      // And the food idle eats, and what a bench would make from the bag.
+      this.refreshIdle();
     });
     listen(QUIVER_CHANGED_EVENT, (quiver) => {
       this.model.quiver = quiver;
       this.refreshQuiver();
       // The sheet's ATK is the shot's, and a quiver run dry is a punch's.
       this.refreshCharacterSheet();
+      this.refreshIdle();
     });
     listen(CURRENCY_CHANGED_EVENT, (totalCopper) => {
       this.model.currency = totalCopper;
@@ -968,6 +1028,9 @@ class Hud {
       if (open && !actions.nearStations.includes(open)) {
         this.overlays.closeStation();
       }
+      // A station underfoot beats the tool in hand, so walking up to one
+      // changes what idle will do.
+      this.refreshIdle();
     });
 
     // Whichever counter the world opened or shut, a conversation included.
@@ -994,6 +1057,7 @@ class Hud {
       this.refreshCharacterSheet();
       this.refreshHealth();
       this.refreshEncumbrance();
+      this.refreshIdle();
       this.overlays.refreshOpen();
     });
     listen(BOUNTY_CHANGED_EVENT, (bounty) => {
@@ -1024,8 +1088,14 @@ class Hud {
     });
 
     listen(AFK_STATE_CHANGED_EVENT, (active) => {
-      this.tabBar.setCamping(active);
-      this.toast.show(active ? 'Camping (Z)' : 'Camp ended', THEME.color.skillUp);
+      this.model.afkActive = active;
+      this.tabBar.setIdle(active);
+      this.refreshIdle();
+      this.toast.show(active ? 'Idle started' : 'Idle stopped', THEME.color.skillUp);
+    });
+    listen(IDLE_FOOD_CHANGED_EVENT, (choice) => {
+      this.model.idleFood = choice;
+      this.refreshIdle();
     });
 
     listen(COMBAT_LOG_EVENT, (entry) => {

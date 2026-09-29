@@ -11,9 +11,9 @@ renderer-independent by construction: the same tree sat unchanged over both canv
 port, and nothing drawing the world knows it exists.
 
 `Hud.ts` owns the model and the subscriptions; everything else in `hud/` is a piece that draws part
-of it. Char / Bag / Quests / Feats / Skills / Map / Log are `Sheet` subclasses and one is open at a time — `Hud`
-holds a single `openSheet`, not a visible flag per panel — while Camp and the gear icon are actions
-that open nothing. The shop, the slot picker, the options menu and the away report are overlays
+of it. Char / Bag / Quests / Idle / Feats / Skills / Map / Log are `Sheet` subclasses and one is open at a time — `Hud`
+holds a single `openSheet`, not a visible flag per panel — while Menu and Options are actions
+that open no sheet. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close. A tap on a person puts up the **talk panel** (`hud/TalkModal.ts`)
 in the slot every counter uses: their greeting, a button for the counter they work, and their
 quests (`hud/talkQuests.ts`), which no counter draws any more. Every role counter's panel is its own
@@ -180,12 +180,13 @@ gear for — the three who stand in town, and the two bandits.
 **The bar holds five; everything else folds behind Menu.** It splits its width evenly (`ui/tabs.ts`),
 so every seat costs every other seat: seven tabs gave each one 44.4px on a 375px phone against a
 `THEME.touchMin` of 44 — four tenths of a pixel of headroom, and under the minimum below ~372px.
-Five give each one 66.2px. `TABS` is what sits on the bar (Char, Bag, Quests, Camp, Menu) and
+Five give each one 66.2px. `TABS` is what sits on the bar (Char, Bag, Quests, Idle, Menu) and
 `MENU_TABS` is what the Menu overlay opens; `ALL_TABS` is both, and the keyboard binds against that
 so a shortcut opens what it names instead of walking through a menu built for thumbs.
 
 **A new surface goes in `MENU_TABS`, not on the bar.** The bar is for what a player opens constantly;
-Camp is out there only because it is the one tab that shows state, staying lit while a camp runs.
+Idle is out there only because it is the one tab that shows state, staying lit while idle runs
+whether or not its panel is the sheet open, so the tab can wear both the selected and the lit mark.
 Menu labels may be whole words — the "labels have to stay short" rule stops at the bar's edge.
 A sheet reached through the menu lights the _Menu_ tab (`isMenuTab` in `ui/tabs.ts`), because that is
 the only seat it has and a dark bar over an open panel answers nothing.
@@ -235,7 +236,7 @@ it off, so the row is a toggle like the button above it.
 uses are derived, never written per item (`systems/ItemUseSystem.ts`): every recipe that takes it
 (one line with the station's verb for a recipe of one input, one "Used in" line per station for
 the rest), the quests and contracts that collect it, what the outfitter and the fettler take it
-for, the door a key opens, what a camp does with food, what it is made from, and what it sells
+for, the door a key opens, what idle does with food, what it is made from, and what it sells
 for. A built station or a counter is named with the zone it stands in, read off the zone that
 spawns it. Both the bag's strip and the card print the same lines, which is why a use is a
 sentence rather than a label and a value — the strip has no column for a label — and the card
@@ -260,3 +261,16 @@ next press disarms it in case the release made none. A drop or a heap on the car
 item's card in place of the list, since there is one card at a time; smoke holds by real touch
 that the release after that press does not reach the new card's scrim. The card is the one modal
 opened over other panels, so its box is opaque where the rest let the world through.
+
+**The idle panel is a sheet whose button asks the world** (decision 96, `hud/IdleSheet.ts`). The
+Idle tab opens it like any sheet, its key included, and nothing on the bar or the keyboard starts
+idle directly: the panel's Start does, sending `afk-set-requested` with the answer it showed rather
+than a toggle, and then closes the panel so the character it set going is in view. What it draws is
+`idlePlan` (`afk.md`), computed in `Hud` off the model and redrawn on everything the plan reads —
+the bag, the gear, the quiver, the skills, a level, a reforge, the stations in reach, the zone,
+idle going on or off, and the food choice — though, like the skills book, it only draws while it is
+showing. Each food row is the item (a held finger opens its card) and three buttons of the touch
+minimum, ▲, ▼ and Keep, which ask the world and redraw from the choice it answers with
+(`idle-food-changed`); the top row's ▲ and the bottom row's ▼ are disabled rather than hidden, so
+the buttons stay in columns. Smoke measures them at a portrait phone's width, where a row is
+tightest.

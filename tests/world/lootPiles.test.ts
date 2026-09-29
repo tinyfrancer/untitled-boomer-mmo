@@ -6,7 +6,7 @@ import { createNewCharacter } from '../../src/persistence';
 import { LOOT_PILE_LIFETIME_MS, rollLootTable } from '../../src/systems/LootSystem';
 import { zoneWorldSize } from '../../src/systems/ZoneSystem';
 import {
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
   INVENTORY_CHANGED_EVENT,
   NOTICE_EVENT,
@@ -117,7 +117,7 @@ describe('a pile is left', () => {
     fillPack(kit);
     const rat = ratOf(kit);
     kit.world.teleport(rat.x - 40, rat.y);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     expect(kit.world.afkActive).toBe(true);
 
     kill(kit, rat);

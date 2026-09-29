@@ -98,10 +98,11 @@ describe('what an item is for', () => {
     ]);
   });
 
-  // The camp's rule said in its own words: nobody could have guessed which of
-  // two foods an unattended character reaches for.
-  it('tells food it is what a camp eats, and in what order', () => {
-    expect(itemUses('cooked-fish')).toContain('Camping eats this when hurt, weakest food first');
+  // Idle's rule said in its own words, and where the order it eats in is set.
+  it('tells food it is what idle eats, and where its order is set', () => {
+    expect(itemUses('cooked-fish')).toContain(
+      'Idle eats this when hurt, in the order set on the Idle tab',
+    );
   });
 
   it('tells a tool what it is held for, and armour who may wear it', () => {

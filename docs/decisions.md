@@ -1821,3 +1821,48 @@ keeping the run on merge; both Node versions, or 22 alone; smoke on every push t
 which Claude recommended; smoke only when a label asks for it. Also not done: skipping CI for a
 change that touches only docs, since a required check that never reports holds its pull request
 open for good.
+
+## 96. The idle panel says what idle will do, starts and stops it, and holds the food the player orders
+
+**2026-09-29 · the user, asked by Claude**
+
+Two forks settled at the start of version 2's phase A7, the first of them the question Part A had
+left open:
+
+- **The player sets what idle eats**: an order, moved a place at a time, and a **Keep** mark on any
+  food idle must leave alone. It is stored on the character (`CharacterState.idleFood`, version 25)
+  and starts empty, which is the rule idle always ate by: weakest first, everything fair game. Keep
+  is what an order alone cannot say, "never", short of banking the food.
+- **The Idle tab opens a panel, and the panel's button starts and stops idle.** Before idle starts
+  it says what idle will do; while it runs, the lit tab opens the same panel saying what it is
+  doing, with Stop. Moving, or tapping anything in the world, still stops it at once.
+
+Claude's, alongside them:
+
+- **The panel is a sheet on the bar**, so the tab changed from an action to a sheet; its key opens it
+  like any sheet's, and nothing on the keyboard starts idle any more. Start puts the panel away, since
+  the character it set going is what the player wants to see, and the lit tab says idle is on; Stop
+  leaves it open. The HUD asks for idle on or off by name (`afk-set-requested`) rather than for a
+  toggle, so a panel drawn a moment stale cannot flip the wrong way.
+- **What the panel says is derived** (`systems/IdlePlanSystem.ts`) in the HUD from what its model
+  already held, with the zone seeded from the save. It reads the job off `afkCampJob`, and what a
+  closed game pays for off **`offlineJob`, which the payout now runs on too**, so the panel cannot
+  promise a night the morning will not honour. It says honestly where the two differ: a tool with no
+  work in the zone fights while the game is open and earns nothing with it closed, and a campfire
+  goes out.
+- **A move swaps a food with its neighbour in the bag**, and the first move places every food in the
+  game, so a food not in the bag keeps its place for when it is again; a food the game adds later
+  goes last, where it is kept longest.
+- **The away report speaks the panel's words**: it names the creature a night fought, says "the most
+  that counts" at eight hours, and says "Stopped at the most a night pays: half a level" (or one level
+  of the skill) when the ceiling ended it, off a new `capped` on the report.
+- Every player-facing "camp" is Idle: the tab, its toasts, the log's "You settle in to fight", the
+  away report, and the item card's food line, which now says where the order is set ("Idle eats this
+  when hurt, in the order set on the Idle tab"). The code keeps its AFK and camp names where they
+  were; what is new says idle.
+
+**Rejected:** weakest first, said plainly, with nothing to set, which Claude recommended and phase E3
+would have revisited with potions; an order with no Keep; Keep with no order; the panel only the
+first time, with the tab starting and stopping idle after that, which makes the same tap mean two
+things; the panel to start and a tap on the lit tab to stop, which leaves nowhere to read what idle is
+doing while it runs.

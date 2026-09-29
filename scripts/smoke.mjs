@@ -301,7 +301,7 @@ const columnHeightBesideTraining = () =>
   });
 
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
-const BAR_TABS = ['character', 'inventory', 'quests', 'camp', 'menu'];
+const BAR_TABS = ['character', 'inventory', 'quests', 'idle', 'menu'];
 /** How many the Menu opens: Map, Feats, Skills, Combat Log, Options. */
 const MENU_TAB_COUNT = 5;
 
@@ -320,6 +320,13 @@ const tapTab = async (tab) => {
   } else {
     await page.click(`.hud-tabs__tab[data-tab="${tab}"]`);
   }
+  await page.waitForTimeout(80);
+};
+
+/** Idle on, the way a thumb does it: the tab opens the panel, and its button starts it. */
+const startIdle = async () => {
+  await tapTab('idle');
+  await page.click('.hud-sheet[data-sheet="idle"] [data-action="start-idle"]');
   await page.waitForTimeout(80);
 };
 
@@ -2336,19 +2343,20 @@ async function keyboard() {
     w.teleport(rat.x - 60, rat.y);
     w.player.restoreToFull();
   });
-  // The real button rather than the event behind it.
-  await tapTab('camp');
+  // The real buttons rather than the event behind them: the tab opens the idle
+  // panel, and the panel's own button starts it.
+  await startIdle();
   await stepUntil(
     () => page.evaluate(() => window.world.afkActive && window.world.target !== null),
-    'the camp to pick a fight',
+    'idle to pick a fight',
   );
-  check('the AFK camp fights unprompted', true);
+  check('idle fights unprompted', true);
 
   await page.keyboard.down('w');
   await step(2);
   const released = await page.evaluate(() => window.world.afkActive);
   await page.keyboard.up('w');
-  check('a real movement key takes the controls back from the camp', released === false);
+  check('a real movement key takes the controls back from idle', released === false);
 
   // Escape reaches the world as a drained action rather than a listener. The
   // furthest live mob, so it is not auto-attacked to death before the key
@@ -3159,6 +3167,124 @@ async function skillsBook() {
     `${smithing.entries} recipes, above the bar ${smithing.aboveBar}, scrolls ${smithing.scrolls}`,
   );
   await tapTab('skills');
+  if (viewport) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(300);
+  }
+}
+
+async function idlePanel() {
+  // --- The idle panel (decision 96). The Idle tab opens a panel saying what
+  // idle will do rather than starting it; the panel's own button starts it,
+  // and the food rows are set with a real thumb. What the panel says is derived
+  // and held in tests/systems/IdlePlanSystem.test.ts; what needs a browser is
+  // that on a portrait phone, where a food with three buttons beside it is
+  // tightest, every button is a thumb target inside the panel, the panel stops
+  // above the tab bar, and a tap goes round the world and back. ---
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.character.addItem('cooked-rat', 3);
+    w.character.addItem('cooked-crab', 2);
+    window.events.emit('inventory-changed', { ...w.character.state.inventory });
+  });
+
+  const panel = () =>
+    page.evaluate(() => {
+      const sheet = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="idle"]')
+      );
+      const box = sheet.getBoundingClientRect();
+      const bar = /** @type {HTMLElement} */ (document.querySelector('.hud-tabs'));
+      const buttons = [...sheet.querySelectorAll('.hud-idle-food button, .hud-idle__button')].map(
+        (button) => button.getBoundingClientRect(),
+      );
+      /** @param {string} selector */
+      const foods = (selector) =>
+        [...sheet.querySelectorAll(selector)].map(
+          (row) => /** @type {HTMLElement} */ (row).dataset.food,
+        );
+      return {
+        visible: getComputedStyle(sheet).display !== 'none',
+        button: sheet.querySelector('.hud-idle__button')?.textContent ?? '',
+        foods: foods('.hud-idle-food'),
+        kept: foods('.hud-idle-food.is-kept'),
+        smallest: Math.round(Math.min(...buttons.map((rect) => Math.min(rect.width, rect.height)))),
+        inside: buttons.every(
+          (rect) => rect.left >= box.left - 0.5 && rect.right <= box.right + 0.5,
+        ),
+        aboveBar: box.bottom <= bar.getBoundingClientRect().top + 0.5,
+        lit:
+          document.querySelector('.hud-tabs__tab[data-tab="idle"]')?.classList.contains('is-lit') ??
+          false,
+        idle: window.world.afkActive,
+      };
+    });
+
+  await tapTab('idle');
+  const opened = await panel();
+  check(
+    'the Idle tab opens its panel rather than starting idle',
+    opened.visible && !opened.idle && opened.button === 'Start idle',
+    `visible ${opened.visible}, idle ${opened.idle}, button "${opened.button}"`,
+  );
+  check(
+    'every button on it is a thumb target, inside the panel, above the tab bar',
+    opened.smallest >= 44 && opened.inside && opened.aboveBar,
+    `smallest ${opened.smallest}px, inside ${opened.inside}, above the bar ${opened.aboveBar}`,
+  );
+  check(
+    'it lists the food in the bag in the order idle eats it',
+    JSON.stringify(opened.foods) === JSON.stringify(['cooked-rat', 'cooked-crab']),
+    opened.foods.join(', '),
+  );
+  await page.screenshot({ path: `${OUT}/13b-idle-panel.png` });
+
+  await page.tap('.hud-idle-food[data-food="cooked-crab"] [data-action="food-earlier"]');
+  await page.tap('.hud-idle-food[data-food="cooked-crab"] [data-action="food-keep"]');
+  await page.waitForTimeout(80);
+  const set = await panel();
+  const saved = await page.evaluate(() => window.world.character.state.idleFood);
+  check(
+    'a real tap moves a food and keeps one, through the world and back',
+    JSON.stringify(set.foods) === JSON.stringify(['cooked-crab', 'cooked-rat']) &&
+      JSON.stringify(set.kept) === JSON.stringify(['cooked-crab']) &&
+      saved.keep.includes('cooked-crab'),
+    `${set.foods.join(', ')}; kept ${set.kept.join(', ')}`,
+  );
+
+  await page.tap('.hud-sheet[data-sheet="idle"] [data-action="start-idle"]');
+  await page.waitForTimeout(80);
+  const started = await panel();
+  check(
+    'Start sets idle going, puts the panel away and lights the tab',
+    started.idle && !started.visible && started.lit,
+    `idle ${started.idle}, panel ${started.visible}, lit ${started.lit}`,
+  );
+
+  await tapTab('idle');
+  const running = await panel();
+  await page.tap('.hud-sheet[data-sheet="idle"] [data-action="stop-idle"]');
+  await page.waitForTimeout(80);
+  const stopped = await panel();
+  check(
+    'while it runs, the lit tab opens the panel with Stop in it',
+    running.visible && running.button === 'Stop idle' && !stopped.idle && !stopped.lit,
+    `"${running.button}", then idle ${stopped.idle}`,
+  );
+
+  await tapTab('idle');
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.removeItem('cooked-rat', 3);
+    w.character.removeItem('cooked-crab', 2);
+    w.character.state.idleFood = { order: [], keep: [] };
+    window.events.emit('inventory-changed', { ...w.character.state.inventory });
+    window.events.emit('idle-food-changed', w.character.state.idleFood);
+  });
   if (viewport) {
     await page.setViewportSize(viewport);
     await page.waitForTimeout(300);
@@ -4102,14 +4228,14 @@ async function offlineCamping() {
   // through a real reload: a full pack does not stop an unattended session, so
   // the report has to come back with the night's XP *and* an itemised list of
   // what it could not carry.
-  await tapTab('camp');
+  await startIdle();
   await page.evaluate(() => {
     const w = window.world;
     w.character.state.level = 1;
     w.character.state.xp = 0;
     w.character.state.inventory = { 'rat-bones': w.character.carryCapacity() };
     const afk = w.character.state.afk;
-    if (!afk) throw new Error('the camp tab left no parked session behind');
+    if (!afk) throw new Error('the idle panel left no parked session behind');
     afk.startedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -4531,6 +4657,7 @@ const SECTIONS = [
   ['sheets', sheets],
   ['achievements', achievements],
   ['skills-book', skillsBook],
+  ['idle-panel', idlePanel],
   ['bag', bagSheet],
   ['character-sheet', characterSheet],
   ['zone-map', zoneMapSheet],

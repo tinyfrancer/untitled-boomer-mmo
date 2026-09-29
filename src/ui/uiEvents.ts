@@ -21,6 +21,7 @@ import type { MasteryXp } from '../systems/MasterySystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
+import type { IdleFoodChoice, IdleFoodMove } from '../systems/IdleFoodSystem';
 import type { InspectPanel } from '../systems/InspectSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
@@ -165,10 +166,17 @@ export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
 // like everything else on this channel: the host applies and keeps it, and the
 // HUD redraws the menu from it.
 export const SOUND_SETTINGS_CHANGED_EVENT = 'sound-settings-changed';
-// AFK camping. The HUD asks for the toggle; ZoneWorld owns whether it is on,
-// since anything in the world can turn it back off, and reports the answer.
-export const AFK_TOGGLE_REQUESTED_EVENT = 'afk-toggle-requested';
+// Idle, which the code calls AFK camping (decision 85). The HUD asks for it on
+// or off, saying which rather than toggling, since what the idle panel's button
+// showed is the thing the player pressed; ZoneWorld owns whether it is on, since
+// anything in the world can turn it back off, and reports the answer.
+export const AFK_SET_REQUESTED_EVENT = 'afk-set-requested';
 export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
+// What idle may eat and in what order: the idle panel's two asks, and the
+// answer, which is the whole choice so that the latest one describes it.
+export const IDLE_FOOD_MOVE_REQUESTED_EVENT = 'idle-food-move-requested';
+export const IDLE_FOOD_KEEP_REQUESTED_EVENT = 'idle-food-keep-requested';
+export const IDLE_FOOD_CHANGED_EVENT = 'idle-food-changed';
 // What a camp earned while the tab was closed is not an event: the load that
 // resolves a parked session is necessarily earlier than the HUD, so it queues
 // on the GameContext and the HUD drains it on mount.
@@ -430,8 +438,11 @@ export interface UiEventMap {
   [NOTICE_EVENT]: [message: string];
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
   [SOUND_SETTINGS_CHANGED_EVENT]: [settings: SoundSettings];
-  [AFK_TOGGLE_REQUESTED_EVENT]: [];
+  [AFK_SET_REQUESTED_EVENT]: [active: boolean];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
+  [IDLE_FOOD_MOVE_REQUESTED_EVENT]: [itemId: ItemId, move: IdleFoodMove];
+  [IDLE_FOOD_KEEP_REQUESTED_EVENT]: [itemId: ItemId, keep: boolean];
+  [IDLE_FOOD_CHANGED_EVENT]: [choice: IdleFoodChoice];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];
   [UNLOCKED_ZONES_CHANGED_EVENT]: [zoneIds: ZoneId[]];
   [VISITS_CHANGED_EVENT]: [visits: ZoneVisits];

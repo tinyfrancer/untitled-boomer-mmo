@@ -2,7 +2,7 @@ export type TabId =
   | 'character'
   | 'inventory'
   | 'quests'
-  | 'camp'
+  | 'idle'
   | 'menu'
   | 'feats'
   | 'log'
@@ -30,15 +30,16 @@ export interface TabDefinition {
  * opens occasionally moved behind one seat, so the bar holds the ones they open
  * constantly and a new surface never has to argue with the arithmetic again.
  *
- * Camp is out here rather than in the menu because it is the one tab that shows
- * state: it stays lit while a camp runs, and a lit button nobody can see is not
- * an indicator.
+ * Idle is out here rather than in the menu because it is the one tab that shows
+ * state: it stays lit while idle runs, and a lit button nobody can see is not
+ * an indicator. It opens the idle panel, which says what idle will do before
+ * the panel's own button starts it (decision 96).
  */
 export const TABS: TabDefinition[] = [
   { id: 'character', label: 'Char', kind: 'sheet', key: 'c' },
   { id: 'inventory', label: 'Bag', kind: 'sheet', key: 'i' },
   { id: 'quests', label: 'Quests', kind: 'sheet', key: 'q' },
-  { id: 'camp', label: 'Camp', kind: 'action', key: 'z' },
+  { id: 'idle', label: 'Idle', kind: 'sheet', key: 'z' },
   { id: 'menu', label: 'Menu', kind: 'action' },
 ];
 

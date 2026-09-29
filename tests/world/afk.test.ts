@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { harness } from './harness';
-import { AFK_STATE_CHANGED_EVENT, AFK_TOGGLE_REQUESTED_EVENT } from '../../src/ui/uiEvents';
+import {
+  AFK_SET_REQUESTED_EVENT,
+  AFK_STATE_CHANGED_EVENT,
+  IDLE_FOOD_CHANGED_EVENT,
+  IDLE_FOOD_KEEP_REQUESTED_EVENT,
+  IDLE_FOOD_MOVE_REQUESTED_EVENT,
+} from '../../src/ui/uiEvents';
 import { AFK_ANCHOR_RADIUS } from '../../src/systems/AfkSystem';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 
@@ -22,7 +28,7 @@ function camped(): ReturnType<typeof harness> {
   if (!rat) throw new Error('town has no live level 1 rat');
   kit.world.teleport(rat.x - 60, rat.y);
   kit.world.player.restoreToFull();
-  kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+  kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
   return kit;
 }
 
@@ -84,7 +90,7 @@ describe('camping', () => {
     const { world, state, bus, until } = harness({ zoneId: 'bandit-camp' });
     const bandit = nth(world.mobs, 0);
     world.teleport(bandit.x, bandit.y);
-    bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    bus.emit(AFK_SET_REQUESTED_EVENT, true);
     world.player.takeDamage(world.player.hp - 1);
 
     until(() => !world.afkActive, 'the camp to end with the player');
@@ -107,7 +113,7 @@ describe('camping a gathering skill', () => {
     kit.character.addItem('felling-axe', 1);
     kit.character.equip('felling-axe');
     kit.world.teleport(tree.x, tree.y + 60);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     return kit;
   }
 
@@ -156,7 +162,7 @@ describe('camping a gathering skill', () => {
     kit.character.addItem('fishing-pole', 1);
     kit.character.equip('fishing-pole');
     kit.world.teleport(spot.x, spot.y + 60);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
 
     kit.until(() => kit.character.itemCount('raw-fish') > 0, 'the camp to land a fish');
   });
@@ -180,7 +186,7 @@ describe('camping a making skill', () => {
     kit.character.addItem('tin-ore', 8);
     kit.world.teleport(forge.x, forge.y + 40);
     kit.tick(1);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     return kit;
   }
 
@@ -211,7 +217,7 @@ describe('camping a making skill', () => {
     kit.character.addItem('raw-fish', 6);
     kit.world.handleLightFireRequested();
     kit.tick(1);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
 
     kit.until(
       () => kit.character.itemCount('cooked-fish') + kit.character.itemCount('burnt-fish') > 0,
@@ -233,7 +239,7 @@ describe('camping a making skill', () => {
   // precedence the awake loop ran on.
   it('records no station for a camp that settled to fight', () => {
     const kit = harness();
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     expect(kit.state.afk).toMatchObject({ station: null });
   });
 });
@@ -247,5 +253,27 @@ describe('the keyboard', () => {
     tick(1);
 
     expect(world.target).toBeNull();
+  });
+});
+
+/**
+ * What idle eats is set from the idle panel (decision 96), and the world is
+ * what hears the asks: the HUD sends an item and a direction, and the answer
+ * is the whole choice, saved with the character.
+ */
+describe("setting idle's food from the panel", () => {
+  it('moves and keeps a food on the save, and answers with the choice', () => {
+    const { bus, state, character, emissions } = harness();
+    character.addItem('cooked-rat', 2);
+    character.addItem('cooked-crab', 1);
+
+    bus.emit(IDLE_FOOD_MOVE_REQUESTED_EVENT, 'cooked-crab', 'earlier');
+    bus.emit(IDLE_FOOD_KEEP_REQUESTED_EVENT, 'cooked-rat', true);
+
+    expect(state.idleFood.order.indexOf('cooked-crab')).toBeLessThan(
+      state.idleFood.order.indexOf('cooked-rat'),
+    );
+    expect(state.idleFood.keep).toEqual(['cooked-rat']);
+    expect(emissions(IDLE_FOOD_CHANGED_EVENT).at(-1)).toEqual([state.idleFood]);
   });
 });

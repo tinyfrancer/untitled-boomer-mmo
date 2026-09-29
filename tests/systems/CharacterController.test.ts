@@ -429,6 +429,32 @@ describe('CharacterController achievements', () => {
   });
 });
 
+describe('CharacterController idle food', () => {
+  it('starts with nothing placed and nothing kept', () => {
+    expect(makeController().state.idleFood).toEqual({ order: [], keep: [] });
+  });
+
+  it('moves a food in the bag, and keeps one, on the state', () => {
+    const character = makeController();
+    character.addItem('cooked-rat', 2);
+    character.addItem('cooked-crab', 1);
+
+    expect(character.moveIdleFood('cooked-crab', 'earlier')).toBe(true);
+    expect(character.state.idleFood.order.slice(0, 1)).toEqual(['cooked-crab']);
+    expect(character.keepIdleFood('cooked-crab', true)).toBe(true);
+    expect(character.state.idleFood.keep).toEqual(['cooked-crab']);
+  });
+
+  it('refuses a move with nowhere to go, leaving the choice as it was', () => {
+    const character = makeController();
+    character.addItem('cooked-rat', 2);
+
+    expect(character.moveIdleFood('cooked-rat', 'earlier')).toBe(false);
+    expect(character.keepIdleFood('logs', true)).toBe(false);
+    expect(character.state.idleFood).toEqual({ order: [], keep: [] });
+  });
+});
+
 describe('CharacterController locked zones', () => {
   it('starts with every door still shut', () => {
     const character = makeController();

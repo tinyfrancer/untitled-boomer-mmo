@@ -593,6 +593,68 @@ function hudCss(): string {
   pointer-events: auto;
 }
 
+/* --- Idle panel ---------------------------------------------------------- */
+
+/* Start and Stop, across from the title: the one thing the panel is opened to do. */
+.hud-idle__button {
+  flex: none;
+  font-size: ${THEME.font.sm}px;
+}
+.hud-idle__head {
+  align-items: center;
+}
+.hud-idle__line {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  line-height: 18px;
+  padding: 1px 0;
+}
+.hud-idle__warning {
+  color: ${THEME.color.playerDamage};
+}
+/* A food in the bag and the three buttons that set it: the item takes the rest
+   of the row, and the buttons keep the touch minimum a thumb needs. */
+.hud-idle-food {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin-top: 2px;
+}
+.hud-idle-food__item {
+  display: flex;
+  align-items: center;
+  gap: ${THEME.padding}px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: ${THEME.font.sm}px;
+  pointer-events: auto;
+}
+.hud-idle-food__item > .hud-icon {
+  flex: none;
+  width: ${THEME.font.xl}px;
+  height: ${THEME.font.xl}px;
+}
+.hud-idle-food__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-idle-food.is-kept .hud-idle-food__name {
+  color: ${THEME.color.dim};
+}
+.hud-idle-food__button {
+  flex: none;
+  min-width: ${THEME.touchMin}px;
+  padding: 0 6px;
+  font-size: ${THEME.font.sm}px;
+}
+/* The top food has nowhere earlier to go and the bottom one nowhere later. */
+.hud-idle-food__button:disabled {
+  color: ${THEME.color.dim};
+}
+
 /* --- Skills book --------------------------------------------------------- */
 
 /* Back to the index, in front of the page's title the way a counter's Back

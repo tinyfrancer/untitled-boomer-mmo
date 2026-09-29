@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RECIPES, STATION_RADIUS } from '../../src/data/recipes';
-import { AFK_TOGGLE_REQUESTED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
+import { AFK_SET_REQUESTED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
 import { harness } from './harness';
 
 /**
@@ -150,7 +150,7 @@ describe('a camp left in the yard', () => {
   function tanning() {
     const kit = atTheVat();
     kit.character.addItem('lurker-hide', 8);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     return kit;
   }
 

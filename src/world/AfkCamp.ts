@@ -2,7 +2,6 @@ import {
   AFK_ANCHOR_RADIUS,
   afkCampJob,
   afkJobSkill,
-  chooseAfkFood,
   chooseAfkNode,
   decideAfkAction,
   shouldAfkEat,
@@ -13,11 +12,16 @@ import { SKILLS } from '../data/skills';
 import type { CraftingRecipe, StationId } from '../data/recipes';
 import { logNotice } from '../systems/CombatLogSystem';
 import { canGather } from '../systems/GatherSystem';
+import { chooseIdleFood, type IdleFoodMove } from '../systems/IdleFoodSystem';
 import { inventoryEntries } from '../systems/InventorySystem';
 import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import { distance, withinRadius, type Point } from '../systems/MovementSystem';
 import type { EnemyId, ItemId, SkillId } from '../types/ids';
-import { AFK_STATE_CHANGED_EVENT, type AchievementUnlock } from '../ui/uiEvents';
+import {
+  AFK_STATE_CHANGED_EVENT,
+  IDLE_FOOD_CHANGED_EVENT,
+  type AchievementUnlock,
+} from '../ui/uiEvents';
 import type { Mob } from './Mob';
 import type { ResourceNode } from './ResourceNode';
 import type { Targeting } from './targeting';
@@ -98,10 +102,6 @@ export class AfkCamp {
     this.deps = deps;
   }
 
-  toggle(): void {
-    this.set(!this.active);
-  }
-
   set(active: boolean): void {
     if (this.active === active) return;
     this.active = active;
@@ -120,7 +120,7 @@ export class AfkCamp {
       }
       this.ctx.log(
         logNotice(
-          skill === null ? 'You settle in to camp.' : `You settle in to ${SKILLS[skill].verb}.`,
+          skill === null ? 'You settle in to fight.' : `You settle in to ${SKILLS[skill].verb}.`,
         ),
       );
       // Settling in with a full pack is allowed — the XP is worth having on its
@@ -151,6 +151,29 @@ export class AfkCamp {
       : null;
     this.ctx.persistCharacter();
     this.ctx.events.emit(AFK_STATE_CHANGED_EVENT, this.active);
+  }
+
+  /** A food in the bag moved a place in what idle eats first (decision 96). */
+  moveFood(itemId: ItemId, move: IdleFoodMove): void {
+    if (this.ctx.character.moveIdleFood(itemId, move)) {
+      this.ctx.persistCharacter();
+    }
+    this.publishFood();
+  }
+
+  /** A food marked for idle to leave alone, or to eat again. */
+  keepFood(itemId: ItemId, keep: boolean): void {
+    if (this.ctx.character.keepIdleFood(itemId, keep)) {
+      this.ctx.persistCharacter();
+    }
+    this.publishFood();
+  }
+
+  // Answered even when refused, the way a title is: the panel that asked may
+  // have been drawn from a bag that has moved since, and the answer is the
+  // choice as it stands.
+  private publishFood(): void {
+    this.ctx.events.emit(IDLE_FOOD_CHANGED_EVENT, this.ctx.character.state.idleFood);
   }
 
   /**
@@ -420,7 +443,8 @@ export class AfkCamp {
     if (player.isEating() || !shouldAfkEat(player.hp, player.maxHp, player.isInCombat())) {
       return;
     }
-    const food = chooseAfkFood(this.ctx.character.state.inventory);
+    const { inventory, idleFood } = this.ctx.character.state;
+    const food = chooseIdleFood(inventory, idleFood);
     if (food) {
       this.deps.eat(food);
     }

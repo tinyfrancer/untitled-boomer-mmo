@@ -17,7 +17,7 @@ locked Sunken Barrow at level 7-8; three classes, the third a ranger whose bow s
 shot; three gathering skills and four making ones, the fourth fletching the ranger's arrows; gear,
 armour and reforging; two-way combat with telegraphed enemy abilities; a shop, a bank, a trainer, a
 quest chain and a contract board, and a barter counter at Greyford; slayer achievements, titles and
-per-target mastery; an AFK camp that pays out offline; click/tap-to-move with a mobile-first HUD;
+per-target mastery; idle play (the code's AFK camp) that pays out offline; click/tap-to-move with a mobile-first HUD;
 and local save/load with versioned migrations. `docs/architecture/zones.md` has the full roster and
 what each zone is for.
 
@@ -191,7 +191,10 @@ leave nothing behind to count. Keep that split. **What an item is for is derived
 them — a counter, a stand, a trade — is taught to it in the same change, or every card it touches
 goes quiet about it. **So is what a skill's level buys** (`systems/SkillBookSystem.ts`, the skills
 book): it reads the functions the rolls call, so a new rate goes behind an exported function the
-book can read rather than inline in a roll, or the book goes on saying the old number.
+book can read rather than inline in a roll, or the book goes on saying the old number. **So is what
+idle will do** (`systems/IdlePlanSystem.ts`, the idle panel): it reads `afkCampJob` and
+`offlineJob`, the function the payout branches on, so a new rule in the camp or the payout goes
+behind those, or the panel goes on promising the old night.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
@@ -250,7 +253,7 @@ Change a stat, a table or a curve and retune until those pass rather than eyebal
 | Tools, recipes, stations, tiers, cooking, dead ends                | `docs/architecture/making.md`     |
 | Loot rules, quests, bounties, stored tallies, mastery              | `docs/architecture/content.md`    |
 | Abilities, levels, difficulty, the cap, crits, armour, bosses      | `docs/architecture/combat.md`     |
-| The AFK camp and offline progress                                  | `docs/architecture/afk.md`        |
+| Idle (the AFK camp), its panel and food order, offline progress    | `docs/architecture/afk.md`        |
 | The HUD's pieces, the map, layout, tabs                            | `docs/architecture/hud.md`        |
 | Camera, terrain, light, draw budget, nameplates, picking, gestures | `docs/architecture/rendering.md`  |
 | Sound: what it hears, cues, ambience, unlocking, mute and volume   | `docs/architecture/audio.md`      |

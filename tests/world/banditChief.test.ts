@@ -4,7 +4,7 @@ import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { ENEMIES } from '../../src/data/enemies';
 import { ENEMY_ABILITIES } from '../../src/data/enemyAbilities';
 import {
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
   COMBAT_LOG_EVENT,
   KILLS_CHANGED_EVENT,
   TARGET_SELECTED_EVENT,
@@ -102,7 +102,7 @@ describe('the chief', () => {
     const chief = chiefIn(kit);
     // Parked right on top of him, which is the case a distance check would miss.
     kit.world.teleport(chief.x, chief.y);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     expect(kit.world.afkActive).toBe(true);
 
     kit.tick(40);
@@ -117,7 +117,7 @@ describe('the chief', () => {
     const kit = hideout();
     const chief = chiefIn(kit);
     kit.world.teleport(chief.x, chief.y - 300);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
 
     chief.engage();
     kit.until(() => kit.world.target === chief, 'the camp to answer the chief');

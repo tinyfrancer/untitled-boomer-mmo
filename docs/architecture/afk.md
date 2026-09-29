@@ -1,6 +1,12 @@
-# Camping and offline progress
+# Idle and offline progress
 
-Why unattended play stays behind active play, what a camp does, and what a parked session pays.
+Why unattended play stays behind active play, what idle does, what a parked session pays, and how
+the idle panel says so before it starts.
+
+**The player calls it Idle; the code mostly calls it camping** (decision 85). `AfkCamp`,
+`afkCampJob`, `AfkSession` and the rest kept the names they were written with, and "a camp" below
+means idle running. What was written after the rename says idle: `IdlePlanSystem`, `IdleFoodSystem`,
+`CharacterState.idleFood`, the idle panel. Every string a player reads says Idle.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
@@ -95,3 +101,35 @@ as arrows for the next, and **stops the night** when there are not enough for a 
 paying punches as though they were shots. `arrowsSpent` runs the way `consumed` does, and
 `resolveParked` takes them off the quiver and then the bag after the drops are in; a bow parked with
 nothing to shoot earns nothing, and the away report says so in the warning colour.
+
+**The idle panel says what idle will do before it starts** (decision 96, `hud/IdleSheet.ts` drawing
+`systems/IdlePlanSystem.ts`). The Idle tab opens it rather than starting anything; its own button
+starts idle and puts the panel away, and while idle runs the lit tab opens the same panel with Stop.
+It says the job, what that pays against doing it by hand, the food in the order it will be eaten,
+the arrows a bow will spend, and what a closed game pays and at most. **None of it is written per
+job**: the awake half is read off `afkCampJob` and the zone's node table (a tool with nothing to
+work here is `chooseAfkNode`'s `none`, and fights), and the closed half off **`offlineJob`, the
+function `resolveOfflineAfk` itself branches on**, with the ceilings and rates read off the same
+constants the payout multiplies by. That is what stops the panel promising a night the payout will
+not pay, and why `IdlePlanSystem.test.ts` sweeps every zone for the creature the panel names being
+the one the payout credits. It says outright where the two halves differ, which the old toggle never
+did: a campfire goes out, so a closed game pays for the gear instead; a tool with no work in the
+zone fights with the game open and earns nothing with it closed; a bow with nothing to shoot punches
+awake and earns nothing away. The panel is derived in the HUD from what its model already held — the
+zone is the one thing it had to be seeded with, from the save, since the world says which zone only
+on its first frame — so it needed no publisher of its own.
+
+**What idle eats is the player's to set** (decision 96, `systems/IdleFoodSystem.ts`): an order, and
+food marked Keep that idle never eats. It is the one idle setting stored (`CharacterState.idleFood`),
+because a choice leaves nothing behind to derive it from, and it starts empty, which is the old rule
+exactly: weakest first, everything fair game. A move swaps a food with its neighbour **in the bag**,
+which is all the panel lists, and the first move writes down every food in the game, so a food not
+in the bag keeps its place for when it is again and a food the game adds later goes last, where it
+is kept longest. With nothing it may eat, idle rests instead, and the panel says so. A closed game
+eats nothing either way — it has no fight to be hurt in — and the panel says that too.
+
+**The away report speaks the panel's words.** It names the creature a night fought, says "the most
+that counts" when the eight hours ran out, and says "Stopped at the most a night pays" with the
+ceiling the panel named — half a level, or one level of the skill — when that is what ended it.
+`OfflineAfkReport.capped` is how it knows: set when the ceiling rather than the time, the bag or the
+arrows ended the night.

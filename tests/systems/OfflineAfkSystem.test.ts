@@ -224,6 +224,35 @@ describe('resolveOfflineAfk', () => {
   });
 });
 
+/**
+ * Whether the ceiling ended a night, which the away report says in the words
+ * the idle panel promised it in. The time running out, the bag running dry and
+ * the arrows running out are each something else.
+ */
+describe('a night that reached its ceiling', () => {
+  const AXE: Gear = { ...SWORD_IN_HAND, weapon: 'felling-axe' };
+
+  it('is capped when a fight reached half a level, and not before', () => {
+    expect(resolveOfflineAfk(sessionStartedAgo(OFFLINE_CAP_MS), context()).capped).toBe(true);
+    expect(resolveOfflineAfk(sessionStartedAgo(HOUR_MS / 6), context()).capped).toBe(false);
+  });
+
+  it('is capped when work reached a level of its skill', () => {
+    const night = resolveOfflineAfk(sessionStartedAgo(OFFLINE_CAP_MS), context({ gear: AXE }));
+    expect(night.capped).toBe(true);
+    const minute = resolveOfflineAfk(sessionStartedAgo(60_000), context({ gear: AXE }));
+    expect(minute.capped).toBe(false);
+  });
+
+  it('is capped at the forge only when the level, not the ore, ran out', () => {
+    const atTheForge = sessionStartedAgo(OFFLINE_CAP_MS, 'town', 'forge');
+    const plenty = context({ gear: AXE, inventory: { 'tin-ore': 400 }, rng: () => 1 });
+    expect(resolveOfflineAfk(atTheForge, plenty).capped).toBe(true);
+    const few = context({ gear: AXE, inventory: { 'tin-ore': 3 }, rng: () => 1 });
+    expect(resolveOfflineAfk(atTheForge, few).capped).toBe(false);
+  });
+});
+
 describe('formatAwayDuration', () => {
   it('reads in minutes under an hour', () => {
     expect(formatAwayDuration(90 * 60 * 1000)).toBe('1h 30m');

@@ -5,7 +5,7 @@ import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { RECIPES } from '../../src/data/recipes';
 import { masteryXp } from '../../src/systems/MasterySystem';
 import {
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
   MASTERY_CHANGED_EVENT,
   MASTERY_TIER_REACHED_EVENT,
 } from '../../src/ui/uiEvents';
@@ -60,7 +60,7 @@ describe('a gather', () => {
     // Anchored at the tree: a camp works the nearest ready node inside its
     // anchor radius, and the anchor is wherever it was settled.
     kit.world.teleport(tree.x, tree.y + 40);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
 
     kit.until(
       () => masteryXp(kit.state.mastery, 'tree') > 0,

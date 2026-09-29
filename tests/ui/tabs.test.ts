@@ -26,9 +26,9 @@ describe('the tab bar', () => {
     expect(tabWidth(280, TABS.length)).toBeGreaterThanOrEqual(THEME.touchMin);
   });
 
-  it('keeps Camp on the bar, since it is the one tab that shows state', () => {
-    expect(TABS.map((tab) => tab.id)).toContain('camp');
-    expect(isMenuTab('camp')).toBe(false);
+  it('keeps Idle on the bar, since it is the one tab that shows state', () => {
+    expect(TABS.find((tab) => tab.id === 'idle')?.label).toBe('Idle');
+    expect(isMenuTab('idle')).toBe(false);
   });
 });
 

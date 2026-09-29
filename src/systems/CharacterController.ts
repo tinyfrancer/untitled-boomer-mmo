@@ -62,6 +62,7 @@ import {
   type AchievementProgress,
 } from './AchievementSystem';
 import { bonusYieldChance, crossedMasteryTiers, masteryXp, recordMastery } from './MasterySystem';
+import { keepIdleFood, moveIdleFood, type IdleFoodMove } from './IdleFoodSystem';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
 import type { AchievementDefinition } from '../data/achievements';
@@ -745,6 +746,22 @@ export class CharacterController {
 
   displayName(): string {
     return formatDisplayName(this.state.name, this.state.activeTitleId);
+  }
+
+  /** A food in the bag moved a place earlier or later in what idle eats first. */
+  moveIdleFood(itemId: ItemId, move: IdleFoodMove): boolean {
+    const next = moveIdleFood(this.state.idleFood, this.state.inventory, itemId, move);
+    if (!next) return false;
+    this.state.idleFood = next;
+    return true;
+  }
+
+  /** A food marked for idle to leave alone, or to eat again. */
+  keepIdleFood(itemId: ItemId, keep: boolean): boolean {
+    const next = keepIdleFood(this.state.idleFood, itemId, keep);
+    if (!next) return false;
+    this.state.idleFood = next;
+    return true;
   }
 
   /**

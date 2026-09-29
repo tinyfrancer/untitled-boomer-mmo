@@ -3,7 +3,7 @@ import { nth } from '../nth';
 import { harness, nodeNamed } from './harness';
 import { ZONES } from '../../src/data/zones';
 import {
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_TILE_CHANGED_EVENT,
   ZONE_ENTERED_EVENT,
@@ -296,7 +296,7 @@ describe('walking out of a zone', () => {
     // would steer the player off the exit before they ever crossed it.
     kit.world.teleport(kit.world.worldWidth / 2, kit.world.worldHeight - 10);
     kit.world.setTarget(nth(kit.world.mobs));
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     expect(kit.world.afkActive).toBe(true);
 
     kit.tick(1);

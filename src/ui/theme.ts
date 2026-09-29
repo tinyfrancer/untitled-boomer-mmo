@@ -33,6 +33,9 @@ export const THEME = {
     // and a map narrow enough to fit the other panels' column would leave each
     // tile too few pixels to tell a fishing spot from the pond it sits in.
     map: 320,
+    // The skills book's, for the same reason: a line of the idle panel is a
+    // recipe's inputs and result, and a food row carries three buttons.
+    idle: 300,
   },
   paperdollSize: 102,
   /**
