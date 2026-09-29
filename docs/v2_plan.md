@@ -7,9 +7,11 @@ item says what it is for, on a tap and on a card any item row opens; decision 90
 shop and the bank in two sides, contracts marked repeatable, Abandon apart and asking twice;
 decision 91), **A4** (a tap on a person talks first: a greeting, their counter as a button, their
 quests; decision 92), **A5** (the skills book: a page per skill, every node and recipe with its
-mastery beside it, the mastery page gone; decision 93) **and A6** (the training bar: the skill last
-trained, in the player column, following what you do and fading half a minute after; decision 94).
-**Next: A7**, idle. Update this line as each phase lands: which phase, and which is next.
+mastery beside it, the mastery page gone; decision 93), **A6** (the training bar: the skill last
+trained, in the player column, following what you do and fading half a minute after; decision 94)
+**and A7** (Idle: a panel that says what idle will do and starts and stops it, the food order and
+Keep the player sets, the away report in the panel's words; decision 96). **Next: A8**, save export
+and import. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -171,10 +173,15 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   on a timer of the HUD's own (`hud/TrainingBar.ts`), and a **tap** opens that skill's page in the
   skills book. Where the tallest column would meet the quest tracker on a landscape phone, the
   tracker steps right of it. Decision 94 has the forks.
-- **A7 — Idle.** "Camp" becomes **Idle** in every player-facing string (decision 85), the item
-  card's "Camping eats this" among them (`ItemUseSystem.ts`, left as Camp by A2). The idle panel
-  says what idle will do before it starts: the job, the food it will eat and in what order, the
-  arrows it will spend, half XP, the offline cap. The away report uses the same words.
+- **A7 — Idle. (Landed.)** "Camp" is **Idle** in every player-facing string, the item card's food
+  line among them ("Idle eats this when hurt, in the order set on the Idle tab"). The Idle tab
+  opens **the idle panel** (`hud/IdleSheet.ts`), which says what idle will do before its own
+  button starts it and what it is doing while it runs, with Stop: the job, what it pays against
+  doing it by hand, the food in the order it is eaten, the arrows a bow spends, and what a closed
+  game pays and at most. It is derived (`systems/IdlePlanSystem.ts`) from `afkCampJob` and from
+  `offlineJob`, which the payout now branches on too. **The player sets the food order and marks
+  food Keep** (`CharacterState.idleFood`, save version 25). The away report names the creature,
+  the hours that count and the ceiling when a night reached it. Decision 96 has the forks.
 - **A8 — Save export and import.** Download the save as a file; load one back through the same
   migration chain, with a confirmation before overwriting.
 - **A9 — Tips.** A tip engine in plain TypeScript: tips fire off derived state (first raw food held,
@@ -182,10 +189,10 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   spirit is drawn in D5 they arrive as HUD toasts **in the spirit's voice**.
 - **A10 — Part A review.**
 
-**Open questions for Part A** (A1 answered the first: mastery folds into the skills book, and
-its own page goes, decision 89; A6 answered where the training bar sits on a landscape phone: in
-the player column, as on every screen, decision 94): Should the player choose idle's food order, or
-is "weakest first, said plainly" enough?
+**Open questions for Part A**: none left. A1 answered the first (mastery folds into the skills book,
+and its own page goes, decision 89), A6 where the training bar sits on a landscape phone (in the
+player column, as on every screen, decision 94), and A7 whether the player chooses idle's food
+order (yes: an order and a Keep mark, set on the idle panel, decision 96).
 
 ---
 
@@ -287,8 +294,8 @@ Idle and active each get a reason (decision 85).
 - **E2 — Potions.** A way to make them (a new making skill, and where its herbs come from, are this
   phase's questions), and potions brewed in active play that **boost idle gains** for a while: more
   XP, faster gathering. Some may help in a fight.
-- **E3 — What idle uses.** Idle drinks the potions it is given and eats in an order the player can
-  see and, if A7's answer says so, set.
+- **E3 — What idle uses.** Idle drinks the potions it is given. Potions join the rows A7's idle
+  panel orders and keeps, so the player sets when idle drinks them the way they set its food.
 - **E4 — Part E review.**
 
 **Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing
