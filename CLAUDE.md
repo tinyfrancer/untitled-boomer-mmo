@@ -133,13 +133,15 @@ loaded dev container reads 10ms high). `docs/architecture/testing.md` has the fu
 ## Architecture
 
 **Stack**: TypeScript bundled with Vite, rendered in 3D with Three.js (`src/render3d/`). It was
-Phaser 4 in 2D until `docs/archive/3d_port_plan.md` replaced it. No backend — everything is a
-static site. Character data lives in the browser's `localStorage`.
+Phaser 4 in 2D until `docs/archive/3d_port_plan.md` replaced it, and version 2 takes it back to 2D:
+pixel art drawn with Canvas 2D at art resolution and scaled up by whole device pixels (decision 101,
+`docs/architecture/art.md`), which B2 starts behind a flag and B7 finishes by deleting Three.js. No
+backend — everything is a static site. Character data lives in the browser's `localStorage`.
 
 **The core seam: `render3d/` knows there is an engine and nothing else does.** `systems/`, `data/`,
-`persistence/`, `types/`, `config/`, `world/`, `hud/` and `ui/` are plain TypeScript that would run
-under any renderer or none, and `src/bootFlow.ts` takes a `GameHost` rather than anything the engine
-defines. It is what makes them unit-testable with no engine to mock, and the boundary a whole
+`persistence/`, `types/`, `config/`, `world/`, `hud/`, `ui/` and `art/` are plain TypeScript that
+would run under any renderer or none, and `src/bootFlow.ts` takes a `GameHost` rather than anything
+the engine defines. It is what makes them unit-testable with no engine to mock, and the boundary a whole
 renderer was swapped across. Put new rules in those modules and call them from the view, never
 inline in an actor. `tests/architecture/phaserFreeSeam.test.ts` guards the old engine staying out.
 
@@ -234,6 +236,15 @@ picked against boxes in a fixed **priority** (node, signpost, NPC, mob, station,
 pile, ground), not a depth sort. What a frame costs is a budget smoke asserts under an eight-times-throttled CPU;
 raising it is a decision about the game, not about the run that hit it.
 
+**Version 2's art is data** (`src/art/`, decisions 81 and 100): a sprite is rows of characters
+naming palette steps, compiled at boot into an atlas, and `src/art/` imports no package so it
+outlives whichever renderer draws it. **Every colour is a step on a ramp** in `art/palette.ts`, a
+new colour being a new ramp of five, darkest first; a person, beast, effect or icon uses only the
+shared ramps, since only the ground changes with the setting. **How much animation a kind has is
+fixed in `art/budget.ts`**, and `tests/art/sprites.test.ts` holds every sprite in `SPRITES` to it
+exactly, to the palette and to its size: raising a frame count is a decision about the game, since
+it multiplies across every sprite of the kind. Nobody draws an outline; the compiler does.
+
 **Sound loads no files either** (`src/audio/`, engine-free and owned by the host). Every cue is
 synthesised from a recipe in `cues.ts`, and the board hears the same `WorldEvent[]` the view is
 handed plus two HUD events (coin, achievement) — it never reads the world. So **a moment the view
@@ -264,6 +275,7 @@ Change a stat, a table or a curve and retune until those pass rather than eyebal
 | Idle (the AFK camp), its panel and food order, offline progress    | `docs/architecture/afk.md`        |
 | The HUD's pieces, the map, layout, tabs                            | `docs/architecture/hud.md`        |
 | Camera, terrain, light, draw budget, nameplates, picking, gestures | `docs/architecture/rendering.md`  |
+| Pixel art: palette, light, outline, budget, sprites, the renderer  | `docs/architecture/art.md`        |
 | Sound: what it hears, cues, ambience, unlocking, mute and volume   | `docs/architecture/audio.md`      |
 | Tests vs smoke, the dev handles, the hand crank, frame-rate bugs   | `docs/architecture/testing.md`    |
 

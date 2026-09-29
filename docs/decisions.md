@@ -2004,6 +2004,72 @@ The four forks settled at the start of version 2's phase B1, the style guide:
   to the Past, with the marsh and underground darker for their setting. It is the one that suits
   pillar 4 and a cheeky tone, and it reads at a glance on a small screen.
 
+Claude's, alongside them, in writing the style guide (`docs/architecture/art.md`):
+
+- **A colour is a step on a ramp of five, darkest first and hue-shifted**, and a sprite names a step,
+  never a hex. **Only the ground changes with the setting**: terrain ramps are coloured per setting,
+  and a person, a beast, an effect or an icon may use only the shared ones. The gear tiers' ramps
+  are built round their `TIER_COLORS`, so the paperdoll and the world draw the same set.
+- **The light is from the top-left, and nothing casts a shadow**: a contact shadow under anything
+  standing, and underground a lantern round the player, as the 3D view had.
+- **The compiler draws the outline**, one pixel, selective (step 0 of the ramp it touches) and
+  four-sided, round people, beasts, props and icons, and not round tiles or effects.
+- **The animation budget is exact, not a ceiling**: a walk is four frames for every walker, and the
+  timing is the budget's. **Either side may be the other mirrored**, which is still four facings on
+  screen, and a death is drawn once, being a body falling seen from above.
+- **A capital in the world's font is at least nine art pixels tall, drawn at one art pixel**: that
+  holds the nameplate's nine-pixel floor at the smallest scale a phone gets without putting two
+  sizes of pixel on one screen.
+- **Anything not yet drawn is its kind's placeholder**, and each placeholder fills every animation
+  its budget allows, so the budget is held against real frames from the start.
+
 **Rejected:** 16-pixel tiles; a pixel font everywhere, and a system font everywhere; two mirrored
 directions for beasts; a muted, earthy palette in the way of classic RuneScape, and a strict retro
-palette of about 32 colours shared by everything.
+palette of about 32 colours shared by everything. Of Claude's: colours as free hexes checked against
+a list; one palette per setting for everything, actors included; a light from the south-west, as the
+3D sun was; a black outline, and an outline drawn by hand; a budget that caps frames rather than
+fixing them; a world font drawn at two art pixels to its pixel.
+
+## 101. The 2D renderer is Canvas 2D, drawing at art resolution into a canvas the page scales up
+
+**2026-09-29 · Claude, by the spike the plan's phase B1 called for**
+
+The same scene was drawn three ways and measured the way smoke measures the draw budget: a zone at
+C1's size (45×32 tiles of 32 pixels), the terrain baked once and the water animated over it, 60 and
+then 150 walking, fighting figures with a contact shadow and a nameplate each, ten effects, and the
+underground's lantern, on a 390×844 portrait phone at one and at three device pixels to the point,
+with the CPU throttled eight times. Each backend was handed the same list of rectangles a frame,
+so only the drawing differed. Mean milliseconds in the call that draws, at 60 figures:
+
+| At 8× throttle                    | Canvas 2D | PixiJS 8 | Three.js ortho |
+| --------------------------------- | --------- | -------- | -------------- |
+| Open, three device px (scale 4)   | 0.79      | 1.58     | 3.15           |
+| Underground, three device px      | 0.74      | 2.19     | 3.72           |
+| Open, one device px (scale 1)     | 0.94      | 2.38     | 3.25           |
+| Underground, one device px        | 1.03      | 2.63     | 4.38           |
+| Open, 150 figures, three px       | 1.51      | 2.22     | 3.52           |
+| Open, three px, frame forced done | 4.81      | 14.62    | 12.78          |
+| JavaScript it adds, gzipped       | 0.3 kB    | ~100 kB  | 127 kB         |
+
+The last timed row forces each frame to finish with a one-pixel read, which counts the rasterising a
+headless browser does in software. Canvas 2D was the cheapest by every measure, and the only one
+whose frames kept a 60-a-second pace under the throttle; the 3D renderer's full smoke run reads 21 to
+25ms against the 40ms ceiling. Headless Chromium has no GPU, so neither number is a phone; the
+ordering held both ways, and on a phone both Canvas 2D and WebGL are drawn by the GPU.
+
+- **Canvas 2D.** The game draws rectangles from a sheet, a few hundred a frame, in painter's order.
+  Canvas 2D does exactly that with no dependency, and B7 then deletes Three.js outright rather than
+  keeping 127 kB of a 3D engine to draw squares. What Three.js gave that 2D has to answer for itself:
+  smoke's GPU memory check becomes a count of the canvases the view holds, a tint (a hit's flash) is
+  a frame the compiler makes, and light is a stamp drawn over the scene, which is how the spike drew
+  the lantern for a tenth of a millisecond. Picking was always the game's own boxes in a priority.
+- **Drawn at art resolution, scaled by the page in whole device pixels** (`image-rendering:
+pixelated`). A portrait phone at scale 4 is a 293×633 canvas, a fifteenth of the pixels a
+  full-resolution one fills, which is most of why every backend was cheap; the whole number keeps
+  every art pixel square. It means sprites move a whole art pixel at a time.
+
+**Rejected:** Three.js with an orthographic camera, which kept renderer.info, disposal and the
+existing host, and was the slowest of the three and the largest; PixiJS, a real 2D batcher, faster
+than Three.js here and slower than Canvas 2D, for about 100 kB and a scene graph with its own
+lifecycle to keep in step with the world's; drawing at device resolution, which scales pixel art by
+fractions and fills fifteen times the pixels.

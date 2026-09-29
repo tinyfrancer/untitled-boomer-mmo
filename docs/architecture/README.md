@@ -17,6 +17,7 @@ correct it in the same PR when the change moves what it describes.
 | `afk.md`        | Idle (the code's camp), what it does, the idle panel and its food order, and offline progress                                               |
 | `hud.md`        | The HTML overlay and its pieces, the map, layout, the tab bar and the menu                                                                  |
 | `rendering.md`  | Camera, terrain, light and shadow, the draw budget, nameplates, effects, picking, gestures, occlusion                                       |
+| `art.md`        | Version 2's style guide: the tile, the scale, the palette, the light, the outline, the animation budget, the sprite format, the renderer    |
 | `audio.md`      | Sound: what it hears from the two channels, the cues, the ambience, the gesture that unlocks it, mute and volume                            |
 | `testing.md`    | What goes in `tests/world/` and what in smoke, the dev handles, the hand crank                                                              |
 
