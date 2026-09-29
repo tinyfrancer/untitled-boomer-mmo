@@ -18,9 +18,10 @@ four leftovers mended in place, a grind pass added to Part C as C10, Part B kept
 **B1** (the style guide, sprites as data in `src/art/` held to a palette and a fixed animation
 budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101) **and B2** (the
 checkpoint slice: town in pixel art behind `?renderer=2d`, with edges between grounds, the warrior,
-the shopkeeper, the rat and a building kit drawn for real; decision 102). **Next: the user judges
-B2's slice**, and B3 if it holds up; if it does not, the art source is re-decided before B3
-(decision 81). Update this line as each phase lands: which phase, and which is next.
+the shopkeeper, the rat and a building kit drawn for real; decision 102; and redrawn heroic and
+weathered after the user's first look found it "farmvilley", decision 103). **Next: the user judges
+B2's revised slice**, and B3 if it holds up; if it does not, the art source is re-decided before
+B3 (decision 81). Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -276,7 +277,11 @@ discovered at the end.
   zone; the leak check counts canvases. Everything else is its kind's placeholder. It went past the
   thirty-file prompt, at about fifty with its tests and docs, and stayed whole because its parts
   are one thing to judge: art with no view is nothing to look at, and a view with no art is the
-  placeholders B1 already had. Decision 102 has the forks.
+  placeholders B1 already had. Decision 102 has the forks. **The user's first look** found the
+  direction right and the look too cute, "farmvilley" where the game wants epic adventure, and
+  asked for World of Warcraft and the Lord of the Rings; the same phase redrew it (decision 103):
+  a deep, earthy palette, people to heroic proportions with the warrior cloaked, a sewer rat,
+  timber-framed buildings on stone, textured ground in variants, and a darker edge to the world.
 - **B3 — Every zone drawable, and the switch.** All terrain and all three settings (the lantern
   underground), water and ground scatter. Anything not yet drawn shows a placeholder sprite. **2D
   becomes the default**; 3D stays reachable for one phase as a fallback.

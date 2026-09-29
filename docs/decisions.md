@@ -2125,3 +2125,39 @@ tile sets are; one building drawn whole at its own size; a camera clamped to the
 host class beside the first; the flag honoured in development only; left-facing figures mirrored
 with the sword moving to the other hand; a font of capitals only; the corpse gone at 400ms whatever
 the fall's budget.
+
+## 103. Version 2 is drawn heroic and weathered, not cute: epic adventure over a farm
+
+**2026-09-29 · the user, judging B2's slice; Claude's under it**
+
+The user's first look at the checkpoint (B2): the direction is right, but it is "a little too
+cutesy" and "kind of farmvilley", where the game wants "the feeling of epic adventure". Draw from
+World of Warcraft, The Lord of the Rings and fantasy like them. That keeps decision 81's art source
+(pixel art drawn as data) and turns decision 100's "warm and bright" palette a long way down.
+
+What Claude made of it, blending WoW's heroic chunkiness with the Lord of the Rings' weathered,
+earthy ground:
+
+- **The palette is deep and earthy, with the warmth kept for the light.** Forest greens and worn
+  grey-brown earth in place of candy greens and orange dirt, a dark lake in place of a bright one;
+  the marsh and underground are derived from the open ground so the three stay in order. Cloth is
+  dyed rather than bright (a steel blue, a worn crimson, ochre), timber is dark oak, plaster is
+  weathered, and a stone `masonry` ramp arrives for plinths and chimneys.
+- **People stand to heroic proportions**: a head over a body three times its height, broad in the
+  shoulder, about 39 pixels of the 48, where they were two and a bit heads to a 30-pixel toddler.
+  The warrior wears a quilted gambeson in the class's blue, leather spaulders, bracers and tall
+  boots, a stubbled jaw and a crimson cloak; the shopkeeper is a grey-bearded merchant in ochre.
+- **The rat is a sewer rat, not a mouse**: lean and hunched, scruffy along the spine, small dark
+  ears, red eyes and fangs.
+- **Buildings are timber-framed on stone**: dark oak posts, a rail and braces over weathered
+  plaster, a plinth of dressed stone, leaded windows lit from inside, slate split unevenly with moss
+  on it, and a stone chimney. Walls stand taller, a head over the taller people.
+- **The ground is textured and varied**: grass in clumps with blades, a road of grit, stones and
+  ruts, and each tile dealt one of several variants by where it is, so a field is not one tile
+  stamped over and over.
+- **The scene has weight**: the map's edge fades into a dark murk rather than a pale sky, and a
+  soft vignette darkens the screen's corners, drawn under the words so no name goes dark.
+
+**Rejected:** re-deciding the art source, which the user did not ask for; a grimdark palette of
+greys and browns, which loses what WoW's colour does for reading a scene at a glance; realistic
+proportions of seven or eight heads, which leave a face two pixels wide at 32 to the tile.

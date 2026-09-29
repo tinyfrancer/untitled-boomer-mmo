@@ -6,7 +6,8 @@ step, recolouring, the world's font, and which renderer draws it.
 
 _Written in version 2's phase B1 (`docs/decisions.md` 100 and 101); B2 added the edges between
 grounds, the world's font, the first people and creature, the building kit and the 2D view that
-draws them (decision 102). Where this and the code disagree, the code is right — and this file is
+draws them (decision 102), and the user's first look turned the whole of it from cute to heroic
+and weathered (decision 103). Where this and the code disagree, the code is right — and this file is
 what should be corrected. `rendering.md` is still the 3D renderer's until B7 retires it._
 
 **The art is data, and it depends on nothing** (decision 81). A sprite is text in `src/art/`:
@@ -50,9 +51,12 @@ which is most of what makes a small sprite read as lit rather than flat. Two ste
   built round the tier's `TIER_COLORS` entry at step 2, which the paperdoll draws in, so a set of
   gear is the same set on the character sheet and in the world (held by a test).
 
-**The palette is warm and bright** (decision 100): saturated greens and warm light, in the way of
-Stardew and Link to the Past. It suits pillar 4 and a cheeky tone, and it reads at a glance on a
-small screen, which a muted palette does not.
+**The palette is heroic and weathered** (decision 103, which turned decision 100's "warm and
+bright" a long way down once the user saw it and called it farmvilley): deep forest greens, worn
+grey-brown earth, dark water, cloth dyed rather than bright, dark oak and weathered plaster, with
+the warmth kept for the light and for what should catch the eye (a lit window, a cloak, a flame).
+World of Warcraft's colour and the Lord of the Rings' ground, in the user's words the feeling of
+epic adventure; it still reads at a glance on a small screen, which a grimdark grey would not.
 
 **There is one palette per setting, and it colours only the ground.** Ramps come in two sets:
 
@@ -61,7 +65,7 @@ small screen, which a muted palette does not.
   a beast, an effect or an icon may use only these (held by a test), because a rat is the same brown
   in the fen as on the beach.
 - **Terrain ramps** (`grass`, `path`, `sand`, `water`, `stone`, `rock`, `marsh`, `foliage`,
-  `bark`) are coloured by each setting: `open` bright and warm, `marsh` greener and heavier,
+  `bark`) are coloured by each setting: `open` the lightest, `marsh` greener and heavier,
   `underground` dark and cool so the lantern has something to do. Every setting colours every one,
   so any tile can be laid in any zone and still be drawn in that zone's light, and a test holds the
   order: no terrain ramp is lighter in the marsh than in the open, or underground than in the marsh.
@@ -160,9 +164,14 @@ paws, a crate, a ring of light, a token with a question on it, a purple checker.
 animation its kind's budget allows, so the renderer never asks whether a pose exists, and so the
 budget is held against real frames from the day it was written. The terrain tiles
 (`sprites/terrain.ts`) were the first real sprites, each written in one terrain ramp's digits and
-repeating with no seam. B2 drew the first figures (`sprites/people.ts`, `sprites/rat.ts`): **the
-warrior** and **the shopkeeper** are one figure put together from parts (a head, a torso, legs a
-facing) dressed two ways, and **the rat** is the first creature. The warrior's sword is a part of
+repeating with no seam; B2 redrew grass and road with texture and gave each several **variants**
+(`TILE_VARIANTS`), a cell dealt one by where it is so a field is not one tile stamped over and
+over. What differs between variants is kept off a tile's edges, so any sits beside any other. B2
+drew the first figures (`sprites/people.ts`, `sprites/rat.ts`): **the warrior** and **the
+shopkeeper** are one figure put together from parts (a head, a torso, legs a facing, and what is
+worn over them: spaulders, a cloak, an apron) dressed two ways, drawn to **heroic proportions**, a
+head over a body three times its height and about 39 pixels of the frame's 48; **the rat** is the
+first creature, a lean sewer rat with red eyes rather than a mouse (decision 103). The warrior's sword is a part of
 its own, drawn over the body facing right and behind it facing left, which is how the left can be
 the right's body flipped with the sword still in the right hand. **Who is drawn with what** is one
 file (`art/cast.ts`): a table a class, a person and a creature, anything not in it falling back on
@@ -233,10 +242,12 @@ is the game's to say.
 (`art/building.ts`, `sprites/buildings.ts`, decision 102). Whole would be a sprite per building at
 a size the budget does not list, redrawn the day a row changes; parts are drawn once and the rule
 lays them over any footprint the table has. From outside it is a roof laid in courses of slate,
-lit on the slope facing up the screen and a step darker on the one facing the viewer, over a front
-wall a head taller than a person: a beam, plaster, a sill, posts at the corners, windows where
-there is room, and **the way in exactly where `doorGap` leaves the collision's**, since the door a
-player sees and the one they can walk through have to be one span. From inside it is a plank floor
+each split its own way, mossed where the rain sits, lit on the slope facing up the screen and a
+step darker on the one facing the viewer, with a stone chimney standing out of the far slope; over
+a front wall a head taller than a person, timber-framed in dark oak (posts, a rail, a brace in each
+lower panel) over weathered plaster on a plinth of dressed stone, leaded windows lit from inside set
+in the frame's panels, and **the way in exactly where `doorGap` leaves the collision's**, since the
+door a player sees and the one they can walk through have to be one span. From inside it is a plank floor
 ringed by the walls' tops, drawn with the ground, and **only the back wall standing**, open where a
 north door is in it: the roof and the front come off the way the 3D cutaway takes them. The three
 shapes are the one kit recoloured (`BUILDING_LOOKS`): slate over plaster for a hall, thatch for a
@@ -278,7 +289,8 @@ to the same host as the 3D view (`host/host.ts`, behind the `ZoneView` interface
   clamped to the map is what hid the south signpost under it the last time the game was 2D.
   Every position is a whole art pixel, the camera's rounded from the player's own, so the player is
   drawn at the same screen pixel every frame. The ground runs on past the map for eight tiles and
-  fades into the setting's haze over four (`terrain.ts`), as the 3D apron does.
+  fades over four into a dark murk (`terrain.ts`), the 3D apron's trick in the 2D view's mood, and
+  a soft vignette darkens the screen's corners, drawn over the world and under the words.
 - **What is drawn comes from the world each frame**; the view keeps no scene. The sprite sheet is
   compiled once a setting and kept for the session, the ground and the buildings once a zone, and
   every word once while it is drawn (`text.ts`, bounded). **Every canvas is made through one pool**
