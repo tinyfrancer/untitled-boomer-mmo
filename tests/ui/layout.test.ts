@@ -112,14 +112,60 @@ describe('hudLayout', () => {
     expect(buffed).toBeGreaterThan(bare);
   });
 
-  it('stacks a title, a mana bar and the buff row rather than overlapping them', () => {
+  // The skill last trained is one more bar with its numbers inside it, so it
+  // costs what the mana bar does, and only while it is up.
+  it('makes room for the training bar only while it is up', () => {
+    const plain = layoutFor(PHONE_PORTRAIT).playerColumn.height;
+    const training = layoutFor(PHONE_PORTRAIT, { hasTraining: true }).playerColumn.height;
+    const mana = layoutFor(PHONE_PORTRAIT, { hasMana: true }).playerColumn.height;
+    expect(training - plain).toBe(mana - plain);
+  });
+
+  it('stacks a title, a mana bar, the training bar and the buff row rather than overlapping them', () => {
     const plain = layoutFor(PHONE_PORTRAIT).playerColumn.height;
     const costOf = (options: object): number =>
       layoutFor(PHONE_PORTRAIT, options).playerColumn.height - plain;
 
-    expect(costOf({ hasMana: true, hasTitle: true, hasEffects: true })).toBe(
-      costOf({ hasMana: true }) + costOf({ hasTitle: true }) + costOf({ hasEffects: true }),
+    expect(costOf({ hasMana: true, hasTitle: true, hasTraining: true, hasEffects: true })).toBe(
+      costOf({ hasMana: true }) +
+        costOf({ hasTitle: true }) +
+        costOf({ hasTraining: true }) +
+        costOf({ hasEffects: true }),
     );
+  });
+
+  /**
+   * The landscape phone is the case: 390px tall, and the column at its tallest
+   * — a wizard wearing a quiver, titled, buffed and training — reaches below
+   * the top of two tracked lines. The tracker steps right of it there, and a
+   * short column leaves it the whole width.
+   */
+  it.each([
+    ['phone portrait', PHONE_PORTRAIT],
+    ['phone landscape', PHONE_LANDSCAPE],
+    ['small landscape', { width: SMALL_PHONE.height, height: SMALL_PHONE.width }],
+    ['small phone', SMALL_PHONE],
+    ['desktop', DESKTOP],
+  ] as const)('never lets the tallest column meet the tracker on %s', (_, viewport) => {
+    const layout = layoutFor(viewport, {
+      hasMana: true,
+      hasQuiver: true,
+      hasTitle: true,
+      hasTraining: true,
+      hasEffects: true,
+      trackedQuests: MAX_TRACKED_QUESTS,
+    });
+    const { playerColumn: column, tracker } = layout;
+    const beside = tracker.x >= column.x + column.width + layout.padding;
+    const below = tracker.y >= column.y + column.height + layout.padding;
+    expect(beside || below).toBe(true);
+    expect(tracker.x + tracker.width).toBe(viewport.width - layout.margin);
+  });
+
+  it('gives the tracker the whole width under a column that stops short of it', () => {
+    const layout = layoutFor(PHONE_LANDSCAPE, { hasTraining: true, trackedQuests: 2 });
+    expect(layout.tracker.x).toBe(layout.margin);
+    expect(layout.tracker.width).toBe(PHONE_LANDSCAPE.width - layout.margin * 2);
   });
 
   // The two corners share the top row now rather than stacking, which is what

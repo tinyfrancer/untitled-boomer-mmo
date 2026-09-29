@@ -6,9 +6,10 @@ slayer rank a title, mastery explained, map names over the markers; decision 89)
 item says what it is for, on a tap and on a card any item row opens; decision 90), **A3** (the
 shop and the bank in two sides, contracts marked repeatable, Abandon apart and asking twice;
 decision 91), **A4** (a tap on a person talks first: a greeting, their counter as a button, their
-quests; decision 92) **and A5** (the skills book: a page per skill, every node and recipe with its
-mastery beside it, the mastery page gone; decision 93). **Next: A6**, the training bar. Update this
-line as each phase lands: which phase, and which is next.
+quests; decision 92), **A5** (the skills book: a page per skill, every node and recipe with its
+mastery beside it, the mastery page gone; decision 93) **and A6** (the training bar: the skill last
+trained, in the player column, following what you do and fading half a minute after; decision 94).
+**Next: A7**, idle. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -159,8 +160,14 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   beside its row, the mastery page is gone, and the six combat skills get pages that say what they
   buy. Everything is derived (`systems/SkillBookSystem.ts`) from the tables and the functions the
   rolls call. Decision 93 has the forks.
-- **A6 — Show what is training.** An on-screen bar for the skill last trained, with its XP, kept
-  clear of the tab bar by `ui/layout.ts`.
+- **A6 — Show what is training. (Landed.)** The skill last trained is **one more bar in the player
+  column**, under the XP bar with its numbers inside it (`Woodcutting Lv 3 · 40 / 96 XP`), in the
+  same place on a landscape phone as everywhere else. It follows **what the player does** (a
+  gather, a make, the weapon or spell skill a swing or a cast trains) and never Block or Parry,
+  which train on what is swung at you. It **fades half a minute** after the last XP into its skill,
+  on a timer of the HUD's own (`hud/TrainingBar.ts`), and a **tap** opens that skill's page in the
+  skills book. Where the tallest column would meet the quest tracker on a landscape phone, the
+  tracker steps right of it. Decision 94 has the forks.
 - **A7 — Idle.** "Camp" becomes **Idle** in every player-facing string (decision 85), the item
   card's "Camping eats this" among them (`ItemUseSystem.ts`, left as Camp by A2). The idle panel
   says what idle will do before it starts: the job, the food it will eat and in what order, the
@@ -173,8 +180,9 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
 - **A10 — Part A review.**
 
 **Open questions for Part A** (A1 answered the first: mastery folds into the skills book, and
-its own page goes; decision 89): Should the player choose idle's food order, or is "weakest first, said plainly" enough? Where
-does the training bar sit on a landscape phone?
+its own page goes, decision 89; A6 answered where the training bar sits on a landscape phone: in
+the player column, as on every screen, decision 94): Should the player choose idle's food order, or
+is "weakest first, said plainly" enough?
 
 ---
 

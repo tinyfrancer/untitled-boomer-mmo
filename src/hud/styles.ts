@@ -1,4 +1,5 @@
 import { el } from './dom';
+import { TRAINING_FADE_MS } from './TrainingBar';
 import { THEME, cssColor, cssRgba } from '../ui/theme';
 
 const STYLE_ID = 'hud-styles';
@@ -107,6 +108,9 @@ function hudCss(): string {
 .hud-bar__fill--quiver {
   background: ${cssColor(THEME.quiverFill)};
 }
+.hud-bar__fill--training {
+  background: ${cssColor(THEME.trainingFill)};
+}
 .hud-bar__fill--hp {
   background: ${cssColor(THEME.hpFill)};
 }
@@ -193,6 +197,39 @@ function hudCss(): string {
 .hud-player__quiver,
 .hud-player__xp {
   margin-top: 5px;
+}
+/* The skill last trained. A button, since a tap opens its page in the skills
+   book, and its padding is the gap the bars above take as a margin, so the gap
+   is part of what a thumb can land on. */
+.hud-player__training {
+  display: block;
+  width: 100%;
+  padding: 5px 0 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity ${TRAINING_FADE_MS}ms linear;
+}
+.hud-player__training.is-fading {
+  opacity: 0;
+}
+/* The name gives way before the numbers do: the longest name with the largest
+   XP only just fits the column, and the level is the part worth reading. */
+.hud-training__label {
+  gap: 4px;
+  padding-right: 5px;
+}
+.hud-training__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-training__progress {
+  flex: none;
 }
 
 /* --- Buffs and debuffs --------------------------------------------------- */

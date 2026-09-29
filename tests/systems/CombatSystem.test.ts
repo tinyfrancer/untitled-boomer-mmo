@@ -9,6 +9,7 @@ import {
   damageReduction,
   enemyAvoids,
   isCooldownReady,
+  isDefenseSkill,
   isInRange,
   mitigatedDamage,
   resolveAttack,
@@ -169,6 +170,18 @@ describe('rollDefense', () => {
   it('is effectively never a save for a fresh character', () => {
     const fresh = { blockLevel: 1, parryLevel: 1, hasWeapon: true };
     expect(rollDefense(fresh, () => 0.5).avoided).toBe(false);
+  });
+});
+
+// The HUD's training bar follows what the player does and leaves these two
+// out, so which skills a save trains is asked here rather than listed there.
+describe('isDefenseSkill', () => {
+  it('names the two skills a save trains and nothing the player does', () => {
+    expect(isDefenseSkill('block')).toBe(true);
+    expect(isDefenseSkill('parry')).toBe(true);
+    for (const skillId of ['one-handed', 'archery', 'unarmed', 'destruction', 'mining'] as const) {
+      expect(isDefenseSkill(skillId)).toBe(false);
+    }
   });
 });
 

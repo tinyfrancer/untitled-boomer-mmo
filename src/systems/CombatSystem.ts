@@ -1,6 +1,6 @@
 import { MAX_CHARACTER_LEVEL, combatSkillCap } from '../config/constants';
 import { isBow, isEquippable } from '../data/items';
-import type { CombatSkillId, ItemId } from '../types/ids';
+import type { CombatSkillId, ItemId, SkillId } from '../types/ids';
 
 export interface Attacker {
   attackPower: number;
@@ -169,10 +169,21 @@ export interface DefenseContext {
   hasShield?: boolean;
 }
 
+/**
+ * The skills a turned-aside hit trains: the two that grow from what is swung at
+ * the player rather than from anything the player does.
+ */
+export const DEFENSE_SKILLS = ['parry', 'block'] as const satisfies readonly CombatSkillId[];
+export type DefenseSkillId = (typeof DEFENSE_SKILLS)[number];
+
+export function isDefenseSkill(skillId: SkillId): skillId is DefenseSkillId {
+  return (DEFENSE_SKILLS as readonly SkillId[]).includes(skillId);
+}
+
 export interface DefenseResult {
   avoided: boolean;
   // The skill that earned the save, and so the one that should take the XP.
-  skillId: CombatSkillId | null;
+  skillId: DefenseSkillId | null;
 }
 
 /**

@@ -1,5 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hudMounted, mountHud, unmountHud } from '../../src/hud/Hud';
+import { TRAINING_FADE_AFTER_MS, TRAINING_FADE_MS } from '../../src/hud/TrainingBar';
+import { fillPercent } from '../../src/hud/dom';
+import { barFill } from '../../src/systems/math';
+import { skillXpToNextLevel } from '../../src/systems/SkillSystem';
 import { AwayReportModal } from '../../src/hud/AwayReportModal';
 import { ContextMenu } from '../../src/hud/ContextMenu';
 import { InspectModal } from '../../src/hud/InspectModal';
@@ -69,7 +73,7 @@ import {
 import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
-import type { NpcId } from '../../src/types/ids';
+import type { NpcId, SkillId } from '../../src/types/ids';
 
 /**
  * jsdom lays nothing out, so every element measures zero — which the HUD reads
@@ -472,14 +476,20 @@ describe('the player column', () => {
 
   it('hangs mana under the health bar, and only for a class with a pool', () => {
     mount();
+    // The training bar is a button around its bar, so a bar is named by
+    // whichever of the two carries the column's class.
     const bars = [...parent.querySelectorAll('.hud-player .hud-bar')].map(
-      (bar) => [...bar.classList].find((name) => name.startsWith('hud-player__')) ?? '',
+      (bar) =>
+        [...(bar.closest('[class*="hud-player__"]')?.classList ?? [])].find((name) =>
+          name.startsWith('hud-player__'),
+        ) ?? '',
     );
     expect(bars).toEqual([
       'hud-player__hp',
       'hud-player__mana',
       'hud-player__quiver',
       'hud-player__xp',
+      'hud-player__training',
     ]);
 
     // A warrior is sent a pool of zero, and no bar at all is what that means.
@@ -596,6 +606,134 @@ describe('the buff row', () => {
       { effectId: 'well-fed', remainingMs: 9000, durationMs: 10000 },
     ]);
     expect(parent.querySelector('.hud-effect')).not.toBe(first);
+  });
+});
+
+describe('the training bar', () => {
+  const bar = (): HTMLButtonElement | null => parent.querySelector('.hud-player__training');
+  const shown = (): boolean => bar()?.classList.contains('hud-hidden') === false;
+  const fading = (): boolean => bar()?.classList.contains('is-fading') === true;
+  const read = (part: 'name' | 'progress'): string =>
+    bar()?.querySelector(`.hud-training__${part}`)?.textContent ?? '';
+  const gain = (skillId: SkillId, level = 3, xp = 40, xpToNext = 96): void => {
+    events.emit(SKILL_XP_GAINED_EVENT, { skillId, level, xp, xpToNext, leveledUp: false });
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('is not there until a skill trains', () => {
+    mount();
+    expect(shown()).toBe(false);
+  });
+
+  it('draws the skill just trained, its level and its XP inside the bar', () => {
+    mount();
+    gain('mining', 3, 40, 96);
+    expect(shown()).toBe(true);
+    expect(read('name')).toBe('Mining');
+    expect(read('progress')).toBe('Lv 3 · 40 / 96 XP');
+    expect(bar()?.querySelector<HTMLElement>('.hud-bar__fill')?.style.width).toBe(
+      fillPercent(barFill(40, 96)),
+    );
+  });
+
+  it('follows the weapon through a fight, and not what turns a hit aside', () => {
+    mount();
+    gain('parry');
+    expect(shown()).toBe(false);
+
+    gain('one-handed', 4, 12, 50);
+    gain('block');
+    gain('parry');
+    expect(read('name')).toBe('1 Handed');
+  });
+
+  it('hands itself to whichever skill trains next', () => {
+    mount();
+    gain('mining');
+    gain('woodcutting', 2, 10, 96);
+    expect(read('name')).toBe('Woodcutting');
+    expect(read('progress')).toBe('Lv 2 · 10 / 96 XP');
+  });
+
+  it('fades half a minute after the last XP into it, and a gain before then keeps it', () => {
+    mount();
+    gain('mining');
+    vi.advanceTimersByTime(TRAINING_FADE_AFTER_MS - 1000);
+    gain('mining');
+    vi.advanceTimersByTime(TRAINING_FADE_AFTER_MS - 1000);
+    expect(shown() && !fading()).toBe(true);
+
+    // A save is not the skill being trained, so it keeps nothing up.
+    gain('block');
+    vi.advanceTimersByTime(1000);
+    expect(shown() && fading()).toBe(true);
+    vi.advanceTimersByTime(TRAINING_FADE_MS);
+    expect(shown()).toBe(false);
+  });
+
+  it('comes back whole on a gain while it is fading', () => {
+    mount();
+    gain('fishing');
+    vi.advanceTimersByTime(TRAINING_FADE_AFTER_MS);
+    expect(fading()).toBe(true);
+    gain('fishing');
+    expect(shown() && !fading()).toBe(true);
+    // Past where the first fade would have taken it down.
+    vi.advanceTimersByTime(TRAINING_FADE_MS);
+    expect(shown() && !fading()).toBe(true);
+  });
+
+  // A roomy screen opens its sheet below the column, so the column's height is
+  // where the sheet starts: up a bar while the bar is up, and back after.
+  it('costs the column a bar while it is up, and gives it back when it goes', () => {
+    setViewport(DESKTOP.width, DESKTOP.height);
+    mount();
+    const sheetTop = (): number =>
+      parseFloat(parent.querySelector<HTMLElement>('[data-sheet="character"]')?.style.top ?? '');
+    const before = sheetTop();
+
+    gain('mining');
+    const during = sheetTop();
+    expect(during).toBeGreaterThan(before);
+
+    vi.advanceTimersByTime(TRAINING_FADE_AFTER_MS + TRAINING_FADE_MS);
+    expect(sheetTop()).toBe(before);
+  });
+
+  // A combat skill's ceiling is ten a character level, so one at the top of it
+  // reads as capped until a level lands with nothing trained in between.
+  it('lets a capped combat skill go on the moment a level raises its ceiling', () => {
+    mount();
+    gain('one-handed', 10, 0, 0);
+    expect(read('progress')).toBe('Lv 10 (max)');
+
+    events.emit(LEVEL_UP_EVENT, 2);
+    expect(read('progress')).toBe(`Lv 10 · 0 / ${skillXpToNextLevel('one-handed', 10, 2)} XP`);
+    expect(skillXpToNextLevel('one-handed', 10, 2)).toBeGreaterThan(0);
+  });
+
+  it('opens the skills book at its skill’s page on a tap', () => {
+    mount();
+    gain('fishing');
+    bar()?.click();
+    expect(openSheets()).toEqual(['skills']);
+    expect(parent.querySelector<HTMLElement>('.hud-sheet[data-sheet="skills"]')?.dataset.page).toBe(
+      'fishing',
+    );
+  });
+
+  it('stops its clock when the HUD is taken down', () => {
+    mount();
+    gain('mining');
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    unmountHud();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 

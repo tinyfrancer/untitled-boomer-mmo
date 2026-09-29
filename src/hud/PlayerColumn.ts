@@ -1,4 +1,5 @@
 import { EffectBar } from './EffectBar';
+import { TrainingBar, type TrainingProgress } from './TrainingBar';
 import { el, fillPercent, place } from './dom';
 import { barFill } from '../systems/math';
 import { titleName } from '../systems/AchievementSystem';
@@ -6,7 +7,7 @@ import { formatXpProgress } from '../systems/LevelingSystem';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { Rect } from '../ui/layout';
-import type { TitleId } from '../types/ids';
+import type { SkillId, TitleId } from '../types/ids';
 
 /** One bar and the numbers printed inside it. */
 interface Gauge {
@@ -23,13 +24,21 @@ function gauge(className: string, fillClass: string): Gauge {
   return { root, fill, label };
 }
 
+export interface PlayerColumnOptions {
+  /** A tap on the training bar, which asks for that skill's page in the book. */
+  onOpenSkill: (skillId: SkillId) => void;
+  /** The training bar went on its own clock, and the column is a bar shorter. */
+  onTrainingHidden: () => void;
+}
+
 /**
  * Who you are and how you are doing: name and level on one line, then health,
- * mana, arrows and XP as bars, then whatever buffs are up.
+ * mana, arrows and XP as bars, the skill being trained under them, then
+ * whatever buffs are up.
  *
  * Mana and arrows are each there only for somebody who has them: a pool, or a
  * quiver worn. A ranger has no mana, so the one it does have to watch sits
- * where a wizard's does.
+ * where a wizard's does. The training bar is there only while a skill is.
  *
  * Every number a bar carries is printed *inside* it rather than on a line
  * underneath. Three bars and three captions is six rows of eye travel for three
@@ -44,9 +53,10 @@ export class PlayerColumn {
   private readonly mana: Gauge;
   private readonly quiver: Gauge;
   private readonly xp: Gauge;
+  private readonly training: TrainingBar;
   private readonly effects = new EffectBar();
 
-  constructor(name: string) {
+  constructor(name: string, options: PlayerColumnOptions) {
     this.root = el('div', 'hud-player');
 
     // Name and level share a line: the level is a short number and giving it a
@@ -61,6 +71,7 @@ export class PlayerColumn {
     this.mana = gauge('hud-player__mana hud-hidden', 'hud-bar__fill--mana');
     this.quiver = gauge('hud-player__quiver hud-hidden', 'hud-bar__fill--quiver');
     this.xp = gauge('hud-player__xp', '');
+    this.training = new TrainingBar(options.onOpenSkill, options.onTrainingHidden);
 
     this.root.append(
       head,
@@ -69,6 +80,7 @@ export class PlayerColumn {
       this.mana.root,
       this.quiver.root,
       this.xp.root,
+      this.training.root,
       this.effects.root,
     );
   }
@@ -122,6 +134,31 @@ export class PlayerColumn {
     }
     this.quiver.fill.style.width = fillPercent(barFill(count, capacity));
     this.quiver.label.textContent = count > 0 ? `${count} / ${capacity} arrows` : 'Out of arrows';
+  }
+
+  /** XP into a skill, which puts it on the training bar for another half minute. */
+  train(progress: TrainingProgress): void {
+    this.training.train(progress);
+  }
+
+  /** Redraws the skill on the training bar, if that is the one, without keeping it up. */
+  redrawTraining(progress: TrainingProgress): void {
+    this.training.redraw(progress);
+  }
+
+  /** The skill on the training bar, or null while there is none. */
+  trainingSkill(): SkillId | null {
+    return this.training.skillId;
+  }
+
+  /** Whether the training bar is taking any room, which `ui/layout.ts` reserves. */
+  hasTraining(): boolean {
+    return this.training.skillId !== null;
+  }
+
+  /** Stops the training bar's clock, for a HUD being taken down. */
+  destroy(): void {
+    this.training.stop();
   }
 
   setEffects(effects: ActiveEffect[]): void {

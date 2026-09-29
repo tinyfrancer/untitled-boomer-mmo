@@ -32,14 +32,17 @@ export function skillRow(label: string, onClick?: () => void): SkillRow {
 }
 
 /** `Lv 3 · 40 / 96 XP`, or `Lv 10 (max)` for a skill with no next level to fill toward. */
+export function formatSkillProgress(level: number, xp: number, xpToNext: number): string {
+  return xpToNext > 0 ? `Lv ${level} · ${xp} / ${xpToNext} XP` : `Lv ${level} (max)`;
+}
+
 export function setSkillProgress(
   skillRow: SkillRow,
   level: number,
   xp: number,
   xpToNext: number,
 ): void {
-  skillRow.value.textContent =
-    xpToNext > 0 ? `Lv ${level} · ${xp} / ${xpToNext} XP` : `Lv ${level} (max)`;
+  skillRow.value.textContent = formatSkillProgress(level, xp, xpToNext);
   // A capped skill has no next level to fill toward, and reads as full.
   skillRow.fill.style.width = fillPercent(xpToNext > 0 ? barFill(xp, xpToNext) : 1);
 }

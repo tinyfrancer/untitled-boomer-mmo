@@ -281,6 +281,25 @@ const tabBarTop = () =>
     ),
   );
 
+/**
+ * The player column's height with the training bar's taken back off.
+ *
+ * That bar comes up with any skill's XP and goes on a half-minute clock of the
+ * HUD's own, which the hand crank does not turn — so a check comparing the
+ * column across a stretch of play would otherwise pass or fail on how long
+ * the run took to get there. What those checks are about is the rest of it.
+ */
+const columnHeightBesideTraining = () =>
+  page.evaluate(() => {
+    const column = /** @type {HTMLElement} */ (document.querySelector('.hud-player'));
+    const training = document.querySelector('.hud-player__training');
+    const bar =
+      training && !training.classList.contains('hud-hidden')
+        ? training.getBoundingClientRect().height
+        : 0;
+    return Math.round(column.getBoundingClientRect().height - bar);
+  });
+
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
 const BAR_TABS = ['character', 'inventory', 'quests', 'camp', 'menu'];
 /** How many the Menu opens: Map, Feats, Skills, Combat Log, Options. */
@@ -412,6 +431,20 @@ const GENERAL_STORE = "window.world.buildings.find((b) => b.definition.id === 'g
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const BENCH = "window.world.stations.find((s) => s.station === 'bench')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
+
+/**
+ * Each gathering skill's first tool, and the name the HUD gives the skill.
+ *
+ * @type {Record<'woodcutting' | 'fishing' | 'mining', {
+ *   tool: import('../src/types/ids').ItemId;
+ *   name: string;
+ * }>}
+ */
+const GATHERING = {
+  woodcutting: { tool: 'felling-axe', name: 'Woodcutting' },
+  fishing: { tool: 'fishing-pole', name: 'Fishing' },
+  mining: { tool: 'pickaxe', name: 'Mining' },
+};
 const PILE = 'window.world.lootPiles[0]';
 
 /**
@@ -2662,7 +2695,7 @@ async function playerColumn() {
   // --- Buffs, driven the way a player raises one: a real press on the real
   // ability button. Battle Fury is the warrior's, costs nothing and cannot
   // fizzle, so what lands here lands every time. ---
-  const bare = column?.height ?? 0;
+  const bare = await columnHeightBesideTraining();
   await page.click('.hud-ability__key[data-ability="battle-fury"]');
   await step(2);
   const buffed = await page.evaluate(() => {
@@ -2674,13 +2707,13 @@ async function playerColumn() {
       shown: icon !== null,
       time: document.querySelector('.hud-effect__time')?.textContent ?? '',
       sweep: sweep?.getBoundingClientRect().height ?? 0,
-      height: document.querySelector('.hud-player')?.getBoundingClientRect().height ?? 0,
     };
   });
+  const buffedHeight = await columnHeightBesideTraining();
   check(
     'using an ability puts its buff in the column, and the column grows for it',
-    buffed.shown && buffed.height > bare,
-    `column ${Math.round(bare)} -> ${Math.round(buffed.height)}, reads "${buffed.time}"`,
+    buffed.shown && buffedHeight > bare,
+    `column ${bare} -> ${buffedHeight}, reads "${buffed.time}"`,
   );
   await page.screenshot({ path: `${OUT}/13-buff-row.png` });
 
@@ -2705,15 +2738,158 @@ async function playerColumn() {
     'Battle Fury to expire',
     20000,
   );
-  const expired = await page.evaluate(() => ({
-    icons: document.querySelectorAll('.hud-effect').length,
-    height: document.querySelector('.hud-player')?.getBoundingClientRect().height ?? 0,
-  }));
+  const expired = {
+    icons: await page.evaluate(() => document.querySelectorAll('.hud-effect').length),
+    height: await columnHeightBesideTraining(),
+  };
   check(
     'and the row is taken back off the column when it runs out',
-    expired.icons === 0 && Math.round(expired.height) === Math.round(bare),
-    `${expired.icons} icons, column back to ${Math.round(expired.height)} from ${Math.round(bare)}`,
+    expired.icons === 0 && expired.height === bare,
+    `${expired.icons} icons, column back to ${expired.height} from ${bare}`,
   );
+}
+
+async function trainingBar() {
+  // --- The skill last trained, as a bar in the player column. Which skill it
+  // follows and when it fades are held in tests/hud/Hud.test.ts against a fake
+  // clock; what needs a browser is that a real gather puts it under the XP bar
+  // with its numbers inside it and none of them cut, that a real touch on it
+  // opens the skills book at that skill's page, and that on a landscape phone
+  // the column it lengthens still clears the ability buttons. The fade itself
+  // is not waited for: it runs on the HUD's own half-minute clock, which the
+  // hand crank does not turn. ---
+  //
+  // Gathered in whichever zone the run has walked to by now (the beach, after
+  // the touch section), so the node is whatever that zone grows. Its skill is
+  // raised to the node's level by setting it rather than awarding it, as the
+  // forge section does with smithing, and the tool goes in the weapon hand the
+  // way the bag puts one there. The tap that starts a gather is not what this
+  // is about, so the gather is asked of the world directly.
+  const { held: weapon, skill } = await page.evaluate((gathering) => {
+    const w = window.world;
+    const node = w.nodes.find((n) => n.isAvailable() && n.definition.skill in gathering);
+    if (!node) throw new Error(`nothing to gather in ${w.zone.id}`);
+    const skill = /** @type {keyof typeof gathering} */ (node.definition.skill);
+    const held = w.character.state.gear.weapon;
+    if (w.character.state.skills[skill].level < node.definition.requiredLevel) {
+      w.character.state.skills[skill] = { level: node.definition.requiredLevel, xp: 0 };
+    }
+    const tool = gathering[skill].tool;
+    w.character.state.inventory = { [tool]: 1 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+    window.events.emit('equip-item-requested', tool);
+    return { held, skill };
+  }, GATHERING);
+  await park();
+  await stepUntil(
+    () =>
+      page.evaluate(
+        ({ skill, name }) => {
+          const w = window.world;
+          const shown = document.querySelector('.hud-player__training .hud-training__name');
+          if (shown?.textContent === name) return true;
+          // Started again whenever nothing is under way: a hit breaks a
+          // gather, and whatever lives here may have come over to deliver one.
+          if (!w.gatherState && !w.player.hasMoveTarget()) {
+            const node = w.nodes.find((n) => n.isAvailable() && n.definition.skill === skill);
+            if (node) w.approachAndGather(node);
+          }
+          return false;
+        },
+        { skill, name: GATHERING[skill].name },
+      ),
+    'a gather to land',
+  );
+  await page.evaluate(() => window.world.stopGathering());
+  await step(2);
+
+  const training = () =>
+    page.evaluate(() => {
+      /** @param {string} selector */
+      const rect = (selector) => {
+        const node = document.querySelector(selector);
+        return node ? node.getBoundingClientRect().toJSON() : null;
+      };
+      const progress = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-training__progress')
+      );
+      return {
+        text: document.querySelector('.hud-player__training')?.textContent ?? '',
+        bar: rect('.hud-training__bar'),
+        label: rect('.hud-training__label'),
+        xp: rect('.hud-player__xp'),
+        column: rect('.hud-player'),
+        actions: rect('.hud-actions'),
+        uncut: progress.scrollWidth <= progress.clientWidth,
+      };
+    });
+  const portrait = await training();
+  check(
+    'a real gather puts its skill on a bar under the XP bar, inside the column',
+    portrait.bar !== null &&
+      portrait.xp !== null &&
+      portrait.column !== null &&
+      portrait.bar.top >= portrait.xp.bottom &&
+      portrait.bar.bottom <= portrait.column.bottom + 1 &&
+      portrait.bar.right <= portrait.column.right + 1,
+    `"${portrait.text}", bar ${JSON.stringify(portrait.bar)}`,
+  );
+  check(
+    'and its level and XP are printed inside it, with nothing cut',
+    portrait.label !== null &&
+      portrait.bar !== null &&
+      portrait.label.top >= portrait.bar.top - 1 &&
+      portrait.label.bottom <= portrait.bar.bottom + 1 &&
+      portrait.text.includes('Lv ') &&
+      portrait.text.endsWith(' XP') &&
+      portrait.uncut,
+    `"${portrait.text}"`,
+  );
+  await page.screenshot({ path: `${OUT}/13-training-bar.png` });
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(300);
+  await draw();
+  const landscape = await training();
+  check(
+    'on a landscape phone the column it lengthens still clears the ability buttons',
+    landscape.column !== null &&
+      landscape.actions !== null &&
+      landscape.column.bottom <= landscape.actions.top,
+    `column ends ${landscape.column?.bottom}, buttons start ${landscape.actions?.top}`,
+  );
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  await draw();
+
+  // A touch, since this is a phone and the bar is short: the gap above it is
+  // part of the button so a thumb has more than the bar itself to land on.
+  await page.tap('.hud-player__training');
+  await page.waitForTimeout(150);
+  const opened = await page.evaluate(() => {
+    const sheet = /** @type {HTMLElement} */ (
+      document.querySelector('.hud-sheet[data-sheet="skills"]')
+    );
+    return {
+      visible: getComputedStyle(sheet).display !== 'none',
+      page: sheet.dataset.page ?? '',
+    };
+  });
+  check(
+    'and a touch on it opens the skills book at that skill’s page',
+    opened.visible && opened.page === skill,
+    `page "${opened.page}"`,
+  );
+  await tapTab('skills');
+
+  // Put the weapon back in hand and the bag the way the sections after this
+  // one expect to find it.
+  await page.evaluate((held) => {
+    if (held) window.events.emit('equip-item-requested', held);
+    window.world.character.state.inventory = {};
+    window.events.emit('inventory-changed', {});
+  }, weapon);
+  await park();
 }
 
 async function sheets() {
@@ -2852,14 +3028,7 @@ async function achievements() {
   // The title has to survive the round trip the picker actually uses: the HUD
   // asks, the world re-checks the kills back it, and the player column redraws.
   // It gets its own line there, so the column has to grow to hold it.
-  const columnHeight = () =>
-    page.evaluate(() =>
-      Math.round(
-        /** @type {HTMLElement} */ (document.querySelector('.hud-player')).getBoundingClientRect()
-          .height,
-      ),
-    );
-  const beforeTitle = await columnHeight();
+  const beforeTitle = await columnHeightBesideTraining();
   await page.click('.hud-feat-title[data-title="rat-slayer"]');
   await page.waitForTimeout(250);
   const wornTitle = await page.evaluate(() => {
@@ -2869,7 +3038,7 @@ async function achievements() {
       shown: line.textContent === 'Rat Slayer' && getComputedStyle(line).display !== 'none',
     };
   });
-  const afterTitle = await columnHeight();
+  const afterTitle = await columnHeightBesideTraining();
   check(
     'wearing a title redraws the player column with room for it',
     wornTitle.model === 'rat-slayer' && wornTitle.shown && afterTitle > beforeTitle,
@@ -4358,6 +4527,7 @@ const SECTIONS = [
   ['keyboard', keyboard],
   ['touch', touchGestures],
   ['player-column', playerColumn],
+  ['training-bar', trainingBar],
   ['sheets', sheets],
   ['achievements', achievements],
   ['skills-book', skillsBook],

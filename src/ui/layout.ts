@@ -29,8 +29,9 @@ const WIND_UP_LINE_HEIGHT = 17;
 const PLAYER_COLUMN_HEIGHT = 60;
 const MANA_BLOCK_HEIGHT = 19;
 // The quiver's bar, which is the mana bar's height for the same reason: it is
-// one more bar with its numbers printed inside it.
+// one more bar with its numbers printed inside it. So is the training bar.
 const QUIVER_BLOCK_HEIGHT = MANA_BLOCK_HEIGHT;
+const TRAINING_BLOCK_HEIGHT = MANA_BLOCK_HEIGHT;
 // A worn title gets its own line under the name. "Adventurer, Rat Slayer" on
 // one line overruns the 190px column, and shrinking the name to fit made the
 // thing the player is proudest of the smallest text on screen.
@@ -80,6 +81,9 @@ export interface HudLayoutOptions {
   hasQuiver?: boolean;
   // Whether a title is worn, which costs the player column an extra line.
   hasTitle?: boolean;
+  // Whether the bar for the skill last trained is up. It comes and goes with
+  // training, so this moves in play the way the buff row does.
+  hasTraining?: boolean;
   // Whether any buff or debuff is up. How many there are does not matter: they
   // sit in a row, so the first one costs the height and the rest are free.
   hasEffects?: boolean;
@@ -110,6 +114,7 @@ export function hudLayout(
     hasMana = false,
     hasQuiver = false,
     hasTitle = false,
+    hasTraining = false,
     targetWinding = false,
     hasEffects = false,
     trackedQuests = 0,
@@ -128,15 +133,6 @@ export function hudLayout(
     height: actionBarHeight,
   };
 
-  const lines = Math.min(trackedQuests, MAX_TRACKED_QUESTS);
-  const trackerHeight = lines > 0 ? lines * px(TRACKER_LINE_HEIGHT, scale) + padding : 0;
-  const tracker: Rect = {
-    x: margin,
-    y: actionBar.y - (trackerHeight > 0 ? padding + trackerHeight : 0),
-    width: width - margin * 2,
-    height: trackerHeight,
-  };
-
   // Who you are top-left, what you are fighting top-right. They share the top
   // row rather than stacking, which is what buys the player column the whole of
   // the corner: it used to start a target frame and a margin down the screen,
@@ -146,6 +142,39 @@ export function hudLayout(
   // because at 375px a full-width one and the column meet in the middle — and
   // the narrower the phone, the worse that gets.
   const columnWidth = px(THEME.xpBar.width, scale);
+  const playerColumn: Rect = {
+    x: margin,
+    y: margin,
+    width: columnWidth,
+    height: px(
+      PLAYER_COLUMN_HEIGHT +
+        (hasMana ? MANA_BLOCK_HEIGHT : 0) +
+        (hasQuiver ? QUIVER_BLOCK_HEIGHT : 0) +
+        (hasTitle ? TITLE_LINE_HEIGHT : 0) +
+        (hasTraining ? TRAINING_BLOCK_HEIGHT : 0) +
+        (hasEffects ? EFFECT_ROW_HEIGHT : 0),
+      scale,
+    ),
+  };
+
+  // The tracker sits over the ability bar at the full width, except where the
+  // column hangs down far enough to meet it. That is only a landscape phone,
+  // 390px tall for both, with the column at its tallest; there the tracker
+  // starts right of the column rather than printing over its bottom row.
+  const lines = Math.min(trackedQuests, MAX_TRACKED_QUESTS);
+  const trackerHeight = lines > 0 ? lines * px(TRACKER_LINE_HEIGHT, scale) + padding : 0;
+  const trackerY = actionBar.y - (trackerHeight > 0 ? padding + trackerHeight : 0);
+  const trackerX =
+    trackerHeight > 0 && playerColumn.y + playerColumn.height + padding > trackerY
+      ? playerColumn.x + playerColumn.width + padding
+      : margin;
+  const tracker: Rect = {
+    x: trackerX,
+    y: trackerY,
+    width: width - trackerX - margin,
+    height: trackerHeight,
+  };
+
   const targetWidth = Math.min(
     px(THEME.panelWidth.target, scale),
     width - margin * 2 - columnWidth - padding,
@@ -162,19 +191,7 @@ export function hudLayout(
     margin,
     padding,
     targetFrame,
-    playerColumn: {
-      x: margin,
-      y: margin,
-      width: columnWidth,
-      height: px(
-        PLAYER_COLUMN_HEIGHT +
-          (hasMana ? MANA_BLOCK_HEIGHT : 0) +
-          (hasQuiver ? QUIVER_BLOCK_HEIGHT : 0) +
-          (hasTitle ? TITLE_LINE_HEIGHT : 0) +
-          (hasEffects ? EFFECT_ROW_HEIGHT : 0),
-        scale,
-      ),
-    },
+    playerColumn,
     tracker,
     actionBar,
     tabBar,
