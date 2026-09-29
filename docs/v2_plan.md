@@ -13,11 +13,12 @@ trained, in the player column, following what you do and fading half a minute af
 Keep the player sets, the away report in the panel's words; decision 96), **A8** (the save out
 as a file or a code and back, in Options and on the creation screen, with a preview and a second
 tap before it replaces anybody; decision 97), **A9** (twelve tips in the spirit's voice, each heard
-once per character, on a card that waits for a tap; decision 98) **and A10** (the Part A review:
-four leftovers mended in place, a grind pass added to Part C as C10, Part B kept next; decision 99).
-**Part A is done. Next: B1**, the style guide, the sprite format and the renderer spike, whose open
-questions are asked when it starts. Update this line as each phase lands: which phase, and which is
-next.
+once per character, on a card that waits for a tap; decision 98), **A10** (the Part A review:
+four leftovers mended in place, a grind pass added to Part C as C10, Part B kept next; decision 99)
+**and B1** (the style guide, sprites as data in `src/art/` held to a palette and a fixed animation
+budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101). **Next: B2**, the
+checkpoint slice: town in 2D behind `?renderer=2d`, for the user to judge. Update this line as each
+phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -242,13 +243,21 @@ and items. So **B2 is a checkpoint**: one zone and one character, judged by the 
 anything else is converted. If it does not hold up, the art source is re-decided there rather than
 discovered at the end.
 
-- **B1 — The style guide and the sprite format.** One palette per setting (open, marsh,
-  underground); one tile size; one light direction; the outline rule; **a fixed animation budget**
-  per kind of actor, so animation cannot creep (the user's worry). A text format for sprites (pixel
-  grids with palette keys), a compile step to texture atlases, recolouring for tiers, and tests that
-  hold every sprite to the palette, its size and its frame count. **A spike decides the renderer**:
-  Three.js with an orthographic camera (keeps the picking, disposal and GPU-memory checks),
-  PixiJS, or plain Canvas 2D.
+- **B1 — The style guide and the sprite format. (Landed.)** `docs/architecture/art.md` is the
+  guide. **A tile is 32 art pixels**, drawn at art resolution and scaled up by the page in whole
+  device pixels, about ten tiles across a phone. **Every colour is a step on a ramp** of five,
+  hue-shifted and darkest first (`src/art/palette.ts`); the ground's ramps are coloured per setting
+  (open warm and bright, marsh heavier, underground dark), everything that moves uses shared ones.
+  The light is from the top-left, with a contact shadow and no cast ones, and **the compiler draws a
+  selective outline** round people, beasts, props and icons. **The animation budget is fixed
+  exactly** per kind (`src/art/budget.ts`), four facings for people and creatures, either side
+  mirrored. A sprite is text (pixel grids naming palette steps, `src/art/format.ts`), compiled to an
+  atlas per setting (`src/art/compile.ts`) with tier and creature variants by recolouring, and
+  `tests/art/` holds every sprite to the palette, its size and its frame count. The seven terrain
+  tiles and a placeholder for each kind are the first sprites. **The spike chose Canvas 2D**, the
+  cheapest of three by every measure under smoke's throttle and no dependency, over Three.js with an
+  orthographic camera and PixiJS. Decisions 100 (the user's four answers and the guide) and 101
+  (the renderer) have the forks.
 - **B2 — The checkpoint slice.** Town in 2D behind `?renderer=2d`: terrain with edge transitions,
   one building, one NPC, the warrior walking, a rat. Picking and the camera work. **The user judges
   it.**
@@ -268,8 +277,9 @@ discovered at the end.
   type choice. Part A said what things are; this makes them look like one game.
 - **B9 — Part B review.**
 
-**Open questions for Part B**: tile size (16px shown at 3×, or 32px?); a pixel font or a readable
-system font for the HUD; how many directions a creature needs (four, or two mirrored).
+**Open questions for Part B**: none left. B1 answered all three: tiles are 32 pixels, the HUD keeps
+a system font while the world gets a pixel font drawn as data, and every creature faces four ways
+(decision 100).
 
 ---
 
