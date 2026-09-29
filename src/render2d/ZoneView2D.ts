@@ -51,6 +51,14 @@ const PILE_BLINK_MS = 250;
 /** How dark a contact shadow is laid down. */
 const SHADOW_ALPHA = 0.35;
 
+/**
+ * How far the corners of the screen fall into shadow, and how far from the
+ * middle the falling starts: enough to give a scene weight, not so much that
+ * anything tappable goes dark (decision 103).
+ */
+const VIGNETTE_DARK = 0.5;
+const VIGNETTE_FROM = 0.45;
+
 const PROP = PLACEHOLDERS.prop.id;
 const EFFECT = PLACEHOLDERS.effect.id;
 
@@ -109,6 +117,8 @@ export class ZoneView2D implements ZoneView {
   private buildings: BuildingSprite[] = [];
   private shadows = new Map<number, HTMLCanvasElement>();
   private ring: HTMLCanvasElement | null = null;
+  // The view's own and the screen's size, made again when the screen changes shape.
+  private vignette: HTMLCanvasElement | null = null;
   private readonly playerMotion = new Motion();
   private mobMotions = new Map<Mob, Motion>();
   private effects: Effect[] = [];
@@ -182,6 +192,8 @@ export class ZoneView2D implements ZoneView {
 
   dispose(): void {
     this.teardown();
+    this.pool.release(this.vignette);
+    this.vignette = null;
     for (const sheet of this.sheets.values()) this.pool.release(sheet.canvas);
     this.sheets.clear();
     this.sheet = null;
@@ -200,6 +212,8 @@ export class ZoneView2D implements ZoneView {
     this.canvas.style.height = `${this.camera.artHeight * this.camera.cssPerArt}px`;
     // Resizing a canvas resets its context, smoothing included.
     this.context.imageSmoothingEnabled = false;
+    this.pool.release(this.vignette);
+    this.vignette = this.shade(this.camera.artWidth, this.camera.artHeight);
   }
 
   /** A 2D camera never turns: north is always up the screen, and a drag asks for nothing. */
@@ -436,6 +450,9 @@ export class ZoneView2D implements ZoneView {
     for (const thing of standing) thing.draw();
 
     this.drawEffects(now);
+    // Over the world and under the words, so a name at the edge of the screen
+    // reads as well as one in the middle.
+    if (this.vignette) context.drawImage(this.vignette, 0, 0);
     this.drawWords(world, sheet, playerSprite);
   }
 
@@ -617,6 +634,29 @@ export class ZoneView2D implements ZoneView {
       true,
     );
     this.shadows.set(width, canvas);
+    return canvas;
+  }
+
+  /**
+   * The screen's corners falling into shadow: a light drawn over the scene, as
+   * the style guide draws light, so it is smooth where the art is not. Measured
+   * from the middle of the screen out to its corners.
+   */
+  private shade(width: number, height: number): HTMLCanvasElement {
+    const { canvas, context } = this.pool.make(width, height);
+    const radius = Math.hypot(width, height) / 2;
+    const gradient = context.createRadialGradient(
+      width / 2,
+      height / 2,
+      radius * VIGNETTE_FROM,
+      width / 2,
+      height / 2,
+      radius,
+    );
+    gradient.addColorStop(0, 'rgba(8, 10, 12, 0)');
+    gradient.addColorStop(1, `rgba(8, 10, 12, ${VIGNETTE_DARK})`);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
     return canvas;
   }
 

@@ -18,14 +18,15 @@ export const APRON_TILES = 8;
 const APRON_FADE = 4;
 
 /**
- * What lies past the apron, and what it fades into: the 3D view's haze, one
- * colour a setting, which is the renderer's to choose as the palette is not
- * asked to hold a colour nothing is drawn in.
+ * What lies past the apron, and what it fades into: a dark murk a setting
+ * rather than the 3D view's pale sky, since the edge of the map is somewhere
+ * the land runs out into shadow (decision 103). The renderer's to choose, as
+ * the palette is not asked to hold a colour nothing is drawn in.
  */
 export const HAZE: Readonly<Record<ZoneSetting, string>> = {
-  open: '#a9bdd0',
-  marsh: '#7f8c74',
-  underground: '#0e0c0b',
+  open: '#161b17',
+  marsh: '#121714',
+  underground: '#0a0909',
 };
 
 /** How long a frame of water shows and how many there are: the tile budget's `loop`. */
