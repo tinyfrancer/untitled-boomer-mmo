@@ -107,6 +107,7 @@ import {
   type ContextMenuRequest,
   type ScreenPoint,
   type UiEventName,
+  SAVE_EXPORTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
@@ -223,6 +224,7 @@ class Hud {
   private readonly events: EventBus;
   private readonly subscriptions: Subscriptions;
   private readonly classId: CharacterState['classId'];
+  private readonly name: string;
 
   private readonly targetFrame = new TargetFrame();
   private readonly playerColumn: PlayerColumn;
@@ -255,6 +257,7 @@ class Hud {
     this.events = events;
     this.subscriptions = createSubscriptions(events);
     this.classId = character.classId;
+    this.name = character.name;
 
     const stats = computeEffectiveStats(
       character.classId,
@@ -554,7 +557,12 @@ class Hud {
       return;
     }
     if (tab === 'options') {
-      this.overlays.openOptions(this.model.sound);
+      this.overlays.openOptions(this.model.sound, {
+        name: this.name,
+        classId: this.classId,
+        level: this.model.level,
+        zoneId: this.model.zoneId,
+      });
       return;
     }
     // Reached from the menu or a key, the book opens on its index: a page is
@@ -1086,6 +1094,7 @@ class Hud {
     listen(SOUND_SETTINGS_CHANGED_EVENT, (settings) => {
       this.model.sound = settings;
     });
+    listen(SAVE_EXPORTED_EVENT, (saved) => this.overlays.saveExported(saved));
 
     listen(AFK_STATE_CHANGED_EVENT, (active) => {
       this.model.afkActive = active;

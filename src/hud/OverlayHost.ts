@@ -3,6 +3,7 @@ import { el } from './dom';
 import { BankModal, type BankPanelState } from './BankModal';
 import { ContextMenu, type ContextMenuEntry } from './ContextMenu';
 import { InspectModal } from './InspectModal';
+import { LoadSaveModal, type CharacterSummary } from './LoadSaveModal';
 import { MenuOverlay } from './MenuOverlay';
 import { OptionsModal } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
@@ -10,6 +11,7 @@ import { TrainerModal, type TrainerState } from './TrainerModal';
 import { OutfitterModal } from './OutfitterModal';
 import { ReforgeModal, type ReforgePanelState } from './ReforgeModal';
 import type { SoundSettings } from '../audio/settings';
+import type { SaveExport } from '../persistence/saveFile';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
 import type { QuestPanelState } from './talkQuests';
@@ -31,6 +33,8 @@ import {
   WITHDRAW_ITEM_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
+  SAVE_EXPORT_REQUESTED_EVENT,
+  SAVE_IMPORT_REQUESTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
@@ -134,6 +138,7 @@ export class OverlayHost {
   private viewportWidth = 0;
 
   private options: OptionsModal | null = null;
+  private loadSave: LoadSaveModal | null = null;
   private counter: { id: CounterId; panel: CounterPanel } | null = null;
   private station: StationModal | null = null;
   private picker: SlotPicker | null = null;
@@ -241,11 +246,17 @@ export class OverlayHost {
     };
   }
 
-  openOptions(sound: SoundSettings): void {
+  /** `current` is who a save loaded from here would replace. */
+  openOptions(sound: SoundSettings, current: CharacterSummary): void {
     this.options?.close();
     this.options = new OptionsModal({
       sound,
       onSoundChanged: (settings) => this.events.emit(SOUND_SETTINGS_CHANGED_EVENT, settings),
+      onExport: (kind) => this.events.emit(SAVE_EXPORT_REQUESTED_EVENT, kind),
+      onOpenLoad: () => {
+        this.options?.close();
+        this.openLoadSave(current);
+      },
       onResetCharacter: () => {
         this.options?.close();
         this.events.emit(RESET_CHARACTER_REQUESTED_EVENT);
@@ -255,6 +266,26 @@ export class OverlayHost {
       },
     });
     this.root.append(this.options.root);
+  }
+
+  /** The session's answer to the options menu's ask, for the menu that asked. */
+  saveExported(saved: SaveExport): void {
+    this.options?.exported(saved);
+  }
+
+  private openLoadSave(current: CharacterSummary): void {
+    this.loadSave?.close();
+    this.loadSave = new LoadSaveModal({
+      current,
+      onLoad: (character) => {
+        this.loadSave?.close();
+        this.events.emit(SAVE_IMPORT_REQUESTED_EVENT, character);
+      },
+      onClose: () => {
+        this.loadSave = null;
+      },
+    });
+    this.root.append(this.loadSave.root);
   }
 
   openMenu(onSelect: (tab: TabId) => void): void {
@@ -434,6 +465,7 @@ export class OverlayHost {
   closeDismissable(): boolean {
     if (
       !this.options &&
+      !this.loadSave &&
       !this.picker &&
       !this.awayReport &&
       !this.menu &&
@@ -443,6 +475,7 @@ export class OverlayHost {
       return false;
     }
     this.options?.close();
+    this.loadSave?.close();
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();
@@ -453,6 +486,7 @@ export class OverlayHost {
 
   closeAll(): void {
     this.options?.close();
+    this.loadSave?.close();
     this.counter?.panel.close();
     this.station?.close();
     this.picker?.close();

@@ -983,6 +983,11 @@ function hudCss(): string {
 .hud-modal--top > .hud-modal__box {
   max-height: 100%;
 }
+/* Centred over the playfield rather than the screen, so a panel taller than a
+   landscape phone stops above the tab bar and scrolls, as the counters do. */
+.hud-modal--above-bar {
+  padding-bottom: ${THEME.touchMin + THEME.padding * 3}px;
+}
 /* The menu opens against the bar that opened it. The offset is the tab bar's
    own height — touchMin plus its padding either side — so the box rests on top
    of the bar rather than over it. */
@@ -1238,6 +1243,56 @@ function hudCss(): string {
   opacity: 0.4;
   cursor: default;
 }
+/* --- The save: Options' section of it, and the panel that loads one ------- */
+
+.hud-options,
+.hud-save {
+  display: flex;
+  flex-direction: column;
+  gap: ${THEME.padding}px;
+}
+.hud-save__heading {
+  margin-top: 4px;
+  font-size: ${THEME.font.sm}px;
+  font-weight: bold;
+}
+/* Where a code is pasted in or copied out. The HUD turns text selection and
+   iOS's copy and paste callout off for every piece of furniture, and this is
+   the one box that exists to be copied from and pasted into, so it takes both
+   back. 16px or larger, or iOS Safari zooms the page when it takes focus. */
+.hud-save__code {
+  pointer-events: auto;
+  width: 100%;
+  min-height: 72px;
+  padding: 6px;
+  resize: vertical;
+  font: 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+  color: ${THEME.color.text};
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid ${cssColor(THEME.panelStroke)};
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+.hud-save__error {
+  font-size: ${THEME.font.sm}px;
+  line-height: 18px;
+  color: ${THEME.color.playerDamage};
+}
+.hud-save__error:empty {
+  display: none;
+}
+.hud-save__card {
+  padding: 6px ${THEME.padding}px;
+  border: 1px solid ${cssColor(THEME.panelStroke)};
+  background: rgba(0, 0, 0, 0.3);
+}
+.hud-save__name {
+  font-size: ${THEME.font.md}px;
+  font-weight: bold;
+}
+
 /* Indented under the "Could not carry" heading, and dimmer than what was
    actually brought back — a list of what you do not have. */
 .hud-modal__missed {
@@ -1494,6 +1549,27 @@ function hudCss(): string {
 }
 .create__begin:disabled {
   color: ${THEME.color.dim};
+}
+/* Under Begin and quieter than it: most who see this screen are starting. */
+.create__load {
+  width: 220px;
+  max-width: 100%;
+  font-size: ${THEME.font.sm}px;
+}
+/* The load panel over the creation screen, which has no .hud around it to take
+   its type and colour from, and sits at the screen's own layer. */
+.create__modal {
+  z-index: 2;
+  /* Dimmed behind, unlike a panel over the world: three class cards showing
+     through a panel read as part of it. */
+  background: rgba(0, 0, 0, 0.6);
+  color: ${THEME.color.text};
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.create__modal * {
+  box-sizing: border-box;
 }
 
 /* --- Slot picker --------------------------------------------------------- */

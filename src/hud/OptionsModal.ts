@@ -1,12 +1,17 @@
 import type { SoundSettings } from '../audio/settings';
+import type { SaveExport, SaveExportKind } from '../persistence/saveFile';
 import { Overlay } from './Overlay';
-import { el } from './dom';
+import { actionButton, el } from './dom';
+import { copyText, downloadFile } from './saveTransfer';
 
 export interface OptionsModalHandlers {
   /** What the speaker is set to now, which the controls open on. */
   sound: SoundSettings;
   /** The whole setting, every time it moves; whoever keeps it applies it. */
   onSoundChanged: (settings: SoundSettings) => void;
+  /** Asks for the save as a file or a code; the answer comes back to `exported`. */
+  onExport: (kind: SaveExportKind) => void;
+  onOpenLoad: () => void;
   onResetCharacter: () => void;
   onClose: () => void;
 }
@@ -22,17 +27,24 @@ export interface OptionsModalHandlers {
  * rather than about the character, and this is the one panel that already is.
  * The volume is greyed out while muted rather than hidden, so it keeps its place
  * and says what unmuting will come back at.
+ *
+ * The save is here for the reason Reset is: it is about the character as a
+ * whole rather than anything in play. A code is shown as well as copied,
+ * since the clipboard is refused over plain http and the text on screen is
+ * always there to copy by hand.
  */
 export class OptionsModal extends Overlay {
   private readonly resetButton: HTMLButtonElement;
   private readonly soundButton: HTMLButtonElement;
   private readonly volume: HTMLInputElement;
+  private readonly saveStatus: HTMLElement;
+  private readonly codeBox: HTMLTextAreaElement;
   private readonly handlers: OptionsModalHandlers;
   private sound: SoundSettings;
   private confirmingReset = false;
 
   constructor(handlers: OptionsModalHandlers) {
-    super('hud-modal', handlers.onClose);
+    super('hud-modal hud-modal--above-bar', handlers.onClose);
     this.handlers = handlers;
     this.sound = handlers.sound;
     const box = el('div', 'hud-modal__box');
@@ -58,6 +70,20 @@ export class OptionsModal extends Overlay {
       this.setSound({ ...this.sound, volume: Number(this.volume.value) / 100 }),
     );
 
+    const download = actionButton('Download Save', 'download-save', () =>
+      handlers.onExport('file'),
+    );
+    const copy = actionButton('Copy Save Code', 'copy-save-code', () => handlers.onExport('code'));
+    const load = actionButton('Load a Save', 'open-load-save', () => handlers.onOpenLoad());
+    this.saveStatus = el('div', 'hud-modal__line');
+    this.saveStatus.hidden = true;
+    this.codeBox = el('textarea', 'hud-save__code');
+    this.codeBox.readOnly = true;
+    this.codeBox.rows = 3;
+    this.codeBox.hidden = true;
+    this.codeBox.dataset.action = 'save-code-output';
+    this.codeBox.setAttribute('aria-label', 'Save code');
+
     this.resetButton = el('button', 'hud-button hud-modal__danger', 'Reset Character');
     this.resetButton.type = 'button';
     this.resetButton.dataset.action = 'reset-character';
@@ -67,13 +93,27 @@ export class OptionsModal extends Overlay {
     close.type = 'button';
     close.addEventListener('click', () => this.close());
 
-    box.append(
+    // A body that scrolls, with Close outside it: a landscape phone is shorter
+    // than the whole list.
+    const body = el('div', 'hud-modal__body hud-options');
+    body.append(
       this.soundButton,
       el('div', 'hud-modal__line', 'Volume'),
       this.volume,
+      el('div', 'hud-save__heading', 'Your save'),
+      el(
+        'div',
+        'hud-modal__line',
+        'Kept in this browser as you play. Take a copy to keep it safe or to play on another device.',
+      ),
+      download,
+      copy,
+      this.saveStatus,
+      this.codeBox,
+      load,
       this.resetButton,
-      close,
     );
+    box.append(body, close);
     this.root.append(box);
     this.drawSound();
     // A tap on the dimmed surround closes; the target check is what keeps a tap
@@ -96,6 +136,26 @@ export class OptionsModal extends Overlay {
     this.soundButton.setAttribute('aria-pressed', String(!this.sound.muted));
     this.volume.value = String(Math.round(this.sound.volume * 100));
     this.volume.disabled = this.sound.muted;
+  }
+
+  /** The session's answer to `onExport`, still inside the tap that asked for it. */
+  exported(saved: SaveExport): void {
+    this.saveStatus.hidden = false;
+    if (saved.kind === 'file') {
+      downloadFile(saved.fileName, saved.text);
+      this.saveStatus.textContent = `Sent to your downloads: ${saved.fileName}`;
+      return;
+    }
+    this.codeBox.value = saved.text;
+    this.codeBox.hidden = false;
+    this.saveStatus.textContent = 'Copying…';
+    void copyText(saved.text).then((copied) => {
+      this.saveStatus.textContent = copied
+        ? 'Copied. Paste it somewhere safe; Load a Save takes it back.'
+        : 'Copy the code below and keep it somewhere safe; Load a Save takes it back.';
+      // Refused, it is selected, ready for a thumb to copy by hand.
+      if (!copied) this.codeBox.select();
+    });
   }
 
   // First press arms it, second one goes through — a mistap can't wipe a save.
