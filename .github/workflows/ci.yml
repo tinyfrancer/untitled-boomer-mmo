@@ -1,9 +1,13 @@
 name: CI
 
+# Minutes on a private repo are metered (2,000 a month on the free plan), so
+# CI runs where it can change a decision: on pull requests, and by hand. Not on
+# the merge, which would test again the head the pull request just passed.
+# `ready_for_review` is listed because a draft skips the browser smoke, and
+# marking it ready is what runs it.
 on:
-  push:
-    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # A new push to a PR makes the in-flight run obsolete.
@@ -15,14 +19,18 @@ jobs:
   gates:
     name: gates (node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    # A few minutes of work. Without a ceiling a hung step runs to GitHub's
+    # default of six hours, a sixth of a month's allowance in one go.
+    timeout-minutes: 10
     strategy:
-      # Both versions' results are useful; don't cancel one because the other failed.
-      fail-fast: false
       matrix:
-        # 22 is the LTS floor, 25 is what the project is developed on. Keeping
-        # both is deliberate: a Node-version-specific break in the test
-        # environment is exactly what went unnoticed before there was any CI.
-        node: ['22', '25']
+        # 25 is what the project is developed on. 22, the LTS floor, is what
+        # the cloud sessions run every gate on before they push, so CI checking
+        # 25 alone still has both versions seen on every change (decision 95).
+        # A Node-version-specific break in the test environment is exactly what
+        # went unnoticed before there was any CI. A matrix of one, so the check
+        # keeps the name a required status check knows it by.
+        node: ['25']
     steps:
       - uses: actions/checkout@v7
 
@@ -53,10 +61,15 @@ jobs:
 
   smoke:
     name: browser smoke
-    # Downloads a browser and boots the dev server, so it is much slower than the
-    # unit gates. It guards merges into main rather than every push to a branch.
-    if: github.event_name != 'push'
+    # Downloads a browser and boots the dev server, so it is most of every run's
+    # minutes. It guards merges into main, and a draft cannot be merged, so a
+    # draft skips it: pushes to a pull request still being worked on run the
+    # gates alone, and marking it ready for review runs this.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
+    # Seven minutes on a good day, and the first run after a Playwright bump
+    # downloads a browser. Past this it is hung, not slow.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
