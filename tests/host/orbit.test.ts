@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OrbitGesture, YAW_PER_PIXEL, normalizeYaw } from '../../src/render3d/orbit';
+import { OrbitGesture, YAW_PER_PIXEL, normalizeYaw } from '../../src/host/orbit';
 import { LONG_PRESS_MS, TAP_MAX_MS, TAP_SLOP_PX } from '../../src/ui/gestures';
 
 /** Drags in a straight line, one pixel at a time, summing the yaw it is worth. */

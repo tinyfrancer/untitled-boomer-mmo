@@ -15,7 +15,7 @@ import {
   resizeCamera,
 } from '../../src/render3d/camera';
 import { simToWorld } from '../../src/render3d/coords';
-import { OrbitGesture } from '../../src/render3d/orbit';
+import { OrbitGesture } from '../../src/host/orbit';
 
 const WORLD = {
   width: nth(TOWN_MAP, 0).length * TILE_SIZE,

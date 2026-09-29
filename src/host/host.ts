@@ -27,7 +27,7 @@ import {
 import { LONG_PRESS_MS } from '../ui/gestures';
 import { FrameTimer } from './frameTimer';
 import { OrbitGesture } from './orbit';
-import { ZoneView3D } from './ZoneView3D';
+import type { ZoneView, ZoneViewFactory } from './zoneView';
 import type { CharacterState } from '../persistence';
 import type { DebugView, DrawnCounts } from '../types/debugView';
 import type { EventBus } from '../world/worldEvents';
@@ -69,16 +69,19 @@ const MAX_FRAME_MS = 100;
  * The host: everything that has to happen around a zone without drawing it.
  *
  * It owns the frame loop, the keyboard, the pointer, the HUD mount, the sound
- * and the reset, and it hands the session's world to a `ZoneView3D`. Neither the
- * `GameContext` under it nor the HUD over it knows what is drawing — which is
- * what made swapping the renderer possible, and is why host duties belong
- * here rather than leaking into either.
+ * and the reset, and it hands the session's world to whichever `ZoneView` it
+ * was built with. Neither the `GameContext` under it nor the HUD over it knows
+ * what is drawing — which is what made swapping the renderer possible, and is
+ * why host duties belong here rather than leaking into either. It lived in
+ * `render3d/` while there was one renderer; version 2 draws with a second one
+ * beside it, so it stands apart from both.
  */
-class ThreeHost implements GameHost {
+class Host implements GameHost {
   readonly events = createEventBus();
 
   private context: GameContext | null = null;
-  private view: ZoneView3D | null = null;
+  private view: ZoneView | null = null;
+  private readonly createView: ZoneViewFactory;
   private readonly gesture = new OrbitGesture();
   // Only the first pointer down drives the camera. A second finger arriving is
   // a pinch, which is the browser's (see `touch-action` on the canvas) — it
@@ -103,7 +106,8 @@ class ThreeHost implements GameHost {
   // speaker than it knows there is a screen.
   private readonly sound = new SoundBoard(loadSoundSettings());
 
-  constructor() {
+  constructor(createView: ZoneViewFactory) {
+    this.createView = createView;
     // For the life of the page rather than of a session: a browser will not
     // start audio before a gesture, and the click that begins a character on
     // the creation screen is as good a gesture as any tap on the world.
@@ -122,7 +126,7 @@ class ThreeHost implements GameHost {
     }
     this.context = context;
 
-    this.view = new ZoneView3D(uiRoot());
+    this.view = this.createView(uiRoot());
     this.view.build(context.currentWorld);
     this.sound.listenTo(this.events);
     this.sound.enter(context.currentWorld.zone.setting);
@@ -416,7 +420,7 @@ class ThreeHost implements GameHost {
   }
 }
 
-/** Boots the game. */
-export function start3d(): void {
-  bootIntoGame(new ThreeHost());
+/** Boots the game, drawn by the views `createView` builds. */
+export function startHost(createView: ZoneViewFactory): void {
+  bootIntoGame(new Host(createView));
 }

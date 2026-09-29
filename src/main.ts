@@ -1,3 +1,4 @@
-import { start3d } from './render3d/start3d';
+import { startHost } from './host/host';
+import { ZoneView3D } from './render3d/ZoneView3D';
 
-start3d();
+startHost((parent) => new ZoneView3D(parent));
