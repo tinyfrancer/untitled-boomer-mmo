@@ -49,7 +49,7 @@
  * An unknown section name prints the list. Screenshots land in .smoke/.
  */
 import { chromium } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 
 const BASE = process.env.SMOKE_URL ?? 'http://localhost:5173';
 /** @param {string} params */
@@ -4216,6 +4216,202 @@ async function saveResume() {
   );
 }
 
+async function saveTransfer() {
+  // --- The save taken away and brought back (decision 97). What only a page
+  // can show: a real download reaching the browser with the character as it
+  // stands, a file chosen through a real picker, and a load that ends one
+  // session and starts another under the same host — a reset's teardown that
+  // ends somewhere other than the creation screen. What a save may hold, and
+  // what is refused, is `tests/persistence/saveFile.test.ts`'s. ---
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  // Staged, so the save that leaves can be told apart from what the page holds
+  // afterwards. Parked on a mob's spawn point, as `save-resume` is, for a spot
+  // known to be walkable and well off centre.
+  const staged = await page.evaluate(() => {
+    const w = window.world;
+    const anchor = w.mobs[0];
+    if (!anchor) throw new Error('the zone has no mob to park on');
+    const spot = { x: Math.round(anchor.spawnX), y: Math.round(anchor.spawnY) };
+    w.clearTarget();
+    w.teleport(spot.x, spot.y);
+    w.character.state.currency = 4321;
+    return { name: w.character.state.name, zoneId: w.zone.id, spot };
+  });
+
+  await tapTab('options');
+  const saveButtons = await page.evaluate(() =>
+    ['download-save', 'copy-save-code', 'open-load-save'].map((action) => {
+      const box = document
+        .querySelector(`.hud-modal [data-action="${action}"]`)
+        ?.getBoundingClientRect();
+      return box ? { height: box.height, right: box.right, bottom: box.bottom } : null;
+    }),
+  );
+  check(
+    'the options menu offers the save, sized for a thumb and on the screen',
+    saveButtons.every(
+      (box) =>
+        box !== null && box.height >= 44 && box.right <= PHONE.width && box.bottom <= PHONE.height,
+    ),
+    JSON.stringify(saveButtons),
+  );
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('.hud-modal [data-action="download-save"]'),
+  ]);
+  const savePath = `${OUT}/save.json`;
+  await download.saveAs(savePath);
+  const file = JSON.parse(readFileSync(savePath, 'utf8'));
+  const left = file.character?.position ?? { x: NaN, y: NaN };
+  check(
+    'Download Save hands the browser a file of the character as it stands',
+    file.game === 'untitled-boomer-mmo' &&
+      file.character.name === staged.name &&
+      file.character.currency === 4321 &&
+      file.character.zoneId === staged.zoneId &&
+      Math.hypot(left.x - staged.spot.x, left.y - staged.spot.y) <= 4 &&
+      /^untitled-boomer-mmo-.+-level-\d+-\d{4}-\d{2}-\d{2}\.json$/.test(
+        download.suggestedFilename(),
+      ),
+    `${download.suggestedFilename()}: ${file.character?.name}, ${file.character?.currency} copper at ${left.x},${left.y}`,
+  );
+
+  await page.click('.hud-modal [data-action="copy-save-code"]');
+  // Either answer will do: the clipboard is the browser's to refuse, and the
+  // code on screen is the half that must always be there.
+  await page.waitForFunction(() =>
+    /Copied|Copy the code/.test(document.querySelector('.hud-modal')?.textContent ?? ''),
+  );
+  const code = await page.evaluate(
+    () =>
+      /** @type {HTMLTextAreaElement | null} */ (
+        document.querySelector('.hud-modal [data-action="save-code-output"]')
+      )?.value ?? '',
+  );
+  check(
+    'Copy Save Code shows the code as well as copying it',
+    /^[A-Za-z0-9+/]+=*$/.test(code) && code.length > 100,
+    `${code.length} characters`,
+  );
+  await page.screenshot({ path: `${OUT}/40-options-save.png` });
+
+  // A landscape phone is shorter than the whole menu, so it scrolls, and Close
+  // is outside what scrolls — above the tab bar, where every counter stops.
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(300);
+  const short = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box');
+    const body = box?.querySelector('.hud-modal__body');
+    const close = [...(box?.querySelectorAll('button') ?? [])].find(
+      (button) => button.textContent === 'Close',
+    );
+    if (!box || !body || !close) throw new Error('the options menu has lost its parts');
+    return {
+      box: Math.round(box.getBoundingClientRect().bottom),
+      close: Math.round(close.getBoundingClientRect().bottom),
+      scrolls: body.scrollHeight > body.clientHeight,
+      bar: Math.round(document.querySelector('.hud-tabs')?.getBoundingClientRect().top ?? 0),
+    };
+  });
+  check(
+    'on a landscape phone the options menu scrolls, and stops above the tab bar',
+    short.scrolls && short.bar > 0 && short.box <= short.bar && short.close <= short.bar,
+    JSON.stringify(short),
+  );
+  await page.screenshot({ path: `${OUT}/41-options-landscape.png` });
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+
+  // The game moves on after the save left, so bringing it back is visible.
+  await page.evaluate(() => {
+    window.world.character.state.currency = 5;
+  });
+  await page.click('.hud-modal [data-action="open-load-save"]');
+  await page.fill('[data-action="save-code-input"]', code);
+  await page.click('[data-action="load-save-code"]');
+  const cards = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-save__card')].map((card) => card.textContent ?? ''),
+  );
+  check(
+    'a pasted code is shown beside the character playing now before anything is replaced',
+    cards.length === 2 && cards.every((card) => card.includes(staged.name)),
+    cards.join(' | '),
+  );
+  await page.screenshot({ path: `${OUT}/42-load-preview.png` });
+  await page.click('[data-action="confirm-load-save"]');
+  const armed = await page.evaluate(() => ({
+    label: document.querySelector('[data-action="confirm-load-save"]')?.textContent ?? '',
+    currency: window.world.character.state.currency,
+  }));
+  check(
+    'the first Replace only arms it',
+    armed.label.startsWith('Tap again') && armed.currency === 5,
+    armed.label,
+  );
+  await page.click('[data-action="confirm-load-save"]');
+  await page.waitForFunction(() => window.world?.character.state.currency === 4321, null, {
+    timeout: 20000,
+  });
+  await draw();
+  const loaded = await page.evaluate(() => ({
+    x: Math.round(window.world.player.x),
+    y: Math.round(window.world.player.y),
+    zoneId: window.world.zone.id,
+    huds: document.querySelectorAll('.hud').length,
+    canvases: document.querySelectorAll('canvas').length,
+    modals: document.querySelectorAll('.hud-modal').length,
+    ground: window.view.drawnCounts().ground,
+    stored: JSON.parse(localStorage.getItem('untitled-boomer-mmo:character:v1') ?? '{}').currency,
+  }));
+  check(
+    'the second tap loads it: one session ended and the save started where it left',
+    loaded.zoneId === staged.zoneId &&
+      Math.hypot(loaded.x - staged.spot.x, loaded.y - staged.spot.y) <= 4 &&
+      loaded.stored === 4321,
+    `${loaded.zoneId} at ${loaded.x},${loaded.y}, ${loaded.stored} copper stored`,
+  );
+  check(
+    'and rebuilds one HUD over one view, with nothing left open',
+    loaded.huds === 1 && loaded.canvases === 1 && loaded.ground === 1 && loaded.modals === 0,
+    JSON.stringify(loaded),
+  );
+
+  // A new device: nobody to replace, so the creation screen offers the file.
+  await tapTab('options');
+  await page.click('.hud-modal [data-action="reset-character"]');
+  await page.click('.hud-modal [data-action="reset-character"]');
+  await page.waitForSelector('.create', { timeout: 20000 });
+  await page.click('.create [data-action="open-load-save"]');
+  await page.setInputFiles('[data-action="save-file-input"]', savePath);
+  await page.waitForSelector('[data-action="confirm-load-save"]');
+  const offer = await page.evaluate(() => ({
+    label: document.querySelector('[data-action="confirm-load-save"]')?.textContent ?? '',
+    cards: document.querySelectorAll('.hud-save__card').length,
+  }));
+  check(
+    'the creation screen loads a chosen file, with nobody to replace',
+    offer.label === `Play as ${staged.name}` && offer.cards === 1,
+    `${offer.label}, ${offer.cards} card(s)`,
+  );
+  await page.screenshot({ path: `${OUT}/43-load-at-creation.png` });
+  await page.click('[data-action="confirm-load-save"]');
+  await page.waitForFunction(() => window.world != null && window.view != null, null, {
+    timeout: 20000,
+  });
+  const resumed = await page.evaluate(() => ({
+    name: window.world.character.state.name,
+    currency: window.world.character.state.currency,
+    create: document.querySelector('.create') !== null,
+  }));
+  check(
+    'and plays as the character in it',
+    resumed.name === staged.name && resumed.currency === 4321 && !resumed.create,
+    `${resumed.name}, ${resumed.currency} copper`,
+  );
+}
+
 async function offlineCamping() {
   // --- Offline camping: a session parked in the save pays out on the next
   // load, and the report waits in the notification queue until the HUD mounts.
@@ -4664,6 +4860,7 @@ const SECTIONS = [
   ['locked-zone', lockedZone],
   ['reset', reset],
   ['save-resume', saveResume],
+  ['save-transfer', saveTransfer],
   ['offline-camping', offlineCamping],
   ['throttled', throttled],
   ['ranger', ranger],
