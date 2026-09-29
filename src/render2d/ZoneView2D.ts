@@ -2,6 +2,7 @@ import { classSprite, creatureSprite, npcSprite } from '../art/cast';
 import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { PLACEHOLDERS } from '../art/index';
 import { TILE_SIZE } from '../config/constants';
+import { ABILITIES } from '../data/abilities';
 import { occupant } from '../data/buildings';
 import { npcName } from '../data/npcs';
 import { titleName } from '../systems/AchievementSystem';
@@ -242,10 +243,24 @@ export class ZoneView2D implements ZoneView {
           break;
         }
         case 'shot':
-          this.playerMotion.strike(now, event.to.x - world.player.x, event.to.y - world.player.y);
+          this.playerMotion.strike(
+            now,
+            event.to.x - world.player.x,
+            event.to.y - world.player.y,
+            'shoot',
+          );
           this.effect('projectile', event.from, event.to, ARROW_MS);
           break;
         case 'bolt-cast':
+          // A creature's throw is already its swing; the player's is a spell.
+          if (Object.hasOwn(ABILITIES, event.abilityId)) {
+            this.playerMotion.strike(
+              now,
+              event.to.x - world.player.x,
+              event.to.y - world.player.y,
+              'cast',
+            );
+          }
           this.effect('projectile', event.from, event.to, BOLT_MS);
           break;
         case 'hit': {

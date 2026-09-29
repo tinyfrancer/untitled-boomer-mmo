@@ -9,8 +9,10 @@ import type { ClassId, EnemyId, NpcId } from '../../src/types/ids';
 const KINDS = new Map(SPRITES.map((def) => [def.id, def.kind]));
 
 describe('who is drawn with what', () => {
-  it('draws phase B2 for real: the warrior, the shopkeeper and the rat', () => {
+  it('draws every class, the shopkeeper and the rat for real', () => {
     expect(classSprite('warrior')).toBe('warrior');
+    expect(classSprite('wizard')).toBe('wizard');
+    expect(classSprite('ranger')).toBe('ranger');
     expect(npcSprite('shopkeeper')).toBe('shopkeeper');
     expect(creatureSprite('rat', ENEMIES.rat.shape)).toBe('rat');
   });

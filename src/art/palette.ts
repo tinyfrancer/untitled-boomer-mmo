@@ -39,6 +39,11 @@ export const SHARED_RAMPS = {
   // A cloak or a banner: red dyed deep and worn, rather than a hurt frame's flush.
   crimson: [0x1c0a0e, 0x361218, 0x551c21, 0x782d2c, 0x9e4c3f],
   blue: [0x111726, 0x1d2a44, 0x2c4263, 0x466286, 0x7891ad],
+  // A wizard's robe: violet dyed deep, which the class's colour names.
+  violet: [0x140e20, 0x251a3b, 0x3b2a5a, 0x584181, 0x8069a9],
+  // A ranger's cloak: a forest green darker and colder than any grass, so a
+  // hunter standing in a field is still a figure and not a patch of it.
+  forest: [0x0b1512, 0x14261f, 0x21392b, 0x34523a, 0x55724f],
   green: [0x12301f, 0x1f5a2e, 0x2f8a3a, 0x5bb84c, 0x9ee07a],
   purple: [0x241238, 0x40205e, 0x663796, 0x9058c2, 0xc493e8],
   yellow: [0x5a3310, 0x9a5e14, 0xd9951c, 0xf5c542, 0xfff08a],

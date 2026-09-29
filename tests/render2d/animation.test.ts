@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PLACEHOLDERS } from '../../src/art/index';
 import { RAT } from '../../src/art/sprites/rat';
-import { SHOPKEEPER, WARRIOR } from '../../src/art/sprites/people';
+import { RANGER, SHOPKEEPER, WARRIOR, WIZARD } from '../../src/art/sprites/people';
 import { Motion, deathPose, facingOf, frameIndex, playMs } from '../../src/render2d/animation';
 
 describe('facingOf', () => {
@@ -51,6 +51,15 @@ describe('Motion', () => {
     motion.flinch(0);
     expect(motion.pose(RAT, 50, 0, 0).animation).toBe('hurt');
     expect(motion.pose(RAT, 200, 0, 0).animation).toBe('idle');
+  });
+
+  it('casts and shoots with the figures that do, and swings with the ones that do not', () => {
+    const motion = new Motion();
+    motion.strike(0, 0, 10, 'cast');
+    expect(motion.pose(WIZARD, 10, 0, 0).animation).toBe('cast');
+    expect(motion.pose(WARRIOR, 10, 0, 0).animation).toBe('attack');
+    motion.strike(0, 0, 10, 'shoot');
+    expect(motion.pose(RANGER, 10, 0, 0).animation).toBe('shoot');
   });
 
   it('goes on standing when told of a moment its sprite has not drawn', () => {

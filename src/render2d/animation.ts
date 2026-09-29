@@ -49,9 +49,12 @@ export interface Pose {
  * walk or the breath under it; a sprite that has not drawn one (a shopkeeper
  * does not swing) simply goes on doing what it was.
  */
+/** The moments a figure plays over its walk: a blow, a spell, a shot, a flinch. */
+export type MomentId = 'attack' | 'cast' | 'shoot' | 'hurt';
+
 export class Motion {
   facing: Facing = 'down';
-  private moment: { animation: 'attack' | 'hurt'; startedAt: number } | null = null;
+  private moment: { animation: MomentId; startedAt: number } | null = null;
   // Figures of one kind built in the same frame would breathe in step; where
   // they stand is a stable seed for pulling them apart.
   private readonly phaseMs: number;
@@ -60,10 +63,18 @@ export class Motion {
     this.phaseMs = phaseMs;
   }
 
-  /** A blow at something, which turns the figure toward it. */
-  strike(nowMs: number, towardX: number, towardY: number): void {
+  /**
+   * A blow, a spell or a shot at something, which turns the figure toward it.
+   * A figure that has not drawn a spell or a shot swings instead.
+   */
+  strike(
+    nowMs: number,
+    towardX: number,
+    towardY: number,
+    animation: 'attack' | 'cast' | 'shoot' = 'attack',
+  ): void {
     this.facing = facingOf(towardX, towardY, this.facing);
-    this.moment = { animation: 'attack', startedAt: nowMs };
+    this.moment = { animation, startedAt: nowMs };
   }
 
   /** A blow that landed on it. */
@@ -74,13 +85,14 @@ export class Motion {
   pose(def: SpriteDef, nowMs: number, vx: number, vy: number): Pose {
     this.facing = facingOf(vx, vy, this.facing);
     const moment = this.moment;
-    if (moment && hasAnimation(def, moment.animation)) {
+    const played = moment && playedAs(def, moment.animation);
+    if (moment && played) {
       const into = nowMs - moment.startedAt;
-      if (into < playMs(def, moment.animation)) {
+      if (into < playMs(def, played)) {
         return {
-          animation: moment.animation,
+          animation: played,
           facing: this.facing,
-          index: frameIndex(def, moment.animation, into),
+          index: frameIndex(def, played, into),
         };
       }
     }
@@ -93,6 +105,13 @@ export class Motion {
       index: frameIndex(def, animation, nowMs + this.phaseMs),
     };
   }
+}
+
+/** What a sprite plays for a moment: its own, a swing for a spell or a shot it has not drawn, or nothing. */
+function playedAs(def: SpriteDef, moment: MomentId): AnimationId | null {
+  if (hasAnimation(def, moment)) return moment;
+  if ((moment === 'cast' || moment === 'shoot') && hasAnimation(def, 'attack')) return 'attack';
+  return null;
 }
 
 /** A creature falling, `deadForMs` after it died, held on its last frame. */

@@ -1,7 +1,7 @@
 import type { ClassId, CreatureShapeId, EnemyId, NpcId } from '../types/ids';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { RAT } from './sprites/rat';
-import { SHOPKEEPER, WARRIOR } from './sprites/people';
+import { RANGER, SHOPKEEPER, WARRIOR, WIZARD } from './sprites/people';
 
 /**
  * Who is drawn with which sprite.
@@ -15,6 +15,8 @@ import { SHOPKEEPER, WARRIOR } from './sprites/people';
 
 const CLASS_SPRITES: Readonly<Partial<Record<ClassId, string>>> = {
   warrior: WARRIOR.id,
+  wizard: WIZARD.id,
+  ranger: RANGER.id,
 };
 
 const NPC_SPRITES: Readonly<Partial<Record<NpcId, string>>> = {

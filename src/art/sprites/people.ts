@@ -1,237 +1,50 @@
+import type { Grid, Placed, SpriteDef } from '../format';
+import { composed, grid, rekeyed } from '../format';
 import {
-  composed,
-  flipped,
-  grid,
-  rekeyed,
-  shifted,
-  type FacingFrames,
-  type Grid,
-  type Placed,
-  type SpriteDef,
-} from '../format';
+  BODY_X,
+  BODY_Y,
+  COAT_DOWN,
+  COAT_RIGHT,
+  COAT_UP,
+  FIGURE_HEIGHT,
+  FIGURE_WIDTH,
+  HEAD_DOWN,
+  HEAD_RIGHT,
+  HEAD_UP,
+  HEAD_X,
+  HEAD_Y,
+  breathing,
+  figureFrame,
+  fourWays,
+  hurtFrames,
+  legs,
+  personSprite,
+  striding,
+  type Dress,
+  type Materials,
+  type Moment,
+  type View,
+} from './figure';
 
 /**
- * People: the warrior and the shopkeeper, the first two drawn for real, and
- * the ones phase B2's checkpoint judges. They are one figure dressed two ways.
+ * People: the three classes a player can be, and the shopkeeper. Each is the
+ * one figure (`figure.ts`) dressed and armed its own way, drawn to heroic
+ * proportions rather than a toy's (decision 103), and holding what it holds
+ * in its hand (decision 104).
  *
- * Drawn to heroic proportions rather than a toy's (decision 103): a head over
- * a body three times its height, broad in the shoulder. The warrior wears a
- * quilted gambeson in the class's blue, leather spaulders, bracers and boots,
- * a crimson cloak, and carries the rusty sword every warrior starts with: a
- * figure that walks, swings, flinches and falls, four ways round. The
- * shopkeeper is a grey-bearded merchant in ochre under an apron, and only
- * stands and breathes, since a person behind a counter does nothing else.
- *
- * Put together from parts the way the mannequin is (`placeholders.ts`): a
- * stride is the same head and body over different legs, and a blow is the same
- * figure with the sword somewhere else. The sword is a part of its own because
- * of which hand holds it: facing right it is on the near side and drawn over
- * the body, and facing left it is on the far side and drawn behind it, which a
- * mirror cannot do. So the left is the right's body flipped, with its own sword.
- *
- * Shaded for a light from the top-left; no outline, which the compiler draws.
+ * - The warrior: a quilted gambeson in the class's blue under leather
+ *   spaulders, a crimson cloak, and the rusty sword every warrior starts with,
+ *   carried low and swung from over the shoulder.
+ * - The wizard: a hooded robe in violet trimmed with brass, and a staff taller
+ *   than they are with a crystal that flares as a spell leaves it.
+ * - The ranger: a hood and mantle in forest green over a leather jerkin, a
+ *   quiver on the back, and a bow in the left hand drawn to the cheek.
+ * - The shopkeeper: a grey-haired merchant in ochre under a leather apron, who
+ *   only stands and breathes, since a person behind a counter does nothing else.
  */
 
 // ---------------------------------------------------------------------------
-// Heads. Hair is i (and j, k lit, h shaded, which is also the stubble on a
-// jaw); skin is c (d lit, b and a shaded); e is an eye.
-// ---------------------------------------------------------------------------
-
-const HEAD_DOWN = grid(`
-  ..iiiiii..
-  .ijjkjjii.
-  ijjkkjjiih
-  iijjjiiihh
-  iiiiiiiihh
-  idcccccbih
-  hcdecceb.h
-  hccecceba.
-  .cccbcbba.
-  .icbbbbih.
-  .hiaaaaih.
-  ..hibbih..
-`);
-
-const HEAD_UP = grid(`
-  ..iiiiii..
-  .ijjkjjii.
-  ijjkkjjiih
-  iijjjiiihh
-  iiiiiiiihh
-  iiiiiiiihh
-  hiiiiiiihh
-  hiiiiiihhh
-  .hiiiihhh.
-  .bhhhhhhb.
-  .abhhhhba.
-  ..abbbba..
-`);
-
-const HEAD_RIGHT = grid(`
-  ..iiiii...
-  .ijjjjii..
-  ijjkkjjii.
-  ijjjjjiiih
-  iiijiiicdh
-  iiiiiiccce
-  hiiiicccec
-  hbbiicccc.
-  hbaiicccc.
-  .hbiiccib.
-  .hhhiiiia.
-  ..hhbbbb..
-`);
-
-// ---------------------------------------------------------------------------
-// Bodies: a quilted coat (1-4, 0 deepest) to mid-thigh, a belt (l m n, and its
-// buckle g), and the arms with their leather bracers and hands at the sides.
-// ---------------------------------------------------------------------------
-
-const TORSO_DOWN = grid(`
-  ......cbbc......
-  ...3444333322...
-  .234443333322221
-  .344.3433322.221
-  .332.3433322.221
-  .333.3333222.211
-  .332.3432221.211
-  .322.3333222.211
-  .322.3322221.211
-  .l22.2322221.2l0
-  .lnm.lmmgmml.ml.
-  .lml.2322221.ml.
-  .dcb.2222221.ba.
-  .cba.2222221.aa.
-  .....2222211....
-  .....1111111....
-`);
-
-const TORSO_UP = grid(`
-  ......bbbb......
-  ...3444333322...
-  .234443333322221
-  .344.3333322.221
-  .332.3333322.221
-  .333.3333222.211
-  .332.3332221.211
-  .322.3322222.211
-  .322.3322221.211
-  .l22.2322221.2l0
-  .lnm.lmmmmml.ml.
-  .lml.2222221.ml.
-  .dcb.2222221.ba.
-  .cba.2222221.aa.
-  .....2222211....
-  .....1111111....
-`);
-
-const TORSO_RIGHT = grid(`
-  ....bcb.....
-  ..3443332...
-  .344333322..
-  .3433333221.
-  .3333332221.
-  .3333322221.
-  .3332222221.
-  .3322222211.
-  .3322222211.
-  .3222222211.
-  .lnmmmmmmll.
-  .3222222211.
-  .2222222211.
-  .2222222211.
-  ..1222221...
-  ..1111111...
-`);
-
-// The near arm, over the side of the body: a sleeve, a bracer and a fist.
-const ARM_RIGHT = grid(`
-  434.
-  333.
-  333.
-  332.
-  332.
-  322.
-  222.
-  221.
-  lnm.
-  lml.
-  dcb.
-  cbb.
-`);
-
-// Leather over the shoulders, laid over the coat: what makes a fighter's
-// shoulders broader than a merchant's.
-const SPAULDERS = grid(`
-  ................
-  .mnnm.......mmml
-  lnnnm.......mmml
-  lmml.........lll
-`);
-
-const SPAULDER_SIDE = grid(`
-  nnm.
-  mml.
-`);
-
-// ---------------------------------------------------------------------------
-// Legs: trousers (u, t shaded) into tall boots (n m l). A lifted one is a foot
-// off the ground, mid-stride.
-// ---------------------------------------------------------------------------
-
-const LEG = grid(`
-  uuut
-  uuut
-  uutt
-  uutt
-  uutt
-  uuut
-  uutt
-  nnml
-  nnml
-  nnml
-  nmml
-  nmml
-  mmll
-  mmll
-`);
-
-const LEG_LIFTED = grid(`
-  uuut
-  uutt
-  uutt
-  uuut
-  uutt
-  nnml
-  nnml
-  nnml
-  nmml
-  nmml
-  mmll
-  mmll
-`);
-
-// A leg seen from the side, the boot's toe pointing the way it walks.
-const LEG_SIDE = grid(`
-  uuut.
-  uuut.
-  uutt.
-  uutt.
-  uutt.
-  uuut.
-  uutt.
-  nnml.
-  nnml.
-  nnml.
-  nnmml
-  nnmml
-  nmmml
-  mmmll
-`);
-
-// ---------------------------------------------------------------------------
-// The cloak (5-7, 9 in its folds): over the back seen from behind, its edges
-// past the shoulders from in front, and trailing behind seen from the side.
+// The warrior's cloak (5-7, 9 in its folds) and spaulders.
 // ---------------------------------------------------------------------------
 
 const CLOAK_BACK = grid(`
@@ -288,343 +101,382 @@ const CLOAK_SIDE = grid(`
   59...
 `);
 
-// ---------------------------------------------------------------------------
-// The sword: a rusty blade (v, w lit, x its edge), a crossguard and pommel in
-// plain dark metal (s) with a brass knot (g), and a grip the fist hides.
-// ---------------------------------------------------------------------------
-
-// Held low at the side, point down: how it is carried walking.
-const SWORD_DOWN = grid(`
-  .s.
-  ...
-  ...
-  sgs
-  .xw
-  .xw
-  .xw
-  .xw
-  .xw
-  .xw
-  .xv
-  ..v
+// Leather over the shoulders, over the tops of the arms.
+export const SPAULDERS = grid(`
+  ................
+  .mnnm.......mmml
+  lnnnm.......mmml
+  lmml.........lll
 `);
 
-// Raised over the shoulder, point up: the wind-up.
-const SWORD_RAISED = grid(`
-  ..x.
-  .xw.
-  .xw.
-  .xw.
-  .xw.
-  .xw.
-  .xv.
-  sgsv
-  ..s.
-`);
-
-// Brought across the front, point low and out: the blow facing down.
-const SWORD_SLASH = grid(`
-  ss.........
-  .sxx.......
-  ..wwxx.....
-  ....wwxx...
-  ......wwxx.
-  ........wvv
-`);
-
-// Thrust out ahead at the chest: the blow facing right.
-const SWORD_THRUST = grid(`
-  .s.........
-  sgxxxxxxxx.
-  .swwwwwwwvv
-  .s.........
-`);
-
-// Held up ahead, facing away: the blow facing up.
-const SWORD_UP = grid(`
-  .x.
-  xw.
-  xw.
-  xw.
-  xw.
-  xw.
-  xv.
-  sgs
+export const SPAULDER_SIDE = grid(`
+  nnm.
+  mml.
 `);
 
 // ---------------------------------------------------------------------------
-// The shopkeeper's apron: undyed linen (o, f lit, y shaded), tied on at the
-// waist, which is all of it that shows from behind.
+// The wizard's robe (0-4, trimmed in brass g y), to the ankles over boots, and
+// a hood (5-8, 9 its shadow) that shades the face.
+// ---------------------------------------------------------------------------
+
+const ROBE_DOWN = grid(`
+  ......cbbc......
+  ...3444333322...
+  .234443333322221
+  .....343G322....
+  .....343G322....
+  .....333G222....
+  .....332G221....
+  .....333G222....
+  .....332G221....
+  .....232G221....
+  .....lmmgmml....
+  .....332G221....
+  ....3332G2221...
+  ....3322G2221...
+  ....3322G2211...
+  ...33322G22211..
+  ...33222G22211..
+  ...33222G22111..
+  ...32222G22111..
+  ..332222G221111.
+  ..332222G221111.
+  ..322222G221110.
+  ..gggggggggggg0.
+`);
+
+const ROBE_UP = grid(`
+  ......bbbb......
+  ...3444333322...
+  .234443333322221
+  .....3333322....
+  .....3333322....
+  .....3333222....
+  .....3332221....
+  .....3322222....
+  .....3322221....
+  .....2322221....
+  .....lmmmmml....
+  .....3322221....
+  ....33322221....
+  ....33222221....
+  ....332222211...
+  ...3332222211...
+  ...3322222111...
+  ...3322222111...
+  ...3222221111...
+  ..33222221111...
+  ..32222221111...
+  ..32222211110...
+  ..gggggggggggg..
+`);
+
+const ROBE_RIGHT = grid(`
+  ....bcb......
+  ..3443332....
+  .344333322...
+  .3433333221..
+  .3333332221..
+  .3333322221..
+  .3332222221..
+  .3322222211..
+  .3322222211..
+  .3222222211..
+  .lnmmmmmmll..
+  .3322222211..
+  .33222222211.
+  .33222222211.
+  .32222222211.
+  332222222211.
+  322222222211.
+  322222222111.
+  322222222111.
+  3222222221111
+  3222222221111
+  2222222211110
+  ggggggggggggg
+`);
+
+const HOOD_DOWN = grid(`
+  ....6776....
+  ..66777766..
+  .6677777665.
+  .6777666665.
+  67766666655.
+  6769999999555
+  676.......95
+  666.......95
+  666.......55
+  6665.....555
+  66655...5559
+  666655555599
+  .6665555599.
+  ..66555599..
+`);
+
+const HOOD_UP = grid(`
+  ....6776....
+  ..67777665..
+  .6777766665.
+  .6777666655.
+  677766666555
+  677666665555
+  676666665555
+  666666655559
+  666666655559
+  666666555559
+  666665555599
+  666665555599
+  .6665555599.
+  ..66555599..
+`);
+
+const HOOD_RIGHT = grid(`
+  ...6776.....
+  ..677776....
+  .67777766...
+  6777766669..
+  677666699...
+  67666669....
+  6666669.....
+  666666......
+  666666......
+  6666665.....
+  66666555....
+  666655555...
+  .6655559....
+  ..55599.....
+`);
+
+// A face in a hood's shadow is a step darker.
+const SHADED_FACE: Readonly<Record<string, string>> = { d: 'c', c: 'b' };
+
+// ---------------------------------------------------------------------------
+// The ranger's hood and mantle (5-8), a strap across the chest, and a quiver
+// of arrows on the back (fletched in bone z).
+// ---------------------------------------------------------------------------
+
+const MANTLE_DOWN = grid(`
+  ...76666655.....
+  .77766666555559.
+  7766..........59
+  76.............9
+`);
+
+const MANTLE_UP = grid(`
+  ...76666655.....
+  .77766666555559.
+  7766666665555559
+  7666666655555559
+  .66666655555599.
+  ..666655555999..
+`);
+
+const MANTLE_RIGHT = grid(`
+  .7766...
+  777665..
+  76665...
+  6655....
+`);
+
+const STRAP_DOWN = grid(`
+  l......
+  .l.....
+  ..l....
+  ...l...
+  ....l..
+  .....l.
+  ......l
+`);
+
+const QUIVER_UP = grid(`
+  z.z..
+  .zqz.
+  .lnm.
+  .lnm.
+  .lmm.
+  .lmm.
+  .lml.
+  .lml.
+  .lml.
+  .lml.
+  ..l..
+`);
+
+const QUIVER_DOWN = grid(`
+  z.z
+  .z.
+`);
+
+const QUIVER_RIGHT = grid(`
+  z.z
+  .zq
+  lnm
+  lnm
+  lmm
+  lmm
+  lml
+  lml
+  lml
+  .l.
+`);
+
+// ---------------------------------------------------------------------------
+// The shopkeeper's leather apron, tied at the waist, which is all of it that
+// shows from behind.
 // ---------------------------------------------------------------------------
 
 const APRON_DOWN = grid(`
-  .o....o.
-  .fooooy.
-  .fooooy.
-  .fooooy.
-  ffoooooy
-  fooooooy
-  fooooooy
-  foooooyy
-  ooooooyy
-  oooooyyy
-  .oooooy.
-  ..yyyy..
+  .m....m.
+  .nmmmml.
+  .nmmmml.
+  .nmmmml.
+  nnmmmmml
+  nmmmmmml
+  nmmmmmml
+  nmmmmmll
+  mmmmmmll
+  mmmmmlll
+  .mmmmml.
+  ..llll..
 `);
 
 const APRON_UP = grid(`
-  yooooooy
+  lmmmmmml
 `);
 
 const APRON_RIGHT = grid(`
-  .f
-  fo
-  fo
-  fo
-  fo
-  fo
-  oy
-  oy
-  oy
-  oy
-  .y
+  .n
+  nm
+  nm
+  nm
+  nm
+  nm
+  ml
+  ml
+  ml
+  ml
+  .l
 `);
 
 // ---------------------------------------------------------------------------
-// Putting a figure together.
+// Dressing the figure.
 // ---------------------------------------------------------------------------
 
-const WIDTH = 32;
-const HEIGHT = 48;
-// The boots' last row stands on the third row from the bottom: the outline and
-// a pixel of air go under it. The coat's skirt comes down over the thighs.
-const LEGS_AT = HEIGHT - 2 - LEG.length;
-const TORSO_AT = LEGS_AT - TORSO_DOWN.length + 4;
-const HEAD_AT = TORSO_AT - HEAD_DOWN.length + 1;
+const NOTHING: Readonly<Record<View, readonly Placed[]>> = { down: [], up: [], right: [] };
 
-type Drawn = 'down' | 'up' | 'right' | 'left';
-type Stance = 'stand' | 'stride' | 'crossed';
-type Blow = 'rest' | 'raised' | 'struck';
+const head = (view: View, swaps: Readonly<Record<string, string>> = {}): Placed => ({
+  grid: rekeyed(view === 'down' ? HEAD_DOWN : view === 'up' ? HEAD_UP : HEAD_RIGHT, swaps),
+  x: HEAD_X,
+  y: HEAD_Y,
+});
 
-const FRONT_LEGS: Readonly<Record<Stance, readonly Placed[]>> = {
-  stand: [
-    { grid: LEG, x: 11, y: LEGS_AT },
-    { grid: flipped(LEG), x: 17, y: LEGS_AT },
-  ],
-  stride: [
-    { grid: LEG_LIFTED, x: 11, y: LEGS_AT },
-    { grid: flipped(LEG), x: 17, y: LEGS_AT },
-  ],
-  crossed: [
-    { grid: LEG, x: 11, y: LEGS_AT },
-    { grid: flipped(LEG_LIFTED), x: 17, y: LEGS_AT },
-  ],
+const coat = (
+  view: View,
+  garment = { down: COAT_DOWN, up: COAT_UP, right: COAT_RIGHT },
+): Placed => ({
+  grid: garment[view],
+  x: BODY_X[view],
+  y: BODY_Y,
+});
+
+export const WARRIOR_DRESS: Dress = {
+  behind: {
+    down: [{ grid: CLOAK_FRONT_EDGES, x: 8, y: 22 }],
+    up: [],
+    right: [{ grid: CLOAK_SIDE, x: 8, y: 22 }],
+  },
+  legs,
+  body: {
+    down: [coat('down'), head('down')],
+    up: [coat('up'), { grid: CLOAK_BACK, x: 9, y: 22 }, head('up')],
+    right: [coat('right'), head('right')],
+  },
+  over: {
+    down: [{ grid: SPAULDERS, x: 8, y: 20 }],
+    up: [{ grid: SPAULDERS, x: 8, y: 20 }],
+    right: [{ grid: SPAULDER_SIDE, x: 15, y: 21 }],
+  },
+  sleeves: {},
+  arms: { main: 'sword', off: null },
 };
 
-const SIDE_LEGS: Readonly<Record<Stance, readonly Placed[]>> = {
-  stand: [
-    { grid: LEG_SIDE, x: 13, y: LEGS_AT },
-    { grid: LEG_SIDE, x: 15, y: LEGS_AT },
-  ],
-  stride: [
-    { grid: LEG_SIDE, x: 11, y: LEGS_AT },
-    { grid: LEG_SIDE, x: 18, y: LEGS_AT },
-  ],
-  crossed: [
-    { grid: LEG_SIDE, x: 13, y: LEGS_AT },
-    { grid: LEG_LIFTED, x: 16, y: LEGS_AT },
-  ],
+const ROBE = { down: ROBE_DOWN, up: ROBE_UP, right: ROBE_RIGHT };
+
+export const WIZARD_DRESS: Dress = {
+  behind: NOTHING,
+  // A robe hides the legs but for the boots under its hem.
+  legs,
+  body: {
+    down: [coat('down', ROBE), head('down', SHADED_FACE), { grid: HOOD_DOWN, x: 10, y: 8 }],
+    up: [coat('up', ROBE), head('up'), { grid: HOOD_UP, x: 10, y: 8 }],
+    right: [coat('right', ROBE), head('right', SHADED_FACE), { grid: HOOD_RIGHT, x: 10, y: 8 }],
+  },
+  over: NOTHING,
+  // Sleeves to the wrist, no bracers.
+  sleeves: { l: '2', m: '3', n: '3' },
+  arms: { main: 'staff', off: null },
 };
 
-/**
- * Where the sword goes for each blow and facing, relative to where the upper
- * body is, and whether it is drawn over the body or behind it.
- */
-const SWORD_AT: Readonly<
-  Record<Drawn, Readonly<Record<Blow, { grid: Grid; x: number; y: number; over: boolean }>>>
-> = {
-  down: {
-    rest: { grid: SWORD_DOWN, x: 7, y: TORSO_AT + 10, over: true },
-    raised: { grid: SWORD_RAISED, x: 5, y: TORSO_AT - 7, over: false },
-    struck: { grid: SWORD_SLASH, x: 11, y: TORSO_AT + 12, over: true },
-  },
-  up: {
-    rest: { grid: SWORD_DOWN, x: 22, y: TORSO_AT + 10, over: false },
-    raised: { grid: flipped(SWORD_RAISED), x: 22, y: TORSO_AT - 7, over: false },
-    struck: { grid: SWORD_UP, x: 20, y: HEAD_AT - 7, over: false },
-  },
-  right: {
-    rest: { grid: SWORD_DOWN, x: 15, y: TORSO_AT + 10, over: true },
-    raised: { grid: flipped(SWORD_RAISED), x: 7, y: TORSO_AT - 9, over: false },
-    struck: { grid: SWORD_THRUST, x: 18, y: TORSO_AT + 10, over: true },
-  },
-  left: {
-    rest: { grid: SWORD_DOWN, x: 14, y: TORSO_AT + 10, over: false },
-    raised: { grid: SWORD_RAISED, x: 21, y: TORSO_AT - 9, over: false },
-    struck: { grid: flipped(SWORD_THRUST), x: 3, y: TORSO_AT + 10, over: true },
-  },
+// The ranger's jerkin is the coat in leather: 1-4 to l-o.
+const JERKIN = {
+  down: rekeyed(COAT_DOWN, { '1': 'l', '2': 'm', '3': 'n', '4': 'o', m: 'l', g: 'g' }),
+  up: rekeyed(COAT_UP, { '1': 'l', '2': 'm', '3': 'n', '4': 'o', m: 'l' }),
+  right: rekeyed(COAT_RIGHT, { '1': 'l', '2': 'm', '3': 'n', '4': 'o', m: 'l' }),
 };
 
-/** What a figure is wearing and carrying beyond the body every person has. */
-interface Outfit {
-  sword: boolean;
-  apron: boolean;
-  cloak: boolean;
-  spaulders: boolean;
-}
-
-const WARRIOR_OUTFIT: Outfit = { sword: true, apron: false, cloak: true, spaulders: true };
-const SHOPKEEPER_OUTFIT: Outfit = { sword: false, apron: true, cloak: false, spaulders: false };
-
-/** The body facing down, up or right, with what it wears, without the legs or the sword. */
-function upperBody(outfit: Outfit, facing: 'down' | 'up' | 'right', bob: number): Placed[] {
-  const torsoAt = TORSO_AT + bob;
-  const headAt = HEAD_AT + bob;
-  if (facing === 'down') {
-    return [
-      { grid: TORSO_DOWN, x: 8, y: torsoAt },
-      ...(outfit.spaulders ? [{ grid: SPAULDERS, x: 8, y: torsoAt }] : []),
-      ...(outfit.apron ? [{ grid: APRON_DOWN, x: 12, y: torsoAt + 3 }] : []),
-      { grid: HEAD_DOWN, x: 11, y: headAt },
-    ];
-  }
-  if (facing === 'up') {
-    return [
-      { grid: TORSO_UP, x: 8, y: torsoAt },
-      ...(outfit.spaulders ? [{ grid: SPAULDERS, x: 8, y: torsoAt }] : []),
-      ...(outfit.apron ? [{ grid: APRON_UP, x: 12, y: torsoAt + 10 }] : []),
-      ...(outfit.cloak ? [{ grid: CLOAK_BACK, x: 9, y: torsoAt + 2 }] : []),
-      { grid: HEAD_UP, x: 11, y: headAt },
-    ];
-  }
-  return [
-    { grid: TORSO_RIGHT, x: 10, y: torsoAt },
-    ...(outfit.apron ? [{ grid: APRON_RIGHT, x: 19, y: torsoAt + 3 }] : []),
-    { grid: HEAD_RIGHT, x: 11, y: headAt },
-    { grid: ARM_RIGHT, x: 15, y: torsoAt + 1 },
-    ...(outfit.spaulders ? [{ grid: SPAULDER_SIDE, x: 15, y: torsoAt + 1 }] : []),
-  ];
-}
-
-/** What hangs behind the body before it is drawn: the cloak's edges, from the front or the side. */
-function behindBody(outfit: Outfit, facing: 'down' | 'up' | 'right', bob: number): Placed[] {
-  if (!outfit.cloak || facing === 'up') return [];
-  return facing === 'down'
-    ? [{ grid: CLOAK_FRONT_EDGES, x: 8, y: TORSO_AT + 2 + bob }]
-    : [{ grid: CLOAK_SIDE, x: 8, y: TORSO_AT + 2 + bob }];
-}
-
-function figure(
-  outfit: Outfit,
-  facing: Drawn,
-  stance: Stance,
-  bob: number,
-  blow: Blow,
-  lean = 0,
-): Grid {
-  const side = facing === 'right' || facing === 'left';
-  const legs = side ? SIDE_LEGS[stance] : FRONT_LEGS[stance];
-  // The left is the right turned round, so it is drawn as the right and
-  // flipped, the sword put in after the flip so it stays in the right hand.
-  const bodyFacing = facing === 'left' ? 'right' : facing;
-  let body = composed(WIDTH, HEIGHT, [
-    ...behindBody(outfit, bodyFacing, bob),
-    ...legs,
-    ...upperBody(outfit, bodyFacing, bob),
-  ]);
-  if (facing === 'left') body = flipped(body);
-  if (lean !== 0) body = side ? shifted(body, facing === 'left' ? -lean : lean, 0) : body;
-  if (!outfit.sword) return body;
-
-  const sword = SWORD_AT[facing][blow];
-  // The hand carries the sword up and down with a breath or a stride, but a
-  // body sinking to its knees leaves its point on the ground.
-  const swordLayer = composed(WIDTH, HEIGHT, [
-    { grid: sword.grid, x: sword.x, y: sword.y + Math.min(bob, 1) },
-  ]);
-  return composed(WIDTH, HEIGHT, [
-    ...(sword.over ? [] : [{ grid: swordLayer, x: 0, y: 0 }]),
-    { grid: body, x: 0, y: 0 },
-    ...(sword.over ? [{ grid: swordLayer, x: 0, y: 0 }] : []),
-  ]);
-}
-
-// A hurt frame is the figure flushed red, every material to the same step.
-const HURT: Readonly<Record<string, string>> = {
-  a: 'P',
-  b: 'Q',
-  c: 'R',
-  d: 'S',
-  e: 'P',
-  h: 'P',
-  i: 'Q',
-  j: 'R',
-  k: 'S',
-  '0': 'P',
-  '1': 'P',
-  '2': 'Q',
-  '3': 'R',
-  '4': 'S',
-  '5': 'P',
-  '6': 'Q',
-  '7': 'R',
-  '9': 'P',
-  l: 'P',
-  m: 'Q',
-  n: 'R',
-  g: 'S',
-  t: 'Q',
-  u: 'R',
-  s: 'P',
-  v: 'Q',
-  w: 'R',
-  x: 'S',
-};
-
-const DRAWN: readonly Drawn[] = ['down', 'up', 'right', 'left'];
-
-function warriorFrames(facing: Drawn): Record<string, Grid[]> {
-  const at = (stance: Stance, bob: number) => figure(WARRIOR_OUTFIT, facing, stance, bob, 'rest');
-  // Facing down or up a blow leans the body rather than moving it, since
-  // moving the whole figure down the screen would move its feet.
-  return {
-    idle: [at('stand', 0), at('stand', 1)],
-    walk: [at('stride', 0), at('stand', -1), at('crossed', 0), at('stand', -1)],
-    attack: [
-      figure(WARRIOR_OUTFIT, facing, 'stand', -1, 'raised', -1),
-      figure(WARRIOR_OUTFIT, facing, 'stride', 1, 'struck', 2),
-      at('stand', 0),
+export const RANGER_DRESS: Dress = {
+  behind: {
+    down: [{ grid: QUIVER_DOWN, x: 9, y: 15 }],
+    up: [],
+    right: [{ grid: QUIVER_RIGHT, x: 8, y: 16 }],
+  },
+  legs,
+  body: {
+    down: [
+      coat('down', JERKIN),
+      { grid: STRAP_DOWN, x: 12, y: 22 },
+      head('down', SHADED_FACE),
+      { grid: HOOD_DOWN, x: 10, y: 8 },
     ],
-    hurt: [rekeyed(figure(WARRIOR_OUTFIT, facing, 'stand', 0, 'rest', -1), HURT)],
-  };
-}
+    up: [
+      coat('up', JERKIN),
+      head('up'),
+      { grid: HOOD_UP, x: 10, y: 8 },
+      { grid: MANTLE_UP, x: 8, y: 20 },
+      { grid: QUIVER_UP, x: 17, y: 15 },
+    ],
+    right: [coat('right', JERKIN), head('right', SHADED_FACE), { grid: HOOD_RIGHT, x: 10, y: 8 }],
+  },
+  over: {
+    down: [{ grid: MANTLE_DOWN, x: 8, y: 20 }],
+    up: [],
+    right: [{ grid: MANTLE_RIGHT, x: 11, y: 20 }],
+  },
+  sleeves: {},
+  arms: { main: 'bow-hand', off: 'bow' },
+};
 
-function shopkeeperFrames(facing: Drawn): Record<string, Grid[]> {
-  const at = (bob: number) => figure(SHOPKEEPER_OUTFIT, facing, 'stand', bob, 'rest');
-  return { idle: [at(0), at(1)] };
-}
+// Grey hair is a step lighter than brown: h-k to i-Z.
+const GREY: Readonly<Record<string, string>> = { h: 'i', i: 'j', j: 'k', k: 'Z' };
 
-/** Each animation drawn every way round, from what a figure draws facing each. */
-function fourWays(draw: (facing: Drawn) => Record<string, Grid[]>): Record<string, FacingFrames> {
-  const drawn = Object.fromEntries(DRAWN.map((facing) => [facing, draw(facing)])) as Record<
-    Drawn,
-    Record<string, Grid[]>
-  >;
-  return Object.fromEntries(
-    Object.keys(drawn.down).map((animation) => [
-      animation,
-      {
-        down: drawn.down[animation] ?? [],
-        up: drawn.up[animation] ?? [],
-        right: drawn.right[animation] ?? [],
-        left: drawn.left[animation] ?? [],
-      },
-    ]),
-  );
-}
+const SHOPKEEPER_DRESS: Dress = {
+  behind: NOTHING,
+  legs,
+  body: {
+    down: [coat('down'), { grid: APRON_DOWN, x: 12, y: 23 }, head('down', GREY)],
+    up: [coat('up'), { grid: APRON_UP, x: 12, y: 30 }, head('up', GREY)],
+    right: [coat('right'), { grid: APRON_RIGHT, x: 19, y: 23 }, head('right', GREY)],
+  },
+  over: NOTHING,
+  sleeves: {},
+  arms: { main: null, off: null },
+};
 
-// Seen from above, lying where they fell: head to the left, the cloak spread
-// under them, the sword dropped beside.
+// ---------------------------------------------------------------------------
+// Falling. Seen from above, lying where they fell: head to the left.
+// ---------------------------------------------------------------------------
+
 const FALLEN = grid(`
   .......................ss..
   ..iiii..666666555....xxxxwv
@@ -637,83 +489,120 @@ const FALLEN = grid(`
   ....bbbb.66111111...tt..ll.
 `);
 
-export const WARRIOR: SpriteDef = {
-  id: 'warrior',
-  kind: 'person',
-  width: WIDTH,
-  height: HEIGHT,
-  legend: {
-    a: 'skin.1',
-    b: 'skin.2',
-    c: 'skin.3',
-    d: 'skin.4',
-    e: 'ink.0',
-    h: 'hair.0',
-    i: 'hair.1',
-    j: 'hair.2',
-    k: 'hair.3',
-    '0': 'blue.0',
-    '1': 'blue.1',
-    '2': 'blue.2',
-    '3': 'blue.3',
-    '4': 'blue.4',
-    '5': 'crimson.1',
-    '6': 'crimson.2',
-    '7': 'crimson.3',
-    '9': 'crimson.0',
-    l: 'leather.1',
-    m: 'leather.2',
-    n: 'leather.3',
-    g: 'gold.2',
-    t: 'linen.1',
-    u: 'linen.2',
-    s: 'metal.1',
-    v: 'metal.2',
-    w: 'metal.3',
-    x: 'metal.4',
-    P: 'red.1',
-    Q: 'red.2',
-    R: 'red.3',
-    S: 'red.4',
-  },
-  animations: {
-    ...fourWays(warriorFrames),
-    death: [
-      figure(WARRIOR_OUTFIT, 'down', 'stand', 0, 'rest'),
-      figure(WARRIOR_OUTFIT, 'down', 'stand', 3, 'rest'),
-      composed(WIDTH, HEIGHT, [{ grid: FALLEN, x: 2, y: 36 }]),
-    ],
-  },
+const FALLEN_ROBED = grid(`
+  ...........................
+  ..6666..3333222222222g.....
+  .677766333322222222222g....
+  67777663333332222222222g...
+  6666666333322222222222221m.
+  666655bc3222222222222211lm.
+  .6555bcc322lmmmgml11111..pf
+  ..5555cb3112222211111111pf.
+  ....555b.11111111111...pf..
+`);
+
+const FALLEN_HOODED = grid(`
+  ..........................q
+  ..6666..nnnnmmmmmm55.....zp
+  .677766nnnnmmmmmmmm51uuu.p.
+  67777663nnnnmmmmmmm1uuutnp.
+  6666666nnnnmmmmmmmml1uutnmp
+  666655bcnmmmmmmmmmll1utnnmp
+  .6555bccnmmlllgllll.uuutml.
+  ..5555cbnllmmmmmlll.ttttlp.
+  ....555b.llllllll...tt..lq.
+`);
+
+export const STANDING: Omit<Moment, 'stance' | 'bob'> = { main: 'rest', off: 'rest' };
+
+/** Standing, sinking, and lying where they fell. */
+function falling(dress: Dress, fallen: Grid, rest = STANDING): Grid[] {
+  return [
+    figureFrame(dress, 'down', { ...rest, stance: 'stand', bob: 0 }),
+    figureFrame(dress, 'down', { ...rest, stance: 'stand', bob: 3 }),
+    composed(FIGURE_WIDTH, FIGURE_HEIGHT, [{ grid: fallen, x: 2, y: 36 }]),
+  ];
+}
+
+export const MATERIALS: Materials = {
+  skin: 'skin',
+  hair: 'hair',
+  cloth: 'blue',
+  cloak: 'crimson',
+  leather: 'leather',
+  trousers: 'linen',
+  metal: 'metal',
+  trim: 'gold',
+  wood: 'wood',
+  glow: 'arcane',
+  gear: 'tier',
 };
 
-export const SHOPKEEPER: SpriteDef = {
-  id: 'shopkeeper',
-  kind: 'person',
-  width: WIDTH,
-  height: HEIGHT,
-  legend: {
-    a: 'skin.1',
-    b: 'skin.2',
-    c: 'skin.3',
-    d: 'skin.4',
-    e: 'ink.0',
-    h: 'hairGrey.1',
-    i: 'hairGrey.2',
-    j: 'hairGrey.3',
-    k: 'hairGrey.4',
-    '0': 'ochre.0',
-    '1': 'ochre.1',
-    '2': 'ochre.2',
-    '3': 'ochre.3',
-    '4': 'ochre.4',
-    l: 'leather.1',
-    m: 'leather.2',
-    n: 'leather.3',
-    t: 'wood.1',
-    u: 'wood.2',
-    o: 'linen.3',
-    f: 'linen.4',
-    y: 'linen.2',
+export const WARRIOR: SpriteDef = personSprite('warrior', MATERIALS, {
+  idle: fourWays(WARRIOR_DRESS, breathing(STANDING)),
+  walk: fourWays(WARRIOR_DRESS, striding(STANDING)),
+  // Up over the shoulder, then down and across; the body rises onto its toes
+  // for the one and drops into a stride for the other.
+  attack: fourWays(WARRIOR_DRESS, [
+    { stance: 'stand', bob: -1, main: 'raised', off: 'rest' },
+    { stance: 'stride', bob: 1, main: 'struck', off: 'rest' },
+    { stance: 'stand', bob: 0, main: 'rest', off: 'rest' },
+  ]),
+  hurt: hurtFrames(WARRIOR_DRESS, STANDING),
+  death: falling(WARRIOR_DRESS, FALLEN),
+});
+
+export const WIZARD_STANDING: Omit<Moment, 'stance' | 'bob'> = { main: 'staff', off: 'rest' };
+
+export const WIZARD: SpriteDef = personSprite(
+  'wizard',
+  { ...MATERIALS, cloth: 'violet', cloak: 'violet', trousers: 'leather' },
+  {
+    idle: fourWays(WIZARD_DRESS, breathing(WIZARD_STANDING)),
+    walk: fourWays(WIZARD_DRESS, striding(WIZARD_STANDING)),
+    // The staff lifted and brought down on the ground ahead, the crystal
+    // flaring as it lands.
+    attack: fourWays(WIZARD_DRESS, [
+      { stance: 'stand', bob: -1, main: 'staffUp', off: 'rest' },
+      { stance: 'stride', bob: 1, main: 'staff', off: 'rest', flare: true },
+      { stance: 'stand', bob: 0, main: 'staff', off: 'rest' },
+    ]),
+    // The other hand opened, lit, and the spell leaving the staff and it both.
+    cast: fourWays(WIZARD_DRESS, [
+      { stance: 'stand', bob: 0, main: 'staff', off: 'palm' },
+      { stance: 'stand', bob: -1, main: 'staff', off: 'palm', flare: true },
+      { stance: 'stand', bob: 0, main: 'staff', off: 'rest' },
+    ]),
+    hurt: hurtFrames(WIZARD_DRESS, WIZARD_STANDING),
+    death: falling(WIZARD_DRESS, FALLEN_ROBED, WIZARD_STANDING),
   },
-  animations: fourWays(shopkeeperFrames),
-};
+);
+
+export const RANGER: SpriteDef = personSprite(
+  'ranger',
+  { ...MATERIALS, cloth: 'linen', cloak: 'forest', trousers: 'fur' },
+  {
+    idle: fourWays(RANGER_DRESS, breathing(STANDING)),
+    walk: fourWays(RANGER_DRESS, striding(STANDING)),
+    // With no arrow to loose: the bow swung out ahead, the hand behind it.
+    attack: fourWays(RANGER_DRESS, [
+      { stance: 'stand', bob: -1, main: 'rest', off: 'bow' },
+      { stance: 'stride', bob: 1, main: 'draw', off: 'bow' },
+      { stance: 'stand', bob: 0, main: 'rest', off: 'rest' },
+    ]),
+    // Nock and draw, loose, and let the bow down.
+    shoot: fourWays(RANGER_DRESS, [
+      { stance: 'stand', bob: 0, main: 'draw', off: 'bow', nocked: true },
+      { stance: 'stand', bob: 0, main: 'loose', off: 'bow' },
+      { stance: 'stand', bob: 0, main: 'rest', off: 'rest' },
+    ]),
+    hurt: hurtFrames(RANGER_DRESS, STANDING),
+    death: falling(RANGER_DRESS, FALLEN_HOODED),
+  },
+);
+
+export const SHOPKEEPER: SpriteDef = personSprite(
+  'shopkeeper',
+  { ...MATERIALS, cloth: 'ochre', hair: 'hairGrey', trousers: 'wood' },
+  { idle: fourWays(SHOPKEEPER_DRESS, breathing(STANDING)) },
+);
