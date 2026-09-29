@@ -109,6 +109,7 @@ const REPORT: OfflineAfkReport = {
   masteryTargetId: null,
   arrowsSpent: 0,
   outOfArrows: false,
+  capped: false,
 };
 
 let parent: HTMLElement;

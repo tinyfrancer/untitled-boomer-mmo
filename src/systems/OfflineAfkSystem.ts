@@ -1,7 +1,8 @@
 import { ENEMIES } from '../data/enemies';
 import { isArrow, isBow } from '../data/items';
-import { RESOURCE_NODES } from '../data/resourceNodes';
+import { RESOURCE_NODES, type ResourceNodeDefinition } from '../data/resourceNodes';
 import { STATION_PERSISTS, type CraftingRecipe, type StationId } from '../data/recipes';
+import type { MobSpawnPoint } from '../data/spawns';
 import { ZONES } from '../data/zones';
 import { xpToReachLevel } from '../data/xpTable';
 import type { AfkSession } from '../persistence/CharacterState';
@@ -28,10 +29,10 @@ import type { ClassId, EnemyId, MasteryTargetId, SkillId } from '../types/ids';
 export const OFFLINE_CAP_MS = 8 * 60 * 60 * 1000;
 // One kill per this long. Far slower than the awake AFK loop manages, since
 // nothing here has to walk to the mob, wait out a respawn, or stop to heal.
-const OFFLINE_KILL_INTERVAL_MS = 60000;
+export const OFFLINE_KILL_INTERVAL_MS = 60000;
 // Stacked on top of the AFK penalty, which puts offline at roughly a quarter
 // of what the same time played actively would pay.
-const OFFLINE_RATE_MULTIPLIER = 0.5;
+export const OFFLINE_RATE_MULTIPLIER = 0.5;
 /**
  * The ceiling that actually matters: however long they were away and however
  * rich the zone, a night away is worth at most this much of the level they are
@@ -46,7 +47,7 @@ const OFFLINE_RATE_MULTIPLIER = 0.5;
  * a quarter, and 1 to 5 is 4,320, of which it is very nearly a half. Halving
  * this leaves a session worth what it has always been worth.
  */
-const OFFLINE_MAX_LEVEL_FRACTION = 0.5;
+export const OFFLINE_MAX_LEVEL_FRACTION = 0.5;
 
 export interface OfflineAfkContext {
   now: number;
@@ -132,6 +133,12 @@ export interface OfflineAfkReport {
    * punch like a shot would be a bow that never runs out (decision 64).
    */
   outOfArrows: boolean;
+  /**
+   * Whether the ceiling ended the night rather than the time, the arrows or the
+   * bag: half a level for a fight, one level of the skill for work. The idle
+   * panel says what the ceiling is, and this is how the report says it was met.
+   */
+  capped: boolean;
 }
 
 const NOTHING: OfflineAfkReport = {
@@ -150,6 +157,7 @@ const NOTHING: OfflineAfkReport = {
   masteryTargetId: null,
   arrowsSpent: 0,
   outOfArrows: false,
+  capped: false,
 };
 
 /**
@@ -245,25 +253,64 @@ export function resolveOfflineAfk(
   context: OfflineAfkContext,
 ): OfflineAfkReport {
   const elapsedMs = elapsedOfflineMs(session.startedAt, context.now);
-  const station = session.station;
-  if (station && STATION_PERSISTS[station]) {
-    const crafted = resolveOfflineCraft(context, elapsedMs, station);
-    if (crafted) {
-      return crafted;
-    }
+  const job = offlineJob(session, context);
+  if (job.kind === 'craft') {
+    return resolveOfflineCraft(context, elapsedMs, job.recipe);
   }
+  if (job.kind === 'gather') {
+    return resolveOfflineGather(context, elapsedMs, job.skill, job.node);
+  }
+  return resolveOfflineFight(context, elapsedMs, job.quarry);
+}
 
+/**
+ * What a parked session is paid for, which is all a payout and the idle panel
+ * have to agree on: the panel says it before idle starts, and the payout is
+ * held to it in the morning.
+ *
+ * The station first, if it is still standing and the bag supplies something
+ * made at it; then the tool in hand, which works the richest node here its
+ * level opens or, with none, nothing; then the spawn nearest the character's
+ * level. A tool with no work here earns nothing, where the awake camp turns to
+ * fighting: that one can see what is chasing it, and this has nothing to model
+ * a fight from but a spawn nobody picked.
+ */
+export type OfflineJob =
+  | { kind: 'craft'; recipe: CraftingRecipe }
+  | { kind: 'gather'; skill: SkillId; node: ResourceNodeDefinition | null }
+  | { kind: 'fight'; quarry: MobSpawnPoint | null };
+
+export function offlineJob(
+  session: Pick<AfkSession, 'zoneId' | 'station'>,
+  context: Pick<OfflineAfkContext, 'characterLevel' | 'inventory' | 'gear' | 'skills'>,
+): OfflineJob {
+  const { station } = session;
+  const recipe =
+    station && STATION_PERSISTS[station]
+      ? campRecipe(station, context.skills, context.inventory)
+      : null;
+  if (recipe) {
+    return { kind: 'craft', recipe };
+  }
   const skill = afkGatherSkill(context.gear);
   if (skill !== null) {
-    return resolveOfflineGather(session, context, elapsedMs, skill);
+    const node = campNode(session.zoneId, skill, skillLevel(context.skills, skill));
+    return { kind: 'gather', skill, node };
   }
+  return { kind: 'fight', quarry: campQuarry(session.zoneId, context.characterLevel) };
+}
 
+/** The fighting branch: a kill a minute of the job's quarry, to the ceiling. */
+function resolveOfflineFight(
+  context: OfflineAfkContext,
+  elapsedMs: number,
+  quarry: MobSpawnPoint | null,
+): OfflineAfkReport {
   const elapsedKills = Math.floor(elapsedMs / OFFLINE_KILL_INTERVAL_MS);
   if (elapsedKills <= 0) {
     return { ...NOTHING, elapsedMs };
   }
 
-  const quarry = campQuarry(session.zoneId, context.characterLevel);
   const definition = quarry ? ENEMIES[quarry.enemyId] : null;
   if (!quarry || !definition) {
     return { ...NOTHING, elapsedMs };
@@ -281,7 +328,7 @@ export function resolveOfflineAfk(
     return { ...NOTHING, elapsedMs };
   }
 
-  const ammo = campAmmo(context, scaleEnemyStats(definition, quarry.level).maxHp);
+  const ammo = offlineAmmo(context, scaleEnemyStats(definition, quarry.level).maxHp);
   let copper = 0;
   let drops: Inventory = {};
   let missed: Inventory = {};
@@ -343,6 +390,7 @@ export function resolveOfflineAfk(
     missed,
     arrowsSpent,
     outOfArrows,
+    capped: !outOfArrows && kills < elapsedKills,
   };
 }
 
@@ -352,8 +400,11 @@ export function resolveOfflineAfk(
  * with no crits and no training counted — the direction that spends more
  * rather than less. Null for anything that is not a bow, which spends nothing.
  */
-function campAmmo(
-  context: OfflineAfkContext,
+export function offlineAmmo(
+  context: Pick<
+    OfflineAfkContext,
+    'classId' | 'characterLevel' | 'gear' | 'quiver' | 'inventory' | 'reforges'
+  >,
   quarryHp: number,
 ): { left: number; perKill: number } | null {
   if (!isBow(context.gear.weapon)) return null;
@@ -391,13 +442,12 @@ function campAmmo(
  * a bag of fish and nothing else.
  */
 function resolveOfflineGather(
-  session: AfkSession,
   context: OfflineAfkContext,
   elapsedMs: number,
   skill: SkillId,
+  node: ResourceNodeDefinition | null,
 ): OfflineAfkReport {
   const level = skillLevel(context.skills, skill);
-  const node = campNode(session.zoneId, skill, level);
   if (!node) {
     return { ...NOTHING, elapsedMs };
   }
@@ -441,6 +491,7 @@ function resolveOfflineGather(
     // same gathers made awake.
     skillXp: Math.floor(perGatherXp * gathers),
     masteryTargetId: node.id,
+    capped: gathers < elapsedGathers,
   };
 }
 
@@ -458,19 +509,13 @@ function resolveOfflineGather(
  *
  * Nothing here checks the pack, because nothing awake does either: a craft
  * consumes its inputs before it hands anything back, so a bench is the one place
- * in the game a full pack cannot refuse. Returns null when there was nothing to
- * make, which is what falls the session back to its tool.
+ * in the game a full pack cannot refuse.
  */
 function resolveOfflineCraft(
   context: OfflineAfkContext,
   elapsedMs: number,
-  station: StationId,
-): OfflineAfkReport | null {
-  const recipe = campRecipe(station, context.skills, context.inventory);
-  if (!recipe) {
-    return null;
-  }
-
+  recipe: CraftingRecipe,
+): OfflineAfkReport {
   const level = skillLevel(context.skills, recipe.skill);
   const attempts = Math.floor(elapsedMs / recipe.durationMs);
   if (attempts <= 0) {
@@ -486,6 +531,7 @@ function resolveOfflineCraft(
   let carried = context.inventory;
   let crafts = 0;
   let skillXp = 0;
+  let capped = false;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     // Checked before the roll rather than after it, so the ceiling is one a
@@ -493,6 +539,7 @@ function resolveOfflineCraft(
     // the same guarantee out of flooring its count up front, which a run of
     // failed rolls makes impossible here.
     if (xpToNext > 0 && skillXp + perCraftXp > xpToNext) {
+      capped = true;
       break;
     }
     if (!hasInputs(recipe, carried)) {
@@ -535,6 +582,7 @@ function resolveOfflineCraft(
     // same work done awake.
     skillXp: Math.floor(skillXp),
     masteryTargetId: recipe.id,
+    capped,
   };
 }
 
