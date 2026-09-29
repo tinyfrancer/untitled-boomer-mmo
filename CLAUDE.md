@@ -207,6 +207,8 @@ the player is camping (`docs/architecture/economy.md`).
 **Persistence**: import the `saveService` singleton from `src/persistence/index.ts`, never construct
 `LocalStorageSaveService`. When `CharacterState` changes shape, bump `CHARACTER_STATE_VERSION` and
 add a step to `persistence/migrations.ts`; a save with no chain to the current version is dropped.
+A save also leaves and comes back as a file or a code (`persistence/saveFile.ts`), read through the
+same chain and then a check of every field, so a new field is a row in its `FIELDS` as well.
 
 **Frame rate is not an assumption you may make.** A cheap phone steps the game at single-digit fps.
 Any distance compared against a fixed threshold scales with the frame's travel (`arriveRadius`),

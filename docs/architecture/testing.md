@@ -22,7 +22,8 @@ remembered to leave on it.
 `scripts/smoke.mjs` (Playwright + headless Chromium) covers the other half and deliberately
 nothing else: the game booting and the flows that cross between zones, real mouse, touch and key
 events reaching the game, the view building and _unbuilding_ itself, the HUD's geometry at real
-viewport sizes, and the save round trip through an actual page reload. Reach for it whenever a
+viewport sizes, the save round trip through an actual page reload, and the save out as a real
+download and back through a real file picker. Reach for it whenever a
 change touches the renderer, an actor or the HUD. Screenshots land in gitignored `.smoke/`.
 
 It runs on a **portrait phone in a touch-capable context**, which is what the game is laid out

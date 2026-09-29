@@ -23,6 +23,18 @@ also holds the one setting
 that is not the character's — mute and volume, which the HUD is handed at mount and sends back
 whole on `SOUND_SETTINGS_CHANGED_EVENT` (`audio.md`).
 
+**The options menu holds the save too** (decision 97): Download Save, Copy Save Code and Load a
+Save, over Reset Character, in a body that scrolls with Close outside it, and it stops above the tab
+bar (`hud-modal--above-bar`) since a landscape phone is shorter than the list. A code is shown in a
+box as well as copied, because the clipboard is refused over plain http (a phone on the dev server's
+LAN address) and the text on screen is always there to copy by hand. **Load a Save**
+(`hud/LoadSaveModal.ts`) takes a file through a hidden picker or a code pasted into a box, which
+takes a file's JSON too; the box turns text selection and iOS's paste callout back on, which `.hud`
+turns off for all its furniture, and is 16px so iOS does not zoom to it. The preview puts the
+character in the save beside the one playing now, and Replace asks twice. The creation screen
+offers the same panel (a new device has nobody to replace, so one tap loads), hung beside the
+screen rather than in it, since the screen scrolls on a short phone, and dimmed behind.
+
 **An overlay that takes a key says so.** Escape closes whatever is open and is also the world's
 "drop the target", and the two used to hear it independently, so closing a panel mid-fight dropped
 the target too. `bindHudKeys` listens in the capture phase and cancels a key an overlay took, and
