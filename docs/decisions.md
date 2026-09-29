@@ -2073,3 +2073,55 @@ existing host, and was the slowest of the three and the largest; PixiJS, a real 
 than Three.js here and slower than Canvas 2D, for about 100 kB and a scene graph with its own
 lifecycle to keep in step with the world's; drawing at device resolution, which scales pixel art by
 fractions and fills fifteen times the pixels.
+
+## 102. The checkpoint slice: edges are a rule, buildings are a kit, and the host stands apart from both renderers
+
+**2026-09-29 · Claude, building the plan's phase B2**
+
+B2 draws town in 2D behind `?renderer=2d` for the user to judge (decision 81's checkpoint). The
+plan named what to draw; how to draw it had forks, all Claude's:
+
+- **An edge between two grounds is a rule over the two tiles, not a set of pictures.** The upper
+  ground reaches into the lower one's cell by a depth that wanders along the edge as a function of
+  where it is in the whole map, so the tile on either side of a join asks the same question and a
+  shore across four tiles is one line; a few rows either side of where it stops are inked from a
+  table (`art/sprites/edges.ts`): the bank's earth face on a north shore, foam on a south one, a
+  grass lip over a road. An edge is drawn inside the lower cell and never lays blocking ground
+  over walkable ground (held by a test), so a player is stopped at the bank rather than in the
+  water. It draws every pond and road the maps have from the tiles B1 drew, and B3's other pairs
+  are a row each.
+- **A building is put together from parts over its own footprint** (`art/building.ts`): a roof
+  laid in courses, a front wall with the door where `doorGap` puts the collision's, windows where
+  there is room, and from inside a plank floor ringed by the walls' tops with only the back wall
+  standing. The three shapes are the one kit recoloured (slate halls, thatched cottages, shingled
+  workshops), so every building in the game is drawn, not the one the plan asked for.
+- **The camera follows the player to the map's edge, the player in the middle of the band above
+  the tab bar**, rather than clamping to the map, which is what hid the south signpost under the
+  bar the last time the game was 2D; the ground runs on past the map and fades into the haze, as
+  the 3D apron does. The scale is the whole number decision 101 described.
+- **The host moved out of `render3d/` into `src/host/`, behind a `ZoneView` interface** both views
+  answer, rather than a second host beside the first. `main.ts` picks the view by the flag; the
+  frame loop, the pointer, the HUD mount and the sound are written once.
+- **`?renderer=2d` works in production**, which is what decision 83 said the checkpoint was for:
+  judged on a phone, for the one phase it takes.
+- **The shopkeeper is the warrior's figure dressed differently**: an amber tunic, grey hair, an
+  apron and no sword. The warrior's sword is a part of its own, drawn over the body facing right
+  and behind it facing left, so the left is the right's body flipped with the sword still in the
+  right hand, as the style guide asks of anything held in one hand.
+- **The world's font draws capitals nine pixels tall with small letters and tails**, outlined on
+  four sides like a sprite, in the darkest step of `ink` whatever colour the word is.
+- **A corpse lies for 300ms after its fall before it is gone.** The budget fixes the fall at three
+  frames of 150ms, longer than the world's 400ms `DEATH_FADE_MS`, and the fall and its lying there
+  are the view's to time; the world still respawns on its own clock.
+- **The leak check counts canvases**, reported where `gpuMemory()` reported textures, since the
+  2D view holds no geometry. B7 renames it.
+
+What B2 leaves as placeholders, on purpose: every creature but the rat, every person but the
+warrior and the shopkeeper, nodes, stations, signposts, loot piles, the campfire and effects, and
+the underground's lantern; B3 to B6 are those.
+
+**Rejected:** transition tiles drawn as twenty quarter-tile pictures per pair of grounds, as RPG
+tile sets are; one building drawn whole at its own size; a camera clamped to the map; a second
+host class beside the first; the flag honoured in development only; left-facing figures mirrored
+with the sword moving to the other hand; a font of capitals only; the corpse gone at 400ms whatever
+the fall's budget.

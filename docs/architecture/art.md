@@ -4,9 +4,10 @@ The style guide version 2 is drawn to, and how a sprite gets from text to the sc
 scale, the palette, the light, the outline, the animation budget, the sprite format, the compile
 step, recolouring, the world's font, and which renderer draws it.
 
-_Written in version 2's phase B1 (`docs/decisions.md` 100 and 101). Where this and the code
-disagree, the code is right — and this file is what should be corrected. `rendering.md` is still
-the 3D renderer's until B7 retires it._
+_Written in version 2's phase B1 (`docs/decisions.md` 100 and 101); B2 added the edges between
+grounds, the world's font, the first people and creature, the building kit and the 2D view that
+draws them (decision 102). Where this and the code disagree, the code is right — and this file is
+what should be corrected. `rendering.md` is still the 3D renderer's until B7 retires it._
 
 **The art is data, and it depends on nothing** (decision 81). A sprite is text in `src/art/`:
 rows of characters, one per pixel, each a key in the sprite's legend, which names a palette step.
@@ -158,8 +159,37 @@ them is the outline, and the last row is the clear pixel the outline rule asks f
 paws, a crate, a ring of light, a token with a question on it, a purple checker. Each fills every
 animation its kind's budget allows, so the renderer never asks whether a pose exists, and so the
 budget is held against real frames from the day it was written. The terrain tiles
-(`sprites/terrain.ts`) are the first real sprites, each written in one terrain ramp's digits and
-repeating with no seam; the edges between two kinds of ground are B2's.
+(`sprites/terrain.ts`) were the first real sprites, each written in one terrain ramp's digits and
+repeating with no seam. B2 drew the first figures (`sprites/people.ts`, `sprites/rat.ts`): **the
+warrior** and **the shopkeeper** are one figure put together from parts (a head, a torso, legs a
+facing) dressed two ways, and **the rat** is the first creature. The warrior's sword is a part of
+its own, drawn over the body facing right and behind it facing left, which is how the left can be
+the right's body flipped with the sword still in the right hand. **Who is drawn with what** is one
+file (`art/cast.ts`): a table a class, a person and a creature, anything not in it falling back on
+its kind's placeholder, a creature's kind read off its `shape`.
+
+## Edges between grounds
+
+**An edge is a rule over two tiles, not a picture of each way they can meet** (`art/ground.ts`,
+decision 102). A pair of grounds with an edge is a row in `sprites/edges.ts`, lower first: road
+under grass, water under grass. **The upper ground reaches into the lower one's cell** by a depth
+that wanders along the edge, and the depth is a function of where the pixel is in the whole map
+and which boundary line it is on, not of where it is in its tile: the cell on either side of a join
+asks the same question, so a shore across four tiles is one line with no step at the joins (held
+by a test). Where two sides reach in, the corner between them is rounded; where only a diagonal
+does, it is the end of two edges running on in the cells either side, and draws as the block where
+they overlap. A style says how far it reaches, how far and how slowly it wanders, how grainy its
+edge is and how round its corners, and then **inks the rows either side of where it stops**, by
+which side the other ground is on: a north shore shows its bank's face, three rows of earth in
+shade over dark water, where a south shore turns it away and shows a lit lip and a line of foam.
+Everything not inked is the tile's own pixel, so a composed cell carries on the pattern of both
+tiles either side of it, and water's four frames move under a still bank.
+
+**The edge is drawn inside the lower cell, and never lays blocking ground over walkable ground**
+(held by a test): where the ground may be crossed is the one thing about terrain a player has to
+read at a glance, and a bank drawn a few pixels into the water's cell stops the player at the bank
+rather than in the water. A pair with no row meets at a hard line, which is what every pair B2 did
+not need still does; B3's are a row each.
 
 ## Compiling, and recolouring
 
@@ -188,7 +218,29 @@ scale a phone is given is one CSS pixel to the art pixel (a 360-point phone at t
 the point), and the nameplate has held nine pixels of glyph as its floor since act three
 (`tests/render3d/nameplate.test.ts`). Drawing the font at two art pixels to its pixel would clear the
 floor with smaller glyphs, and would put two sizes of pixel on one screen, which is the one thing
-the whole-number scale exists to prevent. The glyphs are B2's, where the first nameplate is drawn.
+the whole-number scale exists to prevent. **The font is `art/font.ts`**: capitals nine pixels tall,
+small letters six with three more for a tail, the punctuation names and numbers need, and a
+question mark for anything nobody drew (a test holds that every name the data writes has its
+glyphs). It is written as sheets, glyphs side by side a space apart, so the source reads as the
+letters. A line is outlined on four sides like a sprite, in the darkest step of `ink` whatever
+colour it is written in, which is what lets a name read over grass, water and a roof alike; the
+renderer colours the ink, since what colour a name is (a creature's level against the player's)
+is the game's to say.
+
+## Buildings
+
+**A building is put together from parts over its own footprint, not drawn whole**
+(`art/building.ts`, `sprites/buildings.ts`, decision 102). Whole would be a sprite per building at
+a size the budget does not list, redrawn the day a row changes; parts are drawn once and the rule
+lays them over any footprint the table has. From outside it is a roof laid in courses of slate,
+lit on the slope facing up the screen and a step darker on the one facing the viewer, over a front
+wall a head taller than a person: a beam, plaster, a sill, posts at the corners, windows where
+there is room, and **the way in exactly where `doorGap` leaves the collision's**, since the door a
+player sees and the one they can walk through have to be one span. From inside it is a plank floor
+ringed by the walls' tops, drawn with the ground, and **only the back wall standing**, open where a
+north door is in it: the roof and the front come off the way the 3D cutaway takes them. The three
+shapes are the one kit recoloured (`BUILDING_LOOKS`): slate over plaster for a hall, thatch for a
+cottage, shingles over boards for a workshop. What stands in a room is B6's.
 
 ## The renderer
 
@@ -216,3 +268,32 @@ What that asks of the 2D view, which the 3D one got from its engine:
 Headless Chromium has no GPU, so the spike's numbers are software drawing both ways, not a phone.
 They are the numbers the budget is asserted on, and the ordering did not change with what was
 counted; on a phone, Chrome and Safari draw a canvas on the GPU.
+
+**The view as built** (`src/render2d/`, B2) is `ZoneView2D`, reached by `?renderer=2d` and handed
+to the same host as the 3D view (`host/host.ts`, behind the `ZoneView` interface both answer):
+
+- **The camera** (`camera.ts`) picks the scale, sizes the canvas to the screen in art pixels
+  rounded up, and stands the player in **the middle of the band above the tab bar**, following them
+  to the map's edge rather than stopping at it: the tab bar eats every tap on it, and a camera
+  clamped to the map is what hid the south signpost under it the last time the game was 2D.
+  Every position is a whole art pixel, the camera's rounded from the player's own, so the player is
+  drawn at the same screen pixel every frame. The ground runs on past the map for eight tiles and
+  fades into the setting's haze over four (`terrain.ts`), as the 3D apron does.
+- **What is drawn comes from the world each frame**; the view keeps no scene. The sprite sheet is
+  compiled once a setting and kept for the session, the ground and the buildings once a zone, and
+  every word once while it is drawn (`text.ts`, bounded). **Every canvas is made through one pool**
+  (`canvases.ts`) and counted, which is what `gpuMemory()` reports and smoke holds flat across
+  zone round trips.
+- **An animation plays on the budget's clock** (`animation.ts`): a figure faces the way it mostly
+  moves, walks when moving and breathes when not, and a blow or a flinch told by a `WorldEvent`
+  plays through once over it. A corpse falls on the world's `deadForMs` and lies for 300ms after
+  its fall before it is gone.
+- **A tap is picked against flat boxes in the 3D view's priority** (`picking.ts`): a rectangle
+  standing up the screen from where a thing's feet are, no smaller than a thumb and reaching a
+  little below the feet, and within one kind the one drawn in front wins. A building answers as
+  the 3D one does, whoever works there or the ground at its door, and nothing from inside. The
+  sweep that holds every creature tappable from where a player fights it runs over the flat boxes
+  too (`tests/render2d/picking.test.ts`).
+- **What smoke asks of it** is its own section (`renderer-2d`): the canvas at a whole scale, every
+  thing drawn, canvases flat over three round trips, a click on a rat and on the ground, a click on
+  the shopfront walking in to the shopkeeper, and the draw budget under the eight-times throttle.

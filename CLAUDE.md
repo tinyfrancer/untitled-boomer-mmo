@@ -135,13 +135,15 @@ loaded dev container reads 10ms high). `docs/architecture/testing.md` has the fu
 **Stack**: TypeScript bundled with Vite, rendered in 3D with Three.js (`src/render3d/`). It was
 Phaser 4 in 2D until `docs/archive/3d_port_plan.md` replaced it, and version 2 takes it back to 2D:
 pixel art drawn with Canvas 2D at art resolution and scaled up by whole device pixels (decision 101,
-`docs/architecture/art.md`), which B2 starts behind a flag and B7 finishes by deleting Three.js. No
-backend — everything is a static site. Character data lives in the browser's `localStorage`.
+`docs/architecture/art.md`), which B2 started behind `?renderer=2d` (`src/render2d/`, honoured in
+production) and B7 finishes by deleting Three.js. No backend — everything is a static site.
+Character data lives in the browser's `localStorage`.
 
 **The core seam: `render3d/` knows there is an engine and nothing else does.** `systems/`, `data/`,
-`persistence/`, `types/`, `config/`, `world/`, `hud/`, `ui/` and `art/` are plain TypeScript that
-would run under any renderer or none, and `src/bootFlow.ts` takes a `GameHost` rather than anything
-the engine defines. It is what makes them unit-testable with no engine to mock, and the boundary a whole
+`persistence/`, `types/`, `config/`, `world/`, `hud/`, `ui/`, `host/` and `art/` are plain
+TypeScript that would run under any renderer or none, and `src/bootFlow.ts` takes a `GameHost`
+rather than anything the engine defines. The host (`host/host.ts`) takes whichever view `main.ts`
+builds through the `ZoneView` interface both answer, so a host duty is written once for both. It is what makes them unit-testable with no engine to mock, and the boundary a whole
 renderer was swapped across. Put new rules in those modules and call them from the view, never
 inline in an actor. `tests/architecture/phaserFreeSeam.test.ts` guards the old engine staying out.
 
@@ -244,6 +246,10 @@ shared ramps, since only the ground changes with the setting. **How much animati
 fixed in `art/budget.ts`**, and `tests/art/sprites.test.ts` holds every sprite in `SPRITES` to it
 exactly, to the palette and to its size: raising a frame count is a decision about the game, since
 it multiplies across every sprite of the kind. Nobody draws an outline; the compiler does.
+**Where two grounds meet is a rule, not a picture** (`art/ground.ts`): a pair with an edge is a row
+in `sprites/edges.ts`, and no edge may lay blocking ground over walkable ground. **A building is a
+kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
+and **who is drawn with what** is `art/cast.ts`, anything not in it being its kind's placeholder.
 
 **Sound loads no files either** (`src/audio/`, engine-free and owned by the host). Every cue is
 synthesised from a recipe in `cues.ts`, and the board hears the same `WorldEvent[]` the view is

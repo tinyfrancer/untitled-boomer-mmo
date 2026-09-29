@@ -76,7 +76,7 @@ Nothing else is exposed. The HUD needs no handle — smoke queries and clicks it
 which is what a user does. All three sit behind an `import.meta.env.DEV` guard, so Vite strips
 them from production builds. They are also how you inspect live state from the devtools console.
 
-Nothing in `src/` declares those three on `window` — `start3d.ts` casts to install them —
+Nothing in `src/` declares those three on `window` — `host/host.ts` casts to install them —
 so `scripts/globals.d.ts` does, which is what lets `tsconfig.scripts.json` typecheck the smoke
 script against the real `ZoneWorld` and `DebugView` rather than against `any`. A check that reads a
 field the world stopped having is a compile error now instead of an assertion that fails for the
@@ -88,7 +88,7 @@ carry state forward, so filtering is for iterating on a section you are changing
 to shard the run — `boot` always runs, and a full run is still the verdict.
 
 **`?loop=manual` puts the simulation on a hand crank.** Under that flag the rAF loop in
-`render3d/start3d.ts` stops stepping the game and `window.view.step(deltaMs, frames)` does it
+`host/host.ts` stops stepping the game and `window.view.step(deltaMs, frames)` does it
 instead; the frame loop still draws and still reads the mouse. Smoke always runs this way, which is
 why every wait in it is a number of _game_ milliseconds and a loaded CI runner makes it slower
 rather than flakier.

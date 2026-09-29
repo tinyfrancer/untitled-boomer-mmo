@@ -15,10 +15,12 @@ as a file or a code and back, in Options and on the creation screen, with a prev
 tap before it replaces anybody; decision 97), **A9** (twelve tips in the spirit's voice, each heard
 once per character, on a card that waits for a tap; decision 98), **A10** (the Part A review:
 four leftovers mended in place, a grind pass added to Part C as C10, Part B kept next; decision 99)
-**and B1** (the style guide, sprites as data in `src/art/` held to a palette and a fixed animation
-budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101). **Next: B2**, the
-checkpoint slice: town in 2D behind `?renderer=2d`, for the user to judge. Update this line as each
-phase lands: which phase, and which is next.
+**B1** (the style guide, sprites as data in `src/art/` held to a palette and a fixed animation
+budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101) **and B2** (the
+checkpoint slice: town in pixel art behind `?renderer=2d`, with edges between grounds, the warrior,
+the shopkeeper, the rat and a building kit drawn for real; decision 102). **Next: the user judges
+B2's slice**, and B3 if it holds up; if it does not, the art source is re-decided before B3
+(decision 81). Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -258,9 +260,23 @@ discovered at the end.
   cheapest of three by every measure under smoke's throttle and no dependency, over Three.js with an
   orthographic camera and PixiJS. Decisions 100 (the user's four answers and the guide) and 101
   (the renderer) have the forks.
-- **B2 — The checkpoint slice.** Town in 2D behind `?renderer=2d`: terrain with edge transitions,
-  one building, one NPC, the warrior walking, a rat. Picking and the camera work. **The user judges
-  it.**
+- **B2 — The checkpoint slice. (Landed; the user judges it.)** `?renderer=2d` draws the world with
+  Canvas 2D (`src/render2d/`), in production as well, while the 3D view stays the default. **The
+  host left `render3d/`** for `src/host/`, behind a `ZoneView` both views answer. **Edges between
+  grounds are a rule over the two tiles** (`art/ground.ts`): the upper ground reaches into the lower
+  one's cell by a depth that wanders with where it is in the map, and a table inks the rows either
+  side (a bank's earth face on a north shore, foam on a south one, a grass lip over a road), never
+  laying blocking ground over walkable. **The warrior** walks, swings, flinches and falls four ways,
+  holding the sword on the far side facing left; **the shopkeeper** is the same figure in amber
+  under an apron; **the rat** faces four ways too. **Every building is drawn from one kit** over its
+  footprint (`art/building.ts`), the door where the collision has it and the roof lifting from
+  inside; **the world's font** writes names, signs and damage numbers. The camera frames the
+  player in the middle of the band above the tab bar at a whole-number scale and follows them to
+  the map's edge; a tap is picked against flat boxes in the 3D view's priority, swept over every
+  zone; the leak check counts canvases. Everything else is its kind's placeholder. It went past the
+  thirty-file prompt, at about fifty with its tests and docs, and stayed whole because its parts
+  are one thing to judge: art with no view is nothing to look at, and a view with no art is the
+  placeholders B1 already had. Decision 102 has the forks.
 - **B3 — Every zone drawable, and the switch.** All terrain and all three settings (the lantern
   underground), water and ground scatter. Anything not yet drawn shows a placeholder sprite. **2D
   becomes the default**; 3D stays reachable for one phase as a fallback.
