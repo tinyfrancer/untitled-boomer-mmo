@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RECIPES, STATION_RADIUS } from '../../src/data/recipes';
-import { AFK_TOGGLE_REQUESTED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
+import { AFK_SET_REQUESTED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
 import type { ClassId } from '../../src/types/ids';
 import { harness } from './harness';
 
@@ -135,7 +135,7 @@ describe('a camp left at the bench', () => {
     const kit = atTheBench();
     kit.character.awardSkillXp('fletching', 100_000);
     kit.state.inventory = { 'arrow-shafts': 30, 'iron-arrowheads': 30 };
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
 
     kit.until(
       () => (kit.state.inventory['iron-arrows'] ?? 0) > 0,

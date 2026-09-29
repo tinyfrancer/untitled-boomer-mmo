@@ -6,7 +6,9 @@ import {
   ACCEPT_BOUNTY_REQUESTED_EVENT,
   ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
+  IDLE_FOOD_KEEP_REQUESTED_EVENT,
+  IDLE_FOOD_MOVE_REQUESTED_EVENT,
   COUNTER_CLOSED_EVENT,
   COUNTER_REQUESTED_EVENT,
   REFORGE_REQUESTED_EVENT,
@@ -523,7 +525,9 @@ export class ZoneWorld implements Targeting {
     listen(REFORGE_REQUESTED_EVENT, (itemId) => counters.reforger.reforge(itemId));
     listen(CRAFT_REQUESTED_EVENT, (recipeId) => this.gathering.makeRecipe(recipeId));
     listen(ABILITY_REQUESTED_EVENT, (abilityId) => this.abilities.cast(abilityId));
-    listen(AFK_TOGGLE_REQUESTED_EVENT, () => this.afk.toggle());
+    listen(AFK_SET_REQUESTED_EVENT, (active) => this.afk.set(active));
+    listen(IDLE_FOOD_MOVE_REQUESTED_EVENT, (itemId, move) => this.afk.moveFood(itemId, move));
+    listen(IDLE_FOOD_KEEP_REQUESTED_EVENT, (itemId, keep) => this.afk.keepFood(itemId, keep));
     listen(ACCEPT_QUEST_REQUESTED_EVENT, (questId) => this.quests.accept(questId));
     listen(TURN_IN_QUEST_REQUESTED_EVENT, (questId) => this.quests.turnIn(questId));
     listen(SET_TITLE_REQUESTED_EVENT, (titleId) => this.quests.wearTitle(titleId));

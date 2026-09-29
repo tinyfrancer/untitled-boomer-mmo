@@ -3,7 +3,7 @@ import { ENEMIES } from '../../src/data/enemies';
 import { AFK_ANCHOR_RADIUS, AFK_ENGAGE_RADIUS } from '../../src/systems/AfkSystem';
 import { OUT_OF_COMBAT_DELAY_MS } from '../../src/systems/RegenSystem';
 import type { EnemyId, ItemId } from '../../src/types/ids';
-import { AFK_STATE_CHANGED_EVENT } from '../../src/ui/uiEvents';
+import { AFK_STATE_CHANGED_EVENT, IDLE_FOOD_CHANGED_EVENT } from '../../src/ui/uiEvents';
 import { AfkCamp } from '../../src/world/AfkCamp';
 import { arrowsCarried } from '../../src/systems/QuiverSystem';
 import { Mob } from '../../src/world/Mob';
@@ -12,6 +12,7 @@ import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { RECIPES, type CraftingRecipe, type StationId } from '../../src/data/recipes';
 import type { Targeting } from '../../src/world/targeting';
 import { testContext } from './context';
+import { saveService } from '../../src/persistence';
 
 /**
  * The camp with no zone around it. `afk.test.ts` proves it fights and gives the
@@ -102,7 +103,7 @@ describe('settling in', () => {
   it('gives up the two things a hand on the mouse was doing, and parks the session', () => {
     const { camp, deps, state, emissions } = camped();
 
-    camp.toggle();
+    camp.set(true);
 
     expect(camp.active).toBe(true);
     expect(deps.stopGathering).toHaveBeenCalled();
@@ -113,9 +114,9 @@ describe('settling in', () => {
 
   it('clears the parked session on the way out', () => {
     const { camp, state, emissions } = camped();
-    camp.toggle();
+    camp.set(true);
 
-    camp.toggle();
+    camp.set(false);
 
     expect(camp.active).toBe(false);
     expect(state.afk).toBeNull();
@@ -144,7 +145,7 @@ describe('holding the camp', () => {
     const far = ratAt(AFK_ENGAGE_RADIUS - 10, 0);
     const near = ratAt(40, 0);
     const { camp, pursued } = camped([far, near]);
-    camp.toggle();
+    camp.set(true);
 
     camp.update();
 
@@ -153,7 +154,7 @@ describe('holding the camp', () => {
 
   it('leaves a mob out of reach alone rather than touring the zone', () => {
     const { camp, pursued, targeting } = camped([ratAt(AFK_ENGAGE_RADIUS + 10, 0)]);
-    camp.toggle();
+    camp.set(true);
 
     camp.update();
 
@@ -164,7 +165,7 @@ describe('holding the camp', () => {
   it('drops a fight that has been dragged off the spot it was left at', () => {
     const dragged = ratAt(40, 0);
     const kit = camped([dragged]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
     expect(kit.selected()).toBe(dragged);
 
@@ -177,7 +178,7 @@ describe('holding the camp', () => {
   it('stands down and eats rather than pulling while badly hurt', () => {
     const { camp, character, player, eaten, selected } = camped([ratAt(40, 0)]);
     character.addItem('cooked-fish', 1);
-    camp.toggle();
+    camp.set(true);
     player.takeDamage(player.maxHp - 1);
     // The hit that hurt them also put them in combat, and food is
     // out-of-combat only — so this is the first frame after the lockout,
@@ -194,6 +195,66 @@ describe('holding the camp', () => {
 
     expect(selected()).toBeNull();
     expect(eaten).toEqual(['cooked-fish']);
+  });
+});
+
+/**
+ * What it eats is the player's to set on the idle panel (decision 96): an order,
+ * and food it must leave alone. Asked for by id, and answered with the whole
+ * choice even when refused, since the panel may have been drawn from a bag that
+ * has moved since.
+ */
+describe("idle's food", () => {
+  /** Hurt, out of combat, and nothing in reach: the one frame it eats on. */
+  function hurt(kit: ReturnType<typeof camped>): void {
+    kit.camp.set(true);
+    kit.player.takeDamage(kit.player.maxHp - 1);
+    kit.player.update(OUT_OF_COMBAT_DELAY_MS + 1, {
+      grid: [[0]],
+      blockingTiles: new Set(),
+      worldWidth: 1000,
+      worldHeight: 1000,
+      blockers: [],
+    });
+    kit.camp.update();
+  }
+
+  it('eats in the order the player set, passing over what they kept', () => {
+    const kit = camped();
+    kit.character.addItem('cooked-rat', 1);
+    kit.character.addItem('cooked-fish', 1);
+    kit.character.addItem('cooked-eel', 1);
+
+    kit.camp.moveFood('cooked-eel', 'earlier');
+    kit.camp.moveFood('cooked-eel', 'earlier');
+    kit.camp.keepFood('cooked-eel', true);
+    hurt(kit);
+
+    expect(kit.eaten).toEqual(['cooked-rat']);
+  });
+
+  it('rests rather than eating when every food is kept', () => {
+    const kit = camped();
+    kit.character.addItem('cooked-fish', 1);
+    kit.camp.keepFood('cooked-fish', true);
+
+    hurt(kit);
+
+    expect(kit.eaten).toEqual([]);
+  });
+
+  it('answers every ask with the whole choice, and saves the ones it took', () => {
+    const kit = camped();
+    kit.character.addItem('cooked-rat', 1);
+
+    kit.camp.moveFood('cooked-rat', 'earlier');
+    kit.camp.keepFood('cooked-rat', true);
+
+    expect(kit.emissions(IDLE_FOOD_CHANGED_EVENT)).toEqual([
+      [{ order: [], keep: [] }],
+      [{ order: [], keep: ['cooked-rat'] }],
+    ]);
+    expect(saveService.load()?.idleFood.keep).toEqual(['cooked-rat']);
   });
 });
 
@@ -328,7 +389,7 @@ describe('a gathering camp', () => {
     const near = treeAt(40, 0);
     const kit = chopping([treeAt(200, 0), near]);
 
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
 
     expect(kit.worked).toEqual([near]);
@@ -337,7 +398,7 @@ describe('a gathering camp', () => {
 
   it('says which skill it settled in to, rather than just "camp"', () => {
     const kit = chopping([treeAt(40, 0)]);
-    kit.camp.toggle();
+    kit.camp.set(true);
 
     expect(kit.emitted.some((entry) => JSON.stringify(entry.args).includes('chop wood'))).toBe(
       true,
@@ -348,13 +409,13 @@ describe('a gathering camp', () => {
   // chopping it — which is why only the fighting camp gives the channel up.
   it('leaves a channel already running alone', () => {
     const kit = chopping([treeAt(40, 0)]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     expect(kit.deps.stopGathering).not.toHaveBeenCalled();
   });
 
   it('leaves the channel to finish rather than restarting it every frame', () => {
     const kit = chopping([treeAt(40, 0)]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
     kit.camp.update();
     kit.camp.update();
@@ -368,7 +429,7 @@ describe('a gathering camp', () => {
     const first = treeAt(40, 0);
     const second = treeAt(120, 0);
     const kit = chopping([first, second]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
 
     kit.stopGathering();
@@ -383,7 +444,7 @@ describe('a gathering camp', () => {
   it('waits beside a stand that is entirely chopped out', () => {
     const tree = treeAt(40, 0);
     const kit = chopping([tree]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     while (!tree.consumeCharge()) {
       /* chop it out */
     }
@@ -401,7 +462,7 @@ describe('a gathering camp', () => {
   it('drops the axe work to answer anything already chasing it', () => {
     const rat = ratAt(60, 0);
     const kit = chopping([treeAt(40, 0)], [rat]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     rat.engage();
     kit.camp.update();
 
@@ -414,7 +475,7 @@ describe('a gathering camp', () => {
   it('falls back to fighting where the tool has no work at all', () => {
     const rat = ratAt(60, 0);
     const kit = chopping([], [rat]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
 
     expect(kit.selected()).toBe(rat);
@@ -430,7 +491,7 @@ describe('a gathering camp', () => {
     const tree = treeAt(40, 0);
     const kit = chopping([tree]);
     kit.character.addItem('logs', kit.character.carryCapacity());
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
     kit.stopGathering();
     kit.camp.update();
@@ -447,7 +508,7 @@ describe('a gathering camp', () => {
     const kit = chopping([treeAt(40, 0)]);
     kit.character.addItem('logs', kit.character.carryCapacity());
 
-    kit.camp.toggle();
+    kit.camp.set(true);
 
     const said = JSON.stringify(kit.emitted);
     expect(said).toContain('You settle in to chop wood.');
@@ -456,7 +517,7 @@ describe('a gathering camp', () => {
 
   it('says nothing of the sort when there is room', () => {
     const kit = chopping([treeAt(40, 0)]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     expect(JSON.stringify(kit.emitted)).not.toContain('nothing you find will be kept');
   });
 });
@@ -481,7 +542,7 @@ describe('a making camp', () => {
   it('puts the first thing on the bench rather than picking a fight', () => {
     const kit = smelting([ratAt(60, 0)]);
 
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
 
     expect(kit.crafted).toEqual([TIN]);
@@ -490,7 +551,7 @@ describe('a making camp', () => {
 
   it('says which skill it settled in to', () => {
     const kit = smelting();
-    kit.camp.toggle();
+    kit.camp.set(true);
 
     expect(kit.emitted.some((entry) => JSON.stringify(entry.args).includes('smith'))).toBe(true);
   });
@@ -499,7 +560,7 @@ describe('a making camp', () => {
   // would put the same ore back on a cold clock forever.
   it('leaves the job running rather than restarting it every frame', () => {
     const kit = smelting();
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
     kit.camp.update();
     kit.camp.update();
@@ -513,7 +574,7 @@ describe('a making camp', () => {
   it('answers something already chasing before it touches the bench', () => {
     const rat = ratAt(60, 0);
     const kit = smelting([rat]);
-    kit.camp.toggle();
+    kit.camp.set(true);
     rat.engage();
 
     kit.camp.update();
@@ -531,7 +592,7 @@ describe('a making camp', () => {
     kit.character.equip('pickaxe');
     kit.character.addItem('tin-ore', 1);
 
-    kit.camp.toggle();
+    kit.camp.set(true);
     kit.camp.update();
     expect(kit.crafted).toEqual([TIN]);
 
@@ -548,7 +609,7 @@ describe('a making camp', () => {
     const kit = smelting();
     kit.character.addItem('logs', kit.character.carryCapacity());
 
-    kit.camp.toggle();
+    kit.camp.set(true);
 
     expect(JSON.stringify(kit.emitted)).not.toContain('nothing you find will be kept');
   });

@@ -6,7 +6,6 @@ import {
   afkGatherSkill,
   afkJobSkill,
   afkXpReward,
-  chooseAfkFood,
   chooseAfkNode,
   decideAfkAction,
   shouldAfkEat,
@@ -168,23 +167,6 @@ describe('shouldAfkEat', () => {
 
   it('treats a zero max HP as nothing to heal', () => {
     expect(shouldAfkEat(0, 0, false)).toBe(false);
-  });
-});
-
-describe('chooseAfkFood', () => {
-  it('finds nothing in a bag with no food in it', () => {
-    expect(chooseAfkFood({})).toBeNull();
-    expect(chooseAfkFood({ logs: 5, 'rat-bones': 2 })).toBeNull();
-  });
-
-  // The weakest food that works: there is no hurry between respawns, and it
-  // saves the good stuff for when the player is actually at the keyboard.
-  it('reaches for the weakest food in the bag', () => {
-    expect(chooseAfkFood({ 'cooked-crab': 1, 'cooked-fish': 1 })).toBe('cooked-fish');
-  });
-
-  it('ignores a stack that has run out', () => {
-    expect(chooseAfkFood({ 'cooked-fish': 0, 'cooked-crab': 1 })).toBe('cooked-crab');
   });
 });
 

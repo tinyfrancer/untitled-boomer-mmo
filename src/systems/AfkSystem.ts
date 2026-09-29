@@ -1,9 +1,9 @@
-import { consumableFor, toolSkill } from '../data/items';
+import { toolSkill } from '../data/items';
 import type { CraftingRecipe, StationId } from '../data/recipes';
 import { canCraft, recipesAt } from './CraftingSystem';
-import { inventoryEntries, type Gear, type Inventory } from './InventorySystem';
+import type { Gear, Inventory } from './InventorySystem';
 import type { Skills } from './SkillSystem';
-import type { ItemId, SkillId } from '../types/ids';
+import type { SkillId } from '../types/ids';
 
 // AFK play has to stay behind active play, and two things hold it there: the
 // mode never presses an ability, and what it does earn is halved.
@@ -15,12 +15,12 @@ export const AFK_ENGAGE_RADIUS = 260;
 // dropped: the leash on the player's side of the fight.
 export const AFK_ANCHOR_RADIUS = 360;
 // Below this, with nothing already on them, they stop pulling and rest...
-const AFK_RETREAT_FRACTION = 0.5;
+export const AFK_RETREAT_FRACTION = 0.5;
 // ...and stay resting until this, so the two thresholds can't flap against
 // each other at a single point.
-const AFK_RESUME_FRACTION = 0.85;
+export const AFK_RESUME_FRACTION = 0.85;
 // Worth spending food on rather than waiting out regen.
-const AFK_EAT_FRACTION = 0.7;
+export const AFK_EAT_FRACTION = 0.7;
 
 export function afkXpReward(baseXp: number, isAfk: boolean): number {
   if (!isAfk) {
@@ -247,20 +247,4 @@ export function shouldAfkEat(hp: number, maxHp: number, inCombat: boolean): bool
     return false;
   }
   return hp / maxHp <= AFK_EAT_FRACTION;
-}
-
-/**
- * The food an unattended character reaches for: the weakest thing in the bag
- * that still heals. Nothing is in a hurry between respawns, and it leaves the
- * good food for when the player is actually at the keyboard.
- */
-export function chooseAfkFood(inventory: Inventory): ItemId | null {
-  let best: { itemId: ItemId; healAmount: number } | null = null;
-  for (const [itemId, quantity] of inventoryEntries(inventory)) {
-    const food = quantity > 0 ? consumableFor(itemId) : null;
-    if (food && (best === null || food.healAmount < best.healAmount)) {
-      best = { itemId, healAmount: food.healAmount };
-    }
-  }
-  return best?.itemId ?? null;
 }

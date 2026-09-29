@@ -31,7 +31,11 @@ import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
   ACTIONS_CHANGED_EVENT,
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
+  AFK_STATE_CHANGED_EVENT,
+  IDLE_FOOD_CHANGED_EVENT,
+  IDLE_FOOD_KEEP_REQUESTED_EVENT,
+  IDLE_FOOD_MOVE_REQUESTED_EVENT,
   CONTEXT_ACTION_REQUESTED_EVENT,
   CONTEXT_MENU_REQUESTED_EVENT,
   COOK_REQUESTED_EVENT,
@@ -70,7 +74,7 @@ import {
   MASTERY_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
 } from '../../src/ui/uiEvents';
-import type { OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
+import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
 import type { NpcId, SkillId } from '../../src/types/ids';
@@ -230,10 +234,6 @@ describe('one sheet is open at a time', () => {
 
   it('opens no sheet for the tabs that are actions', () => {
     tab('inventory').click();
-    tab('camp').click();
-    expect(emitted.map((e) => e.event)).toContain(AFK_TOGGLE_REQUESTED_EVENT);
-    expect(openSheets()).toEqual(['inventory']);
-
     menuItem('options');
     expect(openSheets()).toEqual(['inventory']);
     expect(modals()).toHaveLength(1);
@@ -246,6 +246,125 @@ describe('one sheet is open at a time', () => {
  * back — it keeps nothing on the device itself, so the host stays the one place
  * the setting is stored.
  */
+/**
+ * The idle panel (decision 96): the Idle tab opens it rather than starting idle,
+ * it says what idle will do before its own button starts it, and it holds the
+ * food rows the player orders and keeps.
+ */
+describe('the idle panel', () => {
+  const panel = (): HTMLElement | null =>
+    parent.querySelector<HTMLElement>('.hud-sheet[data-sheet="idle"]');
+  const lines = (): string[] =>
+    [...(panel()?.querySelectorAll('.hud-idle__line') ?? [])].map((line) => line.textContent ?? '');
+  const button = (action: string): HTMLButtonElement => {
+    const found = panel()?.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
+    if (!found) throw new Error(`no ${action} button`);
+    return found;
+  };
+  const foodButton = (itemId: string, action: string): HTMLButtonElement => {
+    const found = panel()?.querySelector<HTMLButtonElement>(
+      `[data-food="${itemId}"] [data-action="${action}"]`,
+    );
+    if (!found) throw new Error(`no ${action} button on ${itemId}`);
+    return found;
+  };
+  const foods = (): string[] =>
+    [...(panel()?.querySelectorAll<HTMLElement>('.hud-idle-food') ?? [])].map(
+      (row) => row.dataset.food ?? '',
+    );
+  const sent = (event: string) => emitted.filter((e) => e.event === event).map((e) => e.args);
+
+  it('opens from its tab and its key, and starts nothing on its own', () => {
+    mount();
+    tab('idle').click();
+    expect(openSheets()).toEqual(['idle']);
+    expect(sent(AFK_SET_REQUESTED_EVENT)).toEqual([]);
+
+    tab('idle').click();
+    press('z');
+    expect(openSheets()).toEqual(['idle']);
+  });
+
+  it('says what idle will do before it starts', () => {
+    mount();
+    tab('idle').click();
+    expect(lines()).toContain('Fight what comes near where you start, never starting on a boss');
+    expect(lines()).toContain('Half the XP for kills, and no abilities');
+    expect(lines()).toContain('Counts up to 8 hours');
+    expect(button('start-idle').textContent).toBe('Start idle');
+  });
+
+  it('asks for idle on, and steps out of the way of the character it set going', () => {
+    mount();
+    tab('idle').click();
+    button('start-idle').click();
+
+    expect(sent(AFK_SET_REQUESTED_EVENT)).toEqual([[true]]);
+    expect(openSheets()).toEqual([]);
+  });
+
+  it('lights its tab while idle runs, and offers Stop in the panel', () => {
+    mount();
+    events.emit(AFK_STATE_CHANGED_EVENT, true);
+    expect(tab('idle').classList.contains('is-lit')).toBe(true);
+
+    tab('idle').click();
+    button('stop-idle').click();
+    expect(sent(AFK_SET_REQUESTED_EVENT)).toEqual([[false]]);
+
+    events.emit(AFK_STATE_CHANGED_EVENT, false);
+    expect(tab('idle').classList.contains('is-lit')).toBe(false);
+    expect(button('start-idle').textContent).toBe('Start idle');
+  });
+
+  // A station underfoot beats the tool in hand, so walking up to one is a
+  // different job, and the panel says the new one.
+  it('follows the station the player walks up to', () => {
+    mount({ inventory: { 'raw-fish': 4 } });
+    tab('idle').click();
+    events.emit(ACTIONS_CHANGED_EVENT, { nearFire: true, nearStations: ['fire'] });
+
+    expect(lines()).toContain('Cook at the campfire: Raw Fish → Cooked Fish');
+    expect(lines()).toContain('The campfire goes out, so instead:');
+  });
+
+  it('lists the food in the order idle eats it, and asks to move or keep one', () => {
+    mount({ inventory: { 'cooked-crab': 2, 'cooked-rat': 3 } });
+    tab('idle').click();
+    expect(foods()).toEqual(['cooked-rat', 'cooked-crab']);
+    // Nothing above the first to move past, and nothing below the last.
+    expect(foodButton('cooked-rat', 'food-earlier').disabled).toBe(true);
+    expect(foodButton('cooked-crab', 'food-later').disabled).toBe(true);
+
+    foodButton('cooked-crab', 'food-earlier').click();
+    foodButton('cooked-crab', 'food-keep').click();
+    expect(sent(IDLE_FOOD_MOVE_REQUESTED_EVENT)).toEqual([['cooked-crab', 'earlier']]);
+    expect(sent(IDLE_FOOD_KEEP_REQUESTED_EVENT)).toEqual([['cooked-crab', true]]);
+  });
+
+  it('redraws from the choice the world answers with', () => {
+    mount({ inventory: { 'cooked-crab': 2, 'cooked-rat': 3 } });
+    tab('idle').click();
+    events.emit(IDLE_FOOD_CHANGED_EVENT, {
+      order: ['cooked-crab', 'cooked-rat'],
+      keep: ['cooked-crab'],
+    });
+
+    expect(foods()).toEqual(['cooked-crab', 'cooked-rat']);
+    expect(foodButton('cooked-crab', 'food-keep').classList.contains('is-lit')).toBe(true);
+    expect(panel()?.querySelector('[data-food="cooked-crab"]')?.textContent).toContain('Kept');
+  });
+
+  it('starts from the choice the save holds', () => {
+    mount({
+      inventory: { 'cooked-crab': 2, 'cooked-rat': 3 },
+      idleFood: { order: ['cooked-crab'], keep: [] },
+    });
+    tab('idle').click();
+    expect(foods()).toEqual(['cooked-crab', 'cooked-rat']);
+  });
+});
+
 describe("the options menu's sound", () => {
   const soundButton = (): HTMLButtonElement | null =>
     parent.querySelector('[data-action="toggle-sound"]');
@@ -1616,10 +1735,37 @@ describe('the context menu', () => {
 describe('the away report', () => {
   const parked: PendingNotification = { kind: 'offline-afk', report: REPORT };
 
-  it('shows what the camp earned on the boot that resolved it', () => {
+  it('shows what idle earned on the boot that resolved it, naming what it fought', () => {
     mount({}, [parked]);
     const modal = modals()[0];
-    expect(modal?.textContent).toContain('12 kills');
+    expect(modal?.textContent).toContain('12 Rat kills, 60 XP');
+    expect(modal?.textContent).not.toContain('the most');
+  });
+
+  // In the idle panel's words: the panel said "at most half a level" and "up
+  // to 8 hours", and the report says when a night reached either.
+  it('says when a night reached its ceiling and its hours', () => {
+    mount({}, [
+      {
+        kind: 'offline-afk',
+        report: { ...REPORT, elapsedMs: OFFLINE_CAP_MS, capped: true },
+      },
+    ]);
+    const text = modals()[0]?.textContent ?? '';
+    expect(text).toContain('Away for 8h 0m, the most that counts');
+    expect(text).toContain('Stopped at the most a night pays: half a level');
+  });
+
+  it('names the skill level a night of work stopped at', () => {
+    mount({}, [
+      {
+        kind: 'offline-afk',
+        report: { ...REPORT, kills: 0, skill: 'fishing', gathers: 20, skillXp: 90, capped: true },
+      },
+    ]);
+    expect(modals()[0]?.textContent).toContain(
+      'Stopped at the most a night pays: one Fishing level',
+    );
   });
 
   it('shows nothing when the session was not parked', () => {

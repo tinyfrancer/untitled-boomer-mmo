@@ -4,7 +4,7 @@ import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { ENEMIES } from '../../src/data/enemies';
 import { ENEMY_ABILITIES } from '../../src/data/enemyAbilities';
 import {
-  AFK_TOGGLE_REQUESTED_EVENT,
+  AFK_SET_REQUESTED_EVENT,
   COMBAT_LOG_EVENT,
   KILLS_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
@@ -150,7 +150,7 @@ describe('the barrow', () => {
     const king = kingIn(kit);
     // Parked right on top of him, which is the case a distance check would miss.
     kit.world.teleport(king.x, king.y);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     expect(kit.world.afkActive).toBe(true);
 
     kit.tick(40);
@@ -165,7 +165,7 @@ describe('the barrow', () => {
     const kit = barrow();
     const king = kingIn(kit);
     kit.world.teleport(king.x, king.y - 300);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
 
     king.engage();
     kit.until(() => kit.world.target === king, 'the camp to answer the king');
@@ -177,7 +177,7 @@ describe('the barrow', () => {
     const kit = barrow();
     const wight = nearestWight(kit);
     kit.world.teleport(wight.x, wight.y + 60);
-    kit.bus.emit(AFK_TOGGLE_REQUESTED_EVENT);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
 
     kit.until(() => kit.world.target === wight, 'the camp to pick the wight');
   });

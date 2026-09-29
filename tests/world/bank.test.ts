@@ -106,7 +106,7 @@ describe('the bank', () => {
     const { world, bus } = atTheBank();
     expect(world.counterNpc('banker')).not.toBeNull();
 
-    bus.emit('afk-toggle-requested');
+    bus.emit('afk-set-requested', true);
 
     expect(world.counterNpc('banker')).toBeNull();
   });

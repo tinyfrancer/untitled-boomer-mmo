@@ -120,11 +120,11 @@ const SLOT_NOUNS: Record<GearSlotId, string> = {
 function consuming(itemId: ItemId): string[] {
   const item = ITEMS[itemId];
   const lines: string[] = [];
-  // The camp's rule said in its own words (`chooseAfkFood`, `shouldAfkEat`),
-  // since which of two foods an unattended character reaches for is something
-  // nobody could have guessed. "Camp" is what the tab is called until the plan's
-  // phase A7 renames it Idle, and this line goes with it.
-  if (item.kind === 'consumable') lines.push('Camping eats this when hurt, weakest food first');
+  // Idle's rule said in its own words (`chooseIdleFood`, `shouldAfkEat`), and
+  // where to change it, since the order is the player's to set (decision 96).
+  if (item.kind === 'consumable') {
+    lines.push('Idle eats this when hurt, in the order set on the Idle tab');
+  }
   if (item.kind === 'ammunition') lines.push('Shot from a bow, out of a quiver');
   if (itemId === FIRE_INPUT_ITEM_ID) lines.push('Lights a campfire, one a fire');
   return lines;
