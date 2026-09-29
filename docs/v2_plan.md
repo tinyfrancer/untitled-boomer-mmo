@@ -18,10 +18,12 @@ four leftovers mended in place, a grind pass added to Part C as C10, Part B kept
 **B1** (the style guide, sprites as data in `src/art/` held to a palette and a fixed animation
 budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101) **and B2** (the
 checkpoint slice: town in pixel art behind `?renderer=2d`, with edges between grounds, the warrior,
-the shopkeeper, the rat and a building kit drawn for real; decision 102; and redrawn heroic and
-weathered after the user's first look found it "farmvilley", decision 103). **Next: the user judges
-B2's revised slice**, and B3 if it holds up; if it does not, the art source is re-decided before
-B3 (decision 81). Update this line as each phase lands: which phase, and which is next.
+the shopkeeper, the rat and a building kit drawn for real; decision 102; redrawn heroic and
+weathered after the user's first look found it "farmvilley", decision 103; and after their second,
+which kept the style, a figure whose arms hold what it carries, the wizard and the ranger, an armour
+lookbook, and a town that says what each place is, decision 104). **Next: the user judges the third
+pass of B2's slice**, and B3 if it holds up; if it does not, the art source is re-decided before B3
+(decision 81). Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -282,12 +284,21 @@ discovered at the end.
   asked for World of Warcraft and the Lord of the Rings; the same phase redrew it (decision 103):
   a deep, earthy palette, people to heroic proportions with the warrior cloaked, a sewer rat,
   timber-framed buildings on stone, textured ground in variants, and a darker edge to the world.
+  **The second look** kept the style and found the weapons held wrong, and asked to see armours, a
+  wizard and a ranger, and a town easier to read; the same phase took one more pass (decision 104):
+  **a figure kit** whose arms are parts in poses that each say where the hand is, so what is held is
+  laid in the fist; **the wizard and the ranger** drawn on it and played, casting and shooting;
+  **armour drawn once in the `tier` ramp** and recoloured per tier, as a lookbook B4 builds on;
+  doorways drawn as rooms seen into, a trade sign by every door somebody works behind, roofs whose
+  light falls away down the slope, and the signpost drawn.
 - **B3 — Every zone drawable, and the switch.** All terrain and all three settings (the lantern
   underground), water and ground scatter. Anything not yet drawn shows a placeholder sprite. **2D
   becomes the default**; 3D stays reachable for one phase as a fallback.
 - **B4 — People.** A layered figure for all three classes: body, armour by slot, weapon and offhand,
   tier colours by recolouring. Four directions, walk, attack, cast, shoot, hurt, death, within B1's
-  budget.
+  budget. B2 already has the figure kit, all three classes and an armour lookbook (decision 104):
+  what is left is putting a figure together from what the player has on, slot by slot, compiled when
+  it changes, and each weapon drawn by the item it is.
 - **B5 — Creatures and effects.** Every creature by shape and the bosses; telegraph rings, arrows,
   bolts, hits, crits, the level-up, the loot sack, floating text.
 - **B6 — Places.** Nodes (and their depleted states), stations, signposts, buildings with interiors

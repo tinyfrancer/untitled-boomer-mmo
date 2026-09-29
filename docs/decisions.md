@@ -2161,3 +2161,50 @@ earthy ground:
 **Rejected:** re-deciding the art source, which the user did not ask for; a grimdark palette of
 greys and browns, which loses what WoW's colour does for reading a scene at a glance; realistic
 proportions of seven or eight heads, which leave a face two pixels wide at 32 to the tile.
+
+## 104. A figure holds things in its hands, every class is drawn, armour is a lookbook, and a town says what it is
+
+**2026-09-29 · the user, judging B2's revised slice; Claude's under it**
+
+The user's second look at the checkpoint: the style is better, but **the weapons are held
+incorrectly**. They asked to **try some different armours**, for **a wizard and a ranger mock-up**,
+and, with the town still looking "silly" and to be made more like a town later, for **a way to make
+it slightly more descript and easier to read**. So the style holds (decision 103 stands), and the
+same phase takes one more pass.
+
+What Claude made of it:
+
+- **The arms are parts of their own, in poses, and each pose says where its hand is.** A sword was
+  a part laid near a fist that never moved: from the side its blade hung out of the belt, and a
+  wind-up raised the sword while the hand stayed at the hip. Now a thing held names the pixel its
+  grip is and is laid at the hand, so it comes out of the fist in every frame by construction, and
+  a test holds every hand in sight on a fist. The warrior carries the blade low and out, draws it
+  back over the shoulder and brings it across.
+- **The wizard and the ranger are drawn and played**, on the same figure, so choosing either class
+  under `?renderer=2d` shows them rather than a mannequin. The wizard is hooded, in violet, with a
+  **staff** taller than they are that flares as a spell leaves it. The game's wizard weapons are a
+  wand and a scepter, and B4 draws each weapon by what is equipped, but at 40 pixels a wand reads as a
+  dagger, where a robe, a hood and a staff read as a wizard across a field. The ranger is hooded in a
+  forest green colder and darker than grass, so a hunter in a field is still a figure, over leather,
+  with a quiver on the back and the bow in the left hand. A player's spell plays the wizard's
+  `cast` and a shot the ranger's `shoot`; a figure that has not drawn one swings.
+- **Armour is a lookbook, not yet worn.** Plate, studded leather and a robe under a pointed hat are
+  each drawn once in the neutral `tier` ramp and recoloured into every tier of their kind (iron and
+  steel, brown and studded and fenhide, brown and fenweave), for the user to judge before B4 wires a
+  figure to what it has on by slot. They are held by the sprite tests and kept out of the atlas the
+  game compiles.
+- **The town says what each place is.** A doorway is two tiles of a three-tile front and was drawn
+  as solid ink, which read as a hole in every shopfront; it is the room seen into now, a back wall of
+  boards with a lantern and the floor coming forward into the light. A building somebody works in
+  hangs its trade by the door (a sack, a coin, swords, a shield, an anvil, a tankard, a sheaf,
+  scales). The front slope of a roof falls away from the ridge to the eave rather than lying a step
+  dark all over, which read as paving. And **the signpost is drawn**, ahead of B6, because a crate
+  where the exits are named said nothing.
+
+**Rejected:** mirroring the left facing and moving the sword to the other hand, which decision 102
+already turned down and which the arms-with-hands kit makes unnecessary; sheathing the sword out of
+a fight, which needs an armed idle and walk the budget does not have; a wand for the wizard's
+mock-up; wiring armour to what the player wears now, which is B4's layered figure (a whole-figure
+sprite per class, armour kind and tier cannot mix a steel helm with studded legs); a door drawn
+narrower than the collision's gap, which would put wall where a player walks through; and a
+redesign of the town's layout, which the user put off.

@@ -126,7 +126,8 @@ a person or a beast), and the renderer falls back to those.
 
 **Either side may mirror the other**, the left drawn as the right flipped. That is how most figures
 are drawn and it saves a quarter of their frames; a figure holding something in one hand draws both
-sides, since a flip moves the sword to the other hand. A person with everything is 16 frames a
+sides, since a flip moves the sword to the other hand. The figure kit draws the left as the right
+with its arms traded before the flip, so what the right hand holds stays in it. A person with everything is 16 frames a
 facing: 51 drawn with the left mirrored, 67 on screen. **Raising a count is a decision about the
 game**, since it multiplies across every sprite of the kind and every layer B4 puts on a figure.
 
@@ -167,15 +168,40 @@ budget is held against real frames from the day it was written. The terrain tile
 repeating with no seam; B2 redrew grass and road with texture and gave each several **variants**
 (`TILE_VARIANTS`), a cell dealt one by where it is so a field is not one tile stamped over and
 over. What differs between variants is kept off a tile's edges, so any sits beside any other. B2
-drew the first figures (`sprites/people.ts`, `sprites/rat.ts`): **the warrior** and **the
-shopkeeper** are one figure put together from parts (a head, a torso, legs a facing, and what is
-worn over them: spaulders, a cloak, an apron) dressed two ways, drawn to **heroic proportions**, a
-head over a body three times its height and about 39 pixels of the frame's 48; **the rat** is the
-first creature, a lean sewer rat with red eyes rather than a mouse (decision 103). The warrior's sword is a part of
-its own, drawn over the body facing right and behind it facing left, which is how the left can be
-the right's body flipped with the sword still in the right hand. **Who is drawn with what** is one
-file (`art/cast.ts`): a table a class, a person and a creature, anything not in it falling back on
-its kind's placeholder, a creature's kind read off its `shape`.
+drew the first figures, to **heroic proportions**: a head over a body three times its height, about
+39 pixels of the frame's 48 (decision 103). **The rat** (`sprites/rat.ts`) is the first creature, a
+lean sewer rat with red eyes rather than a mouse.
+
+**Every person is one figure, dressed and armed** (`sprites/figure.ts`, decision 104): a head, a
+body without arms, legs by stance, and **two arms that are parts of their own, in poses**. A pose
+knows where its hand closes, and a thing held (a sword, a staff, a bow, an arrow) knows which of its
+pixels the hand closes on, so the two are laid together there: a sword comes out of the fist in
+every frame, a wind-up lifts the arm that holds it, and a blow carries the blade across with the
+forearm. `tests/art/figure.test.ts` holds every hand in sight on a fist pixel, so a new pose names a
+hand that is one. Facing away, what is held out ahead is beyond the body and drawn under it; facing
+sideways, the far arm is the near one's pose a shoulder back and a step darker, drawn behind the
+body. A figure's grids name **roles, not ramps** (the garment, the cloak, leather, metal, wood, a
+glow, gear), and a sprite's `Materials` says which ramp each role is, so one arm is a blue, violet
+or linen sleeve; the legend is read off the keys the frames use. `sprites/people.ts` dresses it four
+ways: **the warrior** (a gambeson, spaulders, a crimson cloak, the sword carried low), **the
+wizard** (a hooded robe in violet trimmed with brass, a staff taller than they are whose crystal
+flares as a spell leaves it, the other palm lit to cast), **the ranger** (a forest-green hood and
+mantle over a leather jerkin and linen sleeves, a quiver on the back, a bow in the left hand drawn
+to the cheek) and **the shopkeeper** (the coat in ochre under a leather apron). A figure plays
+`cast` and `shoot` where it has drawn them, and swings where it has not.
+
+**Armour is drawn once, in the neutral `tier` ramp, and a tier is a recolour of it**
+(`sprites/armour.ts`): plate (a breastplate with a lit ridge, faulds, round pauldrons, a nasal helm,
+and the arms and legs to gauntlets and sabatons), studded leather (a jerkin, a strap skirt, guards
+and a cap) and a cloth robe under a pointed hat, each the figure's own dress with pieces laid over
+it. They are the **`LOOKBOOK`**, drawn for the user to judge before B4 wires a figure to what it has
+on: held by the sprite tests with everything else, and not in `SPRITES`, so the atlas the game
+compiles at boot does not carry figures nothing wears yet.
+
+**Who is drawn with what** is one file (`art/cast.ts`): a table a class, a person and a creature,
+anything not in it falling back on its kind's placeholder, a creature's kind read off its `shape`.
+**The signpost** (`sprites/props.ts`) is the one prop drawn ahead of B6, a post with two boards
+pointing either way, because a crate standing where a zone says where its exits go said nothing.
 
 ## Edges between grounds
 
@@ -242,12 +268,21 @@ is the game's to say.
 (`art/building.ts`, `sprites/buildings.ts`, decision 102). Whole would be a sprite per building at
 a size the budget does not list, redrawn the day a row changes; parts are drawn once and the rule
 lays them over any footprint the table has. From outside it is a roof laid in courses of slate,
-each split its own way, mossed where the rain sits, lit on the slope facing up the screen and a
-step darker on the one facing the viewer, with a stone chimney standing out of the far slope; over
+each split its own way, mossed where the rain sits, lit on the slope facing up the screen and on the
+one facing the viewer **falling away from the ridge to the eave** (its highlights a step down, and
+its last third a step more), which is what reads a roof as pitched rather than paved, with a stone
+chimney standing out of the far slope; over
 a front wall a head taller than a person, timber-framed in dark oak (posts, a rail, a brace in each
 lower panel) over weathered plaster on a plinth of dressed stone, leaded windows lit from inside set
 in the frame's panels, and **the way in exactly where `doorGap` leaves the collision's**, since the
-door a player sees and the one they can walk through have to be one span. From inside it is a plank floor
+door a player sees and the one they can walk through have to be one span. A doorway is two tiles
+of a three-tile front, or the whole of a two-tile one, so it is drawn **as the room seen into**: a
+back wall of dark boards with a lantern lit on it, and the floor coming forward into the light at
+the threshold; a hole of ink that size read as a hole (decision 104). **A building somebody works in
+hangs its trade by the door** (`BUILDING_SIGNS`, every building answering): a sack for a store, a
+coin for the bank, crossed swords, a shield, an anvil, a tankard, a sheaf and scales, on a board
+hung from a bracket just inside the doorway over the dark of the room, or in the middle of a wall
+with no door in it. From inside it is a plank floor
 ringed by the walls' tops, drawn with the ground, and **only the back wall standing**, open where a
 north door is in it: the roof and the front come off the way the 3D cutaway takes them. The three
 shapes are the one kit recoloured (`BUILDING_LOOKS`): slate over plaster for a hall, thatch for a

@@ -250,6 +250,9 @@ it multiplies across every sprite of the kind. Nobody draws an outline; the comp
 in `sprites/edges.ts`, and no edge may lay blocking ground over walkable ground. **A building is a
 kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
 and **who is drawn with what** is `art/cast.ts`, anything not in it being its kind's placeholder.
+**A person is one figure dressed and armed** (`art/sprites/figure.ts`, decision 104): its arms are
+parts in poses, each naming the pixel its hand closes on, and anything held is laid with its grip
+there, so a new pose names a hand that is a fist (`tests/art/figure.test.ts` holds it).
 
 **Sound loads no files either** (`src/audio/`, engine-free and owned by the host). Every cue is
 synthesised from a recipe in `cues.ts`, and the board hears the same `WorldEvent[]` the view is
