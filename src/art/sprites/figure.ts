@@ -224,65 +224,68 @@ export const HEAD_RIGHT = grid(`
 `);
 
 // ---------------------------------------------------------------------------
-// Bodies without arms: a quilted coat to mid-thigh (0-4) and a belt (l m n,
-// its knot g). The shoulders are part of the body, and the arms hang from them.
+// Bodies without arms: a tunic (0-4) belted (l m n, its buckle g) at a waist
+// narrower than the chest, its skirt down over the thighs. One silhouette
+// every garment is drawn on, shaded for the light, so a figure reads as one
+// body rather than a stack of blocks: the arms hang against it, parted from
+// it by their own shade rather than an outline, and the legs go into it.
 // ---------------------------------------------------------------------------
 
-export const COAT_DOWN = grid(`
+export const TUNIC_DOWN = grid(`
   ......cbbc......
-  ...3444333322...
-  .234443333322221
-  .....3433322....
-  .....3433322....
-  .....3333222....
-  .....3432221....
-  .....3333222....
-  .....3322221....
-  .....2322221....
+  ...2344ba3221...
+  .23444321332221.
+  ....244433221...
+  ....234433221...
+  ....234433221...
+  ....234433221...
+  ....234433110...
+  ....234432110...
+  .....2343321....
   .....lmmgmml....
-  .....2322221....
-  .....2222221....
-  .....2222221....
-  .....2222211....
-  .....1111111....
+  .....2343321....
+  ....234413221...
+  ...2344313221...
+  ...2344313221...
+  ...1233222110...
 `);
 
-export const COAT_UP = grid(`
+export const TUNIC_UP = grid(`
   ......bbbb......
-  ...3444333322...
-  .234443333322221
-  .....3333322....
-  .....3333322....
-  .....3333222....
-  .....3332221....
-  .....3322222....
-  .....3322221....
-  .....2322221....
+  ...2344333221...
+  .23444333332221.
+  ....244433221...
+  ....234433221...
+  ....234433221...
+  ....234433221...
+  ....234433110...
+  ....234432110...
+  .....2343321....
   .....lmmmmml....
-  .....2222221....
-  .....2222221....
-  .....2222221....
-  .....2222211....
-  .....1111111....
+  .....2343321....
+  ....234433221...
+  ...2344333221...
+  ...2344333221...
+  ...1233222110...
 `);
 
-export const COAT_RIGHT = grid(`
+export const TUNIC_RIGHT = grid(`
   ....bcb.....
   ..3443332...
   .344333322..
-  .3433333221.
-  .3333332221.
-  .3333322221.
-  .3332222221.
-  .3322222211.
-  .3322222211.
-  .3222222211.
-  .lnmmmmmmll.
-  .3222222211.
-  .2222222211.
-  .2222222211.
-  ..1222221...
-  ..1111111...
+  .3443332221.
+  .3443332221.
+  .3443332221.
+  .3443332221.
+  .3443331110.
+  .3443321110.
+  ..34332221..
+  ..lnmmmmml..
+  ..34332221..
+  .3343322211.
+  .3343322211.
+  .3343322211.
+  .2232211100.
 `);
 
 /** Where a body is laid, by the way it faces. */
@@ -410,15 +413,17 @@ export interface Limb {
 
 // Facing down, the right arm is on the left of the picture.
 
+// Its inner edge a step darker than the body it hangs against, which is what
+// parts the two rather than an outline between them.
 const DOWN_RIGHT_REST: Limb = {
   grid: grid(`
-    344
-    332
-    333
-    332
-    322
-    322
-    l22
+    343
+    342
+    331
+    331
+    321
+    321
+    221
     lnm
     lml
     dcb
@@ -563,15 +568,17 @@ const DOWN_LEFT_PALM: Limb = {
 
 // Facing right, the near arm hangs from the middle of the side.
 
+// Lit down its middle and dark along its front, so it reads over the side of
+// the body it hangs against.
 const RIGHT_REST: Limb = {
   grid: grid(`
-    434.
-    333.
-    333.
-    332.
-    332.
-    322.
-    222.
+    343.
+    242.
+    241.
+    231.
+    231.
+    231.
+    221.
     221.
     lnm.
     lml.
@@ -980,6 +987,54 @@ const STAFF: Held = {
   grip: [2, 24],
 };
 
+// An apprentice's staff: plain wood with a knob at its head, which a spell
+// still flares from.
+const STAFF_PLAIN: Held = {
+  grid: grid(`
+    .qpp.
+    qpppf
+    .ppf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..qf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..qf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..qf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..pf.
+    ..ff.
+  `),
+  grip: [2, 24],
+};
+
 // Laid over the staff's head as a spell leaves it.
 const STAFF_FLARE: Held = {
   grid: grid(`
@@ -1135,7 +1190,7 @@ const ARROW_UP: Held = {
 
 /** What a figure carries in each hand. */
 export interface Arms {
-  main: 'sword' | 'staff' | 'bow-hand' | null;
+  main: 'sword' | 'staff' | 'plain-staff' | 'bow-hand' | null;
   off: 'bow' | null;
 }
 
@@ -1209,6 +1264,7 @@ function mainHeld(arms: Arms, view: View, moment: Moment): Held | null {
         : SWORD_LOW;
   }
   if (arms.main === 'staff') return STAFF;
+  if (arms.main === 'plain-staff') return STAFF_PLAIN;
   if (arms.main === 'bow-hand' && moment.nocked) {
     if (view === 'right') return ARROW_SIDE;
     return view === 'down' ? ARROW_DOWN : ARROW_UP;
@@ -1225,9 +1281,9 @@ function offHeld(arms: Arms, view: View, moment: Moment): Held | null {
   return view === 'right' ? BOW_SIDE : BOW_DOWN;
 }
 
-/** A staff, and a flare laid over its crystal as a spell leaves it. */
-function staffPieces(moment: Moment, limb: Limb, bob: number, flip = false): Placed[] {
-  const staff = held(STAFF, limb, bob, flip);
+/** A staff, and a flare laid over its head as a spell leaves it. */
+function staffPieces(item: Held, moment: Moment, limb: Limb, bob: number, flip = false): Placed[] {
+  const staff = held(item, limb, bob, flip);
   if (!moment.flare) return [staff];
   // The flare's middle over the crystal's: column 3 row 3 of the one on
   // column 2 row 1 of the other, both of them the same either way round.
@@ -1242,7 +1298,7 @@ function handPieces(
   flip = false,
 ): Placed[] {
   if (!item) return [];
-  if (item === STAFF) return staffPieces(moment, limb, bob, flip);
+  if (item === STAFF || item === STAFF_PLAIN) return staffPieces(item, moment, limb, bob, flip);
   return [held(item, limb, bob, flip)];
 }
 
