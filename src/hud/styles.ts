@@ -974,6 +974,13 @@ function hudCss(): string {
   color: ${THEME.color.muted};
   padding-left: ${THEME.padding}px;
 }
+/* A rank's count is never broken ("0 / 25" over "slain"): if a title is ever
+   too long for the width, the title wraps on its own side. */
+.hud-row--tier > :last-child,
+.hud-feat-title .hud-muted {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
 .hud-row--tier.is-earned {
   color: ${THEME.color.levelUp};
 }

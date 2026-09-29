@@ -36,6 +36,10 @@ export const THEME = {
     // The skills book's, for the same reason: a line of the idle panel is a
     // recipe's inputs and result, and a food row carries three buttons.
     idle: 300,
+    // A rank is one line, its title and its count side by side, and the
+    // longest is a boss's ("Orlath the Barrow King Slayer … 0 / 100 slain"):
+    // at the character sheet's 240 both halves broke into two ragged columns.
+    feats: 340,
   },
   paperdollSize: 102,
   /**

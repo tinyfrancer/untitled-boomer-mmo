@@ -25,7 +25,7 @@ export class FeatsSheet extends Sheet {
   private readonly onSetTitle: (titleId: TitleId | null) => void;
 
   constructor(onSetTitle: (titleId: TitleId | null) => void) {
-    super('Feats', THEME.panelWidth.character);
+    super('Feats', THEME.panelWidth.feats);
     this.onSetTitle = onSetTitle;
     this.worn = el('div', 'hud-titles');
     this.root.insertBefore(this.worn, this.body);
