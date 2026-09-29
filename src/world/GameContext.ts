@@ -2,9 +2,15 @@ import { ZONES } from '../data/zones';
 import { CharacterController } from '../systems/CharacterController';
 import { InputState } from '../systems/InputState';
 import { saveService, type CharacterState } from '../persistence';
+import { writeSaveExport, type SaveExport, type SaveExportKind } from '../persistence/saveFile';
 import type { OfflineAfkReport } from '../systems/OfflineAfkSystem';
-import type { AchievementUnlock } from '../ui/uiEvents';
+import {
+  SAVE_EXPORT_REQUESTED_EVENT,
+  SAVE_EXPORTED_EVENT,
+  type AchievementUnlock,
+} from '../ui/uiEvents';
 import type { ZoneEdge, ZoneId } from '../types/ids';
+import { createSubscriptions, type Subscriptions } from './eventBus';
 import { ZoneWorld } from './ZoneWorld';
 import type { EventBus, WorldEvent } from './worldEvents';
 
@@ -60,6 +66,7 @@ export class GameContext {
   readonly input = new InputState();
 
   private readonly events: EventBus;
+  private readonly subscriptions: Subscriptions;
   private readonly rng?: () => number;
   private readonly rolls?: () => number;
   private notifications: PendingNotification[] = [];
@@ -74,6 +81,12 @@ export class GameContext {
     this.character = new CharacterController(options.character);
     this.world = this.buildWorld({ zoneId: options.character.zoneId ?? 'town' });
     this.collectParkedAfk();
+    // The session's rather than a world's: a save is the whole character, and
+    // outlives every zone it is asked for in.
+    this.subscriptions = createSubscriptions(this.events);
+    this.subscriptions.listen(SAVE_EXPORT_REQUESTED_EVENT, (kind) =>
+      this.events.emit(SAVE_EXPORTED_EVENT, this.exportSave(kind)),
+    );
   }
 
   /** The world running right now. A zone change replaces it with another. */
@@ -127,9 +140,19 @@ export class GameContext {
     this.sinceSaveMs = 0;
   }
 
+  /**
+   * The character as it stands, written to take away. Saved first, so what
+   * leaves is where the player is standing and the browser holds the same.
+   */
+  exportSave(kind: SaveExportKind, now = new Date()): SaveExport {
+    this.persist();
+    return writeSaveExport(kind, this.character.state, now);
+  }
+
   /** Ends the session. The character stays on disk unless the caller clears it. */
   destroy(): void {
     this.destroyed = true;
+    this.subscriptions.clear();
     this.world.destroy();
     this.notifications = [];
   }

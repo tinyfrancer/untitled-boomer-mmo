@@ -12,6 +12,8 @@ import type {
   ZoneId,
 } from '../types/ids';
 import type { SoundSettings } from '../audio/settings';
+import type { CharacterState } from '../persistence/CharacterState';
+import type { SaveExport, SaveExportKind } from '../persistence/saveFile';
 import type { CounterId } from '../data/npcs';
 import type { StationId } from '../data/recipes';
 import type { Reforges } from '../systems/ReforgeSystem';
@@ -161,6 +163,15 @@ export const COMBAT_LOG_EVENT = 'combat-log';
 export const NOTICE_EVENT = 'notice';
 // Asked for by the options menu; the host owns the session, so it does the work.
 export const RESET_CHARACTER_REQUESTED_EVENT = 'reset-character-requested';
+// The save, taken away or brought back (the options menu, and the creation
+// screen for bringing one back). Taking one away is an ask and an answer: the
+// session saves and writes the file or the code, since only it has the
+// character as it stands, and the HUD does what a page does with it — a
+// download, the clipboard. Bringing one back is handed a character the HUD has
+// already read and shown the player, and the host ends the session to start it.
+export const SAVE_EXPORT_REQUESTED_EVENT = 'save-export-requested';
+export const SAVE_EXPORTED_EVENT = 'save-exported';
+export const SAVE_IMPORT_REQUESTED_EVENT = 'save-import-requested';
 // What the player chose in the options menu about the speaker. Carried as the
 // whole setting rather than as a toggle so the latest one describes the present,
 // like everything else on this channel: the host applies and keeps it, and the
@@ -437,6 +448,9 @@ export interface UiEventMap {
   [COMBAT_LOG_EVENT]: [entry: CombatLogEntry];
   [NOTICE_EVENT]: [message: string];
   [RESET_CHARACTER_REQUESTED_EVENT]: [];
+  [SAVE_EXPORT_REQUESTED_EVENT]: [kind: SaveExportKind];
+  [SAVE_EXPORTED_EVENT]: [saved: SaveExport];
+  [SAVE_IMPORT_REQUESTED_EVENT]: [character: CharacterState];
   [SOUND_SETTINGS_CHANGED_EVENT]: [settings: SoundSettings];
   [AFK_SET_REQUESTED_EVENT]: [active: boolean];
   [AFK_STATE_CHANGED_EVENT]: [active: boolean];
