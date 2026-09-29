@@ -211,6 +211,14 @@ const stepFor = async (read, done, label, budgetMs = 60000) => {
   throw new Error(`timed out waiting for: ${label}`);
 };
 
+/**
+ * Switches the spirit's tips off for the character just made, through the same
+ * ask the card's No more tips sends. A tip waits for a tap, so one left up by
+ * a section that is not about tips would sit over whatever the next one taps;
+ * the tips section switches them back on for itself.
+ */
+const quietTips = () => page.evaluate(() => window.events.emit('tips-set-requested', false));
+
 /** Drops the player back on the zone's spawn point with nothing selected. */
 const park = async () => {
   await page.evaluate(() => {
@@ -596,6 +604,7 @@ async function boot() {
       Math.min(town.mobs, town.nodes, town.npcs, town.signposts) > 0,
     `${town.mobs} mobs, ${town.nodes} nodes, ${town.npcs} npcs, ${town.signposts} signposts`,
   );
+  await quietTips();
 }
 
 async function teardown() {
@@ -3990,6 +3999,129 @@ async function lockedZone() {
   await park();
 }
 
+async function tips() {
+  // --- The spirit's tips (decision 98). A card that waits for a tap, placed
+  // clear of both top corners, held while a panel covers the playfield, and
+  // answered with a real thumb. Which tip applies and what it says are held in
+  // tests/systems/TipSystem.test.ts, and the desk's timing in
+  // tests/world/tips.test.ts; what needs a browser is where the card lands at
+  // a real phone's size, in both orientations, and that its buttons are
+  // thumbs' and go round the world and back.
+  //
+  // Late in the run, since it cranks a minute and more of game time and every
+  // creature wanders through it: the sections before it are staged against
+  // where the town's rats are, and the one after it starts a new character.
+  // Which tip comes first depends on what this character has done by now, so
+  // nothing here asks which. Holding a finger on anything applies to everyone,
+  // so there is always a first, and raw meat in the bag stages a second. ---
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  // A card waits out anything over the playfield, which is the point, so the
+  // sheet and the overlay the last section left up go first.
+  await page.keyboard.press('Escape');
+  const sheet = await page.evaluate(
+    () => document.querySelector('.hud-sheet:not(.hud-hidden)')?.getAttribute('data-sheet') ?? null,
+  );
+  if (sheet) await tapTab(sheet);
+  await park();
+
+  const card = () =>
+    page.evaluate(() => {
+      const root = /** @type {HTMLElement} */ (document.querySelector('.hud-tip'));
+      const box = root.getBoundingClientRect();
+      /** @param {DOMRect} a @param {DOMRect | undefined} b */
+      const clear = (a, b) =>
+        !b || a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom;
+      const buttons = [...root.querySelectorAll('button')].map((b) => b.getBoundingClientRect());
+      return {
+        tip: getComputedStyle(root).display === 'none' ? null : (root.dataset.tip ?? null),
+        text: root.querySelector('.hud-tip__line')?.textContent ?? '',
+        smallest: Math.round(Math.min(...buttons.map((rect) => Math.min(rect.width, rect.height)))),
+        onScreen: box.left >= 0 && box.right <= window.innerWidth && box.top >= 0,
+        clearOfCorners:
+          clear(box, document.querySelector('.hud-player')?.getBoundingClientRect()) &&
+          clear(box, document.querySelector('.hud-target')?.getBoundingClientRect()),
+        aboveActions:
+          box.bottom <=
+          (document.querySelector('.hud-actions')?.getBoundingClientRect().top ?? Infinity),
+        heard: window.world.character.state.tips.heard,
+        off: window.world.character.state.tips.off,
+      };
+    });
+
+  // A target up, so the right-hand corner is drawn for the card to clear.
+  await page.evaluate(() => {
+    const mob = window.world.mobs[0];
+    if (mob) window.world.setTarget(mob);
+  });
+  // Back on, which waits a tip's gap rather than arriving with the tap.
+  await page.evaluate(() => window.events.emit('tips-set-requested', true));
+  const offered = await stepFor(card, (seen) => seen.tip !== null, 'a tip offered', 90000);
+  check(
+    "a tip comes as a card with the spirit's line, and two buttons a thumb can take",
+    offered.text.length > 20 && offered.smallest >= 44,
+    `${offered.tip}: "${offered.text}", smallest button ${offered.smallest}px`,
+  );
+  check(
+    'on a portrait phone it sits on screen, under both corners and above the ability bar',
+    offered.onScreen && offered.clearOfCorners && offered.aboveActions,
+    `on screen ${offered.onScreen}, clear ${offered.clearOfCorners}, above ${offered.aboveActions}`,
+  );
+  await page.screenshot({ path: `${OUT}/2b-tip-card.png` });
+
+  await tapTab('inventory');
+  const held = await card();
+  await tapTab('inventory');
+  const back = await card();
+  check(
+    'it waits out a sheet over the playfield, and is still there when it closes',
+    held.tip === null && back.tip === offered.tip,
+    `under the bag ${held.tip}, after ${back.tip}`,
+  );
+
+  await page.setViewportSize({ width: PHONE.height, height: PHONE.width });
+  await page.waitForTimeout(300);
+  const sideways = await card();
+  check(
+    'on a landscape phone it sits between the two corners, clear of both',
+    sideways.tip !== null && sideways.onScreen && sideways.clearOfCorners,
+    `on screen ${sideways.onScreen}, clear ${sideways.clearOfCorners}`,
+  );
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.world.clearTarget());
+
+  await page.tap('.hud-tip [data-action="tip-heard"]');
+  await page.waitForTimeout(80);
+  const heard = await card();
+  check(
+    'Got it takes the card down and the character keeps what it heard',
+    heard.tip === null && heard.heard.some((tipId) => tipId === offered.tip),
+    `card ${heard.tip}, heard ${heard.heard.join(', ')}`,
+  );
+
+  await page.evaluate(() => {
+    window.world.character.addItem('rat-meat', 1);
+    window.events.emit('inventory-changed', { ...window.world.character.state.inventory });
+  });
+  // Ten seconds of game time, well inside the gap.
+  await step(250);
+  const quiet = await card();
+  const next = await stepFor(card, (seen) => seen.tip !== null, 'the next tip', 90000);
+  await page.tap('.hud-tip [data-action="tips-off"]');
+  await page.waitForTimeout(80);
+  const silenced = await card();
+  check(
+    'the next waits out a gap, and No more tips switches them off for good',
+    quiet.tip === null && next.tip !== offered.tip && silenced.tip === null && silenced.off,
+    `quiet ${quiet.tip}, then ${next.tip}, then card ${silenced.tip}, off ${silenced.off}`,
+  );
+  await page.evaluate(() => {
+    window.world.character.removeItem('rat-meat', 1);
+    window.events.emit('inventory-changed', { ...window.world.character.state.inventory });
+  });
+}
+
 async function reset() {
   // --- Resetting: the mobile route to a fresh character, which used to be
   // bound to F9 and so unreachable on a phone. Two taps, on purpose. It is also
@@ -4070,6 +4202,7 @@ async function reset() {
   // `window.world` is cleared when a view is torn down, so this cannot pass on
   // the world the reset just ended.
   await page.waitForFunction(() => window.world != null, null, { timeout: 20000 });
+  await quietTips();
   const caster = await page.evaluate(() => ({
     hasBar: document.querySelectorAll('.hud-ability').length > 0,
     mana: window.world.player.mana,
@@ -4637,6 +4770,7 @@ async function ranger() {
   await page.click('.create__card[data-class="ranger"]');
   await page.click('.create__begin');
   await page.waitForFunction(() => window.world != null, null, { timeout: 20000 });
+  await quietTips();
 
   const corner = () =>
     page.evaluate(() => {
@@ -4858,6 +4992,7 @@ const SECTIONS = [
   ['character-sheet', characterSheet],
   ['zone-map', zoneMapSheet],
   ['locked-zone', lockedZone],
+  ['tips', tips],
   ['reset', reset],
   ['save-resume', saveResume],
   ['save-transfer', saveTransfer],

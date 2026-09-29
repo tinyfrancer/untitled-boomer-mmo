@@ -266,7 +266,7 @@ export function stationPlace(station: StationId): string {
 
 // The same for a person, found by the role they work rather than by name, so
 // a counter moved to another zone takes every line that mentions it along.
-function npcPlace(role: NpcRoleId): string {
+export function npcPlace(role: NpcRoleId): string {
   const npc = Object.values(NPCS).find((candidate) => candidate.role === role);
   if (!npc) return `the ${role}`;
   const zone = Object.values(ZONES).find((candidate) =>

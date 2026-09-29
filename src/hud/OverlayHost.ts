@@ -36,6 +36,7 @@ import {
   SAVE_EXPORT_REQUESTED_EVENT,
   SAVE_IMPORT_REQUESTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
+  TIPS_SET_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
   CRAFT_REQUESTED_EVENT,
@@ -247,11 +248,13 @@ export class OverlayHost {
   }
 
   /** `current` is who a save loaded from here would replace. */
-  openOptions(sound: SoundSettings, current: CharacterSummary): void {
+  openOptions(sound: SoundSettings, tipsOn: boolean, current: CharacterSummary): void {
     this.options?.close();
     this.options = new OptionsModal({
       sound,
       onSoundChanged: (settings) => this.events.emit(SOUND_SETTINGS_CHANGED_EVENT, settings),
+      tipsOn,
+      onTipsChanged: (on) => this.events.emit(TIPS_SET_REQUESTED_EVENT, on),
       onExport: (kind) => this.events.emit(SAVE_EXPORT_REQUESTED_EVENT, kind),
       onOpenLoad: () => {
         this.options?.close();
@@ -482,6 +485,25 @@ export class OverlayHost {
     this.contextMenu?.close();
     this.inspect?.close();
     return true;
+  }
+
+  /**
+   * Whether anything is up over the playfield, which is what a tip waits out.
+   * Asked of what is held rather than of the tree, so a panel mid-close is
+   * already gone.
+   */
+  isAnyOpen(): boolean {
+    return [
+      this.options,
+      this.loadSave,
+      this.counter,
+      this.station,
+      this.picker,
+      this.awayReport,
+      this.menu,
+      this.contextMenu,
+      this.inspect,
+    ].some((overlay) => overlay !== null);
   }
 
   closeAll(): void {

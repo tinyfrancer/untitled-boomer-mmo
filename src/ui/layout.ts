@@ -233,6 +233,43 @@ export function topRowBottom(layout: HudLayout): number {
   return Math.max(playerColumnBottom(layout), layout.targetFrame.y + layout.targetFrame.height);
 }
 
+// The tip card's width where there is room for it, and the least room between
+// the two top corners it will sit in rather than dropping below them.
+const TIP_CARD_WIDTH = 320;
+const TIP_CARD_MIN_WIDTH = 240;
+
+/** Where the tip card goes. Its height is its text's, so only the top is placed. */
+export interface TipCardRect {
+  x: number;
+  y: number;
+  width: number;
+}
+
+/**
+ * Where the spirit's tip card sits: at the top, between the player column and
+ * the target frame, wherever that gap is wide enough to read in — a landscape
+ * phone and anything roomier — and under the whole top row on a portrait
+ * phone, where the two corners all but meet.
+ *
+ * At the top rather than over the middle, which is the player and whatever they
+ * are fighting, and never at the bottom, which is the thumb's.
+ */
+export function tipCardRect(layout: HudLayout, viewportWidth: number): TipCardRect {
+  const gapLeft = layout.playerColumn.x + layout.playerColumn.width + layout.padding;
+  const gapRight = layout.targetFrame.x - layout.padding;
+  const between = gapRight - gapLeft;
+  if (between >= TIP_CARD_MIN_WIDTH) {
+    const width = Math.min(TIP_CARD_WIDTH, between);
+    return { x: Math.round(gapLeft + (between - width) / 2), y: layout.margin, width };
+  }
+  const width = Math.min(TIP_CARD_WIDTH, viewportWidth - layout.margin * 2);
+  return {
+    x: Math.round((viewportWidth - width) / 2),
+    y: topRowBottom(layout) + layout.padding,
+    width,
+  };
+}
+
 /** The row a picker was opened from, in the same coordinates it is placed in. */
 export interface AnchorBox {
   left: number;

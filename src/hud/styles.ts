@@ -431,6 +431,35 @@ function hudCss(): string {
   opacity: 0;
 }
 
+/* --- Tip card ------------------------------------------------------------ */
+
+/* The spirit's voice: nearly opaque, since it hangs over the world as a sheet
+   does and is there to be read, with the skill-up blue at its edge so it is
+   never taken for a counter's panel. */
+.hud-tip {
+  background: ${cssRgba(THEME.panelBg, THEME.sheetAlpha)};
+  border-color: ${THEME.color.skillUp};
+}
+.hud-tip__line {
+  margin: 0 0 ${THEME.padding}px;
+  font-size: ${THEME.font.sm}px;
+  font-style: italic;
+  line-height: 1.35;
+}
+.hud-tip__line::before {
+  content: '\\2726\\00a0';
+  font-style: normal;
+  color: ${THEME.color.skillUp};
+}
+.hud-tip__actions {
+  display: flex;
+  gap: ${THEME.padding}px;
+}
+.hud-tip__actions .hud-button {
+  flex: 1 1 0;
+  font-size: ${THEME.font.sm}px;
+}
+
 /* --- Tab bar ------------------------------------------------------------- */
 
 .hud-tabs {
