@@ -621,6 +621,40 @@ describe('migrateCharacterState', () => {
     expect(migrated?.quiver).toEqual({ itemId: 'crude-arrows', count: 37 });
   });
 
+  /**
+   * v24 -> v25: the player can set what idle eats. Nothing placed and nothing
+   * kept is the rule an older save was already eating by, so the step hands
+   * that character the same next meal.
+   */
+  it('opens with no food placed or kept, touching nothing else', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 24,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+      kills: {},
+      visits: {},
+      bounty: null,
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      mastery: {},
+      reforges: {},
+      quiver: null,
+      skills: createInitialSkills(),
+      inventory: { 'cooked-eel': 4, 'cooked-rat': 2 },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.idleFood).toEqual({ order: [], keep: [] });
+    expect(migrated?.inventory).toEqual({ 'cooked-eel': 4, 'cooked-rat': 2 });
+  });
+
   it('drops saves older than the migration chain', () => {
     expect(migrateCharacterState({ ...v4Save(), version: 3 })).toBeNull();
     expect(migrateCharacterState({ ...v4Save(), version: 0 })).toBeNull();

@@ -4,6 +4,7 @@ import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
+import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
@@ -11,7 +12,7 @@ import type { Quiver } from '../systems/QuiverSystem';
 import type { AbilityId, ClassId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 24;
+export const CHARACTER_STATE_VERSION = 25;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -75,6 +76,12 @@ export interface CharacterState {
   // between an AFK toggle-on and the next load, which is what makes offline
   // progress something the player opted into rather than a background trickle.
   afk: AfkSession | null;
+  /**
+   * What idle may eat and in what order, as the player set it on the idle
+   * panel. Stored because it is a choice: nothing in the bag says which food
+   * somebody wanted saved for the barrow.
+   */
+  idleFood: IdleFoodChoice;
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -164,6 +171,7 @@ export function createNewCharacter(name: string, classId: ClassId): CharacterSta
     zoneId: 'town',
     position: null,
     afk: null,
+    idleFood: { order: [], keep: [] },
     quests: {},
     bounty: null,
     kills: {},

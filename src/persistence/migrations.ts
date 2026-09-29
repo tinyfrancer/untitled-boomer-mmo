@@ -185,6 +185,10 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     ...state,
     skills: { ...createInitialSkills(), ...(state.skills as Partial<Skills>) },
   }),
+  // v24 → v25: the player can set what idle eats and in what order. Nothing
+  // placed and nothing kept is the rule every older save was eating by, weakest
+  // first with everything fair game, so this changes no one's next meal.
+  24: (state) => ({ ...state, idleFood: { order: [], keep: [] } }),
 };
 
 /**
