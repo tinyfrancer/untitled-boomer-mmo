@@ -1940,3 +1940,46 @@ The forks settled at the start of version 2's phase A9, the tips:
 **Rejected:** a long toast that fades on its own, and a card that fades if ignored, since either can
 be missed mid-fight and a tip is heard once; keeping what was heard on the device, alone or with the
 off switch; the plan's four tips alone; marking every tip heard for a save made before A9.
+
+## 99. Part A's review mends five leftovers in place, tunes the grind after the rebuild, and keeps Part B next
+
+**2026-09-29 · the user, asked by Claude**
+
+Phase A10 walked what A1-A9 landed against the pillars and the user's first list, at a portrait
+phone and a desktop through smoke's screenshots. Every item on the list had landed, and the two that
+had not were never Part A's: the quarry's grey rectangle is art (B6), and potions are E2. What the
+walk found instead was Part A's own promise kept in most places and not all of them. Three forks:
+
+- **The leftovers are mended in A10, not left to B8 or H1**, all four the review named:
+  - A creature's level says it is one ("Rat (Lv 1)") on its nameplate and the right-click menu, as the
+    target frame already did, and **a locked row says what it needs** ("Needs A Feast of Crab",
+    "Needs Level 2", "Needs Smithing 9") on the shelf, the talk panel, the board, the trainer and a
+    station, as the skills book already did.
+  - **Stats are named in full wherever an item is described** ("+3 Armour, +1 Health, +1 Strength"),
+    which decision 89 promised and the character sheet's own stat block kept while the gear rows
+    under it said ARM, HP and STR. **Armour gets a line on the character sheet**, with the share of a
+    hit it stops: it was the largest number on most armour and added up to nothing a panel showed.
+  - **A panel is called what its tab calls it**: Bag opens Bag, not Inventory (I), and Feats opens
+    Feats, not Achievements. Reset Character arms as "Tap again to reset", naming the act as Abandon
+    and Replace already did.
+  - **A rank on the Feats sheet is one line**, its title on the left and "0 / 25 slain" whole on the
+    right, where long names had split both into two ragged columns.
+- **The grind is tuned in Part C, after the ten zones are rebuilt**, as a phase between the last
+  rebuild and Part C's review. Pillar 3 promised curves tuned down before systems are added up, and no
+  phase tuned one. Zones about three times the area put more walking between kills, so a curve tuned
+  before them is tuned for distances about to change; the phase measures the arcs in minutes of play
+  rather than in kills.
+- **Part B comes next, as planned.** Its checkpoint (B2) is the plan's largest risk (decision 81), and
+  it is worth learning early whether art drawn as data holds up.
+
+Claude's, alongside them: the plan's rule that a phase past about 30 files is split and the split
+recorded had been broken twice without a word (A4 at 40 files, A7 at 45), so it now asks for the
+reason to be written into the phase's entry when a phase goes past it rather than for a split every
+time; each of those fitted its session. And a boss keeps its three slayer ranks at 25, 50 and 100
+kills, which the review noticed and left alone as content rather than clarity.
+
+**Rejected:** leaving the leftovers to the HUD's restyle (B8) or the last pass (H1), which would
+leave the live game unclear for the whole of Parts B and C; a grind pass now, before Part B, to be
+tuned again after the rebuild; a grind pass with G1 across the whole climb to 20, and no pass at all;
+the lore bible (C2) before Part B, which the art does not wait on; Part E before Part B, which puts
+the checkpoint behind three more phases.
