@@ -60,8 +60,9 @@ forge become arrows here, which is `docs/architecture/making.md`'s to explain.
 
 **What is on the shelf is earned, and a locked row is still drawn** (`StockRequirement` in
 `data/shop.ts`, ruled on by `systems/ShopSystem.ts`). A stock row may name a character level or a
-finished quest, and until it is met the row is drawn dimmed with what it is waiting on where its
-price would sit — the same call the world map makes for a shut zone, and for the same reason: what is
+finished quest, and until it is met the row is drawn dimmed with what it needs where its price would
+sit ("Needs Level 5", "Needs A Feast of Crab", decision 99, since a quest's name alone read as a note
+rather than a need) — the same call the world map makes for a shut zone, and for the same reason: what is
 not on the shelf yet **is** the reason to come back, so hiding it tells the player nothing. It is
 tapped like any other row and the world refuses with the full sentence, since a phone has no tooltip
 to hover. `stockAccess` answers two things where `zoneAccess` answers three, and the missing one is

@@ -12,9 +12,12 @@ trained, in the player column, following what you do and fading half a minute af
 **A7** (Idle: a panel that says what idle will do and starts and stops it, the food order and
 Keep the player sets, the away report in the panel's words; decision 96), **A8** (the save out
 as a file or a code and back, in Options and on the creation screen, with a preview and a second
-tap before it replaces anybody; decision 97) **and A9** (twelve tips in the spirit's voice, each
-heard once per character, on a card that waits for a tap; decision 98). **Next: A10**, the Part A
-review. Update this line as each phase lands: which phase, and which is next.
+tap before it replaces anybody; decision 97), **A9** (twelve tips in the spirit's voice, each heard
+once per character, on a card that waits for a tap; decision 98) **and A10** (the Part A review:
+four leftovers mended in place, a grind pass added to Part C as C10, Part B kept next; decision 99).
+**Part A is done. Next: B1**, the style guide, the sprite format and the renderer spike, whose open
+questions are asked when it starts. Update this line as each phase lands: which phase, and which is
+next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -89,7 +92,9 @@ why Part A exists and comes first.
 
 - **One PR per phase**, merged with a merge commit, commits separable inside it. Phases are sized
   to fit a session with room to spare: when one grows past about 30 files, split it and record the
-  split here.
+  split here, or say in its entry why it stayed whole. A4 (40 files) and A7 (45) went past it
+  without a word, and each fitted its session; the count takes in the tests and the docs every
+  phase corrects, so it is a prompt to look rather than a wall (decision 99).
 - **Every part ends in a review phase.** It re-reads what landed against the pillars and the
   user's original list, asks the user what feels wrong, and **amends the rest of this plan** before
   the next part starts: phases added, cut, reordered. This plan is expected to change.
@@ -204,7 +209,19 @@ changes in Part B. Each phase ends with the thing it fixes explained **once, in 
   while an overlay (or a sheet on a phone) covers the playfield; Options has the switch back. What
   was heard and whether tips are off is **kept on the character** (`CharacterState.tips`, save
   version 26). Until the spirit is drawn in D4 the card is its voice. Decision 98 has the forks.
-- **A10 — Part A review.**
+- **A10 — Part A review. (Landed.)** Walked A1-A9 against the pillars and the user's first list,
+  through smoke's screenshots at a portrait phone and a desktop. Every item on the list had landed,
+  and the two that had not were never Part A's: the quarry's grey rectangle is art (B6), and potions
+  are E2. What it found was Part A's promise kept in most places and not all, and it **mended four
+  leftovers in place**: a creature's level reads `Rat (Lv 1)` on its nameplate and menu, and a
+  locked row says what it **Needs** on every counter and station; a stat is named in full wherever
+  an item is described (`+3 Armour, +1 Health`), off one table (`BONUS_NAMES`), and the character
+  sheet shows **Armour** with the share of a hit it stops; a panel is called what its tab calls it
+  (Bag, Feats), and Reset arms as "Tap again to reset"; a rank on the Feats sheet is one line. It
+  **amended the plan**: pillar 3 had no phase keeping it, so a grind pass goes after the rebuilt
+  zones (C10, Part C's review moving to C11); **Part B stays next**, since its checkpoint is the
+  plan's largest risk; and the phase-size rule above says what to do when a phase outgrows it.
+  Decision 99 has the forks.
 
 **Open questions for Part A**: none left. A1 answered the first (mastery folds into the skills book,
 and its own page goes, decision 89), A6 where the training bar sits on a landscape phone (in the
@@ -274,11 +291,18 @@ saved position stops meaning anything.
   leashing reworked for the distances. The spawn-safety sweeps run over the new maps.
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
   activity spots each. Spawns, nodes and stations re-placed; the progression test re-held.
-- **C10 — Part C review**, which **measures how long a zone took to build**, the number Part G is
+- **C10 — Less grind.** Pillar 3's promise, "tune curves down before adding systems up", which no
+  phase kept until the Part A review added this one (decision 99). The curves are tuned against the
+  rebuilt zones, since their longer walks between kills are what moves the pace, and before Parts
+  D-G add anything up. Which levers move (the XP curves, what a kill or a gather pays, respawns) is
+  this phase's to choose; what it holds is the progression tests measuring each arc **in minutes of
+  play** rather than in kills.
+- **C11 — Part C review**, which **measures how long a zone took to build**, the number Part G is
   sized from.
 
 **Open questions for Part C**: how are secrets found (hidden paths, a tool, a rumour)? Do larger
-zones need fast travel back, having taken it out once (decision in PR #111)?
+zones need fast travel back, having taken it out once (decision in PR #111)? How many minutes should
+a level take, early and near the cap (C10)?
 
 ---
 
@@ -340,7 +364,7 @@ trophy be displayed and still used?
 
 ## Part G — To level 20
 
-Sized at C10 from how long a zone actually took, not guessed now.
+Sized at C11 from how long a zone actually took, not guessed now.
 
 - **G1 — The shape of 9-20.** How many bands, zones, gear tiers, making tiers and bosses, written
   into this plan as phases.
