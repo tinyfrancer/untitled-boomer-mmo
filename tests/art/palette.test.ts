@@ -9,8 +9,7 @@ import {
   rampIn,
   type Ramp,
 } from '../../src/art/palette';
-import { TIER_COLORS } from '../../src/data/tiers';
-import type { TierId, ZoneSetting } from '../../src/types/ids';
+import type { ZoneSetting } from '../../src/types/ids';
 
 const SETTINGS: readonly ZoneSetting[] = ['open', 'marsh', 'underground'];
 
@@ -69,14 +68,13 @@ describe('the settings', () => {
 });
 
 describe('the tier ramps', () => {
-  // The paperdoll draws a tier in its `TIER_COLORS` entry, and the world in
-  // its ramp: a set is the same set on the sheet and in the field.
-  it.each(Object.entries(TIER_RAMPS) as [TierId, keyof typeof SHARED_RAMPS][])(
-    '%s is built round its paperdoll colour',
-    (tier, ramp) => {
-      expect(SHARED_RAMPS[ramp][2]).toBe(TIER_COLORS[tier]);
-    },
-  );
+  // A tier is a recolour of the one drawing, in the world and in the bag alike,
+  // so two tiers sharing a ramp would be two sets nobody could tell apart.
+  it('gives every tier a ramp of its own', () => {
+    const ramps = Object.values(TIER_RAMPS);
+    expect(new Set(ramps).size).toBe(ramps.length);
+    expect(new Set(ramps.map((ramp) => SHARED_RAMPS[ramp][2])).size).toBe(ramps.length);
+  });
 });
 
 describe('parseColourRef', () => {

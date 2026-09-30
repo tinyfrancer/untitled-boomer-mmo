@@ -786,6 +786,32 @@ const PLACEHOLDER_MARK: SpriteDef = {
   animations: { loop: [5, 8, 11, 8].map(ring) },
 };
 
+// ---------------------------------------------------------------------------
+// A frame: a purple border nobody could take for iron.
+// ---------------------------------------------------------------------------
+
+const PLACEHOLDER_FRAME: SpriteDef = {
+  id: 'placeholder-frame',
+  kind: 'frame',
+  width: 8,
+  height: 8,
+  legend: { a: 'purple.1', b: 'purple.2' },
+  animations: {
+    still: [
+      grid(`
+        aaaaaaaa
+        abbbbbba
+        ab....ba
+        ab....ba
+        ab....ba
+        ab....ba
+        abbbbbba
+        aaaaaaaa
+      `),
+    ],
+  },
+};
+
 /** The stand-in for each kind, which is also what the budget is held against in full. */
 export const PLACEHOLDERS: Readonly<Record<SpriteKind, SpriteDef>> = {
   tile: PLACEHOLDER_TILE,
@@ -796,4 +822,5 @@ export const PLACEHOLDERS: Readonly<Record<SpriteKind, SpriteDef>> = {
   prop: PLACEHOLDER_PROP,
   effect: PLACEHOLDER_EFFECT,
   icon: PLACEHOLDER_ICON,
+  frame: PLACEHOLDER_FRAME,
 };

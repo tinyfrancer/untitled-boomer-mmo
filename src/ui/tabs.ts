@@ -1,3 +1,5 @@
+import type { MarkId } from '../art/icons';
+
 export type TabId =
   | 'character'
   | 'inventory'
@@ -13,6 +15,8 @@ export type TabId =
 export interface TabDefinition {
   id: TabId;
   label: string;
+  /** The picture over its word (`art/icons.ts`), a mark of what the surface holds. */
+  icon: MarkId;
   /** A tab opens a sheet; an action just fires and leaves nothing selected. */
   kind: 'sheet' | 'action';
   /** The key that opens it, shown nowhere but bound by the HUD. */
@@ -36,11 +40,11 @@ export interface TabDefinition {
  * the panel's own button starts it (decision 96).
  */
 export const TABS: TabDefinition[] = [
-  { id: 'character', label: 'Char', kind: 'sheet', key: 'c' },
-  { id: 'inventory', label: 'Bag', kind: 'sheet', key: 'i' },
-  { id: 'quests', label: 'Quests', kind: 'sheet', key: 'q' },
-  { id: 'idle', label: 'Idle', kind: 'sheet', key: 'z' },
-  { id: 'menu', label: 'Menu', kind: 'action' },
+  { id: 'character', label: 'Char', icon: 'bust', kind: 'sheet', key: 'c' },
+  { id: 'inventory', label: 'Bag', icon: 'sack', kind: 'sheet', key: 'i' },
+  { id: 'quests', label: 'Quests', icon: 'scroll', kind: 'sheet', key: 'q' },
+  { id: 'idle', label: 'Idle', icon: 'hourglass', kind: 'sheet', key: 'z' },
+  { id: 'menu', label: 'Menu', icon: 'chest', kind: 'action' },
 ];
 
 /**
@@ -48,11 +52,11 @@ export const TABS: TabDefinition[] = [
  * whole word — the bar's "labels have to stay short" rule stops at its edge.
  */
 export const MENU_TABS: TabDefinition[] = [
-  { id: 'map', label: 'Map', kind: 'sheet', key: 'm' },
-  { id: 'feats', label: 'Feats', kind: 'sheet', key: 'v' },
-  { id: 'skills', label: 'Skills', kind: 'sheet', key: 'k' },
-  { id: 'log', label: 'Combat Log', kind: 'sheet', key: 'l' },
-  { id: 'options', label: 'Options', kind: 'action' },
+  { id: 'map', label: 'Map', icon: 'map', kind: 'sheet', key: 'm' },
+  { id: 'feats', label: 'Feats', icon: 'trophy', kind: 'sheet', key: 'v' },
+  { id: 'skills', label: 'Skills', icon: 'book', kind: 'sheet', key: 'k' },
+  { id: 'log', label: 'Combat Log', icon: 'swords', kind: 'sheet', key: 'l' },
+  { id: 'options', label: 'Options', icon: 'cog', kind: 'action' },
 ];
 
 /**

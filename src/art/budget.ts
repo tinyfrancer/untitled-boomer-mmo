@@ -22,7 +22,7 @@ export const TILE_PIXELS = 32;
 export const ART_PIXEL = TILE_SIZE / TILE_PIXELS;
 
 export type SpriteKind =
-  'tile' | 'scatter' | 'mark' | 'person' | 'beast' | 'prop' | 'effect' | 'icon';
+  'tile' | 'scatter' | 'mark' | 'person' | 'beast' | 'prop' | 'effect' | 'icon' | 'frame';
 
 export const SPRITE_KINDS: readonly SpriteKind[] = [
   'tile',
@@ -33,6 +33,7 @@ export const SPRITE_KINDS: readonly SpriteKind[] = [
   'prop',
   'effect',
   'icon',
+  'frame',
 ];
 
 export type AnimationId =
@@ -204,6 +205,22 @@ export const BUDGET: Readonly<Record<SpriteKind, KindBudget>> = {
     outlined: true,
     opaque: false,
     required: [],
+    animations: { still: STILL },
+  },
+  // The HUD's chrome: a panel's iron, a button's stone, a slot sunk into a
+  // panel. Cut in nine by the page (`border-image`), so its corners are drawn
+  // once and its edges and middle stretched, which is why every edge is the
+  // same all along (`hud.test.ts` in tests/art holds it). It draws its own
+  // edge, which is what a frame is, so the compiler outlines none.
+  frame: {
+    sizes: [
+      [8, 8],
+      [16, 16],
+      [24, 24],
+    ],
+    outlined: false,
+    opaque: false,
+    required: ['still'],
     animations: { still: STILL },
   },
 };
