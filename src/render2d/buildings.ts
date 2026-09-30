@@ -12,6 +12,7 @@ import { buildingRect, doorPoint, isInside } from '../data/buildings';
 import type { Point } from '../systems/MovementSystem';
 import type { WorldBuilding, WorldNpc, WorldTap } from '../world/ZoneWorld';
 import type { Pickable2D, PickRect } from './picking';
+import { boxesOverlap } from './plates';
 
 /**
  * How near the doorstep counts as standing on it: a tile, since what it
@@ -39,6 +40,20 @@ interface Baked {
   left: number;
   top: number;
   width: number;
+  height: number;
+}
+
+/** A picture's rectangle in simulation units, its foot at `bottom` where one is given. */
+function pictureRect(
+  picture: Baked,
+  bottom = (picture.top + picture.height) * ART_PIXEL,
+): PickRect {
+  return {
+    left: picture.left * ART_PIXEL,
+    top: picture.top * ART_PIXEL,
+    right: (picture.left + picture.width) * ART_PIXEL,
+    bottom,
+  };
 }
 
 /**
@@ -74,6 +89,7 @@ export class BuildingSprite implements Pickable2D {
       left: left + picture.left,
       top: top + picture.top,
       width: picture.width,
+      height: picture.height,
     });
     this.outside = baked(art.outside);
     this.floor = baked(art.floor);
@@ -116,27 +132,57 @@ export class BuildingSprite implements Pickable2D {
    * What stands: the building from outside, or its back wall from inside.
    * Faded while the player is behind it, since you cannot tap what you cannot
    * see and a roof is the one thing big enough to hide them outright.
+   *
+   * Kept out of `room`, the room the player stands in, if there is one: a
+   * building close in front of it would otherwise lay its roof, faded, over
+   * the floor the player is walking on (decision 112).
    */
   drawStanding(
     context: CanvasRenderingContext2D,
     left: number,
     top: number,
     behind: boolean,
+    room: PickRect | null = null,
   ): void {
     const picture = this.inside ? this.backWall : this.outside;
     if (!picture.canvas) return;
+    const clip = room !== null && boxesOverlap(pictureRect(picture), room);
+    if (clip) {
+      context.save();
+      context.beginPath();
+      context.rect(0, 0, context.canvas.width, context.canvas.height);
+      context.rect(
+        room.left / ART_PIXEL - left,
+        room.top / ART_PIXEL - top,
+        (room.right - room.left) / ART_PIXEL,
+        (room.bottom - room.top) / ART_PIXEL,
+      );
+      context.clip('evenodd');
+    }
     if (behind && !this.inside) context.globalAlpha = 0.5;
     context.drawImage(picture.canvas, picture.left - left, picture.top - top);
     context.globalAlpha = 1;
+    if (clip) context.restore();
   }
 
   /** The picture from outside, in simulation units: what a thumb aims at and what hides the player. */
   outsideRect(): PickRect {
+    return pictureRect(this.outside, this.baseY);
+  }
+
+  /**
+   * The room as it is drawn from inside, in simulation units: its floor and
+   * the back wall standing over it. What nothing else may be drawn over while
+   * the player is in it.
+   */
+  roomRect(): PickRect {
+    const floor = pictureRect(this.floor);
+    const wall = pictureRect(this.backWall);
     return {
-      left: this.outside.left * ART_PIXEL,
-      top: this.outside.top * ART_PIXEL,
-      right: (this.outside.left + this.outside.width) * ART_PIXEL,
-      bottom: this.baseY,
+      left: Math.min(floor.left, wall.left),
+      top: Math.min(floor.top, wall.top),
+      right: Math.max(floor.right, wall.right),
+      bottom: Math.max(floor.bottom, wall.bottom),
     };
   }
 

@@ -74,6 +74,14 @@ back wall left standing is the whole of what the room is read against. The 3D vi
 whichever walls its turning camera had got past the plane of; a camera that never turns always
 looks in over the south wall, so the cutaway is one picture rather than a test.
 
+**Nothing else is drawn over the room while the player is in it** (decision 112). A roof stands up
+the screen from its footprint, so a building close in front of a room reaches over it: the training
+hall stands half a tile south of the smithy, and from inside the smithy its roof, faded, lay across
+the floor with "Training Hall" written over it. Any other building whose picture meets the room
+(`roomRect`, the floor and the back wall) is drawn with the room clipped out, and a sign that would
+be written in it is left off. It is a rule of the view rather than a rule of layout, so a zone laid
+out close, as town is and Part C's may be, needs nothing moved for it.
+
 **A room has a floor and a few things standing against its walls, and none of them block**
 (`art/rooms.ts`, decision 109, moved out of the 3D view in B6). What is in a room is
 keyed by the building's shape the way its colours are — shelves in a hall, a bench in a workshop, a

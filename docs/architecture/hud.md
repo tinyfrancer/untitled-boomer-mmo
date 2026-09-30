@@ -61,8 +61,9 @@ none of them a file loaded:
 **The HUD's pixel is one CSS pixel.** An icon of 32 is 32 CSS pixels, a panel's iron is eight, and
 only a title (the font at two) and the character sheet's figure (at two) are bigger. On a phone that
 is the world's own pixel, near enough; on a desktop, where the HUD was already drawn phone-sized, it
-is finer. `.hud` scales every picture nearest-neighbour, since a phone draws each CSS pixel two or
-three times over.
+is half the world's, which is drawn at two CSS pixels to the art pixel and never more (decision
+112), the size of the sheet's figure and the titles. `.hud` scales every picture nearest-neighbour,
+since a phone draws each CSS pixel two or three times over.
 
 **The pictures reach the page once a page** (`hud/hudArt.ts`, installed with the stylesheet): each
 frame and one sheet of every icon are written onto a canvas and handed to a stylesheet of their own
@@ -93,6 +94,12 @@ is also why the trough is solid (over grass, a half-transparent empty end reads 
 Max HP is not on the wire — `player-hp-changed` carries the current value alone — so the ceiling is
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
+
+**The column stands on a backing of the world's darkest ink** (decision 112), at three-quarters
+strength, because it is the one piece of top furniture with no panel: its words and bars are laid
+straight on the world, and a name the world wrote under them (a rat's, a shopfront's) read between
+their lines. The backing is a `::before` drawn six pixels round the column and behind it, so it
+adds nothing to the height `ui/layout.ts` counts for the column and nothing below it moved.
 
 **Arrows are a bar too, where a wizard's mana goes** (act three phase 12). Anybody wearing a quiver
 gets one — count against capacity, and "Out of arrows" when dry, since an empty quiver is the one
@@ -162,6 +169,12 @@ second ago is worse than a map with no rats on it. No tap-to-travel either.
 counters stand inside the buildings they work from (the interiors plan moved them in), so a name
 drawn before the dots had an NPC's dot through it. Names go after every marker and before only the
 player's dot; the label outline (`.hud-map__label`) keeps a name readable over whatever it crosses.
+**Every building's name is the same size** (decision 112): set once, broken onto two lines at the
+space that leaves the longer line shortest when it is longer than its footprint holds
+(`nameLines`), and squeezed to the footprint only where a line still would not fit, never
+stretched. A name used to be set to its footprint's width, which made "Bank" three times the size
+of "Quartermaster's Post" on the same map. An exit's name hangs under its marker, and **over it at
+the bottom edge**, where under it hung off the map and over the sheet's frame.
 `Hud.test.ts` holds the order.
 
 **The two top corners share the row rather than stacking**: who you are top-left, what you are

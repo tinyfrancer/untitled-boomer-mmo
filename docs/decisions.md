@@ -2577,3 +2577,66 @@ How to build it had forks, all Claude's:
   its terrain ramp in the zone's setting, where it had been a table of bright colours of its own
   (`TILE_COLORS`), which went. **Rejected:** leaving the map as it was, the one panel left in
   another game's colours.
+
+## 112. Part B's review mends five things in place: nothing over the room you stand in, a crowd's names stacked, a big screen seeing more, the map's names one size, the player column backed; Part C comes next as planned
+
+**2026-09-30 · the user, asked by Claude**
+
+Phase B9 walked what B1-B8 landed against the pillars and the user's first list, at a portrait
+phone and a 1280×800 desktop: every zone from its spawn and a grid of points across it, and every
+panel and counter through smoke's own screenshots. Part B's promise held. Every zone, creature,
+place and panel is drawn and nothing is left a placeholder, the suite and smoke were green on
+`main`, and the throttled draw read 6.5ms against 16. What the walk found were five places where the
+art made something harder to read rather than easier, and the user chose to mend all five in the
+review rather than leave them to Part C's rebuild or H1:
+
+- **Nothing is drawn over the room the player is standing in.** B6 found it and left it here: from
+  inside the smithy, the training hall's roof, faded, lay over the room with "Training Hall" written
+  across it, a layout the 3D camera never showed. A building whose picture reaches over the room is
+  drawn with the room cut out of it, and a sign that would be written there is not
+  (`BuildingSprite.roomRect`, the clip in `drawStanding`). **Rejected:** moving the smithy or the
+  hall, which town has no room for (the smithy moved once already for the west road) and C5 lays out
+  again anyway, leaving the next layout to find the same thing; fading the roof further, which still
+  lays a roof over a floor.
+- **A crowd's names stack.** Creatures standing together wrote their names over each other: "Goblin
+  Scavenger (LvGoblin Scavenger (Lv 4)" on the mill road, a pile of names round the chief. Every
+  plate is laid out before any is written, and one that would be written over a plate already stood
+  is lifted straight up clear of it, bars and all, never sideways, so a name is still over what it
+  names (`render2d/plates.ts`). The order is what decides what never moves: the player, the target
+  (whose health bar is the one read mid-fight), the signs and signposts, the townsfolk, then the
+  creatures front first. A plate outside a crowd stands where it always did. **Rejected:** names only
+  on the target, people, bosses and whatever is near, which is quieter but leaves a creature across
+  the screen unnamed against pillar 1; leaving it to Part C's larger zones, where a pack still stands
+  together.
+- **A big screen sees more of the world.** The camera framed ten tiles across the screen's smaller
+  side, so a 1280×800 desktop drew 13 by 8 tiles at three CSS pixels to the art pixel, and names 27
+  pixels tall beside HUD words of 12. An art pixel is now never drawn wider than two CSS pixels
+  (`MAX_CSS_PER_ART` in `render2d/camera.ts`), the size the character sheet draws the same figure
+  at and the HUD sets its titles at: a desktop frames 12.5 tiles tall at 1280×800 and 17 at
+  1920×1080, and no phone reaches the cap, so no phone changed. **Rejected:** keeping the desktop's
+  framing and drawing only its words smaller, which leaves a desktop eight tiles tall; leaving it, a
+  desktop as a big phone.
+- **The zone map's building names are one size.** A name was set to its footprint's width, stretched
+  or squeezed to it, so "Bank" came out three times the size of "Quartermaster's Post" on the same
+  map. Every name is set at one size and broken onto two lines at the space that leaves the longer
+  line shortest, and a line is squeezed only when it still would not fit, never stretched. An exit's
+  name at the bottom edge is written over its marker, where under it hung off the map and over the
+  sheet's frame (the beach's Blackwater Fen). **Rejected:** measuring each name in the browser to
+  set its size, which jsdom cannot do and which still gives every name its own size.
+- **The player column stands on a backing.** Its words and bars are laid straight on the world, and
+  a name the world wrote under it read between their lines: a rat's between "Adventurer" and the
+  health bar. A backing in the world's darkest ink at three-quarters strength is drawn round the
+  column, outside the box `ui/layout.ts` counts, so nothing below it moved. **Rejected:** framing it
+  in iron like the target frame, eight pixels a side the layout would have to find in a corner a
+  landscape phone has none of.
+
+What comes next is **Part C, as planned**, C1 first: big maps and the version 2 save era.
+**Rejected:** the lore bible (C2) before C1, when C1 is a format and a save era and names nothing;
+the minimap and pathing (C3, C4) first, which would work on today's maps and then be measured again
+against the rebuilt ones.
+
+Claude's, alongside them: Part C's rebuild phases now say that every creature, node, station and
+building a rebuild adds is drawn in the phase that adds it, since Part B left nothing a placeholder
+and a test holds every creature, item and vein to a drawing of its own. The walk's script, which
+drops a character into each zone through the save and photographs it at both sizes, was scaffolding
+for the review and is not kept; smoke's screenshots are the record, as they were for A10.

@@ -59,6 +59,12 @@ function barFill({ ramp }: BarFill): string {
 }
 
 /**
+ * How far the player column's backing reaches past its lines: short of the
+ * margin, so the corner of the screen still shows round it.
+ */
+const PLAYER_BACKING = 6;
+
+/**
  * A word written over the world rather than on a panel: edged in ink on its
  * four sides, as the world's own words are (`art/font.ts`), with a soft halo
  * under that so a thin glyph keeps its edge over sand and grass alike.
@@ -236,6 +242,19 @@ export function hudCss(): string {
   position: absolute;
   display: flex;
   flex-direction: column;
+  /* Its own stack, so the backing below goes behind its lines and no further. */
+  isolation: isolate;
+}
+/* A backing in the world's darkest ink: the column is words and bars laid on
+   the world with no panel of its own, and a name the world wrote under it read
+   between its lines (decision 112). Drawn round it rather than inside it, so
+   it adds nothing to the height the layout counts. */
+.hud-player::before {
+  content: '';
+  position: absolute;
+  inset: -${PLAYER_BACKING}px;
+  z-index: -1;
+  background: ${cssRgba(rampStep('ink', 0), 0.75)};
 }
 /* Name left, level right, one line. The level is pinned to the far end rather
    than following the name, so it is in the same place whoever is playing. */

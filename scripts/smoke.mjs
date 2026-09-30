@@ -3023,6 +3023,24 @@ async function sheets() {
     (await sheetVisibility()).selectedTab === 'character',
   );
 
+  // Ten tiles across a desktop's height drew the world three CSS pixels to the
+  // art pixel here, and every name three times the height of the HUD's words
+  // beside it; a big screen sees more of the world instead (decision 112). The
+  // arithmetic is unit-tested; what a browser shows is the canvas the page
+  // actually sized.
+  const desktopWorld = await page.evaluate(() => {
+    const drawn = /** @type {HTMLCanvasElement} */ (document.querySelector('#app > canvas'));
+    return {
+      cssPerArt: Number.parseFloat(drawn.style.width) / drawn.width,
+      tilesTall: drawn.height / 32,
+    };
+  });
+  check(
+    'a desktop draws the world at no more than two CSS pixels to the art pixel, seeing more of it',
+    desktopWorld.cssPerArt <= 2 && desktopWorld.tilesTall > 12,
+    `${desktopWorld.cssPerArt} CSS pixels to the art pixel, ${desktopWorld.tilesTall.toFixed(1)} tiles tall`,
+  );
+
   await tapTab('log');
   const tabbedOpen = await sheetVisibility();
   await tapTab('log');

@@ -134,7 +134,8 @@ loaded dev container reads 10ms high). `docs/architecture/testing.md` has the fu
 
 **Stack**: TypeScript bundled with Vite, rendered in 2D with Canvas 2D (`src/render2d/`): pixel art
 drawn at art resolution and scaled up by whole device pixels (decision 101,
-`docs/architecture/art.md`). It was Phaser 4 in 2D, then Three.js in 3D after
+`docs/architecture/art.md`), about ten tiles across a phone and never more than two CSS pixels to
+the art pixel, so a big screen sees more of the world rather than a bigger one (decision 112). It was Phaser 4 in 2D, then Three.js in 3D after
 `docs/archive/3d_port_plan.md`, and version 2 took it back to 2D: B3 made the 2D view the game
 (decision 106) and B7 deleted the 3D view and Three.js with it (decision 110). **The game has no
 runtime dependency**: `package.json` has no `dependencies`, and nothing in `src/` imports a package.
@@ -252,11 +253,15 @@ every item, ability, buff and tab has an icon, a word beside it wherever there w
 **The renderer loads no files and draws in painter's order** (`docs/decisions.md` 54 and 101).
 Every picture is a sprite compiled from data at boot, the ground is baked onto one canvas once a
 zone, and a frame draws the ground, the shadows, everything standing sorted by where its feet are,
-the moments, the lantern and then the words — nothing else decides what is in front. A tap is
-picked against boxes in a fixed **priority** (node, signpost, NPC, mob, station, building, loot
-pile, ground), not a depth sort. What a frame costs is a budget smoke asserts under an
-eight-times-throttled CPU (`SLOW_DRAW_BUDGET_MS`, 16ms since decision 110); raising it is a decision
-about the game, not about the run that hit it. `docs/architecture/rendering.md` has the view.
+the moments, the lantern and then the words — nothing else decides what is in front. **Nothing is
+drawn over the room the player is standing in**: another building is cut out of it and its sign
+not written there. **The words are laid out before any is written** (`render2d/plates.ts`): a plate
+that would be written over another is lifted straight up clear of it, and the player's and then the
+target's never move (decision 112). A tap is picked against boxes in a fixed **priority** (node,
+signpost, NPC, mob, station, building, loot pile, ground), not a depth sort. What a frame costs is a
+budget smoke asserts under an eight-times-throttled CPU (`SLOW_DRAW_BUDGET_MS`, 16ms since decision
+110); raising it is a decision about the game, not about the run that hit it.
+`docs/architecture/rendering.md` has the view.
 
 **Version 2's art is data** (`src/art/`, decisions 81 and 100): a sprite is rows of characters
 naming palette steps, compiled at boot into an atlas, and `src/art/` imports no package so it
