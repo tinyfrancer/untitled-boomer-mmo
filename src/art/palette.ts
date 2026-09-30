@@ -30,6 +30,8 @@ export const SHARED_RAMPS = {
   skinTan: [0x5a3028, 0x8a4e36, 0xbf7a4f, 0xdda170, 0xf2c99a],
   skinDeep: [0x2e1a1c, 0x4f2e28, 0x7a4a36, 0xa0694a, 0xc48f66],
   skinGoblin: [0x1e2e18, 0x365024, 0x587a34, 0x82a64a, 0xb2d06c],
+  // The goblins that followed the seam down, gone the grey-green of the dark.
+  skinGoblinPale: [0x222b24, 0x3f4f42, 0x667a62, 0x8fa384, 0xbfcca8],
   hair: [0x2a1618, 0x4a2a22, 0x6e4430, 0x94653f, 0xba8b58],
   hairBlack: [0x0f0b14, 0x1f1a26, 0x322b3a, 0x4a4252, 0x6a6070],
   hairFair: [0x6b4a24, 0xa37a36, 0xd6ab4c, 0xf0d077, 0xfff0ae],
@@ -49,6 +51,8 @@ export const SHARED_RAMPS = {
   // A banker's coat: dyed the colour of old copper gone green, which nobody
   // else in town wears.
   teal: [0x0b1618, 0x142c2e, 0x1f4644, 0x31655d, 0x55897b],
+  // What the fen's raiders wear against the water: cloth oiled drab.
+  oilskin: [0x161812, 0x292c20, 0x434631, 0x626448, 0x878764],
   green: [0x12301f, 0x1f5a2e, 0x2f8a3a, 0x5bb84c, 0x9ee07a],
   purple: [0x241238, 0x40205e, 0x663796, 0x9058c2, 0xc493e8],
   yellow: [0x5a3310, 0x9a5e14, 0xd9951c, 0xf5c542, 0xfff08a],
@@ -73,6 +77,17 @@ export const SHARED_RAMPS = {
   furBog: [0x142420, 0x253f33, 0x3f5d4a, 0x5f8264, 0x8aab85],
   shell: [0x5a1414, 0x98261a, 0xd84315, 0xf2783a, 0xffb070],
   shellCave: [0x363c4c, 0x5f6878, 0x9aa6b0, 0xc2cbd0, 0xe8eeee],
+  // What a vein is drawn in before it has an ore, the way gear is drawn in
+  // `tier`: `ORE_RAMPS` recolours it into the ore the vein yields.
+  ore: [0x2a2630, 0x55505c, 0x857e88, 0xb3adb3, 0xe3dee0],
+  // Step 2 of each is the ore's colour in the bag (`ICON_COLOR`), so a lump of
+  // tin is the same grey in the rock as in the pack (held by a test).
+  oreTin: [0x262c33, 0x56626b, 0x9aa7ad, 0xc9d3d6, 0xf2f7f7],
+  oreIron: [0x2b120c, 0x5e2816, 0xa0562f, 0xcc7f45, 0xf0b673],
+  oreCoal: [0x0b0a0d, 0x1c1b1e, 0x3b3a38, 0x625f59, 0xb8b2a3],
+  // Water thrown up, the same wherever it is thrown: a splash is light, and the
+  // water it comes off is coloured by the setting.
+  spray: [0x1c2a36, 0x355468, 0x5f8aa0, 0x9fc4d2, 0xe6f4f6],
   // Buildings are only ever built in the open, so they need no setting of
   // their own. Masonry is dressed stone: a plinth, a chimney, a wall.
   masonry: [0x19181c, 0x2c2a2f, 0x444147, 0x625e63, 0x86807f],
@@ -187,6 +202,19 @@ export const TIER_RAMPS: Readonly<Record<TierId, SharedRampId>> = {
   fenweave: 'tierFenweave',
   fenhide: 'tierFenhide',
   steel: 'tierSteel',
+};
+
+/**
+ * The ores a vein can be drawn with, and the ramp each is drawn in for the
+ * `ore` ramp to be swapped for. Named for what the rock yields, which the
+ * nodes' own data says (`art/places.ts` reads it).
+ */
+export type OreId = 'tin' | 'iron' | 'coal';
+
+export const ORE_RAMPS: Readonly<Record<OreId, SharedRampId>> = {
+  tin: 'oreTin',
+  iron: 'oreIron',
+  coal: 'oreCoal',
 };
 
 export function isTerrainRamp(id: RampId): id is TerrainRampId {

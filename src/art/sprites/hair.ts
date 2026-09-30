@@ -1,4 +1,4 @@
-import { grid, type Grid, type Placed } from '../format';
+import { flipped, grid, rekeyed, type Grid, type Placed } from '../format';
 import type { HairstyleId } from '../../types/ids';
 import { HEAD_DOWN, HEAD_RIGHT, HEAD_UP, HEAD_X, HEAD_Y, type View } from './figure';
 
@@ -225,6 +225,35 @@ const BEARDED: Hairstyle = {
     up: [],
     right: [{ grid: grid('..iji\n...i.'), x: HEAD_X + 4, y: BELOW_Y }],
   },
+};
+
+// A goblin's ear, long and pointed, swept up and out from the side of the head.
+const EAR = grid(`
+  c....
+  dc...
+  .dcb.
+  ..cbb
+  ...ab
+`);
+
+// The far one, and the backs of both from behind, a step darker.
+const EAR_SHADED = rekeyed(EAR, { d: 'c', c: 'b', b: 'a' });
+
+/**
+ * What stands out from a goblin's head, to be laid under it so only what
+ * sticks out past the skull shows: both ears from in front and behind, the
+ * near one swept back from the side.
+ */
+export const GOBLIN_EARS: Readonly<Record<View, readonly Placed[]>> = {
+  down: [
+    { grid: EAR, x: HEAD_X - 5, y: HEAD_Y + 3 },
+    { grid: flipped(EAR_SHADED), x: HEAD_X + 10, y: HEAD_Y + 3 },
+  ],
+  up: [
+    { grid: EAR_SHADED, x: HEAD_X - 5, y: HEAD_Y + 3 },
+    { grid: flipped(EAR_SHADED), x: HEAD_X + 10, y: HEAD_Y + 3 },
+  ],
+  right: [{ grid: EAR, x: HEAD_X - 4, y: HEAD_Y + 2 }],
 };
 
 export const HAIRSTYLE_ART: Readonly<Record<HairstyleId, Hairstyle>> = {

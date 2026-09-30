@@ -2348,3 +2348,106 @@ How to build it had forks, all Claude's:
 - **The creation screen draws each class in the world's own art**, in the look chosen, with a
   smaller picture beside the choices so a phone that has scrolled the cards away still shows the
   look as it is picked. The class cards' stick-figure previews went with it.
+
+## 108. A boss is the figure grown and a goblin the figure shrunk, creatures carry what they drop, and a moment is a sprite held fading
+
+**2026-09-30 · Claude, building the plan's phase B5**
+
+B5 draws every creature and the moments a fight is made of. Part B's open questions were all
+answered in B1, so the forks were Claude's:
+
+- **A boss is drawn bigger by refitting the figure, not by scaling it or drawing him again.** The
+  budget has kept 48×64 for a boss since B1, "drawn bigger rather than scaled up". Every frame of
+  his figure has a dozen rows doubled where the drawing is flat (the chest, the waist, the shins)
+  and six columns (the shoulders, the cheeks, the legs), so the chief and the king stand a third
+  again as tall and as broad as their men with the faces they were drawn with (`refitted`,
+  `Build`). **Rejected:** a nearest-neighbour scale by four thirds, which draws some pixels twice
+  as wide as their neighbours at random; a boss kit drawn by hand at 48×64, which is every pose of
+  the figure drawn again for two creatures; bosses at a person's size, a chief standing in a room
+  of his own men as one of them.
+- **A goblin is the same refit the other way**, rows and columns left out, green, bald, its ears
+  swept out and its eyes catching the light. **Rejected:** goblins at a man's size, which is how
+  the 3D rig had to draw them and why it scaled them; a goblin kit of its own.
+- **A humanoid creature carries what it drops**, so what a player takes off a body is what they
+  saw it holding: the chief's bandana and cutlass, the king's crown and leaf blade, the raider's
+  fenweave, the wight's grave shield. A getup gains a skin nobody is made in, a cloak colour and
+  eyes lit from inside, and two weapons nobody can carry: the bandit's knife and the raider's
+  gaff. A creature fights and does nothing else, with no spell or shot drawn, since its throw is
+  its swing. **Rejected:** every creature on a getup with the player's full set, frames nothing
+  plays; the 3D colours alone.
+- **The cave crawler is the crab recoloured** (`crab@cave`), the style guide's own example of a
+  variant, where the 3D view drew it a size bigger. **Rejected:** a crawler drawn of its own.
+- **A moment is an effect sprite played on the budget's clock and then held fading by the view**,
+  in four steps, as a corpse lies after its fall: a level's light plays its four frames and
+  lingers for most of a second. **Rejected:** raising the effect budget's frames or timing for the
+  level-up, which would multiply across every effect for the one that wants to linger.
+- **An arrow is a line of pixels, and a telegraph a baked disc drawn at whole pixels.** Neither
+  has a fixed frame: an arrow flies at any angle and a telegraph has any reach. The arrow steps a
+  pixel along its longer axis in the palette's ramps; the telegraph's rim and disc are baked once
+  a reach and the fill drawn from the disc at the size the wind-up has reached, under everything
+  standing as the 3D rings lay on the ground. **Rejected:** an arrow sprite turned to its angle,
+  which smears, or drawn in eight directions, which the budget gives no effect; a telegraph traced
+  a row at a time each frame, hundreds of calls for the king's; a telegraph drawn over the
+  figures and the lantern, which covers whoever is standing in it.
+- **A number rises off the top of what it came off, and stacks over one born with it.** The
+  view finds what stands at the spot a moment names and starts the number over its health bar, so
+  it clears a boss's head and sits on a rat's; one born at a spot another was a moment ago goes up
+  a line. **Rejected:** the fixed lift the checkpoint used, inside a boss and far over a rat; the
+  soak drawn at a fixed offset, which a stack makes unnecessary.
+- **Every enemy ability telegraphs, the bandit's thrown knife included**, as in 3D: it lands on
+  whoever is still inside its reach, so the ring is the truth, even when a room of bandits fills
+  with them. **Rejected:** drawing only the abilities that are not thrown.
+
+Left for B6, with the nodes they come off: the chips a gather knocks loose, and the campfire.
+
+## 109. A place is drawn from one table, a vein in the ore it yields, a fishing spot as a mark, and a room's furniture from one layout both views read
+
+**2026-09-30 · Claude, building the plan's phase B6**
+
+B6 draws the places: every node and what it leaves, the stations and the fire, what a stroke of a
+tool knocks loose, and what stands in a room. Part B's open questions were all answered in B1, so
+the forks were Claude's:
+
+- **What each place is drawn as is one table** (`art/places.ts`), a node by its id and falling back
+  on the drawing of its shape, as `cast.ts` falls back for a creature. **Rejected:** the 3D view's
+  rule, one body a shape, which draws the tree, the hardwood and the willow as one tree; a table
+  that must name every node, which a new row would fail to compile against rather than being drawn
+  as its shape the day it lands.
+- **A tree is drawn at the prop budget's 64 square**, a crown two tiles across half again as tall
+  as a person, from leaf clumps a generator lit and painted and that were pasted in as the picture
+  they made. **Rejected:** a tree at a person's 32×48, which a person can see over; generating trees
+  at boot, which makes the art something nobody can read; hand-placing four thousand pixels a tree.
+- **A crown the player is behind is faded, as a roof is, and a node is picked by its body**, a tree
+  up its trunk and the lower half of its crown, as the 3D view picked it. **Rejected:** a crown that
+  hides the player outright; a pick box the height of the crown, which takes the tap meant for a
+  creature standing behind it.
+- **A vein is drawn once in a neutral `ore` ramp and recoloured into the ore it yields**
+  (`ORE_VARIANTS`), step 2 of each ore's ramp being the ore's colour in the bag, the way gear is
+  drawn in `tier`; **coal is a seam**, a black band glinting across the stone. **Rejected:** a
+  drawing per ore; coal in the thin seams tin and iron show in, where ore nearly as dark as the rock
+  did not show at all; ore colours picked by eye, which would make a lump two colours in two places.
+- **A fishing spot is a mark, a new kind**: rings on the water, not outlined, looping on the water's
+  own 250ms clock, drawn under everything standing and centred on the spot. **Rejected:** a prop,
+  whose outline drew the rings as loops of dark wire; a water tile with rings in it, since spots
+  stand half a tile off the grid and a tile laid there would seam against the water either side; an
+  effect played again and again, which is not what an effect is.
+- **A stroke knocks something loose on each of a gather's two beats**, chips, flakes of stone or a
+  splash, on the side the player stands, the moment the tool comes down. **Rejected:** a burst when
+  a gather pays out, seconds apart and after the strokes that earned it; nothing, which left a
+  gather a bar filling beside a tree.
+- **What stands in a room moved from the 3D view to `art/rooms.ts`**, which both views draw from.
+  **Rejected:** a second layout for 2D, two answers to where a shelf stands; leaving it in
+  `render3d/`, which B7 deletes with it.
+- **The 2D view draws a fitting by the wall it stands against**: from the front against the north
+  wall, along its length against a side wall, and only as low as it stands against the south wall,
+  which the cutaway takes away. **Rejected:** one drawing for every wall, a bench running across a
+  side wall and a fire's mouth facing into it; the whole fireplace against the south wall, standing
+  across the room in front of whoever is in it.
+- **Whoever works in a room stands behind a counter**, drawn only in 2D, just in front of them
+  toward the door and short of where the walk up to them ends, blocking nothing. **Rejected:** no
+  counter, a person standing in a room; a counter that blocks, which the walk up to a shopkeeper
+  would have to route round, in rooms with no cell to spare for it.
+
+Found and left for the Part B review: town's training hall stands close enough south of the smithy
+that its roof, faded, is drawn over the smithy's room while the player stands in it, a layout the 3D
+camera never showed and the rebuilt zones of Part C will move anyway.

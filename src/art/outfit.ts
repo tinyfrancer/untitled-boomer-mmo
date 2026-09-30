@@ -2,10 +2,21 @@ import type { Look } from '../data/looks';
 import type { Gear } from '../systems/InventorySystem';
 import type { ClassId, HairColourId, SkinToneId } from '../types/ids';
 import { compileFrame } from './compile';
-import { rekeyed, type Grid, type Placed, type SpriteDef } from './format';
+import {
+  isFacingFrames,
+  refitted,
+  rekeyed,
+  type FacingFrames,
+  type Grid,
+  type Placed,
+  type Refit,
+  type SpriteDef,
+} from './format';
 import type { SharedRampId } from './palette';
 import type { PerView } from './sprites/armour';
 import {
+  FIGURE_HEIGHT,
+  FIGURE_WIDTH,
   HEAD_X,
   HEAD_Y,
   TIER_STEPS,
@@ -66,8 +77,14 @@ export interface Getup {
   legs: (Worn & { ramp: SharedRampId }) | null;
   weapon: Wield | null;
   offhand: (Offhand & { ramp: SharedRampId }) | null;
-  /** Anything else on the body over the garment: an apron. */
+  /** Anything else on the body over the garment: an apron, a goblin's ears. */
   extra?: PerView;
+  /** What a cloak is dyed, when the chest has one; crimson unless it says. */
+  cloak?: SharedRampId;
+  /** Eyes lit from inside rather than dark, in this ramp: the dead, a goblin in the dark. */
+  eyes?: SharedRampId;
+  /** A skin nobody is made in, over the look's: a goblin's green, the bone of the dead. */
+  skin?: SharedRampId;
 }
 
 /** What a class starts in, under whatever it puts on (decision 105). */
@@ -97,6 +114,9 @@ const LIFTED: Readonly<Record<string, string>> = { h: 'i', i: 'j', j: 'k', k: 'Z
 
 // A face in a hood's shadow is a step darker.
 const SHADED_FACE: Readonly<Record<string, string>> = { d: 'c', c: 'b' };
+
+// An eye lit from inside, in the brightest step of the glow.
+const LIT_EYES: Readonly<Record<string, string>> = { e: 'K' };
 
 /** The player: their class's garment, their look, and what they have on. */
 export function playerGetup(classId: ClassId, look: Look, gear: Gear): Getup {
@@ -142,7 +162,11 @@ function put(getup: Getup): Put {
   const { look, helmet, chest, legs: pants, weapon, offhand } = getup;
   const style = HAIRSTYLE_ART[look.hairstyle];
   const lift = look.hair === 'grey' ? LIFTED : {};
-  const face = helmet?.piece.shadesFace ? { ...lift, ...SHADED_FACE } : lift;
+  const face = {
+    ...lift,
+    ...(helmet?.piece.shadesFace ? SHADED_FACE : {}),
+    ...(getup.eyes ? LIT_EYES : {}),
+  };
   const garment = chest?.piece.garment ? chest.piece.garment(getup.garment) : getup.garment;
   const quivered = offhand?.art === 'quiver';
   const views: readonly View[] = ['down', 'up', 'right'];
@@ -183,16 +207,16 @@ function put(getup: Getup): Put {
     arms,
   };
   const materials: Materials = {
-    skin: SKIN_RAMPS[look.skin],
+    skin: getup.skin ?? SKIN_RAMPS[look.skin],
     hair: HAIR_RAMPS[look.hair],
     cloth: getup.cloth,
-    cloak: 'crimson',
+    cloak: getup.cloak ?? 'crimson',
     leather: 'leather',
     trousers: 'wood',
     metal: 'metal',
     trim: 'gold',
     wood: 'wood',
-    glow: offhand?.glow ?? weapon?.gem ?? 'arcane',
+    glow: offhand?.glow ?? weapon?.gem ?? getup.eyes ?? 'arcane',
     gear: chest?.ramp ?? 'tier',
     helm: helmet?.ramp ?? 'tier',
     greaves: pants?.ramp ?? 'tier',
@@ -267,6 +291,94 @@ export function getupSprite(id: string, getup: Getup): SpriteDef {
 export function standingSprite(id: string, getup: Getup): SpriteDef {
   const { dress, materials, rest } = put(getup);
   return personSprite(id, materials, { idle: fourWays(dress, breathing(rest)) });
+}
+
+/**
+ * How a body is built: the figure as drawn, a goblin drawn shorter and
+ * narrower, or a boss drawn bigger (the budget's 48×64) rather than scaled up.
+ * Both are the figure refit (`refitted`): rows and columns doubled where it is
+ * flat, a chest, a shin, a cheek, or left out there, so the face keeps its
+ * eyes and every pixel stays one pixel. A body lying where it fell is refit
+ * along its length rather than its height, being seen from above.
+ */
+export type Build = 'man' | 'goblin' | 'boss';
+
+interface BuildFit {
+  width: number;
+  height: number;
+  standing: Refit;
+  lying: Refit;
+}
+
+const BUILDS: Readonly<Record<Exclude<Build, 'man'>, BuildFit>> = {
+  // Four rows off the chest and the thighs, and a column off either cheek
+  // and either leg: a head shorter than the men it robs, and pinched.
+  goblin: {
+    width: FIGURE_WIDTH,
+    height: FIGURE_HEIGHT,
+    standing: { dropRows: [25, 27, 36, 38], dropColumns: [13, 18] },
+    lying: { dropColumns: [13, 18] },
+  },
+  // A dozen rows through the chest, the waist and the shins, and six columns
+  // through the shoulders, the cheeks and the legs: a third again as tall and
+  // as broad, with the same face on him.
+  boss: {
+    width: 48,
+    height: 64,
+    standing: {
+      doubleRows: [24, 25, 26, 27, 28, 31, 34, 36, 37, 38, 41, 42],
+      doubleColumns: [9, 10, 13, 18, 21, 22],
+    },
+    lying: { doubleRows: [39, 40], doubleColumns: [9, 10, 13, 18, 21, 22] },
+  },
+};
+
+/** Every frame of a sprite refit to a build; the last of its death is the body lying. */
+function built(def: SpriteDef, build: Build): SpriteDef {
+  if (build === 'man') return def;
+  const { width, height, standing, lying } = BUILDS[build];
+  const fit = (frames: readonly Grid[], last?: Refit): Grid[] =>
+    frames.map((frame, index) =>
+      refitted(frame, index === frames.length - 1 && last ? last : standing, width, height),
+    );
+  const animations = Object.fromEntries(
+    Object.entries(def.animations).map(([animation, frames]) => {
+      if (!frames) return [animation, frames];
+      if (!isFacingFrames(frames)) {
+        return [animation, fit(frames, animation === 'death' ? lying : undefined)];
+      }
+      const side = (own: FacingFrames['left']) => (own === 'mirror' ? own : fit(own));
+      return [
+        animation,
+        {
+          down: fit(frames.down),
+          up: fit(frames.up),
+          left: side(frames.left),
+          right: side(frames.right),
+        },
+      ];
+    }),
+  );
+  return { ...def, kind: 'person', width, height, animations };
+}
+
+/**
+ * A getup that fights and nothing else: a breath, a stride, a blow, a flinch
+ * and a fall, in the build its body is. A creature's throw is its swing, and
+ * nothing that fights the player casts, so it draws no spell and no shot.
+ */
+export function fighterSprite(id: string, getup: Getup, build: Build = 'man'): SpriteDef {
+  const { dress, materials, fallen, rest } = put(getup);
+  return built(
+    personSprite(id, materials, {
+      idle: fourWays(dress, breathing(rest)),
+      walk: fourWays(dress, striding(rest)),
+      attack: fourWays(dress, attackOf(getup.weapon?.art.hold ?? null)),
+      hurt: hurtFrames(dress, rest),
+      death: falling(dress, fallen, rest),
+    }),
+    build,
+  );
 }
 
 function attackOf(hold: 'swung' | 'planted' | 'drawn' | null): Moment[] {

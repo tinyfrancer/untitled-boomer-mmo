@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { TIER_VARIANTS, composed, flipped, grid, rekeyed, shifted } from '../../src/art/format';
+import {
+  TIER_VARIANTS,
+  composed,
+  flipped,
+  grid,
+  refitted,
+  rekeyed,
+  shifted,
+} from '../../src/art/format';
 import { TIER_RAMPS } from '../../src/art/palette';
 
 describe('grid', () => {
@@ -40,6 +48,29 @@ describe('the frame ops', () => {
         { grid: ['cc'], x: 3, y: 1 },
       ]),
     ).toEqual(['abaa', 'aabc']);
+  });
+});
+
+describe('refitted', () => {
+  const FIGURE = ['.ab.', '.cd.', '.ef.'];
+
+  it('draws the rows and columns it is told twice, and leaves out the ones it is told to', () => {
+    expect(refitted(FIGURE, { doubleRows: [1], doubleColumns: [1] }, 5, 4)).toEqual([
+      '.aab.',
+      '.ccd.',
+      '.ccd.',
+      '.eef.',
+    ]);
+    expect(refitted(FIGURE, { dropRows: [0], dropColumns: [2] }, 3, 2)).toEqual(['.c.', '.e.']);
+  });
+
+  it('keeps the bottom row at the bottom and the middle in the middle, where the feet are', () => {
+    // A column more either side of the middle, in a frame four wider and two taller.
+    const grown = refitted(FIGURE, { doubleColumns: [0, 3] }, 8, 5);
+    expect(grown).toEqual(['........', '........', '...ab...', '...cd...', '...ef...']);
+    // One more on the left moves what is drawn left of the middle, and nothing else.
+    expect(refitted(FIGURE, { doubleColumns: [1] }, 5, 3)).toEqual(['.aab.', '.ccd.', '.eef.']);
+    expect(refitted(FIGURE, {}, 4, 3)).toEqual(FIGURE);
   });
 });
 

@@ -73,7 +73,8 @@ walls on the sign of a rounding error. The fade is switched off while it does, s
 left standing are the whole of what the room is read against.
 
 **A room has a floor and a few things standing against its walls, and none of them block**
-(`render3d/interiors.ts`, drawn off the interior half of `BUILDING_LOOKS`). What is in a room is
+(`art/rooms.ts` since B6, which both views draw from; the 3D view builds each piece in
+`render3d/interiors.ts` off the interior half of its `BUILDING_LOOKS`). What is in a room is
 keyed by the building's shape the way its colours are — shelves in a hall, a bench in a workshop, a
 bed in a cottage — with a per-`BuildingId` override table beside it for the two rooms whose whole
 character is the thing burning in them, the smithy's forge and the inn's fire. It is the renderer's
@@ -86,9 +87,17 @@ the two people fill it end to end — so a blocking fitting is a cell A\* refuse
 answers `null` for the whole walk. What keeps that from being a wall drawn where there is none is
 `FITTING_DEPTH`, which is the thickness of the wall a fitting stands against and is **measured off
 the smallest room in the game**: a body in the middle of a two-tile hut leaves sixteen units to
-either side. `tests/render3d/interiors.test.ts` puts a body on all three spots the game stands
+either side. `tests/art/rooms.test.ts` puts a body on all three spots the game stands
 somebody on — the middle of the room, the counter, and where the walk to that counter ends — and
 fails on anything deeper.
+
+**The 2D view draws the same furniture, and a counter** (decision 109, `docs/architecture/art.md`
+under Places): each fitting against its wall from the front, along its length on a side wall, and
+only as low as it stands against the south wall the cutaway takes away; and in front of whoever works
+in a room, toward the door, a counter they are served across, short of where the walk up to them
+ends. None of it blocks and none of it is drawn until the player is inside, as the floor is, and
+`tests/art/rooms.test.ts` also holds that nobody standing on the three spots is drawn in the
+furniture, which is the same rule asked of the drawing rather than of the ground.
 
 **A lit room is one light, moved to whichever room the player is standing in** (`RoomLight` in
 `render3d/lights.ts`, in that room's own `lamp` colour). One rather than one per building, since

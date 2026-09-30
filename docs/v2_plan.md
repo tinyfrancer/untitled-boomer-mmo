@@ -27,11 +27,16 @@ cleaned up into one silhouette, decision 105; the user then asked for B3, which 
 checkpoint with the art source standing), **and B3** (every zone drawn: an edge wherever two grounds
 meet, rock standing up with its face in its own cell, irregular flagstones, variants for sand,
 stone, rock and marsh, scatter baked into the ground, and the lantern underground; **2D the game**, 3D behind
-`?renderer=3d` until B7; decision 106), **and B4** (a person put together from what they chose and
+`?renderer=3d` until B7; decision 106), **B4** (a person put together from what they chose and
 what they wear, a slot dyed apiece; every weapon and offhand drawn as the item it is, the wands
-renamed staves; a look chosen at creation, save version 27; the townsfolk drawn; decision 107).
-**Next: B5**, creatures and effects. Update this line as each phase lands: which phase, and which
-is next.
+renamed staves; a look chosen at creation, save version 27; the townsfolk drawn; decision 107),
+**B5** (every creature drawn, the humanoids on the figure carrying what they drop, the bosses
+grown to 48×64 and the goblins shrunk by refitting it; hits, crits, a level, fireballs, knives
+and arrows, the telegraphs and the loot sack; decision 108), **and B6** (every place drawn: three
+woods and their stumps, veins in the ore they yield, rings on the water, the forge, the tannery, the
+fletcher's bench and the fire, chips off each stroke, and rooms furnished from one layout with a
+counter in front of whoever works there; decision 109). **Next: B7**, retire 3D. Update this line
+as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -338,11 +343,40 @@ discovered at the end.
   about fifty-five files with its tests and docs and stayed whole: the look is the figure's first
   layer, and the screen that chooses it draws the figure the gear builds, so the two are one thing
   to judge. Decision 107 has the forks.
-- **B5 — Creatures and effects.** Every creature by shape and the bosses, the humanoids (bandits,
-  goblins, raiders, the dead and their king) on B4's figure with what they carry; telegraph rings,
-  arrows, bolts, hits, crits, the level-up, the loot sack, floating text.
-- **B6 — Places.** Nodes (and their depleted states), stations, signposts, buildings with interiors
-  (the roof lifts when you are inside), counters.
+- **B5 — Creatures and effects. (Landed.)** **Every creature is drawn**, a test holding each to a
+  sprite of its own. The humanoids are getups on B4's figure (`art/cast.ts`), **carrying mostly
+  what they drop**: the bandit's red rag and a knife, the raider's fenweave hood and a boat's gaff,
+  the goblins green and bald with their ears swept out and their eyes lit, the wight in bone
+  under a shroud with its buried sword and shield. **A boss is the figure refit bigger**
+  (`refitted`: rows and columns doubled where the drawing is flat, never scaled), the budget's
+  48×64, the chief in the cutthroat's bandana with his cutlass and the king crowned in plate under
+  a dark cloak; **a goblin is the same refit smaller**. The crab and the bog lurker are drawn as
+  parts like the rat, and **the cave crawler is the crab in chalk** (`crab@cave`). **The moments
+  are effect sprites played once and held fading** (`render2d/effects.ts`): a star where a blow
+  lands, blood-red on the player, a crit's twice the size, a level's column of light, a fireball
+  and a knife in flight; an arrow is a line of pixels at its angle, and **a telegraph is a baked
+  rim and a disc filling out to it**, on the ground under everything standing. Numbers rise off
+  the top of what they came off and stack over one born with them; the loot sack is drawn. About
+  twenty files with its tests and docs. Decision 108 has the forks.
+- **B6 — Places. (Landed.)** **What each place is drawn as is one table** (`art/places.ts`), a node
+  falling back on its shape's drawing as a creature falls back in `cast.ts`. **Three woods**, each a
+  canopy of leaf clumps lit from the top-left at the prop budget's 64 square, in the setting's
+  `foliage` and `bark`: the round-crowned tree, broader darker hardwood on a trunk twice as thick,
+  and the willow's strands hanging nearly to the ground; each **felled to a stump** showing its cut
+  face, and **a crown the player is behind fades** as a roof does. **A vein is a boulder of the
+  setting's rock with the ore in its seams**, drawn once in a neutral `ore` ramp and recoloured into
+  the ore it yields (step 2 the ore's colour in the bag, held by a test); coal is a black seam across
+  the stone, and a worked-out vein shows its pits. **A fishing spot is a mark**, a new kind: rings on
+  the water, unoutlined, looping on the water's clock. **The forge** glows and sparks, **the
+  tannery** is a vat with a hide on a frame, **the fletcher's bench** has its shafts laid out and a
+  bow behind it, and **the fire** crackles in its ring of stones. **A stroke knocks something
+  loose** on each gather beat: chips, flakes of stone, a splash. **What stands in a room moved to
+  `art/rooms.ts`**, which both views read, drawn by the wall it stands against (from the front,
+  along a side wall, and low against the south wall the cutaway takes away), and **whoever works in
+  a room stands behind a counter**, blocking nothing. A node is picked by its body as in 3D, and a
+  fishing spot as the water round it. About twenty-six files with its tests and docs. Found and left
+  for B9: town's training hall stands close enough south of the smithy that its faded roof is drawn
+  over the smithy's room. Decision 109 has the forks.
 - **B7 — Retire 3D.** Three.js and `render3d/` deleted; smoke's draw budget and memory checks
   rewritten for 2D; `rendering.md` rewritten.
 - **B8 — The HUD's look.** A full UI pass to match the art: theme, panels, icons as pixel data, a

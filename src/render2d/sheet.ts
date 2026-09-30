@@ -1,4 +1,4 @@
-import { compileAtlas, drawnHeight, frameKey, type AtlasRect } from '../art/compile';
+import { compileAtlas, drawnHeight, frameKey, variantId, type AtlasRect } from '../art/compile';
 import type { SpriteDef } from '../art/format';
 import { SPRITES } from '../art/index';
 import type { ZoneSetting } from '../types/ids';
@@ -26,8 +26,14 @@ export class SpriteSheet {
     this.canvas = pool.fromPixels(atlas.width, atlas.height, atlas.pixels);
     this.frames = atlas.frames;
     for (const def of defs) {
-      this.defs.set(def.id, def);
-      this.heights.set(def.id, drawnHeight(def));
+      // A variant is drawn as a sprite of its own, the same size and shape.
+      for (const id of [
+        def.id,
+        ...Object.keys(def.variants ?? {}).map((name) => variantId(def.id, name)),
+      ]) {
+        this.defs.set(id, def);
+        this.heights.set(id, drawnHeight(def));
+      }
     }
   }
 

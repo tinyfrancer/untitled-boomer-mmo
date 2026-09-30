@@ -1,5 +1,12 @@
 import { ART_PIXEL } from '../art/budget';
 import { buildingArt, buildingPlan, type Picture } from '../art/building';
+import {
+  COUNTER_SPRITE,
+  counterAt,
+  fittingAnchor,
+  fittingRects,
+  fittingSprite,
+} from '../art/rooms';
 import { TILE_SIZE } from '../config/constants';
 import { buildingRect, doorPoint, isInside } from '../data/buildings';
 import type { Point } from '../systems/MovementSystem';
@@ -19,6 +26,13 @@ const DOOR_REACH = TILE_SIZE;
  * no pixels anywhere.
  */
 export type Bake = (picture: Picture) => HTMLCanvasElement | null;
+
+/** Something standing in a room: which sprite, and where its foot is in the world. */
+export interface Furnishing {
+  readonly sprite: string;
+  readonly x: number;
+  readonly y: number;
+}
 
 interface Baked {
   canvas: HTMLCanvasElement | null;
@@ -43,6 +57,8 @@ export class BuildingSprite implements Pickable2D {
   private readonly floor: Baked;
   private readonly backWall: Baked;
   private readonly backWallBase: number;
+  /** What stands in the room: its fittings, and the counter whoever works here is behind. */
+  readonly furniture: readonly Furnishing[];
   private inside = false;
   private atDoor = false;
 
@@ -66,6 +82,13 @@ export class BuildingSprite implements Pickable2D {
     // The back wall stands at the foot of its inside face, which is where the
     // room begins: anyone in the room is in front of it.
     this.backWallBase = rect.top + buildingPlan(building).wall * ART_PIXEL;
+    const fittings = fittingRects(building.definition).map((fitting) => {
+      const anchor = fittingAnchor(fitting.rect);
+      return { sprite: fittingSprite(fitting), x: building.x + anchor.x, y: building.y + anchor.y };
+    });
+    this.furniture = counter
+      ? [...fittings, { sprite: COUNTER_SPRITE, ...counterAt(counter, building.definition.door) }]
+      : fittings;
   }
 
   /** Whether the player is in the room, and whether they are on its doorstep. */

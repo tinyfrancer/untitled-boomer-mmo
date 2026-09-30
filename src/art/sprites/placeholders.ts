@@ -765,10 +765,32 @@ const PLACEHOLDER_TILE: SpriteDef = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// A mark: a ring of light breathing in and out, lying flat.
+// ---------------------------------------------------------------------------
+
+const ring = (radius: number): Grid =>
+  Array.from({ length: TILE_PIXELS }, (_, y) =>
+    Array.from({ length: TILE_PIXELS }, (__, x) => {
+      const reach = Math.hypot(x + 0.5 - TILE_PIXELS / 2, (y + 0.5 - TILE_PIXELS / 2) * 2);
+      return Math.abs(reach - radius) < 0.8 ? 'a' : '.';
+    }).join(''),
+  );
+
+const PLACEHOLDER_MARK: SpriteDef = {
+  id: 'placeholder-mark',
+  kind: 'mark',
+  width: TILE_PIXELS,
+  height: TILE_PIXELS,
+  legend: { a: 'yellow.3' },
+  animations: { loop: [5, 8, 11, 8].map(ring) },
+};
+
 /** The stand-in for each kind, which is also what the budget is held against in full. */
 export const PLACEHOLDERS: Readonly<Record<SpriteKind, SpriteDef>> = {
   tile: PLACEHOLDER_TILE,
   scatter: PLACEHOLDER_SCATTER,
+  mark: PLACEHOLDER_MARK,
   person: PLACEHOLDER_PERSON,
   beast: PLACEHOLDER_BEAST,
   prop: PLACEHOLDER_PROP,

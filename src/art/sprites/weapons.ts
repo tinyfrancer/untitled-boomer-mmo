@@ -173,6 +173,22 @@ export const LEAF_BLADE = swung(
   ),
 );
 
+/** A bandit's: a short blade, the one it throws when it cannot reach you. */
+export const DAGGER = swung(
+  forged(
+    `
+    .x.
+    .xw
+    .xw
+    .xv
+    sgs
+    .l.
+    .g.
+  `,
+    [1, 5],
+  ),
+);
+
 // ---------------------------------------------------------------------------
 // Axes, picks and a maul: a head (x w v s) on a haft (q lit, p, f).
 // ---------------------------------------------------------------------------
@@ -249,6 +265,26 @@ export const MAUL = swung(
     ...qf...
   `,
     [4, 7],
+  ),
+);
+
+/** A fen raider's: the hook off a boat, on a pole long enough to reach one. */
+export const GAFF = swung(
+  forged(
+    `
+    .xww.
+    x...w
+    w...s
+    ....p
+    ....p
+    ....f
+    ....p
+    ....p
+    ....f
+    ....p
+    ....f
+  `,
+    [4, 8],
   ),
 );
 

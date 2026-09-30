@@ -187,6 +187,10 @@ items, enemies, spawns, loot, quests, bounties, recipes, zones, maps. Prefer a r
 enemy is an `ENEMIES` row plus a loot table, and the renderer picks its body from `shape` and its
 colour from `render3d/palette.ts` without a line written for its id. `Record<Id, …>` and
 `exhaustive<Id>()` are how a new id becomes a compile error everywhere it has to be answered.
+In the 2D view a new creature is also a row in `art/cast.ts` saying what it is drawn as, which a
+test holds every creature to (until then it is its shape's placeholder), and a new node or station
+a row in `art/places.ts` (until then a node is its shape's drawing, and a vein drawn in no ore,
+which a test holds every vein against: its ore is drawn in the colour of what it yields).
 
 **State that can be derived is derived.** Quest progress counts the bag or a tally on read; buffs,
 quest markers, achievements, titles and mastery rungs are computed when asked. Only three tallies
@@ -252,7 +256,16 @@ zone is a row in `sprites/edges.ts` (a test sweeps the maps, so a new pair is a 
 may lay blocking ground over walkable ground, which is why rock shows its face inside its own cell.
 **Scatter is baked into the ground** (`art/scatter.ts`), never where an edge is drawn. **A building is a
 kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
-and **who is drawn with what** is `art/cast.ts`, anything not in it being its kind's placeholder.
+and **what stands in its room is `art/rooms.ts`** (decision 109), which the 3D view reads too until
+B7: nothing in it blocks, so `tests/art/rooms.test.ts` is all that keeps the furniture and the
+counter out of where the game stands a body. **Who is drawn with what** is
+`art/cast.ts`, anything not in it being its kind's placeholder, and **what each place is drawn as**
+is `art/places.ts`.
+**A creature built like a person is a getup on the figure in a build** (decision 108): a boss is
+grown to the budget's 48×64 and a goblin shrunk by `refitted`, whole rows and columns doubled or
+left out where the drawing is flat, never scaled by a fraction. **A moment is an effect sprite
+played once on the budget's clock and held fading by the view** (`render2d/effects.ts`); only an
+arrow and a telegraph are drawn as lines, since no fixed frame has their angle or their reach.
 **A person is one figure dressed and armed** (`art/sprites/figure.ts`, decision 104): its arms are
 parts in poses, each naming the pixel its hand closes on, and anything held is laid with its grip
 there, so a new pose names a hand that is a fist (`tests/art/figure.test.ts` holds it). **The player
