@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TRANSPARENT } from '../../src/art/format';
 import { ARM_POSES, hurt } from '../../src/art/sprites/figure';
-import { RANGER, WARRIOR, WIZARD } from '../../src/art/sprites/people';
+import { OUTFITS, RANGER, WARRIOR, WIZARD } from './outfits';
 
 describe('the figure kit', () => {
   it('closes every hand in sight on a fist, so what it holds comes out of the fist', () => {
@@ -17,8 +17,8 @@ describe('the figure kit', () => {
     }
   });
 
-  it('flushes a hurt frame red all over', () => {
-    for (const def of [WARRIOR, WIZARD, RANGER]) {
+  it('flushes a hurt frame red all over, whatever is worn', () => {
+    for (const def of [WARRIOR, WIZARD, RANGER, ...OUTFITS]) {
       const idle = def.animations.idle;
       const frame = idle && !Array.isArray(idle) && 'down' in idle ? idle.down[0] : undefined;
       if (!frame) throw new Error(`${def.id} has no idle`);

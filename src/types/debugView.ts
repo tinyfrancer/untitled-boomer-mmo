@@ -25,8 +25,12 @@ export interface DebugView {
    * numbers climbing — a leak no state assertion can see.
    */
   drawnCounts(): DrawnCounts;
-  /** The player's figure, as opposed to the simulation: its walk cycle. */
-  playerFigure(): { walking: boolean; pose: string };
+  /**
+   * The player's figure, as opposed to the simulation: its walk cycle, and
+   * what it was last put together from, which changes when what the player
+   * has on does (the 2D view's; the 3D view leaves it out).
+   */
+  playerFigure(): PlayerFigure;
   /**
    * What the renderer is holding on the GPU. An object nobody disposed is
    * invisible to every state assertion and to the screen: it is memory the card
@@ -44,6 +48,12 @@ export interface DebugView {
    * worst, because one GC pause is not a regression.
    */
   drawTime(): DrawTime;
+}
+
+export interface PlayerFigure {
+  walking: boolean;
+  pose: string;
+  wearing?: string;
 }
 
 /** What a drawn frame costs, from `drawTime()`. */

@@ -109,7 +109,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
    * The bandana always drops, because a fight this long has to be worth
    * something every time and it is the one piece every class can wear. The
    * three weapons are the chase, one a class, so the run is worth making
-   * whoever you rolled — a warrior selling a wand is still selling 150 copper.
+   * whoever you rolled — a warrior selling a staff is still selling 150 copper.
    */
   'bandit-chief': {
     id: 'bandit-chief',

@@ -3,6 +3,7 @@ import { ABILITIES } from '../data/abilities';
 import { TITLES } from '../data/achievements';
 import { BOUNTIES } from '../data/bounties';
 import { CLASSES } from '../data/classes';
+import { HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../data/looks';
 import { QUESTS } from '../data/quests';
 import { REFORGES } from '../data/reforges';
 import { SKILLS } from '../data/skills';
@@ -185,6 +186,14 @@ const names = (table: object): string => Object.keys(table).join(', ');
 const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, string]> = {
   name: [(value) => isString(value) && value.trim().length > 0, 'a name'],
   classId: [keyOf(CLASSES), `a class (${names(CLASSES)})`],
+  look: [
+    (value) =>
+      isRecord(value) &&
+      keyOf(SKIN_TONES)(value.skin) &&
+      keyOf(HAIR_COLOURS)(value.hair) &&
+      keyOf(HAIRSTYLES)(value.hairstyle),
+    `a skin (${names(SKIN_TONES)}), a hair colour (${names(HAIR_COLOURS)}) and a hairstyle (${names(HAIRSTYLES)})`,
+  ],
   level: [
     (value) => isWhole(value) && value >= 1 && value <= MAX_CHARACTER_LEVEL,
     `a whole number from 1 to ${MAX_CHARACTER_LEVEL}`,

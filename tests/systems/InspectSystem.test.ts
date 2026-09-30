@@ -222,7 +222,7 @@ describe('describing an item', () => {
     expect(panel.uses).toContain('Sells for 35c');
   });
 
-  it('reads a wand as a weapon and a pole as a tool', () => {
+  it('reads a staff as a weapon and a pole as a tool', () => {
     expect(describeItem('apprentice-wand').subtitle).toBe('Weapon');
     expect(valueOf(describeItem('apprentice-wand'), 'Reach')).toBe('200');
     expect(describeItem('fishing-pole').subtitle).toBe('Tool');

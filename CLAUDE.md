@@ -255,7 +255,11 @@ kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts
 and **who is drawn with what** is `art/cast.ts`, anything not in it being its kind's placeholder.
 **A person is one figure dressed and armed** (`art/sprites/figure.ts`, decision 104): its arms are
 parts in poses, each naming the pixel its hand closes on, and anything held is laid with its grip
-there, so a new pose names a hand that is a fist (`tests/art/figure.test.ts` holds it).
+there, so a new pose names a hand that is a fist (`tests/art/figure.test.ts` holds it). **The player
+is put together from their class, their look and what they wear** (`art/outfit.ts`, decision 107),
+composed as grids and compiled as one sprite, each slot dyed into a ramp of its own, and compiled
+again by the view when that changes. **What an item looks like worn is a row in `art/wardrobe.ts`**,
+and `tests/art/outfit.test.ts` holds every item to one, so a new piece of gear is a row there too.
 
 **Sound loads no files either** (`src/audio/`, engine-free and owned by the host). Every cue is
 synthesised from a recipe in `cues.ts`, and the board hears the same `WorldEvent[]` the view is

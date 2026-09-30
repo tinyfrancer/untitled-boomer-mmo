@@ -54,7 +54,7 @@ export const ENEMY_ABILITIES: Record<EnemyAbilityId, EnemyAbilityDefinition> = {
     id: 'throw-knife',
     name: 'Throw Knife',
     windUpMs: 700,
-    // Past a wizard's wand and just short of their nuke, so kiting a bandit is
+    // Past a wizard's staff and just short of their nuke, so kiting a bandit is
     // still the right idea and no longer a free one.
     range: 260,
     minRange: 88,

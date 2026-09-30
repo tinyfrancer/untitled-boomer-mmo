@@ -97,6 +97,24 @@ export function shifted(frame: Grid, dx: number, dy: number): Grid {
   });
 }
 
+/** A frame turned upside down, left staying left: a blade carried point down still lit on its left. */
+export function inverted(frame: Grid): Grid {
+  return [...frame].reverse();
+}
+
+/**
+ * A frame turned a quarter clockwise, its rows padded to the widest first. What
+ * pointed up points right, and what was lit down its left is lit along its top,
+ * so the light from the top-left survives the turn.
+ */
+export function turned(frame: Grid): Grid {
+  const width = Math.max(0, ...frame.map((row) => row.length));
+  const height = frame.length;
+  return Array.from({ length: width }, (_, x) =>
+    Array.from({ length: height }, (__, y) => frame[height - 1 - y]?.[x] ?? TRANSPARENT).join(''),
+  );
+}
+
 /** A frame with some keys swapped for others: a flash of colour, a hurt frame. */
 export function rekeyed(frame: Grid, swaps: Readonly<Record<string, string>>): Grid {
   return frame.map((row) => [...row].map((key) => swaps[key] ?? key).join(''));

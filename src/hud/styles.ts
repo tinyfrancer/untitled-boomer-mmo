@@ -1578,6 +1578,62 @@ function hudCss(): string {
   color: ${THEME.color.muted};
   text-align: center;
 }
+/* The class as it starts, in the look chosen below, drawn in the world's art at
+   a whole scale so every art pixel is one square. */
+.create__portrait {
+  display: block;
+  image-rendering: pixelated;
+}
+.create__look {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: ${THEME.margin}px;
+  max-width: 100%;
+}
+.create__look-rows {
+  display: flex;
+  flex-direction: column;
+  gap: ${THEME.padding}px;
+}
+.create__look-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.create__look-label {
+  flex: none;
+  width: 40px;
+  line-height: 36px;
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+.create__look-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 214px;
+}
+.create__choice {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 2px solid ${cssColor(THEME.panelStroke)};
+  background: #2a2a4a;
+  color: ${THEME.color.text};
+  font: inherit;
+  font-size: ${THEME.font.sm}px;
+  cursor: pointer;
+}
+.create__choice--swatch {
+  width: 36px;
+  padding: 0;
+}
+.create__choice.is-selected {
+  border-color: ${THEME.color.equippable};
+  box-shadow: inset 0 0 0 2px #1a1a2e;
+}
 .create__begin {
   width: 220px;
   max-width: 100%;

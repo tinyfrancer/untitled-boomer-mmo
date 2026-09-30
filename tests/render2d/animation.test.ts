@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { PLACEHOLDERS } from '../../src/art/index';
+import { PLACEHOLDERS, SPRITES } from '../../src/art/index';
 import { RAT } from '../../src/art/sprites/rat';
-import { RANGER, SHOPKEEPER, WARRIOR, WIZARD } from '../../src/art/sprites/people';
 import { Motion, deathPose, facingOf, frameIndex, playMs } from '../../src/render2d/animation';
+import { RANGER, WARRIOR, WIZARD, starting } from '../art/outfits';
+
+const SHOPKEEPER = SPRITES.find((def) => def.id === 'shopkeeper');
+if (!SHOPKEEPER) throw new Error('the shopkeeper is not drawn');
 
 describe('facingOf', () => {
   it('faces the way it mostly moves, and keeps facing that way standing still', () => {
@@ -57,7 +60,10 @@ describe('Motion', () => {
     const motion = new Motion();
     motion.strike(0, 0, 10, 'cast');
     expect(motion.pose(WIZARD, 10, 0, 0).animation).toBe('cast');
-    expect(motion.pose(WARRIOR, 10, 0, 0).animation).toBe('attack');
+    // A shield on the other arm leaves no hand to cast from, so a spell is a swing.
+    expect(motion.pose(starting('warrior', { offhand: 'brown-shield' }), 10, 0, 0).animation).toBe(
+      'attack',
+    );
     motion.strike(0, 0, 10, 'shoot');
     expect(motion.pose(RANGER, 10, 0, 0).animation).toBe('shoot');
   });

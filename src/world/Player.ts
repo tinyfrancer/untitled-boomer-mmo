@@ -207,7 +207,7 @@ export class Player {
     this.intellect = stats.intellect;
     this.agility = stats.agility;
     this.attackPower = stats.attackPower;
-    // Reach rides the weapon, so putting the wand away has to shorten it here
+    // Reach rides the weapon, so putting the staff away has to shorten it here
     // rather than waiting for the view to rebuild the figure. Armour is the
     // same: a shield taken off has to stop stopping things this frame.
     this.attackRange = stats.attackRange;

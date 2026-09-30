@@ -210,7 +210,7 @@ export class CombatDirector {
       {
         attackPower,
         weaponSkillLevel: character.skillLevelOf(weaponSkill),
-        // Every swing and every shot is physical, a wand's included, so every one
+        // Every swing and every shot is physical, a staff's included, so every one
         // of them can land hard off agility; a wizard's point or so is a rounding
         // error, which is what keeps that from being a rule worth an exception.
         agility: player.agility,

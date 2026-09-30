@@ -62,7 +62,7 @@ describe('buildFigure', () => {
   });
 
   it('gives every weapon shape something to hold', () => {
-    (['sword', 'wand', 'pole', 'axe', 'pick', 'bow'] as const).forEach((shape) => {
+    (['sword', 'staff', 'pole', 'axe', 'pick', 'bow'] as const).forEach((shape) => {
       const armed = buildFigure({ ...BARE, weapon: { shape, color: 0xabcdef } });
       expect(colors(armed.object)).toContain(0xabcdef);
     });

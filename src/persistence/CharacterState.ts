@@ -1,4 +1,5 @@
 import { CLASSES } from '../data/classes';
+import { DEFAULT_LOOK, type Look } from '../data/looks';
 import type { StationId } from '../data/recipes';
 import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
@@ -12,7 +13,7 @@ import type { Quiver } from '../systems/QuiverSystem';
 import type { AbilityId, ClassId, TipId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 26;
+export const CHARACTER_STATE_VERSION = 27;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -22,6 +23,12 @@ export interface CharacterState {
   version: number;
   name: string;
   classId: ClassId;
+  /**
+   * The skin, hair colour and hairstyle chosen at creation (decision 107).
+   * Stored because it is a choice: nothing else about a character says what
+   * they look like, and it is kept for as long as they are.
+   */
+  look: Look;
   level: number;
   xp: number;
   gear: Gear;
@@ -152,13 +159,18 @@ export interface AfkSession {
   station: StationId | null;
 }
 
-export function createNewCharacter(name: string, classId: ClassId): CharacterState {
+export function createNewCharacter(
+  name: string,
+  classId: ClassId,
+  look: Look = DEFAULT_LOOK,
+): CharacterState {
   const now = new Date().toISOString();
   const definition = CLASSES[classId];
   return {
     version: CHARACTER_STATE_VERSION,
     name,
     classId,
+    look: { ...look },
     level: 1,
     xp: 0,
     gear: {

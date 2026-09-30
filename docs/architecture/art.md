@@ -8,7 +8,9 @@ _Written in version 2's phase B1 (`docs/decisions.md` 100 and 101); B2 added the
 grounds, the world's font, the first people and creature, the building kit and the 2D view that
 draws them (decision 102), and the user's first look turned the whole of it from cute to heroic
 and weathered (decision 103). B3 drew every ground, the edges and faces between them, the scatter
-and the lantern, and made the 2D view the game (decision 106). Where this and the code disagree, the
+and the lantern, and made the 2D view the game (decision 106). B4 put a person together from what
+they chose and what they have on, drew every weapon and offhand as the item it is, and the
+townsfolk (decision 107). Where this and the code disagree, the
 code is right — and this file is what should be corrected. `rendering.md` is still the 3D renderer's,
 the fallback behind `?renderer=3d`, until B7 retires it._
 
@@ -199,29 +201,71 @@ sideways, the far arm is the near one's pose a shoulder back and a step darker, 
 body. A figure's grids name **roles, not ramps** (the garment, the cloak, leather, metal, wood, a
 glow, gear), and a sprite's `Materials` says which ramp each role is, so one arm is a blue, violet
 or linen sleeve; the legend is read off the keys the frames use. **A class starts plain**
-(`sprites/people.ts`, decision 105), since zero to hero has to start somewhere: bare-headed, in a
-tunic or a robe of its colour, carrying what it fights with. **The warrior** in a blue tunic and
-dark breeches with the rusty sword carried low; **the wizard** in a plain violet robe tied with a
-cord, with an apprentice's staff of bare wood that a spell still flares from, the other palm lit
-to cast; **the ranger** in a green tunic with a quiver slung across it and a bow in the left hand
-drawn to the cheek; and **the shopkeeper** in ochre under a leather apron. A figure plays `cast`
-and `shoot` where it has drawn them, and swings where it has not.
+(`sprites/people.ts`, `CLASS_DRESS` in `art/outfit.ts`, decision 105), since zero to hero has to
+start somewhere: bare-headed, in a tunic or a robe of its colour, carrying what it fights with.
+**The warrior** in a blue tunic and dark breeches with the rusty sword carried low; **the wizard**
+in a plain violet robe tied with a cord, with an apprentice's staff of bare wood that a spell still
+flares from, the other palm lit to cast; **the ranger** in a green tunic with a quiver slung across
+it and a bow in the left hand drawn to the cheek.
 
-**What is worn later is the `LOOKBOOK`** (`sprites/armour.ts`), drawn for the user to judge before
-B4 wires a figure to what it has on: held by the sprite tests with everything else, and not in
-`SPRITES`, so the atlas the game compiles at boot does not carry figures nothing wears yet. Two
-kinds. **Later looks** are what the classes wore before they started plain: the warrior's quilted
-gambeson, leather spaulders and crimson cloak; the wizard's violet robe trimmed in brass, **under a
-hood or a pointed hat** (both are headgear the game has: a hood and a cloth hat), with a staff
-whose crystal flares; the ranger's hood and mantle over a leather jerkin. **Armour by tier is drawn
-once, in the neutral `tier` ramp, and a tier is a recolour of it**: plate (a breastplate with a lit
-ridge, faulds, round pauldrons, a nasal helm, and the arms and legs to gauntlets and sabatons) over
-the gambeson and under the cloak, studded leather (a jerkin, a strap skirt, guards and a cap) over a
-starting tunic, the hunter's leathers, and a cloth robe under a hat or a hood, each the figure's own
-dress with pieces laid over it and fitted to its silhouette.
+**A person is put together from what they are and what they have on** (`art/outfit.ts`, decision
+107): the class's garment in its colour, the look they were made in, a piece on each slot that has
+one and a weapon in the hand, composed at the level of the grids and compiled as one sprite. At the
+level of the grids rather than stacked as sprites at draw time, so the compiler outlines the figure
+once, round its silhouette: armour drawn as a sprite over a sprite is a figure made of outlined
+blocks, the disjointed look decision 105 mended. **Each slot is dyed into a ramp of its own**: a
+piece is written in the keys it reads best in (the `tier` ramp's `A`-`E`, a blade's metal, a staff's
+glow) and rekeyed into its slot's role when it is worn (`dyed`, `figure.ts`), five generated keys a
+role for the helm, the legs, the other hand and a weapon's blade, haft, fittings and stone, so a
+steel helm sits over studded legs and a tier is still a recolour of one piece. A frame's outermost
+ring of pixels is left clear for the outline whatever reaches it: a blade drawn back or a hat risen
+on a stride is cut a pixel short of the edge.
 
-**Who is drawn with what** is one file (`art/cast.ts`): a table a class, a person and a creature,
-anything not in it falling back on its kind's placeholder, a creature's kind read off its `shape`.
+**What each item is drawn as is a row** (`art/wardrobe.ts`): the piece a helmet, a chest or the legs
+put on, the weapon in the hand, what fills the other one, and the ramp each is drawn in, the tier's
+unless the row says otherwise. An item with no row falls back on what the data says it is (a
+helmet by its armour type, a weapon by its shape), so a new item is on the figure the day its row
+is; `tests/art/outfit.test.ts` holds every item the game has to a row of its own. **The pieces**
+(`sprites/armour.ts`) are what B2's lookbook was, and the grand looks a class wore before it started
+plain are what it grows into: a leather cap, a nasal helm, a pointed hat, a hood, and the hunter's
+cowl with its mantle; a cutthroat's bandana over the nose and mouth, and a crown of gold; a leather
+jerkin, studded or plain, over the tunic; **plate over a quilted gambeson, the steel under the
+crimson cloak**; a robe, and the fen's trimmed in brass; a vest of hide; breeches, and greaves to
+the toes.
+
+**Every weapon is drawn as the item it is** (`sprites/weapons.ts`): a rusty sword, the chief's
+cutlass with its knuckle bow, the king's leaf blade; a felling axe, a bearded fighting axe, a
+pickaxe and the goblin's maul; an apprentice's staff, a staff with a crystal in its head and the
+king's gold-shod staff; a fishing pole with its line and float; a bow, and the king's longbow drawn
+out from it. **A swung weapon is drawn once, upright**, and its six carries are made from that one
+drawing: turned upside down to be carried low, left still lit (`inverted`); a quarter clockwise to
+be brought across, lit along its top (`turned`); leant a pixel a row to be carried point forward or
+drawn back from the side, which is how B2's rusty sword was drawn by hand. The kit says how a hand
+holds each kind (`figure.ts`): **swung**, **planted** (a staff or a pole, a spell flaring from a
+staff's head in its stone's colour) or **drawn** (a bow, in the other hand, the arrow on the string
+the figure's own). The other hand carries a shield strapped over the forearm, its face toward the
+viewer and over the arm, or a light in the hand, an orb or a lantern, which a spell is cast from;
+a quiver is worn on the back. A figure plays the blow its weapon makes, `cast` unless a bow or a
+shield leaves it no hand to cast from, and `shoot` only with a bow. **The wizard's weapons are
+staves** (decision 107): a wand read as a dagger at the size a figure is drawn, so the three were
+renamed to what they are drawn as, their ids kept for the saves that name them.
+
+**A character is made in a look** (`CharacterState.look`, decision 107): a skin (pale, fair, tan
+or deep, each a ramp), a hair colour (brown, black, fair, red or grey, grey drawn a step lighter
+than its ramp's middle) and a hairstyle (`sprites/hair.ts`): cropped, which is the head B2 drew and
+what every character from before the choice wears, long past the shoulders, tied back into a tail,
+shaved to stubble, or bearded. A hairstyle is a whole head drawn three ways round and what falls
+below it, laid over the shoulders, rather than hair laid over a bald head, since hair frames a face
+rather than sitting on it. A hood shades the face under it; a piece that covers the head is what a
+body lying where it fell shows of it (`covers`).
+
+**Who is drawn with what** is one file (`art/cast.ts`): the six who stand in a town, each a getup
+of a garment, a look and what they hold, told from one another at a glance the way their colours
+were in 3D (a merchant in ochre under an apron, a clerk in teal with a shaved head, an old soldier
+in iron plate with a sword, the quartermaster in a cap and studded leather with a shield, the
+outfitter in leather over linen, and the fettler sooted under an apron with a hammer); and a
+creature, anything not in it falling back on its kind's placeholder, a creature's kind read off its
+`shape`. The player is not there: they are what they chose and what they have on.
 **The signpost** (`sprites/props.ts`) is the one prop drawn ahead of B6, a post with two boards
 pointing either way, because a crate standing where a zone says where its exits go said nothing.
 
@@ -375,8 +419,12 @@ same host (`host/host.ts`, behind the `ZoneView` interface both answer):
   fades over four into a dark murk (`terrain.ts`), the 3D apron's trick in the 2D view's mood, and
   a soft vignette darkens the screen's corners, drawn over the world and under the words.
 - **What is drawn comes from the world each frame**; the view keeps no scene. The sprite sheet is
-  compiled once a setting and kept for the session, the ground and the buildings once a zone, and
-  every word once while it is drawn (`text.ts`): a word no frame drew is let go at the end of that
+  compiled once a setting and kept for the session, and **the player's figure is a sheet of its
+  own**, put together from their class, their look and their gear (`playerSprite`) and compiled
+  again when one of those changes, which the view reads off the world each frame and compares
+  rather than being told; the old sheet's canvas is let go as the new one is made, and one compile
+  serves every setting, since a person is drawn only in shared ramps. The ground and the buildings
+  are compiled once a zone, and every word once while it is drawn (`text.ts`): a word no frame drew is let go at the end of that
   frame, so a fight's numbers do not pile up and the canvas count comes back when it is over.
   **Every canvas is made through one pool**
   (`canvases.ts`) and counted, which is what `gpuMemory()` reports and smoke holds flat across
@@ -394,5 +442,7 @@ same host (`host/host.ts`, behind the `ZoneView` interface both answer):
 - **What smoke asks of it** is the whole run, every section of which draws in 2D: the canvas at a
   whole scale (`boot`), every thing drawn and canvases flat over three round trips (`teardown`),
   picking, the shopfront, a drag that turns nothing, and the draw budget under the eight-times
-  throttle. The `renderer-3d` section holds the fallback: that it boots, draws town, and that its
+  throttle; the creation screen's cards drawn in the look chosen and drawn again when it changes,
+  and the character made in it (`boot`), and a helmet put on the figure with the canvas count flat
+  (`character-sheet`). The `renderer-3d` section holds the fallback: that it boots, draws town, and that its
   camera still turns under a drag with W walking up the turned screen.

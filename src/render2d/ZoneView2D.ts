@@ -1,4 +1,5 @@
-import { classSprite, creatureSprite, npcSprite } from '../art/cast';
+import { creatureSprite, npcSprite } from '../art/cast';
+import { PLAYER_SPRITE, playerSprite } from '../art/outfit';
 import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { ART_PIXEL } from '../art/budget';
 import { PLACEHOLDERS } from '../art/index';
@@ -16,7 +17,7 @@ import { GatherBeat } from '../ui/gatherBeat';
 import { FLOAT_TONE_COLORS, QUEST_MARKER_STYLE, THEME } from '../ui/theme';
 import type { ZoneView } from '../host/zoneView';
 import type { Point } from '../systems/MovementSystem';
-import type { DrawnCounts } from '../types/debugView';
+import type { DrawnCounts, PlayerFigure } from '../types/debugView';
 import type { ZoneSetting } from '../types/ids';
 import type { Mob } from '../world/Mob';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
@@ -115,6 +116,10 @@ export class ZoneView2D implements ZoneView {
   // The session's, one a setting: the same sheet serves every zone in the same light.
   private readonly sheets = new Map<ZoneSetting, SpriteSheet>();
   private sheet: SpriteSheet | null = null;
+  // The player as they are dressed, and what they were dressed in when it was
+  // made: compiled again when that changes, and kept across zones, since a
+  // person looks the same in every light (only the ground's ramps differ).
+  private figure: { wearing: string; sheet: SpriteSheet } | null = null;
   private world: ZoneWorld | null = null;
   private setting: ZoneSetting = 'open';
   private ground: BakedGround | null = null;
@@ -214,6 +219,8 @@ export class ZoneView2D implements ZoneView {
     this.teardown();
     this.pool.release(this.vignette);
     this.vignette = null;
+    this.pool.release(this.figure?.sheet.canvas ?? null);
+    this.figure = null;
     for (const sheet of this.sheets.values()) this.pool.release(sheet.canvas);
     this.sheets.clear();
     this.sheet = null;
@@ -363,15 +370,15 @@ export class ZoneView2D implements ZoneView {
     }
 
     const standing: Standing[] = [];
-    const playerSprite = classSprite(world.player.classId);
-    const playerDef = sheet.def(playerSprite);
+    const figure = this.dressed(world);
+    const playerDef = figure.def(PLAYER_SPRITE);
     this.playerPose = this.playerMotion.pose(playerDef, now, world.player.vx, world.player.vy);
     shadowAt(world.player.x, world.player.y, 16);
     standing.push({
       baseY: world.player.y,
       draw: () => {
         const p = at(world.player.x, world.player.y);
-        sheet.draw(context, playerSprite, this.playerPose, p.x, p.y);
+        figure.draw(context, PLAYER_SPRITE, this.playerPose, p.x, p.y);
       },
     });
 
@@ -498,8 +505,27 @@ export class ZoneView2D implements ZoneView {
     // Over the world and under the words, so a name at the edge of the screen
     // reads as well as one in the middle, underground as well.
     if (this.vignette) context.drawImage(this.vignette, 0, 0);
-    this.drawWords(world, sheet, playerSprite);
+    this.drawWords(world, sheet, figure);
     this.text.endFrame();
+  }
+
+  /**
+   * The player's figure, put together from their class, their look and what
+   * they have on (`art/outfit.ts`), and made again only when one of those
+   * changes: a gear change is read off the world each frame, as everything
+   * this view draws is, and compared rather than told.
+   */
+  private dressed(world: ZoneWorld): SpriteSheet {
+    const { classId, look } = world.character.state;
+    const gear = world.player.currentGear();
+    const wearing = JSON.stringify([classId, look, gear]);
+    if (this.figure?.wearing === wearing) return this.figure.sheet;
+    this.pool.release(this.figure?.sheet.canvas ?? null);
+    // A person is drawn only in the shared ramps, so one setting's compile
+    // serves every zone.
+    const sheet = new SpriteSheet(this.pool, 'open', [playerSprite(classId, look, gear)]);
+    this.figure = { wearing, sheet };
+    return sheet;
   }
 
   /** The moments in flight: projectiles, bursts, and the numbers over them. */
@@ -542,7 +568,7 @@ export class ZoneView2D implements ZoneView {
   }
 
   /** Every word the world writes: the plates over heads, the signs over doors. */
-  private drawWords(world: ZoneWorld, sheet: SpriteSheet, playerSprite: string): void {
+  private drawWords(world: ZoneWorld, sheet: SpriteSheet, figure: SpriteSheet): void {
     const state = world.character.state;
     for (const building of this.buildings) {
       if (building.isInside) continue;
@@ -593,12 +619,19 @@ export class ZoneView2D implements ZoneView {
       );
     }
     const player = world.player;
-    this.plate(player.x, player.y, sheet.drawnHeight(playerSprite), player.name, THEME.color.text, {
-      health: [player.hp, player.maxHp],
-      mana: player.maxMana > 0 ? [player.mana, player.maxMana] : undefined,
-      title: state.activeTitleId ? titleName(state.activeTitleId) : undefined,
-      barWidth: PLAYER_BAR_WIDTH,
-    });
+    this.plate(
+      player.x,
+      player.y,
+      figure.drawnHeight(PLAYER_SPRITE),
+      player.name,
+      THEME.color.text,
+      {
+        health: [player.hp, player.maxHp],
+        mana: player.maxMana > 0 ? [player.mana, player.maxMana] : undefined,
+        title: state.activeTitleId ? titleName(state.activeTitleId) : undefined,
+        barWidth: PLAYER_BAR_WIDTH,
+      },
+    );
   }
 
   /**
@@ -810,12 +843,13 @@ export class ZoneView2D implements ZoneView {
     return { total, ...counts };
   }
 
-  playerFigure(): { walking: boolean; pose: string } {
+  playerFigure(): PlayerFigure {
     const player = this.world?.player;
     const { animation, facing, index } = this.playerPose;
     return {
       walking: player?.isMoving() ?? false,
       pose: `${animation}:${facing ?? 'all'}:${index}`,
+      wearing: this.figure?.wearing ?? '',
     };
   }
 

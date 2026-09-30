@@ -99,7 +99,7 @@ describe('the exchange', () => {
    * reforge is permanent and the row it names could be retuned under it.
    */
   it('ignores a stored reforge the piece can no longer afford', () => {
-    // A wand has no armour at all, so `keen` has nothing to take from it.
+    // A staff has no armour at all, so `keen` has nothing to take from it.
     expect(reforgedBonuses('apprentice-wand', 'keen')).toEqual(
       getEquipmentBonuses('apprentice-wand'),
     );

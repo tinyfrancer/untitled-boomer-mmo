@@ -24,6 +24,8 @@ export type Ramp = readonly [number, number, number, number, number];
 export const SHARED_RAMPS = {
   // The darkest thing anywhere: eyes, a mouth, the gap in a doorway.
   ink: [0x140c1c, 0x241830, 0x3a2a45, 0x584660, 0x7d6a82],
+  // The four a character is made in (decision 107), palest first.
+  skinPale: [0x6a4046, 0xad7668, 0xe6b39a, 0xf7d5bd, 0xfff1e3],
   skin: [0x6b3a3a, 0xa8604e, 0xe09a74, 0xf5c197, 0xffe3c4],
   skinTan: [0x5a3028, 0x8a4e36, 0xbf7a4f, 0xdda170, 0xf2c99a],
   skinDeep: [0x2e1a1c, 0x4f2e28, 0x7a4a36, 0xa0694a, 0xc48f66],
@@ -44,6 +46,9 @@ export const SHARED_RAMPS = {
   // A ranger's cloak: a forest green darker and colder than any grass, so a
   // hunter standing in a field is still a figure and not a patch of it.
   forest: [0x0b1512, 0x14261f, 0x21392b, 0x34523a, 0x55724f],
+  // A banker's coat: dyed the colour of old copper gone green, which nobody
+  // else in town wears.
+  teal: [0x0b1618, 0x142c2e, 0x1f4644, 0x31655d, 0x55897b],
   green: [0x12301f, 0x1f5a2e, 0x2f8a3a, 0x5bb84c, 0x9ee07a],
   purple: [0x241238, 0x40205e, 0x663796, 0x9058c2, 0xc493e8],
   yellow: [0x5a3310, 0x9a5e14, 0xd9951c, 0xf5c542, 0xfff08a],
@@ -56,6 +61,8 @@ export const SHARED_RAMPS = {
   metal: [0x23232f, 0x444655, 0x6f7384, 0xa2a8b5, 0xdfe5ea],
   gold: [0x4a2a10, 0x8a5a14, 0xcf9420, 0xf5cf4a, 0xfff6a8],
   bone: [0x4a4038, 0x7a6e5e, 0xaea188, 0xd9cfb5, 0xf7f2e2],
+  // What the barrow's dead were buried holding: bronze gone to verdigris.
+  grave: [0x151b19, 0x2a3531, 0x47544b, 0x6b7a69, 0x9aab93],
   fire: [0x5a1010, 0xa8281a, 0xe8601e, 0xffa634, 0xffe89a],
   arcane: [0x1a1450, 0x2e2e9a, 0x4a5ee0, 0x7aa2f8, 0xc8e6ff],
   nature: [0x0e3a2a, 0x1a6a3a, 0x33a84a, 0x7ae070, 0xd0ffb0],

@@ -1,5 +1,11 @@
 export type ClassId = 'warrior' | 'wizard' | 'ranger';
 
+// What a character looks like, chosen when they are made (decision 107): the
+// one figure every person is, in a skin, a hair colour and a way of wearing it.
+export type SkinToneId = 'pale' | 'fair' | 'tan' | 'deep';
+export type HairColourId = 'brown' | 'black' | 'fair' | 'red' | 'grey';
+export type HairstyleId = 'cropped' | 'long' | 'tied' | 'shaved' | 'bearded';
+
 export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 
 // `studded` is the first tier the world drops that nothing in town sells and no
@@ -132,9 +138,9 @@ export type ItemId =
   | 'steel-pickaxe'
   | 'steel-axe'
   | 'steel-pole'
-  // The ranger's: a bow for every rung a sword and a wand have, a quiver for the
+  // The ranger's: a bow for every rung a sword and a staff have, a quiver for the
   // hand the bow leaves free, and the arrow both are for. The chief's and the
-  // king's bows join their blades and wands as things off one creature.
+  // king's bows join their blades and staves as things off one creature.
   | 'shortbow'
   | 'hunting-bow'
   | 'poachers-bow'
@@ -229,7 +235,7 @@ export type LootTableId =
   | 'barrow-wight'
   | 'barrow-king';
 
-export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick' | 'bow';
+export type WeaponShapeId = 'sword' | 'staff' | 'axe' | 'pole' | 'pick' | 'bow';
 
 // What fills the hand that is not holding the weapon. Its own union rather than
 // a slice of WeaponShapeId: nothing here is swung, and the two hands are drawn

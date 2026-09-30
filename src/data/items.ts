@@ -211,15 +211,18 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weaponShape: 'sword',
     attackPowerBonus: 2,
   },
+  // The three wizard's weapons are staves, since a wand reads as a dagger at
+  // the size a figure is drawn (decision 107). Their ids still say wand and
+  // scepter, because a save names them.
   'apprentice-wand': {
     id: 'apprentice-wand',
-    name: 'Apprentice Wand',
+    name: 'Apprentice Staff',
     value: 10,
     weight: 2,
     kind: 'equipment',
     slot: 'weapon',
     color: 0x8d6e63,
-    weaponShape: 'wand',
+    weaponShape: 'staff',
     // The only weapon that reaches: shorter than Fireball, so a wizard who wants
     // real distance casts for it.
     attackRange: 200,
@@ -263,13 +266,13 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
   // holding one — and the only weapon upgrade a caster has ever had.
   'stolen-wand': {
     id: 'stolen-wand',
-    name: 'Stolen Wand',
+    name: 'Stolen Staff',
     value: 150,
     weight: 2,
     kind: 'equipment',
     slot: 'weapon',
     color: 0x7e57c2,
-    weaponShape: 'wand',
+    weaponShape: 'staff',
     attackRange: 220,
     attackPowerBonus: 4,
     intellectBonus: 2,
@@ -379,7 +382,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
    * crown always drops, since a fight this long has to be worth something every
    * time, and it is cloth so the trophy is the same trophy whoever took it. The
    * two weapons behind it are the chase, one per class — a warrior who rolls the
-   * scepter is still carrying 260 copper out.
+   * staff is still carrying 260 copper out.
    */
   'barrow-crown': {
     id: 'barrow-crown',
@@ -408,26 +411,26 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
   },
   'barrow-scepter': {
     id: 'barrow-scepter',
-    name: 'Barrow Scepter',
+    name: 'Barrow Staff',
     value: 260,
     weight: 3,
     kind: 'equipment',
     slot: 'weapon',
     color: 0x9575cd,
-    weaponShape: 'wand',
+    weaponShape: 'staff',
     attackRange: 240,
     attackPowerBonus: 7,
     intellectBonus: 3,
   },
   /**
-   * The ranger's bows, one for every rung a sword and a wand already stand on:
+   * The ranger's bows, one for every rung a sword and a staff already stand on:
    * the one it starts with, the one bandits carry, the chief's and the king's.
    *
    * A bow is two-handed, shoots arrows and scales with agility whoever draws it
    * (`isBow`) — so a warrior can hold one and it is a bad idea by arithmetic
-   * rather than by rule. Reach is priced against the wand's, rung for rung: the
+   * rather than by rule. Reach is priced against the staff's, rung for rung: the
    * same 200 to start and the same 240 at the top, since the difference between
-   * a bow and a wand is the arrow each shot costs rather than the distance.
+   * a bow and a staff is the arrow each shot costs rather than the distance.
    */
   shortbow: {
     id: 'shortbow',
@@ -455,7 +458,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     attackRange: 210,
     attackPowerBonus: 3,
   },
-  // Taken off a poacher the chief robbed, which is the stolen wand's story told
+  // Taken off a poacher the chief robbed, which is the stolen staff's story told
   // about the third class — and the third weapon on his table, so a run at him
   // is worth making whichever of the three took it.
   'poachers-bow': {
