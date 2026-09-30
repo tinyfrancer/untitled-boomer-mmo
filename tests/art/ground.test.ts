@@ -3,9 +3,21 @@ import { TILE_PIXELS } from '../../src/art/budget';
 import { compileFrame } from '../../src/art/compile';
 import { composeGround, edgeStyle, reachAt } from '../../src/art/ground';
 import { parseColourRef } from '../../src/art/palette';
-import { EDGES, SIDES } from '../../src/art/sprites/edges';
-import { TERRAIN_SPRITES, TILE_SPRITES } from '../../src/art/sprites/terrain';
-import { BLOCKING_TILES, GRASS_TILE, PATH_TILE, WATER_TILE } from '../../src/data/tiles';
+import { EDGES, FACE_ROWS, SIDES } from '../../src/art/sprites/edges';
+import {
+  ROCK_FACE,
+  TERRAIN_SPRITES,
+  TILE_SPRITES,
+  TILE_VARIANTS,
+} from '../../src/art/sprites/terrain';
+import {
+  BLOCKING_TILES,
+  GRASS_TILE,
+  PATH_TILE,
+  STONE_TILE,
+  WALL_TILE,
+  WATER_TILE,
+} from '../../src/data/tiles';
 import { ZONES } from '../../src/data/zones';
 import type { ZoneId } from '../../src/types/ids';
 
@@ -16,11 +28,15 @@ function at(pixels: Uint8ClampedArray, x: number, y: number): number {
 }
 
 function tilePixels(tile: number, frame = 0): Uint8ClampedArray {
-  const def = TERRAIN_SPRITES.find(({ id }) => id === TILE_SPRITES[tile]);
-  if (!def) throw new Error(`no sprite for tile ${tile}`);
+  return spritePixels(TILE_SPRITES[tile] ?? '', frame);
+}
+
+function spritePixels(id: string, frame = 0): Uint8ClampedArray {
+  const def = TERRAIN_SPRITES.find((sprite) => sprite.id === id);
+  if (!def) throw new Error(`no sprite ${id}`);
   const frames = def.animations.loop ?? def.animations.still;
   const grid = Array.isArray(frames) ? frames[frame] : undefined;
-  if (!grid) throw new Error(`no frame ${frame} of tile ${tile}`);
+  if (!grid) throw new Error(`no frame ${frame} of ${id}`);
   return compileFrame(def, grid, 'open');
 }
 
@@ -47,6 +63,42 @@ describe('the edges between grounds', () => {
 
   it('names each pair one way round', () => {
     for (const { lower, upper } of EDGES) expect(edgeStyle(upper, lower)).toBeUndefined();
+  });
+
+  it.each(Object.keys(ZONES) as ZoneId[])(
+    'draws an edge wherever two grounds meet in %s',
+    (zoneId) => {
+      // A pair with no row meets at a hard line, which reads as a seam in the
+      // map rather than as one ground giving way to another.
+      const { map } = ZONES[zoneId];
+      const bare = new Set<string>();
+      map.forEach((line, row) =>
+        line.forEach((tile, col) => {
+          for (const next of [line[col + 1], map[row + 1]?.[col]]) {
+            if (next === undefined || next === tile) continue;
+            if (!edgeStyle(tile, next) && !edgeStyle(next, tile)) bare.add(`${tile}|${next}`);
+          }
+        }),
+      );
+      expect([...bare]).toEqual([]);
+    },
+  );
+
+  it('keeps every variant of a tile the plain one at its edges, so any sits beside any other', () => {
+    const RING = 2;
+    for (const [tile, variants] of Object.entries(TILE_VARIANTS)) {
+      const plain = tilePixels(Number(tile));
+      for (const id of variants) {
+        const pixels = spritePixels(id);
+        for (let y = 0; y < TILE_PIXELS; y += 1) {
+          for (let x = 0; x < TILE_PIXELS; x += 1) {
+            const inRing =
+              x < RING || y < RING || x >= TILE_PIXELS - RING || y >= TILE_PIXELS - RING;
+            if (inRing) expect(at(pixels, x, y), `${id} at ${x},${y}`).toBe(at(plain, x, y));
+          }
+        }
+      }
+    }
   });
 
   it('inks every band in a step the palette has', () => {
@@ -116,6 +168,32 @@ describe('composeGround', () => {
     // pond's own water.
     expect(at(edge.frames[0] ?? water, 16, 0)).toBe(at(grass, 16, 0));
     expect(at(edge.frames[0] ?? grass, 16, 24)).toBe(at(water, 16, 24));
+  });
+
+  it('stands rock up over a floor: its face drawn in its own cell, the foot at the edge', () => {
+    // The floor reaches into the rock's cell (rock blocks, so it is the one
+    // reached into), and the rows over where it stops are the face's bottom
+    // rows, the foot next to the floor: the face is inside the tile that stops
+    // a player, never over the floor in front of it.
+    const map = [
+      [WALL_TILE, WALL_TILE, WALL_TILE],
+      [STONE_TILE, STONE_TILE, STONE_TILE],
+    ];
+    const ground = composeGround(map, 'open', 0);
+    const rock = ground.cells[1];
+    if (rock?.kind !== 'edge') throw new Error('expected the rock over the floor to be an edge');
+    const style = edgeStyle(WALL_TILE, STONE_TILE);
+    if (!style?.face) throw new Error('rock over a floor shows no face');
+    const face = spritePixels(ROCK_FACE);
+    for (const x of [3, 16, 28]) {
+      const reach = reachAt(style, 'south', 1, TILE_PIXELS + x);
+      for (let d = 1; d <= FACE_ROWS; d += 1) {
+        const y = TILE_PIXELS - reach - d;
+        expect(at(rock.frames[0] ?? face, x, y), `${x},${y}`).toBe(at(face, x, TILE_PIXELS - d));
+      }
+    }
+    // And the floor's own cell is whole floor.
+    expect(ground.cells[4]?.kind).toBe('tile');
   });
 
   it.each(Object.keys(ZONES) as ZoneId[])('composes %s', (zoneId) => {
