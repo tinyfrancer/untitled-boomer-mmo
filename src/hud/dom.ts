@@ -66,9 +66,9 @@ export interface RowOptions {
   /**
    * A thumbnail down the left. Taken as a built element rather than an item id
    * so this stays the HUD's generic row and knows nothing about items — the
-   * two panels that pass one get it from `itemIcon.ts`.
+   * panels that pass one get it from `hudArt.ts`.
    */
-  icon?: SVGElement;
+  icon?: HTMLElement;
   /** A row that does something is a button, because a tappable row has to be. */
   onClick?: () => void;
 }

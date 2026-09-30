@@ -1,6 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row } from './dom';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { bindItemCard } from './itemCard';
 import { describeItemBonuses, describeItemName } from '../data/items';
 import { outfitterRows, type OutfitterRow } from '../systems/OutfitterSystem';
@@ -69,7 +69,7 @@ export class OutfitterModal extends Overlay {
 
     const head = row({
       className: 'hud-list-row',
-      icon: itemIconSvg(offer.itemId),
+      icon: itemIconEl(offer.itemId),
       label: describeItemName(offer.itemId),
       value: describeItemBonuses(offer.itemId),
       valueClass: 'hud-muted',

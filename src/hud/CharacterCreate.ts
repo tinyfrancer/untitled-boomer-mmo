@@ -1,6 +1,7 @@
 import { el } from './dom';
 import { LoadSaveModal } from './LoadSaveModal';
 import { injectHudStyles } from './styles';
+import { drawPortrait } from './hudArt';
 import { HAIR_RAMPS, SKIN_RAMPS, playerGetup, portrait } from '../art/outfit';
 import { SHARED_RAMPS } from '../art/palette';
 import { CLASSES } from '../data/classes';
@@ -199,18 +200,9 @@ class CharacterCreate {
           offhand: definition.startingOffhandId ?? null,
         }),
       );
-      canvas.width = picture.width;
-      canvas.height = picture.height;
-      const scale = canvas === this.preview ? PREVIEW_SCALE : PORTRAIT_SCALE;
-      canvas.style.width = `${picture.width * scale}px`;
-      canvas.style.height = `${picture.height * scale}px`;
       canvas.dataset.look = `${this.look.skin}:${this.look.hair}:${this.look.hairstyle}`;
       // A page with no 2D canvas (a test's) gets the card without the picture.
-      const context = hasCanvas() ? canvas.getContext('2d') : null;
-      if (!context) continue;
-      const image = context.createImageData(picture.width, picture.height);
-      image.data.set(picture.pixels);
-      context.putImageData(image, 0, 0);
+      drawPortrait(canvas, picture, canvas === this.preview ? PREVIEW_SCALE : PORTRAIT_SCALE);
     }
   }
 
@@ -242,12 +234,6 @@ class CharacterCreate {
     this.loadSave?.close();
     this.root.remove();
   }
-}
-
-// jsdom has canvases with nothing behind them, and says so loudly when one is
-// asked for a context; a browser always has one.
-function hasCanvas(): boolean {
-  return !navigator.userAgent.includes('jsdom');
 }
 
 let screen: CharacterCreate | null = null;

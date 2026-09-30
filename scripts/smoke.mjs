@@ -779,6 +779,57 @@ async function tabBar() {
   );
 }
 
+async function hudArt() {
+  // --- The HUD's look (B8, decision 111): its frames and icons are pixel art
+  // compiled at boot and handed to the page as images, and its headings are set
+  // in the world's own font, written as a font file in memory. None of it is a
+  // file loaded, and a page that refused any of it would fall back without a
+  // word to plain borders and the system font, which only a browser can see.
+  await park();
+  const art = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const faces = [...document.fonts].filter(
+      (face) => face.family.replaceAll('"', '') === 'World Pixel',
+    );
+    const label = document.querySelector('.hud-tabs__label');
+    const icon = document.querySelector('.hud-tabs__tab .hud-icon');
+    const bar = document.querySelector('.hud-tabs');
+    const hud = document.querySelector('.hud');
+    const box = icon?.getBoundingClientRect();
+    // Measured in the font alone: its glyphs' own widths, a pixel apart, add up
+    // to 35 for "Quests" at one pixel to the CSS pixel, which no system font
+    // standing in for it would.
+    const context = document.createElement('canvas').getContext('2d');
+    if (context) context.font = "16px 'World Pixel'";
+    return {
+      faces: faces.map((face) => face.status),
+      quests: context ? context.measureText('Quests').width : 0,
+      labelFont: label ? getComputedStyle(label).fontFamily : '',
+      frame: bar ? getComputedStyle(bar).borderImageSource : '',
+      sheet: icon ? getComputedStyle(icon).backgroundImage : '',
+      iconBox: box ? [box.width, box.height] : [],
+      pixelated: hud ? getComputedStyle(hud).imageRendering : '',
+    };
+  });
+  check(
+    "the world's font is written into the page and loads, and draws its own glyphs",
+    art.faces.includes('loaded') && art.quests === 35,
+    `${art.faces.join(', ')}; "Quests" ${art.quests}px wide`,
+  );
+  check('a tab is labelled in it', art.labelFont.includes('World Pixel'), art.labelFont);
+  check(
+    'the tab bar wears its iron frame, drawn as an image',
+    art.frame.startsWith('url("data:image/png'),
+    art.frame.slice(0, 40),
+  );
+  check(
+    "a tab's picture comes off the sheet of icons at one CSS pixel to the art pixel",
+    art.sheet.startsWith('url("data:image/png') && art.iconBox.join('x') === '16x16',
+    `${art.sheet.slice(0, 30)}, ${art.iconBox.join('x')}`,
+  );
+  check('and every picture is scaled nearest-neighbour', art.pixelated === 'pixelated');
+}
+
 async function landscape() {
   // --- A resize, which has to move two things that can be forgotten
   // separately: the drawing buffer and the camera's window. A buffer that
@@ -3387,10 +3438,11 @@ async function bagSheet() {
         actions: [...sheet.querySelectorAll('[data-item-action]')].map((n) => n.textContent),
       };
     });
-  // One of everything in the game. A grid holds several to a row where the old
-  // list gave each item the full width, so the fixture has to be the widest a
-  // bag can get for the scroll and the clip below to be exercised at all — and
-  // it makes the icon check further down cover every shape there is.
+  // A bag of one of most things. A grid holds several to a row where the old
+  // list gave each item the full width, so the fixture has to be wide enough for
+  // the bag to overflow by more than a row of cells, or the scroll and the clip
+  // below are not exercised at all — and it gives the icon check further down
+  // gear, tools, food and materials to draw.
   const ONE_OF_EACH = {
     'rusty-sword': 1,
     'apprentice-wand': 1,
@@ -3412,6 +3464,27 @@ async function bagSheet() {
     'crab-meat': 4,
     'cooked-crab': 2,
     'burnt-crab': 1,
+    'tin-ore': 2,
+    'iron-bar': 1,
+    shortbow: 1,
+    'brown-shield': 1,
+    'apprentice-orb': 1,
+    'crude-arrows': 25,
+    'lurker-hide': 1,
+    charcoal: 1,
+    'raw-eel': 1,
+    'cooked-eel': 1,
+    'iron-ore': 2,
+    coal: 2,
+    'tin-bar': 1,
+    'steel-bar': 1,
+    hardwood: 2,
+    willow: 2,
+    'arrow-shafts': 15,
+    'iron-arrowheads': 15,
+    'crawler-shell': 1,
+    'cured-leather': 1,
+    'reforging-stone': 1,
   };
   await page.evaluate((inventory) => {
     const w = window.world;
@@ -3484,26 +3557,32 @@ async function bagSheet() {
     `off the top: ${clipped.above}, still hittable: ${clipped.hits}`,
   );
 
-  // Every cell carries a drawn icon. The shapes are unit-tested; what needs a
-  // browser is that the SVG survives being built, hung and laid out — an icon
-  // that collapsed to nothing would leave a grid of empty boxes and no error.
+  // Every cell carries a drawn icon. Which picture each item is is unit-tested;
+  // what needs a browser is that the sheet of them reached the page and each
+  // cell shows its own square of it — an icon that lost its sheet would leave a
+  // grid of empty boxes and no error.
   const icons = await page.evaluate(() => {
     const cells = [...document.querySelectorAll('.hud-sheet[data-sheet="inventory"] .hud-item')];
     return cells.map((cell) => {
-      const svg = cell.querySelector('.hud-icon');
-      const box = svg?.getBoundingClientRect();
+      const icon = /** @type {HTMLElement | null} */ (cell.querySelector('.hud-icon'));
+      const box = icon?.getBoundingClientRect();
       return {
         item: /** @type {HTMLElement} */ (cell).dataset.item,
-        shape: svg ? /** @type {HTMLElement} */ (svg).dataset.shape : null,
-        drawn: !!box && box.width > 0 && box.height > 0,
-        parts: svg?.childElementCount ?? 0,
+        key: icon?.dataset.icon ?? null,
+        drawn: !!box && box.width === 32 && box.height === 32,
+        sheet: icon
+          ? getComputedStyle(icon).backgroundImage.startsWith('url("data:image/png')
+          : false,
+        at: icon?.style.backgroundPosition ?? '',
       };
     });
   });
   check(
-    'every item in the bag is drawn as an icon with a size and something in it',
-    icons.length > 0 && icons.every((icon) => icon.shape && icon.drawn && icon.parts > 0),
-    `${icons.length} cells, e.g. ${icons[0]?.item}: ${icons[0]?.shape} (${icons[0]?.parts} parts)`,
+    'every item in the bag is drawn as its own square of the sheet of icons',
+    icons.length > 0 &&
+      icons.every((icon) => icon.key && icon.drawn && icon.sheet && icon.at) &&
+      new Set(icons.map((icon) => icon.at)).size === icons.length,
+    `${icons.length} cells, e.g. ${icons[0]?.item}: ${icons[0]?.key} at ${icons[0]?.at}`,
   );
 
   // The grid packs several to a row where the list gave each one the full width,
@@ -3590,12 +3669,36 @@ async function bagSheet() {
   );
 }
 
+/**
+ * The character sheet's figure as drawn: what it wears, and its pixels, which
+ * only a browser fills.
+ */
+const paperdoll = () =>
+  page.evaluate(() => {
+    const doll = /** @type {HTMLCanvasElement | null} */ (document.querySelector('.hud-paperdoll'));
+    const data = doll?.getContext('2d')?.getImageData(0, 0, doll.width, doll.height).data;
+    let painted = 0;
+    for (let at = 3; data && at < data.length; at += 4) if ((data[at] ?? 0) > 0) painted += 1;
+    return {
+      gear: doll?.dataset.gear ?? '',
+      size: doll ? [doll.width, doll.height, doll.clientWidth, doll.clientHeight] : [],
+      painted,
+      pixels: data ? Array.from(data).join() : '',
+    };
+  });
+
 async function characterSheet() {
-  // --- The character sheet: the paperdoll is SVG built from the same rig the
-  // figure in the world is built from, and an empty slot opens a picker rather
+  // --- The character sheet: the figure on it is the world's (decision 111),
+  // put together from what is worn, and an empty slot opens a picker rather
   // than needing the bag. Equipping from it is the round trip that proves the
   // sheet is self-sufficient. ---
   await tapTab('character');
+  const before = await paperdoll();
+  check(
+    "the sheet draws the world's figure, at a whole scale",
+    before.painted > 200 && before.size.join('x') === '32x48x64x96',
+    `${before.painted} pixels painted, ${before.size.join('x')}`,
+  );
   await page.click('.hud-sheet[data-sheet="character"] .hud-slot[data-slot="helmet"]');
   await page.waitForTimeout(200);
   const picker = await page.evaluate(() => {
@@ -3651,16 +3754,18 @@ async function characterSheet() {
       document.querySelector('.hud-slot[data-slot="helmet"] .hud-slot__item')
     ).textContent,
     pickerGone: document.querySelector('.hud-picker') === null,
-    // The paperdoll is redrawn from the new gear, so the helmet's colour is on
-    // the head circle — the one thing a static picture could not show.
-    headFill: /** @type {SVGElement} */ (
-      document.querySelector('.hud-paperdoll circle')
-    ).getAttribute('fill'),
   }));
+  // The figure is drawn again in the new gear — the one thing a static picture
+  // could not show.
+  const after = await paperdoll();
   check(
-    'picking an item equips it and redraws the sheet',
-    equipped.world === 'brown-helmet' && equipped.shown === 'Brown Helmet' && equipped.pickerGone,
-    `${equipped.shown}, head drawn ${equipped.headFill}`,
+    'picking an item equips it and redraws the sheet, the figure in its new helmet',
+    equipped.world === 'brown-helmet' &&
+      equipped.shown === 'Brown Helmet' &&
+      equipped.pickerGone &&
+      after.gear.includes('brown-helmet') &&
+      after.pixels !== before.pixels,
+    `${equipped.shown}, figure wearing ${after.gear}`,
   );
   await page.screenshot({ path: `${OUT}/14-character-sheet.png` });
 }
@@ -4578,7 +4683,9 @@ async function saveTransfer() {
     y: Math.round(window.world.player.y),
     zoneId: window.world.zone.id,
     huds: document.querySelectorAll('.hud').length,
-    canvases: document.querySelectorAll('canvas').length,
+    // The view's, not the HUD's: the character sheet draws its figure on a
+    // canvas of its own, which comes and goes with the HUD it is in.
+    canvases: [...document.querySelectorAll('canvas')].filter((c) => !c.closest('.hud')).length,
     modals: document.querySelectorAll('.hud-modal').length,
     ground: window.view.drawnCounts().ground,
     stored: JSON.parse(localStorage.getItem('untitled-boomer-mmo:character:v1') ?? '{}').currency,
@@ -5050,6 +5157,7 @@ const SECTIONS = [
   ['teardown', teardown],
   ['walk-cycle', walkCycle],
   ['tab-bar', tabBar],
+  ['hud-art', hudArt],
   ['landscape', landscape],
   ['picking', picking],
   ['interiors', interiors],

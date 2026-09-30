@@ -7,7 +7,7 @@ import {
   type ActiveEffect,
 } from '../../src/systems/EffectSystem';
 import { EFFECTS, EFFECT_IDS } from '../../src/data/effects';
-import { EFFECT_STYLE } from '../../src/ui/theme';
+import { effectIconKey } from '../../src/art/icons';
 import type { EffectId } from '../../src/types/ids';
 
 const active = (effectId: EffectId, remainingMs: number, durationMs: number): ActiveEffect => ({
@@ -81,16 +81,15 @@ describe('the effect table', () => {
     }
   });
 
-  // The pair `QUEST_MARKER_STYLE` makes with `QuestSystem`: the table says what
-  // an effect is and the theme says what it looks like, so a new row without a
-  // glyph would otherwise draw an empty square.
-  it('has a glyph for every row, and no two the same', () => {
-    const glyphs = EFFECT_IDS.map((id) => EFFECT_STYLE[id].glyph);
-    expect(glyphs.every((glyph) => glyph.length > 0)).toBe(true);
-    expect(new Set(glyphs).size).toBe(EFFECT_IDS.length);
+  // The table says what an effect is and the art says what it looks like
+  // (`art/icons.ts`), so two rows drawn alike would be two squares nobody could
+  // tell apart.
+  it('has an icon for every row, and no two the same', () => {
+    const icons = EFFECT_IDS.map((id) => effectIconKey(id));
+    expect(new Set(icons).size).toBe(EFFECT_IDS.length);
   });
 
-  it('gives every row a short name that fits under a 30px icon', () => {
+  it('gives every row a short name that fits under its icon', () => {
     for (const definition of Object.values(EFFECTS)) {
       expect(definition.short.length).toBeLessThanOrEqual(8);
     }

@@ -369,6 +369,8 @@ class Hud {
     });
 
     this.characterSheet = new CharacterSheet(
+      character.classId,
+      character.look,
       (slot, isEmpty) => {
         if (isEmpty) {
           this.overlays.openSlotPicker(

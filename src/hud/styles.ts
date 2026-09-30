@@ -1,8 +1,74 @@
 import { el } from './dom';
+import { ICON_SHEET_VAR, frameVar, installHudArt } from './hudArt';
 import { TRAINING_FADE_MS } from './TrainingBar';
-import { THEME, cssColor, cssRgba } from '../ui/theme';
+import { FONT_FAMILY, PIXELS_PER_EM } from '../art/fontFile';
+import { HUD_FRAMES, accentPanel, type HudFrameName } from '../art/hud';
+import { FRAME_ACCENT, THEME, cssColor, cssRgba, rampStep, type BarFill } from '../ui/theme';
 
 const STYLE_ID = 'hud-styles';
+
+const SANS = `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
+
+const INK = cssColor(rampStep('ink', 0));
+const INK_2 = cssColor(rampStep('ink', 2));
+const INK_3 = cssColor(rampStep('ink', 3));
+const STONE = cssColor(rampStep('masonry', 2));
+const STONE_DARK = cssColor(rampStep('masonry', 1));
+
+/**
+ * A frame from `art/hud.ts` round an element, cut in nine by the page.
+ *
+ * The border under it is what the element wears where the art is not drawn (a
+ * test's page, which has no canvas): the frame's width in the frame's darkest
+ * colour, so the box is the same size either way and only the picture differs.
+ */
+function framed(name: HudFrameName, fallback = INK): string {
+  const { slice } = HUD_FRAMES[name];
+  return `border: ${slice}px solid ${fallback};
+  border-image: var(${frameVar(name)}) ${slice} fill / ${slice}px stretch;`;
+}
+
+/** Only the picture, for a state of an element already framed at this width. */
+function reframed(name: HudFrameName): string {
+  return `border-image-source: var(${frameVar(name)});`;
+}
+
+/**
+ * The world's font at a whole multiple, which is the only size it is drawn
+ * at: one CSS pixel to the glyph's pixel, or two for a title. Solid, so the
+ * capitals sit in the middle of the line, and never made bold or slanted by
+ * the browser, which would smear the pixels it is made of.
+ */
+function pixelType(times: 1 | 2): string {
+  const size = PIXELS_PER_EM * times;
+  return `font-family: '${FONT_FAMILY}', ${SANS};
+  font-size: ${size}px;
+  line-height: ${size}px;
+  font-weight: normal;
+  font-style: normal;
+  font-synthesis: none;`;
+}
+
+/**
+ * A bar's fill in its ramp, lit along the top row and shaded along the foot,
+ * in hard steps as pixel art shades rather than a gradient.
+ */
+function barFill({ ramp }: BarFill): string {
+  const [dark, lit, top] = [1, 3, 4].map((step) => cssColor(rampStep(ramp, step as 1 | 3 | 4)));
+  return `background: linear-gradient(to bottom, ${top} 0 1px, ${lit} 1px calc(100% - 2px), ${dark} calc(100% - 2px));`;
+}
+
+/**
+ * A word written over the world rather than on a panel: edged in ink on its
+ * four sides, as the world's own words are (`art/font.ts`), with a soft halo
+ * under that so a thin glyph keeps its edge over sand and grass alike.
+ */
+const OVER_THE_WORLD = `text-shadow:
+    1px 0 0 ${INK},
+    -1px 0 0 ${INK},
+    0 1px 0 ${INK},
+    0 -1px 0 ${INK},
+    0 0 4px ${cssRgba(rampStep('ink', 0), 0.8)};`;
 
 /**
  * The HUD's stylesheet, interpolated from THEME so the palette still lives in
@@ -10,11 +76,11 @@ const STYLE_ID = 'hud-styles';
  *
  * Written as a string rather than a `.css` file because the values in it are
  * the same ones the layout arithmetic uses, and a second hand-maintained copy
- * of the palette is exactly what the port is trying to avoid. Everything a
- * panel does with a rounded rectangle, a border and a bit of text is CSS now:
- * no masks, no hit areas, no per-object depth.
+ * of the palette is exactly what the port is trying to avoid. Every colour in
+ * it is a step on the art's ramps (`theme.test.ts` holds it), and every panel,
+ * button, row and slot is a frame drawn as pixel data (B8, decision 111).
  */
-function hudCss(): string {
+export function hudCss(): string {
   return `
 .hud {
   position: absolute;
@@ -29,8 +95,11 @@ function hudCss(): string {
      still permits panning and pinching, so sheet bodies scroll and the page can
      be scaled back. */
   touch-action: manipulation;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${SANS};
   color: ${THEME.color.text};
+  /* Every picture the HUD hangs is pixel art drawn one to a CSS pixel, which a
+     phone scales two or three times: nearest neighbour, or every edge blurs. */
+  image-rendering: pixelated;
   -webkit-user-select: none;
   user-select: none;
   /* A held finger is how a phone asks what something is, so iOS must not answer
@@ -40,15 +109,22 @@ function hudCss(): string {
 }
 .hud * {
   box-sizing: border-box;
+  scrollbar-color: ${INK_3} ${INK};
 }
 /* --- Shared chrome ------------------------------------------------------- */
 
+/* Iron round a dark face. The padding is what is left of the old eight once the
+   frame has taken its six, so what is inside sits where it always did. */
 .hud-panel {
   position: absolute;
   pointer-events: auto;
-  background: ${cssRgba(THEME.panelBg, THEME.panelAlpha)};
-  border: 1px solid ${cssColor(THEME.panelStroke)};
-  padding: ${THEME.padding}px;
+  background: ${cssColor(THEME.panelBg)};
+  ${framed('panel')}
+  padding: ${THEME.padding + 1 - THEME.frame.panel}px;
+}
+/* The world's font, where the HUD names something rather than counting it. */
+.hud-pixel {
+  ${pixelType(1)}
 }
 .hud-muted {
   color: ${THEME.color.muted};
@@ -59,63 +135,70 @@ function hudCss(): string {
   padding: 4px 0 4px ${THEME.padding}px;
 }
 
+/* A slab of stone standing up out of the panel, pressed in while it is held. */
 .hud-button {
   pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   min-height: ${THEME.touchMin}px;
-  padding: 0 ${THEME.padding}px;
-  border: 1px solid #888888;
-  background: ${cssRgba(THEME.buttonBg, THEME.buttonAlpha)};
+  padding: 0 ${THEME.padding - THEME.frame.button}px;
+  background: ${STONE};
+  ${framed('button')}
   color: ${THEME.color.text};
-  font: inherit;
-  font-size: ${THEME.font.md}px;
+  ${pixelType(1)}
   text-align: center;
   cursor: pointer;
 }
+.hud-button:active:not(:disabled) {
+  ${reframed('button-down')}
+  background: ${STONE_DARK};
+}
 .hud-button:disabled {
-  background: ${cssRgba(THEME.buttonBg, 0.4)};
-  border-color: #333333;
+  ${reframed('button-off')}
+  background: ${STONE_DARK};
+  color: ${THEME.color.dim};
   cursor: default;
 }
 .hud-button.is-selected {
-  border: 2px solid ${cssColor(THEME.xpFill)};
+  ${reframed('button-arcane')}
 }
 .hud-button.is-lit {
-  border: 2px solid ${THEME.color.equippable};
+  ${reframed('button-gold')}
 }
 
 /* A bar with a fill, which the player column and the skill lists are made of.
-   The backing is nearly opaque because these hang over the world with no panel
-   behind them: at half alpha the empty end of a bar over grass read as grass,
-   which is the one thing a bar exists to answer. */
+   The trough is solid because these hang over the world with no panel behind
+   them: at half alpha the empty end of a bar over grass read as grass, which is
+   the one thing a bar exists to answer. */
 .hud-bar {
   position: relative;
   height: ${THEME.xpBar.height}px;
-  background: rgba(0, 0, 0, 0.78);
+  background: ${INK};
+  ${framed('slot')}
   overflow: hidden;
 }
 .hud-bar__fill {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0;
-  background: ${cssColor(THEME.xpFill)};
+  ${barFill(THEME.bars.xp)}
 }
 .hud-bar__fill--mana {
-  background: ${cssColor(THEME.manaFill)};
+  ${barFill(THEME.bars.mana)}
 }
 .hud-bar__fill--quiver {
-  background: ${cssColor(THEME.quiverFill)};
+  ${barFill(THEME.bars.quiver)}
 }
 .hud-bar__fill--training {
-  background: ${cssColor(THEME.trainingFill)};
+  ${barFill(THEME.bars.training)}
 }
 .hud-bar__fill--hp {
-  background: ${cssColor(THEME.hpFill)};
+  ${barFill(THEME.bars.hp)}
 }
 .hud-bar__fill--target {
-  background: ${THEME.color.targetHp};
+  ${barFill(THEME.bars.target)}
 }
 /* The numbers ride inside the bar rather than under it, so the shadow is what
    keeps them legible over both the fill and the empty half of it. */
@@ -127,16 +210,13 @@ function hudCss(): string {
   font-size: ${THEME.font.xs}px;
   line-height: 1;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  ${OVER_THE_WORLD}
 }
 
 /* --- Text over the world ------------------------------------------------ */
 
-/* Everything written straight onto the world rather than onto a panel. The
-   world behind it used to end in a dark clear colour at the top of the screen;
-   now it runs on into pale haze, and a grey caption over a pale sky is a caption
-   nobody reads. The shadow is what the bar labels already wore, doubled with a
-   soft halo so a thin glyph keeps an edge over grass, sand and sky alike. */
+/* Everything written straight onto the world rather than onto a panel, edged
+   the way the world's own nameplates are. */
 .hud-player__head,
 .hud-player__title,
 .hud-effect__name,
@@ -144,12 +224,10 @@ function hudCss(): string {
 .hud-target__name,
 .hud-target__winding,
 .hud-tracker__line,
-.hud-ability__cost,
-.hud-channel__label {
-  text-shadow:
-    0 0 2px rgba(0, 0, 0, 0.95),
-    0 1px 2px rgba(0, 0, 0, 0.95),
-    0 0 5px rgba(0, 0, 0, 0.8);
+.hud-ability__name,
+.hud-channel__label,
+.hud-toast {
+  ${OVER_THE_WORLD}
 }
 
 /* --- Player column ------------------------------------------------------- */
@@ -169,8 +247,7 @@ function hudCss(): string {
   line-height: 18px;
 }
 .hud-player__name {
-  font-size: ${THEME.font.md}px;
-  font-weight: bold;
+  ${pixelType(1)}
   /* One line, cut rather than wrapped: a long name must not push the level
      onto a row of its own, which is the whole point of sharing this one. */
   min-width: 0;
@@ -180,7 +257,7 @@ function hudCss(): string {
 }
 .hud-player__level {
   flex: none;
-  font-size: ${THEME.font.sm}px;
+  ${pixelType(1)}
   color: ${THEME.color.text};
 }
 /* On its own line rather than appended to the name: the two together overrun
@@ -248,23 +325,15 @@ function hudCss(): string {
   width: ${THEME.effectIcon.size}px;
   height: ${THEME.effectIcon.size}px;
   margin: 0 auto;
-  border: 1px solid currentColor;
-  background: rgba(0, 0, 0, 0.55);
+  background: ${INK};
+  ${framed('slot')}
   overflow: hidden;
 }
 /* The one thing that tells a mark being done *to* you from one you asked for,
-   since nothing else about the square can carry it at 30px. */
+   since nothing else about the square can carry it at this size. */
 .hud-effect__icon.is-debuff {
+  border-image: none;
   border-color: ${THEME.color.playerDamage};
-}
-.hud-effect__glyph {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: ${THEME.font.lg}px;
-  line-height: 1;
 }
 /* Grows from the bottom as the buff is spent, so a square that is nearly full
    is one about to drop off. The mirror of the ability sweep, which fills while
@@ -275,7 +344,7 @@ function hudCss(): string {
   right: 0;
   bottom: 0;
   height: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: ${cssRgba(rampStep('ink', 0), 0.65)};
 }
 .hud-effect__name,
 .hud-effect__time {
@@ -300,8 +369,7 @@ function hudCss(): string {
   gap: 4px;
 }
 .hud-target__name {
-  font-size: ${THEME.font.md}px;
-  font-weight: bold;
+  ${pixelType(1)}
   line-height: 18px;
   overflow: hidden;
   white-space: nowrap;
@@ -345,30 +413,37 @@ function hudCss(): string {
   position: relative;
   width: ${THEME.touchMin + 8}px;
 }
+/* The ability's picture on a slab, its name under it and what it costs a
+   wizard along its foot: the picture is what a thumb finds mid-fight. */
 .hud-ability__key {
   position: relative;
   pointer-events: auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: ${THEME.touchMin + 8}px;
   padding: 0;
-  border: 1px solid ${cssColor(THEME.panelStroke)};
-  background: ${cssRgba(THEME.buttonBg, THEME.buttonAlpha)};
+  background: ${STONE};
+  ${framed('button')}
   color: ${THEME.color.text};
   font: inherit;
-  font-size: ${THEME.font.xs}px;
-  line-height: 1.2;
-  white-space: pre-line;
   cursor: pointer;
   overflow: hidden;
 }
+.hud-ability__key:active:not(:disabled) {
+  ${reframed('button-down')}
+  background: ${STONE_DARK};
+}
 .hud-ability__key:disabled {
-  background: ${cssRgba(THEME.buttonBg, 0.4)};
-  border-color: #333333;
+  ${reframed('button-off')}
+  background: ${STONE_DARK};
   color: ${THEME.color.text};
   cursor: default;
+}
+.hud-ability__key:disabled > .hud-icon {
+  opacity: 0.55;
 }
 /* Drawn from the bottom up as the cooldown runs down, so a glance says how
    long is left without reading a number. */
@@ -378,21 +453,40 @@ function hudCss(): string {
   right: 0;
   bottom: 0;
   height: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: ${cssRgba(rampStep('ink', 0), 0.6)};
   pointer-events: none;
 }
 .hud-ability__slot {
   position: absolute;
-  top: 2px;
-  left: 4px;
-  font-size: ${THEME.font.xs}px;
-  color: ${THEME.color.dim};
+  top: 0;
+  left: 1px;
+  ${pixelType(1)}
+  color: ${THEME.color.muted};
 }
+/* A wizard's price, in the world's font across the slab's foot; an ability that
+   costs nothing says nothing there. */
 .hud-ability__cost {
-  margin-top: 3px;
-  font-size: ${THEME.font.xs}px;
-  color: ${THEME.color.dim};
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  ${pixelType(1)}
+  color: ${THEME.color.skillUp};
   text-align: center;
+  pointer-events: none;
+}
+.hud-ability__name {
+  margin-top: 2px;
+  font-size: ${THEME.font.xs}px;
+  line-height: 13px;
+  color: ${THEME.color.muted};
+  text-align: center;
+  /* Two lines at most, since the bar reserves two: the longest names ("Crushing
+     Blow II") take both. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* --- Channel bar and toasts ---------------------------------------------- */
@@ -411,8 +505,6 @@ function hudCss(): string {
 }
 .hud-channel__bar {
   height: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid ${cssColor(THEME.panelStroke)};
 }
 /* A utility, so it has to beat whatever display the element sets for itself —
    .hud-sheet is declared later in this file and is otherwise flex. */
@@ -424,21 +516,20 @@ function hudCss(): string {
   position: absolute;
   left: 0;
   right: 0;
+  padding: 0 ${THEME.margin}px;
   text-align: center;
-  font-size: ${THEME.font.xl}px;
-  font-weight: bold;
+  ${pixelType(2)}
   pointer-events: none;
   opacity: 0;
 }
 
 /* --- Tip card ------------------------------------------------------------ */
 
-/* The spirit's voice: nearly opaque, since it hangs over the world as a sheet
-   does and is there to be read, with the skill-up blue at its edge so it is
-   never taken for a counter's panel. */
+/* The spirit's voice, its frame's accent the blue it speaks in. The bank wears
+   the same accent, and the two are never up at once: a tip waits out any
+   counter. */
 .hud-tip {
-  background: ${cssRgba(THEME.panelBg, THEME.sheetAlpha)};
-  border-color: ${THEME.color.skillUp};
+  ${reframed(accentPanel(FRAME_ACCENT.tip))}
 }
 .hud-tip__line {
   margin: 0 0 ${THEME.padding}px;
@@ -457,11 +548,12 @@ function hudCss(): string {
 }
 .hud-tip__actions .hud-button {
   flex: 1 1 0;
-  font-size: ${THEME.font.sm}px;
 }
 
 /* --- Tab bar ------------------------------------------------------------- */
 
+/* A bar of iron along the foot of the screen. Its frame takes six of the eight
+   it was padded by, so the tabs stand where they did. */
 .hud-tabs {
   position: absolute;
   left: 0;
@@ -469,10 +561,10 @@ function hudCss(): string {
   bottom: 0;
   display: flex;
   gap: ${THEME.padding}px;
-  padding: ${THEME.padding}px;
+  padding: ${THEME.padding - THEME.frame.panel}px;
   pointer-events: auto;
-  background: ${cssRgba(THEME.panelBg, 0.92)};
-  border-top: 1px solid ${cssColor(THEME.panelStroke)};
+  background: ${cssColor(THEME.panelBg)};
+  ${framed('panel')}
 }
 .hud-tabs__tab {
   /* Even shares of the width, so every seat costs every other seat. Five of
@@ -480,7 +572,8 @@ function hudCss(): string {
      seven cleared it by four tenths of a pixel. */
   flex: 1 1 0;
   min-width: 0;
-  font-size: ${THEME.font.sm}px;
+  flex-direction: column;
+  gap: 1px;
   padding: 0;
 }
 
@@ -489,26 +582,31 @@ function hudCss(): string {
 /* One sheet is open at a time, so each gets the whole column rather than
    sharing it. 'overflow: hidden' here and 'auto' on the body is the entire
    clipping story. */
+/* One sheet is open at a time, so each gets the whole column rather than
+   sharing it. 'overflow: hidden' here and 'auto' on the body is the entire
+   clipping story. Its frame's six come out of the head's and the body's own
+   padding, so what is inside stands where it did. */
 .hud-sheet {
   position: absolute;
   display: flex;
   flex-direction: column;
   pointer-events: auto;
   overflow: hidden;
-  background: ${cssRgba(THEME.panelBg, THEME.sheetAlpha)};
-  border: 1px solid ${cssColor(THEME.panelStroke)};
+  background: ${cssColor(THEME.panelBg)};
+  ${framed('panel')}
 }
 .hud-sheet__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: ${THEME.padding}px;
-  padding: ${THEME.padding}px ${THEME.padding}px 4px;
+  padding: ${THEME.padding + 1 - THEME.frame.panel}px ${THEME.padding + 1 - THEME.frame.panel}px 4px;
   flex: 0 0 auto;
 }
 .hud-sheet__title {
-  font-size: ${THEME.font.md}px;
-  font-weight: bold;
+  ${pixelType(2)}
+  color: ${THEME.color.levelUp};
+  min-width: 0;
 }
 .hud-sheet__body {
   flex: 1 1 auto;
@@ -516,7 +614,7 @@ function hudCss(): string {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 4px ${THEME.padding}px ${THEME.padding}px;
+  padding: 4px ${THEME.padding + 1 - THEME.frame.panel}px ${THEME.padding + 1 - THEME.frame.panel}px;
 }
 /* What a page is for, said once at its top: small, and out of the way of the rows. */
 .hud-sheet__intro {
@@ -535,10 +633,17 @@ function hudCss(): string {
   gap: ${THEME.padding}px;
   align-items: flex-start;
 }
-.hud-paperdoll {
-  width: ${THEME.paperdollSize}px;
-  height: ${THEME.paperdollSize}px;
+/* The figure the world draws, in what is worn, on a pit of its own. */
+.hud-char__doll {
   flex: 0 0 auto;
+  padding: 2px 6px;
+  background: ${INK};
+  ${framed('slot')}
+}
+.hud-paperdoll {
+  display: block;
+  width: ${32 * THEME.paperdollScale}px;
+  height: ${48 * THEME.paperdollScale}px;
 }
 .hud-char__stats {
   display: flex;
@@ -551,10 +656,10 @@ function hudCss(): string {
   display: block;
   width: 100%;
   min-height: ${THEME.touchMin}px;
-  padding: 4px 6px;
+  padding: 3px 5px;
   margin-top: 2px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.05);
+  background: ${STONE_DARK};
+  ${framed('row', STONE_DARK)}
   color: inherit;
   font: inherit;
   text-align: left;
@@ -579,13 +684,13 @@ function hudCss(): string {
   color: ${THEME.color.equippable};
 }
 .hud-section {
-  font-size: ${THEME.font.sm}px;
-  font-weight: bold;
-  color: ${THEME.color.muted};
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
   margin: ${THEME.padding}px 0 4px;
 }
 .hud-section__hint {
-  font-weight: normal;
+  font-family: ${SANS};
+  font-size: ${THEME.font.xs}px;
   color: ${THEME.color.dim};
   margin-left: 6px;
 }
@@ -611,10 +716,10 @@ function hudCss(): string {
   justify-content: center;
   width: 100%;
   min-height: 34px;
-  padding: 4px 6px;
+  padding: 3px 5px;
   margin-top: 2px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.05);
+  background: ${STONE_DARK};
+  ${framed('row', STONE_DARK)}
   color: inherit;
   font: inherit;
   text-align: left;
@@ -627,7 +732,6 @@ function hudCss(): string {
 /* Start and Stop, across from the title: the one thing the panel is opened to do. */
 .hud-idle__button {
   flex: none;
-  font-size: ${THEME.font.sm}px;
 }
 .hud-idle__head {
   align-items: center;
@@ -655,15 +759,14 @@ function hudCss(): string {
   gap: ${THEME.padding}px;
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0 6px;
-  background: rgba(255, 255, 255, 0.06);
+  padding: 0 5px;
+  background: ${STONE_DARK};
+  ${framed('row', STONE_DARK)}
   font-size: ${THEME.font.sm}px;
   pointer-events: auto;
 }
 .hud-idle-food__item > .hud-icon {
   flex: none;
-  width: ${THEME.font.xl}px;
-  height: ${THEME.font.xl}px;
 }
 .hud-idle-food__name {
   overflow: hidden;
@@ -676,8 +779,7 @@ function hudCss(): string {
 .hud-idle-food__button {
   flex: none;
   min-width: ${THEME.touchMin}px;
-  padding: 0 6px;
-  font-size: ${THEME.font.sm}px;
+  padding: 0 3px;
 }
 /* The top food has nowhere earlier to go and the bottom one nowhere later. */
 .hud-idle-food__button:disabled {
@@ -690,11 +792,8 @@ function hudCss(): string {
    sits in front of its own. */
 .hud-sheet__back {
   flex: none;
-  min-height: 24px;
-  padding: 0 6px;
-  font-size: ${THEME.font.sm}px;
-  border-color: ${cssColor(THEME.panelStroke)};
-  background: ${cssColor(THEME.buttonBg)};
+  min-height: 28px;
+  padding: 0 4px;
 }
 .hud-sheet__back + .hud-sheet__title {
   margin-right: auto;
@@ -730,12 +829,15 @@ function hudCss(): string {
 /* --- Bag ----------------------------------------------------------------- */
 
 .hud-coin {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-size: ${THEME.font.sm}px;
   color: ${THEME.color.levelUp};
+  white-space: nowrap;
 }
 .hud-coin__label {
   color: ${THEME.color.muted};
-  margin-right: 0.35em;
 }
 .hud-weight {
   font-size: ${THEME.font.xs}px;
@@ -757,6 +859,7 @@ function hudCss(): string {
   grid-template-columns: repeat(auto-fill, minmax(${THEME.bagCell.min}px, 1fr));
   gap: 6px;
 }
+/* A cell of the bag: a slot sunk into the panel, the item's picture in it. */
 .hud-item {
   position: relative;
   display: flex;
@@ -764,32 +867,33 @@ function hudCss(): string {
   align-items: center;
   gap: 2px;
   min-height: ${THEME.touchMin}px;
-  padding: 6px 4px;
-  border: 0;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 5px 3px;
+  background: ${INK};
+  ${framed('slot')}
   color: inherit;
   font: inherit;
   text-align: center;
   cursor: pointer;
 }
 .hud-item.is-selected {
-  background: rgba(255, 255, 255, 0.14);
   outline: 1px solid ${THEME.color.equippable};
 }
+/* An icon off the HUD's sheet of them (hud/hudArt.ts), sized and placed inline. */
 .hud-icon {
   display: block;
-  width: ${THEME.bagCell.icon}px;
-  height: ${THEME.bagCell.icon}px;
+  flex: none;
+  width: ${THEME.icon.item}px;
+  height: ${THEME.icon.item}px;
+  background-image: var(${ICON_SHEET_VAR});
+  background-repeat: no-repeat;
 }
 /* Bottom-right of the cell, over the icon — where every bag has put it. */
 .hud-item__count {
   position: absolute;
-  right: 3px;
-  bottom: ${THEME.font.xs + 6}px;
-  padding: 0 3px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.75);
+  right: 2px;
+  bottom: ${THEME.font.xs + 5}px;
+  padding: 0 2px;
+  background: ${INK};
   font-size: ${THEME.font.xs}px;
   color: ${THEME.color.text};
 }
@@ -813,8 +917,8 @@ function hudCss(): string {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 6px ${THEME.padding}px ${THEME.padding}px;
-  border-top: 1px solid ${cssRgba(THEME.panelStroke, 0.6)};
+  padding: 6px ${THEME.padding + 1 - THEME.frame.panel}px ${THEME.padding + 1 - THEME.frame.panel}px;
+  border-top: 1px solid ${INK_3};
 }
 .hud-bag-body {
   min-height: ${THEME.bagCell.icon + 2 * THEME.font.xs + 16}px;
@@ -851,9 +955,6 @@ function hudCss(): string {
 }
 .hud-item-actions .hud-button {
   min-height: 30px;
-  font-size: ${THEME.font.sm}px;
-  border-color: ${cssColor(THEME.panelStroke)};
-  background: ${cssColor(THEME.buttonBg)};
 }
 
 /* --- Map ----------------------------------------------------------------- */
@@ -868,7 +969,7 @@ function hudCss(): string {
   width: 100%;
   height: auto;
   max-height: 100%;
-  border: 1px solid ${cssColor(THEME.panelStroke)};
+  border: 1px solid ${INK_3};
   /* Terrain is drawn a tile at a time and the browser would otherwise blend
      the seams between them into a haze at this size. */
   shape-rendering: crispEdges;
@@ -877,7 +978,7 @@ function hudCss(): string {
    name always runs into the map rather than off it. */
 .hud-map__label {
   paint-order: stroke;
-  stroke: rgba(0, 0, 0, 0.85);
+  stroke: ${cssRgba(rampStep('ink', 0), 0.85)};
   stroke-width: 0.5;
   stroke-linejoin: round;
 }
@@ -902,10 +1003,7 @@ function hudCss(): string {
    place a sheet has room for a control. */
 .hud-map__zoom {
   min-height: 28px;
-  padding: 0 10px;
-  font-size: ${THEME.font.sm}px;
-  border-color: ${cssColor(THEME.panelStroke)};
-  background: ${cssColor(THEME.buttonBg)};
+  padding: 0 7px;
 }
 
 /* --- Quests, feats, log -------------------------------------------------- */
@@ -914,7 +1012,8 @@ function hudCss(): string {
   margin-bottom: ${THEME.padding}px;
 }
 .hud-quest__name {
-  font-size: ${THEME.font.md}px;
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
 }
 .hud-quest__name.is-done {
   color: ${THEME.color.dim};
@@ -950,7 +1049,6 @@ function hudCss(): string {
 }
 .hud-titles .hud-button {
   flex: 0 0 auto;
-  font-size: ${THEME.font.xs}px;
 }
 .hud-feat-title {
   color: ${THEME.color.levelUp};
@@ -967,7 +1065,9 @@ function hudCss(): string {
   gap: ${THEME.padding}px;
 }
 .hud-row--group {
-  font-size: ${THEME.font.md}px;
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
+  margin-bottom: 2px;
 }
 .hud-row--tier {
   font-size: ${THEME.font.sm}px;
@@ -1035,9 +1135,9 @@ function hudCss(): string {
   width: 280px;
   max-width: calc(100% - ${THEME.margin * 2}px);
   max-height: calc(100% - ${THEME.margin * 2}px);
-  background: ${cssRgba(THEME.panelBg, 0.95)};
-  border: 1px solid ${cssColor(THEME.panelStroke)};
-  padding: ${THEME.padding}px;
+  background: ${cssColor(THEME.panelBg)};
+  ${framed('panel')}
+  padding: ${THEME.padding + 1 - THEME.frame.panel}px;
   display: flex;
   flex-direction: column;
   gap: ${THEME.padding}px;
@@ -1053,17 +1153,19 @@ function hudCss(): string {
 }
 .hud-menu__item {
   min-height: ${THEME.touchMin}px;
+  flex-direction: column;
+  gap: 1px;
 }
 /* Its width is \`counterLayout\`'s, set inline: it depends on whether the two
    sides stand across or one over the other. */
 .hud-modal__box--shop {
-  border-color: ${THEME.color.levelUp};
+  ${reframed(accentPanel(FRAME_ACCENT.shop))}
   gap: 4px;
 }
 /* The shop's shape in the banker's colour, so which counter is open is
    answerable without reading the title. */
 .hud-modal__box--bank {
-  border-color: ${THEME.color.skillUp};
+  ${reframed(accentPanel(FRAME_ACCENT.bank))}
   gap: 4px;
 }
 /* A counter that deals both ways, as two framed panes that scroll on their own:
@@ -1082,9 +1184,9 @@ function hudCss(): string {
   min-height: 96px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 4px 4px;
-  border: 1px solid ${cssColor(THEME.panelStroke)};
-  background: rgba(0, 0, 0, 0.18);
+  padding: 0 3px 3px;
+  background: ${INK};
+  ${framed('slot')}
 }
 /* Across, each side takes half and the whole height, which is what a landscape
    phone has least of. */
@@ -1101,7 +1203,7 @@ function hudCss(): string {
    do not are lists of names and numbers. */
 .hud-modal__box--trainer {
   width: 320px;
-  border-color: ${THEME.color.trainer};
+  ${reframed(accentPanel(FRAME_ACCENT.trainer))}
   gap: 4px;
 }
 /* A lesson is its row and the sentence describing it, kept together so the
@@ -1125,7 +1227,7 @@ function hudCss(): string {
    what it asks for. */
 .hud-modal__box--bounty {
   width: 320px;
-  border-color: ${THEME.color.quartermaster};
+  ${reframed(accentPanel(FRAME_ACCENT.bounty))}
   gap: 4px;
 }
 /* A contract is its row and the line describing what it wants, kept together the
@@ -1152,11 +1254,10 @@ function hudCss(): string {
   width: 100%;
   min-height: 34px;
   margin: ${THEME.padding * 1.5}px 0 ${THEME.padding}px;
-  font-size: ${THEME.font.sm}px;
-  border-color: ${THEME.color.playerDamage};
+  ${reframed('button-red')}
 }
 .hud-contract__abandon.is-armed {
-  background: ${THEME.color.playerDamage};
+  ${reframed('button-armed')}
   color: ${THEME.color.text};
 }
 /* A word marking what kind of thing a row is, kept off the words around it. */
@@ -1196,15 +1297,14 @@ function hudCss(): string {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  padding: 6px ${THEME.padding}px;
+  padding: 3px ${THEME.padding - THEME.frame.button}px;
   margin-bottom: 4px;
   text-align: left;
 }
-.hud-talk__service-label {
-  font-weight: bold;
-}
 .hud-talk__blurb {
+  font-family: ${SANS};
   font-size: ${THEME.font.xs}px;
+  line-height: 1.3;
   color: ${THEME.color.muted};
 }
 /* A station's list, in the ember colour the forge's coals are drawn in — one
@@ -1213,7 +1313,7 @@ function hudCss(): string {
    trainer's for the same reason: every row carries a line under it. */
 .hud-modal__box--station {
   width: 320px;
-  border-color: ${THEME.color.forge};
+  ${reframed(accentPanel(FRAME_ACCENT.station))}
   gap: 4px;
 }
 /* Beside the purse in the head, and the one number that says why a deposit was
@@ -1224,15 +1324,38 @@ function hudCss(): string {
   margin-left: auto;
 }
 .hud-modal__title {
-  font-size: ${THEME.font.lg}px;
-  font-weight: bold;
+  ${pixelType(2)}
+  color: ${THEME.color.levelUp};
+  min-width: 0;
 }
 .hud-modal__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: ${THEME.padding}px;
+  gap: 2px ${THEME.padding}px;
   flex: 0 0 auto;
+}
+/* A counter's purse, and the bank's count of its slots, stand on a line of their
+   own under the title: a title in the world's font at two, a Back and an X fill
+   the head of a box a phone's width, and the title is the one that must not
+   wrap. The break is this empty line's, so the order the head is built in, Back
+   first, is the order it is read in. */
+.hud-modal__head:has(> .hud-coin)::after {
+  content: '';
+  order: 1;
+  flex-basis: 100%;
+  height: 0;
+}
+.hud-modal__head > .hud-bank__slots {
+  order: 2;
+}
+.hud-modal__head > .hud-coin {
+  order: 3;
+  margin-left: auto;
+}
+.hud-modal__head > .hud-bank__slots + .hud-coin {
+  margin-left: 0;
 }
 .hud-modal__body {
   flex: 1 1 auto;
@@ -1241,23 +1364,19 @@ function hudCss(): string {
   overscroll-behavior: contain;
 }
 .hud-modal__close {
-  min-height: 24px;
-  width: 24px;
+  flex: none;
+  min-height: 28px;
+  width: 28px;
   padding: 0;
-  font-size: ${THEME.font.sm}px;
-  border-color: ${cssColor(THEME.panelStroke)};
-  background: ${cssColor(THEME.buttonBg)};
+  margin-left: auto;
 }
 /* The way back to the conversation, at the front of every counter's head: the
    close button's size and look, and the title after it takes the slack, so the
    pair reads left to right and the purse and the X keep the right-hand end. */
 .hud-modal__back {
   flex: none;
-  min-height: 24px;
-  padding: 0 6px;
-  font-size: ${THEME.font.sm}px;
-  border-color: ${cssColor(THEME.panelStroke)};
-  background: ${cssColor(THEME.buttonBg)};
+  min-height: 28px;
+  padding: 0 4px;
 }
 .hud-modal__back + .hud-modal__title {
   margin-right: auto;
@@ -1272,7 +1391,7 @@ function hudCss(): string {
   width: 100%;
   min-height: ${THEME.touchMin}px;
   margin: 0;
-  accent-color: ${cssColor(THEME.xpFill)};
+  accent-color: ${THEME.color.levelUp};
   cursor: pointer;
 }
 .hud-options__volume:disabled {
@@ -1289,8 +1408,8 @@ function hudCss(): string {
 }
 .hud-save__heading {
   margin-top: 4px;
-  font-size: ${THEME.font.sm}px;
-  font-weight: bold;
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
 }
 /* Where a code is pasted in or copied out. The HUD turns text selection and
    iOS's copy and paste callout off for every piece of furniture, and this is
@@ -1305,8 +1424,8 @@ function hudCss(): string {
   font: 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   word-break: break-all;
   color: ${THEME.color.text};
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid ${cssColor(THEME.panelStroke)};
+  background: ${INK};
+  border: 1px solid ${INK_3};
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
@@ -1320,13 +1439,12 @@ function hudCss(): string {
   display: none;
 }
 .hud-save__card {
-  padding: 6px ${THEME.padding}px;
-  border: 1px solid ${cssColor(THEME.panelStroke)};
-  background: rgba(0, 0, 0, 0.3);
+  padding: 5px ${THEME.padding - 1}px;
+  background: ${INK};
+  ${framed('slot')}
 }
 .hud-save__name {
-  font-size: ${THEME.font.md}px;
-  font-weight: bold;
+  ${pixelType(1)}
 }
 
 /* Indented under the "Could not carry" heading, and dimmer than what was
@@ -1343,6 +1461,7 @@ function hudCss(): string {
 
 /* A list row that reads as a list item rather than a key: no border, and the
    value right-aligned for a price or a count. */
+/* A row of a list: a slab lower than a button, so a list reads as rows. */
 .hud-list-row {
   display: flex;
   align-items: center;
@@ -1350,10 +1469,10 @@ function hudCss(): string {
   gap: ${THEME.padding}px;
   width: 100%;
   min-height: 34px;
-  padding: 0 ${THEME.padding}px;
+  padding: 0 ${THEME.padding - 1}px;
   margin-bottom: 2px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
+  background: ${STONE_DARK};
+  ${framed('row', STONE_DARK)}
   color: ${THEME.color.text};
   font: inherit;
   font-size: ${THEME.font.sm}px;
@@ -1365,8 +1484,6 @@ function hudCss(): string {
    text lines takes the rest, and the value stays pinned right where it was. */
 .has-icon > .hud-icon {
   flex: none;
-  width: ${THEME.font.xl}px;
-  height: ${THEME.font.xl}px;
 }
 .hud-row__text {
   flex: 1 1 auto;
@@ -1412,7 +1529,6 @@ function hudCss(): string {
   flex: none;
   min-height: 0;
   min-width: 44px;
-  font-size: ${THEME.font.sm}px;
 }
 
 /* --- Context menu and inspect card --------------------------------------- */
@@ -1425,14 +1541,14 @@ function hudCss(): string {
   min-width: 132px;
   max-width: 200px;
   pointer-events: auto;
-  background: ${cssRgba(THEME.panelBg, 0.95)};
-  border: 1px solid ${cssColor(THEME.panelStroke)};
-  padding: 4px;
+  background: ${cssColor(THEME.panelBg)};
+  ${framed('panel')}
+  padding: 0;
 }
 .hud-context__title {
-  font-size: ${THEME.font.sm}px;
-  font-weight: bold;
-  padding: 2px ${THEME.padding}px 4px;
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
+  padding: 2px ${THEME.padding - 2}px 4px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1441,9 +1557,9 @@ function hudCss(): string {
   display: block;
   width: 100%;
   min-height: ${THEME.touchMin}px;
-  padding: 4px ${THEME.padding}px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
+  padding: 3px ${THEME.padding - 1}px;
+  background: ${STONE_DARK};
+  ${framed('row', STONE_DARK)}
   color: ${THEME.color.text};
   font: inherit;
   font-size: ${THEME.font.sm}px;
@@ -1460,7 +1576,20 @@ function hudCss(): string {
 .hud-modal__box--inspect {
   width: 300px;
   gap: 4px;
-  background: ${cssColor(THEME.panelBg)};
+}
+/* The item itself, twice the size of a row's, beside its name. */
+.hud-inspect__head {
+  display: flex;
+  align-items: center;
+  gap: ${THEME.padding}px;
+  min-width: 0;
+  margin-right: auto;
+}
+.hud-inspect__picture {
+  flex: none;
+  background-color: ${INK};
+  ${framed('slot')}
+  box-sizing: content-box;
 }
 .hud-inspect__subtitle {
   font-size: ${THEME.font.xs}px;
@@ -1486,7 +1615,7 @@ function hudCss(): string {
 .hud-inspect__uses {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid ${cssRgba(THEME.panelStroke, 0.6)};
+  border-top: 1px solid ${INK_3};
 }
 .hud-inspect__uses .hud-item-uses__line {
   font-size: ${THEME.font.sm}px;
@@ -1516,9 +1645,10 @@ function hudCss(): string {
   gap: ${THEME.margin}px;
   padding: ${THEME.margin}px;
   overflow-y: auto;
-  background: #1a1a2e;
+  background: ${INK};
   color: ${THEME.color.text};
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${SANS};
+  image-rendering: pixelated;
   /* Its own copy of the .hud rule: this screen is mounted before any canvas
      exists and sits outside the HUD overlay, and a page zoomed by double-tapping
      one of its big cards outlives it. */
@@ -1536,16 +1666,20 @@ function hudCss(): string {
 }
 .create__title {
   margin: 0;
-  font-size: ${THEME.font.xl}px;
-  font-weight: normal;
+  ${pixelType(2)}
+  color: ${THEME.color.levelUp};
+  text-align: center;
 }
 .create__name {
   width: 220px;
   max-width: 100%;
-  padding: 8px 10px;
+  padding: 7px 9px;
   /* 16px or larger, or iOS Safari zooms the page when it takes focus. */
   font-size: 16px;
   text-align: center;
+  color: ${THEME.color.text};
+  background: ${INK};
+  border: 1px solid ${INK_3};
 }
 .create__cards {
   display: flex;
@@ -1559,19 +1693,19 @@ function hudCss(): string {
   align-items: center;
   gap: ${THEME.padding}px;
   width: 200px;
-  padding: ${THEME.padding}px;
-  border: 2px solid ${cssColor(THEME.panelStroke)};
-  background: #2a2a4a;
+  padding: ${THEME.padding + 1 - THEME.frame.panel}px;
+  background: ${cssColor(THEME.panelBg)};
+  ${framed('panel')}
   color: ${THEME.color.text};
   font: inherit;
   cursor: pointer;
 }
 .create__card.is-selected {
-  border-color: ${THEME.color.equippable};
+  ${reframed(accentPanel('yellow'))}
 }
 .create__card-name {
-  font-size: ${THEME.font.lg}px;
-  font-weight: bold;
+  ${pixelType(2)}
+  color: ${THEME.color.levelUp};
 }
 .create__card-text {
   font-size: ${THEME.font.xs}px;
@@ -1618,26 +1752,30 @@ function hudCss(): string {
 .create__choice {
   min-width: 36px;
   height: 36px;
-  padding: 0 8px;
-  border: 2px solid ${cssColor(THEME.panelStroke)};
-  background: #2a2a4a;
+  padding: 0 5px;
+  background: ${STONE};
+  ${framed('button')}
   color: ${THEME.color.text};
-  font: inherit;
-  font-size: ${THEME.font.sm}px;
+  ${pixelType(1)}
   cursor: pointer;
 }
 .create__choice--swatch {
   width: 36px;
   padding: 0;
+  /* The colour itself is the face, which the frame's own fill would cover. */
+  border-image: none;
+  border: 3px solid ${INK_2};
 }
 .create__choice.is-selected {
+  ${reframed('button-gold')}
+}
+.create__choice--swatch.is-selected {
   border-color: ${THEME.color.equippable};
-  box-shadow: inset 0 0 0 2px #1a1a2e;
+  box-shadow: inset 0 0 0 2px ${INK};
 }
 .create__begin {
   width: 220px;
   max-width: 100%;
-  font-size: ${THEME.font.lg}px;
 }
 .create__begin:disabled {
   color: ${THEME.color.dim};
@@ -1654,9 +1792,10 @@ function hudCss(): string {
   z-index: 2;
   /* Dimmed behind, unlike a panel over the world: three class cards showing
      through a panel read as part of it. */
-  background: rgba(0, 0, 0, 0.6);
+  background: ${cssRgba(rampStep('ink', 0), 0.6)};
   color: ${THEME.color.text};
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${SANS};
+  image-rendering: pixelated;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1672,22 +1811,23 @@ function hudCss(): string {
   max-height: 60%;
   overflow-y: auto;
   pointer-events: auto;
-  background: ${cssRgba(THEME.panelBg, 0.92)};
-  border: 1px solid ${THEME.color.equippable};
-  padding: ${THEME.padding}px;
+  background: ${cssColor(THEME.panelBg)};
+  ${framed(accentPanel(FRAME_ACCENT.picker))}
+  padding: ${THEME.padding + 1 - THEME.frame.panel}px;
 }
 .hud-picker__title {
-  font-size: ${THEME.font.md}px;
-  font-weight: bold;
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
   margin-bottom: 4px;
 }
 .hud-picker__row {
   display: block;
   width: 100%;
   min-height: ${THEME.touchMin}px;
-  padding: 4px ${THEME.padding}px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
+  padding: 3px ${THEME.padding - 1}px;
+  margin-bottom: 2px;
+  background: ${STONE_DARK};
+  ${framed('row', STONE_DARK)}
   color: ${THEME.color.equippable};
   font: inherit;
   font-size: ${THEME.font.sm}px;
@@ -1697,8 +1837,12 @@ function hudCss(): string {
 `;
 }
 
-/** Idempotent: the HUD can be mounted and unmounted many times per page load. */
+/**
+ * Idempotent: the HUD can be mounted and unmounted many times per page load.
+ * The art the sheet names (the frames, the icons, the font) goes up with it.
+ */
 export function injectHudStyles(): void {
+  installHudArt();
   if (document.getElementById(STYLE_ID)) {
     return;
   }

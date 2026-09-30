@@ -1,4 +1,6 @@
 import { el, fillPercent, place } from './dom';
+import { iconEl } from './hudArt';
+import { abilityIconKey } from '../art/icons';
 import type { AbilityDefinition } from '../data/abilities';
 import type { Rect } from '../ui/layout';
 import type { AbilityState } from '../ui/uiEvents';
@@ -40,22 +42,25 @@ export class ActionBar {
     abilities.forEach((ability, index) => {
       const slot = el('div', 'hud-ability');
 
-      const button = el('button', 'hud-ability__key', ability.name.replace(' ', '\n'));
+      // The picture on the slab and the name under it: the name is what the
+      // button is called, so a reader and the checks that press it find it.
+      const button = el('button', 'hud-ability__key');
       button.type = 'button';
       button.dataset.ability = ability.id;
+      button.setAttribute('aria-label', ability.name);
       button.addEventListener('click', () => this.onUse(ability.id));
 
       const sweep = el('div', 'hud-ability__sweep');
       // The slot number doubles as the keyboard hint.
       const number = el('div', 'hud-ability__slot', `${index + 1}`);
-      button.append(sweep, number);
+      button.append(iconEl(abilityIconKey(ability.id)), sweep, number);
+      // What a cast costs, on the slab, for the class that pays in mana; a blow
+      // that costs nothing says nothing.
+      if (ability.manaCost > 0) {
+        button.append(el('div', 'hud-ability__cost', `${ability.manaCost} mana`));
+      }
 
-      const cost = el(
-        'div',
-        'hud-ability__cost',
-        ability.manaCost > 0 ? `${ability.manaCost} mana` : 'no cost',
-      );
-      slot.append(button, cost);
+      slot.append(button, el('div', 'hud-ability__name', ability.name));
       this.buttons.set(ability.id, { button, sweep });
       this.root.append(slot);
     });

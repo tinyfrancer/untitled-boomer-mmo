@@ -1,7 +1,7 @@
 import { Sheet } from './Sheet';
 import { el, fillPercent, row, sectionHeader } from './dom';
 import { bindItemCard } from './itemCard';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { setSkillProgress, skillRow } from './skillRows';
 import { MASTERY_TIERS } from '../data/mastery';
 import { COMBAT_SKILL_ORDER, SKILLS, SKILL_ORDER } from '../data/skills';
@@ -148,7 +148,7 @@ function entryView(entry: BookEntry, skillName: string): HTMLElement {
       ? `Lv ${entry.requiredLevel}`
       : `Needs ${skillName} ${entry.requiredLevel}`,
     valueClass: 'hud-list-row__value',
-    icon: itemIconSvg(entry.resultItemId),
+    icon: itemIconEl(entry.resultItemId),
   });
   wrapper.append(head.root, ...entry.lines.map((line) => el('div', 'hud-list-row__note', line)));
   if (entry.mastery) {

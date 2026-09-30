@@ -1,4 +1,6 @@
 import { el } from './dom';
+import { iconEl } from './hudArt';
+import { markIconKey } from '../art/icons';
 import { formatCurrency } from '../systems/CurrencySystem';
 
 /**
@@ -15,7 +17,11 @@ export class Purse {
   constructor(copper = 0) {
     this.root = el('div', 'hud-coin');
     this.amount = el('span', 'hud-coin__amount', formatCurrency(copper));
-    this.root.append(el('span', 'hud-coin__label', 'Coins'), this.amount);
+    this.root.append(
+      el('span', 'hud-coin__label', 'Coins'),
+      iconEl(markIconKey('coin'), 1, 'hud-icon hud-icon--mark'),
+      this.amount,
+    );
   }
 
   set(copper: number): void {

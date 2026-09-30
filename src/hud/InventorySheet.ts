@@ -3,7 +3,7 @@ import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
 import type { ItemId } from '../types/ids';
 import { el } from './dom';
 import { Purse } from './purse';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { bindLongPress } from './longPress';
 import { consumableFor, describeItemBonuses, describeItemName, isEquippable } from '../data/items';
 import { encumbranceLevel } from '../systems/EncumbranceSystem';
@@ -112,7 +112,7 @@ export class InventorySheet extends Sheet {
     name.classList.toggle('is-equippable', isEquippable(itemId));
     name.classList.toggle('is-consumable', !isEquippable(itemId) && consumableFor(itemId) !== null);
 
-    cell.append(itemIconSvg(itemId), name);
+    cell.append(itemIconEl(itemId), name);
     // A stack of one says so by not saying anything, the way every bag does.
     if (quantity > 1) {
       cell.append(el('span', 'hud-item__count', String(quantity)));
