@@ -2767,16 +2767,22 @@ async function playerColumn() {
   await clickAt(await screenAt(RAT));
   await step(2);
   const frame = await box('.hud-target');
+  // The minimap has the corner itself (decision 115), and on a phone held
+  // upright the frame stands under it rather than beside the column.
+  const minimap = await box('.hud-minimap');
   check(
-    'the enemy details sit in the opposite corner, clear of the character details',
+    'the enemy details sit on the far side, clear of the character details and under the minimap',
     frame !== null &&
       column !== null &&
+      minimap !== null &&
       frame.x >= column.right &&
       frame.right <= viewportWidth &&
-      Math.abs(frame.y - column.y) < 2,
+      frame.y >= minimap.bottom,
     `column ends x=${Math.round(column?.right ?? 0)}, frame runs ${Math.round(
       frame?.x ?? 0,
-    )}-${Math.round(frame?.right ?? 0)} of ${viewportWidth}`,
+    )}-${Math.round(frame?.right ?? 0)} of ${viewportWidth} from y=${Math.round(
+      frame?.y ?? 0,
+    )}, minimap ends y=${Math.round(minimap?.bottom ?? 0)}`,
   );
   await page.screenshot({ path: `${OUT}/13-top-corners.png` });
   await park();
@@ -3967,6 +3973,163 @@ async function zoneMapSheet() {
     `${before} -> ${arrived.title}, dot ${JSON.stringify(arrived.dot)}`,
   );
   await page.screenshot({ path: `${OUT}/21-map-next-zone.png` });
+}
+
+async function minimapCorner() {
+  // --- The minimap (decision 115). What it draws is unit-tested against the
+  // zone map's tables and a list of creatures handed to it; what needs a
+  // browser is that it is laid out in the corner at a real size and meets
+  // nothing else at a portrait phone, a landscape one and a desktop, that the
+  // creatures on it are the world's own on the real frame loop, that a real tap
+  // opens the map, and that its switch outlives a reload. ---
+  const furniture = () =>
+    page.evaluate(() => {
+      /** @param {Element | null} node */
+      const box = (node) => {
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      };
+      // Placed by the layout whether or not anything is targeted, so read off
+      // its style rather than off a box that is not drawn.
+      const frame = /** @type {HTMLElement} */ (document.querySelector('.hud-target'));
+      const minimap = document.querySelector('.hud-minimap');
+      return {
+        shown: minimap !== null && !minimap.classList.contains('hud-hidden'),
+        minimap: box(minimap),
+        map: box(document.querySelector('.hud-minimap__map')),
+        column: box(document.querySelector('.hud-player')),
+        tabs: box(document.querySelector('.hud-tabs')),
+        frame: {
+          x: parseFloat(frame.style.left),
+          y: parseFloat(frame.style.top),
+          width: parseFloat(frame.style.width),
+          height: parseFloat(frame.style.height),
+        },
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+      };
+    });
+  /**
+   * @param {{ x: number; y: number; width: number; height: number } | null} a
+   * @param {{ x: number; y: number; width: number; height: number } | null} b
+   */
+  const apart = (a, b) =>
+    a !== null &&
+    b !== null &&
+    (a.x + a.width <= b.x ||
+      b.x + b.width <= a.x ||
+      a.y + a.height <= b.y ||
+      b.y + b.height <= a.y);
+
+  for (const [name, viewport] of /** @type {const} */ ([
+    ['a portrait phone', PHONE],
+    ['a landscape phone', { width: 844, height: 390 }],
+    ['a desktop', { width: 1280, height: 800 }],
+  ])) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(300);
+    await park();
+    const at = await furniture();
+    const { minimap, map } = at;
+    check(
+      `the minimap stands in the top-right corner of ${name}, its map square and drawn`,
+      at.shown &&
+        minimap !== null &&
+        map !== null &&
+        Math.round(minimap.x + minimap.width) <= at.viewport.width &&
+        minimap.y < 20 &&
+        at.viewport.width - (minimap.x + minimap.width) < 20 &&
+        map.width === map.height &&
+        map.width >= 100,
+      `${JSON.stringify(minimap)}, map ${map?.width}x${map?.height}`,
+    );
+    check(
+      `and meets neither the player column, the target frame nor the tab bar on ${name}`,
+      apart(minimap, at.column) && apart(minimap, at.frame) && apart(minimap, at.tabs),
+      `minimap ${JSON.stringify(minimap)}, frame ${JSON.stringify(at.frame)}`,
+    );
+  }
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  await park();
+
+  // A creature stood three tiles east of the player has to turn up three tiles
+  // east of the cross in the middle: the world's publisher, the tile crossing
+  // and the HUD's drawing, on the real loop.
+  const placed = await page.evaluate(() => {
+    const w = window.world;
+    const mob = w.mobs.find((m) => m.isAlive());
+    if (!mob) return false;
+    mob.setPosition(w.player.x + 3 * 64, w.player.y);
+    return true;
+  });
+  await step(2);
+  await draw();
+  const dots = await page.evaluate(() => {
+    const centre = (/** @type {Element | null | undefined} */ node) => {
+      const rect = node?.getBoundingClientRect();
+      return rect ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 } : null;
+    };
+    const you = centre(document.querySelector('.hud-minimap__map [data-minimap="player"] rect'));
+    const creatures = [
+      ...document.querySelectorAll(
+        '.hud-minimap__map [data-minimap="creature"], .hud-minimap__map [data-minimap="boss"]',
+      ),
+    ].map((dot) => centre(dot.firstElementChild));
+    return { you, creatures, alive: window.world.mobs.filter((m) => m.isAlive()).length };
+  });
+  const tile = 4;
+  const east = dots.creatures.find(
+    (dot) =>
+      dots.you !== null &&
+      dot !== null &&
+      Math.abs(dot.x - dots.you.x - 3 * tile) <= tile &&
+      Math.abs(dot.y - dots.you.y) <= tile,
+  );
+  check(
+    'the minimap draws the creatures in reach where they stand, beside the player',
+    placed && east !== undefined && dots.creatures.length <= dots.alive,
+    `player at ${JSON.stringify(dots.you)}, ${dots.creatures.length} of ${dots.alive} creatures drawn`,
+  );
+  await page.screenshot({ path: `${OUT}/20c-minimap.png` });
+
+  // A tap on it opens the zone map, and another puts it away, as the tab would.
+  await page.tap('.hud-minimap');
+  await page.waitForTimeout(120);
+  const opened = await page.evaluate(
+    () => document.querySelector('.hud-sheet[data-sheet="map"]:not(.hud-hidden)') !== null,
+  );
+  // On a phone the sheet is the screen and covers the minimap, so the second
+  // ask comes the way a thumb would make it there: the menu.
+  await tapTab('map');
+  const closed = await page.evaluate(
+    () => document.querySelector('.hud-sheet[data-sheet="map"]:not(.hud-hidden)') === null,
+  );
+  check('a tap on the minimap opens the zone map', opened && closed);
+
+  // The switch in Options: off gives the corner back to the target frame, and
+  // the character keeps it across a reload.
+  await tapTab('options');
+  await page.click('[data-action="toggle-minimap"]');
+  await page.keyboard.press('Escape');
+  await step(2);
+  const off = await furniture();
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.world != null && window.view != null, null, {
+    timeout: 60000,
+  });
+  await step(2);
+  const reloaded = await furniture();
+  check(
+    'switched off in Options, the minimap goes, the target frame takes the corner, and a reload keeps it off',
+    !off.shown && off.frame.y < 20 && !reloaded.shown,
+    `off: shown ${off.shown}, frame at y=${off.frame.y}; after a reload shown ${reloaded.shown}`,
+  );
+  await tapTab('options');
+  await page.click('[data-action="toggle-minimap"]');
+  await page.keyboard.press('Escape');
+  await step(2);
+  check('and switched back on, it is back', (await furniture()).shown);
 }
 
 async function lockedZone() {
@@ -5235,6 +5398,7 @@ const SECTIONS = [
   ['bag', bagSheet],
   ['character-sheet', characterSheet],
   ['zone-map', zoneMapSheet],
+  ['minimap', minimapCorner],
   ['locked-zone', lockedZone],
   ['tips', tips],
   ['reset', reset],
