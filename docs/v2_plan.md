@@ -37,8 +37,11 @@ woods and their stumps, veins in the ore they yield, rings on the water, the for
 fletcher's bench and the fire, chips off each stroke, and rooms furnished from one layout with a
 counter in front of whoever works there; decision 109), **and B7** (3D deleted whole with Three.js,
 the camera fixed facing north, a game that imports no package, the memory check counting canvases
-and the draw budget brought down to 16ms, `rendering.md` the 2D view's; decision 110). **Next: B8**,
-the HUD's look. Update this line as each phase lands: which phase, and which is next.
+and the draw budget brought down to 16ms, `rendering.md` the 2D view's; decision 110), **and B8**
+(the HUD drawn in the world's art: iron and brass frames, the world's font on its headings compiled
+into a font file, every item, ability, buff and tab a pixel icon, the world's figure on the
+character sheet, and every colour a step on the art's ramps; decision 111). **Next: B9**, the Part B
+review. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -395,13 +398,33 @@ discovered at the end.
   files, forty-odd of them deleted and most of the rest a comment or a paragraph that named the 3D
   view; it stayed whole because a deletion that leaves the docs and comments pointing at files that
   are gone is not finished. Decision 110 has the forks.
-- **B8 — The HUD's look.** A full UI pass to match the art: theme, panels, icons as pixel data, a
-  type choice. Part A said what things are; this makes them look like one game.
+- **B8 — The HUD's look. (Landed.)** **The HUD is drawn in the world's art**, each of it made at
+  boot out of data and none of it a file loaded. **Panels are dark iron and brass** (the user's
+  choice over parchment and leather, and dark oak): a face of dark stone inside a bevelled iron band
+  with a brass plate riveted over each corner, buttons slabs of stone that press in, rows lower
+  slabs and a bag's cells pits, each **a frame** (a sprite kind of its own, `art/sprites/frames.ts`)
+  that the page cuts in nine, a counter's colour living on in its accent. **The world's font sets
+  the headings, tabs and buttons** (the user's choice over a book serif and the system sans),
+  written as a TrueType file in memory from its glyphs (`art/fontFile.ts`) at whole multiples only,
+  the dense lines staying sans; decision 100 had kept a system font because a pixel font "would have
+  to be a font file". **Every item, ability, buff and tab has a pixel icon** beside its word, 32
+  pixels and a tab's 16 (`art/icons.ts`): gear read off the wardrobe, so the helm in the bag is the
+  helm on the figure in the same steel, and cooking, burning and smelting as recolours into two new
+  ramps; seventy-three pictures painted by a generator and pasted in, as B6's trees were. **The
+  character sheet draws the world's figure** in what is worn, and the stick-figure rig went with the
+  vector icons and every colour an item or a class carried for them. **Every colour the HUD names is
+  a step on the art's ramps**, held over the whole stylesheet by a test, the XP bar went violet
+  to free blue for mana, and the zone map is drawn in each ground's own colour in the zone's light. The HUD's pixel is one CSS pixel, the world's own on a phone. Smoke gained a
+  `hud-art` section holding that a real browser takes the font, the frames and the sheet of icons. It
+  went to about seventy files with its tests and docs and stayed whole, the user's choice: the look
+  is one thing to judge, and frames round vector icons would have been neither the old HUD nor the
+  new one. Decision 111 has the forks.
 - **B9 — Part B review.**
 
 **Open questions for Part B**: none left. B1 answered all three: tiles are 32 pixels, the HUD keeps
 a system font while the world gets a pixel font drawn as data, and every creature faces four ways
-(decision 100).
+(decision 100). B8 asked the type again, since writing the font file from the data answered
+decision 100's objection, and the HUD's headings took the world's font (decision 111).
 
 ---
 

@@ -2503,3 +2503,77 @@ the forks were Claude's:
 Smoke's checks that a drag turned nothing went with the camera that could turn, and its landscape
 check, which had held the 3D canvas's drawing buffer to device pixels and passed on the 2D one only
 because the run's pixel ratio is 1, now holds the buffer in art pixels at a whole scale.
+
+## 111. The HUD is drawn in the world's art: iron and brass frames, the world's font on its headings, every item, ability, buff and tab a pixel icon, and the world's figure on the sheet
+
+**2026-09-30 · the user on the panels, the type, the icons and the phase's size; Claude's under it**
+
+B8 is the HUD's look: Part A said what things are, and this makes them look like one game with the
+world Part B drew. Four forks were the user's, asked when the phase started:
+
+- **Panels are dark iron and brass**: a near-opaque face of dark stone inside a bevelled iron band,
+  a brass plate riveted over each corner, and buttons that are slabs of stone standing out of the
+  panel and pressing in. **Rejected:** parchment and leather, the boldest, and the brightest thing
+  over a dark world, with every colour of text inverted to dark on light; dark oak and iron, which
+  ties the HUD to the town and reads rustic rather than heroic.
+- **The world's pixel font sets the HUD's headings, tabs and buttons**, compiled into a font file
+  at boot from the glyphs the world already draws (`art/fontFile.ts`), while the dense lines (the
+  numbers Part A labelled, the descriptions) keep the system sans. Decision 100 kept the whole HUD
+  on a system font because a pixel font there "would have to be a font file"; a file written in
+  memory from the data is no file loaded. **Rejected:** a book serif for headings, the platform's
+  Palatino or Georgia, cheapest and nothing like the world; the system sans everywhere, leaving the
+  frames and icons to carry the look.
+- **Items, abilities, buffs, the tab bar and the purse all get icons**, and every word that stood
+  there before stands beside its picture (pillar 1).
+- **One phase and one PR**, well past the plan's thirty-file prompt, since the look is one thing to
+  judge: frames round vector icons, or pixel icons in grey boxes, is neither the old HUD nor the new
+  one. **Rejected:** B8 for the frames, the type and the sheet, and B8b for the icons.
+
+How to build it had forks, all Claude's:
+
+- **Every colour the HUD names is a step on the art's ramps.** `THEME` reads its colours off
+  `rampStep`, and `theme.test.ts` holds the theme and every colour written into the stylesheet to
+  the palette, so the gold of a stat is a coin's gold and the green in the corner the green over a
+  head. The bars shade their fill in their ramp, a lit top row and a shaded foot, and the XP bar
+  goes violet, the way the genre has drawn it, which frees blue for mana. **Rejected:** a HUD
+  palette of its own beside the art's, the second copy the stylesheet was written to avoid.
+- **A frame is a sprite kind of its own, cut in nine by the page** (`border-image`): corners drawn
+  once and edges stretched, so an edge is the same all along its length, which `tests/art/hud.test.ts`
+  holds. A counter's colour is its accent, the line inside the iron and the stone in each rivet,
+  recoloured from `tier` as gear is, so the shop's gold and the trainer's violet still say which
+  counter is up. **Rejected:** borders and shadows in CSS imitating a bevel, which are neither pixel
+  art nor data; a picture a panel size.
+- **The HUD's pixel is one CSS pixel**: a 32-pixel icon is 32 CSS pixels and a panel's iron eight,
+  and a title is the font at two. On a phone that is the world's own pixel (a 390-point phone draws
+  the world at one to one and a third CSS pixels to the art pixel), and on a desktop, where the HUD
+  was already drawn phone-sized, it is finer than the world's. **Rejected:** two CSS pixels to the
+  art pixel, which doubles every frame and makes an icon 64; the world's scale over the device's,
+  which puts a variable into every number `ui/layout.ts` is tested at.
+- **The pictures reach the page as images written once a page** (`hud/hudArt.ts`): each frame and
+  one sheet of every icon onto a canvas, handed to a stylesheet of their own as data, and an icon an
+  element showing its square of the sheet. A test's jsdom has no canvas, so its HUD comes up in the
+  stylesheet's plain borders, every box the same size. **Rejected:** a canvas an icon, forty of them
+  rebuilt on every change to the bag; a picture as SVG a rectangle a pixel.
+- **Gear is drawn as what it is on the figure** (`art/icons.ts`): an item's icon is read off the
+  wardrobe's answer and dyed in its ramps, so the helm in the bag is the helm on the figure in the
+  same steel, and everything else is a row, falling back on its data's shape. `tests/art/icons.test.ts`
+  holds every item to a picture of its own. With the stick figure and the vector icons gone,
+  nothing read an item's `color`, `TIER_COLORS`, the bag's `ICON_COLOR` or a class's colour any
+  more, and they went. **Rejected:** a row an item, the tier drawn again in each.
+- **The icons are painted by a generator and pasted in**, as B6's trees were: shapes filled as
+  materials and shaded by the style guide's light, a sphere for what is round, then written into
+  the source as the grids they made. Seventy-three pictures of up to 32 square, which by hand is the
+  better part of a phase on its own. A cooked or burnt thing is its raw self recoloured, into two
+  new shared ramps, `roast` and `char`.
+- **The paperdoll is the world's figure**: the character sheet draws `portrait` of the player's own
+  getup at two CSS pixels to the art pixel, compiled again only when what is worn changes, as the
+  world compiles its own. The stick-figure rig (`systems/AppearanceSystem.ts`) is deleted with it.
+- **An ability is its picture on the slab and its name under it**, two lines at most, with a
+  wizard's price across the foot of the slab in the world's font; "no cost" said nothing and went.
+  **A buff is drawn as what gave it**: the shield as its spell, haste as Battle Fury, a full stomach
+  as a roast. A tab is a sixteen-pixel mark over its word, the purse a coin between its label and
+  its sum, and an item's card opens on the item drawn at twice a row's size.
+- **The zone map is drawn in the ground's own colours, in the zone's light**: a tile is step 2 of
+  its terrain ramp in the zone's setting, where it had been a table of bright colours of its own
+  (`TILE_COLORS`), which went. **Rejected:** leaving the map as it was, the one panel left in
+  another game's colours.

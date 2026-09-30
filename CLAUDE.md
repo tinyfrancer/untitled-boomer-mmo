@@ -192,7 +192,9 @@ line written for its id. `Record<Id, …>` and
 A new creature is also a row in `art/cast.ts` saying what it is drawn as, which a
 test holds every creature to (until then it is its shape's placeholder), and a new node or station
 a row in `art/places.ts` (until then a node is its shape's drawing, and a vein drawn in no ore,
-which a test holds every vein against: its ore is drawn in the colour of what it yields).
+which a test holds every vein against: its ore is drawn in the colour of what it yields). A new item
+of gear has its HUD icon the day its `art/wardrobe.ts` row lands, and anything else is a row in
+`art/icons.ts`, which a test holds every item to.
 
 **State that can be derived is derived.** Quest progress counts the bag or a tally on read; buffs,
 quest markers, achievements, titles and mastery rungs are computed when asked. Only three tallies
@@ -238,6 +240,14 @@ framing holds that, measured in `tests/render2d/camera.test.ts` and in smoke. **
 what it counts** (decisions 89 and 99): a stat is named in full off `BONUS_NAMES` in `data/items.ts`
 rather than abbreviated where it is drawn, a locked row says what it Needs, and a panel is titled
 with its tab's own word. Nothing but the panel titles is held by a test, so a new surface keeps it.
+**The HUD is drawn in the world's art** (decision 111, `docs/architecture/hud.md`): **every colour
+it names is a step on the art's ramps**, read through `rampStep` rather than typed as a hex, which
+`tests/ui/theme.test.ts` holds over the whole stylesheet; a panel, button, row or slot wears a
+frame from `art/hud.ts`, cut in nine by the page, so **a frame's edges are the same all along**
+(`tests/art/hud.test.ts`), and its width comes out of the element's old padding so the layout's
+heights hold; headings, tabs and buttons are set in the world's font, compiled to a font file at
+boot and **only ever set at a whole multiple, never bold**, the dense lines staying sans; and
+every item, ability, buff and tab has an icon, a word beside it wherever there was one.
 
 **The renderer loads no files and draws in painter's order** (`docs/decisions.md` 54 and 101).
 Every picture is a sprite compiled from data at boot, the ground is baked onto one canvas once a
@@ -297,21 +307,21 @@ Change a stat, a table or a curve and retune until those pass rather than eyebal
 
 ## Where the reasoning lives
 
-| Topic                                                              | File                              |
-| ------------------------------------------------------------------ | --------------------------------- |
-| The tick, collaborators, session, channels, death, pathing, saves  | `docs/architecture/simulation.md` |
-| The zone roster, exits, locks, the Greyford loop                   | `docs/architecture/zones.md`      |
-| Walls, doorways, rooms, counters indoors, the cutaway              | `docs/architecture/buildings.md`  |
-| Shop shelf, selling, bank, NPC roles, reforging, the full pack     | `docs/architecture/economy.md`    |
-| Tools, recipes, stations, tiers, cooking, dead ends                | `docs/architecture/making.md`     |
-| Loot rules, quests, bounties, stored tallies, mastery              | `docs/architecture/content.md`    |
-| Abilities, levels, difficulty, the cap, crits, armour, bosses      | `docs/architecture/combat.md`     |
-| Idle (the AFK camp), its panel and food order, offline progress    | `docs/architecture/afk.md`        |
-| The HUD's pieces, the map, layout, tabs                            | `docs/architecture/hud.md`        |
-| The 2D view: camera, painter's order, words, picking, draw budget  | `docs/architecture/rendering.md`  |
-| Pixel art: palette, light, outline, budget, sprites, places, edges | `docs/architecture/art.md`        |
-| Sound: what it hears, cues, ambience, unlocking, mute and volume   | `docs/architecture/audio.md`      |
-| Tests vs smoke, the dev handles, the hand crank, frame-rate bugs   | `docs/architecture/testing.md`    |
+| Topic                                                                             | File                              |
+| --------------------------------------------------------------------------------- | --------------------------------- |
+| The tick, collaborators, session, channels, death, pathing, saves                 | `docs/architecture/simulation.md` |
+| The zone roster, exits, locks, the Greyford loop                                  | `docs/architecture/zones.md`      |
+| Walls, doorways, rooms, counters indoors, the cutaway                             | `docs/architecture/buildings.md`  |
+| Shop shelf, selling, bank, NPC roles, reforging, the full pack                    | `docs/architecture/economy.md`    |
+| Tools, recipes, stations, tiers, cooking, dead ends                               | `docs/architecture/making.md`     |
+| Loot rules, quests, bounties, stored tallies, mastery                             | `docs/architecture/content.md`    |
+| Abilities, levels, difficulty, the cap, crits, armour, bosses                     | `docs/architecture/combat.md`     |
+| Idle (the AFK camp), its panel and food order, offline progress                   | `docs/architecture/afk.md`        |
+| The HUD's look and pieces, the map, layout, tabs                                  | `docs/architecture/hud.md`        |
+| The 2D view: camera, painter's order, words, picking, draw budget                 | `docs/architecture/rendering.md`  |
+| Pixel art: palette, light, outline, budget, sprites, places, edges, the HUD's art | `docs/architecture/art.md`        |
+| Sound: what it hears, cues, ambience, unlocking, mute and volume                  | `docs/architecture/audio.md`      |
+| Tests vs smoke, the dev handles, the hand crank, frame-rate bugs                  | `docs/architecture/testing.md`    |
 
 When a change moves one of those subsystems, the topic file is what gets corrected — and when it
 adds a rule a later change could break without a test noticing, that rule goes here too.
