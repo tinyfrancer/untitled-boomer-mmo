@@ -78,11 +78,28 @@ const ELBOW_STEP = TILE_SIZE / 8;
  * middle of either cell, since each has a wall's thickness of the room's edge
  * in it. Standing only at the middle, a two-tile room had no cell a route could
  * pass through, and the only way into one was a straight line through its door.
+
  */
 const FOOTHOLD_REACH = TILE_SIZE / 4;
 
-function bodyAt(at: Point, halfExtent: number): Aabb {
-  return { x: at.x, y: at.y, halfWidth: halfExtent, halfHeight: halfExtent };
+/**
+ * How big the body being routed is: its half extents, or one number for a
+ * square body. The player is a square; a creature is whatever its row says, and
+ * a rat is half again as long as it is wide.
+ */
+export type BodyExtent = number | { readonly halfWidth: number; readonly halfHeight: number };
+
+function bodyAt(at: Point, extent: BodyExtent): Aabb {
+  return typeof extent === 'number'
+    ? { x: at.x, y: at.y, halfWidth: extent, halfHeight: extent }
+    : { x: at.x, y: at.y, halfWidth: extent.halfWidth, halfHeight: extent.halfHeight };
+}
+
+/** The same body with `by` more room all round it. */
+function grown(extent: BodyExtent, by: number): BodyExtent {
+  return typeof extent === 'number'
+    ? extent + by
+    : { halfWidth: extent.halfWidth + by, halfHeight: extent.halfHeight + by };
 }
 
 /**
@@ -98,11 +115,11 @@ function roomToMove(
   from: Point,
   dx: number,
   dy: number,
-  halfExtent: number,
+  extent: BodyExtent,
 ): number {
   for (let shift = ELBOW_STEP; shift <= ELBOW_ROOM; shift += ELBOW_STEP) {
     const probe = { x: from.x + dx * shift, y: from.y + dy * shift };
-    const body = bodyAt(probe, halfExtent);
+    const body = bodyAt(probe, extent);
     const reachable = clampToWorld(body, world);
     if (reachable.x !== probe.x || reachable.y !== probe.y || isBlocked(world, body)) {
       return shift - ELBOW_STEP;
@@ -120,8 +137,8 @@ function roomToMove(
  * refused before anything is searched: a zone cut out of rock is most of its
  * cells, and a route asks about the ones it reaches.
  */
-function foothold(world: CollisionWorld, cell: Point, halfExtent: number): Point | null {
-  if (!isBlocked(world, bodyAt(cell, halfExtent))) return cell;
+function foothold(world: CollisionWorld, cell: Point, extent: BodyExtent): Point | null {
+  if (!isBlocked(world, bodyAt(cell, extent))) return cell;
   const tile = world.grid[Math.floor(cell.y / TILE_SIZE)]?.[Math.floor(cell.x / TILE_SIZE)];
   if (tile !== undefined && world.blockingTiles.has(tile)) return null;
   let best: Point | null = null;
@@ -131,7 +148,7 @@ function foothold(world: CollisionWorld, cell: Point, halfExtent: number): Point
       const distance = Math.hypot(dx, dy);
       if (distance >= bestDistance) continue;
       const spot = { x: cell.x + dx, y: cell.y + dy };
-      const body = bodyAt(spot, halfExtent);
+      const body = bodyAt(spot, extent);
       const reachable = clampToWorld(body, world);
       if (reachable.x !== spot.x || reachable.y !== spot.y || isBlocked(world, body)) continue;
       best = spot;
@@ -154,10 +171,10 @@ function foothold(world: CollisionWorld, cell: Point, halfExtent: number): Point
  * line above answers; one that has to arrive somewhere inside it and turn is
  * not, which is what this refuses.
  */
-function footing(world: CollisionWorld, cell: Point, halfExtent: number): Point | null {
-  const from = foothold(world, cell, halfExtent);
+function footing(world: CollisionWorld, cell: Point, extent: BodyExtent): Point | null {
+  const from = foothold(world, cell, extent);
   if (from === null) return null;
-  const room = (dx: number, dy: number): number => roomToMove(world, from, dx, dy, halfExtent);
+  const room = (dx: number, dy: number): number => roomToMove(world, from, dx, dy, extent);
   const east = room(1, 0);
   const west = room(-1, 0);
   const south = room(0, 1);
@@ -166,7 +183,7 @@ function footing(world: CollisionWorld, cell: Point, halfExtent: number): Point 
   const moved = { x: from.x + (east - west) / 2, y: from.y + (south - north) / 2 };
   // The two axes are measured apart and taken together, which an inside corner
   // can make a step into the corner itself.
-  return isBlocked(world, bodyAt(moved, halfExtent)) ? from : moved;
+  return isBlocked(world, bodyAt(moved, extent)) ? from : moved;
 }
 
 /**
@@ -180,14 +197,14 @@ export function hasClearLine(
   world: CollisionWorld,
   from: Point,
   to: Point,
-  halfExtent: number,
+  extent: BodyExtent,
 ): boolean {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / LINE_SAMPLE_STEP));
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
-    if (isBlocked(world, bodyAt({ x: from.x + dx * t, y: from.y + dy * t }, halfExtent))) {
+    if (isBlocked(world, bodyAt({ x: from.x + dx * t, y: from.y + dy * t }, extent))) {
       return false;
     }
   }
@@ -221,9 +238,9 @@ export function standNear(
   world: CollisionWorld,
   from: Point,
   goal: Point,
-  halfExtent: number,
+  extent: BodyExtent,
 ): Point {
-  if (!isBlocked(world, bodyAt(goal, halfExtent))) return goal;
+  if (!isBlocked(world, bodyAt(goal, extent))) return goal;
   const dx = from.x - goal.x;
   const dy = from.y - goal.y;
   const span = Math.hypot(dx, dy);
@@ -232,7 +249,7 @@ export function standNear(
   for (let i = 1; i <= steps; i += 1) {
     const t = Math.min(1, (i * LINE_SAMPLE_STEP) / span);
     const probe = { x: goal.x + dx * t, y: goal.y + dy * t };
-    if (!isBlocked(world, bodyAt(probe, halfExtent))) return probe;
+    if (!isBlocked(world, bodyAt(probe, extent))) return probe;
   }
   return goal;
 }
@@ -246,7 +263,12 @@ export function standNear(
  * the end of the wall beside the opening where squaring up to it first does
  * not.
  */
-function cornerBetween(world: CollisionWorld, from: Point, to: Point, reach: number): Point | null {
+function cornerBetween(
+  world: CollisionWorld,
+  from: Point,
+  to: Point,
+  reach: BodyExtent,
+): Point | null {
   const turns = [
     { x: from.x, y: to.y },
     { x: to.x, y: from.y },
@@ -285,9 +307,9 @@ function heuristic(col: number, row: number, goalCol: number, goalRow: number): 
 function pullStraight(
   world: CollisionWorld,
   points: readonly Point[],
-  halfExtent: number,
+  extent: BodyExtent,
 ): Point[] {
-  const clearance = halfExtent + CLEARANCE;
+  const clearance = grown(extent, CLEARANCE);
   const kept: Point[] = [];
   let anchor = points[0];
   let i = 1;
@@ -308,7 +330,112 @@ function pullStraight(
 }
 
 /**
- * A route from `start` to `goal` for a body `halfExtent` across, or `null` when
+ * Where a body of one size stands in each cell of one world, and whether the
+ * cell is crowded: something reaches into it, so the body stands off its
+ * middle. A step between two cells with nothing in either is clear by
+ * construction, since the body at a cell's middle is the whole cell; a step
+ * touching a crowded one is not, since the thing reaching in may be a wall
+ * between the two.
+ */
+interface Footings {
+  stood: (Point | null | undefined)[];
+  crowded: boolean[];
+}
+
+/**
+ * Footings are remembered for the life of the world they were worked out in,
+ * one set per body size.
+ *
+ * A footing is sixteen probes and more in a crowded cell, and it was worked out
+ * again by every search while the player's taps were the only thing asking.
+ * Creatures ask as often as their quarry moves a tile, so the same cells were
+ * about to be stood in over and over, on maps three times the size. What is
+ * solid is fixed for the life of a zone — nothing the player does adds a
+ * blocker — so an answer never goes stale, and a world is let go with the zone.
+ */
+const FOOTINGS = new WeakMap<CollisionWorld, Map<string, Footings>>();
+
+function footingsOf(world: CollisionWorld, extent: BodyExtent, cellCount: number): Footings {
+  const body = bodyAt({ x: 0, y: 0 }, extent);
+  const key = `${body.halfWidth}x${body.halfHeight}`;
+  const bySize = FOOTINGS.get(world) ?? new Map<string, Footings>();
+  FOOTINGS.set(world, bySize);
+  const known = bySize.get(key) ?? {
+    stood: new Array<Point | null | undefined>(cellCount),
+    crowded: new Array<boolean>(cellCount).fill(false),
+  };
+  bySize.set(key, known);
+  return known;
+}
+
+/**
+ * The cells a search has still to look at, cheapest estimate first: a binary
+ * heap, ties going to whichever was queued first.
+ *
+ * A linear scan did this while a zone was 25 by 19 and the whole search was 475
+ * cells. The rebuilt zones are three times that, and a creature re-plans a
+ * chase where a tap planned once, so the scan's square was the part of a search
+ * that grew fastest.
+ */
+class OpenSet {
+  private readonly heap: { index: number; estimate: number; order: number }[] = [];
+  private queued = 0;
+
+  push(index: number, estimate: number): void {
+    const entry = { index, estimate, order: this.queued };
+    this.queued += 1;
+    const { heap } = this;
+    heap.push(entry);
+    let at = heap.length - 1;
+    while (at > 0) {
+      const up = (at - 1) >> 1;
+      const parent = heap[up];
+      if (parent === undefined || !this.before(entry, parent)) break;
+      heap[at] = parent;
+      at = up;
+    }
+    heap[at] = entry;
+  }
+
+  pop(): number | undefined {
+    const { heap } = this;
+    const top = heap[0];
+    const last = heap.pop();
+    if (top === undefined || last === undefined || heap.length === 0) return top?.index;
+    let at = 0;
+    for (;;) {
+      const left = at * 2 + 1;
+      const right = left + 1;
+      let next = at;
+      let best = last;
+      const leftEntry = heap[left];
+      const rightEntry = heap[right];
+      if (leftEntry !== undefined && this.before(leftEntry, best)) {
+        next = left;
+        best = leftEntry;
+      }
+      if (rightEntry !== undefined && this.before(rightEntry, best)) {
+        next = right;
+        best = rightEntry;
+      }
+      if (next === at) break;
+      heap[at] = best;
+      at = next;
+    }
+    heap[at] = last;
+    return top.index;
+  }
+
+  private before(
+    a: { estimate: number; order: number },
+    b: { estimate: number; order: number },
+  ): boolean {
+    return a.estimate < b.estimate || (a.estimate === b.estimate && a.order < b.order);
+  }
+}
+
+/**
+ * A route from `start` to `goal` for a body `extent` across, or `null` when
  * there is none.
  *
  * A\* over the tile grid `CollisionSystem` already thinks in, with everything
@@ -322,19 +449,22 @@ function pullStraight(
  * The answer excludes the standing spot and ends exactly on the goal, so it is
  * never empty. `null` means the caller should do whatever it did before there was a
  * pathfinder: no route was found, the goal is somewhere the body could not
- * stand anyway, or the world has no grid at all. `ApproachDriver` is the caller,
- * and the straight line it falls back to on `null` is the whole of its handling.
+ * stand anyway, or the world has no grid at all. Two things call it: the
+ * `ApproachDriver`'s walks from a tap, and a `Chase`, a creature's or the
+ * player's pursuit. Both fall back to the straight line on `null`, and for a
+ * tap that is the whole of the handling; a chase also counts the time a press
+ * gets no nearer, and gives up on it (decision 116).
  */
 export function findPath(
   world: CollisionWorld,
   start: Point,
   goal: Point,
-  halfExtent: number,
+  extent: BodyExtent,
 ): Point[] | null {
   // Nothing can end a walk standing inside a wall, so there is no route to ask
   // for. Checked before anything else because it is also the cheapest.
-  if (isBlocked(world, bodyAt(goal, halfExtent))) return null;
-  if (hasClearLine(world, start, goal, halfExtent)) return [goal];
+  if (isBlocked(world, bodyAt(goal, extent))) return null;
+  if (hasClearLine(world, start, goal, extent)) return [goal];
 
   const rows = world.grid.length;
   const cols = world.grid[0]?.length ?? 0;
@@ -351,78 +481,59 @@ export function findPath(
   };
 
   const cellCount = cols * rows;
-  // Worked out on demand rather than swept up front: a search that never
-  // reaches a corner of the map never pays for it, and most taps are answered
-  // by the straight line above without one of these being asked at all.
-  const stood: (Point | null | undefined)[] = new Array(cellCount);
-  // A cell with something reaching into it, stood in off its middle. A step
-  // between two cells with nothing in either is clear by construction, since
-  // the body at a cell's middle is the whole cell; a step touching one of these
-  // is not, since the thing reaching in may be a wall between the two.
-  const crowded: boolean[] = new Array(cellCount).fill(false);
-  const standing = (index: number): Point | null => {
-    const known = stood[index];
-    if (known !== undefined) return known;
-    const cell = centre(index % cols, Math.floor(index / cols));
-    const answer = footing(world, cell, halfExtent);
-    stood[index] = answer;
-    crowded[index] = answer !== null && isBlocked(world, bodyAt(cell, halfExtent));
-    return answer;
-  };
-
+  const known = footingsOf(world, extent, cellCount);
   const startIndex = indexOf(start);
-  const goalIndex = indexOf(goal);
-  const goalCol = goalIndex % cols;
-  const goalRow = Math.floor(goalIndex / cols);
   // You can always walk out of what you are already standing in — the same rule
   // `moveWithCollision` makes one level down, and for the same reason: a body a
   // tree grew on top of would otherwise be stuck there for good. The spot is
   // where it is standing, since that is the one place it is known to fit.
   // Its steps are checked like any crowded cell's when there is something in
   // the cell, which in a room two tiles deep is the wall behind it, but not when
-  // the body is inside something already: nothing is clear of there.
-  stood[startIndex] = start;
-  crowded[startIndex] =
-    !isBlocked(world, bodyAt(start, halfExtent)) &&
-    isBlocked(world, bodyAt(centre(startIndex % cols, Math.floor(startIndex / cols)), halfExtent));
+  // the body is inside something already: nothing is clear of there. It is this
+  // search's own and never remembered, since the next one starts somewhere else.
+  const startCrowded =
+    !isBlocked(world, bodyAt(start, extent)) &&
+    isBlocked(world, bodyAt(centre(startIndex % cols, Math.floor(startIndex / cols)), extent));
+  const standing = (index: number): Point | null => {
+    if (index === startIndex) return start;
+    const stood = known.stood[index];
+    if (stood !== undefined) return stood;
+    const cell = centre(index % cols, Math.floor(index / cols));
+    const answer = footing(world, cell, extent);
+    known.stood[index] = answer;
+    known.crowded[index] = answer !== null && isBlocked(world, bodyAt(cell, extent));
+    return answer;
+  };
+  const crowded = (index: number): boolean =>
+    index === startIndex ? startCrowded : known.crowded[index] === true;
+
+  const goalIndex = indexOf(goal);
+  const goalCol = goalIndex % cols;
+  const goalRow = Math.floor(goalIndex / cols);
   if (standing(goalIndex) === null) return null;
 
   const gScore: number[] = new Array(cellCount).fill(Infinity);
-  const fScore: number[] = new Array(cellCount).fill(Infinity);
   const cameFrom: number[] = new Array(cellCount).fill(-1);
   const turnedAt: (Point | null)[] = new Array(cellCount).fill(null);
   const closed: boolean[] = new Array(cellCount).fill(false);
-  const queued: boolean[] = new Array(cellCount).fill(false);
   const costTo = (index: number): number => gScore[index] ?? Infinity;
-  const estimate = (index: number): number => fScore[index] ?? Infinity;
 
   gScore[startIndex] = 0;
-  fScore[startIndex] = heuristic(
-    startIndex % cols,
-    Math.floor(startIndex / cols),
-    goalCol,
-    goalRow,
+  const open = new OpenSet();
+  open.push(
+    startIndex,
+    heuristic(startIndex % cols, Math.floor(startIndex / cols), goalCol, goalRow),
   );
-  const open: number[] = [startIndex];
-  queued[startIndex] = true;
   let found = false;
 
-  while (open.length > 0) {
-    // A linear scan for the cheapest node open. The grid is 25 x 19, so the
-    // whole search is 475 cells and a heap in front of it would be machinery
-    // guarding an arithmetic that costs nothing.
-    let bestAt = 0;
-    for (let i = 1; i < open.length; i += 1) {
-      if (estimate(open[i] ?? -1) < estimate(open[bestAt] ?? -1)) bestAt = i;
-    }
-    const current = open[bestAt] ?? -1;
+  for (let current = open.pop(); current !== undefined; current = open.pop()) {
+    // A cell is queued again each time a cheaper way to it turns up rather than
+    // moved up the queue, so the dearer copies are still in there behind it.
+    if (closed[current] === true) continue;
     if (current === goalIndex) {
       found = true;
       break;
     }
-    open[bestAt] = open[open.length - 1] ?? -1;
-    open.pop();
-    queued[current] = false;
     closed[current] = true;
 
     const col = current % cols;
@@ -440,7 +551,7 @@ export function findPath(
         step.dc !== 0 && step.dr !== 0 ? [row * cols + nextCol, nextRow * cols + col] : [];
       if (corners.some((corner) => standing(corner) === null)) continue;
       let turn: Point | null = null;
-      if ([current, next, ...corners].some((index) => crowded[index] === true)) {
+      if ([current, next, ...corners].some(crowded)) {
         const from = standing(current);
         const to = standing(next);
         if (from === null || to === null) continue;
@@ -448,7 +559,7 @@ export function findPath(
         // waypoint rather than on it and a leg along a wall's end with none to
         // spare catches on it. Not out of where the body stands now, which may
         // be closer to something than a route would ever choose to be.
-        const reach = current === startIndex ? halfExtent : halfExtent + CLEARANCE;
+        const reach = current === startIndex ? extent : grown(extent, CLEARANCE);
         if (!hasClearLine(world, from, to, reach)) {
           turn = cornerBetween(world, from, to, reach);
           if (turn === null) continue;
@@ -459,11 +570,7 @@ export function findPath(
       cameFrom[next] = current;
       turnedAt[next] = turn;
       gScore[next] = cost;
-      fScore[next] = cost + heuristic(nextCol, nextRow, goalCol, goalRow);
-      if (queued[next] !== true) {
-        open.push(next);
-        queued[next] = true;
-      }
+      open.push(next, cost + heuristic(nextCol, nextRow, goalCol, goalRow));
     }
   }
 
@@ -486,5 +593,5 @@ export function findPath(
     }),
     goal,
   ];
-  return pullStraight(world, points, halfExtent);
+  return pullStraight(world, points, extent);
 }
