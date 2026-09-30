@@ -1,11 +1,10 @@
 /**
  * Every canvas the 2D view holds, counted.
  *
- * What the 3D view's leak check read off the GPU (`renderer.info.memory`), this
- * view holds as canvases: the sprite sheet, the baked ground, each building,
- * each word. A zone change that does not let go of the last zone's is the leak
- * smoke has to find, and nothing else can see it, so every canvas is made and
- * let go through here and `DebugView.gpuMemory()` reports the count.
+ * What the view holds is canvases: the sprite sheets, the baked ground, each
+ * building, each word. A zone change that does not let go of the last zone's
+ * is the leak smoke has to find, and nothing else can see it, so every canvas
+ * is made and let go through here and `DebugView.canvases()` reports the count.
  */
 export class CanvasPool {
   private readonly held = new Set<HTMLCanvasElement>();
