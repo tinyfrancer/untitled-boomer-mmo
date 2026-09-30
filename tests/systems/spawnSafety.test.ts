@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { TILE_SIZE } from '../../src/config/constants';
 import { ENEMIES } from '../../src/data/enemies';
 import { ZONES } from '../../src/data/zones';
-import { arrivalPoint } from '../../src/systems/ZoneSystem';
+import { clampToWorld, isBlocked } from '../../src/systems/CollisionSystem';
+import { arriveRadius, distance } from '../../src/systems/MovementSystem';
+import { hasClearLine } from '../../src/systems/PathSystem';
+import { arrivalPoint, zoneWorldSize } from '../../src/systems/ZoneSystem';
 import type { Point } from '../../src/systems/MovementSystem';
 import type { ZoneEdge } from '../../src/types/ids';
+import type { Mob } from '../../src/world/Mob';
+import { populateZone } from '../../src/world/zoneEntities';
 
 /**
  * Where the game puts a player down, and what is allowed to be standing there.
@@ -116,6 +121,142 @@ describe('an arrival strip', () => {
     }
   });
 });
+
+/**
+ * Where a creature goes when a fight is over (decision 116): home, by the way
+ * round whatever it was led round. A creature that cannot get there never
+ * wanders again, and only a wandering creature notices anyone, so one stuck on
+ * the way is a hole in its zone. It is put there after a chase's worth of
+ * getting nowhere, which is the net under this sweep rather than the plan.
+ */
+describe("a creature's way home", () => {
+  /**
+   * The weaker half, and the one that failed first. A home the body does not
+   * fit is a home no walk can end at, so a creature led off it was never coming
+   * back: two did, since zones were written as text and every placement moved
+   * onto a cell's middle — a goblin on the mill road into the trunk of the
+   * hardwood beside it, and the barrow king, a tile and a half tall, into the
+   * rock at the foot of his chamber.
+   */
+  it('is somewhere its body stands', () => {
+    for (const zone of Object.values(ZONES)) {
+      const { mobs, collisionWorld } = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      for (const mob of mobs) {
+        expect(
+          isBlocked(collisionWorld, mob.bounds()),
+          `${zone.id}: the ${mob.definition.id} at ${mob.spawnX},${mob.spawnY} stands in something`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  /**
+   * Walked home from every cell a chase could have led it to — inside its
+   * leash ring, reached from home without leaving the ring — where the way home
+   * is not a straight line, at 60fps and at 5. The fen had a raider and a
+   * lurker living in slots between two pools a tile wide, which a search will
+   * not stand a body in, and they pressed at the slot a fraction of a pixel a
+   * frame for good.
+   */
+  it('is walked back to, by the way round, from anywhere a chase can lead it', () => {
+    for (const zone of Object.values(ZONES)) {
+      const { mobs, collisionWorld } = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      for (const mob of mobs) {
+        for (const from of ledTo(mob, zone.map, collisionWorld)) {
+          for (const deltaMs of [16, 200]) {
+            expect(
+              walksHome(mob, from, collisionWorld, deltaMs),
+              `${zone.id}: the ${mob.definition.id} at ${mob.spawnX},${mob.spawnY} never gets home from ${from.x},${from.y} at ${deltaMs}ms a frame`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  });
+});
+
+type World = ReturnType<typeof populateZone>['collisionWorld'];
+
+/** The room a body needs on each axis to turn round in a cell: `PathSystem`'s clearance. */
+const SLACK = TILE_SIZE / 4;
+
+/**
+ * The middles of every cell the creature's body fits in, inside the world's
+ * edge as well as clear of anything solid, joined to its home
+ * without leaving the leash ring, from which it cannot see its way straight
+ * home. The ones that can are the walk every creature took before creatures
+ * pathed.
+ */
+function ledTo(mob: Mob, map: readonly (readonly number[])[], world: World): Point[] {
+  const cols = map[0]?.length ?? 0;
+  const rows = map.length;
+  const home = { x: mob.spawnX, y: mob.spawnY };
+  const { width, height } = mob.definition.body;
+  const middle = (col: number, row: number): Point => ({
+    x: (col + 0.5) * TILE_SIZE,
+    y: (row + 0.5) * TILE_SIZE,
+  });
+  const inRing = (col: number, row: number): boolean => {
+    if (col < 0 || row < 0 || col >= cols || row >= rows) return false;
+    const at = middle(col, row);
+    return distance(at, home) <= mob.definition.leashRadius && standsIn(at);
+  };
+  // Clear of anything solid and inside the world's edge, with room to turn
+  // round: a slot exactly the body's width is somewhere a press can push it
+  // and no route will take it out of (decision 35), and the net is for that.
+  const standsIn = (at: Point): boolean => {
+    const fits = (dx: number, dy: number): boolean => {
+      const body = { x: at.x + dx, y: at.y + dy, halfWidth: width / 2, halfHeight: height / 2 };
+      const inside = clampToWorld(body, world);
+      return inside.x === body.x && inside.y === body.y && !isBlocked(world, body);
+    };
+    const room = (dx: number, dy: number): number =>
+      [SLACK / 2, SLACK].filter((shift) => fits(dx * shift, dy * shift)).length * (SLACK / 2);
+    return fits(0, 0) && room(1, 0) + room(-1, 0) >= SLACK && room(0, 1) + room(0, -1) >= SLACK;
+  };
+  const first = { col: Math.floor(home.x / TILE_SIZE), row: Math.floor(home.y / TILE_SIZE) };
+  const seen = new Set([first.row * cols + first.col]);
+  const queue = [first];
+  for (let cell = queue.shift(); cell !== undefined; cell = queue.shift()) {
+    for (const [dc, dr] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const next = { col: cell.col + dc, row: cell.row + dr };
+      const index = next.row * cols + next.col;
+      if (seen.has(index) || !inRing(next.col, next.row)) continue;
+      seen.add(index);
+      queue.push(next);
+    }
+  }
+  const extent = { halfWidth: width / 2, halfHeight: height / 2 };
+  return [...seen]
+    .map((index) => middle(index % cols, Math.floor(index / cols)))
+    .filter((at) => !hasClearLine(world, at, home, extent));
+}
+
+/**
+ * Whether it walks home from `from` inside a generous minute, with nobody
+ * anywhere near. Walks: a frame that carries it further than a step is the net
+ * putting it there, which is the failure this is looking for.
+ */
+function walksHome(mob: Mob, from: Point, world: World, deltaMs: number): boolean {
+  mob.setPosition(from.x, from.y);
+  mob.engage();
+  mob.disengage();
+  const { chaseSpeed } = mob.definition;
+  const band = arriveRadius(chaseSpeed, deltaMs);
+  const step = (chaseSpeed * deltaMs) / 1000 + 1;
+  for (let elapsed = 0; elapsed < 60_000; elapsed += deltaMs) {
+    if (distance(mob, { x: mob.spawnX, y: mob.spawnY }) <= band) return true;
+    const before = { x: mob.x, y: mob.y };
+    mob.update(-TILE_SIZE * 100, -TILE_SIZE * 100, deltaMs, world);
+    if (distance(before, mob) > step) return false;
+  }
+  return false;
+}
 
 /**
  * The closest a creature stands to **any** point on an arrival strip, which is

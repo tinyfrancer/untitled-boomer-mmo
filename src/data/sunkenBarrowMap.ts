@@ -37,7 +37,7 @@ export const SUNKEN_BARROW_LAYOUT = layoutZone(
     ######_____________######
     ######~~_b_____b___######
     ######______c______######
-    #########################
+    ###########___###########
     #########################
   `,
   {
@@ -53,7 +53,10 @@ export const SUNKEN_BARROW_LAYOUT = layoutZone(
     b: { mob: 'barrow-wight', level: 8, on: 'stone' },
     /**
      * The king, last, with four of his between the way in and him: he is fought
-     * last or he is fought with company.
+     * last or he is fought with company. He is a tile and a half tall, and in
+     * the chamber's last row he stood with his feet in the rock, so he never got
+     * home once led off it; the alcove behind him is the room he stands in
+     * (decision 116).
      */
     c: { mob: 'barrow-king', level: 8, on: 'stone' },
   },

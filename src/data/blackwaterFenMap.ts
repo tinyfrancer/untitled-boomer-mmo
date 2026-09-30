@@ -32,9 +32,9 @@ export const BLACKWATER_FEN_LAYOUT = layoutZone(
     ,,,,,,,,,,,,,,,,,,,a,,,,,
     ,,,,,,,,,,,,@,,,,,,,,,,,,
     ,,,,c,,,~~~,,,,,,,,,,,,,,
-    ,,,~~~~,~~~d~~~~~,,d,,,,,
-    ,,,f~~~,,,,,f~~~f,~~~,,,,
-    ,,,~~~~,,e,,~~~~~e~~~,,,,
+    ,,,~~~~,~~~,~~~~~,,d,,,,,
+    ,,,f~~~,,,,df~~~f,~~~,,,,
+    ,,,~~~~,,e,,~~~~~e,~~,,,,
     ,,,,,,,,,,,,,,,,,,,,,,,,,
     ,,,,,,,,,,,,,,,,,,,,,,,,,
     ,,,,,,,,,g,,,,g,,,,,,,,,,
@@ -59,7 +59,9 @@ export const BLACKWATER_FEN_LAYOUT = layoutZone(
      * No raider stands within its aggro radius of the south edge's arrival
      * strip, and none within its reach of the start: one once stood beside the
      * middle of the map, where a death respawns you, and `spawnSafety.test.ts`
-     * holds that now.
+     * holds that now. Nobody lives in a gap a tile wide between two pools, which
+     * a search will not stand a body in: a lurker did and moved down a row, and
+     * the far raider's pool gave up the tile east of him (decision 116).
      */
     a: { mob: 'fen-raider', level: 5, on: 'marsh' },
     b: { mob: 'bog-lurker', level: 5, on: 'marsh' },
