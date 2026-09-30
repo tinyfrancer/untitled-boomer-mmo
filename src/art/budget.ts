@@ -21,11 +21,13 @@ export const TILE_PIXELS = 32;
  */
 export const ART_PIXEL = TILE_SIZE / TILE_PIXELS;
 
-export type SpriteKind = 'tile' | 'scatter' | 'person' | 'beast' | 'prop' | 'effect' | 'icon';
+export type SpriteKind =
+  'tile' | 'scatter' | 'mark' | 'person' | 'beast' | 'prop' | 'effect' | 'icon';
 
 export const SPRITE_KINDS: readonly SpriteKind[] = [
   'tile',
   'scatter',
+  'mark',
   'person',
   'beast',
   'prop',
@@ -121,6 +123,17 @@ export const BUDGET: Readonly<Record<SpriteKind, KindBudget>> = {
     opaque: false,
     required: ['still'],
     animations: { still: STILL },
+  },
+  // What lies on the ground and moves there: the rings spreading over a
+  // fishing spot. Light on water rather than a thing standing, so it is not
+  // outlined, which drew the rings as loops of dark wire; and it loops on the
+  // water's own clock, so it moves in step with what it lies on.
+  mark: {
+    sizes: [[TILE_PIXELS, TILE_PIXELS]],
+    outlined: false,
+    opaque: false,
+    required: ['loop'],
+    animations: { loop: looping(4, 250, 'one') },
   },
   // The player, an NPC, and every creature built like one: a bandit, a
   // goblin, a wight. A tile wide and half again as tall; the larger size is

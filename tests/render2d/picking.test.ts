@@ -99,6 +99,23 @@ describe('pickTap in 2D', () => {
     expect(tapIn(world, point)).toEqual({ kind: 'ground', point });
   });
 
+  /**
+   * A node is picked by its body, as the 3D view picked it: a tree up its
+   * trunk and the lower half of its crown, not the whole crown, and a fishing
+   * spot as the patch of water it is, on either side of the spot.
+   */
+  it('picks a tree by its body and a fishing spot lying flat round it', () => {
+    const { world } = harness();
+    const tree = world.nodes.find((node) => node.definition.shape === 'tree');
+    const pool = world.nodes.find((node) => node.definition.shape === 'ripple');
+    if (!tree || !pool) throw new Error('town has a tree and a fishing spot');
+    const body = tree.definition.body.height;
+    expect(tapIn(world, { x: tree.x, y: tree.y - body + 4 })).toMatchObject({ node: tree });
+    expect(tapIn(world, { x: tree.x, y: tree.y - body - 8 }).kind).not.toBe('node');
+    expect(tapIn(world, { x: pool.x, y: pool.y - 20 })).toMatchObject({ node: pool });
+    expect(tapIn(world, { x: pool.x, y: pool.y + 20 })).toMatchObject({ node: pool });
+  });
+
   it('leaves a zone from a tap on its signpost', () => {
     const { world } = harness();
     const signpost = world.signposts[0];

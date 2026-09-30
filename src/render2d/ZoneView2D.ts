@@ -2,8 +2,8 @@ import { creatureSprite, npcSprite, thrownSprite } from '../art/cast';
 import { PLAYER_SPRITE, playerSprite } from '../art/outfit';
 import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { ART_PIXEL } from '../art/budget';
-import { PLACEHOLDERS } from '../art/index';
 import { variantId } from '../art/compile';
+import { nodeSprite, stationSprite, strokeSprite } from '../art/places';
 import { CRIT, HIT, LEVEL_UP, LOOT_SACK } from '../art/sprites/effects';
 import { SIGNPOST } from '../art/sprites/props';
 import { TILE_SIZE } from '../config/constants';
@@ -11,6 +11,7 @@ import { ABILITIES } from '../data/abilities';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { buildingRect, occupant } from '../data/buildings';
 import { npcName } from '../data/npcs';
+import { RESOURCE_NODES } from '../data/resourceNodes';
 import { titleName } from '../systems/AchievementSystem';
 import { bountyMarker } from '../systems/BountySystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
@@ -21,7 +22,7 @@ import { FLOAT_TONE_COLORS, QUEST_MARKER_STYLE, THEME } from '../ui/theme';
 import type { ZoneView } from '../host/zoneView';
 import type { Point } from '../systems/MovementSystem';
 import type { DrawnCounts, PlayerFigure } from '../types/debugView';
-import type { ZoneSetting } from '../types/ids';
+import type { NodeShapeId, ResourceNodeId, ZoneSetting } from '../types/ids';
 import type { Mob } from '../world/Mob';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
@@ -31,7 +32,7 @@ import { Camera2D } from './camera';
 import { CanvasPool } from './canvases';
 import { Effects2D, Telegraphs } from './effects';
 import { LANTERN, Lantern } from './lantern';
-import { pickScene, pickTap } from './picking';
+import { pickScene, pickTap, type PickRect } from './picking';
 import { SpriteSheet } from './sheet';
 import { BakedGround, HAZE } from './terrain';
 import { TextCache } from './text';
@@ -72,14 +73,40 @@ const PILE_BLINK_MS = 250;
 const SHADOW_ALPHA = 0.35;
 
 /**
+ * How wide the shadow under each shape of node is laid, in art pixels: a
+ * tree's under its crown, a stump's under what is left. A ripple lies on the
+ * water and stands on nothing.
+ */
+const NODE_SHADOW: Readonly<Record<NodeShapeId, number>> = { tree: 34, vein: 26, ripple: 0 };
+const STUMP_SHADOW = 16;
+const STATION_SHADOW = 24;
+
+/**
+ * How strong something tall is drawn while the player is behind it, since you
+ * cannot tap what you cannot see: a roof, and a tree's crown.
+ */
+const BEHIND_ALPHA = 0.5;
+/** How much of a tree's frame its crown is taken to fill across, for whether it hides the player. */
+const CROWN_ACROSS = 0.7;
+
+/**
+ * How high over a node's foot a stroke of the tool lands, in art pixels (an
+ * axe on a trunk, a pick on the face of a rock, a line at the water), and how
+ * far toward the player from its middle, in simulation units: the side struck
+ * is the side they stand on.
+ */
+const STROKE_HEIGHT: Readonly<Record<NodeShapeId, number>> = { tree: 10, vein: 8, ripple: 0 };
+const STROKE_TOWARD = 10;
+/** Where in its frame what a stroke knocks loose starts: four pixels over the foot. */
+const STROKE_FROM = 4;
+
+/**
  * How far the corners of the screen fall into shadow, and how far from the
  * middle the falling starts: enough to give a scene weight, not so much that
  * anything tappable goes dark (decision 103).
  */
 const VIGNETTE_DARK = 0.5;
 const VIGNETTE_FROM = 0.45;
-
-const PROP = PLACEHOLDERS.prop.id;
 
 function css(hex: number): string {
   return `#${hex.toString(16).padStart(6, '0')}`;
@@ -98,8 +125,8 @@ interface Standing {
  *
  * The game's view since phase B3 (decision 106): every zone's ground with its
  * edges, scatter and the lantern underground, a building kit, every person
- * (B4) and every creature and moment (B5) drawn for real; nodes, stations and
- * the campfire are still their kind's placeholder until B6 draws them.
+ * (B4) and every creature and moment (B5) drawn for real, and since B6 every
+ * place a player works and what stands in a room (decision 109).
  *
  * It holds no scene. Every frame is drawn from the world as it stands, in
  * painter's order — the ground, the shadows, everything standing sorted by
@@ -335,6 +362,7 @@ export class ZoneView2D implements ZoneView {
         case 'gather-tick':
           if (this.gatherBeat.beat(event.progress)) {
             this.playerMotion.strike(now, event.at.x - world.player.x, event.at.y - world.player.y);
+            this.stroke(event.at, event.nodeId);
           }
           break;
         case 'defend':
@@ -377,6 +405,17 @@ export class ZoneView2D implements ZoneView {
     this.buildings.forEach((building) => building.sync(world.player));
     this.ground.draw(context, camera, now);
     this.buildings.forEach((building) => building.drawFloor(context, left, top));
+
+    // What lies flat on the ground and moves there, under everything standing
+    // on it: the rings over a fishing spot, centred on the spot.
+    for (const node of world.nodes) {
+      const sprite = nodeSprite(node.definition.id, node.definition.shape);
+      const def = sheet.def(sprite);
+      if (def.kind !== 'mark' || !node.isAvailable()) continue;
+      const p = at(node.x, node.y);
+      const pose: Pose = { animation: 'loop', facing: null, index: frameIndex(def, 'loop', now) };
+      sheet.draw(context, sprite, pose, p.x, p.y + Math.floor(def.height / 2));
+    }
 
     // What everything stands on: a shadow under it, and a ring under the target.
     const shadowAt = (x: number, y: number, width: number): void => {
@@ -468,37 +507,63 @@ export class ZoneView2D implements ZoneView {
       });
     });
 
-    const still = (
+    // A prop standing where it is, played on its own clock if it moves on its own.
+    const prop = (
       x: number,
       y: number,
+      sprite: string,
       animation: 'still' | 'spent' | 'loop',
       alpha = 1,
-      sprite = PROP,
-    ): Standing => ({
-      baseY: y,
-      draw: () => {
-        const p = at(x, y);
-        const pose: Pose = {
-          animation,
-          facing: null,
-          index: animation === 'loop' ? frameIndex(PLACEHOLDERS.prop, 'loop', now) : 0,
-        };
-        context.globalAlpha = alpha;
-        sheet.draw(context, sprite, pose, p.x, p.y);
-        context.globalAlpha = 1;
-      },
-    });
+    ): Standing => {
+      const pose: Pose = {
+        animation,
+        facing: null,
+        index: frameIndex(sheet.def(sprite), animation, now),
+      };
+      return {
+        baseY: y,
+        draw: () => {
+          const p = at(x, y);
+          context.globalAlpha = alpha;
+          sheet.draw(context, sprite, pose, p.x, p.y);
+          context.globalAlpha = 1;
+        },
+      };
+    };
+    const moving = (sprite: string): 'loop' | 'still' =>
+      sheet.def(sprite).animations.loop ? 'loop' : 'still';
     for (const node of world.nodes) {
-      shadowAt(node.x, node.y, 20);
-      standing.push(still(node.x, node.y, node.isAvailable() ? 'still' : 'spent'));
+      const { id, shape } = node.definition;
+      const sprite = nodeSprite(id, shape);
+      const def = sheet.def(sprite);
+      if (def.kind === 'mark') continue;
+      const available = node.isAvailable();
+      shadowAt(node.x, node.y, available ? NODE_SHADOW[shape] : STUMP_SHADOW);
+      // A crown the player has walked behind is faded, as a roof is.
+      const crown = (def.width * CROWN_ACROSS * ART_PIXEL) / 2;
+      const hides =
+        available &&
+        this.hidesPlayer(
+          {
+            left: node.x - crown,
+            right: node.x + crown,
+            top: node.y - sheet.drawnHeight(sprite) * ART_PIXEL,
+            bottom: node.y,
+          },
+          node.y,
+        );
+      standing.push(
+        prop(node.x, node.y, sprite, available ? 'still' : 'spent', hides ? BEHIND_ALPHA : 1),
+      );
     }
     for (const signpost of world.signposts) {
       shadowAt(signpost.x, signpost.y, 20);
-      standing.push(still(signpost.x, signpost.y, 'still', 1, SIGNPOST.id));
+      standing.push(prop(signpost.x, signpost.y, SIGNPOST.id, 'still'));
     }
     for (const station of world.stations) {
-      shadowAt(station.x, station.y, 20);
-      standing.push(still(station.x, station.y, 'still'));
+      const sprite = stationSprite(station.station);
+      shadowAt(station.x, station.y, STATION_SHADOW);
+      standing.push(prop(station.x, station.y, sprite, moving(sprite)));
     }
     for (const pile of world.lootPiles) {
       if (pile.isGone()) continue;
@@ -507,19 +572,15 @@ export class ZoneView2D implements ZoneView {
       // A person's width, whose shadow is already cut: a sack comes and goes
       // mid-zone, and what it is drawn with must go with it.
       shadowAt(pile.x, pile.y, 16);
-      standing.push(still(pile.x, pile.y, 'still', 1, LOOT_SACK.id));
+      standing.push(prop(pile.x, pile.y, LOOT_SACK.id, 'still'));
     }
+    // A fire stands on no shadow: what it throws is light.
     const campfire = world.campfire;
-    if (campfire) standing.push(still(campfire.x, campfire.y, 'loop'));
+    if (campfire) standing.push(prop(campfire.x, campfire.y, stationSprite('fire'), 'loop'));
 
     const player = world.player;
     for (const building of this.buildings) {
-      const rect = building.outsideRect();
-      const behind =
-        player.y < building.baseY &&
-        player.x > rect.left &&
-        player.x < rect.right &&
-        player.y - TILE_SIZE / 2 > rect.top;
+      const behind = this.hidesPlayer(building.outsideRect(), building.baseY);
       standing.push({
         baseY: building.standingBase,
         draw: () => building.drawStanding(context, left, top, behind),
@@ -545,6 +606,42 @@ export class ZoneView2D implements ZoneView {
     if (this.vignette) context.drawImage(this.vignette, 0, 0);
     this.drawWords(world, sheet, figure);
     this.text.endFrame();
+  }
+
+  /**
+   * Whether the player is behind something drawn over `rect` and standing at
+   * `baseY`: north of its foot, and far enough inside it that it covers them.
+   */
+  private hidesPlayer(rect: PickRect, baseY: number): boolean {
+    const player = this.world?.player;
+    if (!player) return false;
+    return (
+      player.y < baseY &&
+      player.x > rect.left &&
+      player.x < rect.right &&
+      player.y - TILE_SIZE / 2 > rect.top
+    );
+  }
+
+  /**
+   * What a stroke of the tool knocks loose, where it lands: chips off a trunk,
+   * flakes off a rock's face, a splash where the line goes in, on the side of
+   * the node the player stands on.
+   */
+  private stroke(at: Point, nodeId: ResourceNodeId): void {
+    const world = this.world;
+    const sheet = this.sheet;
+    if (!world || !sheet) return;
+    const { shape } = RESOURCE_NODES[nodeId];
+    const dx = world.player.x - at.x;
+    const dy = world.player.y - at.y;
+    const reach = Math.hypot(dx, dy) || 1;
+    this.effects.burst(
+      sheet,
+      { x: at.x + (dx / reach) * STROKE_TOWARD, y: at.y + (dy / reach) * STROKE_TOWARD },
+      strokeSprite(shape),
+      { drop: STROKE_FROM - STROKE_HEIGHT[shape] },
+    );
   }
 
   /**

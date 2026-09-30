@@ -2,6 +2,11 @@ import type { SpriteDef } from './format';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
+import { CHIPS, SPLASH } from './sprites/chips';
+import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
+import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
+import { RICH_VEIN, SEAM, VEIN } from './sprites/veins';
+import { RIPPLE } from './sprites/water';
 import { CRAB } from './sprites/crab';
 import { CRIT, FIREBALL, HIT, KNIFE, LEVEL_UP, LOOT_SACK } from './sprites/effects';
 import { LURKER } from './sprites/lurker';
@@ -30,6 +35,19 @@ export const SPRITES: readonly SpriteDef[] = [
   LEVEL_UP,
   LOOT_SACK,
   SIGNPOST,
+  TREE,
+  HARDWOOD,
+  WILLOW,
+  VEIN,
+  SEAM,
+  RICH_VEIN,
+  RIPPLE,
+  FORGE,
+  TANNERY,
+  FLETCHING_BENCH,
+  CAMPFIRE,
+  CHIPS,
+  SPLASH,
 ];
 
 export { PLACEHOLDERS } from './sprites/placeholders';

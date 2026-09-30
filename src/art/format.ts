@@ -1,6 +1,6 @@
 import type { TierId } from '../types/ids';
 import type { AnimationId, SpriteKind } from './budget';
-import { TIER_RAMPS, type ColourRef, type RampId } from './palette';
+import { ORE_RAMPS, TIER_RAMPS, type ColourRef, type OreId, type RampId } from './palette';
 
 /**
  * The text format sprites are written in.
@@ -48,6 +48,11 @@ export type Recolour = Readonly<Partial<Record<RampId, RampId>>>;
 export const TIER_VARIANTS: Readonly<Record<TierId, Recolour>> = Object.fromEntries(
   Object.entries(TIER_RAMPS).map(([tier, ramp]) => [tier, { tier: ramp }]),
 ) as Record<TierId, Recolour>;
+
+/** A variant per ore, for a vein drawn in the `ore` ramp: `vein@tin`, `seam@coal`. */
+export const ORE_VARIANTS: Readonly<Record<OreId, Recolour>> = Object.fromEntries(
+  Object.entries(ORE_RAMPS).map(([ore, ramp]) => [ore, { ore: ramp }]),
+) as Record<OreId, Recolour>;
 
 export interface SpriteDef {
   /** Unique across every sprite; frames are looked up as `id/animation/facing/index`. */

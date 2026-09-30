@@ -1,6 +1,6 @@
 import { ART_PIXEL } from '../art/budget';
 import { creatureSprite, npcSprite } from '../art/cast';
-import { PLACEHOLDERS } from '../art/sprites/placeholders';
+import { stationSprite } from '../art/places';
 import { TILE_SIZE } from '../config/constants';
 import type { Point } from '../systems/MovementSystem';
 import type { LootPile } from '../world/LootPile';
@@ -63,6 +63,17 @@ export function standingRect(x: number, y: number, width: number, height: number
     top: y - Math.max(height, MIN_PICK_SPAN),
     bottom: y + BELOW_FEET,
   };
+}
+
+/**
+ * The box of something lying flat at `(x, y)`, centred on it, no smaller than
+ * a thumb: a fishing spot, which is a patch of water rather than a thing
+ * standing on it.
+ */
+export function lyingRect(x: number, y: number, width: number, depth: number): PickRect {
+  const halfWidth = Math.max(width, MIN_PICK_SPAN) / 2;
+  const halfDepth = Math.max(depth, MIN_PICK_SPAN) / 2;
+  return { left: x - halfWidth, right: x + halfWidth, top: y - halfDepth, bottom: y + halfDepth };
 }
 
 /** Something a tap can land on, and where its feet are for telling which is in front. */
@@ -130,7 +141,10 @@ export function pickTap(point: Point, scene: PickScene2D): WorldTap {
 /**
  * Everything in a world a tap can land on, each as the box it is picked by: a
  * thing's own width or its body's, standing as tall as its sprite is drawn
- * (`heightOf`, in art pixels), and never smaller than a thumb.
+ * (`heightOf`, in art pixels), and never smaller than a thumb. A node is the
+ * exception, picked by its body as the 3D view picked it: a tree a tile and a
+ * half tall rather than the whole of its crown, so a creature behind the crown
+ * is still the creature, and a fishing spot lying flat on the water.
  */
 export function pickScene(
   world: ZoneWorld,
@@ -138,13 +152,19 @@ export function pickScene(
   buildings: PickScene2D['buildings'],
 ): PickScene2D {
   const tall = (sprite: string): number => heightOf(sprite) * ART_PIXEL;
-  const prop = tall(PLACEHOLDERS.prop.id);
   return {
-    nodes: world.nodes.map((node) => ({
-      node,
-      baseY: node.y,
-      pickRect: () => standingRect(node.x, node.y, node.definition.body.width, prop),
-    })),
+    nodes: world.nodes.map((node) => {
+      const { width, height } = node.definition.body;
+      const flat = node.definition.shape === 'ripple';
+      return {
+        node,
+        baseY: node.y,
+        pickRect: () =>
+          flat
+            ? lyingRect(node.x, node.y, width, height)
+            : standingRect(node.x, node.y, width, height),
+      };
+    }),
     signposts: world.signposts.map((signpost) => ({
       signpost,
       baseY: signpost.y,
@@ -174,7 +194,8 @@ export function pickScene(
     stations: world.stations.map((station) => ({
       station,
       baseY: station.y,
-      pickRect: () => standingRect(station.x, station.y, TILE_SIZE, TILE_SIZE),
+      pickRect: () =>
+        standingRect(station.x, station.y, TILE_SIZE, tall(stationSprite(station.station))),
     })),
     buildings,
     piles: world.lootPiles.map((pile) => ({
