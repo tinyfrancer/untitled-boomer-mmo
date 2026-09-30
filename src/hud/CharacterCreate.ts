@@ -26,6 +26,11 @@ export interface CharacterCreateOptions {
   onBegin: (name: string, classId: ClassId, look: Look) => void;
   /** A character brought back from a save file or code instead of made here. */
   onLoad: (character: CharacterState) => void;
+  /**
+   * Who retired with version 1 on this device, the first time the screen is
+   * shown after their save was dropped (decision 82), or null.
+   */
+  retired?: string | null;
 }
 
 type LookPart = keyof Look;
@@ -91,6 +96,7 @@ class CharacterCreate {
     this.parent = options.parent;
     this.root = el('div', 'create');
     this.root.append(el('h1', 'create__title', 'Create Your Character'));
+    if (options.retired) this.root.append(el('p', 'create__retired', options.retired));
 
     this.nameInput = el('input', 'create__name');
     this.nameInput.type = 'text';

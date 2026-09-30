@@ -7,7 +7,7 @@ import {
   COMBAT_LOG_EVENT,
 } from '../../src/ui/uiEvents';
 import type { CombatLogEntry } from '../../src/systems/CombatLogSystem';
-import { harness } from './harness';
+import { harness, mobsByReach } from './harness';
 
 /**
  * The action bar, driven as a wizard. Spells fizzle, so several of these cast in
@@ -137,7 +137,7 @@ describe('killing with an ability', () => {
   it('credits the same counter a swing does', () => {
     const kit = wizard();
     const { world, state } = kit;
-    const mob = world.mobs.find((candidate) => candidate.isAlive());
+    const mob = mobsByReach(world).find((candidate) => candidate.isAlive());
     if (!mob) throw new Error('town has no live mob');
 
     world.setTarget(mob);
@@ -169,7 +169,7 @@ describe('killing with an ability', () => {
 describe('casting in a running zone', () => {
   function castingWizard() {
     const kit = harness({ classId: 'wizard' });
-    const mob = kit.world.mobs.find((candidate) => candidate.isAlive());
+    const mob = mobsByReach(kit.world).find((candidate) => candidate.isAlive());
     if (!mob) throw new Error('town has no live mob');
     // In range of the spell and well out of reach of anything the rat can do.
     kit.world.teleport(mob.x - 200, mob.y);

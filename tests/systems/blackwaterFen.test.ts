@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { BLACKWATER_FEN_MOB_SPAWNS, BLACKWATER_FEN_NODE_SPAWNS } from '../../src/data/spawns';
 import { ENEMIES } from '../../src/data/enemies';
 import { ITEMS } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
@@ -63,15 +62,14 @@ describe('the way in', () => {
     expect(onward?.edge).toBe('south');
 
     const strip = zoneWorldSize(ZONE).height - TILE_SIZE * 1.5;
-    const centre = zoneWorldSize(ZONE).height / 2;
-    BLACKWATER_FEN_MOB_SPAWNS.filter((spawn) => ENEMIES[spawn.enemyId].aggressive).forEach(
-      (spawn) => {
+    ZONE.mobSpawns
+      .filter((spawn) => ENEMIES[spawn.enemyId].aggressive)
+      .forEach((spawn) => {
         expect(
-          strip - (centre + spawn.dy),
-          `${spawn.enemyId} at dy ${spawn.dy} is standing on the causeway`,
+          strip - spawn.y,
+          `${spawn.enemyId} at y ${spawn.y} is standing on the causeway`,
         ).toBeGreaterThan(ENEMIES[spawn.enemyId].aggroRadius ?? 0);
-      },
-    );
+      });
   });
 
   it('lands two south of town on the world map, on a cell of its own', () => {
@@ -100,19 +98,19 @@ describe('what the fen is', () => {
    * quietly becoming a flat level 5-7 soup with no reason to retreat.
    */
   it('climbs the further south it goes', () => {
-    const byDepth = [...BLACKWATER_FEN_MOB_SPAWNS].sort((a, b) => a.dy - b.dy);
+    const byDepth = [...ZONE.mobSpawns].sort((a, b) => a.y - b.y);
 
     for (let i = 1; i < byDepth.length; i += 1) {
       const shallower = byDepth[i - 1]!;
       const deeper = byDepth[i]!;
       expect(
         deeper.level,
-        `${deeper.enemyId} at dy ${deeper.dy} is shallower-levelled than ${shallower.enemyId} at ${shallower.dy}`,
+        `${deeper.enemyId} at y ${deeper.y} is shallower-levelled than ${shallower.enemyId} at ${shallower.y}`,
       ).toBeGreaterThanOrEqual(shallower.level);
     }
 
     // And it actually spans a band rather than technically not descending.
-    const levels = BLACKWATER_FEN_MOB_SPAWNS.map((spawn) => spawn.level);
+    const levels = ZONE.mobSpawns.map((spawn) => spawn.level);
     expect(Math.min(...levels)).toBe(5);
     expect(Math.max(...levels)).toBe(7);
   });
@@ -126,15 +124,15 @@ describe('what the fen is', () => {
    * becomes a quiet fishing hole that happens to have raiders somewhere in it.
    */
   it('puts a raider over every deep pool', () => {
-    const raiders = BLACKWATER_FEN_MOB_SPAWNS.filter((spawn) => spawn.enemyId === 'fen-raider');
+    const raiders = ZONE.mobSpawns.filter((spawn) => spawn.enemyId === 'fen-raider');
     const aggro = RAIDER.aggroRadius ?? 0;
     expect(aggro).toBeGreaterThan(0);
 
-    for (const pool of BLACKWATER_FEN_NODE_SPAWNS) {
+    for (const pool of ZONE.nodeSpawns) {
       const nearest = Math.min(
-        ...raiders.map((raider) => Math.hypot(raider.dx - pool.dx, raider.dy - pool.dy)),
+        ...raiders.map((raider) => Math.hypot(raider.x - pool.x, raider.y - pool.y)),
       );
-      expect(nearest, `the pool at ${pool.dx},${pool.dy} is unguarded`).toBeLessThanOrEqual(aggro);
+      expect(nearest, `the pool at ${pool.x},${pool.y} is unguarded`).toBeLessThanOrEqual(aggro);
     }
   });
 });

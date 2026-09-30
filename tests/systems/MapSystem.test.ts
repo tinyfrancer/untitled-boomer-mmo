@@ -7,7 +7,7 @@ import {
   zoneLevels,
   zoneMap,
 } from '../../src/systems/MapSystem';
-import { TILE_SIZE, WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../../src/config/constants';
+import { TILE_SIZE } from '../../src/config/constants';
 import { ZONES } from '../../src/data/zones';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { BUILDINGS } from '../../src/data/buildings';
@@ -61,8 +61,9 @@ describe('terrainBands', () => {
   });
 
   it('is worth doing: a real zone bands to a fraction of its tiles', () => {
-    const bands = terrainBands(ZONES.town.map);
-    expect(bands.length).toBeLessThan((WORLD_WIDTH_TILES * WORLD_HEIGHT_TILES) / 3);
+    const { map } = ZONES.town;
+    const bands = terrainBands(map);
+    expect(bands.length).toBeLessThan((map.length * (map[0]?.length ?? 0)) / 3);
   });
 
   it('holds a band’s colour to the tile it came from', () => {
@@ -76,20 +77,19 @@ describe('terrainBands', () => {
 describe('zoneMap', () => {
   it('is drawn from the zone id alone, at the size the world is built at', () => {
     const map = zoneMap('town');
+    const size = zoneWorldSize(ZONES.town);
     expect(map.name).toBe('Town');
-    expect(map.columns).toBe(WORLD_WIDTH_TILES);
-    expect(map.rows).toBe(WORLD_HEIGHT_TILES);
+    expect(map.columns).toBe(size.width / TILE_SIZE);
+    expect(map.rows).toBe(size.height / TILE_SIZE);
   });
 
   /**
    * The point of reading it off the same tables: a marker on the map has to be
-   * where the world actually puts the thing, and `populateZone` places a spawn
-   * at the middle of the map plus its offset.
+   * where the world actually puts the thing, which is where the zone's text
+   * drew it.
    */
   it('puts a marker where the world puts the thing it stands for', () => {
-    const zone = ZONES.town;
-    const size = zoneWorldSize(zone);
-    const spawn = zone.nodeSpawns[0];
+    const spawn = ZONES.town.nodeSpawns[0];
     if (!spawn) throw new Error('town has no nodes');
 
     const marker = zoneMap('town').markers.find(
@@ -97,7 +97,7 @@ describe('zoneMap', () => {
         candidate.kind === 'node' && candidate.label === RESOURCE_NODES[spawn.nodeId].name,
     );
 
-    expect(marker).toMatchObject(toTile(size.width / 2 + spawn.dx, size.height / 2 + spawn.dy));
+    expect(marker).toMatchObject(toTile(spawn.x, spawn.y));
   });
 
   /**
@@ -108,18 +108,14 @@ describe('zoneMap', () => {
    */
   it('draws a footprint where the world puts each building', () => {
     const zone = ZONES.town;
-    const size = zoneWorldSize(zone);
-    const spawn = zone.buildingSpawns?.[0];
+    const spawn = zone.buildingSpawns[0];
     if (!spawn) throw new Error('town has no buildings');
     const { body, name } = BUILDINGS[spawn.buildingId];
 
     const drawn = zoneMap('town').buildings;
-    expect(drawn).toHaveLength(zone.buildingSpawns?.length ?? 0);
+    expect(drawn).toHaveLength(zone.buildingSpawns.length);
     expect(drawn[0]).toEqual({
-      ...toTile(
-        size.width / 2 + spawn.dx - body.width / 2,
-        size.height / 2 + spawn.dy - body.height / 2,
-      ),
+      ...toTile(spawn.x - body.width / 2, spawn.y - body.height / 2),
       width: body.width / TILE_SIZE,
       height: body.height / TILE_SIZE,
       label: name,

@@ -13,7 +13,16 @@ import type { Quiver } from '../systems/QuiverSystem';
 import type { AbilityId, ClassId, TipId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
-export const CHARACTER_STATE_VERSION = 27;
+/**
+ * Where version 2's saves start counting (decision 82). Every number below it
+ * was written by version 1, whose world version 2 rebuilt at a new size, so no
+ * step leads out of one: its character retires, and is named once on the
+ * creation screen (`retired.ts`). A hundred rather than the next number so a
+ * save says which game wrote it at a glance.
+ */
+export const FIRST_VERSION_2_STATE = 100;
+
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.

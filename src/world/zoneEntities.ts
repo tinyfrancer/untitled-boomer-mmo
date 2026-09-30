@@ -54,7 +54,7 @@ export interface WorldSignpost {
 
 /** Everything a zone is populated with, before anything starts moving. */
 export interface ZoneEntities {
-  /** The middle of the map: where a character with no particular spot stands. */
+  /** The zone's `@`: where a character with no particular spot stands. */
   spawnPoint: Point;
   mobs: Mob[];
   nodes: ResourceNode[];
@@ -68,43 +68,32 @@ export interface ZoneEntities {
 /**
  * A zone definition, read once into the things that live in it.
  *
- * Spawns are offsets from the middle of the map rather than absolute
- * coordinates, so a zone's contents survive its map growing. Everything here is
- * a pure function of the definition and the rng — no clock, no events, nothing
- * to tear down.
+ * Everything here is where the zone's text put it (`data/zoneText.ts`), and a
+ * pure function of the definition and the rng: no clock, no events, nothing to
+ * tear down.
  */
 export function populateZone(
   zone: ZoneDefinition,
   size: { width: number; height: number },
   rng: () => number,
 ): ZoneEntities {
-  const spawnPoint: Point = { x: size.width / 2, y: size.height / 2 };
+  const spawnPoint: Point = { ...zone.start };
 
   const mobs = zone.mobSpawns.map(
-    ({ dx, dy, enemyId, level }) =>
-      new Mob(spawnPoint.x + dx, spawnPoint.y + dy, ENEMIES[enemyId], level, rng),
+    ({ x, y, enemyId, level }) => new Mob(x, y, ENEMIES[enemyId], level, rng),
   );
 
   const nodes = zone.nodeSpawns.map(
-    ({ dx, dy, nodeId }) =>
-      new ResourceNode(spawnPoint.x + dx, spawnPoint.y + dy, RESOURCE_NODES[nodeId]),
+    ({ x, y, nodeId }) => new ResourceNode(x, y, RESOURCE_NODES[nodeId]),
   );
 
-  const npcs = zone.npcSpawns.map(({ dx, dy, npcId }) => ({
-    x: spawnPoint.x + dx,
-    y: spawnPoint.y + dy,
-    npcId,
-  }));
+  const npcs = zone.npcSpawns.map(({ x, y, npcId }) => ({ x, y, npcId }));
 
-  const stations = (zone.stationSpawns ?? []).map(({ dx, dy, station }) => ({
-    x: spawnPoint.x + dx,
-    y: spawnPoint.y + dy,
-    station,
-  }));
+  const stations = zone.stationSpawns.map(({ x, y, station }) => ({ x, y, station }));
 
-  const buildings = (zone.buildingSpawns ?? []).map(({ dx, dy, buildingId }) => ({
-    x: spawnPoint.x + dx,
-    y: spawnPoint.y + dy,
+  const buildings = zone.buildingSpawns.map(({ x, y, buildingId }) => ({
+    x,
+    y,
     definition: BUILDINGS[buildingId],
   }));
 
@@ -126,10 +115,9 @@ export function populateZone(
     // the world, which the player and every mob integrate themselves against.
     //
     // A building is a blocker rather than a painted-in run of `WALL_TILE`
-    // because it is placed by offset from the middle of the map like everything
-    // else in a zone, where the tile grid is written out in absolute rows — and
-    // one of those two has to be the map's own. Blocking it here also keeps the
-    // footprint that stops you the same number the prop is drawn from.
+    // because it is a shell with a door in it, and a tile is solid or not.
+    // Blocking it here also keeps the footprint that stops you the same number
+    // the prop is drawn from.
     collisionWorld: {
       grid: zone.map,
       blockingTiles: new Set(BLOCKING_TILES),

@@ -1,6 +1,7 @@
 import { mountCharacterCreate, unmountCharacterCreate } from './hud/CharacterCreate';
 import { uiRoot } from './hud/dom';
 import { createNewCharacter, saveService, type CharacterState } from './persistence';
+import { retiredLine } from './persistence/retired';
 import { startGame } from './world/GameContext';
 import type { EventBus } from './world/worldEvents';
 
@@ -42,8 +43,10 @@ export function beginLoadedCharacter(host: GameHost, character: CharacterState):
 
 /** Shows the creation screen and starts the game with whatever it produces. */
 export function showCharacterCreate(host: GameHost): void {
+  const retired = saveService.takeRetired();
   mountCharacterCreate({
     parent: uiRoot(),
+    retired: retired ? retiredLine(retired) : null,
     onBegin: (name, classId, look) => {
       const character = createNewCharacter(name, classId, look);
       saveService.save(character);

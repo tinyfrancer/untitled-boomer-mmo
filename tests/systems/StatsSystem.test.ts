@@ -27,7 +27,7 @@ describe('computeEffectiveStats', () => {
   });
 
   it("adds the weapon's attack power bonus for an intellect-based class", () => {
-    const stats = computeEffectiveStats('wizard', { ...NO_GEAR, weapon: 'apprentice-wand' });
+    const stats = computeEffectiveStats('wizard', { ...NO_GEAR, weapon: 'apprentice-staff' });
     expect(stats.attackPower).toBe(6 + 2);
   });
 
@@ -116,7 +116,7 @@ describe('attack range', () => {
   it('takes its reach from the weapon, not the class', () => {
     for (const classId of ['warrior', 'wizard'] as const) {
       expect(
-        computeEffectiveStats(classId, { ...NO_GEAR, weapon: 'apprentice-wand' }).attackRange,
+        computeEffectiveStats(classId, { ...NO_GEAR, weapon: 'apprentice-staff' }).attackRange,
       ).toBe(200);
       expect(
         computeEffectiveStats(classId, { ...NO_GEAR, weapon: 'rusty-sword' }).attackRange,

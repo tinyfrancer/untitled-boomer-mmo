@@ -5,7 +5,7 @@ import { InputState } from '../../src/systems/InputState';
 import { createNewCharacter, type CharacterState } from '../../src/persistence';
 import { ZONES } from '../../src/data/zones';
 import { ABILITIES, CLASS_ABILITIES } from '../../src/data/abilities';
-import type { AbilityId, ClassId, ZoneId } from '../../src/types/ids';
+import type { AbilityId, ClassId, NpcId, ZoneId } from '../../src/types/ids';
 import type { UiEventMap, UiEventName } from '../../src/ui/uiEvents';
 import type { EventBus, WorldEvent } from '../../src/world/worldEvents';
 
@@ -151,4 +151,22 @@ export function nodeNamed(world: ZoneWorld, id: string): ZoneWorld['nodes'][numb
   const node = world.nodes.find((candidate) => candidate.definition.id === id);
   if (!node) throw new Error(`${world.zone.id} has no ${id}`);
   return node;
+}
+
+/** The person who does that job here, by who they are rather than where the list puts them. */
+export function npcNamed(world: ZoneWorld, id: NpcId): ZoneWorld['npcs'][number] {
+  const npc = world.npcs.find((candidate) => candidate.npcId === id);
+  if (!npc) throw new Error(`${world.zone.id} has no ${id}`);
+  return npc;
+}
+
+/**
+ * The zone's creatures, nearest its start first. The zone's own list is in the
+ * order its text is read, which puts a corner first, and a test staging a
+ * fight wants the one out in the open by the way in.
+ */
+export function mobsByReach(world: ZoneWorld): ZoneWorld['mobs'] {
+  const { x, y } = world.zone.start;
+  const away = (mob: ZoneWorld['mobs'][number]): number => Math.hypot(mob.x - x, mob.y - y);
+  return [...world.mobs].sort((a, b) => away(a) - away(b));
 }

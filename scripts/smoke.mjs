@@ -3463,7 +3463,7 @@ async function bagSheet() {
   // gear, tools, food and materials to draw.
   const ONE_OF_EACH = {
     'rusty-sword': 1,
-    'apprentice-wand': 1,
+    'apprentice-staff': 1,
     'rat-bones': 12,
     'rat-meat': 7,
     'brown-chestplate': 1,
@@ -4753,6 +4753,42 @@ async function saveTransfer() {
     resumed.name === staged.name && resumed.currency === 4321 && !resumed.create,
     `${resumed.name}, ${resumed.currency} copper`,
   );
+
+  // Version 1's characters retire (decision 82): a save written before version
+  // 2 is dropped on the next load, and the creation screen names who was in it,
+  // the once. Marked through the live game, since the unload handler writes the
+  // character on the way out and would overwrite a hand-written save.
+  const retiring = await page.evaluate(() => {
+    const { state } = window.world.character;
+    state.version = 27;
+    return { name: state.name, level: state.level, classId: state.classId };
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.create', { timeout: 60000 });
+  const retiredLine = await page.evaluate(
+    () => document.querySelector('.create__retired')?.textContent ?? null,
+  );
+  check(
+    'a version 1 save retires on the next load, and the creation screen says who',
+    retiredLine ===
+      `${retiring.name}, level ${retiring.level} ${retiring.classId}, retired with version 1. ` +
+        'Version 2 is a fresh start.',
+    `${retiredLine}`,
+  );
+  await page.screenshot({ path: `${OUT}/44-retired.png` });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.create', { timeout: 60000 });
+  check(
+    'and says it the once, since the save is gone',
+    await page.evaluate(() => document.querySelector('.create__retired') === null),
+  );
+  // Back as the character in the file, for everything after this.
+  await page.click('.create [data-action="open-load-save"]');
+  await page.setInputFiles('[data-action="save-file-input"]', savePath);
+  await page.click('[data-action="confirm-load-save"]');
+  await page.waitForFunction(() => window.world != null && window.view != null, null, {
+    timeout: 20000,
+  });
 }
 
 async function offlineCamping() {

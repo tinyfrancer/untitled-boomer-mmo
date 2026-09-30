@@ -92,9 +92,9 @@ export function terrainBands(tiles: number[][]): TerrainBand[] {
  * Everything about a zone that can be drawn without the world running.
  *
  * All of it is a pure function of the zone definition, which is what lets the
- * HUD draw a map having been told nothing but the zone's id: the spawn offsets
- * are read with the same arithmetic `populateZone` uses, so the map cannot
- * disagree with where things actually stand.
+ * HUD draw a map having been told nothing but the zone's id: the spawns are
+ * the same points `populateZone` stands things at, so the map cannot disagree
+ * with where things actually stand.
  *
  * Mobs are deliberately absent. They wander, so drawing them means a per-frame
  * channel into the HUD — and a map of where the rats were a second ago is worse
@@ -103,22 +103,21 @@ export function terrainBands(tiles: number[][]): TerrainBand[] {
 export function zoneMap(zoneId: ZoneId): ZoneMap {
   const zone = ZONES[zoneId];
   const size = zoneWorldSize(zone);
-  const centre = { x: size.width / 2, y: size.height / 2 };
   const markers: MapMarker[] = [];
 
-  for (const { dx, dy, nodeId } of zone.nodeSpawns) {
+  for (const { x, y, nodeId } of zone.nodeSpawns) {
     const node = RESOURCE_NODES[nodeId];
     markers.push({
       kind: 'node',
-      ...toTile(centre.x + dx, centre.y + dy),
+      ...toTile(x, y),
       label: node.name,
       skill: node.skill,
     });
   }
-  for (const { dx, dy, npcId } of zone.npcSpawns) {
+  for (const { x, y, npcId } of zone.npcSpawns) {
     markers.push({
       kind: 'npc',
-      ...toTile(centre.x + dx, centre.y + dy),
+      ...toTile(x, y),
       label: npcName(npcId),
       skill: null,
     });
@@ -134,9 +133,9 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
     });
   }
 
-  const buildings = (zone.buildingSpawns ?? []).map(({ dx, dy, buildingId }) => {
+  const buildings = zone.buildingSpawns.map(({ x, y, buildingId }) => {
     const { body, name } = BUILDINGS[buildingId];
-    const topLeft = toTile(centre.x + dx - body.width / 2, centre.y + dy - body.height / 2);
+    const topLeft = toTile(x - body.width / 2, y - body.height / 2);
     return {
       ...topLeft,
       width: body.width / TILE_SIZE,

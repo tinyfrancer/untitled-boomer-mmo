@@ -116,7 +116,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     entries: [
       { itemId: 'cutthroats-bandana', chance: 1 },
       { itemId: 'cutthroats-blade', chance: 0.2 },
-      { itemId: 'stolen-wand', chance: 0.2 },
+      { itemId: 'stolen-staff', chance: 0.2 },
       { itemId: 'poachers-bow', chance: 0.2 },
     ],
     // A chief's purse: several times what the men outside are carrying.
@@ -235,7 +235,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     entries: [
       { itemId: 'barrow-crown', chance: 1 },
       { itemId: 'barrow-blade', chance: 0.2 },
-      { itemId: 'barrow-scepter', chance: 0.2 },
+      { itemId: 'barrow-staff', chance: 0.2 },
       { itemId: 'barrow-longbow', chance: 0.2 },
     ],
     // A king's hoard, and several times what the men in his chamber carry.

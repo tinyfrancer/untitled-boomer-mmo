@@ -193,7 +193,7 @@ describe('a shot', () => {
   });
 
   it('is the same bad idea for a wizard', () => {
-    const staff = computeEffectiveStats('wizard', { ...NO_GEAR, weapon: 'apprentice-wand' }, 5);
+    const staff = computeEffectiveStats('wizard', { ...NO_GEAR, weapon: 'apprentice-staff' }, 5);
     const bow = computeEffectiveStats('wizard', quivered, 5, {}, 'crude-arrows');
     expect(bow.attackPower).toBeLessThan(staff.attackPower / 2);
   });

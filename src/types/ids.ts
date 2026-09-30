@@ -31,7 +31,7 @@ export type ReforgeId = 'keen' | 'bulwark' | 'arcane' | 'hale' | 'brawn' | 'nimb
 
 export type ItemId =
   | 'rusty-sword'
-  | 'apprentice-wand'
+  | 'apprentice-staff'
   | 'rat-bones'
   | 'rat-meat'
   | 'brown-chestplate'
@@ -76,7 +76,7 @@ export type ItemId =
   // one creature. Nothing sells them and nothing else drops them.
   | 'cutthroats-bandana'
   | 'cutthroats-blade'
-  | 'stolen-wand'
+  | 'stolen-staff'
   // The offhand, which is the slot the game had a Block skill for and nothing
   // to put in.
   | 'brown-shield'
@@ -131,7 +131,7 @@ export type ItemId =
   // one creature. Nothing sells them and nothing else drops them.
   | 'barrow-crown'
   | 'barrow-blade'
-  | 'barrow-scepter'
+  | 'barrow-staff'
   // The steel tools, and the first things in the game bought with materials
   // rather than coin. What the quarry and the road west are *for*, handed back
   // as the means of working them faster.

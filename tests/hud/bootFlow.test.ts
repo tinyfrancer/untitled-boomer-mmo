@@ -3,6 +3,7 @@ import { bootIntoGame, showCharacterCreate, type GameHost } from '../../src/boot
 import { unmountCharacterCreate } from '../../src/hud/CharacterCreate';
 import { DEFAULT_LOOK, HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../../src/data/looks';
 import { createNewCharacter, saveService } from '../../src/persistence';
+import { STORAGE_KEY } from '../../src/persistence/LocalStorageSaveService';
 import { writeSaveExport } from '../../src/persistence/saveFile';
 import { endGame, gameContext } from '../../src/world/GameContext';
 import { recordingBus, type Emitted } from '../world/harness';
@@ -91,6 +92,31 @@ describe('bootIntoGame', () => {
     // Nothing exists yet: no session, and nothing has been asked to draw one.
     expect(gameContext()).toBeNull();
     expect(startZone).not.toHaveBeenCalled();
+  });
+
+  it('says nothing about anybody retiring on a device that never had version 1', () => {
+    bootIntoGame(host);
+
+    expect(document.querySelector('.create__retired')).toBeNull();
+  });
+
+  // Decision 82: the version 1 character is named the once, on the screen that
+  // replaces them, and the save they were in is gone by the time it shows.
+  it('names who retired with version 1, the first time only', () => {
+    const brom = { ...createNewCharacter('Brom', 'warrior'), version: 27, level: 8 };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(brom));
+
+    bootIntoGame(host);
+
+    expect(document.querySelector('.create__retired')?.textContent).toBe(
+      'Brom, level 8 warrior, retired with version 1. Version 2 is a fresh start.',
+    );
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+
+    unmountCharacterCreate();
+    bootIntoGame(host);
+    expect(createScreen()).not.toBeNull();
+    expect(document.querySelector('.create__retired')).toBeNull();
   });
 
   it('starts the session the creation screen produces, and takes the screen down', () => {

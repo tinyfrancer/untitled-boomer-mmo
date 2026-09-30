@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_GATHER_SKILL_LEVEL, TILE_SIZE } from '../../src/config/constants';
-import { DEEP_CUT_MOB_SPAWNS, DEEP_CUT_NODE_SPAWNS } from '../../src/data/spawns';
 import { ENEMIES } from '../../src/data/enemies';
 import { ITEMS } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
@@ -153,8 +152,8 @@ describe('what the Deep Cut is', () => {
    */
   it('puts the higher gate deeper in', () => {
     const gateOf = (nodeId: ResourceNodeId): number => RESOURCE_NODES[nodeId].requiredLevel;
-    const coal = DEEP_CUT_NODE_SPAWNS.filter((spawn) => spawn.nodeId === 'coal-vein');
-    const rich = DEEP_CUT_NODE_SPAWNS.filter((spawn) => spawn.nodeId === 'rich-iron-vein');
+    const coal = ZONE.nodeSpawns.filter((spawn) => spawn.nodeId === 'coal-vein');
+    const rich = ZONE.nodeSpawns.filter((spawn) => spawn.nodeId === 'rich-iron-vein');
 
     expect(coal.length).toBeGreaterThan(0);
     expect(rich.length).toBeGreaterThan(0);
@@ -162,8 +161,8 @@ describe('what the Deep Cut is', () => {
     // North is deeper, so the deepest coal is still shallower than every rich
     // seam. Written as a gap rather than as a sort, since what would break it is
     // one seam being moved rather than the list being reordered.
-    expect(Math.min(...coal.map((spawn) => spawn.dy))).toBeGreaterThan(
-      Math.max(...rich.map((spawn) => spawn.dy)),
+    expect(Math.min(...coal.map((spawn) => spawn.y))).toBeGreaterThan(
+      Math.max(...rich.map((spawn) => spawn.y)),
     );
   });
 
@@ -172,33 +171,33 @@ describe('what the Deep Cut is', () => {
    *
    * A traveller materialises anywhere along the south edge, at whatever fraction
    * of the quarry's north edge they crossed at, and someone who dies down here
-   * respawns in the middle of the map — so neither spot may sit inside the reach
+   * respawns at the zone's start — so neither spot may sit inside the reach
    * of something that opens fights on its own. Everything aggressive is up in the
    * workings, which is also what makes the crawler the first thing anybody meets:
    * the zone introduces itself with something that will not start anything.
    */
   it('leaves the way in and the respawn clear of anything that starts a fight', () => {
-    const { width, height } = zoneWorldSize(ZONE);
+    const { height } = zoneWorldSize(ZONE);
     // The inset `ZoneWorld` arrives on, re-derived the way the other sweeps do.
-    const arrivalDy = height / 2 - TILE_SIZE * 1.5;
+    const arrivalY = height - TILE_SIZE * 1.5;
 
-    DEEP_CUT_MOB_SPAWNS.filter((spawn) => ENEMIES[spawn.enemyId].aggressive).forEach((spawn) => {
-      const enemy = ENEMIES[spawn.enemyId];
-      const reach = (enemy.aggroRadius ?? 0) + enemy.wander.radius;
+    ZONE.mobSpawns
+      .filter((spawn) => ENEMIES[spawn.enemyId].aggressive)
+      .forEach((spawn) => {
+        const enemy = ENEMIES[spawn.enemyId];
+        const reach = (enemy.aggroRadius ?? 0) + enemy.wander.radius;
 
-      // The arrival runs the whole width, so the nearest point on it is always
-      // the one directly north or south of the spawn.
-      expect(
-        arrivalDy - spawn.dy,
-        `${spawn.enemyId} at ${spawn.dx},${spawn.dy} greets the traveller`,
-      ).toBeGreaterThan(reach);
-      expect(
-        Math.hypot(spawn.dx, spawn.dy),
-        `${spawn.enemyId} at ${spawn.dx},${spawn.dy} is standing on the respawn`,
-      ).toBeGreaterThan(reach);
-    });
-
-    expect(width).toBeGreaterThan(0);
+        // The arrival runs the whole width, so the nearest point on it is always
+        // the one directly north or south of the spawn.
+        expect(
+          arrivalY - spawn.y,
+          `${spawn.enemyId} at ${spawn.x},${spawn.y} greets the traveller`,
+        ).toBeGreaterThan(reach);
+        expect(
+          Math.hypot(spawn.x - ZONE.start.x, spawn.y - ZONE.start.y),
+          `${spawn.enemyId} at ${spawn.x},${spawn.y} is standing on the respawn`,
+        ).toBeGreaterThan(reach);
+      });
   });
 });
 
@@ -228,7 +227,7 @@ describe('what keeps the gate a gate', () => {
     );
     expect(yields.size).toBeGreaterThan(0);
 
-    const residents = new Set(DEEP_CUT_MOB_SPAWNS.map((spawn) => spawn.enemyId));
+    const residents = new Set(ZONE.mobSpawns.map((spawn) => spawn.enemyId));
     for (const enemyId of residents) {
       const tableId = ENEMIES[enemyId].lootTableId;
       if (!tableId) continue;
@@ -257,7 +256,7 @@ describe('what keeps the gate a gate', () => {
    * demand a new cap without anyone noticing which zone asked for it.
    */
   it('spawns below the top of the world, so it raises no ceiling', () => {
-    const here = Math.max(...DEEP_CUT_MOB_SPAWNS.map((spawn) => spawn.level));
+    const here = Math.max(...ZONE.mobSpawns.map((spawn) => spawn.level));
     const anywhere = Math.max(
       ...Object.values(ZONES).flatMap((zone) =>
         zone.mobSpawns

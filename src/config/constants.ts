@@ -1,8 +1,5 @@
 export const TILE_SIZE = 64;
 
-export const WORLD_WIDTH_TILES = 25;
-export const WORLD_HEIGHT_TILES = 19;
-
 /**
  * Half the player's collision box, which is one tile square. Named rather than
  * measured off anything drawn: the renderer decides how tall a figure looks,

@@ -142,10 +142,10 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     attackPowerBonus: 2,
   },
   // The three wizard's weapons are staves, since a wand reads as a dagger at
-  // the size a figure is drawn (decision 107). Their ids still say wand and
-  // scepter, because a save names them.
-  'apprentice-wand': {
-    id: 'apprentice-wand',
+  // the size a figure is drawn (decision 107). Their ids said wand and scepter
+  // until version 1's saves, which named them, retired (decision 113).
+  'apprentice-staff': {
+    id: 'apprentice-staff',
     name: 'Apprentice Staff',
     value: 10,
     weight: 2,
@@ -191,8 +191,8 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
   },
   // Taken off someone the chief robbed, which is the only reason a bandit is
   // holding one — and the only weapon upgrade a caster has ever had.
-  'stolen-wand': {
-    id: 'stolen-wand',
+  'stolen-staff': {
+    id: 'stolen-staff',
     name: 'Stolen Staff',
     value: 150,
     weight: 2,
@@ -329,8 +329,8 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     attackPowerBonus: 9,
     strengthBonus: 2,
   },
-  'barrow-scepter': {
-    id: 'barrow-scepter',
+  'barrow-staff': {
+    id: 'barrow-staff',
     name: 'Barrow Staff',
     value: 260,
     weight: 3,

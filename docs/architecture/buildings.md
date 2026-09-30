@@ -7,10 +7,10 @@ _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs
 **A town has walls in it, and a building is a shell rather than a solid mass**
 (`ZoneDefinition.buildingSpawns` into `data/buildings.ts`, drawn by `art/building.ts` and
 `render2d/buildings.ts`). It is
-placed by a centre offset like every other spawn and blocks as `CollisionSystem` blockers beside
-the tree trunks rather than as painted-in `WALL_TILE`, because a zone's contents are offsets from the
-middle of the map and the tile grid is written out in absolute rows — one of those two has to be the
-map's own. What it hands over is `buildingWalls`: three whole walls plus the door wall in the
+written into its zone's text as a block of its letter exactly its footprint, so it stands on tile
+lines (decision 113), and blocks as `CollisionSystem` blockers beside the tree trunks rather than as
+painted-in `WALL_TILE`, because it is a shell with a door in it and a tile is solid or not. What it
+hands over is `buildingWalls`: three whole walls plus the door wall in the
 segments either side of its opening, which run the full span of the footprint and so overlap at the
 corners — free, since being inside two blockers is the same as being inside one. `buildingRect` is
 still what a thumb aims at and what hides the player, so the three questions one rectangle used to

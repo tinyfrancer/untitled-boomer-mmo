@@ -51,8 +51,8 @@ describe('equipItem', () => {
 
   it('returns the previously equipped item to inventory when swapping', () => {
     const gear: Gear = { ...EMPTY_GEAR, weapon: 'rusty-sword' };
-    const result = equipItem(gear, { 'apprentice-wand': 1 }, 'apprentice-wand');
-    expect(result.gear.weapon).toBe('apprentice-wand');
+    const result = equipItem(gear, { 'apprentice-staff': 1 }, 'apprentice-staff');
+    expect(result.gear.weapon).toBe('apprentice-staff');
     expect(result.inventory).toEqual({ 'rusty-sword': 1 });
   });
 

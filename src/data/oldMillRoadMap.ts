@@ -1,57 +1,75 @@
-import { WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../config/constants';
-import { GRASS_TILE, PATH_TILE, WATER_TILE, paintRect } from './tiles';
+import { layoutZone } from './zoneText';
 
 /**
- * The road west out of town, gone to seed.
+ * The road west out of town, gone to seed: the town's three-tile road on the
+ * same middle rows, so walking out of one and into the other reads as one
+ * road rather than two zones that happen to touch. The mill yard is the only
+ * other worked ground, and the rest is the verge the goblins have taken.
  *
- * The same three-tile road the town has, running the full width at the same
- * middle rows — which is what makes walking out of one and into the other read
- * as one continuous road rather than as two zones that happen to touch. Nothing
- * else here is paved: the mill yard is the only other worked ground, and the
- * rest is the verge the goblins have taken over.
+ * The millpond in the north-west is why the mill is where it is. It is the
+ * one thing here that blocks and is not a building, and it is in the corner
+ * furthest from where a traveller arrives: water is a wall you can see over,
+ * and a wall between the road and the fighting would make the zone read as two
+ * rooms. It sat two rows higher until the road north to Greyford opened and an
+ * arrival strip ran along the second row, the same bill the beach paid in
+ * ocean and the quarry in rock.
  */
-const ROAD_HALF_WIDTH = 1;
-
-/**
- * The millpond, in the north-west, and the reason the mill is where it is.
- *
- * It is the one thing in this zone that blocks and is not a building, and it is
- * deliberately in the corner furthest from where a traveller arrives: water is
- * a wall you can see over, and a wall between the road and the fighting would
- * make the zone read as two rooms.
- *
- * It sat two rows higher until the road north to Greyford opened. An arrival
- * lands anywhere along the edge it crosses, `ARRIVAL_INSET` in — a tile and a
- * half, so the second row down — and the pond was sitting in it. The beach paid
- * this bill in ocean and the quarry in rock; this is the same one again, in a
- * millpond.
- */
-const MILLPOND = { left: 1, right: 4, top: 3, bottom: 6 };
-
-/** The worked ground around the mill, which is what says somebody used to be here. */
-const MILL_YARD = { left: 4, right: 9, top: 4, bottom: 8 };
-
-function buildOldMillRoadMap(): number[][] {
-  const map: number[][] = [];
-  for (let row = 0; row < WORLD_HEIGHT_TILES; row++) {
-    map.push(new Array<number>(WORLD_WIDTH_TILES).fill(GRASS_TILE));
-  }
-
-  const midRow = Math.floor(WORLD_HEIGHT_TILES / 2);
-  paintRect(map, MILL_YARD, PATH_TILE);
-  paintRect(
-    map,
-    {
-      left: 0,
-      right: WORLD_WIDTH_TILES - 1,
-      top: midRow - ROAD_HALF_WIDTH,
-      bottom: midRow + ROAD_HALF_WIDTH,
-    },
-    PATH_TILE,
-  );
-  paintRect(map, MILLPOND, WATER_TILE);
-
-  return map;
-}
-
-export const OLD_MILL_ROAD_MAP: number[][] = buildOldMillRoadMap();
+export const OLD_MILL_ROAD_LAYOUT = layoutZone(
+  'old-mill-road',
+  `
+    .........................
+    .........................
+    .........................
+    .~~~~u............t......
+    .~~~~=====.........t.....
+    .~~~~MMM==......a..a.....
+    .~~~~MMM==...........t...
+    .u.u=MMM==........a......
+    =========================
+    ============@============
+    =========================
+    .........................
+    ..b.............a........
+    ......................t..
+    ....b.............a.t....
+    ...b............a........
+    .........................
+    .........................
+    .........................
+  `,
+  {
+    '@': { start: true, on: 'road' },
+    /**
+     * The mill, scenery and the only building outside a town: nobody works
+     * there, nothing is sold there, and it is what the road is named after.
+     */
+    M: { building: 'mill', on: 'road' },
+    /**
+     * The hardwood, off in the north-east and south-east corners, clear of all
+     * three goblin knots and of the mill: a channel is broken by being hit, and
+     * a tree inside a knot is a tree nobody finishes.
+     */
+    t: { node: 'hardwood', on: 'grass' },
+    /**
+     * The willows, on the millpond's bank, held out of the far knot's reach
+     * (its aggro and its wander together) for the reason the hardwood is.
+     * `oldMillRoad.test.ts` holds that.
+     */
+    u: { node: 'willow', on: 'grass' },
+    /**
+     * Three knots of three, and the knots are the design of the zone: close
+     * enough that a careless pull is two goblins and a bad one is three, the
+     * first time the table rather than the stat block is what makes something
+     * hard. They climb westward, since the road from town arrives on the east
+     * edge: the near knot is met at level 4 with a way back one screen behind,
+     * and the level 5 knot is the far end of the walk. The north-east knot has
+     * moved three times: clear of the middle, clear of the north edge's arrival
+     * strip, and in off the east one when the zone was written as text and half
+     * a tile put it in reach of it. A knot moves as a knot or stops being one. The east half is left
+     * empty so arriving never lands inside a goblin's aggro radius, which is
+     * wider than anything else in the game.
+     */
+    a: { mob: 'goblin-scavenger', level: 4, on: 'grass' },
+    b: { mob: 'goblin-scavenger', level: 5, on: 'grass' },
+  },
+);

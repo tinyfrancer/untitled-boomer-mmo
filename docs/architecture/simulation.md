@@ -124,18 +124,19 @@ for the player to walk back to (`docs/decisions.md` 63). What dying costs is the
 fee in `systems/DeathSystem.ts` — the first thing in the game currency is spent on, and deliberately coin rather than XP, since on a
 quadratic curve a penalty big enough to be felt is big enough to erase an evening. A purse too thin
 pays what it has: a respawn is never blocked on affordability. Arriving at full is still the point
-of dying, which is why the spawn point has to be safe — it is the middle of the map, where
-a respawn puts someone with no particular spot.
+of dying, which is why the spawn point has to be safe — it is the zone's start, the `@` in its
+text, where a respawn puts someone with no particular spot. It was the middle of the map until zones
+were written as text (decision 113), and a start is still best somewhere a traveller would stand.
 
 **That safety is held by a sweep now rather than by this paragraph**
 (`tests/systems/spawnSafety.test.ts`), because for a long time the paragraph was simply wrong. Three
-zones shipped with the centre or an arrival strip inside an aggro radius, each found by hand and one
+zones shipped with the spawn point or an arrival strip inside an aggro radius, each found by hand and one
 at a time after the fact: Blackwater Fen put a level 5 raider 71 units from its own centre against a
 radius of 210, the Old Mill Road had a goblin at 187 against 200, and the bandit camp's east edge —
 the way back out of the hideout — passed 128 from a level 3 bandit.
 
 The sweep holds **two rules of different strength, and the difference is the whole of it.** The
-centre is clear of an aggressive creature's _whole wander disc_, because a respawn is not a choice:
+start is clear of an aggressive creature's _whole wander disc_, because a respawn is not a choice:
 dying already costs the walk and the fee, and what stops that being a spiral is a moment to gather
 yourself. Measuring at the spawn offset would guarantee nothing, since a creature is only ever _at_
 its spawn on the frame the zone was built — the same argument `tests/render2d/picking.test.ts` makes
@@ -143,9 +144,10 @@ about tapping one. An arrival strip is held to the weaker rule of not landing an
 aggro radius, because walking through a door is a choice and something wandering over to meet you on
 the far side is the zone working. What that refuses is a trap: no frame in which to walk back out.
 
-Expect a new zone to cost a spawn or two moved. A 300-unit disc around the middle of the map is not
-a small claim on a 25x19 grid, and the mill road's knots had to move as whole knots to keep being
-knots.
+Expect a new zone to cost a spawn or two moved. A 300-unit disc around the start is not a small
+claim on a 25x19 grid, and the mill road's knots had to move as whole knots to keep being knots.
+Writing the zones as text moved every spawn onto the middle of a cell, and that half tile cost two
+fen raiders and a knot another move each.
 
 **There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate
 themselves each frame against `systems/CollisionSystem.ts`, which is the only thing that decides
@@ -168,7 +170,7 @@ than a failure case.
 What makes a cell passable is **`isBlocked` on the body being routed**, rather than a second grid
 built by rasterising the blockers: testing the whole body at a point _is_ the configuration-space
 inflation, and a rasteriser would have been a second picture of the world free to drift from the one
-every walk integrates against. Three things about it were decided against alternatives and are worth
+every walk integrates against. Four things about it were decided against alternatives and are worth
 not undoing:
 
 - **A waypoint is where the body stands in a cell, not the middle of the cell.** A\* answers with
@@ -176,6 +178,15 @@ not undoing:
   wide comes back hugging one of its walls — and the walk lands within `arriveRadius` of a waypoint
   rather than on it, which beside a wall is a corner in that wall. Passability and where-to-stand are
   one answer (`footing`) precisely so the two cannot disagree.
+- **A cell something reaches into is stood in off its middle** (decision 113). Every building is on
+  tile lines since zones are written as text, so a room two tiles deep has room for the body at the
+  middle of neither cell, each holding a wall's thickness of its edge, and a door two tiles wide is
+  centred on the line between them. Such a cell stands the body at the nearest spot a quarter tile
+  off its middle (`foothold`), and it is **crowded**: a step between two uncrowded cells is clear by
+  construction, since a body at a cell's middle is the whole cell, but a step touching a crowded
+  one may cross the very wall that crowds it, so it is walked with a shortcut's clearance and may
+  turn one corner to square up to a door. The start cell is crowded too when something is in it,
+  which is what stops a route out of a room stepping through its back wall.
 - **A passage with no slack in it is not a route.** A gap exactly the body's width is one it fits
   through only in exact arithmetic, so `findPath` refuses to turn a corner in one — which is where
   the rule that **a doorway has to be at least two tiles wide** comes from. Walking the _length_ of
@@ -234,6 +245,16 @@ indirection is the intended swap point for a future networked backend. `Characte
 `persistence/migrations.ts` so existing saves upgrade on load instead of being wiped — a save
 with no chain of steps to the current version is dropped.
 
+**Version 2's saves count from 100** (`FIRST_VERSION_2_STATE`, decisions 82 and 113), with no step
+from anything below it: version 2 rebuilds the world at a new size, and a version 1 character's
+position, quests and keys stop describing anywhere. A version 1 save is dropped the first time it is
+read, and `LocalStorageSaveService` keeps who was in it for exactly one ask (`takeRetired`), which
+the boot flow makes when it shows the creation screen: "Brom, level 8 warrior, retired with version
+
+1. Version 2 is a fresh start." Once, because the save it came from is already gone. A version 1
+   file or code is refused by `readSave` in the same words (`persistence/retired.ts`), and the version
+   1 chain of steps is in the history before C1.
+
 **A save travels as a file or a code** (decision 97, `persistence/saveFile.ts`): one envelope,
 `{ game, character }`, written as indented JSON for a file and as base64 of the same JSON for a
 code, since a code goes through notes and messages that curl a straight quote and wrap a long line.
@@ -259,8 +280,7 @@ over it, then `beginLoadedCharacter` in `bootFlow.ts`, which the creation screen
 
 `CharacterState.position` is **honoured on load**: a save resumes at the spot it names, and only
 when `zoneId` matches the zone being entered. `null` means "no particular spot" — a new character,
-or one who owes a respawn — and the zone puts them at its default spawn (the middle of the map)
-instead. Walking through an exit records the arrival point in the zone being _entered_, not the
+or one who owes a respawn — and the zone puts them at its start instead. Walking through an exit records the arrival point in the zone being _entered_, not the
 spot being left, so the pair is never self-contradictory; keep it that way if you add another way
 to change zones. Only smoke can check any of this, and it does.
 

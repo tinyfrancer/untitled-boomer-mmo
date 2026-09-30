@@ -9,8 +9,13 @@ import { REFORGES } from '../data/reforges';
 import { SKILLS } from '../data/skills';
 import { ZONES } from '../data/zones';
 import { NO_GEAR } from '../systems/InventorySystem';
-import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
+import {
+  CHARACTER_STATE_VERSION,
+  FIRST_VERSION_2_STATE,
+  type CharacterState,
+} from './CharacterState';
 import { migrateCharacterState } from './migrations';
+import { retiredReason } from './retired';
 
 /**
  * What names a file as one of this game's saves, whatever version wrote the
@@ -74,6 +79,9 @@ export function readSave(text: string): SaveReadResult {
   }
   if (version > CHARACTER_STATE_VERSION) {
     return { ok: false, reason: TOO_NEW };
+  }
+  if (version < FIRST_VERSION_2_STATE) {
+    return { ok: false, reason: retiredReason(envelope.character) };
   }
   let migrated: CharacterState | null;
   try {

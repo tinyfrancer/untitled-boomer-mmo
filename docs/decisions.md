@@ -2640,3 +2640,47 @@ building a rebuild adds is drawn in the phase that adds it, since Part B left no
 and a test holds every creature, item and vein to a drawing of its own. The walk's script, which
 drops a character into each zone through the save and photographs it at both sizes, was scaffolding
 for the review and is not kept; smoke's screenshots are the record, as they were for A10.
+
+## 113. A zone is written as text, every placement on it included; version 2's saves count from 100 and a retired character is named once; the wizard's ids become staffs
+
+**2026-09-30 · the user, asked by Claude, building the plan's phase C1**
+
+C1 is the format the rebuilt zones will be written in, and the save era decision 82 promised. The
+user settled three forks at the start of the phase:
+
+- **Everything in a zone is written in its text** (`data/zoneText.ts`, a file a zone under
+  `data/`). One character a tile: the ground in characters every zone shares (`.` grass, `=` road,
+  `~` water, `:` sand, `_` stone, `#` rock, `,` marsh), and the start, creatures, nodes, stations
+  and buildings in markers of the zone's own, each a legend row naming what it is and the ground
+  under it. A marker stands in the middle of its tile; a building is a block of its letter exactly
+  its footprint, and a block that is the wrong size or runs on past it refuses to load; whoever
+  works in a building is named on its row and stands at its `counterPoint`, never written down a
+  second time. A legend row the map never uses refuses to load too. The offsets from the map's
+  middle went, with `spawns.ts` and the fixed 25×19, so a zone's size is its text's. **Rejected:**
+  the ground in text and the placements as offsets beside it, which Claude offered and which leaves
+  two ways to say where a thing is; the ground alone in text for now.
+- **Every placement moved up to half a tile onto the middle of a cell**, and the sweeps flagged
+  five: the forge stood across the smithy's open front, the north-east cottage over the
+  quartermaster's counter, the mill road's north-east knot half in reach of its east arrival strip
+  and half out of reach of itself, and two fen raiders onto the south strip and then within reach of
+  the start. Each moved a cell. The spawn lists come out in the order the map is read, so the tests
+  that took the first person or creature in a list name the one they want.
+- **A route stands off the middle of a cell something reaches into.** With every building on tile
+  lines, a room two tiles deep has room for the body but at the middle of neither cell, and its
+  door is centred on the line between them; the pathfinder had no cell to route through and the
+  smithy could not be walked into from round a corner. A cell whose middle is blocked now stands the
+  body at the nearest spot a quarter tile off it, and a step touching such a cell is checked, with a
+  shortcut's clearance, and may turn one corner to square up to a door (`PathSystem.ts`).
+  **Rejected:** drawing even-sized buildings half a tile off the grid, which the text cannot say;
+  pathing on a half-tile grid, four times the cells for every route on maps about to triple.
+- **Version 2's saves count from 100** (`FIRST_VERSION_2_STATE`), so a save says which game wrote it
+  at a glance, and the version 1 chain of migrations is gone. A version 1 save is dropped the first
+  time it is read, and the creation screen names who was in it, the once: "Brom, level 8 warrior,
+  retired with version 1. Version 2 is a fresh start." A version 1 file or code brought back through
+  Load a Save is refused in the same words. **Rejected:** dropping it silently; keeping the line
+  until a new character is made.
+- **The wizard's weapons are staffs in their ids as well**: `apprentice-staff`, `stolen-staff` and
+  `barrow-staff`, the ids decision 107 kept for the saves that named them. **Rejected:** keeping
+  the old ids, which no save needs any more.
+- **The camera needed nothing new.** It already framed whatever size the world is, clamped to its
+  edges; the per-zone size is the text's.

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { nth } from '../nth';
-import { harness } from './harness';
+import { harness, npcNamed } from './harness';
 import { UNARMED_ATTACK_RANGE, weaponAttackRange } from '../../src/data/items';
 import { COMBAT_LOG_EVENT, NOTICE_EVENT, QUIVER_CHANGED_EVENT } from '../../src/ui/uiEvents';
 import type { Mob } from '../../src/world/Mob';
@@ -137,7 +136,7 @@ describe('arrows coming back', () => {
 
   it('are sold by the bundle, into the quiver first and the bag after', () => {
     const kit = harness({ classId: 'ranger' });
-    const keeper = nth(kit.world.npcs, 0);
+    const keeper = npcNamed(kit.world, 'shopkeeper');
     kit.world.teleport(keeper.x, keeper.y + 50);
     kit.world.approachNpc(keeper, 'merchant');
     kit.state.quiver = { itemId: 'crude-arrows', count: 40 };

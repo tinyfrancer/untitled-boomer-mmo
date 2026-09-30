@@ -100,8 +100,8 @@ describe('the exchange', () => {
    */
   it('ignores a stored reforge the piece can no longer afford', () => {
     // A staff has no armour at all, so `keen` has nothing to take from it.
-    expect(reforgedBonuses('apprentice-wand', 'keen')).toEqual(
-      getEquipmentBonuses('apprentice-wand'),
+    expect(reforgedBonuses('apprentice-staff', 'keen')).toEqual(
+      getEquipmentBonuses('apprentice-staff'),
     );
   });
 });

@@ -44,10 +44,9 @@ function around(x: number, y: number, halfWidth: number, halfHeight = halfWidth)
 function placed(
   zone: ZoneDefinition,
 ): Array<{ x: number; y: number; definition: BuildingDefinition }> {
-  const { width, height } = zoneWorldSize(zone);
-  return (zone.buildingSpawns ?? []).map(({ dx, dy, buildingId }) => ({
-    x: width / 2 + dx,
-    y: height / 2 + dy,
+  return zone.buildingSpawns.map(({ x, y, buildingId }) => ({
+    x,
+    y,
     definition: BUILDINGS[buildingId],
   }));
 }
@@ -61,7 +60,7 @@ describe('BUILDINGS data integrity', () => {
 
   it('every spawn references a defined building', () => {
     zones.forEach((zone) => {
-      (zone.buildingSpawns ?? []).forEach((spawn) => {
+      zone.buildingSpawns.forEach((spawn) => {
         expect(BUILDINGS[spawn.buildingId], `${zone.id}: ${spawn.buildingId}`).toBeDefined();
       });
     });
@@ -151,16 +150,15 @@ describe('where the buildings stand', () => {
    */
   it('leaves every mob its whole wander disc', () => {
     zones.forEach((zone) => {
-      const { width, height } = zoneWorldSize(zone);
       const buildings = placed(zone);
 
-      zone.mobSpawns.forEach(({ dx, dy, enemyId }) => {
+      zone.mobSpawns.forEach(({ x, y, enemyId }) => {
         const { radius } = ENEMIES[enemyId].wander;
-        const disc = around(width / 2 + dx, height / 2 + dy, radius);
+        const disc = around(x, y, radius);
         buildings.forEach((building) => {
           expect(
             overlaps(disc, buildingRect(building)),
-            `${zone.id}: ${enemyId} at ${dx},${dy} wanders into the ${building.definition.id}`,
+            `${zone.id}: ${enemyId} at ${x},${y} wanders into the ${building.definition.id}`,
           ).toBe(false);
         });
       });
@@ -169,16 +167,15 @@ describe('where the buildings stand', () => {
 
   it('leaves every node the ground it is worked from', () => {
     zones.forEach((zone) => {
-      const { width, height } = zoneWorldSize(zone);
       const buildings = placed(zone);
 
-      zone.nodeSpawns.forEach(({ dx, dy, nodeId }) => {
+      zone.nodeSpawns.forEach(({ x, y, nodeId }) => {
         const { body } = RESOURCE_NODES[nodeId];
-        const footprint = around(width / 2 + dx, height / 2 + dy, body.width / 2, body.height / 2);
+        const footprint = around(x, y, body.width / 2, body.height / 2);
         buildings.forEach((building) => {
           expect(
             overlaps(footprint, buildingRect(building)),
-            `${zone.id}: ${nodeId} at ${dx},${dy} stands in the ${building.definition.id}`,
+            `${zone.id}: ${nodeId} at ${x},${y} stands in the ${building.definition.id}`,
           ).toBe(false);
         });
       });
@@ -197,16 +194,12 @@ describe('where the buildings stand', () => {
       const { width, height } = zoneWorldSize(zone);
       const buildings = placed(zone);
       const standing: Array<{ what: string; x: number; y: number }> = [
-        ...(zone.stationSpawns ?? []).map(({ dx, dy, station }) => ({
-          what: station,
-          x: width / 2 + dx,
-          y: height / 2 + dy,
-        })),
+        ...zone.stationSpawns.map(({ x, y, station }) => ({ what: station, x, y })),
         ...zone.exits.map((exit) => ({
           what: `${exit.edge} signpost`,
           ...signpostPoint(exit.edge, width, height),
         })),
-        { what: 'the spawn point', x: width / 2, y: height / 2 },
+        { what: 'the start', ...zone.start },
       ];
 
       standing.forEach((thing) => {
@@ -281,13 +274,8 @@ describe('the walk up to a counter', () => {
 
   it('is clear of every other building, out from the door it comes in through', () => {
     zones.forEach((zone) => {
-      const { width, height } = zoneWorldSize(zone);
       const buildings = placed(zone);
-      const people = zone.npcSpawns.map(({ dx, dy, npcId }) => ({
-        what: npcId,
-        x: width / 2 + dx,
-        y: height / 2 + dy,
-      }));
+      const people = zone.npcSpawns.map(({ x, y, npcId }) => ({ what: npcId, x, y }));
 
       buildings.forEach((building) => {
         const counter = occupant(building, people);
@@ -317,10 +305,9 @@ describe('the walk up to a counter', () => {
   // is one nobody can reach from any direction at all.
   it('ends on walkable ground', () => {
     zones.forEach((zone) => {
-      const { width, height } = zoneWorldSize(zone);
-      zone.npcSpawns.forEach(({ dx, dy, npcId }) => {
-        const row = nth(zone.map, Math.floor((height / 2 + dy) / TILE_SIZE));
-        const tile = nth(row, Math.floor((width / 2 + dx) / TILE_SIZE));
+      zone.npcSpawns.forEach(({ x, y, npcId }) => {
+        const row = nth(zone.map, Math.floor(y / TILE_SIZE));
+        const tile = nth(row, Math.floor(x / TILE_SIZE));
         expect(BLOCKING_TILES, `${zone.id}: ${npcId}`).not.toContain(tile);
       });
     });
@@ -340,15 +327,14 @@ describe('the walk up to a counter', () => {
  */
 describe('every counter', () => {
   const withCounters = zones.filter(
-    (zone) => zone.npcSpawns.length > 0 && (zone.buildingSpawns ?? []).length > 0,
+    (zone) => zone.npcSpawns.length > 0 && zone.buildingSpawns.length > 0,
   );
 
   it.each(withCounters.map((zone) => zone.id))('works out of a building in %s', (zoneId) => {
     const zone = ZONES[zoneId];
-    const { width, height } = zoneWorldSize(zone);
 
-    zone.npcSpawns.forEach(({ dx, dy, npcId }) => {
-      const npc = { x: width / 2 + dx, y: height / 2 + dy };
+    zone.npcSpawns.forEach(({ x, y, npcId }) => {
+      const npc = { x, y };
       const home = placed(zone).find((building) => isInside(building, npc));
       expect(home, `the ${npcId} works out of nowhere`).toBeDefined();
     });
@@ -361,10 +347,9 @@ describe('every counter', () => {
    */
   it.each(withCounters.map((zone) => zone.id))('stands at the back of the room in %s', (zoneId) => {
     const zone = ZONES[zoneId];
-    const { width, height } = zoneWorldSize(zone);
 
-    zone.npcSpawns.forEach(({ dx, dy, npcId }) => {
-      const npc = { x: width / 2 + dx, y: height / 2 + dy };
+    zone.npcSpawns.forEach(({ x, y, npcId }) => {
+      const npc = { x, y };
       const home = placed(zone).find((building) => isInside(building, npc));
       if (!home) throw new Error(`the ${npcId} works out of nowhere`);
       expect(counterPoint(home), npcId).toEqual(npc);
@@ -382,7 +367,7 @@ describe('every counter', () => {
         people.forEach((b) => {
           if (a === b) return;
           expect(
-            Math.hypot(a.dx - b.dx, a.dy - b.dy),
+            Math.hypot(a.x - b.x, a.y - b.y),
             `${NPCS[a.npcId].name} and ${NPCS[b.npcId].name}`,
           ).toBeGreaterThan(NPC_INTERACT_RADIUS);
         });
@@ -409,7 +394,7 @@ describe('every counter', () => {
  */
 describe('every building can be walked into', () => {
   Object.values(ZONES).forEach((zone) => {
-    const buildings = zone.buildingSpawns ?? [];
+    const buildings = zone.buildingSpawns;
     if (buildings.length === 0) return;
 
     it(`lets a player into every building in ${zone.id}`, () => {
