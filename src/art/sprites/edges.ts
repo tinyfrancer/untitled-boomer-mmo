@@ -196,7 +196,7 @@ const WATER_UNDER_MARSH: EdgeStyle = {
 /**
  * How many rows of face rock shows over the ground at its foot: under half of
  * a figure's 39, so it reads as rock standing up and hides no more than the
- * boots of whoever stands behind it, as the 3D view's `WALL_HEIGHT` did.
+ * boots of whoever stands behind it.
  */
 export const FACE_ROWS = 16;
 

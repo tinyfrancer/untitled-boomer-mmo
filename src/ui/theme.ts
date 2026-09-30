@@ -109,8 +109,8 @@ export const THEME = {
   // sky blue a skill's XP floats in: two blues touching read as one bar.
   trainingFill: 0x26a69a,
   // The same green the health bar over the player's head is drawn in
-  // (`render3d/palette.ts`): the bar in the corner and the bar in the world are
-  // one reading of one number, and two greens would suggest otherwise.
+  // (`render2d/ZoneView2D.ts`): the bar in the corner and the bar in the world
+  // are one reading of one number, and two greens would suggest otherwise.
   hpFill: 0x66bb6a,
 } as const;
 

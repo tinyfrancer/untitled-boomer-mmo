@@ -3,9 +3,10 @@ import { worldViewportHeight } from '../ui/layout';
 import type { Point } from '../systems/MovementSystem';
 
 /**
- * How many tiles the view frames across the screen's smaller side, which is
- * what the 3D camera framed (`render3d/camera.ts`), so the two draw things the
- * same size while both exist.
+ * How many tiles the view frames across the screen's smaller side: a portrait
+ * phone sees about ten, which is room to see a fight coming without a creature
+ * shrinking under a thumb. The 3D camera framed the same, so a zone was the
+ * same size on screen when the game moved to 2D.
  */
 export const TARGET_TILES_ACROSS = 10;
 
@@ -50,9 +51,9 @@ export interface Viewport {
  * middle of the screen. The bar is opaque and eats every tap on it, so the
  * world's middle is the middle of what can be tapped (`worldViewportHeight`),
  * and anything on the map comes up out of the bar by walking toward it. The
- * camera follows all the way to the map's edge rather than stopping at it, for
- * the same reason the 3D one does: a camera clamped to the map pinned the south
- * signpost under the bar for good, back when the game was last drawn in 2D.
+ * camera follows all the way to the map's edge rather than stopping at it: a
+ * camera clamped to the map pinned the south signpost under the bar for good,
+ * back when the game was first drawn in 2D.
  *
  * Every position is rounded to a whole art pixel, the camera's included, and
  * the camera is rounded from the player's own rounded position, so the player

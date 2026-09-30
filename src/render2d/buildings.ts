@@ -14,9 +14,8 @@ import type { WorldBuilding, WorldNpc, WorldTap } from '../world/ZoneWorld';
 import type { Pickable2D, PickRect } from './picking';
 
 /**
- * How near the doorstep counts as standing on it: a tile, the 3D view's
- * number (`render3d/actors.ts`), since it is a rule about the walk to the door
- * rather than about what draws it.
+ * How near the doorstep counts as standing on it: a tile, since what it
+ * answers is whether the walk to the door is over.
  */
 const DOOR_REACH = TILE_SIZE;
 
@@ -45,9 +44,9 @@ interface Baked {
 /**
  * One building, drawn: from outside, or with its roof off and its front walls
  * cut down while the player stands in it (`art/building.ts` puts the pictures
- * together). What a tap on it means is the 3D view's answer word for word, and
- * `docs/architecture/buildings.md` has why: whoever works there, or the ground
- * at its door, and nothing at all from inside.
+ * together). What a tap on it means is `docs/architecture/buildings.md`'s:
+ * whoever works there, or the ground at its door, and nothing at all from
+ * inside.
  */
 export class BuildingSprite implements Pickable2D {
   readonly building: WorldBuilding;

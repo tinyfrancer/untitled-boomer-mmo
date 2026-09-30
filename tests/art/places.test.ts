@@ -67,9 +67,9 @@ describe('what each place is drawn as', () => {
   });
 
   /**
-   * Which metal is in the rock is a fact the whole game shares, as the 3D view
-   * read it off the bag: step 2 of the ramp a vein's ore is drawn in is the
-   * colour the ore it yields is drawn in the pack.
+   * Which metal is in the rock is a fact the whole game shares: step 2 of the
+   * ramp a vein's ore is drawn in is the colour the ore it yields is drawn in
+   * the pack.
    */
   it("draws every vein's ore in the colour of what it yields", () => {
     for (const [id, node] of NODES) {

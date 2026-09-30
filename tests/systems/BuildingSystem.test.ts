@@ -147,7 +147,7 @@ describe('where the buildings stand', () => {
    * The whole wander disc, not the spawn point: a creature is only ever *at* its
    * spawn on the frame the zone was built, and one that can walk behind a
    * shopfront is one a player cannot see to tap. Same argument, and the same
-   * sweep, as `tests/render3d/picking.test.ts` makes over the counters.
+   * sweep, as `tests/render2d/picking.test.ts` makes over the counters.
    */
   it('leaves every mob its whole wander disc', () => {
     zones.forEach((zone) => {

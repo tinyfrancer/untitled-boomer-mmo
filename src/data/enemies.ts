@@ -10,9 +10,10 @@ import type {
 /**
  * The collision box, in world pixels. Named here rather than measured off
  * anything drawn, for the same reason PLAYER_HALF_EXTENT is: how big a rat
- * looks is the renderer's decision and how big a rat *is* is not. The renderer
- * reads these to size the mesh, which is the direction that keeps them
- * agreeing — see `render3d/creatures.ts`.
+ * looks is the renderer's decision and how big a rat *is* is not. The art is
+ * drawn to agree with it rather than the other way round: a boss is the figure
+ * grown and a goblin the figure shrunk (`art/cast.ts`), and
+ * `tests/art/cast.test.ts` holds the heights.
  */
 export interface BodySize {
   width: number;
@@ -194,8 +195,8 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     name: 'Goblin Scavenger',
     family: 'humanoid',
     shape: 'humanoid',
-    // Smaller than the men it robs, and drawn from this the way the chief's
-    // bulk is: `render3d/creatures.ts` scales the rig by how wide the body is.
+    // Smaller than the men it robs, and drawn so: a goblin is the figure
+    // shrunk (`art/cast.ts`).
     body: { width: TILE_SIZE * 0.85, height: TILE_SIZE * 0.85 },
     aggressive: true,
     // A shade wider than a bandit's 180, which is what makes a knot of three a
@@ -225,9 +226,9 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     name: 'Hollis the Cutthroat',
     family: 'humanoid',
     shape: 'humanoid',
-    // Half again the size of the men he leads, and drawn from this rather than
-    // the other way round: `render3d/creatures.ts` scales the figure by how
-    // wide the body is, so being bigger is a fact about the creature.
+    // Half again the size of the men he leads, and drawn so: a boss is the
+    // figure grown (`art/cast.ts`), so being bigger is a fact about the
+    // creature that the picture agrees with.
     body: { width: TILE_SIZE * 1.4, height: TILE_SIZE * 1.4 },
     aggressive: true,
     // Wider than a bandit's, and the room he stands in is wider still: walking
@@ -465,8 +466,7 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     name: 'Orlath the Barrow King',
     family: 'humanoid',
     shape: 'humanoid',
-    // Half again a wight, and drawn from it: `render3d/creatures.ts` scales the
-    // rig by how wide the body is, the same as the chief.
+    // Half again a wight, and drawn grown from it, as the chief is.
     body: { width: TILE_SIZE * 1.5, height: TILE_SIZE * 1.5 },
     aggressive: true,
     // Wider than the chief's, and the chamber he stands in is wider still:

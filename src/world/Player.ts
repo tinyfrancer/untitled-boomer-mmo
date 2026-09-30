@@ -17,8 +17,8 @@ import { isBow } from '../data/items';
 /**
  * The player, as simulation only: position, velocity, stats, pools and buffs.
  * It owns its transform and integrates itself against CollisionSystem, and it
- * knows nothing about how any of that is drawn — a sprite, a mesh or nothing at
- * all follows it (see `render3d/actors.ts` for today's).
+ * knows nothing about how any of that is drawn: the view reads it each frame,
+ * and so does nothing at all under the unit suite.
  */
 export class Player {
   readonly classId: ClassId;

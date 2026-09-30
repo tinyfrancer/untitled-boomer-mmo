@@ -10,8 +10,7 @@ import { FLOWERS, PEBBLES, REEDS, SCATTER_SPRITES, SHELL, SPRIG, TUFT } from './
  *
  * Placed by a hash of where it is, so a zone is strewn the same every time it
  * is built. None of it blocks, is picked, or is known to the simulation: the
- * renderer bakes it into the ground (the 3D view's scatter, which was its own
- * in the same way).
+ * renderer bakes it into the ground.
  */
 
 interface ScatterRule {

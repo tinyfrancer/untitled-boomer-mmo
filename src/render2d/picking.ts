@@ -16,21 +16,18 @@ import type {
 } from '../world/ZoneWorld';
 
 /**
- * What a tap is on, for a view that draws the world flat.
- *
- * The same rules as the 3D view's (`render3d/picking.ts`, and
- * `docs/architecture/rendering.md` for why each is what it is): a tap is picked
- * against boxes the game chooses, not against the pixels drawn, and the kinds
- * are asked in a **priority** — node, signpost, NPC, mob, station, building,
- * loot pile, ground — rather than a depth sort, so a rat in front of the
- * shopkeeper does not stop you shopping. What changes in 2D is only what a box
- * is: a rectangle on the ground's plane, standing up the screen from where a
- * thing's feet are, and within one kind the one drawn in front wins.
+ * What a tap is on (`docs/architecture/rendering.md` has why each rule is what
+ * it is): a tap is picked against boxes the game chooses, not against the
+ * pixels drawn, and the kinds are asked in a **priority** — node, signpost,
+ * NPC, mob, station, building, loot pile, ground — rather than a depth sort,
+ * so a rat in front of the shopkeeper does not stop you shopping. A box is a
+ * rectangle on the ground's plane, standing up the screen from where a thing's
+ * feet are, and within one kind the one drawn in front wins.
  */
 
 /**
- * The smallest a pick box may be either way, which is the 3D view's number: a
- * crab is a thumb's width at best, and the things being picked are tiles apart.
+ * The smallest a pick box may be either way: a crab is a thumb's width at
+ * best, and the things being picked are tiles apart.
  */
 export const MIN_PICK_SPAN = TILE_SIZE * 0.75;
 
@@ -40,7 +37,7 @@ export const MIN_PICK_SPAN = TILE_SIZE * 0.75;
  */
 const BELOW_FEET = TILE_SIZE / 4;
 
-/** Every drawn figure's tap target is at least a tile across: the 3D view's `FIGURE_FOOTPRINT`. */
+/** Every drawn figure's tap target is at least a tile across, whatever its body. */
 const FIGURE_FOOTPRINT = TILE_SIZE;
 
 /** A box in simulation units, top-down: `top` is north. */
@@ -142,9 +139,9 @@ export function pickTap(point: Point, scene: PickScene2D): WorldTap {
  * Everything in a world a tap can land on, each as the box it is picked by: a
  * thing's own width or its body's, standing as tall as its sprite is drawn
  * (`heightOf`, in art pixels), and never smaller than a thumb. A node is the
- * exception, picked by its body as the 3D view picked it: a tree a tile and a
- * half tall rather than the whole of its crown, so a creature behind the crown
- * is still the creature, and a fishing spot lying flat on the water.
+ * exception, picked by its body: a tree a tile and a half tall rather than the
+ * whole of its crown, so a creature behind the crown is still the creature,
+ * and a fishing spot lying flat on the water.
  */
 export function pickScene(
   world: ZoneWorld,

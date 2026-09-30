@@ -3,9 +3,9 @@ import { TILE_PIXELS } from '../art/budget';
 import type { CanvasPool } from './canvases';
 
 /**
- * The light the player carries underground: the 3D view's lantern, drawn the
- * way the style guide draws light, as a stamp over the scene rather than
- * anything computed per sprite (`docs/architecture/art.md`).
+ * The light the player carries underground, drawn the way the style guide
+ * draws light, as a stamp over the scene rather than anything computed per
+ * sprite (`docs/architecture/art.md`).
  *
  * Two stamps, centred on the player's chest. The first is darkness with a
  * clear disc in it, falling off in dithered steps as pixel art shades rather

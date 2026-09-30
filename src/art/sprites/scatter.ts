@@ -2,7 +2,7 @@ import { grid, type SpriteDef } from '../format';
 
 /**
  * What is strewn over the ground: tufts and flowers on grass, reeds in the
- * marsh, pebbles on stone, shells on sand. The 3D view's scatter, drawn.
+ * marsh, pebbles on stone, shells on sand.
  *
  * Written in terrain ramps where it grows out of the ground, so a tuft in the
  * fen is a fen tuft and a pebble underground is a cave pebble; a flower and a
