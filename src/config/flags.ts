@@ -13,3 +13,15 @@
 export function manualLoopRequested(search: string): boolean {
   return new URLSearchParams(search).get('loop') === 'manual';
 }
+
+/** Which renderer draws the world. */
+export type RendererId = '3d' | '2d';
+
+/**
+ * `?renderer=2d` draws the world in version 2's pixel art, for as long as the 3D
+ * view is still the default (decision 83). Honoured in production too, since the
+ * slice it draws is there to be judged on a phone; anything else is the 3D view.
+ */
+export function rendererRequested(search: string): RendererId {
+  return new URLSearchParams(search).get('renderer') === '2d' ? '2d' : '3d';
+}

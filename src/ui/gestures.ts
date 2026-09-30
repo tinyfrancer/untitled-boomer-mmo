@@ -3,7 +3,7 @@
  *
  * These live beside the palette and the layout arithmetic rather than in the
  * renderer because two very different things read them: the gesture that turns
- * the camera (`render3d/orbit.ts`) and the one that opens a menu on a bag cell
+ * the camera (`host/orbit.ts`) and the one that opens a menu on a bag cell
  * (`hud/longPress.ts`). A press has to mean the same thing wherever a thumb
  * lands, and it cannot if each surface keeps its own copy of the numbers.
  */

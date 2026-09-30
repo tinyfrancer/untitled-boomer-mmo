@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME_WINDOW, FrameTimer } from '../../src/render3d/frameTimer';
+import { FRAME_WINDOW, FrameTimer } from '../../src/host/frameTimer';
 
 describe('FrameTimer', () => {
   it('answers nothing before anything has been drawn', () => {

@@ -6,7 +6,7 @@ import type { ScreenPoint } from '../ui/uiEvents';
  * held still on it.
  *
  * The world makes this decision inside the gesture that also turns the camera
- * (`render3d/orbit.ts`), and the two share the numbers rather than the code:
+ * (`host/orbit.ts`), and the two share the numbers rather than the code:
  * an element in an overlay has no drag to disambiguate against and no pointer
  * to capture, so all that is left of the rule here is a timer and the slop that
  * cancels it. `ui/gestures.ts` is what keeps a bag cell and a rat answering to

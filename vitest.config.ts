@@ -16,7 +16,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       // The two modules that boot a page rather than compute anything; smoke
       // is their cover and always will be.
-      exclude: ['src/main.ts', 'src/render3d/start3d.ts'],
+      exclude: ['src/main.ts', 'src/host/host.ts'],
       reporter: ['text-summary', 'text'],
       // Reported, never gated: no `thresholds`. The number is worth reading
       // and not worth passing.

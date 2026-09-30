@@ -1,3 +1,5 @@
+import { TILE_SIZE } from '../config/constants';
+
 /**
  * How much animation each kind of sprite may have, fixed in advance.
  *
@@ -11,6 +13,13 @@
 
 /** The size of a tile in art pixels (decision 100), and the unit of every sprite. */
 export const TILE_PIXELS = 32;
+
+/**
+ * How many simulation units an art pixel covers: two, a tile being 64 of those
+ * and 32 of these. Nothing in the simulation changes for the art; this is the
+ * one place the two are related.
+ */
+export const ART_PIXEL = TILE_SIZE / TILE_PIXELS;
 
 export type SpriteKind = 'tile' | 'person' | 'beast' | 'prop' | 'effect' | 'icon';
 

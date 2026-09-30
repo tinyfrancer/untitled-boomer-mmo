@@ -35,7 +35,7 @@ import { WATER_TIME, buildWaterSheen } from './water';
 import { buildingRect } from '../data/buildings';
 import { RoomLight, Sunlight, type RoomLamp } from './lights';
 import { applyOcclusion, type Occluder } from './occlusion';
-import { normalizeYaw } from './orbit';
+import { normalizeYaw } from '../host/orbit';
 import { pickTap, pointerRay } from './picking';
 import { SelectionRing } from './selection';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
@@ -43,6 +43,7 @@ import type { WorldEvent } from '../world/worldEvents';
 import type { LootPile } from '../world/LootPile';
 import type { Mob } from '../world/Mob';
 import type { DrawnCounts } from '../types/debugView';
+import type { ZoneView } from '../host/zoneView';
 
 /**
  * The lantern the player carries underground: warm, head high, and reaching
@@ -64,7 +65,7 @@ const LANTERN_REACH = TILE_SIZE * 7;
  * `scripts/smoke.mjs` walks three zone round trips and asserts
  * `renderer.info.memory` came back to where it started.
  */
-export class ZoneView3D {
+export class ZoneView3D implements ZoneView {
   readonly canvas: HTMLCanvasElement;
   private readonly parent: HTMLElement;
   private readonly renderer: WebGLRenderer;

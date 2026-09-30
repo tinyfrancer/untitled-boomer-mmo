@@ -9,6 +9,7 @@ import {
   type SpriteDef,
 } from '../../src/art/format';
 import { PLACEHOLDERS, SPRITES, TILE_SPRITES } from '../../src/art/index';
+import { LOOKBOOK } from '../../src/art/sprites/armour';
 import { isTerrainRamp, parseColourRef } from '../../src/art/palette';
 import { TILE_COLORS } from '../../src/data/tiles';
 import type { ZoneSetting } from '../../src/types/ids';
@@ -16,7 +17,8 @@ import type { ZoneSetting } from '../../src/types/ids';
 /**
  * Every sprite held to the palette, its size and its frame count: the three
  * things B1 said a sprite could not be allowed to drift on. A sprite added to
- * `SPRITES` is answered for here with nothing written for it.
+ * `SPRITES` is answered for here with nothing written for it, and so is every
+ * armour look drawn for judging, which the game does not compile yet.
  */
 
 const SETTINGS: readonly ZoneSetting[] = ['open', 'marsh', 'underground'];
@@ -36,7 +38,7 @@ function writtenFrames(def: SpriteDef): Grid[] {
 // What a kind that is drawn the same wherever it goes may not reach for.
 const ACTOR_KINDS = new Set(['person', 'beast', 'effect', 'icon']);
 
-describe.each(SPRITES.map((def) => [def.id, def] as const))('%s', (_, def) => {
+describe.each([...SPRITES, ...LOOKBOOK].map((def) => [def.id, def] as const))('%s', (_, def) => {
   const budget = BUDGET[def.kind];
 
   it("is a size its kind's budget allows", () => {

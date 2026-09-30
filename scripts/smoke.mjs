@@ -5002,6 +5002,174 @@ async function fletchersBench() {
   );
 }
 
+async function renderer2d() {
+  // --- Version 2's checkpoint (phase B2): the world drawn in pixel art, behind
+  // `?renderer=2d`, by a view the host takes the same way it takes the 3D one.
+  //
+  // What is drawn is unit-tested where it can be: the edges, the font, the
+  // building kit and the sprites in `tests/art/`, the camera and picking in
+  // `tests/render2d/`. What only a browser shows is a Canvas 2D context drawing
+  // any of it: the page booting into the second renderer, a canvas at art
+  // resolution scaled up by whole device pixels, real presses picked against
+  // the flat boxes, a building's roof coming off, the canvases let go across
+  // zone changes, and what a frame costs on a slow phone. Last, since it boots a
+  // fresh warrior into a different renderer from every section above. ---
+  // Reset first rather than clearing storage and leaving: a page with a
+  // session in it writes the save back on its way out.
+  await tapTab('options');
+  await page.click('.hud-modal [data-action="reset-character"]');
+  await page.click('.hud-modal [data-action="reset-character"]');
+  await page.waitForSelector('.create', { timeout: 20000 });
+  await page.goto(query('loop=manual&renderer=2d'), { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.create', { timeout: 60000 });
+  await page.fill('.create__name', 'Adventurer');
+  await page.click('.create__card[data-class="warrior"]');
+  await page.click('.create__begin');
+  await page.waitForFunction(() => window.world != null && window.view != null, null, {
+    timeout: 60000,
+  });
+  await quietTips();
+  await park();
+
+  const canvas = await page.evaluate(() => {
+    const drawn = /** @type {HTMLCanvasElement} */ (document.querySelector('#app > canvas'));
+    return {
+      width: drawn.width,
+      cssWidth: Number.parseFloat(drawn.style.width),
+      rendering: drawn.style.imageRendering,
+      dpr: window.devicePixelRatio,
+      viewport: window.innerWidth,
+    };
+  });
+  const scale = (canvas.cssWidth * canvas.dpr) / canvas.width;
+  check(
+    'the 2D view draws at art resolution, scaled up by a whole number of device pixels',
+    canvas.rendering === 'pixelated' &&
+      Math.abs(scale - Math.round(scale)) < 1e-6 &&
+      canvas.cssWidth >= canvas.viewport,
+    `${canvas.width} art pixels across at ${scale} device pixels each, ${canvas.cssWidth}px wide`,
+  );
+  await checkZoneDrawn('town in 2D');
+  await page.screenshot({ path: `${OUT}/2d-1-town.png` });
+
+  // The leak check, counted in canvases: the 2D view holds no geometry, and a
+  // zone change that kept the last zone's ground or buildings would climb here
+  // and nowhere else.
+  const before = await gpuMemory();
+  for (let trip = 0; trip < 3; trip += 1) {
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+    });
+    await stepUntilZone('beach', 'the south exit to load the beach in 2D');
+    if (trip === 0) {
+      await draw();
+      await page.screenshot({ path: `${OUT}/2d-2-beach.png` });
+    }
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, 33);
+    });
+    await stepUntilZone('town', 'the north exit to return to town in 2D');
+  }
+  await park();
+  const after = await gpuMemory();
+  check(
+    'three zone round trips in 2D let go of every canvas the last zone made',
+    JSON.stringify(before) === JSON.stringify(after) && after.textures > 0,
+    `${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
+  );
+
+  // Before anything is fought, so no blow is still playing over the stride.
+  await park();
+  const destination = await page.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y - 200,
+  }));
+  await clickAt(await page.evaluate((to) => window.view.worldToScreen(to.x, to.y), destination));
+  await step(4);
+  await draw();
+  const walking = await page.evaluate(() => window.view.playerFigure());
+  await stepUntil(
+    () => page.evaluate(() => !window.world.player.hasMoveTarget()),
+    'the player to arrive in 2D',
+  );
+  await draw();
+  const arrived = await page.evaluate(() => ({
+    x: window.world.player.x,
+    y: window.world.player.y,
+    figure: window.view.playerFigure(),
+  }));
+  check(
+    'a click on the ground walks the warrior there, striding, and it stands when it arrives',
+    walking.pose.startsWith('walk') &&
+      arrived.figure.pose.startsWith('idle') &&
+      Math.hypot(arrived.x - destination.x, arrived.y - destination.y) < 48,
+    `${walking.pose} then ${arrived.figure.pose}`,
+  );
+
+  await standSouthOf(RAT);
+  await clickAt(await screenAt(RAT));
+  check(
+    'a real click on a rat drawn in 2D selects it',
+    (await page.evaluate(() => window.world.target?.name ?? null)) === 'Rat',
+  );
+  const swung = await stepFor(
+    () => page.evaluate(() => window.view.playerFigure().pose),
+    (pose) => pose.startsWith('attack'),
+    'the warrior to swing at the rat',
+    20000,
+  );
+  check('and the warrior swings its sword at it', swung.startsWith('attack'), swung);
+  await page.screenshot({ path: `${OUT}/2d-3-fight.png` });
+
+  // A tap on the shopfront is a tap on the shopkeeper behind it: the walk in
+  // through the door, the roof off, and the conversation at the counter.
+  await park();
+  await page.evaluate(`(() => {
+    const store = ${GENERAL_STORE};
+    window.world.teleport(store.x, store.y + store.definition.body.height / 2 + 160);
+  })()`);
+  await step(2);
+  await draw();
+  await clickAt(
+    await page.evaluate(`(() => {
+      const store = ${GENERAL_STORE};
+      return window.view.worldToScreen(store.x - 40, store.y);
+    })()`),
+  );
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk') !== null),
+    'the shopkeeper to talk, from a tap on the roof',
+    30000,
+  );
+  check(
+    'a click on the General Store walks in to the shopkeeper and talks',
+    (await page.evaluate(() => window.world.counterNpc('talk')?.npcId ?? null)) === 'shopkeeper',
+  );
+  await page.screenshot({ path: `${OUT}/2d-4-store.png` });
+  await page.evaluate(() => window.world.closeCounters());
+
+  // The same game on a phone that cannot keep up: the frame budget the 3D view
+  // is held to, asked of the 2D one while it walks and fights.
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 });
+  await park();
+  await standSouthOf(RAT);
+  await clickAt(await screenAt(RAT));
+  for (let frame = 0; frame < 40; frame += 1) {
+    await step(1, 140);
+    await draw();
+  }
+  const slowDraw = await page.evaluate(() => window.view.drawTime());
+  check(
+    'a 2D frame draws inside the budget on an eight-times slower CPU',
+    slowDraw.samples >= 20 && slowDraw.averageMs < SLOW_DRAW_BUDGET_MS,
+    `${slowDraw.averageMs.toFixed(2)}ms mean over ${slowDraw.samples} frames ` +
+      `(worst ${slowDraw.worstMs.toFixed(2)}ms), budget ${SLOW_DRAW_BUDGET_MS}ms`,
+  );
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -5045,6 +5213,7 @@ const SECTIONS = [
   ['throttled', throttled],
   ['ranger', ranger],
   ['fletchers-bench', fletchersBench],
+  ['renderer-2d', renderer2d],
 ];
 
 const known = SECTIONS.map(([name]) => name);

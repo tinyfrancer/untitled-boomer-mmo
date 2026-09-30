@@ -2073,3 +2073,173 @@ existing host, and was the slowest of the three and the largest; PixiJS, a real 
 than Three.js here and slower than Canvas 2D, for about 100 kB and a scene graph with its own
 lifecycle to keep in step with the world's; drawing at device resolution, which scales pixel art by
 fractions and fills fifteen times the pixels.
+
+## 102. The checkpoint slice: edges are a rule, buildings are a kit, and the host stands apart from both renderers
+
+**2026-09-29 · Claude, building the plan's phase B2**
+
+B2 draws town in 2D behind `?renderer=2d` for the user to judge (decision 81's checkpoint). The
+plan named what to draw; how to draw it had forks, all Claude's:
+
+- **An edge between two grounds is a rule over the two tiles, not a set of pictures.** The upper
+  ground reaches into the lower one's cell by a depth that wanders along the edge as a function of
+  where it is in the whole map, so the tile on either side of a join asks the same question and a
+  shore across four tiles is one line; a few rows either side of where it stops are inked from a
+  table (`art/sprites/edges.ts`): the bank's earth face on a north shore, foam on a south one, a
+  grass lip over a road. An edge is drawn inside the lower cell and never lays blocking ground
+  over walkable ground (held by a test), so a player is stopped at the bank rather than in the
+  water. It draws every pond and road the maps have from the tiles B1 drew, and B3's other pairs
+  are a row each.
+- **A building is put together from parts over its own footprint** (`art/building.ts`): a roof
+  laid in courses, a front wall with the door where `doorGap` puts the collision's, windows where
+  there is room, and from inside a plank floor ringed by the walls' tops with only the back wall
+  standing. The three shapes are the one kit recoloured (slate halls, thatched cottages, shingled
+  workshops), so every building in the game is drawn, not the one the plan asked for.
+- **The camera follows the player to the map's edge, the player in the middle of the band above
+  the tab bar**, rather than clamping to the map, which is what hid the south signpost under the
+  bar the last time the game was 2D; the ground runs on past the map and fades into the haze, as
+  the 3D apron does. The scale is the whole number decision 101 described.
+- **The host moved out of `render3d/` into `src/host/`, behind a `ZoneView` interface** both views
+  answer, rather than a second host beside the first. `main.ts` picks the view by the flag; the
+  frame loop, the pointer, the HUD mount and the sound are written once.
+- **`?renderer=2d` works in production**, which is what decision 83 said the checkpoint was for:
+  judged on a phone, for the one phase it takes.
+- **The shopkeeper is the warrior's figure dressed differently**: an amber tunic, grey hair, an
+  apron and no sword. The warrior's sword is a part of its own, drawn over the body facing right
+  and behind it facing left, so the left is the right's body flipped with the sword still in the
+  right hand, as the style guide asks of anything held in one hand.
+- **The world's font draws capitals nine pixels tall with small letters and tails**, outlined on
+  four sides like a sprite, in the darkest step of `ink` whatever colour the word is.
+- **A corpse lies for 300ms after its fall before it is gone.** The budget fixes the fall at three
+  frames of 150ms, longer than the world's 400ms `DEATH_FADE_MS`, and the fall and its lying there
+  are the view's to time; the world still respawns on its own clock.
+- **The leak check counts canvases**, reported where `gpuMemory()` reported textures, since the
+  2D view holds no geometry. B7 renames it.
+
+What B2 leaves as placeholders, on purpose: every creature but the rat, every person but the
+warrior and the shopkeeper, nodes, stations, signposts, loot piles, the campfire and effects, and
+the underground's lantern; B3 to B6 are those.
+
+**Rejected:** transition tiles drawn as twenty quarter-tile pictures per pair of grounds, as RPG
+tile sets are; one building drawn whole at its own size; a camera clamped to the map; a second
+host class beside the first; the flag honoured in development only; left-facing figures mirrored
+with the sword moving to the other hand; a font of capitals only; the corpse gone at 400ms whatever
+the fall's budget.
+
+## 103. Version 2 is drawn heroic and weathered, not cute: epic adventure over a farm
+
+**2026-09-29 · the user, judging B2's slice; Claude's under it**
+
+The user's first look at the checkpoint (B2): the direction is right, but it is "a little too
+cutesy" and "kind of farmvilley", where the game wants "the feeling of epic adventure". Draw from
+World of Warcraft, The Lord of the Rings and fantasy like them. That keeps decision 81's art source
+(pixel art drawn as data) and turns decision 100's "warm and bright" palette a long way down.
+
+What Claude made of it, blending WoW's heroic chunkiness with the Lord of the Rings' weathered,
+earthy ground:
+
+- **The palette is deep and earthy, with the warmth kept for the light.** Forest greens and worn
+  grey-brown earth in place of candy greens and orange dirt, a dark lake in place of a bright one;
+  the marsh and underground are derived from the open ground so the three stay in order. Cloth is
+  dyed rather than bright (a steel blue, a worn crimson, ochre), timber is dark oak, plaster is
+  weathered, and a stone `masonry` ramp arrives for plinths and chimneys.
+- **People stand to heroic proportions**: a head over a body three times its height, broad in the
+  shoulder, about 39 pixels of the 48, where they were two and a bit heads to a 30-pixel toddler.
+  The warrior wears a quilted gambeson in the class's blue, leather spaulders, bracers and tall
+  boots, a stubbled jaw and a crimson cloak; the shopkeeper is a grey-bearded merchant in ochre.
+- **The rat is a sewer rat, not a mouse**: lean and hunched, scruffy along the spine, small dark
+  ears, red eyes and fangs.
+- **Buildings are timber-framed on stone**: dark oak posts, a rail and braces over weathered
+  plaster, a plinth of dressed stone, leaded windows lit from inside, slate split unevenly with moss
+  on it, and a stone chimney. Walls stand taller, a head over the taller people.
+- **The ground is textured and varied**: grass in clumps with blades, a road of grit, stones and
+  ruts, and each tile dealt one of several variants by where it is, so a field is not one tile
+  stamped over and over.
+- **The scene has weight**: the map's edge fades into a dark murk rather than a pale sky, and a
+  soft vignette darkens the screen's corners, drawn under the words so no name goes dark.
+
+**Rejected:** re-deciding the art source, which the user did not ask for; a grimdark palette of
+greys and browns, which loses what WoW's colour does for reading a scene at a glance; realistic
+proportions of seven or eight heads, which leave a face two pixels wide at 32 to the tile.
+
+## 104. A figure holds things in its hands, every class is drawn, armour is a lookbook, and a town says what it is
+
+**2026-09-29 · the user, judging B2's revised slice; Claude's under it**
+
+The user's second look at the checkpoint: the style is better, but **the weapons are held
+incorrectly**. They asked to **try some different armours**, for **a wizard and a ranger mock-up**,
+and, with the town still looking "silly" and to be made more like a town later, for **a way to make
+it slightly more descript and easier to read**. So the style holds (decision 103 stands), and the
+same phase takes one more pass.
+
+What Claude made of it:
+
+- **The arms are parts of their own, in poses, and each pose says where its hand is.** A sword was
+  a part laid near a fist that never moved: from the side its blade hung out of the belt, and a
+  wind-up raised the sword while the hand stayed at the hip. Now a thing held names the pixel its
+  grip is and is laid at the hand, so it comes out of the fist in every frame by construction, and
+  a test holds every hand in sight on a fist. The warrior carries the blade low and out, draws it
+  back over the shoulder and brings it across.
+- **The wizard and the ranger are drawn and played**, on the same figure, so choosing either class
+  under `?renderer=2d` shows them rather than a mannequin. The wizard is hooded, in violet, with a
+  **staff** taller than they are that flares as a spell leaves it. The game's wizard weapons are a
+  wand and a scepter, and B4 draws each weapon by what is equipped, but at 40 pixels a wand reads as a
+  dagger, where a robe, a hood and a staff read as a wizard across a field. The ranger is hooded in a
+  forest green colder and darker than grass, so a hunter in a field is still a figure, over leather,
+  with a quiver on the back and the bow in the left hand. A player's spell plays the wizard's
+  `cast` and a shot the ranger's `shoot`; a figure that has not drawn one swings.
+- **Armour is a lookbook, not yet worn.** Plate, studded leather and a robe under a pointed hat are
+  each drawn once in the neutral `tier` ramp and recoloured into every tier of their kind (iron and
+  steel, brown and studded and fenhide, brown and fenweave), for the user to judge before B4 wires a
+  figure to what it has on by slot. They are held by the sprite tests and kept out of the atlas the
+  game compiles.
+- **The town says what each place is.** A doorway is two tiles of a three-tile front and was drawn
+  as solid ink, which read as a hole in every shopfront; it is the room seen into now, a back wall of
+  boards with a lantern and the floor coming forward into the light. A building somebody works in
+  hangs its trade by the door (a sack, a coin, swords, a shield, an anvil, a tankard, a sheaf,
+  scales). The front slope of a roof falls away from the ridge to the eave rather than lying a step
+  dark all over, which read as paving. And **the signpost is drawn**, ahead of B6, because a crate
+  where the exits are named said nothing.
+
+**Rejected:** mirroring the left facing and moving the sword to the other hand, which decision 102
+already turned down and which the arms-with-hands kit makes unnecessary; sheathing the sword out of
+a fight, which needs an armed idle and walk the budget does not have; a wand for the wizard's
+mock-up; wiring armour to what the player wears now, which is B4's layered figure (a whole-figure
+sprite per class, armour kind and tier cannot mix a steel helm with studded legs); a door drawn
+narrower than the collision's gap, which would put wall where a player walks through; and a
+redesign of the town's layout, which the user put off.
+
+## 105. A new character starts plain, the grand looks are armour worn later, and a figure is one silhouette
+
+**2026-09-29 · the user, judging B2's third pass; Claude's under it**
+
+The user's third look: the armour looks good, but **a new character's default outfit should not
+look as cool** as the three classes had been drawn, and **those looks can be armour for later**.
+The figures **seemed a little disjointed**, so take another pass at the adventurers to clean them
+up. Asked whether the wizard should wear a hat or a hood: **both, as options**. B3 waits on this
+(the user: answer the first point, then see).
+
+What Claude made of it:
+
+- **A class starts plain**: bare-headed, in a tunic or a robe of its colour, carrying what it
+  fights with, which is what a character sheet with an empty helmet, chest and pants slot already
+  said. The warrior's blue tunic and dark breeches, the wizard's plain violet robe tied with a cord
+  and an apprentice's staff of bare wood, the ranger's green tunic with the quiver slung across it.
+  Zero to hero (pillar 2) needs a zero to climb from, and a starting look that is already the best
+  in the game has nowhere to go.
+- **What they wore becomes the lookbook's later looks**: the gambeson, spaulders and cloak; the
+  violet robe trimmed in brass under a hood, and under a pointed hat, with the crystal staff; the
+  hood and mantle over a leather jerkin. Plate is worn over the gambeson and under the cloak;
+  studded leather over a starting tunic, as the first armour a warrior buys. The robe comes in its
+  tiers under a hat and under a hood, the hood and the cloth hat being headgear the game has.
+- **The figure is one silhouette.** It read as a stack of blocks for three reasons, each mended: the
+  torso was a straight box, and is a tunic narrowing to a belted waist with its skirt over the
+  thighs; each arm stood off the body across a clear pixel the compiler outlined into a line, and
+  now hangs against it, parted by its own inner edge a step darker; and light breeches cut a band
+  between the coat and the boots, where dark ones now run into them. The armour was refitted to the
+  new silhouette rather than laid over the old one.
+
+**Rejected:** keeping the grand looks as the start and adding plainer ones nobody would wear;
+choosing between the hat and the hood, which the user asked to keep both of; drawing each class
+with its own face or hair, which nobody asked for and which B4's layered figure can offer as a
+choice; and a thicker outline round the arms, which is the disjointed look itself.

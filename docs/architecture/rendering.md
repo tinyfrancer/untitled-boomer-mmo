@@ -296,7 +296,7 @@ and taken up. The sack is three primitives and no nameplate. It **blinks through
 seconds of its minute**, read off the pile's own clock rather than the view's, which is how it says
 it is going without a timer drawn over it (`docs/decisions.md` 66).
 
-**A tap and a drag are the same three events, and `render3d/orbit.ts` is what tells them apart.**
+**A tap and a drag are the same three events, and `host/orbit.ts` is what tells them apart.**
 A drag turns the camera's yaw around the player; a tap asks the world for something. The rule is a
 **latch**, not a comparison: a gesture becomes a drag once its _cumulative_ travel passes
 `TAP_SLOP_PX` and can never go back, because a drag out and back finishes where it started and

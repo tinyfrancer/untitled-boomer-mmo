@@ -3,7 +3,7 @@
  * all.
  *
  * Pure arithmetic over pointer positions: the host owns the events and the
- * pointer capture, `ZoneView3D` owns the camera, and this owns the one part
+ * pointer capture, the view owns the camera, and this owns the one part
  * that is easy to get wrong in both directions — a tap that rotates the world
  * because a thumb wobbled, and a drag that also walks the player off to
  * wherever it happened to start.
@@ -50,7 +50,7 @@ export class OrbitGesture {
    *
    * Only the horizontal component turns anything. Pitch is not the player's to
    * change: it is what keeps the world out from under the tab bar (see
-   * `camera.ts`), so a vertical swipe spends itself on the slop above and
+   * `render3d/camera.ts`), so a vertical swipe spends itself on the slop above and
    * rotates nothing. It still costs the gesture its tap, which is the point —
    * a flick meant to scroll must not also walk the character.
    *

@@ -1,7 +1,7 @@
 /**
  * The three dev-only handles the smoke check reaches the game through.
  *
- * `render3d/start3d.ts` installs them behind an `import.meta.env.DEV` guard and
+ * `host/host.ts` installs them behind an `import.meta.env.DEV` guard and
  * casts `window` to do it, so nothing in `src/` declares them. Declaring them
  * here is what lets `tsconfig.scripts.json` check the smoke script against the
  * real shapes rather than against `any`: a check that reads a field the world

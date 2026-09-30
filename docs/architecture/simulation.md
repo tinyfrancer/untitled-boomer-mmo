@@ -55,9 +55,12 @@ be shown before one exists.
 **A host is what a renderer owes the boot flow**: an `events` channel plus `startZone()`, and
 beyond that everything that has to happen around a zone without drawing it — the frame loop, the
 keyboard binding, the pointer, mounting the HUD, the reset that ends a session, and the load that
-replaces one with a character read from a save file. `ThreeHost` in
-`render3d/start3d.ts` is the only one now, but the split is what let the renderer be replaced under
-the game, so new host duties belong there rather than leaking into the world or the HUD.
+replaces one with a character read from a save file. `Host` in `host/host.ts` is the only one,
+and it takes whichever view it is built with through the `ZoneView` interface
+(`host/zoneView.ts`): the Three.js view, or the pixel-art one behind `?renderer=2d` (decision 102).
+It lived in `render3d/` while there was one renderer. The split is what let the renderer be
+replaced under the game, so new host duties belong there rather than leaking into the world, the
+HUD or either view.
 
 **`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
 engine-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
