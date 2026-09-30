@@ -1,4 +1,4 @@
-import type { DrawnCounts } from '../types/debugView';
+import type { DrawnCounts, PlayerFigure } from '../types/debugView';
 import type { WorldEvent } from '../world/worldEvents';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 
@@ -35,7 +35,7 @@ export interface ZoneView {
   /** What a point on the canvas is over, in the vocabulary the world takes. */
   resolveTap(x: number, y: number): WorldTap | null;
   drawnCounts(): DrawnCounts;
-  playerFigure(): { walking: boolean; pose: string };
+  playerFigure(): PlayerFigure;
   /**
    * What the view is holding that a teardown has to give back: the card's
    * geometries and textures for the 3D view, the canvases for the 2D one.

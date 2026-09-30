@@ -6,12 +6,14 @@ import type { Pose } from './animation';
 import type { CanvasPool } from './canvases';
 
 /**
- * Every sprite, compiled for one setting onto one canvas (`art/compile.ts`),
- * and drawn from it a frame at a time.
+ * Sprites compiled for one setting onto one canvas (`art/compile.ts`), and
+ * drawn from it a frame at a time: every sprite in the game, by default.
  *
  * Held for the session rather than the zone, one a setting, since what is on
  * it is the same in every zone that shares a setting's light: the beach and
  * town draw from the same sheet, and walking between them compiles nothing.
+ * The player's figure is a sheet of its own, made again when what they have
+ * on changes (`ZoneView2D`).
  */
 export class SpriteSheet {
   readonly canvas: HTMLCanvasElement;
@@ -19,11 +21,11 @@ export class SpriteSheet {
   private readonly defs = new Map<string, SpriteDef>();
   private readonly heights = new Map<string, number>();
 
-  constructor(pool: CanvasPool, setting: ZoneSetting) {
-    const atlas = compileAtlas(SPRITES, setting);
+  constructor(pool: CanvasPool, setting: ZoneSetting, defs: readonly SpriteDef[] = SPRITES) {
+    const atlas = compileAtlas(defs, setting);
     this.canvas = pool.fromPixels(atlas.width, atlas.height, atlas.pixels);
     this.frames = atlas.frames;
-    for (const def of SPRITES) {
+    for (const def of defs) {
       this.defs.set(def.id, def);
       this.heights.set(def.id, drawnHeight(def));
     }

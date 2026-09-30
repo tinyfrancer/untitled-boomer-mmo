@@ -1,4 +1,5 @@
 import {
+  TRANSPARENT,
   composed,
   flipped,
   grid,
@@ -64,8 +65,40 @@ export interface Materials {
   wood: SharedRampId;
   /** What magic is lit with. */
   glow: SharedRampId;
-  /** Armour, drawn in the `tier` ramp for a tier to recolour. */
+  /** The chest's armour, drawn in the `tier` ramp for a tier to recolour. */
   gear: SharedRampId;
+  /** What is on the head. */
+  helm: SharedRampId;
+  /** What is on the legs, when it is more than breeches in the garment's own cloth. */
+  greaves: SharedRampId;
+  /** What the other hand carries: a shield, an orb, a lantern, a quiver. */
+  shield: SharedRampId;
+  /** A weapon's blade or head. */
+  blade: SharedRampId;
+  /** A weapon's haft, a bow's stave. */
+  haft: SharedRampId;
+  /** A weapon's guard, pommel and fittings. */
+  fitting: SharedRampId;
+  /** The stone in a staff, and the light a spell leaves it in. */
+  gem: SharedRampId;
+}
+
+/**
+ * The roles a piece of gear is dyed into, five keys each, so that a helm, the
+ * legs, the shield and the weapon can each be a ramp of its own on one figure:
+ * a steel helm over studded legs (decision 107). A piece is written in the keys
+ * it reads best in (the `tier` ramp's A-E, a blade's metal) and dyed into its
+ * slot's role when it is put on (`dyed`), so nobody types these.
+ */
+export const DYED_ROLES = ['helm', 'greaves', 'shield', 'blade', 'haft', 'fitting', 'gem'] as const;
+export type DyedRole = (typeof DYED_ROLES)[number];
+
+// Letters no sprite is written in, generated five a role from the Greek alphabet on.
+const DYE_FROM = 0x3b1;
+
+/** The key a dyed role is drawn in at a step. */
+export function dyeKey(role: DyedRole, step: Step): string {
+  return String.fromCharCode(DYE_FROM + DYED_ROLES.indexOf(role) * 5 + step);
 }
 
 type Role = keyof Materials | 'ink' | 'bone' | 'linen' | 'red';
@@ -123,7 +156,27 @@ const KEYS: Readonly<Record<string, readonly [Role, Step]>> = {
   Q: ['red', 2],
   R: ['red', 3],
   S: ['red', 4],
+  ...Object.fromEntries(
+    DYED_ROLES.flatMap((role) =>
+      ([0, 1, 2, 3, 4] as const).map((step) => [dyeKey(role, step), [role, step] as const]),
+    ),
+  ),
 };
+
+/** The keys armour is written in, the `tier` ramp's steps darkest first. */
+export const TIER_STEPS: Readonly<Record<string, Step>> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+
+/** A piece written in some keys, each drawn as a step of a dyed role. */
+export function dyed(
+  part: Grid,
+  role: DyedRole,
+  steps: Readonly<Record<string, Step>> = TIER_STEPS,
+): Grid {
+  return rekeyed(
+    part,
+    Object.fromEntries(Object.entries(steps).map(([key, step]) => [key, dyeKey(role, step)])),
+  );
+}
 
 const FIXED: Readonly<Record<'ink' | 'bone' | 'linen' | 'red', SharedRampId>> = {
   ink: 'ink',
@@ -171,6 +224,11 @@ const SHADE: Readonly<Record<string, string>> = {
   D: 'C',
   C: 'B',
   B: 'A',
+  ...Object.fromEntries(
+    DYED_ROLES.flatMap((role) =>
+      ([1, 2, 3, 4] as const).map((step) => [dyeKey(role, step), dyeKey(role, (step - 1) as Step)]),
+    ),
+  ),
 };
 
 // ---------------------------------------------------------------------------
@@ -841,203 +899,69 @@ function farLimb(limb: Limb): Limb {
 }
 
 // ---------------------------------------------------------------------------
-// What is held: a sword (a rusty blade x w v, crossguard s and a brass knot g),
-// a staff (wood, a crystal lit in the glow), a bow (wood strung with z) and an
-// arrow. `grip` is the pixel the hand closes on; under the fist, not seen.
+// What is held, and how a hand holds each kind of thing. What each thing looks
+// like is `weapons.ts`'s: here is only where it goes. `grip` is the pixel the
+// hand closes on, under the fist and unseen.
 // ---------------------------------------------------------------------------
 
-interface Held {
+export interface Held {
   grid: Grid;
   grip: readonly [number, number];
+  /** Laid over the arm that holds it rather than under the fist: a shield's face. */
+  over?: boolean;
 }
 
-// Carried low and out from the fist, point down: how it is walked with.
-const SWORD_LOW: Held = {
-  grid: grid(`
-    ....v..
-    ....v..
-    ...sgs.
-    ...xw..
-    ...xw..
-    ..xw...
-    ..xw...
-    .xw....
-    .xw....
-    xw.....
-    xv.....
-    v......
-  `),
-  grip: [4, 0],
-};
+/**
+ * A weapon swung: a blade, an axe, a pick. Carried low, wound up high and
+ * brought across, facing down or up; carried point forward, drawn back and
+ * thrust, facing sideways.
+ */
+export interface Swung {
+  hold: 'swung';
+  low: Held;
+  high: Held;
+  across: Held;
+  side: Held;
+  back: Held;
+  thrust: Held;
+}
 
-// Up over the fist: the wind-up.
-const SWORD_HIGH: Held = {
-  grid: grid(`
-    .x...
-    .xw..
-    .xw..
-    .xw..
-    .xw..
-    .xw..
-    .xv..
-    ssgss
-    ..v..
-  `),
-  grip: [2, 8],
-};
+/** Held upright and brought down on the ground ahead: a staff, a fishing pole. */
+export interface Planted {
+  hold: 'planted';
+  held: Held;
+  /** Where on it a spell leaves it, or null for a pole nothing is cast from. */
+  head: readonly [number, number] | null;
+}
 
-// Out level from the fist: the end of a blow across.
-const SWORD_ACROSS: Held = {
-  grid: grid(`
-    ..s..........
-    vvgxxxxxxxxx.
-    vvgwwwwwwwwwv
-    ..s..........
-  `),
-  grip: [1, 1],
-};
+/** A bow: held in the other hand, drawn with this one, and the arrow on the string. */
+export interface Drawn {
+  hold: 'drawn';
+  /** Hanging at the side, facing down or up, and facing sideways. */
+  rest: Held;
+  side: Held;
+  /** Drawn to the cheek from the side, and held out across the body from in front and behind. */
+  drawn: Held;
+  flat: Held;
+  flatBack: Held;
+  arrow: Readonly<Record<View, Held>>;
+}
 
-// Seen from the side, carried point forward and down.
-const SWORD_FORWARD_LOW: Held = {
-  grid: grid(`
-    v.........
-    .vs.......
-    .sg.......
-    ...xw.....
-    ....xw....
-    .....xw...
-    ......xw..
-    .......xw.
-    ........xv
-  `),
-  grip: [0, 0],
-};
+export type Wielded = Swung | Planted | Drawn;
 
-// Drawn back, point up behind the shoulder.
-const SWORD_BACK_UP: Held = {
-  grid: grid(`
-    x........
-    wx.......
-    .wx......
-    ..wx.....
-    ...wx....
-    ....wx...
-    .....gs..
-    .....s.v.
-    ........v
-  `),
-  grip: [8, 8],
-};
+/** What the other hand carries: a shield on the forearm, or a light in the hand. */
+export type Carried =
+  { kind: 'shield'; face: Held; back: Held; edge: Held } | { kind: 'light'; held: Held };
 
-// Thrust out ahead, level.
-const SWORD_FORWARD: Held = {
-  grid: grid(`
-    ..s.......
-    vvgxxxxxx.
-    vvgwwwwwwv
-    ..s.......
-  `),
-  grip: [1, 1],
-};
+/** What a figure carries in each hand. A bow is in both, so it leaves `off` empty. */
+export interface Arms {
+  main: Wielded | null;
+  off: Carried | null;
+}
 
-// A staff taller than its bearer, a crystal set in its head.
-const STAFF: Held = {
-  grid: grid(`
-    ..J..
-    .IKJ.
-    .JKI.
-    q.I.q
-    qp.pf
-    .qpf.
-    ..pf.
-    ..pf.
-    ..qf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..qf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..qf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..ff.
-  `),
-  grip: [2, 24],
-};
-
-// An apprentice's staff: plain wood with a knob at its head, which a spell
-// still flares from.
-const STAFF_PLAIN: Held = {
-  grid: grid(`
-    .qpp.
-    qpppf
-    .ppf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..qf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..qf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..qf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..pf.
-    ..ff.
-  `),
-  grip: [2, 24],
-};
-
-// Laid over the staff's head as a spell leaves it.
-const STAFF_FLARE: Held = {
-  grid: grid(`
+// Laid over a staff's head as a spell leaves it, in the stone's own colour.
+const FLARE = dyed(
+  grid(`
     ...K...
     .J.K.J.
     ..JKJ..
@@ -1046,153 +970,9 @@ const STAFF_FLARE: Held = {
     .J.K.J.
     ...K...
   `),
-  grip: [3, 3],
-};
-
-// A bow at rest in the hand (wood, lit q), strung (T), the grip wrapped in
-// leather.
-const BOW_DOWN: Held = {
-  grid: grid(`
-    ..qT
-    ..qT
-    .qp.T
-    .qp.T
-    qp..T
-    qp..T
-    qp..T
-    qp..T
-    qp..T
-    mm..T
-    mm..T
-    mm..T
-    qp..T
-    qp..T
-    qp..T
-    qp..T
-    qp..T
-    .qp.T
-    .qp.T
-    ..qT
-    ..fT
-  `),
-  grip: [0, 10],
-};
-
-// Held up ahead from the side, strung, and drawn to the cheek.
-const BOW_SIDE: Held = {
-  grid: grid(`
-    Tq..
-    T.qp
-    T.qp
-    T..qp
-    T..qp
-    T..qp
-    T..qp
-    T..qp
-    T..mm
-    T..mm
-    T..mm
-    T..qp
-    T..qp
-    T..qp
-    T..qp
-    T..qp
-    T.qp
-    T.qp
-    Tf..
-  `),
-  grip: [3, 9],
-};
-
-const BOW_SIDE_DRAWN: Held = {
-  grid: grid(`
-    ....qp.
-    ...T.qp
-    ...T.qp
-    ..T...qp
-    ..T...qp
-    .T....qp
-    .T....qp
-    T.....qp
-    T.....mm
-    T.....mm
-    T.....mm
-    .T....qp
-    .T....qp
-    ..T...qp
-    ..T...qp
-    ...T..qp
-    ...T.qp
-    ....Tqp
-    ....f..
-  `),
-  grip: [6, 9],
-};
-
-// Across the body, facing down or up: wider than the body, so its tips stand
-// out against whatever is behind it.
-const BOW_FLAT: Held = {
-  grid: grid(`
-    q...................f
-    qp.................pf
-    .qpp.............ppf.
-    ...qqppppmmmppppqf...
-  `),
-  grip: [10, 3],
-};
-
-// From behind, bending away up the picture.
-const BOW_FLAT_BACK: Held = { grid: [...BOW_FLAT.grid].reverse(), grip: [10, 0] };
-
-// An arrow on the string: a head of metal, a shaft, and fletching.
-const ARROW_DOWN: Held = {
-  grid: grid(`
-    z.z
-    .z.
-    .p.
-    .p.
-    .p.
-    .p.
-    .p.
-    .p.
-    .w.
-    sxs
-    .v.
-  `),
-  grip: [1, 1],
-};
-
-const ARROW_SIDE: Held = {
-  grid: grid(`
-    z.........s.
-    .zpppppppwxv
-    z.........s.
-  `),
-  grip: [1, 1],
-};
-
-const ARROW_UP: Held = {
-  grid: grid(`
-    .x.
-    sws
-    .p.
-    .p.
-    .p.
-    .p.
-    .p.
-    .p.
-    .p.
-    .z.
-    z.z
-  `),
-  grip: [1, 9],
-};
-
-/** What a figure carries in each hand. */
-export interface Arms {
-  main: 'sword' | 'staff' | 'plain-staff' | 'bow-hand' | null;
-  off: 'bow' | null;
-}
+  'gem',
+  { J: 3, K: 4 },
+);
 
 /** A frame's worth of how a figure stands and what its arms are doing. */
 export interface Moment {
@@ -1248,58 +1028,65 @@ export interface Dress {
   arms: Arms;
 }
 
-function mainHeld(arms: Arms, view: View, moment: Moment): Held | null {
-  if (arms.main === 'sword') {
-    if (view === 'right') {
+function mainHeld(main: Wielded | null, view: View, moment: Moment): Held | null {
+  if (!main) return null;
+  switch (main.hold) {
+    case 'swung':
+      if (view === 'right') {
+        return moment.main === 'raised'
+          ? main.back
+          : moment.main === 'struck'
+            ? main.thrust
+            : main.side;
+      }
       return moment.main === 'raised'
-        ? SWORD_BACK_UP
+        ? main.high
         : moment.main === 'struck'
-          ? SWORD_FORWARD
-          : SWORD_FORWARD_LOW;
-    }
-    return moment.main === 'raised'
-      ? SWORD_HIGH
-      : moment.main === 'struck'
-        ? SWORD_ACROSS
-        : SWORD_LOW;
+          ? main.across
+          : main.low;
+    case 'planted':
+      return main.held;
+    case 'drawn':
+      return moment.nocked ? main.arrow[view] : null;
   }
-  if (arms.main === 'staff') return STAFF;
-  if (arms.main === 'plain-staff') return STAFF_PLAIN;
-  if (arms.main === 'bow-hand' && moment.nocked) {
-    if (view === 'right') return ARROW_SIDE;
-    return view === 'down' ? ARROW_DOWN : ARROW_UP;
-  }
-  return null;
 }
 
 function offHeld(arms: Arms, view: View, moment: Moment): Held | null {
-  if (arms.off !== 'bow') return null;
-  if (moment.off === 'bow') {
-    if (view === 'right') return moment.nocked ? BOW_SIDE_DRAWN : BOW_SIDE;
-    return view === 'up' ? BOW_FLAT_BACK : BOW_FLAT;
+  const main = arms.main;
+  if (main?.hold === 'drawn') {
+    if (moment.off === 'bow') {
+      if (view === 'right') return moment.nocked ? main.drawn : main.side;
+      return view === 'up' ? main.flatBack : main.flat;
+    }
+    return view === 'right' ? main.side : main.rest;
   }
-  return view === 'right' ? BOW_SIDE : BOW_DOWN;
+  const off = arms.off;
+  if (!off) return null;
+  if (off.kind === 'light') return off.held;
+  return view === 'down' ? off.face : view === 'up' ? off.back : off.edge;
 }
 
-/** A staff, and a flare laid over its head as a spell leaves it. */
-function staffPieces(item: Held, moment: Moment, limb: Limb, bob: number, flip = false): Placed[] {
-  const staff = held(item, limb, bob, flip);
-  if (!moment.flare) return [staff];
-  // The flare's middle over the crystal's: column 3 row 3 of the one on
-  // column 2 row 1 of the other, both of them the same either way round.
-  return [staff, { grid: STAFF_FLARE.grid, x: staff.x - 1, y: staff.y - 2 }];
-}
-
+/** What a hand holds, laid in it, and a spell flaring from a staff's head. */
 function handPieces(
   item: Held | null,
+  planted: Planted | null,
   moment: Moment,
   limb: Limb,
   bob: number,
   flip = false,
 ): Placed[] {
   if (!item) return [];
-  if (item === STAFF || item === STAFF_PLAIN) return staffPieces(item, moment, limb, bob, flip);
-  return [held(item, limb, bob, flip)];
+  const piece = held(item, limb, bob, flip);
+  const head = planted?.held === item ? planted.head : null;
+  if (!moment.flare || !head) return [piece];
+  const width = squared(item.grid)[0]?.length ?? 0;
+  const x = flip ? width - 1 - head[0] : head[0];
+  return [piece, { grid: FLARE, x: piece.x + x - 3, y: piece.y + head[1] - 3 }];
+}
+
+/** The pieces in a hand, under the fist or over the arm, and the arm between. */
+function inHand(pieces: readonly Placed[], item: Held | null, limb: Placed): Placed[] {
+  return item?.over ? [limb, ...pieces] : [...pieces, limb];
 }
 
 function dressed(limb: Limb, sleeves: Readonly<Record<string, string>>): Limb {
@@ -1313,23 +1100,24 @@ function frontFrame(dress: Dress, view: 'down' | 'up', moment: Moment): Grid {
     dress.sleeves,
   );
   const off = dressed(view === 'down' ? OFF_DOWN[moment.off] : OFF_UP[moment.off], dress.sleeves);
-  const mainItem = mainHeld(dress.arms, view, moment);
+  const planted = dress.arms.main?.hold === 'planted' ? dress.arms.main : null;
+  const mainItem = mainHeld(dress.arms.main, view, moment);
   const offItem = offHeld(dress.arms, view, moment);
   // Facing up, the right hand is the picture's right, so what it holds is
   // turned round; and what is held out ahead is beyond the body, behind it.
   const flip = view === 'up';
-  const ahead = view === 'up' && (moment.main === 'struck' || moment.off === 'bow');
-  const mainPieces = handPieces(mainItem, moment, main, bob, flip);
-  const offPieces = handPieces(offItem, moment, off, bob, flip);
+  const offAhead = view === 'up' && moment.off === 'bow';
+  const mainAhead = view === 'up' && (moment.main === 'struck' || moment.off === 'bow');
+  const mainPieces = handPieces(mainItem, planted, moment, main, bob, flip);
+  const offPieces = handPieces(offItem, planted, moment, off, bob, flip);
   return composed(FIGURE_WIDTH, FIGURE_HEIGHT, [
     ...dress.behind[view].map((part) => ({ ...part, y: part.y + bob })),
-    ...(ahead ? [...offPieces, ...mainPieces] : []),
+    ...(offAhead ? offPieces : []),
+    ...(mainAhead ? mainPieces : []),
     ...dress.legs(view, moment.stance),
     ...bobbed(dress.body[view], bob),
-    ...(ahead ? [] : offPieces),
-    limbAt(off, bob),
-    ...(ahead ? [] : mainPieces),
-    limbAt(main, bob),
+    ...inHand(offAhead ? [] : offPieces, offItem, limbAt(off, bob)),
+    ...inHand(mainAhead ? [] : mainPieces, mainItem, limbAt(main, bob)),
     ...bobbed(dress.over[view], bob),
   ]);
 }
@@ -1345,25 +1133,42 @@ function sideFrame(dress: Dress, facing: 'right' | 'left', moment: Moment): Grid
   const offLimb = dressed(NEAR_RIGHT[moment.off], dress.sleeves);
   const main = mainNear ? mainLimb : farLimb(mainLimb);
   const off = mainNear ? farLimb(offLimb) : offLimb;
-  const mainPieces = handPieces(mainHeld(dress.arms, 'right', moment), moment, main, bob);
-  const offPieces = handPieces(offHeld(dress.arms, 'right', moment), moment, off, bob);
-  const near = mainNear ? [...mainPieces, limbAt(main, bob)] : [...offPieces, limbAt(off, bob)];
-  const far = mainNear ? [...offPieces, limbAt(off, bob)] : [...mainPieces, limbAt(main, bob)];
+  const planted = dress.arms.main?.hold === 'planted' ? dress.arms.main : null;
+  const mainItem = mainHeld(dress.arms.main, 'right', moment);
+  const offItem = offHeld(dress.arms, 'right', moment);
+  const mainHand = inHand(
+    handPieces(mainItem, planted, moment, main, bob),
+    mainItem,
+    limbAt(main, bob),
+  );
+  const offHand = inHand(handPieces(offItem, planted, moment, off, bob), offItem, limbAt(off, bob));
   const drawn = composed(FIGURE_WIDTH, FIGURE_HEIGHT, [
-    ...far,
+    ...(mainNear ? offHand : mainHand),
     ...dress.behind.right.map((part) => ({ ...part, y: part.y + bob })),
     ...dress.legs('right', moment.stance),
     ...bobbed(dress.body.right, bob),
-    ...near,
+    ...(mainNear ? mainHand : offHand),
     ...bobbed(dress.over.right, bob),
   ]);
   return facing === 'right' ? drawn : flipped(drawn);
 }
 
-/** The figure in a moment, facing one way. */
+/**
+ * The figure in a moment, facing one way, its outermost ring of pixels left
+ * clear for the outline the compiler draws there: a blade drawn back or a hat
+ * risen on a stride that reaches it is cut a pixel short of the frame's edge.
+ */
 export function figureFrame(dress: Dress, facing: Facing, moment: Moment): Grid {
-  if (facing === 'down' || facing === 'up') return frontFrame(dress, facing, moment);
-  return sideFrame(dress, facing, moment);
+  const frame =
+    facing === 'down' || facing === 'up'
+      ? frontFrame(dress, facing, moment)
+      : sideFrame(dress, facing, moment);
+  const last = frame.length - 1;
+  return frame.map((row, y) =>
+    y === 0 || y === last
+      ? TRANSPARENT.repeat(row.length)
+      : `${TRANSPARENT}${row.slice(1, -1)}${TRANSPARENT}`,
+  );
 }
 
 /** The figure flushed red: a hurt frame. */

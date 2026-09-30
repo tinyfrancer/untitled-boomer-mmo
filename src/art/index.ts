@@ -4,7 +4,7 @@ import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
 import { RAT } from './sprites/rat';
 import { SCATTER_SPRITES } from './sprites/scatter';
-import { RANGER, SHOPKEEPER, WARRIOR, WIZARD } from './sprites/people';
+import { TOWNSFOLK_SPRITES } from './cast';
 
 /**
  * Every sprite in the game. `sprites.test.ts` walks this list, so a sprite
@@ -15,10 +15,7 @@ export const SPRITES: readonly SpriteDef[] = [
   ...TERRAIN_SPRITES,
   ...SCATTER_SPRITES,
   ...Object.values(PLACEHOLDERS),
-  WARRIOR,
-  WIZARD,
-  RANGER,
-  SHOPKEEPER,
+  ...TOWNSFOLK_SPRITES,
   RAT,
   SIGNPOST,
 ];

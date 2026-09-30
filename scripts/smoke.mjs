@@ -3621,8 +3621,28 @@ async function characterSheet() {
     picker !== null && picker.icons === picker.items.length && picker.icons > 0,
     `${picker?.icons} icons for ${picker?.items.length} rows`,
   );
+  await draw();
+  const undressed = await page.evaluate(() => ({
+    wearing: window.view.playerFigure().wearing ?? '',
+    canvases: window.view.gpuMemory().textures,
+  }));
   await page.click('.hud-picker__row[data-item="brown-helmet"]');
   await page.waitForTimeout(200);
+  await draw();
+  // The figure in the world is put together from what is worn (decision 107):
+  // compiled again when the gear changes, the old one let go as the new one is
+  // made, so a change of helmet is not a canvas that never comes back.
+  const redressed = await page.evaluate(() => ({
+    wearing: window.view.playerFigure().wearing ?? '',
+    canvases: window.view.gpuMemory().textures,
+  }));
+  check(
+    'and puts the helmet on the figure in the world, letting the old figure go',
+    !undressed.wearing.includes('brown-helmet') &&
+      redressed.wearing.includes('brown-helmet') &&
+      redressed.canvases === undressed.canvases,
+    `${undressed.canvases} -> ${redressed.canvases} canvases`,
+  );
   const equipped = await page.evaluate(() => ({
     world: window.world.character.state.gear.helmet,
     shown: /** @type {HTMLElement} */ (
