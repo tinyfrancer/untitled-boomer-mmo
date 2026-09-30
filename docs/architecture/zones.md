@@ -48,7 +48,7 @@ hoard in the game that comes off one creature.
 
 **Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
 node spawns, exits), each built into one `ZoneWorld` by the `GameContext` and drawn by the single
-`ZoneView3D`; the DOM HUD keeps running across a change untouched. Each exit spawns a
+`ZoneView2D`; the DOM HUD keeps running across a change untouched. Each exit spawns a
 tappable signpost (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
 in `systems/ZoneSystem.ts`. A new area should be a `ZONES` row (plus exits both ways), not new

@@ -5,7 +5,8 @@ Walls, doorways, rooms you can walk into, counters inside them, the cutaway, the
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
 **A town has walls in it, and a building is a shell rather than a solid mass**
-(`ZoneDefinition.buildingSpawns` into `data/buildings.ts`, drawn by `render3d/buildings.ts`). It is
+(`ZoneDefinition.buildingSpawns` into `data/buildings.ts`, drawn by `art/building.ts` and
+`render2d/buildings.ts`). It is
 placed by a centre offset like every other spawn and blocks as `CollisionSystem` blockers beside
 the tree trunks rather than as painted-in `WALL_TILE`, because a zone's contents are offsets from the
 middle of the map and the tile grid is written out in absolute rows — one of those two has to be the
@@ -43,38 +44,38 @@ nothing else can see any of them:
 - **Every counter's door faces the open ground it is approached across**, measured out from the
   doorstep along whichever way the door faces, and the lane is clear of every other building. That
   decides where a shopfront may be built rather than the other way about, and it is why the town is
-  one high street with the counters along the north side of it: the camera stands to the south, so
-  due south is where a tap comes from. Only the buildings somebody works out of — which way an empty
+  one high street with the counters along the north side of it: the camera looks north, so a
+  building's south face is the one a player sees and taps, and due south is where a tap comes from. Only the buildings somebody works out of — which way an empty
   house faces costs nobody anything, and the cottage north of the quartermaster's post fronts
   straight onto it.
 
-**A tap on a shopfront is a tap on whoever works behind it** (`BuildingActor.tapAnswer`, and
-`docs/decisions.md` 45). A building is picked last of all — below even the forge — and it answers as
-something else rather than with a kind of its own: the person inside, or the **ground at its door**
-for the ones nobody works out of. The counter comes first because from outside there is no pixel a
-thumb could put on one — the roof is drawn over the room and the pick box is the whole footprint
-standing as tall as it is drawn, so _every_ ray aimed at the inside meets the building. The same ray
-crossing the figure's own box says `npc` too, so the two agree instead of offering a thumb two
-answers depending on where a box happened to fall under a roof.
+**A tap on a shopfront is a tap on whoever works behind it** (`BuildingSprite.tapAnswer`, and
+`docs/decisions.md` 45). A building is picked below everything but a loot pile — below even the
+forge — and it answers as something else rather than with a kind of its own: the person inside, or
+the **ground at its door** for the ones nobody works out of. The counter comes first because from
+outside there is no pixel a thumb could put on one — the roof is drawn over the room and the pick box
+is the whole of the building as it is drawn, so _every_ point on the inside is the building's. A tap
+on the figure's own box says `npc` too, so the two agree instead of offering a thumb two answers
+depending on where a box happened to fall under a roof.
 
 **Going indoors takes two taps, and the second one has no other way of being asked for.** Where
 nobody works, a tap is the doorstep — and the room instead, once the player is within a tile of that
 doorstep. Walk to the shop, then go in. It outranks the counter, which is what keeps a room reachable
-in the two huts whose counter is served from the threshold. From inside, `pickBox()` answers `null`
+in the two huts whose counter is served from the threshold. From inside, `pickRect()` answers `null`
 so a tap on the floor reaches the ground. Without all of that the rooms would be reachable by
 keyboard alone, on a game laid out for a phone.
 
-**Standing in one cuts it away rather than fading it** (`BuildingActor.sync`, called once a frame
-from `ZoneView3D` before the occlusion pass). The roof goes outright, because a roof faded to a
-quarter still reads as a lid; so does any wall the camera has got _past the plane of_, which is a
-stronger test than "on that side" and stronger on purpose — a camera due south of a building is a
-hair to one side or the other of its centre line, and the weaker test would flicker the two side
-walls on the sign of a rounding error. The fade is switched off while it does, since the far walls
-left standing are the whole of what the room is read against.
+**Standing in one cuts it away rather than fading it** (`BuildingSprite.sync`, called once a frame
+before anything is drawn). The roof and the front come off outright, because a roof faded still
+reads as a lid; what is drawn instead is the room's floor with the ground, the tops of its walls,
+and only **the back wall standing**, open where a north door is in it (`art/building.ts` bakes the
+three pictures once a zone). The fade is not asked of a building the player is inside, since the
+back wall left standing is the whole of what the room is read against. The 3D view took away
+whichever walls its turning camera had got past the plane of; a camera that never turns always
+looks in over the south wall, so the cutaway is one picture rather than a test.
 
 **A room has a floor and a few things standing against its walls, and none of them block**
-(`art/rooms.ts` since B6, which both views draw from; the 3D view builds each piece in
-`render3d/interiors.ts` off the interior half of its `BUILDING_LOOKS`). What is in a room is
+(`art/rooms.ts`, decision 109, moved out of the 3D view in B6). What is in a room is
 keyed by the building's shape the way its colours are — shelves in a hall, a bench in a workshop, a
 bed in a cottage — with a per-`BuildingId` override table beside it for the two rooms whose whole
 character is the thing burning in them, the smithy's forge and the inn's fire. It is the renderer's
@@ -91,7 +92,7 @@ either side. `tests/art/rooms.test.ts` puts a body on all three spots the game s
 somebody on — the middle of the room, the counter, and where the walk to that counter ends — and
 fails on anything deeper.
 
-**The 2D view draws the same furniture, and a counter** (decision 109, `docs/architecture/art.md`
+**The view draws each fitting by its wall, and a counter** (decision 109, `docs/architecture/art.md`
 under Places): each fitting against its wall from the front, along its length on a side wall, and
 only as low as it stands against the south wall the cutaway takes away; and in front of whoever works
 in a room, toward the door, a counter they are served across, short of where the walk up to them
@@ -99,21 +100,14 @@ ends. None of it blocks and none of it is drawn until the player is inside, as t
 `tests/art/rooms.test.ts` also holds that nobody standing on the three spots is drawn in the
 furniture, which is the same rule asked of the drawing rather than of the ground.
 
-**A lit room is one light, moved to whichever room the player is standing in** (`RoomLight` in
-`render3d/lights.ts`, in that room's own `lamp` colour). One rather than one per building, since
-nine of the ten would be lighting the inside of a box no camera can see into — and it sits in the
-scene with its intensity at zero rather than being added at the doorway, because three recompiles
-every program in the world when the light count changes and that would be the frame somebody walks
-through a door. It is not decoration on top of a lit room: the cutaway hides the roof and a hidden
-roof casts no shadow, so a room being stood in is a room in full sun, and the lamp is the whole of
-what tells an interior from the grass outside. The rooms and the light together cost **about ten of
-the forty milliseconds** of the throttled draw budget, which leaves about nine: three consecutive CI
-runs read 20.06ms on the pre-interiors tree, 20.66ms once the counters moved indoors, and 30.74ms
-with the rooms furnished and lit. The ground and the camera after them read 25.15ms — under that, not
-over it, so whatever the ground's extra vertices cost is inside the noise between two CI runs, and
-the nine are still there for whatever is next. **Read that number off CI rather than off a dev
-container** — a loaded one reads the same trees 10ms high and has no headroom left to see the
-difference in, which is how the cost was first written down here as one to three.
+**A room costs a frame nothing until somebody is in it.** The 3D view lit the room being stood in
+with one light moved from room to room, since its cutaway took off the roof that shaded it and left
+a room in full sun, and the lamp was the whole of what told an interior from the grass outside. The
+2D view has no light to move: a room is told from the grass by its floor of planks and the walls
+ringing it, lit from the top-left as everything is, and a doorway seen from the street shows the
+room with a lantern lit on its back wall (`art/building.ts`). The floor, the back wall and the
+furniture are drawn only while the player is inside, so a zone full of rooms draws none of them from
+the street.
 
 **A room is also somewhere to be out of sight, which nothing in the world was before.**
 `hasLineOfSight` in `CollisionSystem.ts` is the same blockers asked about a segment rather than about
@@ -131,12 +125,13 @@ door faces the open ground its station or counter is approached across, and in t
 open ground left is west. A south-facing door there would have put the forge on the training hall's
 roof.
 
-It is also the first thing tall enough to hide the player outright, so it is an `Occluder` beside the
-trees — and the only one whose three boxes are one box, since it has no canopy to walk under and no
-trunk to be stopped by. A building need not have anyone behind it or anything to tap: `mill` on the
+It is also the first thing tall enough to hide the player outright, so the view fades it to half while
+the player is behind it, as it fades a tree's crown — and it is the only thing whose box for hiding
+the player and box for a thumb are one box, the building as it is drawn, since it has no canopy to
+walk under and no trunk to be stopped by. A building need not have anyone behind it or anything to tap: `mill` on the
 Old Mill Road is pure scenery, which is the thing a zone could not have until it could have buildings
-at all. The name over the door is tagged `sign` rather than `label` for the reason a
-quest marker is tagged `marker`: `drawnCounts` counts one label per drawn _creature_ and
-`scripts/smoke.mjs` asserts that total in every zone. With no art assets, that sign is the whole of
-how a player tells the bank from the store, which is why `BUILDING_LOOKS` is keyed by shape and gives
-four shopfronts one colour — four in four colours would read as a fairground.
+at all. The name over the ridge is counted as a `sign` rather than a `label` for the reason a
+quest marker is counted as a `marker`: `drawnCounts` counts one label per drawn _creature_ and
+`scripts/smoke.mjs` asserts that total in every zone. That name and the trade hung by the door
+(`BUILDING_SIGNS`) are how a player tells the bank from the store, which is why `BUILDING_LOOKS` is
+keyed by shape and gives four shopfronts one kit — four in four colours would read as a fairground.

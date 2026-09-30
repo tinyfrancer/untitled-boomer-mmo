@@ -2451,3 +2451,55 @@ the forks were Claude's:
 Found and left for the Part B review: town's training hall stands close enough south of the smithy
 that its roof, faded, is drawn over the smithy's room while the player stands in it, a layout the 3D
 camera never showed and the rebuilt zones of Part C will move anyway.
+
+## 110. 3D is deleted whole, the camera never turns, the game imports no package, and the draw budget comes down to 16ms
+
+**2026-09-30 · Claude, building the plan's phase B7**
+
+B7 retires the 3D view: Three.js and `render3d/` deleted, smoke's draw budget and memory checks
+rewritten for 2D, and `rendering.md` rewritten. Part B's open questions were all answered in B1, so
+the forks were Claude's:
+
+- **Everything 3D goes at once**: `src/render3d/`, its seventeen test files, `three` and
+  `@types/three`, the `?renderer=3d` flag (a URL still naming it draws the one view there is), and
+  smoke's `renderer-3d` section. So do the shared tables only the 3D view read: the townsfolk's and
+  outlaws' colours and masks (`NPC_APPEARANCES`), the stride offsets, the appearance key, and the
+  test pairing the paperdoll with the 3D figure. **Rejected:** keeping `?renderer=3d` a while longer
+  as a fallback, which the plan's "no second renderer kept alive" rules out; keeping the 3D tests
+  that held shared rules, which were **ported to the 2D picking test** instead (the priority order
+  asked of every kind, a pile taken where it lies and a lapsed one answering nothing, a pile under a
+  creature giving way to it, a second tap from the doorstep walking in, a rat on a shopfront's
+  doorstep still attacked), each checked against a planted swap of the priority.
+- **The camera never turns, and the orbit goes with it**: `orbitBy`, `cameraYaw`, the yaw a drag was
+  worth and `InputState.setViewYaw`, so W walks north. The gesture (`host/gesture.ts`, from
+  `orbit.ts`) still tells a drag from a tap, since a flick or a thumb sliding off a button must not
+  walk the character, and a drag asks for nothing. **Rejected:** keeping the yaw plumbing for a
+  camera that might turn again, when the art is lit from the top-left and drawn four ways round and
+  a turned view would light every sprite from somewhere the sun is not; giving a drag something to
+  do (panning, walking while held), which is a feature rather than a retirement.
+- **The seam is that the game imports no package**, not that it imports no named engine: nothing in
+  `src/` imports a package, `package.json` has no `dependencies`, and `render2d/` is imported by
+  `main.ts` alone (`tests/architecture/seam.test.ts`, from `phaserFreeSeam.test.ts`). Imports are
+  read by TypeScript's own scanner. **Rejected:** guarding Three.js by name as Phaser was, a list of
+  engines to keep in step; the old test's regex, which matched prose such as "made from '…" in a
+  string once it was asked about every package rather than one.
+- **The view reports a canvas count** (`canvases()`), which is what it holds, in place of
+  `gpuMemory()` and its `{ geometries, textures }`, and every memory check in smoke reads it.
+  **Rejected:** keeping the 3D shape with its geometries always 0.
+- **The draw budget is 16ms**, down from 40. The 2D view reads 2-3ms on CI on a full throttled run
+  and 5-8ms in a loaded dev container, against the 25ms the 3D view read. 16 is where the draw alone
+  stops fitting a 60fps frame: five times CI, twice or three times a container, and room for Part
+  C's bigger, fuller zones. Planted to test it, every word baked again each frame read 46ms in the
+  container, seven times the game and so over 16 on CI and under 40; nothing else in smoke noticed
+  it. **Rejected:** keeping 40, which that regression passes; 8-10ms, three times CI but close
+  enough to a loaded container's reading that it fails on whose machine ran it, which is a ceiling
+  that gets raised rather than believed.
+- **The paperdoll keeps its stick-figure rig until B8** draws the sheet to match the world.
+  **Rejected:** redrawing it from the outfit now, which is B8's, with the rest of the HUD's look.
+- **`rendering.md` is the 2D view's**, keeping what was about the game rather than the engine (the
+  tab bar, the priority, the gestures, the menu, the pile), and takes `art.md`'s account of the view,
+  so the style guide is what is drawn and `rendering.md` how.
+
+Smoke's checks that a drag turned nothing went with the camera that could turn, and its landscape
+check, which had held the 3D canvas's drawing buffer to device pixels and passed on the 2D one only
+because the run's pixel ratio is 1, now holds the buffer in art pixels at a whole scale.

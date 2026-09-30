@@ -13,11 +13,13 @@ shaped and why.
 
 ## Stack
 
-TypeScript + [Three.js](https://threejs.org/), bundled with [Vite](https://vite.dev/). The
-game was originally 2D on [Phaser](https://phaser.io/); `docs/archive/3d_port_plan.md` is the
-record of moving it. No backend — character data is saved to the browser's `localStorage`
-behind a `SaveService` interface, so a networked backend can be swapped in later without
-touching game logic.
+TypeScript, bundled with [Vite](https://vite.dev/), with no runtime dependency at all. The world
+is pixel art drawn as data (`src/art/`) and drawn with the browser's own Canvas 2D
+(`src/render2d/`); sound is synthesised with Web Audio. The game was first 2D on
+[Phaser](https://phaser.io/), then 3D on [Three.js](https://threejs.org/)
+(`docs/archive/3d_port_plan.md`), and version 2 took it back to 2D (`docs/v2_plan.md`). No
+backend — character data is saved to the browser's `localStorage` behind a `SaveService`
+interface.
 
 ## Setup
 
@@ -53,8 +55,7 @@ to expose it on your local network for testing on a phone.
 The game is laid out for a portrait phone, and everything works with a mouse too.
 
 - **Tap or click the ground** to walk there — the walk routes round walls and buildings.
-  **WASD** also moves; W is up the screen, not north, so it follows the camera.
-- **Drag** to swing the camera around your character.
+  **WASD** also moves; W is up the screen, which is north.
 - **Tap a creature** to target it and start auto-attacking — stay in range and it fights on
   its own, EverQuest/WoW-style. **Esc**, or a tap on empty ground, clears your target.
 - **Tap a tree, fishing spot or ore vein** to gather from it, a **signpost** to walk to the
@@ -76,7 +77,10 @@ autosaves to your browser and persists across reloads.
 ```
 src/
   world/        The simulation — ZoneWorld, Player, Mob, the session
-  render3d/     The Three.js renderer — the only code that knows there is an engine
+  render2d/     The Canvas 2D view — the only code that draws the world
+  art/          Sprites as data, the palette and the compiler, importing nothing
+  host/         The frame loop, the pointer, the keyboard and the sound around a zone
+  audio/        Every sound, synthesised from a recipe
   systems/      Combat/leveling/movement logic — plain TypeScript, unit-tested
   data/         Class stats, items, enemies, zones, xp table, tilemap layouts
   persistence/  CharacterState shape + SaveService (localStorage-backed for now)
@@ -88,6 +92,6 @@ tests/          Vitest specs mirroring world/, systems/, persistence/ and the re
 scripts/        The Playwright smoke check
 ```
 
-Everything but `render3d/` is engine-free, which is what makes it unit-testable, is the
-same seam that will let a real backend swap in later, and is what let a whole renderer
-be replaced without rewriting the game.
+Nothing but `main.ts` imports `render2d/`, and nothing in `src/` imports a package, which is
+what makes the rest unit-testable and what let the renderer be replaced twice without rewriting
+the game.
