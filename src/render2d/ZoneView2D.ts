@@ -585,6 +585,11 @@ export class ZoneView2D implements ZoneView {
         baseY: building.standingBase,
         draw: () => building.drawStanding(context, left, top, behind),
       });
+      // What stands in a room is seen only from inside it, as its floor is.
+      if (!building.isInside) continue;
+      for (const thing of building.furniture) {
+        standing.push(prop(thing.x, thing.y, thing.sprite, moving(thing.sprite)));
+      }
     }
 
     standing.sort((a, b) => a.baseY - b.baseY);

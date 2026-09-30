@@ -3,6 +3,18 @@ import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
 import { CHIPS, SPLASH } from './sprites/chips';
+import {
+  BED,
+  BENCH,
+  BENCH_SIDE,
+  COUNTER,
+  CRATES,
+  HEARTH,
+  HEARTH_EAST,
+  HEARTH_LOW,
+  HEARTH_WEST,
+  SHELVES,
+} from './sprites/fittings';
 import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
 import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
 import { RICH_VEIN, SEAM, VEIN } from './sprites/veins';
@@ -46,6 +58,16 @@ export const SPRITES: readonly SpriteDef[] = [
   TANNERY,
   FLETCHING_BENCH,
   CAMPFIRE,
+  SHELVES,
+  HEARTH,
+  HEARTH_EAST,
+  HEARTH_WEST,
+  HEARTH_LOW,
+  BENCH,
+  BENCH_SIDE,
+  CRATES,
+  BED,
+  COUNTER,
   CHIPS,
   SPLASH,
 ];
