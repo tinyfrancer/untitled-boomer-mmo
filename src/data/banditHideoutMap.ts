@@ -1,49 +1,53 @@
-import { WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../config/constants';
-import { STONE_TILE, WALL_TILE, paintRect } from './tiles';
+import { layoutZone } from './zoneText';
 
 /**
- * The hideout: rock with rooms cut out of it.
+ * The hideout: rock with rooms cut out of it, two of them joined by a
+ * corridor, the entrance hall on the west where the player arrives from the
+ * camp and a larger chamber on the east. The corridor is two tiles tall, so it
+ * is wider than the player and a slow frame cannot wedge them in it.
  *
- * Solid wall by default and floor carved into it, which is the opposite of
- * every other map here — the three outdoor zones start walkable and paint
- * obstacles on. It is also the first map to use a blocking tile that is not
- * water, so `CollisionSystem` does the containing and nothing here has to.
- *
- * Two rooms joined by a corridor: the entrance hall on the west, where the
- * player arrives from the camp, and a larger chamber on the east.
+ * The whole west edge is the way in, running the height of the map. Not a
+ * doorway: an arrival keeps the fraction of the edge the player crossed at,
+ * so a passage only as tall as the corridor would drop them inside the rock
+ * for most of that range. It is also where the signpost back to the camp
+ * stands.
  */
-const ENTRANCE = { left: 2, right: 8, top: 6, bottom: 12 };
-const CHAMBER = { left: 14, right: 22, top: 3, bottom: 15 };
-const CORRIDOR_ROW = Math.floor(WORLD_HEIGHT_TILES / 2);
-
-function buildBanditHideoutMap(): number[][] {
-  const map: number[][] = [];
-  for (let row = 0; row < WORLD_HEIGHT_TILES; row++) {
-    map.push(new Array<number>(WORLD_WIDTH_TILES).fill(WALL_TILE));
-  }
-
-  paintRect(map, ENTRANCE, STONE_TILE);
-  paintRect(map, CHAMBER, STONE_TILE);
-  // Two tiles tall, so the corridor is wider than the player and a slow frame
-  // cannot wedge them in it.
-  paintRect(
-    map,
-    { left: ENTRANCE.right, right: CHAMBER.left, top: CORRIDOR_ROW - 1, bottom: CORRIDOR_ROW },
-    STONE_TILE,
-  );
-  // The whole west wall is the way in, running the height of the map.
-  //
-  // Not a doorway: arriving through an exit keeps the fraction of the edge the
-  // player crossed at, so they can come in anywhere along it — a passage only
-  // as tall as the corridor would drop them inside the rock for most of that
-  // range. It is also where the signpost back to the camp stands.
-  paintRect(
-    map,
-    { left: 0, right: ENTRANCE.left, top: 0, bottom: WORLD_HEIGHT_TILES - 1 },
-    STONE_TILE,
-  );
-
-  return map;
-}
-
-export const BANDIT_HIDEOUT_MAP: number[][] = buildBanditHideoutMap();
+export const BANDIT_HIDEOUT_LAYOUT = layoutZone(
+  'bandit-hideout',
+  `
+    ___######################
+    ___######################
+    ___######################
+    ___###########_________##
+    ___###########_________##
+    ___###########_a_______##
+    _________#####_________##
+    _________#####_________##
+    _________________a_____##
+    ____________@______c___##
+    _________#####_________##
+    _________#####___b_____##
+    _________#####_________##
+    ___###########_b_______##
+    ___###########_________##
+    ___###########_________##
+    ___######################
+    ___######################
+    ___######################
+  `,
+  {
+    '@': { start: true, on: 'stone' },
+    /**
+     * The entrance hall is left clear so arriving is not an ambush, and
+     * everything stands in the chamber beyond the corridor, in the starter
+     * band: what makes this worth the key is what drops here.
+     */
+    a: { mob: 'bandit', level: 2, on: 'stone' },
+    b: { mob: 'bandit', level: 3, on: 'stone' },
+    /**
+     * The chief, level 4, the one thing in the starter zones above the band, at
+     * the back of the chamber so the men in front of him are fought first.
+     */
+    c: { mob: 'bandit-chief', level: 4, on: 'stone' },
+  },
+);

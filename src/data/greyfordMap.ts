@@ -1,49 +1,58 @@
-import { WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../config/constants';
-import { GRASS_TILE, PATH_TILE, paintRect } from './tiles';
+import { layoutZone } from './zoneText';
 
 /**
  * Greyford Outpost: the second place in the world with counters in it, and the
- * zone that turns the map from a star into a loop.
+ * zone that turns the map from a star into a loop. It joins the Old Mill Road
+ * to the quarry, so the way home from the hardwood is not the way you came.
+ * There is nothing to fight here, which is what makes it somewhere to stand.
  *
- * Every road until now ran through town — out to a thing and back the same way.
- * This one joins the Old Mill Road to the quarry, so the way home from the
- * hardwood is not the way you came, and the walk between the timber and the ore
- * stops passing the shopkeeper's door. That is the whole reason it is here
- * rather than at the far end of another spoke.
- *
- * There is nothing to fight. It is the second zone with no `mobSpawns` at all
- * and the first outside town, which is what makes it somewhere to stand.
+ * The two roads meet in an L rather than crossing. South is the mill road and
+ * east is the quarry, so both edges are left open the whole way along, since an
+ * arrival lands anywhere down either. They join short of the middle, where a
+ * respawn puts somebody and where a person standing about would be walked into
+ * by anyone tapping the ground ahead of them. The worked yard the counters stand
+ * on is north of where the roads meet.
  */
-
-/**
- * The two roads, meeting in an L rather than crossing.
- *
- * South is the mill road and east is the quarry, so the ground a traveller
- * arrives on is the bottom edge and the right-hand one — both left open the
- * whole way along, because an arrival lands anywhere down either.
- *
- * They join short of the middle rather than at it. The centre of the map is
- * where a respawn puts somebody, and a crossroads is exactly where a person
- * standing about would be walked into by anyone tapping the ground ahead of
- * them — the mistake the trainer taught in town, three tiles up the north road.
- */
-const SOUTH_ROAD = { left: 11, right: 13, top: 9, bottom: WORLD_HEIGHT_TILES - 1 };
-const EAST_ROAD = { left: 11, right: WORLD_WIDTH_TILES - 1, top: 9, bottom: 11 };
-
-/** The worked ground the counters stand on, north of where the roads meet. */
-const YARD = { left: 5, right: 17, top: 4, bottom: 8 };
-
-function buildGreyfordMap(): number[][] {
-  const map: number[][] = [];
-  for (let row = 0; row < WORLD_HEIGHT_TILES; row++) {
-    map.push(new Array<number>(WORLD_WIDTH_TILES).fill(GRASS_TILE));
-  }
-
-  for (const paved of [YARD, SOUTH_ROAD, EAST_ROAD]) {
-    paintRect(map, paved, PATH_TILE);
-  }
-
-  return map;
-}
-
-export const GREYFORD_MAP: number[][] = buildGreyfordMap();
+export const GREYFORD_LAYOUT = layoutZone(
+  'greyford',
+  `
+    .........................
+    .........................
+    .........................
+    ..........PPP............
+    .....=====PPP==LLLLLL....
+    .....=====PPP==LLLLLL....
+    .....V=H==========.......
+    .....=============.......
+    .....=============.......
+    ...........=@============
+    ...........==============
+    ...........==============
+    ...........===...........
+    ...........===...........
+    ...........===...........
+    ...........===...........
+    ...........===...........
+    ...........===...........
+    ...........===...........
+  `,
+  {
+    '@': { start: true, on: 'road' },
+    /**
+     * Both counters are inside the yard's two buildings, at the back of the room
+     * like every counter in town, and far enough apart that which one a tap opens
+     * is never a question about pixels. The longhouse was scenery while the
+     * fettler stood at its door; a hall with somebody working in it reads as
+     * somewhere people live.
+     */
+    L: { building: 'longhouse', worker: 'fettler', on: 'road' },
+    P: { building: 'trading-post', worker: 'outfitter', on: 'grass' },
+    /**
+     * The tannery at the west end of the yard, clear of both roads and of the
+     * counters, and the fletcher's bench beside it: what they work is what the
+     * places around the outpost produce.
+     */
+    V: { station: 'tannery', on: 'road' },
+    H: { station: 'bench', on: 'road' },
+  },
+);

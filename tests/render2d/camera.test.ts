@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { ART_PIXEL, TILE_PIXELS } from '../../src/art/budget';
 import { TILE_SIZE } from '../../src/config/constants';
-import { TOWN_MAP } from '../../src/data/townMap';
+import { ZONES } from '../../src/data/zones';
 import {
   Camera2D,
   MAX_CSS_PER_ART,
@@ -12,11 +12,12 @@ import {
 import { signpostPoint } from '../../src/systems/ZoneSystem';
 import { worldViewportHeight } from '../../src/ui/layout';
 
+const TOWN = ZONES.town;
 const WORLD = {
-  width: nth(TOWN_MAP, 0).length * TILE_SIZE,
-  height: TOWN_MAP.length * TILE_SIZE,
+  width: nth(TOWN.map, 0).length * TILE_SIZE,
+  height: TOWN.map.length * TILE_SIZE,
 };
-const SPAWN = { x: WORLD.width / 2, y: WORLD.height / 2 };
+const SPAWN = TOWN.start;
 
 /** Phones and a small desktop, in CSS pixels and device pixels to one. */
 const PHONES = [

@@ -4,12 +4,7 @@ import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import { RECIPES } from '../../src/data/recipes';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { LOOT_TABLES } from '../../src/data/lootTables';
-import {
-  BANDIT_CAMP_MOB_SPAWNS,
-  BEACH_MOB_SPAWNS,
-  TOWN_MOB_SPAWNS,
-  type MobSpawnPoint,
-} from '../../src/data/spawns';
+import type { MobSpawnPoint } from '../../src/data/zoneText';
 import { addXp, type LevelState } from '../../src/systems/LevelingSystem';
 import { addSkillXp, createInitialSkills, skillLevel } from '../../src/systems/SkillSystem';
 import { failureChance } from '../../src/systems/CraftingSystem';
@@ -116,9 +111,9 @@ function intendedArc(): Arc {
 /** Total character XP the arc pays out, quest rewards included. */
 function arcXp(arc: Arc): number {
   return (
-    arc.ratKills * averageKillXp(TOWN_MOB_SPAWNS, 'rat') +
-    arc.crabKills * averageKillXp(BEACH_MOB_SPAWNS, 'crab') +
-    arc.banditKills * averageKillXp(BANDIT_CAMP_MOB_SPAWNS, 'bandit') +
+    arc.ratKills * averageKillXp(ZONES.town.mobSpawns, 'rat') +
+    arc.crabKills * averageKillXp(ZONES.beach.mobSpawns, 'crab') +
+    arc.banditKills * averageKillXp(ZONES['bandit-camp'].mobSpawns, 'bandit') +
     arc.quests.reduce((xp, questId) => xp + QUESTS[questId].reward.xp, 0)
   );
 }
@@ -199,9 +194,9 @@ describe('the starter arc', () => {
 
   it('does not let a single zone carry the whole arc', () => {
     const perZone = [
-      arc.ratKills * averageKillXp(TOWN_MOB_SPAWNS, 'rat'),
-      arc.crabKills * averageKillXp(BEACH_MOB_SPAWNS, 'crab'),
-      arc.banditKills * averageKillXp(BANDIT_CAMP_MOB_SPAWNS, 'bandit'),
+      arc.ratKills * averageKillXp(ZONES.town.mobSpawns, 'rat'),
+      arc.crabKills * averageKillXp(ZONES.beach.mobSpawns, 'crab'),
+      arc.banditKills * averageKillXp(ZONES['bandit-camp'].mobSpawns, 'bandit'),
     ];
     perZone.forEach((zoneXp) => {
       expect(zoneXp / arcXp(arc)).toBeLessThan(0.75);
@@ -261,9 +256,9 @@ describe("the ranger's arc", () => {
 
   it('pays for every arrow it shoots out of well under half the coin it earns', () => {
     const shotAtArc =
-      arc.ratKills * shotsFor(TOWN_MOB_SPAWNS, 'rat') +
-      arc.crabKills * shotsFor(BEACH_MOB_SPAWNS, 'crab') +
-      arc.banditKills * shotsFor(BANDIT_CAMP_MOB_SPAWNS, 'bandit');
+      arc.ratKills * shotsFor(ZONES.town.mobSpawns, 'rat') +
+      arc.crabKills * shotsFor(ZONES.beach.mobSpawns, 'crab') +
+      arc.banditKills * shotsFor(ZONES['bandit-camp'].mobSpawns, 'bandit');
 
     const handful = LOOT_TABLES.bandit.entries.find((entry) => entry.itemId === 'crude-arrows');
     const perHandful = handful?.quantity ? (handful.quantity.min + handful.quantity.max) / 2 : 1;

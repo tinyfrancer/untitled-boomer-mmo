@@ -2,7 +2,7 @@ import { ENEMIES } from '../data/enemies';
 import { isArrow, isBow } from '../data/items';
 import { RESOURCE_NODES, type ResourceNodeDefinition } from '../data/resourceNodes';
 import { STATION_PERSISTS, type CraftingRecipe, type StationId } from '../data/recipes';
-import type { MobSpawnPoint } from '../data/spawns';
+import type { MobSpawnPoint } from '../data/zoneText';
 import { ZONES } from '../data/zones';
 import { xpToReachLevel } from '../data/xpTable';
 import type { AfkSession } from '../persistence/CharacterState';

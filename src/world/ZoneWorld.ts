@@ -477,8 +477,8 @@ export class ZoneWorld implements Targeting {
 
   // Where the player stands when this world opens: the arrival point if they
   // walked in through an exit, the spot the save was left at if they are
-  // resuming into the zone that save names, and the middle of the map
-  // otherwise — a new character, or a save that names no particular spot.
+  // resuming into the zone that save names, and the zone's start otherwise —
+  // a new character, or a save that names no particular spot.
   private startPoint(entry: ZoneWorldOptions['entry']): Point {
     if (entry) {
       return arrivalPoint(
@@ -493,7 +493,7 @@ export class ZoneWorld implements Targeting {
     if (position && zoneId === this.zone.id) {
       return resumePoint(position, this.worldWidth, this.worldHeight, ARRIVAL_INSET);
     }
-    return { x: this.worldWidth / 2, y: this.worldHeight / 2 };
+    return { ...this.spawnPoint };
   }
 
   // ---------------------------------------------------------------------------
@@ -1074,7 +1074,7 @@ export class ZoneWorld implements Targeting {
     // to town for nothing made dying the fastest way to travel and a free heal
     // on arrival; what it costs now is the walk back.
     //
-    // The spawn point is the middle of the map, and `spawnSafety.test.ts` holds
+    // The spawn point is the zone's start, and `spawnSafety.test.ts` holds
     // it clear of every aggressive creature's whole wander disc — so getting up
     // is never getting straight back into the fight that ended.
     this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);

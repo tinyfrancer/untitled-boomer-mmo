@@ -34,7 +34,7 @@ interface Threat {
   wander: number;
 }
 
-function threatsIn(zoneId: keyof typeof ZONES, centre: Point): Threat[] {
+function threatsIn(zoneId: keyof typeof ZONES): Threat[] {
   return ZONES[zoneId].mobSpawns
     .filter((spawn) => {
       const definition = ENEMIES[spawn.enemyId];
@@ -45,7 +45,7 @@ function threatsIn(zoneId: keyof typeof ZONES, centre: Point): Threat[] {
       return {
         enemyId: spawn.enemyId,
         level: spawn.level,
-        at: { x: centre.x + spawn.dx, y: centre.y + spawn.dy },
+        at: { x: spawn.x, y: spawn.y },
         aggro: definition.aggroRadius ?? 0,
         wander: definition.wander.radius,
       };
@@ -64,7 +64,7 @@ describe('the spawn point', () => {
    * The strong rule, and it is the strong one because **a respawn is not a
    * choice.** Dying already costs the walk back and a fee in copper, and the
    * thing that keeps that from being a spiral is arriving at full with a moment
-   * to gather yourself. So the centre is held clear of an aggressive creature's
+   * to gather yourself. So the start is held clear of an aggressive creature's
    * whole wander disc rather than of where its row happens to say it starts —
    * a creature is only ever *at* its spawn on the frame the zone was built,
    * which is the same argument `tests/render2d/picking.test.ts` makes about tapping
@@ -74,13 +74,10 @@ describe('the spawn point', () => {
    */
   it('is clear of every aggressive creature, wherever it has wandered to', () => {
     for (const zone of Object.values(ZONES)) {
-      const { width, height } = sizeOf(zone.id);
-      const centre = { x: width / 2, y: height / 2 };
-
-      for (const threat of threatsIn(zone.id, centre)) {
+      for (const threat of threatsIn(zone.id)) {
         const reach = threat.aggro + threat.wander;
         expect(
-          gap(centre, threat.at),
+          gap(zone.start, threat.at),
           `${zone.id}: respawning lands within reach of a ${threat.enemyId} (L${threat.level})`,
         ).toBeGreaterThan(reach);
       }
@@ -93,7 +90,7 @@ describe('an arrival strip', () => {
    * The weaker rule, and deliberately weaker: **walking through a door is a
    * choice.** Something wandering over to meet you on the far side of it is the
    * zone working — the bandit camp is supposed to be full of bandits — so this
-   * does not ask for the wander disc the way the centre does.
+   * does not ask for the wander disc the way the start does.
    *
    * What it does refuse is materialising *already* inside a fight, before there
    * is a frame in which to walk back out. That is the difference between a
@@ -104,8 +101,7 @@ describe('an arrival strip', () => {
   it('never lands a traveller already inside an aggro radius', () => {
     for (const zone of Object.values(ZONES)) {
       const { width, height } = sizeOf(zone.id);
-      const centre = { x: width / 2, y: height / 2 };
-      const threats = threatsIn(zone.id, centre);
+      const threats = threatsIn(zone.id);
 
       // A zone is arrived on the edges its own exits sit on: walking out
       // through one and coming back lands on the same edge.

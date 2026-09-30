@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
-import { harness, recordingBus } from './harness';
+import { harness, npcNamed, recordingBus } from './harness';
 import { GameContext } from '../../src/world/GameContext';
 import { createNewCharacter } from '../../src/persistence';
 import { zoneWorldSize } from '../../src/systems/ZoneSystem';
@@ -27,7 +27,7 @@ beforeEach(() => {
 
 function talkingToTheShopkeeper(): ReturnType<typeof harness> {
   const kit = harness();
-  const npc = nth(kit.world.npcs, 0);
+  const npc = npcNamed(kit.world, 'shopkeeper');
   kit.world.teleport(npc.x, npc.y + 50);
   kit.world.approachNpc(npc);
   return kit;

@@ -1,61 +1,60 @@
-import { WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../config/constants';
-import { STONE_TILE, WALL_TILE, WATER_TILE, paintRect } from './tiles';
+import { layoutZone } from './zoneText';
 
 /**
- * The barrow: the hideout's map one band up, and the second one in the game cut
- * out of solid rock rather than painted onto open ground.
+ * The barrow: the hideout's map one band up, cut out of solid rock and read
+ * north to south, the way it is walked. The mouth along the north edge where
+ * the fen drains in, a stair down into the antechamber, the spine through the
+ * middle, a transept across it with the dead laid in either arm, and the
+ * king's chamber at the bottom. Depth is the difficulty dial the whole way
+ * down.
  *
- * It is a passage grave read north to south, because that is the direction it is
- * walked: the mouth along the north edge where the fen drains in, a stair down
- * into the antechamber, the spine through the middle of the map, a transept
- * across it with the dead laid in either arm, and the king's chamber at the
- * bottom. Depth is the difficulty dial the whole way down, the same one the fen
- * above it uses.
+ * The whole north edge is the mouth, for the reason the hideout's west wall is
+ * a wall rather than a doorway: an arrival keeps the fraction of the edge it
+ * was crossed at, and `tests/systems/ZoneSystem.test.ts` sweeps that.
  *
- * The **whole north edge is the mouth**, for the reason the hideout's west wall
- * is a wall rather than a doorway: an arrival keeps the fraction of the edge it
- * was crossed at, so a passage only as wide as the stair would drop most
- * travellers inside the rock. `tests/systems/ZoneSystem.test.ts` sweeps that.
+ * The water that followed the fen in is small and scattered, and one rule
+ * further than the fen's: creatures do not path, so standing water in the
+ * stair or the spine would be a wight wedged in the only way through. The
+ * flooding is in the arms of the transept and the corners of the chamber.
  */
-const MOUTH = { left: 0, right: WORLD_WIDTH_TILES - 1, top: 0, bottom: 2 };
-const STAIR = { left: 11, right: 13, top: 2, bottom: 5 };
-const ANTECHAMBER = { left: 5, right: 19, top: 4, bottom: 7 };
-const SPINE = { left: 11, right: 13, top: 7, bottom: 12 };
-const TRANSEPT = { left: 4, right: 20, top: 9, bottom: 10 };
-const CHAMBER = { left: 6, right: 18, top: 12, bottom: 16 };
-
-/**
- * What "sunken" means underfoot: the water that followed the fen in.
- *
- * Under the same rule the fen's own pools are placed by — **small and scattered,
- * never a wall** — and one rule further, because this map has pinch points the
- * marsh does not. There is no pathfinding anywhere in this game, so a chaser
- * steers straight at the player and slides along whatever it hits: standing
- * water in the stair or the spine would be a wight wedged in the only way
- * through. So the flooding is in the arms of the transept and the corners of the
- * chamber, which are rooms, and nowhere a fight has to pass through.
- */
-const FLOODED = [
-  { left: 4, right: 5, top: 9, bottom: 9 },
-  { left: 19, right: 20, top: 10, bottom: 10 },
-  { left: 6, right: 7, top: 15, bottom: 15 },
-  { left: 17, right: 18, top: 13, bottom: 13 },
-];
-
-function buildSunkenBarrowMap(): number[][] {
-  const map: number[][] = [];
-  for (let row = 0; row < WORLD_HEIGHT_TILES; row++) {
-    map.push(new Array<number>(WORLD_WIDTH_TILES).fill(WALL_TILE));
-  }
-
-  for (const room of [MOUTH, STAIR, ANTECHAMBER, SPINE, TRANSEPT, CHAMBER]) {
-    paintRect(map, room, STONE_TILE);
-  }
-  for (const pool of FLOODED) {
-    paintRect(map, pool, WATER_TILE);
-  }
-
-  return map;
-}
-
-export const SUNKEN_BARROW_MAP: number[][] = buildSunkenBarrowMap();
+export const SUNKEN_BARROW_LAYOUT = layoutZone(
+  'sunken-barrow',
+  `
+    _________________________
+    _________________________
+    _________________________
+    ###########___###########
+    #####_______________#####
+    #####_______________#####
+    #####___a________a__#####
+    #####_______________#####
+    ###########___###########
+    ####~~______@________####
+    ####__a___________a~~####
+    ###########___###########
+    ######_____________######
+    ######__b_______b~~######
+    ######_____________######
+    ######~~_b_____b___######
+    ######______c______######
+    #########################
+    #########################
+  `,
+  {
+    '@': { start: true, on: 'stone' },
+    /**
+     * The sevens hold the antechamber and the transept, and the eights are down
+     * in the king's chamber with him. The mouth is empty, the rule the hideout's
+     * entrance hall set: a locked door with an ambush behind it is a trap rather
+     * than a zone. The antechamber's pair stand off its middle, where the stair
+     * comes in and where anyone who wants out goes.
+     */
+    a: { mob: 'barrow-wight', level: 7, on: 'stone' },
+    b: { mob: 'barrow-wight', level: 8, on: 'stone' },
+    /**
+     * The king, last, with four of his between the way in and him: he is fought
+     * last or he is fought with company.
+     */
+    c: { mob: 'barrow-king', level: 8, on: 'stone' },
+  },
+);

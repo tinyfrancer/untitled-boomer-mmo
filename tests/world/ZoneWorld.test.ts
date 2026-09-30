@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
-import { harness, nodeNamed } from './harness';
+import { harness, mobsByReach, nodeNamed } from './harness';
 import { ZONES } from '../../src/data/zones';
 import {
   AFK_SET_REQUESTED_EVENT,
@@ -295,7 +295,7 @@ describe('walking out of a zone', () => {
     // it was toggled and walks back to it, so a camp struck in the town centre
     // would steer the player off the exit before they ever crossed it.
     kit.world.teleport(kit.world.worldWidth / 2, kit.world.worldHeight - 10);
-    kit.world.setTarget(nth(kit.world.mobs));
+    kit.world.setTarget(nth(mobsByReach(kit.world)));
     kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
     expect(kit.world.afkActive).toBe(true);
 

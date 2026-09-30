@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
-import { harness, type Harness } from './harness';
+import { harness, mobsByReach, type Harness } from './harness';
 import { itemWeight } from '../../src/data/items';
 import { createNewCharacter } from '../../src/persistence';
 import { LOOT_PILE_LIFETIME_MS, rollLootTable } from '../../src/systems/LootSystem';
@@ -51,7 +51,7 @@ function kill(kit: Pick<Harness, 'world'>, mob: Mob): void {
 }
 
 function ratOf(kit: Pick<Harness, 'world'>, index = 0): Mob {
-  const rat = kit.world.mobs.filter((mob) => mob.definition.id === 'rat')[index];
+  const rat = mobsByReach(kit.world).filter((mob) => mob.definition.id === 'rat')[index];
   if (!rat) throw new Error('town has too few rats');
   return rat;
 }

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { TILE_SIZE, WORLD_WIDTH_TILES } from '../../src/config/constants';
+import { TILE_SIZE } from '../../src/config/constants';
 import { ENEMIES } from '../../src/data/enemies';
 import { ITEMS } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
-import { OLD_MILL_ROAD_MOB_SPAWNS, OLD_MILL_ROAD_NODE_SPAWNS } from '../../src/data/spawns';
 import { WATER_TILE } from '../../src/data/tiles';
 import { ZONES } from '../../src/data/zones';
 import { worldMap } from '../../src/systems/MapSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
+import { zoneWorldSize } from '../../src/systems/ZoneSystem';
 import type { ItemId } from '../../src/types/ids';
 
 /**
@@ -24,8 +24,8 @@ import type { ItemId } from '../../src/types/ids';
 const ZONE = ZONES['old-mill-road'];
 const GOBLIN = ENEMIES['goblin-scavenger'];
 
-const between = (a: { dx: number; dy: number }, b: { dx: number; dy: number }): number =>
-  Math.hypot(a.dx - b.dx, a.dy - b.dy);
+const between = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
+  Math.hypot(a.x - b.x, a.y - b.y);
 
 const armorValueOf = (itemId: ItemId): number => {
   const item = ITEMS[itemId];
@@ -117,18 +117,18 @@ describe('the goblins stand in threes', () => {
   const AGGRO_REACH = (GOBLIN.aggroRadius ?? 0) + GOBLIN.wander.radius;
 
   it('spawns nine of them and nothing else', () => {
-    expect(OLD_MILL_ROAD_MOB_SPAWNS).toHaveLength(9);
-    OLD_MILL_ROAD_MOB_SPAWNS.forEach((spawn) => {
+    expect(ZONE.mobSpawns).toHaveLength(9);
+    ZONE.mobSpawns.forEach((spawn) => {
       expect(spawn.enemyId).toBe('goblin-scavenger');
     });
   });
 
   it('gives every one of them two companions within a pull', () => {
-    OLD_MILL_ROAD_MOB_SPAWNS.forEach((spawn) => {
-      const near = OLD_MILL_ROAD_MOB_SPAWNS.filter(
+    ZONE.mobSpawns.forEach((spawn) => {
+      const near = ZONE.mobSpawns.filter(
         (other) => other !== spawn && between(spawn, other) <= KNOT_RADIUS,
       );
-      expect(near.length, `${spawn.dx},${spawn.dy} stands alone`).toBeGreaterThanOrEqual(2);
+      expect(near.length, `${spawn.x},${spawn.y} stands alone`).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -137,8 +137,8 @@ describe('the goblins stand in threes', () => {
   // single-link rule a player discovers by walking into it, so two knots close
   // enough to chain would come back here as one knot of six.
   it('keeps the knots apart from one another', () => {
-    const knots: (typeof OLD_MILL_ROAD_MOB_SPAWNS)[] = [];
-    OLD_MILL_ROAD_MOB_SPAWNS.forEach((spawn) => {
+    const knots: (typeof ZONE.mobSpawns)[] = [];
+    ZONE.mobSpawns.forEach((spawn) => {
       const knot = knots.find((group) =>
         group.some((member) => between(member, spawn) <= KNOT_RADIUS),
       );
@@ -167,24 +167,24 @@ describe('the goblins stand in threes', () => {
    * back to safety behind it.
    */
   it('puts the softer knots nearer the way home', () => {
-    const level4 = OLD_MILL_ROAD_MOB_SPAWNS.filter((spawn) => spawn.level === 4);
-    const level5 = OLD_MILL_ROAD_MOB_SPAWNS.filter((spawn) => spawn.level === 5);
+    const level4 = ZONE.mobSpawns.filter((spawn) => spawn.level === 4);
+    const level5 = ZONE.mobSpawns.filter((spawn) => spawn.level === 5);
 
     expect(level4.length).toBeGreaterThan(level5.length);
-    expect(Math.min(...level4.map((spawn) => spawn.dx))).toBeGreaterThan(
-      Math.max(...level5.map((spawn) => spawn.dx)),
+    expect(Math.min(...level4.map((spawn) => spawn.x))).toBeGreaterThan(
+      Math.max(...level5.map((spawn) => spawn.x)),
     );
   });
 
   // Arriving must never land inside an aggro radius, which is the rule the
   // bandit camp's spawn list already follows from the other side of town.
   it('leaves the east half of the road empty enough to arrive on', () => {
-    const arrival = { dx: (WORLD_WIDTH_TILES * TILE_SIZE) / 2 - TILE_SIZE * 1.5, dy: 0 };
-    OLD_MILL_ROAD_MOB_SPAWNS.forEach((spawn) => {
-      expect(
-        between(spawn, arrival),
-        `${spawn.dx},${spawn.dy} greets the traveller`,
-      ).toBeGreaterThan(AGGRO_REACH);
+    const { width, height } = zoneWorldSize(ZONE);
+    const arrival = { x: width - TILE_SIZE * 1.5, y: height / 2 };
+    ZONE.mobSpawns.forEach((spawn) => {
+      expect(between(spawn, arrival), `${spawn.x},${spawn.y} greets the traveller`).toBeGreaterThan(
+        AGGRO_REACH,
+      );
     });
   });
 });
@@ -196,15 +196,13 @@ describe('the goblins stand in threes', () => {
  * since a channel is broken by being hit.
  */
 describe('the willows on the millpond', () => {
-  const willows = OLD_MILL_ROAD_NODE_SPAWNS.filter((spawn) => spawn.nodeId === 'willow');
-  const centre = { x: (WORLD_WIDTH_TILES * TILE_SIZE) / 2, y: (ZONE.map.length * TILE_SIZE) / 2 };
+  const willows = ZONE.nodeSpawns.filter((spawn) => spawn.nodeId === 'willow');
   const reach = (GOBLIN.aggroRadius ?? 0) + GOBLIN.wander.radius;
 
   it('stand on the bank, within a tile of the water', () => {
     expect(willows.length).toBeGreaterThan(0);
     for (const willow of willows) {
-      const x = centre.x + willow.dx;
-      const y = centre.y + willow.dy;
+      const { x, y } = willow;
       const nearWater = ZONE.map.some((row, rowIndex) =>
         row.some((tile, column) => {
           if (tile !== WATER_TILE) return false;
@@ -213,16 +211,16 @@ describe('the willows on the millpond', () => {
           return Math.hypot(tileX - x, tileY - y) <= TILE_SIZE * 1.5;
         }),
       );
-      expect(nearWater, `${willow.dx},${willow.dy} is not on the bank`).toBe(true);
+      expect(nearWater, `${x},${y} is not on the bank`).toBe(true);
     }
   });
 
   it('stand out of every knot’s reach, wherever a goblin has wandered to', () => {
     for (const willow of willows) {
-      for (const goblin of OLD_MILL_ROAD_MOB_SPAWNS) {
+      for (const goblin of ZONE.mobSpawns) {
         expect(
           between(willow, goblin),
-          `the willow at ${willow.dx},${willow.dy} is in reach of ${goblin.dx},${goblin.dy}`,
+          `the willow at ${willow.x},${willow.y} is in reach of ${goblin.x},${goblin.y}`,
         ).toBeGreaterThan(reach);
       }
     }

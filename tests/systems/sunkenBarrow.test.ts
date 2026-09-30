@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_CHARACTER_LEVEL, TILE_SIZE } from '../../src/config/constants';
-import { BLACKWATER_FEN_MOB_SPAWNS, SUNKEN_BARROW_MOB_SPAWNS } from '../../src/data/spawns';
 import { CLASSES } from '../../src/data/classes';
 import { ENEMIES } from '../../src/data/enemies';
 import { ENEMY_ABILITIES } from '../../src/data/enemyAbilities';
@@ -9,7 +8,6 @@ import { LOOT_TABLES } from '../../src/data/lootTables';
 import { ZONES } from '../../src/data/zones';
 import { worldMap } from '../../src/systems/MapSystem';
 import { zoneAccess, type ZoneAccessContext } from '../../src/systems/ZoneAccessSystem';
-import { zoneWorldSize } from '../../src/systems/ZoneSystem';
 import type { ItemId } from '../../src/types/ids';
 
 /**
@@ -61,7 +59,7 @@ describe('the way in', () => {
     });
     expect(carriers.map((enemy) => enemy.id)).toEqual(['fen-raider']);
 
-    const lives = new Set(BLACKWATER_FEN_MOB_SPAWNS.map((spawn) => spawn.enemyId));
+    const lives = new Set(ZONES['blackwater-fen'].mobSpawns.map((spawn) => spawn.enemyId));
     expect(lives.has('fen-raider')).toBe(true);
   });
 
@@ -128,25 +126,24 @@ describe('what the barrow is', () => {
    * the king. `spawnSafety` holds the arithmetic; what this holds is the shape.
    */
   it('climbs the further in it goes, and starts nothing at the mouth', () => {
-    const byDepth = [...SUNKEN_BARROW_MOB_SPAWNS].sort((a, b) => a.dy - b.dy);
+    const byDepth = [...ZONE.mobSpawns].sort((a, b) => a.y - b.y);
     for (let i = 1; i < byDepth.length; i += 1) {
       const nearer = byDepth[i - 1]!;
       const deeper = byDepth[i]!;
       expect(
         deeper.level,
-        `${deeper.enemyId} at dy ${deeper.dy} is shallower-levelled than ${nearer.enemyId} at ${nearer.dy}`,
+        `${deeper.enemyId} at y ${deeper.y} is shallower-levelled than ${nearer.enemyId} at ${nearer.y}`,
       ).toBeGreaterThanOrEqual(nearer.level);
     }
 
-    const levels = SUNKEN_BARROW_MOB_SPAWNS.map((spawn) => spawn.level);
+    const levels = ZONE.mobSpawns.map((spawn) => spawn.level);
     expect(Math.min(...levels)).toBe(7);
     expect(Math.max(...levels)).toBe(8);
 
     // Nothing at all stands in the mouth, which is the north third of the map.
-    const { height } = zoneWorldSize(ZONE);
-    const mouthDy = TILE_SIZE * 3 - height / 2;
-    SUNKEN_BARROW_MOB_SPAWNS.forEach((spawn) => {
-      expect(spawn.dy, `${spawn.enemyId} is standing in the mouth`).toBeGreaterThan(mouthDy);
+    const mouth = TILE_SIZE * 3;
+    ZONE.mobSpawns.forEach((spawn) => {
+      expect(spawn.y, `${spawn.enemyId} is standing in the mouth`).toBeGreaterThan(mouth);
     });
   });
 
@@ -157,12 +154,12 @@ describe('what the barrow is', () => {
    * everything else while becoming a boss with a corridor behind him.
    */
   it('puts the king deeper than everything that guards him', () => {
-    const king = SUNKEN_BARROW_MOB_SPAWNS.filter((spawn) => spawn.enemyId === 'barrow-king');
-    const guards = SUNKEN_BARROW_MOB_SPAWNS.filter((spawn) => spawn.enemyId !== 'barrow-king');
+    const king = ZONE.mobSpawns.filter((spawn) => spawn.enemyId === 'barrow-king');
+    const guards = ZONE.mobSpawns.filter((spawn) => spawn.enemyId !== 'barrow-king');
 
     expect(king).toHaveLength(1);
     expect(guards).toHaveLength(8);
-    guards.forEach((guard) => expect(guard.dy).toBeLessThan(king[0]!.dy));
+    guards.forEach((guard) => expect(guard.y).toBeLessThan(king[0]!.y));
     guards.forEach((guard) => expect(guard.enemyId).toBe('barrow-wight'));
   });
 
@@ -285,7 +282,7 @@ describe('what it pays', () => {
    * `progression.test.ts` holds.
    */
   it('is what the level cap is a claim about', () => {
-    const here = Math.max(...SUNKEN_BARROW_MOB_SPAWNS.map((spawn) => spawn.level));
+    const here = Math.max(...ZONE.mobSpawns.map((spawn) => spawn.level));
     const anywhere = Math.max(
       ...Object.values(ZONES).flatMap((zone) => zone.mobSpawns.map((spawn) => spawn.level)),
     );

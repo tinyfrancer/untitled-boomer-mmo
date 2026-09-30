@@ -190,12 +190,9 @@ describe('ZONES data integrity', () => {
    */
   it('leaves somewhere to stand within reach of every node', () => {
     zones.forEach((zone) => {
-      const width = nth(zone.map, 0).length * TILE_SIZE;
-      const height = zone.map.length * TILE_SIZE;
-
-      zone.nodeSpawns.forEach(({ dx, dy, nodeId }) => {
+      zone.nodeSpawns.forEach(({ x: atX, y: atY, nodeId }) => {
         const { interactRadius } = RESOURCE_NODES[nodeId];
-        const at = { x: width / 2 + dx, y: height / 2 + dy };
+        const at = { x: atX, y: atY };
         const reachable = zone.map.some((row, y) =>
           row.some(
             (tile, x) =>
@@ -206,9 +203,10 @@ describe('ZONES data integrity', () => {
               ) <= interactRadius,
           ),
         );
-        expect(reachable, `${zone.id}: ${nodeId} at ${dx},${dy} has nowhere to work it from`).toBe(
-          true,
-        );
+        expect(
+          reachable,
+          `${zone.id}: ${nodeId} at ${at.x},${at.y} has nowhere to work it from`,
+        ).toBe(true);
       });
     });
   });
@@ -217,23 +215,20 @@ describe('ZONES data integrity', () => {
   // swimming or inside the rock.
   it('puts every mob spawn on walkable ground', () => {
     zones.forEach((zone) => {
-      const width = nth(zone.map, 0).length * TILE_SIZE;
-      const height = zone.map.length * TILE_SIZE;
-
-      zone.mobSpawns.forEach(({ dx, dy, enemyId }) => {
-        const row = nth(zone.map, Math.floor((height / 2 + dy) / TILE_SIZE));
-        const tile = nth(row, Math.floor((width / 2 + dx) / TILE_SIZE));
-        expect(BLOCKING_TILES, `${zone.id}: ${enemyId} at ${dx},${dy}`).not.toContain(tile);
+      zone.mobSpawns.forEach(({ x, y, enemyId }) => {
+        const row = nth(zone.map, Math.floor(y / TILE_SIZE));
+        const tile = nth(row, Math.floor(x / TILE_SIZE));
+        expect(BLOCKING_TILES, `${zone.id}: ${enemyId} at ${x},${y}`).not.toContain(tile);
       });
     });
   });
 
-  // Where a character with no particular spot is put, which is the middle of the
-  // map — a zone whose centre is rock would strand every arrival inside it.
-  it('puts every zone spawn point on walkable ground', () => {
+  // Where a character with no particular spot is put, which is the zone's `@`:
+  // a start on rock would strand every new character and every death inside it.
+  it('puts every zone start on walkable ground', () => {
     zones.forEach((zone) => {
-      const row = nth(zone.map, Math.floor(zone.map.length / 2));
-      expect(BLOCKING_TILES, zone.id).not.toContain(nth(row, Math.floor(row.length / 2)));
+      const row = nth(zone.map, Math.floor(zone.start.y / TILE_SIZE));
+      expect(BLOCKING_TILES, zone.id).not.toContain(nth(row, Math.floor(zone.start.x / TILE_SIZE)));
     });
   });
 

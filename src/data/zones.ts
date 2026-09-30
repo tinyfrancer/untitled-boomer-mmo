@@ -1,61 +1,15 @@
-import type { StationId } from './recipes';
-import type { BuildingId, ItemId, NpcId, ZoneEdge, ZoneId, ZoneSetting } from '../types/ids';
-import { TOWN_MAP } from './townMap';
-import { BEACH_MAP } from './beachMap';
-import { BLACKWATER_FEN_MAP } from './blackwaterFenMap';
-import { QUARRY_MAP } from './quarryMap';
-import { DEEP_CUT_MAP } from './deepCutMap';
-import { GREYFORD_MAP } from './greyfordMap';
-import { BANDIT_CAMP_MAP } from './banditCampMap';
-import { BANDIT_HIDEOUT_MAP } from './banditHideoutMap';
-import { OLD_MILL_ROAD_MAP } from './oldMillRoadMap';
-import { SUNKEN_BARROW_MAP } from './sunkenBarrowMap';
-import {
-  BANDIT_CAMP_MOB_SPAWNS,
-  BANDIT_HIDEOUT_MOB_SPAWNS,
-  BEACH_MOB_SPAWNS,
-  BEACH_NODE_SPAWNS,
-  BLACKWATER_FEN_MOB_SPAWNS,
-  BLACKWATER_FEN_NODE_SPAWNS,
-  DEEP_CUT_MOB_SPAWNS,
-  DEEP_CUT_NODE_SPAWNS,
-  OLD_MILL_ROAD_MOB_SPAWNS,
-  OLD_MILL_ROAD_NODE_SPAWNS,
-  QUARRY_MOB_SPAWNS,
-  QUARRY_NODE_SPAWNS,
-  SUNKEN_BARROW_MOB_SPAWNS,
-  TOWN_MOB_SPAWNS,
-  TOWN_NODE_SPAWNS,
-  type MobSpawnPoint,
-  type NodeSpawnPoint,
-} from './spawns';
-
-export interface NpcSpawnPoint {
-  dx: number;
-  dy: number;
-  npcId: NpcId;
-}
-
-export interface StationSpawnPoint {
-  dx: number;
-  dy: number;
-  station: StationId;
-}
-
-/**
- * Where a building stands, as the middle of its footprint.
- *
- * The centre rather than a corner, so it reads like every other spawn offset in
- * the table and so `buildingRect` is the one place the footprint is turned into
- * edges. A building is the only thing here placed by *size* as well as by
- * position, which is why nothing else in a zone may stand inside one — see
- * `tests/systems/BuildingSystem.test.ts`, which sweeps that over every zone.
- */
-export interface BuildingSpawnPoint {
-  dx: number;
-  dy: number;
-  buildingId: BuildingId;
-}
+import type { ItemId, ZoneEdge, ZoneId, ZoneSetting } from '../types/ids';
+import type { ZoneLayout } from './zoneText';
+import { TOWN_LAYOUT } from './townMap';
+import { BEACH_LAYOUT } from './beachMap';
+import { BLACKWATER_FEN_LAYOUT } from './blackwaterFenMap';
+import { QUARRY_LAYOUT } from './quarryMap';
+import { DEEP_CUT_LAYOUT } from './deepCutMap';
+import { GREYFORD_LAYOUT } from './greyfordMap';
+import { BANDIT_CAMP_LAYOUT } from './banditCampMap';
+import { BANDIT_HIDEOUT_LAYOUT } from './banditHideoutMap';
+import { OLD_MILL_ROAD_LAYOUT } from './oldMillRoadMap';
+import { SUNKEN_BARROW_LAYOUT } from './sunkenBarrowMap';
 
 // Walking onto the matching edge of the map leaves for the target zone; the
 // player arrives on the opposite edge of that zone (see systems/ZoneSystem.ts).
@@ -64,7 +18,11 @@ export interface ZoneExit {
   to: ZoneId;
 }
 
-export interface ZoneDefinition {
+/**
+ * A zone: what it is called and where its roads go, and everything its text
+ * says about the ground and what stands on it (`zoneText.ts`).
+ */
+export interface ZoneDefinition extends ZoneLayout {
   id: ZoneId;
   name: string;
   /**
@@ -83,25 +41,6 @@ export interface ZoneDefinition {
    * like, and nothing in the simulation reads it.
    */
   setting: ZoneSetting;
-  map: number[][];
-  mobSpawns: MobSpawnPoint[];
-  nodeSpawns: NodeSpawnPoint[];
-  npcSpawns: NpcSpawnPoint[];
-  /**
-   * Where the fixed crafting stations stand. A campfire is not one of these —
-   * that is lit by the player and burns out — so this is only what a zone comes
-   * with, which today is the town forge.
-   */
-  stationSpawns?: StationSpawnPoint[];
-  /**
-   * What is built here. Solid, permanent, and the only thing in a zone that is
-   * placed by how much room it takes up rather than by a point alone.
-   *
-   * Absent for everywhere but the town today, which is the same shape
-   * `stationSpawns` uses: the table reads as a list of what a zone *has* rather
-   * than of what every zone must say something about.
-   */
-  buildingSpawns?: BuildingSpawnPoint[];
   exits: ZoneExit[];
   /**
    * The item that opens the way in, for a zone that is shut until it is found.
@@ -120,76 +59,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'Town',
     setting: 'open',
     description: 'A shop, a pond and more rats than anyone will admit to.',
-    map: TOWN_MAP,
-    mobSpawns: TOWN_MOB_SPAWNS,
-    nodeSpawns: TOWN_NODE_SPAWNS,
-    /**
-     * Each of the four at the back of the room they work in, which is
-     * `counterPoint` of the matching row below rather than a coordinate written
-     * down twice — move a shopfront and the shopkeeper moves with it.
-     *
-     * They stood on the doorsteps until the rooms could be walked into, and the
-     * two rules that put them there still hold from inside. Every pair of
-     * counters is more than `NPC_INTERACT_RADIUS` apart, so which one a tap
-     * opens is never a question about pixels — the walls make that harder to get
-     * wrong rather than easier, since the radius reaches straight through one.
-     * And none of them stands in the middle of a road: a person where a player
-     * taps to walk forward turns "go north" into "open a shop", which four walls
-     * do not fix either.
-     */
-    npcSpawns: [
-      { dx: 192, dy: -208, npcId: 'shopkeeper' },
-      { dx: -192, dy: -208, npcId: 'banker' },
-      { dx: -448, dy: -208, npcId: 'trainer' },
-      { dx: 448, dy: -160, npcId: 'quartermaster' },
-    ],
-    /**
-     * At the smithy's door rather than inside it, and the placement rule here is
-     * a third one beyond the two the counters follow.
-     *
-     * A station is a tile of solid furniture that can be tapped, so it must not
-     * sit **between the camera and anything else worth tapping**. The camera
-     * stands south of the player and looks north, so a ray aimed at a creature
-     * passes over the ground *south* of it — and a forge parked there quietly
-     * eats every tap on that creature. The first placement was at `192, 64`,
-     * which is directly south of the rat at `192, -128` and 42px from where a
-     * player stands to fight it; smoke caught it as a finger tap that selected
-     * nothing, one run in three.
-     *
-     * It is also why the smithy is the one building with its anvil outdoors: a
-     * station is *tapped*, and a solid building has no inside to tap into.
-     */
-    stationSpawns: [{ dx: -576, dy: -384, station: 'forge' }],
-    /**
-     * The town, as a place rather than as four people standing in a field.
-     *
-     * Laid out against the two roads: the shops front the high street from the
-     * north side, the hall and the inn from the south, and the two counters
-     * whose work is out of town sit up the north lane with the forge between
-     * them. The cottages have nobody behind them and are the point — they are
-     * what makes the counters part of somewhere.
-     */
-    buildingSpawns: [
-      { dx: -448, dy: -384, buildingId: 'smithy' },
-      { dx: -448, dy: -192, buildingId: 'training-hall' },
-      { dx: -192, dy: -192, buildingId: 'bank-house' },
-      { dx: 192, dy: -192, buildingId: 'general-store' },
-      { dx: 448, dy: -160, buildingId: 'quartermasters-post' },
-      { dx: -320, dy: 192, buildingId: 'inn' },
-      { dx: -576, dy: 224, buildingId: 'cottage' },
-      { dx: 448, dy: -384, buildingId: 'cottage' },
-    ],
-    /**
-     * The fourth road, and the one that cost the town a re-layout.
-     *
-     * An exit reserves a strip of its own edge for arrivals — a traveller
-     * materialises anywhere along it, at whatever fraction they crossed the
-     * other zone's edge at — and the smithy was built across the west one back
-     * when there was no road there. So the smithy and its forge moved up into
-     * the north-west block, a cottage moved across town to make room, and one
-     * rat moved a notch east. Nothing about that is visible in this list, which
-     * is exactly why `tests/systems/BuildingSystem.test.ts` sweeps it.
-     */
+    ...TOWN_LAYOUT,
     exits: [
       { edge: 'south', to: 'beach' },
       { edge: 'east', to: 'bandit-camp' },
@@ -202,10 +72,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'Beach',
     setting: 'open',
     description: 'Crabs along the shore and deep water to fish. Bring a pan.',
-    map: BEACH_MAP,
-    mobSpawns: BEACH_MOB_SPAWNS,
-    nodeSpawns: BEACH_NODE_SPAWNS,
-    npcSpawns: [],
+    ...BEACH_LAYOUT,
     exits: [
       { edge: 'north', to: 'town' },
       { edge: 'south', to: 'blackwater-fen' },
@@ -216,10 +83,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'Quarry',
     setting: 'open',
     description: 'Tin and iron in the rock, and rats in the spoil. Bring a pickaxe.',
-    map: QUARRY_MAP,
-    mobSpawns: QUARRY_MOB_SPAWNS,
-    nodeSpawns: QUARRY_NODE_SPAWNS,
-    npcSpawns: [],
+    ...QUARRY_LAYOUT,
     // The road north, and the second exit in the game to cost the zone it leaves
     // a re-cut: the face ran across the whole of that edge. See `quarryMap.ts`.
     exits: [
@@ -248,10 +112,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'The Deep Cut',
     setting: 'underground',
     description: 'Coal and rich iron under the quarry, and goblins already working them.',
-    map: DEEP_CUT_MAP,
-    mobSpawns: DEEP_CUT_MOB_SPAWNS,
-    nodeSpawns: DEEP_CUT_NODE_SPAWNS,
-    npcSpawns: [],
+    ...DEEP_CUT_LAYOUT,
     exits: [{ edge: 'south', to: 'quarry' }],
   },
   'bandit-camp': {
@@ -259,10 +120,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'Bandit Camp',
     setting: 'open',
     description: 'Armour and coin, off men who swing first. Come geared.',
-    map: BANDIT_CAMP_MAP,
-    mobSpawns: BANDIT_CAMP_MOB_SPAWNS,
-    nodeSpawns: [],
-    npcSpawns: [],
+    ...BANDIT_CAMP_LAYOUT,
     exits: [
       { edge: 'west', to: 'town' },
       { edge: 'east', to: 'bandit-hideout' },
@@ -276,20 +134,13 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
    * by walking out of town with no key, no quest and no gate behind it, which is
    * deliberate: the starter band ended by walking, so the band above it should
    * begin the same way.
-   *
-   * The mill is scenery and the only building outside a town — nobody works
-   * there, nothing is sold there, and it is what the road is named after.
    */
   'old-mill-road': {
     id: 'old-mill-road',
     name: 'Old Mill Road',
     setting: 'open',
     description: 'Goblins on the west road, three to a knot. Harder than anything in town.',
-    map: OLD_MILL_ROAD_MAP,
-    mobSpawns: OLD_MILL_ROAD_MOB_SPAWNS,
-    nodeSpawns: OLD_MILL_ROAD_NODE_SPAWNS,
-    npcSpawns: [],
-    buildingSpawns: [{ dx: -384, dy: -192, buildingId: 'mill' }],
+    ...OLD_MILL_ROAD_LAYOUT,
     exits: [
       { edge: 'east', to: 'town' },
       { edge: 'north', to: 'greyford' },
@@ -317,10 +168,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'Blackwater Fen',
     setting: 'marsh',
     description: 'Eels in the deep pools and raiders standing over them. Bring a pole.',
-    map: BLACKWATER_FEN_MAP,
-    mobSpawns: BLACKWATER_FEN_MOB_SPAWNS,
-    nodeSpawns: BLACKWATER_FEN_NODE_SPAWNS,
-    npcSpawns: [],
+    ...BLACKWATER_FEN_LAYOUT,
     exits: [
       { edge: 'north', to: 'beach' },
       { edge: 'south', to: 'sunken-barrow' },
@@ -348,10 +196,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'The Sunken Barrow',
     setting: 'underground',
     description: 'Locked, and what is buried in there was buried holding it. Come at eight.',
-    map: SUNKEN_BARROW_MAP,
-    mobSpawns: SUNKEN_BARROW_MOB_SPAWNS,
-    nodeSpawns: [],
-    npcSpawns: [],
+    ...SUNKEN_BARROW_LAYOUT,
     exits: [{ edge: 'north', to: 'blackwater-fen' }],
     requiresKey: 'barrow-key',
   },
@@ -380,38 +225,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'Greyford Outpost',
     setting: 'open',
     description: 'A trading post out where the work is. Bring what you dug up.',
-    map: GREYFORD_MAP,
-    mobSpawns: [],
-    nodeSpawns: [],
-    /**
-     * Both inside the yard's two buildings, at the back of the room like every
-     * counter in town, and far enough apart that which one a tap opens is never
-     * a question about pixels.
-     *
-     * The longhouse was scenery while the fettler stood at its door, and the day
-     * they moved in is the day it stopped being: what makes an outpost read as
-     * somewhere people live is a hall with somebody working in it just as well
-     * as an empty one, and a shed built to be nobody's would have been a second
-     * building to find room for out here.
-     */
-    npcSpawns: [
-      { dx: -64, dy: -336, npcId: 'outfitter' },
-      { dx: 320, dy: -288, npcId: 'fettler' },
-    ],
-    buildingSpawns: [
-      { dx: -64, dy: -320, buildingId: 'trading-post' },
-      { dx: 320, dy: -288, buildingId: 'longhouse' },
-    ],
-    // West end of the yard, well clear of both roads and of the counter: a
-    // station is tapped rather than stood at, and a vat on the crossroads would
-    // be the mistake the trainer taught in town three tiles up the north road.
-    // The fletcher's bench stands beside the vat for the reason the vat is here:
-    // what it works — timber off the road south, bars off the forge — is what
-    // the places around the outpost produce.
-    stationSpawns: [
-      { dx: -448, dy: -224, station: 'tannery' },
-      { dx: -320, dy: -224, station: 'bench' },
-    ],
+    ...GREYFORD_LAYOUT,
     exits: [
       { edge: 'south', to: 'old-mill-road' },
       { edge: 'east', to: 'quarry' },
@@ -422,10 +236,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     name: 'Bandit Hideout',
     setting: 'underground',
     description: 'Locked. Whatever they are guarding in there, they guard it well.',
-    map: BANDIT_HIDEOUT_MAP,
-    mobSpawns: BANDIT_HIDEOUT_MOB_SPAWNS,
-    nodeSpawns: [],
-    npcSpawns: [],
+    ...BANDIT_HIDEOUT_LAYOUT,
     exits: [{ edge: 'west', to: 'bandit-camp' }],
     requiresKey: 'hideout-key',
   },

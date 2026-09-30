@@ -3,7 +3,6 @@ import { ENEMIES } from '../../src/data/enemies';
 import { ENEMY_ABILITIES, type EnemyAbilityDefinition } from '../../src/data/enemyAbilities';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { ITEMS, armorTypeOf } from '../../src/data/items';
-import { BANDIT_HIDEOUT_MOB_SPAWNS, TOWN_MOB_SPAWNS } from '../../src/data/spawns';
 import { ZONES } from '../../src/data/zones';
 import { nth } from '../nth';
 import { conColor, enemyDisplayName, scaleEnemyStats } from '../../src/systems/EnemySystem';
@@ -78,10 +77,10 @@ describe('enemyDisplayName', () => {
   });
 });
 
-describe('TOWN_MOB_SPAWNS', () => {
+describe("the town's rats", () => {
   it('spawns fewer enemies at each higher level', () => {
     const countAt = (level: number): number =>
-      TOWN_MOB_SPAWNS.filter((spawn) => spawn.level === level).length;
+      ZONES.town.mobSpawns.filter((spawn) => spawn.level === level).length;
 
     expect(countAt(1)).toBeGreaterThan(countAt(2));
     expect(countAt(2)).toBeGreaterThan(countAt(3));
@@ -89,7 +88,7 @@ describe('TOWN_MOB_SPAWNS', () => {
   });
 
   it('only uses levels the starting area is tuned for', () => {
-    TOWN_MOB_SPAWNS.forEach((spawn) => {
+    ZONES.town.mobSpawns.forEach((spawn) => {
       expect(spawn.level).toBeGreaterThanOrEqual(1);
       expect(spawn.level).toBeLessThanOrEqual(3);
     });
@@ -103,8 +102,7 @@ describe('TOWN_MOB_SPAWNS', () => {
 import { computeEffectiveStats } from '../../src/systems/StatsSystem';
 import { mitigatedDamage } from '../../src/systems/CombatSystem';
 import type { Gear } from '../../src/systems/InventorySystem';
-import { BANDIT_CAMP_MOB_SPAWNS, BEACH_MOB_SPAWNS } from '../../src/data/spawns';
-import type { MobSpawnPoint } from '../../src/data/spawns';
+import type { MobSpawnPoint } from '../../src/data/zoneText';
 import type { EnemyId } from '../../src/types/ids';
 
 interface Combatant {
@@ -487,9 +485,9 @@ describe('difficulty curve', () => {
 
 describe('zone spawn tables', () => {
   const zones: [string, MobSpawnPoint[], EnemyId][] = [
-    ['town', TOWN_MOB_SPAWNS, 'rat'],
-    ['beach', BEACH_MOB_SPAWNS, 'crab'],
-    ['bandit camp', BANDIT_CAMP_MOB_SPAWNS, 'bandit'],
+    ['town', ZONES.town.mobSpawns, 'rat'],
+    ['beach', ZONES.beach.mobSpawns, 'crab'],
+    ['bandit camp', ZONES['bandit-camp'].mobSpawns, 'bandit'],
   ];
 
   // Every zone is starter content: the three of them teach three drop tables,
@@ -514,8 +512,9 @@ describe('zone spawn tables', () => {
    * content — what the door is really gating is the table, not the difficulty.
    */
   it('keeps the hideout to bandits plus the one thing above the band', () => {
-    const trash = BANDIT_HIDEOUT_MOB_SPAWNS.filter((spawn) => spawn.enemyId !== 'bandit-chief');
-    const bosses = BANDIT_HIDEOUT_MOB_SPAWNS.filter((spawn) => spawn.enemyId === 'bandit-chief');
+    const hideout = ZONES['bandit-hideout'].mobSpawns;
+    const trash = hideout.filter((spawn) => spawn.enemyId !== 'bandit-chief');
+    const bosses = hideout.filter((spawn) => spawn.enemyId === 'bandit-chief');
 
     expect(bosses).toHaveLength(1);
     expect(nth(bosses, 0).level).toBe(4);

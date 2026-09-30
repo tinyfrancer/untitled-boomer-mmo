@@ -254,14 +254,9 @@ describe('what the 2D view draws in a room', () => {
     const columns = drawnColumns(counter);
     let served = 0;
     for (const zone of Object.values(ZONES)) {
-      const middle = { x: 0, y: 0 };
-      const people = zone.npcSpawns.map(({ dx, dy, npcId }) => ({
-        x: middle.x + dx,
-        y: middle.y + dy,
-        npcId: npcId as NpcId,
-      }));
-      for (const spawn of zone.buildingSpawns ?? []) {
-        const building = { x: spawn.dx, y: spawn.dy, definition: BUILDINGS[spawn.buildingId] };
+      const people = zone.npcSpawns.map(({ x, y, npcId }) => ({ x, y, npcId: npcId as NpcId }));
+      for (const spawn of zone.buildingSpawns) {
+        const building = { x: spawn.x, y: spawn.y, definition: BUILDINGS[spawn.buildingId] };
         const worker = occupant(building, people);
         if (!worker) continue;
         served += 1;

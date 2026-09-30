@@ -1,51 +1,62 @@
-import { WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES } from '../config/constants';
-import { GRASS_TILE, STONE_TILE, WALL_TILE, paintRect } from './tiles';
+import { layoutZone } from './zoneText';
 
-// The cut stone floor, grass along the south where the road from town arrives,
-// and the rock face across the north — but no longer across the whole of it,
-// which is what the road to the Deep Cut cost this map.
-//
-// An exit reserves a strip of its own edge for arrivals along the entire length:
-// a traveller materialises at whatever fraction of the edge they crossed the
-// other zone's at, `ARRIVAL_INSET` inside it. That inset is a tile and a half,
-// which on a nineteen-row map is the second row down — so opening a road north
-// meant row 1 had to be walkable end to end, and it was solid rock.
-//
-// The beach paid this in water and the quarry pays it in stone, which is the
-// same bill twice: the face moved down to rows 2-4, a shelf runs along the top
-// of it, and the middle of it is open where the shaft was driven north. The two
-// iron veins already stood in that opening, hard against the face, which is what
-// the fiction now says the cut was following.
-const FACE_TOP_ROW = 2;
-const FACE_BOTTOM_ROW = 4;
-// Where the face is broken through. Wide enough that walking out of the quarry
-// is walking rather than threading a doorway, and it takes both iron veins with
-// it (see QUARRY_NODE_SPAWNS).
-const CUT_LEFT_COL = 7;
-const CUT_RIGHT_COL = 17;
 /**
- * How much of the face is left standing at the west end — none of it, past this
- * column. The road to Greyford leaves along the western edge, and an arrival
- * lands anywhere down it, so the face had to stop short of the map's own side
- * the way it already stops short of the top. What is left is a ledge running
- * north under the rock, which is the road.
+ * The cut stone floor, grass along the south where the road from town
+ * arrives, and the rock face across the north, though no longer across the
+ * whole of it: the road to the Deep Cut took that.
+ *
+ * An arrival lands anywhere along the edge it crosses, a tile and a half in,
+ * so opening a road north meant the second row had to be walkable end to end,
+ * and it was solid rock. The beach paid this bill in water and the quarry pays
+ * it in stone: the face moved down to rows 2-4, a shelf runs along the top of
+ * it, and the middle is open where the shaft was driven north. The two iron
+ * veins already stood in that opening, hard against the face, which is what
+ * the fiction now says the cut was following.
+ *
+ * The face stops two columns short of the west edge as well, where the road
+ * to Greyford leaves: what is left there is a ledge running north under the
+ * rock, which is the road.
  */
-const LEDGE_COLS = 2;
-const GRASS_TOP_ROW = 15;
-
-function buildQuarryMap(): number[][] {
-  const map: number[][] = [];
-  for (let row = 0; row < WORLD_HEIGHT_TILES; row++) {
-    map.push(
-      new Array<number>(WORLD_WIDTH_TILES).fill(row >= GRASS_TOP_ROW ? GRASS_TILE : STONE_TILE),
-    );
-  }
-
-  const face = { top: FACE_TOP_ROW, bottom: FACE_BOTTOM_ROW };
-  paintRect(map, { ...face, left: LEDGE_COLS, right: CUT_LEFT_COL - 1 }, WALL_TILE);
-  paintRect(map, { ...face, left: CUT_RIGHT_COL + 1, right: WORLD_WIDTH_TILES - 1 }, WALL_TILE);
-
-  return map;
-}
-
-export const QUARRY_MAP: number[][] = buildQuarryMap();
+export const QUARRY_LAYOUT = layoutZone(
+  'quarry',
+  `
+    _________________________
+    _________________________
+    __#####___________#######
+    __#####____w_____w#######
+    __#####_______c___#######
+    __________v______________
+    _______________v_________
+    ______v____________v_____
+    _____b___________________
+    ____________@_______b____
+    _________________________
+    _______a__________a______
+    _________________________
+    ___________a_____________
+    _________________________
+    .........................
+    .........................
+    .........................
+    .........................
+  `,
+  {
+    '@': { start: true, on: 'stone' },
+    /**
+     * Tin across the open floor and iron hard against the face at the back: the
+     * shape the pond and the ocean make, the gated one further from the way in,
+     * so the level that opens it is earned on the walk to it.
+     */
+    v: { node: 'tin-vein', on: 'stone' },
+    w: { node: 'iron-vein', on: 'stone' },
+    /**
+     * The rats that got in among the spoil heaps, climbing a level with depth:
+     * the road in is the south edge, so the further north the less anyone should
+     * want to stand there with a pickaxe out. Nothing new lives here, on purpose:
+     * what makes the quarry worth the walk is the veins, not a creature.
+     */
+    a: { mob: 'rat', level: 1, on: 'stone' },
+    b: { mob: 'rat', level: 2, on: 'stone' },
+    c: { mob: 'rat', level: 3, on: 'stone' },
+  },
+);
