@@ -36,7 +36,6 @@ export interface ClassDefinition {
   id: ClassId;
   name: string;
   description: string;
-  color: number;
   baseStats: ClassStats;
   startingWeaponId: ItemId;
   /**
@@ -54,7 +53,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     name: 'Warrior',
     description:
       'A stalwart melee fighter with high health and a mighty swing, but must close to melee range.',
-    color: 0x3d5afe,
     baseStats: {
       maxHp: 40,
       speed: 320,
@@ -71,7 +69,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     id: 'wizard',
     name: 'Wizard',
     description: 'A fragile spellcaster who strikes from a distance, trading health for reach.',
-    color: 0x7c3aed,
     baseStats: {
       maxHp: 24,
       speed: 320,
@@ -98,7 +95,6 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
     id: 'ranger',
     name: 'Ranger',
     description: 'A hunter who shoots from range, spending an arrow on every shot.',
-    color: 0x2e7d32,
     baseStats: {
       maxHp: 32,
       speed: 320,
