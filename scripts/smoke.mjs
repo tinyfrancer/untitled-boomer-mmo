@@ -4887,6 +4887,10 @@ async function ranger() {
     rat.setPosition(w.player.x, w.player.y - 150);
     w.setTarget(rat);
   });
+  // Read with a target up, since the frame it has to clear is hidden without
+  // one — and before the shot, which a crit can make the rat's last.
+  await draw();
+  const framed = await corner();
   const shot = await stepFor(
     () =>
       page.evaluate(() => ({
@@ -4899,8 +4903,6 @@ async function ranger() {
   );
   await draw();
   const flying = await drawnCounts();
-  // Read with a target up, since the frame it has to clear is hidden without one.
-  const framed = await corner();
   check(
     "the quiver's bar fits the player column and clears the target frame",
     framed.inside && framed.clear,
