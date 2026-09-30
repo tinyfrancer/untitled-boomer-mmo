@@ -33,7 +33,7 @@ the pan, the food), `AbilityCaster` (whether a button may be pressed, and the sp
 through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `TalkSession` and the counter sessions beside it (`ShopSession`, `BankSession`, `TrainerSession`, `BountySession` and the rest, `economy.md`), `QuestDesk`,
 `ContextMenuSession` (what a press held is about, and what was chosen from it), `TipDesk` (the
 spirit's tips: which to offer, and hearing the answer), and `ApproachDriver`
-(all three click-to-move walks, and the only thing that asks for a route). Each owns its own state,
+(all three click-to-move walks). Each owns its own state,
 is constructed by `ZoneWorld` and reaches the rest of the zone through two things and no others: the
 `WorldContext` they all share — the clock, the character, the player, both channels out of the
 simulation, and the handful of publishers more than one of them needs — and a small `Deps` interface
@@ -153,6 +153,18 @@ claim on a 25x19 grid, and the mill road's knots had to move as whole knots to k
 Writing the zones as text moved every spawn onto the middle of a cell, and that half tile cost two
 fen raiders and a knot another move each.
 
+**The same file holds a creature's way home** (decision 116), since a creature that cannot get home
+never wanders again and only a wandering creature notices anyone. Its home is somewhere its body
+stands, and it is walked home, at 60fps and at 5, from every cell a chase could have led it to —
+inside its leash ring, joined to home without leaving it — where the way home is not a straight
+line. The first run found four homes no walk could end at, all from writing the zones as text: a
+goblin in the trunk of the hardwood beside it, the barrow king (a tile and a half tall) with his feet
+in the rock at the foot of his chamber, and a fen raider and a lurker each living in a gap a tile wide
+between two pools, which a search will not stand a body in. The tree moved, the king got an alcove,
+the lurker moved down a row and the raider's pool gave up a tile. The one kind of cell it skips is a
+slot with no room to turn round in (decision 35), which a press can push a creature into and no route
+takes it out of; the net below is for that.
+
 **There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate
 themselves each frame against `systems/CollisionSystem.ts`, which is the only thing that decides
 what may move where. The arcade physics this replaced was carrying four colliders — player and mobs
@@ -165,11 +177,12 @@ it lives in `systems/CombatSystem.ts` and is called from `ZoneWorld`, which reso
 directions: `updateCombat()` for the player's swings and `updateEnemyAttacks()` for everything
 hitting back.
 
-**A tap routes round what is in the way, and `ApproachDriver` is the only thing that asks**
-(`systems/PathSystem.ts`). `findPath` is A\* over the same tile grid `CollisionSystem` thinks in,
-answering with the points to walk to in order, or `null` — which means "do what you did before there
-was a pathfinder", so the driver's whole handling of it is a fallback to the straight line rather
-than a failure case.
+**A tap routes round what is in the way, and so does a chase** (`systems/PathSystem.ts`). `findPath`
+is A\* over the same tile grid `CollisionSystem` thinks in, answering with the points to walk to in
+order, or `null` — which means "do what you did before there was a pathfinder", so a caller's first
+handling of it is a fallback to the straight line rather than a failure case. It routes **a body of
+any shape**, half extents rather than one number, since a rat is a tile and a quarter long and six
+tenths of one wide; the player is the square case.
 
 What makes a cell passable is **`isBlocked` on the body being routed**, rather than a second grid
 built by rasterising the blockers: testing the whole body at a point _is_ the configuration-space
@@ -200,6 +213,13 @@ not undoing:
   hand-built worlds and over every zone as `populateZone` builds it. Four routes that read perfectly
   were refuted that way, which is the whole reason the two rules above exist.
 
+**A search is paid for once a zone, not once a tap** (decision 116). Where a body of one size stands
+in each cell is remembered for the life of the collision world it was worked out in, since what is
+solid never changes inside a zone, and the cells a search has still to look at are a binary heap
+rather than a scanned list. Taps asked a search once each; creatures ask as often as their quarry
+moves a tile, on maps that are about to be three times the size. On a 50×38 stand-in for a rebuilt
+zone the mean search went from 5.7ms to 1.9ms, the worst being the first, which fills the footings.
+
 **Walking one is `Player`'s and asking for one is the caller's**, which is the split that let this be
 wired in without touching anything else. `Player` holds a list of legs and `moveTo` sets a route of
 one — which is what a walk always was — so `hasMoveTarget()` stays true across a whole route, and the
@@ -207,10 +227,26 @@ two things that read it (`AbilityCaster` refusing a cast, `resolveApproach` aski
 over) went on meaning what they meant. A leg is **given up inside the frame that reaches it** rather
 than one per frame: `stepToward` reports arrival before it moves, so a leg a frame is a stall at every
 waypoint — a fifth of a second of one at 5fps, exactly where the corner was that put the waypoint
-there. `ApproachDriver` is the only caller, so the plain walk and the walk up to a counter are routed
-and **a pursuit is not**: a plan re-made every frame for a moving mob swings between two ways round an
-obstacle as its quarry drifts, which is the same call `docs/archive/interiors_and_light_plan.md` makes about
-mobs not pathing.
+there.
+
+**A chase is a route kept, not a route re-made** (`world/Chase.ts`, decision 116). Something that
+moves cannot be routed once at a tap, and decision 37 kept the pursuit straight because a plan re-made
+every frame for a moving quarry swings between two ways round an obstacle as it drifts. A `Chase`
+answers that: **straight at the quarry whenever the body has a clear line**, which is most of every
+chase and costs a line check; otherwise **round what is in the way, on a route kept until the quarry
+is a tile off its end** and never re-made twice in half a second; the last leg is the quarry where it
+is now. A creature chasing the player, a creature walking home and the player's pursuit are the same
+object, one each, so a tap on a creature behind a building walks round it. Both kinds of chaser
+**stop in reach and in sight**: a staff reaches 200, and a wizard at the back of a room would
+otherwise stop against the wall with the creature the other side of it. No creature's reach is longer
+than a wall and two bodies, so for one of them it is the rule for the day a reach is.
+
+A chase also counts **how long it has been going nowhere**, off what the body did rather than what
+the search said: on a route or a clear line, a step that went under a quarter of the way it was set;
+with no route, a step that got no nearer, since a chase with no route presses straight as every walk
+did before there was a pathfinder, and that press may slide along a shore for ever or may walk the
+length of a passage a search refuses. A creature's chase gives up on the player at `GIVE_UP_MS`
+(two seconds) of it, and its walk home is put home at the same.
 
 **A walk toward something solid is routed to beside it and finished by pressing into it**
 (`standNear`). Almost everything worth tapping is solid — every tree, every vein, every building — and
@@ -232,10 +268,20 @@ route and happens with none involved.
 
 **Aggro contract**: `Mob.engage()` starts a chase, `disengage()` drops aggro _and heals the mob
 to full_ on its way back to spawn. Enemies with `aggressive: true` and an `aggroRadius` engage
-on their own when a wandering mob sees the player inside that radius (bandits); passive enemies
-only ever retaliate. Both leashing (running past `leashRadius`) and player death
+on their own when a wandering mob **sees** the player inside that radius (bandits) and has a way to
+them (decision 116): a wall between them hides the player, so cover is a way past a camp, and a
+creature with no way to the player never starts a chase it could only give up. Asked cheapest first
+— the radius, then the line of sight, then a search at most every half second — so the search is
+only made for a player already close and in plain sight. Passive enemies only ever retaliate.
+Leashing (running past `leashRadius`, still a ring round home as the crow flies, so one led round a
+building gives up at the ring a player can learn by looking), **giving up** (a chase that has gone
+nowhere for `GIVE_UP_MS`: across water, into a room too narrow for it) and player death all
 route through `disengage()`, so a fight always restarts from a clean slate — reuse it rather than
-resetting mob state by hand. `Mob.update()` takes the player's position, since chasing needs it,
+resetting mob state by hand. Giving up is what makes standing somewhere a creature can never reach
+an escape rather than a turret: a ranger shooting it from there heals it every two seconds.
+The walk home is a chase too, routed round whatever it was led round, and **a walk home that goes
+nowhere for as long ends with the creature put there**, since one stuck on the way stays out of its
+zone's fights for good. Nothing draws that as a moment; the sweep above is what keeps it rare. `Mob.update()` takes the player's position, since chasing needs it,
 plus the frame delta and the collision world, since it moves itself. All three AI states steer
 through `stepToward`, so the arrival band is `arriveRadius` — never a fixed one. The 2px and 4px
 thresholds they used to carry were the same slow-frame bug `arriveRadius` exists to fix, one level

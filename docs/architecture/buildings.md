@@ -124,7 +124,19 @@ could never land is never shouted, and again when it resolves, so stepping behin
 shout is a dodge. It is deliberately **not** asked of an auto-attack in either direction — a tree
 trunk is a blocker exactly as a wall is, so gating every swing would make every tree in the game
 something to fight around, which is a retune of the whole of combat rather than the fix to a bug the
-hollowing created. The segment test is exact rather than sampled, because the thinnest solid thing in
+hollowing created. Two more things ask it since creatures learned to walk round things (decision
+116): **an aggressive creature notices only a player it can see**, so a building is cover to pass a
+camp behind; and **anything closing on another stops only in reach and in sight**, a creature on the
+player and the player's pursuit alike, so a wizard at the back of a room walks out and round to what
+they tapped behind its wall rather than stopping against it. A swing still asks nothing: no creature's
+reach is longer than a wall's quarter tile and two bodies, so there is no swing through a wall for it
+to refuse.
+
+**A room too narrow for a creature is somewhere it gives up on you.** A route may not turn a corner
+without a quarter tile to spare on each side (decision 35), and a rat, a tile and a quarter long, has
+an eighth of a tile each side in a room two tiles wide: the cottages and the inn. A chase that cannot
+get there goes nowhere, and a creature whose chase has gone nowhere for two seconds goes home
+(decision 116). Everything the player's size follows them into any room they can walk into. The segment test is exact rather than sampled, because the thinnest solid thing in
 the world is a wall at a quarter of a tile and a sampling step fine enough for that is a constant
 that quietly stops being fine enough the day something thinner is built.
 
