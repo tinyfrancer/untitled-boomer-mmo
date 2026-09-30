@@ -173,6 +173,14 @@ belongs in the collaborator that owns the state it reads. What stays in `ZoneWor
 the tick order, what is selected, the publishers that speak only on change, and the three things
 that stop everything at once: a zone change, a death, a teardown.
 
+**Anything closing on something that moves is a `Chase`** (`world/Chase.ts`, decision 116): a
+creature on the player, a creature walking home, and the player's pursuit. It goes straight while the
+body has a clear line and otherwise keeps one route until the quarry drifts a tile off its end, never
+a plan a frame, which swings between two ways round an obstacle. Both chasers stop **in reach and in
+sight**, an aggressive creature notices only a player it can see and has a way to, and a creature
+whose chase goes nowhere for `GIVE_UP_MS` gives up through `disengage()`; the leash is still a ring
+round home as the crow flies. `docs/architecture/simulation.md` has why.
+
 **`GameContext` is the session** — everything that outlives a zone — and the only thing that builds
 or tears down a world. **A zone change is a view rebuild**: every canvas the view makes is made and
 let go through one pool (`render2d/canvases.ts`), whatever makes one lets it go, and smoke holds the
@@ -197,7 +205,9 @@ building is a block of its letter exactly its footprint, whoever works in one is
 rather than placed, and a zone's size is its text's. Walking is the only way into a zone. **An exit needs its whole shared edge walkable on both sides, one arrival-inset
 in**, and every spawn, building and wander disc is held by sweeps (`ZoneSystem.test.ts`,
 `BuildingSystem.test.ts`, `spawnSafety.test.ts`, `render2d/picking.test.ts`) — expect a new zone or
-exit to cost a spawn or a building moved somewhere else.
+exit to cost a spawn or a building moved somewhere else. **So is every creature's way home**
+(`spawnSafety.test.ts`): a home its body stands in, with room to turn round, walked back to from
+anywhere a chase inside its ring can lead it; nobody lives in a gap exactly a body's width.
 
 **Data-driven definitions** (`src/data/`, keyed by the id unions in `src/types/ids.ts`): classes,
 items, enemies, loot, quests, bounties, recipes, zones and the text they are written in. Prefer a row over code — a new

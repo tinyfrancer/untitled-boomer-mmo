@@ -2794,3 +2794,69 @@ Claude's, alongside them:
   minimap is the map looked at mid-fight.
 - **The switch is the session's to set** (`GameContext`), as taking the save away is, since nothing
   in a zone reads it.
+
+## 116. Creatures walk round things, notice only who they can see and reach, give up on a chase going nowhere, and leash at the ring round home; the player's pursuit walks round too
+
+**2026-09-30 · the user, asked by Claude, building the plan's phase C4 · reverses 26 and the pursuit half of 37**
+
+C4 is decision 86's smarter creatures: they path round walls and obstacles, with leashing reworked
+for it. The user settled four forks at the start of the phase, each on Claude's recommendation:
+
+- **A creature that cannot reach the player gives up and goes home**, healing as a leash does, after
+  its chase has gone nowhere for two seconds (`GIVE_UP_MS`). Standing somewhere it can never get to is
+  an escape rather than a turret: a ranger shooting it from there heals it every two seconds.
+  **Rejected:** waiting at the nearest spot it can stand and throwing what it can, RuneScape's
+  safespot, a known trick and a cheap kill; pressing straight at the player, what every creature did.
+- **The leash stays a ring round home, as the crow flies**, and the walk home is routed. One led round
+  a building gives up at the same ring as one led across open ground, which is the one a player can
+  learn by looking. **Rejected:** the walk home measured along its route, so a creature led round a
+  building gives up sooner; giving up after about eight seconds without landing or taking a blow, the
+  ring kept as an outer limit.
+- **An aggressive creature notices only a player it can see.** A wall between them hides the player,
+  so cover is a way past a camp, and one that sees them through a doorway comes round. **Rejected:**
+  the radius alone, through walls, now walking round to reach them.
+- **The player's pursuit walks round too**, on the same chase the creatures run. **Rejected:** keeping
+  it straight as decision 37 left it.
+
+Claude's, alongside them:
+
+- **A chase is a route kept rather than re-made** (`world/Chase.ts`): straight at the quarry while
+  the body has a clear line, and otherwise round what is in the way on a route kept until the quarry
+  is a tile off its end, never re-planned twice in half a second, its last leg the quarry where it is
+  now. That is the answer to 37's objection, that a plan re-made every frame for something moving
+  swings between two ways round an obstacle as it drifts, which a test holds. **Rejected:** a plan
+  every frame; a plan on a timer alone, which re-plans a quarry standing still; flow fields over the
+  zone, one per quarry, which answer many chasers at once where this game has one or two.
+- **Going nowhere is measured off what the body did**, not off what the search said: on a route or a
+  clear line, a step that went under a quarter of the way it was set; with no route, a step that got
+  no nearer, since a chase with no route presses straight and that press may walk the length of a
+  passage a search refuses. **Rejected:** "no route" alone, which gave up on a creature pressing
+  straight down a corridor to the player, and missed a route the body could not walk.
+- **Noticing asks for a way as well as for sight**, cheapest first: the radius, the line, then a
+  search at most every half second. A creature with no way to the player never starts a chase it
+  could only give up, which would otherwise have been a creature walking to the shore and home again
+  for as long as the player stood across the water.
+- **Both chasers stop in reach and in sight.** A staff reaches 200, so a wizard at the back of a room
+  would have stopped against the wall with the creature the other side. **A swing still asks nothing**
+  and decision 44 stands: no creature's reach is longer than a wall and two bodies, so a gate on a
+  creature's swing refused nothing in the game and made a body standing inside a trunk untouchable.
+  It was written and taken back.
+- **A walk home that goes nowhere as long ends with the creature put there.** One stuck on the way
+  never wanders again, and only a wandering creature notices anyone. A slot exactly a body's width is
+  somewhere a press can push one and no route takes it out of (decision 35), which is the case.
+- **The pathfinder routes any body** (half extents rather than one number, since a rat is a tile and
+  a quarter long), **remembers its footings for the life of a zone** per body size, and **searches with
+  a heap**: on a 50×38 stand-in for a rebuilt zone the mean search fell from 5.7ms to 1.9ms. Rejected:
+  routing a creature as the square its body fits in, which gave a rat the room of something twice as
+  broad.
+- **The spawn-safety sweep holds each creature's way home**: its home somewhere its body stands, and
+  a walk home from every cell a chase inside its ring could lead it to, at 60fps and at 5. It found
+  four homes no walk could end at, all from C1's half-tile snap: a goblin in the trunk of a hardwood
+  (the tree moved), the barrow king's feet in the rock (an alcove behind him), and a fen raider and a
+  lurker in slots a tile wide between pools (the lurker moved, the pool gave up a tile).
+
+**What it costs:** a rat cannot follow the player into a room two tiles wide (the cottages and the
+inn), since a route may not turn without a quarter tile to spare each side and a rat has an eighth;
+it gives up there. Loosening the clearance for it would have re-opened routes decisions 34 and 35
+closed for the player. Every creature the player's size follows them into any room they can walk
+into.

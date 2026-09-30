@@ -51,8 +51,12 @@ lore bible in `docs/lore/`: the Veymarch, a drowned kingdom's frontier whose lan
 its peoples, factions and places, the spirit who lit the light that drowned it, the tone and the
 names; decision 114), **and C3** (the minimap: the zone map windowed round the player in the
 top-right corner, the creatures near them in their names' colours, exits as arrows on its rim, a tap
-opening the zone map, and a switch in Options kept on the character; decision 115). **Next: C4**,
-smarter creatures. Update this line as each phase lands: which phase, and which is next.
+opening the zone map, and a switch in Options kept on the character; decision 115), **and C4**
+(smarter creatures: a chase routed round what is in the way and kept rather than re-made, the
+player's pursuit on the same chase, noticing only who a creature can see and reach, giving up on a
+chase going nowhere, the leash still a ring round home, and each creature's way home held by a sweep;
+decision 116). **Next: C5**, the first two zones rebuilt at 3×. Update this line as each phase lands:
+which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -500,8 +504,21 @@ saved position stops meaning anything.
   room and under it on a phone held upright. **A tap opens the zone map**, and a second shuts it.
   **A switch in Options** takes it down, kept on the character (save version 101, version 2's first
   migration step). Smoke gained a `minimap` section. All three forks were the user's (decision 115).
-- **C4 — Smarter creatures.** Mobs path around walls and obstacles (reversing decision 26), with
-  leashing reworked for the distances. The spawn-safety sweeps run over the new maps.
+- **C4 — Smarter creatures. (Landed.)** **A chase is a route kept, not re-made** (`world/Chase.ts`):
+  straight at the quarry while the body has a clear line, otherwise round what is in the way on a
+  route kept until the quarry drifts a tile off its end and never re-planned twice in half a second,
+  which answers decision 37's swinging; a creature on the player, a creature walking home and **the
+  player's pursuit** are the same object, and both kinds stop **in reach and in sight**. **An
+  aggressive creature notices only a player it can see** and has a way to. **A chase that goes
+  nowhere for two seconds gives up** and goes home healed, so standing somewhere a creature can never
+  reach is an escape rather than a turret; nowhere is measured off what the body did, not what the
+  search said. **The leash stays a ring round home**, and a walk home that goes nowhere as long ends
+  with the creature put there. The pathfinder routes **any body shape**, remembers its footings for
+  the life of a zone and searches with a heap, a third of the cost on a rebuilt zone's size. **The
+  spawn-safety sweep holds each creature's way home**, walked at 60fps and at 5; it found four homes
+  no walk could end at from C1's half-tile snap, and a tree, the barrow king, a lurker and a pool
+  tile moved. A rat cannot follow the player into a room two tiles wide, and gives up there. All four
+  forks were the user's (decision 116).
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
   activity spots each. Spawns, nodes and stations re-placed; the progression test re-held. **Every
   creature, node, station and building a rebuild adds is drawn in the phase that adds it** (a row in
