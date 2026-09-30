@@ -80,7 +80,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   },
   quarry: {
     id: 'quarry',
-    name: 'Quarry',
+    name: 'The New Cut',
     setting: 'open',
     description: 'Tin and iron in the rock, and rats in the spoil. Bring a pickaxe.',
     ...QUARRY_LAYOUT,
@@ -117,7 +117,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   },
   'bandit-camp': {
     id: 'bandit-camp',
-    name: 'Bandit Camp',
+    name: 'Redrag Camp',
     setting: 'open',
     description: 'Armour and coin, off men who swing first. Come geared.',
     ...BANDIT_CAMP_LAYOUT,

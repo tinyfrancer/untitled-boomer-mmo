@@ -271,7 +271,7 @@ describe('describeObjective', () => {
   it('names the item, the creature or the place', () => {
     expect(describeObjective(bones.objective)).toBe('Rat Bones');
     expect(describeObjective(trouble.objective)).toBe('Bandit');
-    expect(describeObjective(road.objective)).toBe('Quarry');
+    expect(describeObjective(road.objective)).toBe('The New Cut');
   });
 });
 

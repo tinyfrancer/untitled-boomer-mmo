@@ -2237,7 +2237,7 @@ describe('the map', () => {
     expect(line()?.textContent).toBe('Secrets 1 / 2');
     expect(parent.querySelectorAll('.hud-map__svg [data-secret]')).toHaveLength(0);
 
-    events.emit(ZONE_ENTERED_EVENT, 'quarry');
+    events.emit(ZONE_ENTERED_EVENT, 'deep-cut');
     expect(line()?.classList.contains('hud-hidden')).toBe(true);
   });
 
