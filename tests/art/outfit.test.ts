@@ -121,7 +121,7 @@ describe('what a figure does', () => {
       expect.arrayContaining(['idle', 'walk', 'attack', 'cast', 'hurt', 'death']),
     );
     expect(animations({ weapon: 'rusty-sword' })).not.toContain('shoot');
-    expect(animations({ weapon: 'apprentice-wand' }, 'wizard')).toContain('cast');
+    expect(animations({ weapon: 'apprentice-staff' }, 'wizard')).toContain('cast');
     expect(animations({ weapon: 'shortbow', offhand: 'worn-quiver' }, 'ranger')).toContain('shoot');
   });
 
@@ -130,7 +130,7 @@ describe('what a figure does', () => {
     expect(animations({ weapon: 'rusty-sword', offhand: 'brown-shield' })).not.toContain('cast');
     // An orb or a lantern is held up in the hand the spell leaves.
     expect(
-      animations({ weapon: 'apprentice-wand', offhand: 'apprentice-orb' }, 'wizard'),
+      animations({ weapon: 'apprentice-staff', offhand: 'apprentice-orb' }, 'wizard'),
     ).toContain('cast');
   });
 
@@ -144,7 +144,7 @@ describe('what a figure does', () => {
 
   it('pictures a person facing the viewer, for the creation screen', () => {
     const picture = portrait(
-      playerGetup('wizard', DEFAULT_LOOK, { ...NO_GEAR, weapon: 'apprentice-wand' }),
+      playerGetup('wizard', DEFAULT_LOOK, { ...NO_GEAR, weapon: 'apprentice-staff' }),
     );
     expect([picture.width, picture.height]).toEqual([32, 48]);
     expect(picture.pixels).toHaveLength(32 * 48 * 4);

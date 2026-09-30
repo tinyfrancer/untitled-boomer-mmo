@@ -223,8 +223,8 @@ describe('describing an item', () => {
   });
 
   it('reads a staff as a weapon and a pole as a tool', () => {
-    expect(describeItem('apprentice-wand').subtitle).toBe('Weapon');
-    expect(valueOf(describeItem('apprentice-wand'), 'Reach')).toBe('200');
+    expect(describeItem('apprentice-staff').subtitle).toBe('Weapon');
+    expect(valueOf(describeItem('apprentice-staff'), 'Reach')).toBe('200');
     expect(describeItem('fishing-pole').subtitle).toBe('Tool');
     expect(describeItem('fishing-pole').uses).toContain('Equip it to fish');
   });

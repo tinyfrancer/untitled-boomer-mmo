@@ -227,7 +227,7 @@ _picks_ a fight with one — `decideAfkAction` filters it out of what is in reac
 leaves it off the offline list — because a night parked beside him would mint sixty of the only
 loot in the game that comes off one creature. It is still answered once it engages: something
 already chasing an AFK character is arriving whether or not the camp chose it. His table is the one
-place `cutthroats-bandana`, `cutthroats-blade` and `stolen-wand` exist, and
+place `cutthroats-bandana`, `cutthroats-blade` and `stolen-staff` exist, and
 `tests/systems/uniqueLoot.test.ts` holds that over the data — uniqueness is nothing but every other
 table not naming them, which is exactly what stops being true the day someone pads one.
 

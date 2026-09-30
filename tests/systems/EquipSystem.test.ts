@@ -23,7 +23,7 @@ describe('canEquip', () => {
   });
 
   it('never restricts weapons and tools, which name no armor type', () => {
-    expect(canEquip('apprentice-wand', 'warrior').ok).toBe(true);
+    expect(canEquip('apprentice-staff', 'warrior').ok).toBe(true);
     expect(canEquip('rusty-sword', 'wizard').ok).toBe(true);
     expect(canEquip('felling-axe', 'wizard').ok).toBe(true);
   });
@@ -45,14 +45,14 @@ describe('equippableFrom', () => {
 describe('stripIllegalGear', () => {
   it('moves gear the class may no longer wear back into the bag', () => {
     const result = stripIllegalGear(
-      { ...EMPTY_GEAR, chest: 'brown-chestplate', weapon: 'apprentice-wand' },
+      { ...EMPTY_GEAR, chest: 'brown-chestplate', weapon: 'apprentice-staff' },
       { 'rat-bones': 2 },
       'wizard',
     );
     expect(result.gear.chest).toBeNull();
     expect(result.inventory).toEqual({ 'rat-bones': 2, 'brown-chestplate': 1 });
     // The staff carries no armor type, so it stays equipped.
-    expect(result.gear.weapon).toBe('apprentice-wand');
+    expect(result.gear.weapon).toBe('apprentice-staff');
   });
 
   it('stacks a stripped piece onto one already in the bag', () => {

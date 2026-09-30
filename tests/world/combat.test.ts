@@ -50,7 +50,7 @@ describe('a fight', () => {
     };
 
     expect(rangeWith('rusty-sword')).toBe(80);
-    expect(rangeWith('apprentice-wand')).toBe(200);
+    expect(rangeWith('apprentice-staff')).toBe(200);
     expect(rangeWith(null)).toBe(64);
   });
 });

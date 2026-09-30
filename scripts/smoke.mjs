@@ -3463,7 +3463,7 @@ async function bagSheet() {
   // gear, tools, food and materials to draw.
   const ONE_OF_EACH = {
     'rusty-sword': 1,
-    'apprentice-wand': 1,
+    'apprentice-staff': 1,
     'rat-bones': 12,
     'rat-meat': 7,
     'brown-chestplate': 1,

@@ -79,7 +79,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       attackCooldownMs: 1400,
       perLevel: { maxHp: 3, strength: 0, intellect: 2, agility: 0 },
     },
-    startingWeaponId: 'apprentice-wand',
+    startingWeaponId: 'apprentice-staff',
   },
   /**
    * The bow's class, and the third answer to the same fight: the warrior stands

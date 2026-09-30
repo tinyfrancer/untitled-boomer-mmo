@@ -265,7 +265,8 @@ viewer and over the arm, or a light in the hand, an orb or a lantern, which a sp
 a quiver is worn on the back. A figure plays the blow its weapon makes, `cast` unless a bow or a
 shield leaves it no hand to cast from, and `shoot` only with a bow. **The wizard's weapons are
 staves** (decision 107): a wand read as a dagger at the size a figure is drawn, so the three were
-renamed to what they are drawn as, their ids kept for the saves that name them.
+renamed to what they are drawn as, and their ids with them once version 1's saves had retired
+(decision 113).
 
 **A character is made in a look** (`CharacterState.look`, decision 107): a skin (pale, fair, tan
 or deep, each a ramp), a hair colour (brown, black, fair, red or grey, grey drawn a step lighter

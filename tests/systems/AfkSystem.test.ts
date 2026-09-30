@@ -197,7 +197,7 @@ describe('afkGatherSkill', () => {
 
   it('makes a weapon or an empty hand the fighting camp', () => {
     expect(afkGatherSkill(holding('rusty-sword'))).toBeNull();
-    expect(afkGatherSkill(holding('apprentice-wand'))).toBeNull();
+    expect(afkGatherSkill(holding('apprentice-staff'))).toBeNull();
     expect(afkGatherSkill(holding(null))).toBeNull();
     // An axe you fight with is not an axe you fell trees with.
     expect(afkGatherSkill(holding('brown-axe'))).toBeNull();
