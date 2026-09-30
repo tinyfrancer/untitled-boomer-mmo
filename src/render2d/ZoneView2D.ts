@@ -1,10 +1,11 @@
 import { classSprite, creatureSprite, npcSprite } from '../art/cast';
 import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
+import { ART_PIXEL } from '../art/budget';
 import { PLACEHOLDERS } from '../art/index';
 import { SIGNPOST } from '../art/sprites/props';
 import { TILE_SIZE } from '../config/constants';
 import { ABILITIES } from '../data/abilities';
-import { occupant } from '../data/buildings';
+import { buildingRect, occupant } from '../data/buildings';
 import { npcName } from '../data/npcs';
 import { titleName } from '../systems/AchievementSystem';
 import { bountyMarker } from '../systems/BountySystem';
@@ -158,7 +159,17 @@ export class ZoneView2D implements ZoneView {
       this.sheets.set(this.setting, sheet);
     }
     this.sheet = sheet;
-    this.ground = new BakedGround(this.pool, sheet, world.zone.map, this.setting);
+    // Nothing strewn on a building's footprint, whose floor it would show through.
+    const floors = world.buildings.map(buildingRect);
+    this.ground = new BakedGround(this.pool, sheet, world.zone.map, this.setting, (x, y, w, h) =>
+      floors.some(
+        (rect) =>
+          (x + w) * ART_PIXEL > rect.left &&
+          x * ART_PIXEL < rect.right &&
+          (y + h) * ART_PIXEL > rect.top &&
+          y * ART_PIXEL < rect.bottom,
+      ),
+    );
     this.text = new TextCache(this.pool);
     this.buildings = world.buildings.map(
       (building) =>

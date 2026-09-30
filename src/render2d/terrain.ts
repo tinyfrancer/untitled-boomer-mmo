@@ -1,6 +1,7 @@
 import { BUDGET, TILE_PIXELS } from '../art/budget';
 import { frameKey } from '../art/compile';
 import { composeGround } from '../art/ground';
+import { scatterOver } from '../art/scatter';
 import type { ZoneSetting } from '../types/ids';
 import type { Camera2D } from './camera';
 import type { CanvasPool } from './canvases';
@@ -41,10 +42,13 @@ interface MovingCell {
   frames: { source: HTMLCanvasElement; x: number; y: number }[];
 }
 
+/** A rectangle in art pixels from the map's corner. */
+export type KeepClear = (x: number, y: number, width: number, height: number) => boolean;
+
 /**
  * A zone's ground, drawn once onto a canvas of its own when the zone is built,
- * with the cells that move (water) listed to be drawn over it each frame.
- * A frame draws the window the camera sees in one call.
+ * with its scatter on it and the cells that move (water) listed to be drawn
+ * over it each frame. A frame draws the window the camera sees in one call.
  */
 export class BakedGround {
   private readonly pool: CanvasPool;
@@ -58,6 +62,7 @@ export class BakedGround {
     sheet: SpriteSheet,
     map: readonly (readonly number[])[],
     setting: ZoneSetting,
+    keepClear?: KeepClear,
   ) {
     this.pool = pool;
     const art = composeGround(map, setting, APRON_TILES);
@@ -117,6 +122,12 @@ export class BakedGround {
       edgeColumn += 1;
       this.moving.push({ x, y, frames });
     });
+
+    // Baked with the ground rather than drawn standing: it is ground, a tuft
+    // underfoot, and costs a frame nothing this way.
+    for (const { sprite, x, y } of scatterOver(map, keepClear)) {
+      sheet.drawAt(context, frameKey(sprite, 'still', null, 0), x + this.origin, y + this.origin);
+    }
 
     // The apron fades into the haze over its first few tiles, so the edge of
     // the map is somewhere the ground gives out rather than a wall.

@@ -713,6 +713,32 @@ const PLACEHOLDER_ICON: SpriteDef = {
 };
 
 // ---------------------------------------------------------------------------
+// Scatter: a grey fleck.
+// ---------------------------------------------------------------------------
+
+const PLACEHOLDER_SCATTER: SpriteDef = {
+  id: 'placeholder-scatter',
+  kind: 'scatter',
+  width: 8,
+  height: 8,
+  legend: { a: 'metal.1', b: 'metal.2', c: 'metal.3' },
+  animations: {
+    still: [
+      grid(`
+        ........
+        ........
+        ...cc...
+        ..cbba..
+        ..bbaa..
+        ...aa...
+        ........
+        ........
+      `),
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
 // A tile: a checker nobody could take for ground.
 // ---------------------------------------------------------------------------
 
@@ -742,6 +768,7 @@ const PLACEHOLDER_TILE: SpriteDef = {
 /** The stand-in for each kind, which is also what the budget is held against in full. */
 export const PLACEHOLDERS: Readonly<Record<SpriteKind, SpriteDef>> = {
   tile: PLACEHOLDER_TILE,
+  scatter: PLACEHOLDER_SCATTER,
   person: PLACEHOLDER_PERSON,
   beast: PLACEHOLDER_BEAST,
   prop: PLACEHOLDER_PROP,
