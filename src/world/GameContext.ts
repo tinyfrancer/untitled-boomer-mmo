@@ -5,6 +5,8 @@ import { saveService, type CharacterState } from '../persistence';
 import { writeSaveExport, type SaveExport, type SaveExportKind } from '../persistence/saveFile';
 import type { OfflineAfkReport } from '../systems/OfflineAfkSystem';
 import {
+  MINIMAP_SET_REQUESTED_EVENT,
+  MINIMAP_STATE_CHANGED_EVENT,
   SAVE_EXPORT_REQUESTED_EVENT,
   SAVE_EXPORTED_EVENT,
   type AchievementUnlock,
@@ -87,6 +89,13 @@ export class GameContext {
     this.subscriptions.listen(SAVE_EXPORT_REQUESTED_EVENT, (kind) =>
       this.events.emit(SAVE_EXPORTED_EVENT, this.exportSave(kind)),
     );
+    // The session's too: nothing in a zone reads it, and it is kept on the
+    // character whichever zone it is switched in.
+    this.subscriptions.listen(MINIMAP_SET_REQUESTED_EVENT, (on) => {
+      this.character.setMinimapShown(on);
+      this.events.emit(MINIMAP_STATE_CHANGED_EVENT, on);
+      this.persist();
+    });
   }
 
   /** The world running right now. A zone change replaces it with another. */

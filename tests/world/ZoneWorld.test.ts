@@ -4,11 +4,15 @@ import { harness, mobsByReach, nodeNamed } from './harness';
 import { ZONES } from '../../src/data/zones';
 import {
   AFK_SET_REQUESTED_EVENT,
+  CREATURES_CHANGED_EVENT,
   PLAYER_DIED_EVENT,
   PLAYER_TILE_CHANGED_EVENT,
   ZONE_ENTERED_EVENT,
+  type CreatureDot,
 } from '../../src/ui/uiEvents';
 import { MAX_CHARACTER_LEVEL, TILE_SIZE } from '../../src/config/constants';
+import { MINIMAP_REACH, toTile } from '../../src/systems/MapSystem';
+import type { ZoneWorld } from '../../src/world/ZoneWorld';
 
 /**
  * The core loop, with nothing rendering it: what a zone is made of, a fight
@@ -271,6 +275,87 @@ describe('what the world tells the map', () => {
     kit.tick(1);
 
     expect(kit.emissions(PLAYER_TILE_CHANGED_EVENT).at(-1)).toEqual([{ x: 3.5, y: 6.25 }]);
+  });
+});
+
+/**
+ * The minimap's creatures (decision 115): the one moving thing the HUD is told
+ * about besides the player, on the same terms — whole tiles, from the tick, and
+ * only what the minimap can show.
+ */
+describe('what the world tells the minimap', () => {
+  /** Stands the player and one rat on tiles, with every other creature put out of reach. */
+  const stage = (
+    kit: ReturnType<typeof harness>,
+    player: { x: number; y: number },
+    rat: { x: number; y: number },
+  ): ZoneWorld['mobs'][number] => {
+    const [first, ...rest] = kit.world.mobs;
+    if (!first) throw new Error('town has no creatures');
+    kit.world.teleport((player.x + 0.5) * TILE_SIZE, (player.y + 0.5) * TILE_SIZE);
+    first.setPosition((rat.x + 0.5) * TILE_SIZE, (rat.y + 0.5) * TILE_SIZE);
+    for (const mob of rest) mob.takeDamage(mob.hp);
+    return first;
+  };
+  // A millisecond a frame, so nothing wanders out of the tile it was put on.
+  const frame = (kit: ReturnType<typeof harness>): void => void kit.tick(1, 1);
+  const latest = (kit: ReturnType<typeof harness>): CreatureDot[] =>
+    (kit.emissions(CREATURES_CHANGED_EVENT).at(-1)?.[0] as CreatureDot[] | undefined) ?? [];
+
+  it('says nothing before the first frame, then names each creature in reach in tiles', () => {
+    const kit = harness();
+    const rat = stage(kit, { x: 2, y: 9 }, { x: 6, y: 9 });
+    expect(kit.emissions(CREATURES_CHANGED_EVENT)).toEqual([]);
+
+    frame(kit);
+
+    expect(latest(kit)).toEqual([{ ...toTile(rat.x, rat.y), level: rat.level, boss: false }]);
+  });
+
+  it('leaves out a creature further than the minimap reaches', () => {
+    const kit = harness();
+    stage(kit, { x: 1, y: 9 }, { x: 1 + MINIMAP_REACH + 1, y: 9 });
+    frame(kit);
+    expect(latest(kit)).toEqual([]);
+
+    kit.world.mobs[0]?.setPosition((1 + MINIMAP_REACH + 0.5) * TILE_SIZE, 9.5 * TILE_SIZE);
+    frame(kit);
+    expect(latest(kit)).toHaveLength(1);
+  });
+
+  it('speaks when a creature crosses a tile, and not while it moves inside one', () => {
+    const kit = harness();
+    const rat = stage(kit, { x: 2, y: 9 }, { x: 6, y: 9 });
+    frame(kit);
+    const settled = kit.emissions(CREATURES_CHANGED_EVENT).length;
+
+    rat.setPosition(6.2 * TILE_SIZE, 9.8 * TILE_SIZE);
+    frame(kit);
+    expect(kit.emissions(CREATURES_CHANGED_EVENT)).toHaveLength(settled);
+
+    rat.setPosition(7.2 * TILE_SIZE, 9.8 * TILE_SIZE);
+    frame(kit);
+    expect(kit.emissions(CREATURES_CHANGED_EVENT)).toHaveLength(settled + 1);
+  });
+
+  it('drops a creature the moment it dies', () => {
+    const kit = harness();
+    const rat = stage(kit, { x: 2, y: 9 }, { x: 6, y: 9 });
+    frame(kit);
+    expect(latest(kit)).toHaveLength(1);
+
+    rat.takeDamage(rat.hp);
+    frame(kit);
+    expect(latest(kit)).toEqual([]);
+  });
+
+  it('marks a boss', () => {
+    const kit = harness({ zoneId: 'bandit-hideout' });
+    const chief = kit.world.mobs.find((mob) => mob.definition.boss);
+    if (!chief) throw new Error('the hideout has no boss');
+    kit.world.teleport(chief.x - TILE_SIZE * 6, chief.y);
+    frame(kit);
+    expect(latest(kit)).toContainEqual(expect.objectContaining({ level: chief.level, boss: true }));
   });
 });
 

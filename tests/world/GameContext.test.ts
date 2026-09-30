@@ -13,6 +13,8 @@ import { createNewCharacter, saveService, type CharacterState } from '../../src/
 import {
   AFK_STATE_CHANGED_EVENT,
   AFK_SET_REQUESTED_EVENT,
+  MINIMAP_SET_REQUESTED_EVENT,
+  MINIMAP_STATE_CHANGED_EVENT,
   SAVE_EXPORT_REQUESTED_EVENT,
   SAVE_EXPORTED_EVENT,
   type UiEventMap,
@@ -319,5 +321,31 @@ describe('taking the save away', () => {
     walkOut(game, 'south');
     walkOut(game, 'north');
     expect(exported(bus, 'file')).toHaveLength(1);
+  });
+});
+
+describe('the minimap switch', () => {
+  function switched(bus: EventBus, on: boolean): boolean[] {
+    const answers: boolean[] = [];
+    bus.on(MINIMAP_STATE_CHANGED_EVENT, (shown) => answers.push(shown));
+    bus.emit(MINIMAP_SET_REQUESTED_EVENT, on);
+    return answers;
+  }
+
+  it('keeps the answer on the character and saves it at once', () => {
+    const { context: game, bus } = context();
+    expect(game.character.state.showMinimap).toBe(true);
+
+    expect(switched(bus, false)).toEqual([false]);
+
+    expect(game.character.state.showMinimap).toBe(false);
+    expect(saveService.load()?.showMinimap).toBe(false);
+  });
+
+  it('answers once, however many zones the session has loaded', () => {
+    const { context: game, bus } = context();
+    walkOut(game, 'south');
+    walkOut(game, 'north');
+    expect(switched(bus, false)).toEqual([false]);
   });
 });

@@ -12,7 +12,10 @@ import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 // version 1 chain, twenty-three steps of it, is in the history before C1.
 type MigrationStep = (state: Record<string, unknown>) => Record<string, unknown>;
 
-const MIGRATIONS: Record<number, MigrationStep> = {};
+const MIGRATIONS: Record<number, MigrationStep> = {
+  // The minimap's switch (decision 115), on for everybody made before it.
+  100: (state) => ({ ...state, showMinimap: true }),
+};
 
 /**
  * Bring a parsed save up to CHARACTER_STATE_VERSION, or return null if it
