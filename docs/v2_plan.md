@@ -30,10 +30,13 @@ stone, rock and marsh, scatter baked into the ground, and the lantern undergroun
 `?renderer=3d` until B7; decision 106), **B4** (a person put together from what they chose and
 what they wear, a slot dyed apiece; every weapon and offhand drawn as the item it is, the wands
 renamed staves; a look chosen at creation, save version 27; the townsfolk drawn; decision 107),
-**and B5** (every creature drawn, the humanoids on the figure carrying what they drop, the bosses
+**B5** (every creature drawn, the humanoids on the figure carrying what they drop, the bosses
 grown to 48×64 and the goblins shrunk by refitting it; hits, crits, a level, fireballs, knives
-and arrows, the telegraphs and the loot sack; decision 108). **Next: B6**, places. Update this
-line as each phase lands: which phase, and which is next.
+and arrows, the telegraphs and the loot sack; decision 108), **and B6** (every place drawn: three
+woods and their stumps, veins in the ore they yield, rings on the water, the forge, the tannery, the
+fletcher's bench and the fire, chips off each stroke, and rooms furnished from one layout with a
+counter in front of whoever works there; decision 109). **Next: B7**, retire 3D. Update this line
+as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -355,8 +358,25 @@ discovered at the end.
   rim and a disc filling out to it**, on the ground under everything standing. Numbers rise off
   the top of what they came off and stack over one born with them; the loot sack is drawn. About
   twenty files with its tests and docs. Decision 108 has the forks.
-- **B6 — Places.** Nodes (and their depleted states), stations, signposts, buildings with interiors
-  (the roof lifts when you are inside), counters.
+- **B6 — Places. (Landed.)** **What each place is drawn as is one table** (`art/places.ts`), a node
+  falling back on its shape's drawing as a creature falls back in `cast.ts`. **Three woods**, each a
+  canopy of leaf clumps lit from the top-left at the prop budget's 64 square, in the setting's
+  `foliage` and `bark`: the round-crowned tree, broader darker hardwood on a trunk twice as thick,
+  and the willow's strands hanging nearly to the ground; each **felled to a stump** showing its cut
+  face, and **a crown the player is behind fades** as a roof does. **A vein is a boulder of the
+  setting's rock with the ore in its seams**, drawn once in a neutral `ore` ramp and recoloured into
+  the ore it yields (step 2 the ore's colour in the bag, held by a test); coal is a black seam across
+  the stone, and a worked-out vein shows its pits. **A fishing spot is a mark**, a new kind: rings on
+  the water, unoutlined, looping on the water's clock. **The forge** glows and sparks, **the
+  tannery** is a vat with a hide on a frame, **the fletcher's bench** has its shafts laid out and a
+  bow behind it, and **the fire** crackles in its ring of stones. **A stroke knocks something
+  loose** on each gather beat: chips, flakes of stone, a splash. **What stands in a room moved to
+  `art/rooms.ts`**, which both views read, drawn by the wall it stands against (from the front,
+  along a side wall, and low against the south wall the cutaway takes away), and **whoever works in
+  a room stands behind a counter**, blocking nothing. A node is picked by its body as in 3D, and a
+  fishing spot as the water round it. About twenty-six files with its tests and docs. Found and left
+  for B9: town's training hall stands close enough south of the smithy that its faded roof is drawn
+  over the smithy's room. Decision 109 has the forks.
 - **B7 — Retire 3D.** Three.js and `render3d/` deleted; smoke's draw budget and memory checks
   rewritten for 2D; `rendering.md` rewritten.
 - **B8 — The HUD's look.** A full UI pass to match the art: theme, panels, icons as pixel data, a

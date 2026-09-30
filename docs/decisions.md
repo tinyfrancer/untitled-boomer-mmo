@@ -2399,3 +2399,55 @@ answered in B1, so the forks were Claude's:
   with them. **Rejected:** drawing only the abilities that are not thrown.
 
 Left for B6, with the nodes they come off: the chips a gather knocks loose, and the campfire.
+
+## 109. A place is drawn from one table, a vein in the ore it yields, a fishing spot as a mark, and a room's furniture from one layout both views read
+
+**2026-09-30 · Claude, building the plan's phase B6**
+
+B6 draws the places: every node and what it leaves, the stations and the fire, what a stroke of a
+tool knocks loose, and what stands in a room. Part B's open questions were all answered in B1, so
+the forks were Claude's:
+
+- **What each place is drawn as is one table** (`art/places.ts`), a node by its id and falling back
+  on the drawing of its shape, as `cast.ts` falls back for a creature. **Rejected:** the 3D view's
+  rule, one body a shape, which draws the tree, the hardwood and the willow as one tree; a table
+  that must name every node, which a new row would fail to compile against rather than being drawn
+  as its shape the day it lands.
+- **A tree is drawn at the prop budget's 64 square**, a crown two tiles across half again as tall
+  as a person, from leaf clumps a generator lit and painted and that were pasted in as the picture
+  they made. **Rejected:** a tree at a person's 32×48, which a person can see over; generating trees
+  at boot, which makes the art something nobody can read; hand-placing four thousand pixels a tree.
+- **A crown the player is behind is faded, as a roof is, and a node is picked by its body**, a tree
+  up its trunk and the lower half of its crown, as the 3D view picked it. **Rejected:** a crown that
+  hides the player outright; a pick box the height of the crown, which takes the tap meant for a
+  creature standing behind it.
+- **A vein is drawn once in a neutral `ore` ramp and recoloured into the ore it yields**
+  (`ORE_VARIANTS`), step 2 of each ore's ramp being the ore's colour in the bag, the way gear is
+  drawn in `tier`; **coal is a seam**, a black band glinting across the stone. **Rejected:** a
+  drawing per ore; coal in the thin seams tin and iron show in, where ore nearly as dark as the rock
+  did not show at all; ore colours picked by eye, which would make a lump two colours in two places.
+- **A fishing spot is a mark, a new kind**: rings on the water, not outlined, looping on the water's
+  own 250ms clock, drawn under everything standing and centred on the spot. **Rejected:** a prop,
+  whose outline drew the rings as loops of dark wire; a water tile with rings in it, since spots
+  stand half a tile off the grid and a tile laid there would seam against the water either side; an
+  effect played again and again, which is not what an effect is.
+- **A stroke knocks something loose on each of a gather's two beats**, chips, flakes of stone or a
+  splash, on the side the player stands, the moment the tool comes down. **Rejected:** a burst when
+  a gather pays out, seconds apart and after the strokes that earned it; nothing, which left a
+  gather a bar filling beside a tree.
+- **What stands in a room moved from the 3D view to `art/rooms.ts`**, which both views draw from.
+  **Rejected:** a second layout for 2D, two answers to where a shelf stands; leaving it in
+  `render3d/`, which B7 deletes with it.
+- **The 2D view draws a fitting by the wall it stands against**: from the front against the north
+  wall, along its length against a side wall, and only as low as it stands against the south wall,
+  which the cutaway takes away. **Rejected:** one drawing for every wall, a bench running across a
+  side wall and a fire's mouth facing into it; the whole fireplace against the south wall, standing
+  across the room in front of whoever is in it.
+- **Whoever works in a room stands behind a counter**, drawn only in 2D, just in front of them
+  toward the door and short of where the walk up to them ends, blocking nothing. **Rejected:** no
+  counter, a person standing in a room; a counter that blocks, which the walk up to a shopkeeper
+  would have to route round, in rooms with no cell to spare for it.
+
+Found and left for the Part B review: town's training hall stands close enough south of the smithy
+that its roof, faded, is drawn over the smithy's room while the player stands in it, a layout the 3D
+camera never showed and the rebuilt zones of Part C will move anyway.

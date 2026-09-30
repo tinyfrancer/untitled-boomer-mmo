@@ -12,7 +12,9 @@ and the lantern, and made the 2D view the game (decision 106). B4 put a person t
 they chose and what they have on, drew every weapon and offhand as the item it is, and the
 townsfolk (decision 107). B5 drew every creature, the bosses grown and the goblins shrunk from the
 same figure, and the moments: hits, crits, a level, what flies, the telegraphs, the loot sack
-(decision 108). Where this and the code disagree, the
+(decision 108). B6 drew the places: every node and what it leaves, the stations and the fire, the
+chips a stroke knocks loose, and what stands in a room, the counter included (decision 109). Where
+this and the code disagree, the
 code is right — and this file is what should be corrected. `rendering.md` is still the 3D renderer's,
 the fallback behind `?renderer=3d`, until B7 retires it._
 
@@ -124,6 +126,7 @@ renderer play any creature's walk on one clock without asking the creature.
 | ------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | tile    | 32×32                                    | still 1; loop 4 (250)                                                                                              |
 | scatter | 8×8, 16×16                               | still 1                                                                                                            |
+| mark    | 32×32                                    | loop 4 (250)                                                                                                       |
 | person  | 32×48; 48×64 for a boss                  | idle 2×4 (500), walk 4×4 (150), attack 3×4 (100), cast 3×4 (120), shoot 3×4 (100), hurt 1×4 (150), death 3×1 (150) |
 | beast   | 32×32, 48×48, 64×64                      | idle, walk, attack, hurt and death, as a person's                                                                  |
 | prop    | 16×16 to 64×64 (the list is in the code) | still 1; spent 1 (a stump, a worked-out vein); loop 4 (150)                                                        |
@@ -174,9 +177,8 @@ the thing's position in the world; the feet stand on the third row from the bott
 them is the outline, and the last row is the clear pixel the outline rule asks for.
 
 **Anything not yet drawn is drawn as its kind's placeholder**: a mannequin, a grey lump on four
-paws, a crate, a ring of light, a token with a question on it, a purple checker. Since B5 every
-person and creature is drawn and only props (nodes, stations, the campfire) and icons are left,
-which are B6's and B8's. Each fills every
+paws, a crate, a ring of light, a token with a question on it, a purple checker. Since B6 every
+person, creature and place is drawn and only icons are left, which are B8's. Each fills every
 animation its kind's budget allows, so the renderer never asks whether a pose exists, and so the
 budget is held against real frames from the day it was written. The terrain tiles
 (`sprites/terrain.ts`) were the first real sprites, each written in one terrain ramp's digits and
@@ -271,7 +273,7 @@ outfitter in leather over linen, and the fettler sooted under an apron with a ha
 creature, anything not in it falling back on its kind's placeholder, a creature's kind read off its
 `shape` (`tests/art/cast.test.ts` holds every creature the game has drawn for real). The player is
 not there: they are what they chose and what they have on.
-**The signpost** (`sprites/props.ts`) is the one prop drawn ahead of B6, a post with two boards
+**The signpost** (`sprites/props.ts`) was the one prop drawn ahead of B6, a post with two boards
 pointing either way, because a crate standing where a zone says where its exits go said nothing.
 
 ## Creatures
@@ -342,6 +344,74 @@ which finds the creature or the player standing at the spot a moment names). It 
 first half of its life and fades in steps, a crit's climbs further and lasts longer, and one born
 at a spot where another was a moment ago goes up a line over it: a blow soaked and a blow landed,
 the XP and the level, are told at once.
+
+## Places
+
+**Every place a player works is drawn, and what each is drawn as is one table** (`art/places.ts`,
+decision 109), as creatures are `cast.ts`: a node by its id, falling back on the drawing of its
+`shape`, so a new node is on screen the day its row is; each station and the fire by its id; and
+what a stroke of the tool knocks loose by the node's shape (`tests/art/places.test.ts` holds every
+node, station and stroke to a real drawing).
+
+**A tree is a canopy of leaf clumps over a trunk** (`sprites/trees.ts`), at the prop budget's 64
+square: a crown two tiles across standing half again as tall as a person, since a tree a person
+could see over is a bush. Each clump is a ball lit from the top-left with a crescent of light inside
+its upper rim and a seam of shade along its lower one, painted back to front so the lower clumps sit
+over the higher, with small leaf marks over it; drawn by a generator and pasted in as the picture it
+made, as the lookbook's rings were. It is drawn in the setting's `foliage` and `bark`, so a tree in
+the fen is a fen tree. The three woods are told apart at a glance: **the tree** round-crowned on a
+trunk a person could put their arms round, **hardwood** broader and darker on a trunk twice as thick
+flaring into roots, and **the willow** a crown in the lighter green of the grass with strands hanging
+from it nearly to the ground, parted where the trunk comes down. **A felled tree is its stump**,
+the trunk's foot with its cut face in pale new wood (`thatch`), so the node does not move when it
+runs out and is still the thing to look at to see whether it is back. The crown blocks nothing, and
+**the view fades it while the player is behind it**, as a roof is faded.
+
+**A vein is a boulder of the setting's `rock` with the ore in its seams** (`sprites/veins.ts`), cut
+into a few planes lit from the top-left, a smaller stone leaning on its left. **The ore is drawn in
+a neutral `ore` ramp and recoloured into the ore the vein yields** (`ORE_VARIANTS`, `vein@tin`), the
+way gear is drawn in `tier`, and step 2 of each ore's ramp is the ore's colour in the bag, so a lump
+of tin is the same grey in the rock as in the pack (held by a test, as the 3D view read the colour
+off the item). **Coal is a seam** (`seam@coal`), a black band laid across the stone glinting where it
+catches the light, since ore nearly as dark as the rock it is in did not show as a thin vein; **the
+rich vein** is a bigger stone with the ore running through all of it. A worked-out vein is the same
+rock with pits where the ore came out.
+
+**A fishing spot is a mark**, a kind of its own (decision 109): rings spreading on the water where
+something touched it, a new one born as the outer breaks up, looping on the water's own clock (four
+frames of 250ms, as a water tile's). Light on water rather than a thing standing, so it is not
+outlined, which drew the rings as loops of dark wire; each crest has a line of trough under it on
+the side turned from the light, which is what reads it on water of any setting. It is drawn in the
+setting's `water`, lies centred on the spot under everything standing, and has no shadow.
+
+**The stations** (`sprites/stations.ts`) are each a silhouette of their own, as the 3D ones were:
+**the forge** a block of dressed stone with a bed of coals in its top and its mouth glowing, an anvil
+on a stump in front, looping as a few embers brighten and dim and a spark goes up; **the tannery** a
+vat of liquor with a hide laced to a frame behind it; **the fletcher's bench** a plank on splayed
+trestles with shafts laid on it, heads one way and fletching the other, and a strung bow stood
+behind. **The fire the player lights** is a ring of stones, two logs crossed, embers and a flame
+over them, looping, and stands on no shadow, since what it throws is light.
+
+**A stroke of the tool knocks something loose** (`sprites/chips.ts`): on each of a gather's two beats
+(`ui/gatherBeat.ts`, the frame the tool comes down on), chips of pale new wood off a trunk, flakes of
+pale stone off a rock (`chips@stone`), or drops off the water (`splash`, in the shared `spray` ramp,
+since a splash is light and the water it comes off is coloured by the setting), on the side of the
+node the player stands on and at the height the tool lands.
+
+**What stands in a room is `art/rooms.ts`** (decision 109): the 3D view's fittings table moved out of
+`render3d/` so both views stand the same furniture in the same places (the 3D view reads it until
+B7), each fitting against a wall named from the doorway looking in, on ground no deeper than the
+wall. The 2D view draws each against its wall by compass: from the front against the north wall
+(**shelves** long enough to show either side of whoever stands in front, a **hearth** with its
+chimney breast up the wall, a heavy **bench**), along its length against a side wall (the bench seen
+lengthways, a **bed** seen from above, a hearth with its mouth facing the room), and against the
+south wall, which the cutaway takes away, only as low as it stands (the hearth as the stone it burns
+on). **Whoever works in a room stands behind a counter** just in front of them toward the door
+(`COUNTER_AHEAD`), a lit top over a panelled front that hides their legs to the knee and ends short of where the
+walk up to them stops, which is what makes a person in a room a shopkeeper rather than somebody
+standing in one. None of it blocks, and none of it is drawn until the player is inside, as the floor
+is. `tests/art/rooms.test.ts` holds the layout's rules and that nobody standing on the three spots
+the game puts a body is drawn in the furniture.
 
 ## Edges between grounds
 
@@ -451,7 +521,7 @@ with no door in it. From inside it is a plank floor
 ringed by the walls' tops, drawn with the ground, and **only the back wall standing**, open where a
 north door is in it: the roof and the front come off the way the 3D cutaway takes them. The three
 shapes are the one kit recoloured (`BUILDING_LOOKS`): slate over plaster for a hall, thatch for a
-cottage, shingles over boards for a workshop. What stands in a room is B6's.
+cottage, shingles over boards for a workshop. What stands in a room is below, under Places.
 
 ## The renderer
 
@@ -503,6 +573,10 @@ same host (`host/host.ts`, behind the `ZoneView` interface both answer):
   **Every canvas is made through one pool**
   (`canvases.ts`) and counted, which is what `gpuMemory()` reports and smoke holds flat across
   zone round trips.
+- **What lies on the ground is drawn with it** and everything standing is sorted with the
+  people: a fishing spot's rings over the ground and under the shadows, and nodes, stations, the
+  fire, a sack and, while the player is in a room, its furniture and counter, each by where its foot
+  is. A tree's crown the player has walked behind is drawn at half strength, the roof's rule.
 - **An animation plays on the budget's clock** (`animation.ts`): a figure faces the way it mostly
   moves, walks when moving and breathes when not, and a blow or a flinch told by a `WorldEvent`
   plays through once over it. A corpse falls on the world's `deadForMs` and lies for 300ms after
@@ -515,8 +589,10 @@ same host (`host/host.ts`, behind the `ZoneView` interface both answer):
 - **A tap is picked against flat boxes in the 3D view's priority** (`picking.ts`): a rectangle
   standing up the screen from where a thing's feet are, no smaller than a thumb and reaching a
   little below the feet, and within one kind the one drawn in front wins. A building answers as
-  the 3D one does, whoever works there or the ground at its door, and nothing from inside. The
-  sweep that holds every creature tappable from where a player fights it runs over the flat boxes
+  the 3D one does, whoever works there or the ground at its door, and nothing from inside. A node
+  is picked by its body, as the 3D view picked it: a tree up its trunk and the lower half of its
+  crown, so a creature behind the crown is still the creature, and a fishing spot as the patch of
+  water round it. The sweep that holds every creature tappable from where a player fights it runs over the flat boxes
   too (`tests/render2d/picking.test.ts`).
 - **What smoke asks of it** is the whole run, every section of which draws in 2D: the canvas at a
   whole scale (`boot`), every thing drawn and canvases flat over three round trips (`teardown`),
