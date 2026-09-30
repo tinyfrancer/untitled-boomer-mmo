@@ -2289,3 +2289,62 @@ with the figures, which costs every frame for what a player walks over; scatter 
 a smooth lantern gradient, which is not pixel art, and a lantern gone to black; keeping 3D the
 default until B5 and B6 draw what is still a placeholder, which decision 83 already decided against;
 deleting the 3D view now, which is B7's; and keeping smoke on the 3D view while the game is 2D.
+
+## 107. A person is put together from what they chose and what they wear, a slot dyed apiece; the wands become staves
+
+**2026-09-30 · the user on the wands and the look; Claude's under it**
+
+B4 wires the figure kit (decision 104) to what the player has on. Two forks were the user's, asked
+when the phase started:
+
+- **The wizard's three weapons are staves, and are renamed to say so**: the Apprentice Staff, the
+  Stolen Staff and the Barrow Staff, the weapon shape `staff` everywhere it is drawn (the bag's
+  icon, the paperdoll, the 3D rig). B2 had drawn a staff because a wand at 40 pixels reads as a
+  dagger, and B4 draws every weapon as the item it is, so the picture and the name had to agree.
+  The item ids keep saying wand and scepter, since a save names them. **Rejected:** keeping the
+  names and drawing staves, which Claude offered as the lesser change and which has the world and
+  the bag naming different things; drawing them as wands.
+- **A character is made in a look: a skin, a hair colour and a hairstyle**, each a choice on the
+  creation screen and a field on the save (`CharacterState.look`, version 27). Four skins, five hair
+  colours and five hairstyles (cropped, long, tied back, shaved, bearded); a character from before is
+  migrated to fair, brown and cropped, which is how every character was drawn. **Rejected:** no look
+  choice in B4, which Claude recommended as scope creep and which decision 105 had noted the layered
+  figure could offer; colours alone, without hairstyles.
+
+How to build it had forks, all Claude's:
+
+- **A person is composed at the level of the grids and compiled as one sprite**, not stacked as
+  layer sprites at draw time. Stacked layers are each outlined by the compiler, and a figure of
+  outlined blocks is the disjointed look decision 105 mended; they would also need a draw call a
+  layer a figure a frame. The price is a compile when the gear changes, which is rare: the 2D view
+  compares what the player has on each frame and compiles their figure again (a small sheet of its
+  own, its old canvas let go) only when it differs.
+- **Each slot is dyed into a ramp of its own.** A piece is written in the `tier` ramp's A-E, or a
+  weapon in metal, wood, brass and glow, and rekeyed into generated keys for its slot's role (helm,
+  legs, other hand, blade, haft, fitting, gem), so a steel helm sits over studded legs and a tier is
+  still a recolour of one drawing. Decision 104 had rejected a whole-figure sprite per class, kind
+  and tier for exactly the mixing this allows.
+- **What an item looks like is a row** (`art/wardrobe.ts`), the ramp the tier's unless it says
+  otherwise, with a fallback by armour type and weapon shape so a new item is on the figure the day
+  its row lands; a test holds every item the game has to a row of its own.
+- **A swung weapon is drawn once, upright, and its six carries are made from it** by turning it over,
+  turning it a quarter, and leaning it a pixel a row, which keeps the light on its top-left and is
+  how B2's hand-drawn sword was shaped anyway. A longbow is the bow with its limbs drawn out.
+  **Rejected:** drawing six carries of each of eighteen weapons; generating weapons procedurally
+  from a rig, which is not art written as data.
+- **The lookbook's grand looks are what the gear grows into**: plate over a quilted gambeson, the
+  steel under the crimson cloak; the fen's robe trimmed in brass under its hood, the cloth hat
+  pointed; the hide cowl the hunter's hood and mantle. The cutthroat's bandana is a mask over the
+  nose and mouth, which read as a cutthroat's where a wrap over the head read as red hair.
+- **A hairstyle is a whole head, not hair over a bald one**: hair frames a face, and a bald head
+  under hair laid over it drew a skull too small for the hair. What falls past the head (long locks,
+  a tail, a beard's point) is laid over the shoulders.
+- **The townsfolk are drawn in B4**, as people, each a garment, a look and what they hold, told apart
+  at a glance as their 3D colours told them; the humanoid creatures stay placeholders for B5.
+- **A frame's edge ring is left clear by the kit**, a blade drawn back or a hat risen on a stride cut
+  a pixel short, rather than every weapon shortened to fit the widest swing.
+- **A bow or a shield leaves no hand to cast from**, so a figure holding one has no `cast` and a
+  spell plays its swing; an orb or a lantern is held up in the casting hand.
+- **The creation screen draws each class in the world's own art**, in the look chosen, with a
+  smaller picture beside the choices so a phone that has scrolled the cards away still shows the
+  look as it is picked. The class cards' stick-figure previews went with it.

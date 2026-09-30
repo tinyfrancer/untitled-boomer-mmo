@@ -168,7 +168,7 @@ rather than watched.
 phase 12; `docs/decisions.md` 72): half a percent a point on a physical hit, capped at 15% on its own
 rather than inside the skill's 20%. Inside it, agility would buy nothing once the skill was trained
 out, and it would move the budget the flat bonus is derived from. **Physical is everything but a
-spell** — every swing and shot, a wand's included, and every ability not governed by Destruction
+spell** — every swing and shot, a staff's included, and every ability not governed by Destruction
 (`isSpell`) — so a warrior's or a wizard's one point is half a percent on their swing, which is the
 whole of what agility does for anyone not drawing a bow.
 

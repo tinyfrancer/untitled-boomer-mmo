@@ -27,8 +27,11 @@ cleaned up into one silhouette, decision 105; the user then asked for B3, which 
 checkpoint with the art source standing), **and B3** (every zone drawn: an edge wherever two grounds
 meet, rock standing up with its face in its own cell, irregular flagstones, variants for sand,
 stone, rock and marsh, scatter baked into the ground, and the lantern underground; **2D the game**, 3D behind
-`?renderer=3d` until B7; decision 106). **Next: B4**, people. Update this line as each phase lands:
-which phase, and which is next.
+`?renderer=3d` until B7; decision 106), **and B4** (a person put together from what they chose and
+what they wear, a slot dyed apiece; every weapon and offhand drawn as the item it is, the wands
+renamed staves; a look chosen at creation, save version 27; the townsfolk drawn; decision 107).
+**Next: B5**, creatures and effects. Update this line as each phase lands: which phase, and which
+is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -317,13 +320,27 @@ discovered at the end.
   the drag checks ask a drag to turn nothing, and a `renderer-3d` section holds the fallback and
   the camera only it turns. Twenty-seven files with its tests and docs. Decision 106 has the
   forks.
-- **B4 — People.** A layered figure for all three classes: body, armour by slot, weapon and offhand,
-  tier colours by recolouring. Four directions, walk, attack, cast, shoot, hurt, death, within B1's
-  budget. B2 already has the figure kit, all three classes and an armour lookbook (decision 104):
-  what is left is putting a figure together from what the player has on, slot by slot, compiled when
-  it changes, and each weapon drawn by the item it is.
-- **B5 — Creatures and effects.** Every creature by shape and the bosses; telegraph rings, arrows,
-  bolts, hits, crits, the level-up, the loot sack, floating text.
+- **B4 — People. (Landed.)** **A person is put together from what they chose and what they wear**
+  (`art/outfit.ts`): the class's garment, their look, a piece on each slot and the weapon in hand,
+  composed at the level of the grids and compiled as one sprite, so the compiler outlines one
+  silhouette rather than a stack of outlined layers. **Each slot is dyed into a ramp of its own**, so
+  a steel helm sits over studded legs and a tier is still a recolour. What each item is drawn as is a
+  row (`art/wardrobe.ts`), every item held to one by a test; the lookbook became the pieces (plate
+  over a gambeson, the steel under the crimson cloak, the fen's trimmed robe, the hunter's cowl, a
+  cutthroat's bandana over the face, a crown). **Every weapon and offhand is drawn as the item it
+  is**, a swung one drawn once upright and its carries turned and leant from it; shields over the
+  forearm, an orb and a lantern cast from, a quiver on the back. **The wizard's wands are staves**,
+  renamed to match, their ids kept. **A character is made in a look**: four skins, five hair colours,
+  five hairstyles, picked on a creation screen that draws each class in the world's art
+  (`CharacterState.look`, save version 27, older characters fair, brown and cropped). The 2D view
+  compiles the player's figure again when what they wear changes, its old canvas let go (smoke holds
+  the count flat). **The six townsfolk are drawn**; the humanoid creatures are B5's. It went to
+  about fifty-five files with its tests and docs and stayed whole: the look is the figure's first
+  layer, and the screen that chooses it draws the figure the gear builds, so the two are one thing
+  to judge. Decision 107 has the forks.
+- **B5 — Creatures and effects.** Every creature by shape and the bosses, the humanoids (bandits,
+  goblins, raiders, the dead and their king) on B4's figure with what they carry; telegraph rings,
+  arrows, bolts, hits, crits, the level-up, the loot sack, floating text.
 - **B6 — Places.** Nodes (and their depleted states), stations, signposts, buildings with interiors
   (the roof lifts when you are inside), counters.
 - **B7 — Retire 3D.** Three.js and `render3d/` deleted; smoke's draw budget and memory checks

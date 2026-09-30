@@ -35,6 +35,14 @@ character in the save beside the one playing now, and Replace asks twice. The cr
 offers the same panel (a new device has nobody to replace, so one tap loads), hung beside the
 screen rather than in it, since the screen scrolls on a short phone, and dimmed behind.
 
+**The creation screen draws in the world's art** (decision 107). Each class's card is a picture of
+it as it starts, compiled from the same outfit the world draws (`art/outfit.ts`'s `portrait`) onto
+a canvas at three CSS pixels to the art pixel, and under the cards a row each for skin, hair colour
+and hairstyle: swatches for the two colours, named buttons for the style, each labelled with what it
+is, the chosen one marked. A smaller picture of the chosen class (the warrior until one is) sits
+beside the rows, since on a phone the cards have scrolled away by the time a look is being picked.
+jsdom has no canvas to fill, so there the cards come without their pictures.
+
 **An overlay that takes a key says so.** Escape closes whatever is open and is also the world's
 "drop the target", and the two used to hear it independently, so closing a panel mid-fight dropped
 the target too. `bindHudKeys` listens in the capture phase and cancels a key an overlay took, and

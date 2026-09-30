@@ -29,7 +29,7 @@ one `enemyId` on the report enough to credit them all.
 **What a camp does is read off the tool and the station, not out of a mode** (`afkCampJob`). A
 gathering tool _is_ the weapon slot, so a fishing pole, a felling axe or a pickaxe makes the Camp tab
 a gathering camp and a
-sword, a wand or an empty hand makes it the fighting one — the same question `canGather` already
+sword, a staff or an empty hand makes it the fighting one — the same question `canGather` already
 asks, which is why this needed nothing stored and no second button. Mining is what
 collected on that: a whole third skill, awake and offline, cost the AFK code not one line. It
 re-derives

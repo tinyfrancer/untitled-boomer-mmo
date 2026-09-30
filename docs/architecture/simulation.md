@@ -49,7 +49,7 @@ than by emitting the request the HUD would; neither the view nor `scripts/smoke.
 
 **The boot flow is an if-statement, not a scene graph.** `src/bootFlow.ts` resumes the save, or
 mounts the plain-HTML creation screen (`hud/CharacterCreate.ts`) and starts the session with what
-it produces. Nothing before the world needs a renderer at all, which is why the creation screen can
+it produces: a name, a class and a look (`CharacterState.look`, save version 27, decision 107). Nothing before the world needs a renderer at all, which is why the creation screen can
 be shown before one exists.
 
 **A host is what a renderer owes the boot flow**: an `events` channel plus `startZone()`, and
