@@ -5,9 +5,10 @@ What the data tables hold and the rules over them: loot, quests and objectives, 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
 **Data-driven definitions** (`src/data/`): class stats (`classes.ts`), items/gear (`items.ts`),
-enemy definitions (`enemies.ts`), where and at what level they spawn (`spawns.ts`), loot
-(`lootTables.ts`), quests (`quests.ts`), the XP curve (`xpTable.ts`), zones (`zones.ts`), and the
-tilemap layouts (`tiles.ts`, `townMap.ts`) are plain data tables keyed by id. `types/ids.ts` holds
+enemy definitions (`enemies.ts`), loot (`lootTables.ts`), quests (`quests.ts`), the XP curve
+(`xpTable.ts`), zones (`zones.ts`), and each zone's ground and what stands on it, creatures at their
+levels included, written as text (`townMap.ts` and its nine siblings, read by `zoneText.ts`) are
+plain data tables keyed by id. `types/ids.ts` holds
 the id unions (`ClassId`, `GearSlotId`, `EnemyId`, `ZoneId`, `QuestId`, `AchievementId`,
 `TitleId`) that key into them. Prefer
 adding a row to one of these tables over hardcoding values in a scene/entity — a new enemy type

@@ -37,8 +37,8 @@ beside the code instead.
 
 Per-feature briefs live in `docs/feature_N_*.txt`. They are the original prompts, kept as a
 historical record of what each feature was asked for — not current spec, and superseded by the
-code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `spawns.ts` puts
-them at 1-3, and `spawns.ts` is right). The original long-term vision is in
+code wherever the two disagree (`feature_6_v1.txt` asks for crabs at level 4-6; `beachMap.ts` puts
+them at 1-3, and `beachMap.ts` is right). The original long-term vision is in
 `docs/initial_design.txt` (multiplayer, more zones, more skills) — most of it is intentionally not
 built, and **its multiplayer is no longer the direction**: the game is solo (decision 80). Don't
 assume features from that doc exist in code.
@@ -89,10 +89,10 @@ structure survives in history and stays reviewable later.
 Merging to `main` triggers a Vercel production deploy, so a merge publishes. Nothing else deploys:
 `vercel.json` turns off the preview a branch push used to build.
 
-**CI minutes and deploys are metered, so spend them where they decide something** (decision 95).
-The repo is private, and Actions has 2,000 Linux minutes a month on the free plan: a PR's run costs
-about 10 of them (the gates about 3, smoke about 7), and a hung job is stopped by its
-`timeout-minutes` rather than GitHub's six hours. Vercel's Hobby plan allows 100 deployments a day.
+**CI runs and deploys are spent where they decide something** (decision 95). The repo has been
+public since decision 95, so Actions minutes no longer run out, but a PR's run still takes about 10
+minutes (the gates about 3, smoke about 7), a hung job is stopped by its `timeout-minutes` rather
+than GitHub's six hours, and Vercel's Hobby plan allows 100 deployments a day.
 So run every gate locally, smoke included, before a phase's first push; push a phase when it is
 green rather than commit by commit; open its PR when it is done, or as a draft while it is still
 moving, since a draft runs the gates alone and marking it ready is what runs smoke; and batch a CI
@@ -178,15 +178,19 @@ returns: moments (a hit, a bolt, a float) a view cannot recover from state, nami
 than a colour. Add HUD-facing state by adding an event, not by reaching across modules; payloads of
 more than two or three values are one object.
 
-**Zones are rows, not code.** A new area is a `ZONES` row in `src/data/zones.ts` plus exits both
-ways, and its map, mobs, nodes, NPCs, buildings and stations come from that row. Walking is the only
-way into a zone. **An exit needs its whole shared edge walkable on both sides, one arrival-inset
+**Zones are rows, not code, and each is written as text.** A new area is a `ZONES` row in
+`src/data/zones.ts` plus exits both ways, and its ground and everything standing on it are a block of
+text in its own `src/data/*Map.ts`, read by `layoutZone` (`data/zoneText.ts`, decision 113): a
+character a tile, the grounds' characters shared by every zone, and a legend of the zone's own for
+the start, creatures, nodes, stations and buildings. A marker stands in the middle of its tile, a
+building is a block of its letter exactly its footprint, whoever works in one is named on its row
+rather than placed, and a zone's size is its text's. Walking is the only way into a zone. **An exit needs its whole shared edge walkable on both sides, one arrival-inset
 in**, and every spawn, building and wander disc is held by sweeps (`ZoneSystem.test.ts`,
 `BuildingSystem.test.ts`, `spawnSafety.test.ts`, `render2d/picking.test.ts`) — expect a new zone or
 exit to cost a spawn or a building moved somewhere else.
 
 **Data-driven definitions** (`src/data/`, keyed by the id unions in `src/types/ids.ts`): classes,
-items, enemies, spawns, loot, quests, bounties, recipes, zones, maps. Prefer a row over code — a new
+items, enemies, loot, quests, bounties, recipes, zones and the text they are written in. Prefer a row over code — a new
 enemy is an `ENEMIES` row plus a loot table, and it is drawn as its `shape`'s placeholder without a
 line written for its id. `Record<Id, …>` and
 `exhaustive<Id>()` are how a new id becomes a compile error everywhere it has to be answered.
@@ -224,7 +228,8 @@ the player is camping (`docs/architecture/economy.md`).
 **Persistence**: import the `saveService` singleton from `src/persistence/index.ts`, never construct
 `LocalStorageSaveService`. When `CharacterState` changes shape, bump `CHARACTER_STATE_VERSION` and
 add a step to `persistence/migrations.ts`; a save with no chain to the current version is dropped.
-A save also leaves and comes back as a file or a code (`persistence/saveFile.ts`), read through the
+Version 2's saves count from 100 with no step from before (decision 113): a version 1 save is
+dropped the first time it is read, and who was in it is named once on the creation screen. A save also leaves and comes back as a file or a code (`persistence/saveFile.ts`), read through the
 same chain and then a check of every field, so a new field is a row in its `FIELDS` as well.
 
 **Frame rate is not an assumption you may make.** A cheap phone steps the game at single-digit fps.

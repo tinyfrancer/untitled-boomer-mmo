@@ -150,8 +150,8 @@ opened is the one thing about this the HUD cannot derive, so it rides its own ev
 
 **The map is drawn from the zone's id and nothing else** (`systems/MapSystem.ts`, drawn by
 `hud/MapSheet.ts` as inline SVG in tile units). Terrain, the exits and what is worth walking to all
-come back out of the tables the world was built from — read with the same centre-plus-offset
-arithmetic `populateZone` uses — so the map cannot disagree with where things actually stand, and
+come back out of the tables the world was built from — the same points `populateZone` stands things
+at — so the map cannot disagree with where things actually stand, and
 the HUD needs telling nothing but which zone is running. Only the player's dot is on the wire.
 That is two events rather than one (`zone-entered`, `player-tile-changed`) precisely so a walk moves
 the dot without rebuilding the terrain under it; the tile event is keyed to whole tiles so a position

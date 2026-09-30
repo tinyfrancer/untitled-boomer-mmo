@@ -46,8 +46,9 @@ hoard in the game that comes off one creature.
 
 ## How zones work
 
-**Zones**: the world is a set of zones defined in `src/data/zones.ts` (map grid, mob spawns,
-node spawns, exits), each built into one `ZoneWorld` by the `GameContext` and drawn by the single
+**Zones**: the world is a set of zones defined in `src/data/zones.ts` (a name, a setting, exits,
+and a lock for two of them) and written in their own `data/*Map.ts` (the ground and everything on
+it), each built into one `ZoneWorld` by the `GameContext` and drawn by the single
 `ZoneView2D`; the DOM HUD keeps running across a change untouched. Each exit spawns a
 tappable signpost (the mobile path — the invisible edge-walk band is untappably thin on
 a phone); walking into the map edge still transitions too, for keyboards. Both are pure math
@@ -59,11 +60,27 @@ world with no distance in it: a forward base saves nothing, a full pack is never
 walk home is never a cost. What replaced it is nothing. If travel comes back it should be a thing
 with a price on it rather than a free line on a panel.
 
-The quarry is what that claim looks like when it is cashed: a map file, a spawn list, a row and one
+**A zone is written as text** (`data/zoneText.ts`, decision 113), because at version 2's size a
+zone painted in rectangles of code, its contents a list of offsets from the middle of the map,
+cannot be read, let alone laid out. One character is one tile. The grounds are characters every zone
+shares — `.` grass, `=` road, `~` water, `:` sand, `_` stone, `#` rock, `,` marsh — and everything
+standing on them is a marker of the zone's own: `@` the start, where a new character and a death
+put somebody, and a letter for each kind of creature at its level, node, station and building, each
+a legend row saying what it is and the ground under it. A marker stands in the middle of its tile. A
+building is a block of its letter exactly its footprint, so it stands on tile lines, and two of a
+kind side by side take two letters, since a block running on past a footprint is refused rather
+than guessed at. Whoever works in a building is named on its row and stands at its `counterPoint`,
+so a shopfront moved is its keeper moved. The text refuses to load if a row is the wrong width, a
+character is in neither table, there is not exactly one start, a block is the wrong size, or a
+legend row is on no tile: a zone that does not read is found at the first import, not in play. The
+lists `layoutZone` hands back come out in the order the text is read, which is why a test that
+wants a particular person or creature names it rather than taking the first.
+
+The quarry is what that claim looks like when it is cashed: a map file, a row and one
 exit each way, and it appeared on the world map, in the zone map and in the offline camp with
 nothing else written down. Two things a `ZONES` row still cannot promise on its own, both held
 by `tests/systems/ZoneSystem.test.ts`: that an arrival _anywhere_ along an exit edge lands on
-walkable ground, and that every spawn offset is somewhere something can actually reach — a vein one
+walkable ground, and that every spawn is somewhere something can actually reach — a vein one
 row too far north is a vein inside the rock face, and unlike a misplaced rat it never wanders out to
 prove it.
 

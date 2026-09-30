@@ -43,8 +43,11 @@ into a font file, every item, ability, buff and tab a pixel icon, the world's fi
 character sheet, and every colour a step on the art's ramps; decision 111), **and B9** (the Part B
 review: nothing drawn over the room the player stands in, a crowd's names stacked, a big screen
 seeing more of the world, the map's names one size, the player column backed, and Part C next as
-planned; decision 112). **Next: C1**, big maps and the version 2 save era. Update this line as each
-phase lands: which phase, and which is next.
+planned; decision 112), **and C1** (every zone written as text, the start, creatures, nodes,
+stations and buildings included and the townsfolk placed from where they work; a route that stands
+off the middle of a cell to reach a room two tiles deep; version 2's saves counting from 100, a
+version 1 character named once as they retire; the wizard's ids staffs; decision 113). **Next:
+C2**, the lore bible. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -130,7 +133,8 @@ why Part A exists and comes first.
 - **Open questions are asked when their phase starts**, not before. Each phase lists its own.
 - **Production shows work in progress** (decision 83). Every merge deploys, so every phase must
   leave the game playable, even where it is half-converted. Nothing but a merge deploys.
-- **CI and deploys are metered** (decision 95): 2,000 Actions minutes a month, and 100 Vercel
+- **CI runs and deploys are spent with care** (decision 95): the repo has since gone public, so
+  Actions minutes no longer run out, but a run still takes ten minutes, and Vercel allows 100
   deployments a day. A phase is pushed once its gates pass locally, not commit by commit, and its
   PR opened when it is done; a draft runs the gates alone, and marking it ready runs smoke.
 - **Saves**: normal migrations until **C1**, which starts the version 2 save era and retires every
@@ -450,9 +454,18 @@ decision 100's objection, and the HUD's headings took the world's font (decision
 Zones grow to **about 3× the area** (decision 86). This is where old saves retire, since every
 saved position stops meaning anything.
 
-- **C1 — Big maps, and the version 2 save era.** A text format for authoring maps at this size (a
-  legend of tiles and markers), per-zone dimensions, camera bounds. `CHARACTER_STATE_VERSION` jumps
-  with no chain from before: **older saves retire** (decision 82).
+- **C1 — Big maps, and the version 2 save era. (Landed.)** Every zone is **written as text**
+  (`data/zoneText.ts`): a character a tile, the grounds shared, and a legend of the zone's own for
+  the start, creatures, nodes, stations and buildings, a building a block of its letter exactly its
+  footprint and whoever works in it placed from its row. The offsets from the map's middle went
+  with `spawns.ts` and the fixed 25×19, so a zone's size is its text's; the camera already framed
+  any size. About sixty placements moved up to half a tile onto a cell's middle, and the sweeps
+  moved five more a cell. The pathfinder **stands a body off the middle of a crowded cell**, since
+  a room two tiles deep on tile lines had no cell to route through. **Version 2's saves count from
+  100** with no step from before: a version 1 save is dropped on its first load and the creation
+  screen names who was in it, once; a version 1 file is refused in the same words. The wizard's
+  ids became `apprentice-staff`, `stolen-staff` and `barrow-staff`. All three forks were the
+  user's (decision 113).
 - **C2 — The lore bible.** Before any zone is rebuilt: the realm's name and history, its peoples
   (humans, elves, dwarves and stranger things), its factions, its places, the tone with examples,
   the spirit's story, how things are named (`docs/lore/`). The user reviews it; rebuilt zones get

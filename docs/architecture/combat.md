@@ -104,7 +104,7 @@ the cap exactly where it was. The mill road spawns level 5 goblins and moved it 
 level 7 raiders and moved it to 8; the barrow spawns level 8 wights and moved it to 9. The Deep Cut
 is the clearest case of all, because it is a whole zone above the starter band that moved the cap
 **not at all** — it tops out at 6 under a fen that already spawns 7, so `progression.test.ts` had
-nothing to say about it. Nobody chose any of those numbers: the cap is asserted against `spawns.ts`,
+nothing to say about it. Nobody chose any of those numbers: the cap is asserted against the zones' spawns,
 so raising the content is what raises the ceiling and the test says the new number before anyone has
 to remember it.
 
