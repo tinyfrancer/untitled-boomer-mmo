@@ -2243,3 +2243,49 @@ What Claude made of it:
 choosing between the hat and the hood, which the user asked to keep both of; drawing each class
 with its own face or hair, which nobody asked for and which B4's layered figure can offer as a
 choice; and a thicker outline round the arms, which is the disjointed look itself.
+
+## 106. Every ground is drawn, rock stands up inside its own cell, scatter is baked and outlined, and 2D is the game
+
+**2026-09-30 · the user, starting B3; Claude's under it**
+
+The plan had B3 waiting on the fourth pass of the checkpoint's figures (decision 105) holding up,
+and the art source re-decided if it did not. The user answered by asking for B3, which closes
+decision 81's checkpoint with the art source standing. B3 is every zone drawable, the lantern, water
+and scatter, and 2D the default with 3D kept behind a flag. How to draw it had forks, all Claude's:
+
+- **Every pair of grounds that meets in a zone has an edge**, nine new rows beside B2's two, and a
+  test sweeps every zone for a pair without one. Sand under grass, the sea under a beach (foam, no
+  face, since a beach slopes into the water), a quarry's floor under its turf, the mill pond under
+  its yard, the fen under its sand and its pools under their mud, water under a cut stone kerb, and
+  rock over a floor and over water.
+- **Rock stands up inside its own cell.** A true 3/4 view would draw a rock's top a face's height
+  north of its footprint, over the floor behind it; that lays blocking ground over walkable, which
+  decision 102 ruled out, and hides where a player may walk. So the floor reaches into the rock's
+  cell as every upper ground does, and the rock shows **a face** on its south side there, sixteen
+  rows drawn from a tile of fractured rock rather than inked flat, its crest lit on the north and
+  the floor at its foot a crevice of shadow. A face is a field of an edge style, so a kerb or a
+  cliff later is a row.
+- **The stone floor is irregular flagstones**, not a bond: the bond read as a brick wall laid flat.
+  Its joints are a step up from black so the slabs do not shout, and sand, stone, rock and marsh get
+  variants the way grass and road did, each holding its plain tile's two-pixel border (now a test).
+- **Scatter is a sprite kind of its own, baked into the ground and outlined.** Tufts, flowers,
+  reeds, pebbles and shells, placed by a hash of where they are, never in a cell another ground
+  reaches into and never on a building's footprint. Baked, since it is ground and a frame then pays
+  nothing for it. Outlined, which the style guide keeps for things rather than ground, because
+  drawn in the same ramp as textured ground a tuft with no edge was not there at all.
+- **The lantern is darkness stamped over the scene in dithered steps, with a warm glow added in
+  the clear**, drawn over everything standing and under the words. It is never black (two thirds
+  dark), so a creature at the edge of the screen is still a shape and its name reads, and the glow
+  is what brings the underground palette's colour back where the player is.
+- **2D is the default and 3D is `?renderer=3d`**, loaded only when asked for, until B7 deletes
+  it. Every smoke section now runs in 2D; the checks that asked a drag to turn the camera ask it to
+  turn nothing, and the ones only the turned camera can answer moved to a `renderer-3d` section. A
+  word baked for the world is let go on the first frame that does not draw it, so the canvas count
+  comes back when a fight is over, as the leak check needs.
+
+**Rejected:** a rock's top overhanging the floor north of it; a face inked in flat rows, which read
+as a stripe; scatter as more tile variants, which repeat with the tile; scatter standing and sorted
+with the figures, which costs every frame for what a player walks over; scatter without an outline;
+a smooth lantern gradient, which is not pixel art, and a lantern gone to black; keeping 3D the
+default until B5 and B6 draw what is still a placeholder, which decision 83 already decided against;
+deleting the 3D view now, which is B7's; and keeping smoke on the 3D view while the game is 2D.

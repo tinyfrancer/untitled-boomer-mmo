@@ -16,16 +16,19 @@ tap before it replaces anybody; decision 97), **A9** (twelve tips in the spirit'
 once per character, on a card that waits for a tap; decision 98), **A10** (the Part A review:
 four leftovers mended in place, a grind pass added to Part C as C10, Part B kept next; decision 99)
 **B1** (the style guide, sprites as data in `src/art/` held to a palette and a fixed animation
-budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101) **and B2** (the
+budget, and the renderer spike, which chose Canvas 2D; decisions 100 and 101), **B2** (the
 checkpoint slice: town in pixel art behind `?renderer=2d`, with edges between grounds, the warrior,
 the shopkeeper, the rat and a building kit drawn for real; decision 102; redrawn heroic and
 weathered after the user's first look found it "farmvilley", decision 103; after their second, which
 kept the style, a figure whose arms hold what it carries, the wizard and the ranger, an armour
 lookbook, and a town that says what each place is, decision 104; and after their third, plain
 starting outfits with the grand looks kept as armour for later, a hat and a hood both, and a figure
-cleaned up into one silhouette, decision 105). **Next: the user judges the fourth pass of B2's
-figures**, and B3 once they hold up; if they do not, the art source is re-decided before B3
-(decision 81). Update this line as each phase lands: which phase, and which is next.
+cleaned up into one silhouette, decision 105; the user then asked for B3, which closed the
+checkpoint with the art source standing), **and B3** (every zone drawn: an edge wherever two grounds
+meet, rock standing up with its face in its own cell, irregular flagstones, variants for sand,
+stone, rock and marsh, scatter baked into the ground, and the lantern underground; **2D the game**, 3D behind
+`?renderer=3d` until B7; decision 106). **Next: B4**, people. Update this line as each phase lands:
+which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -297,9 +300,23 @@ discovered at the end.
   105): each class now starts bare-headed in a tunic or robe of its colour, what they wore is armour
   for later in the lookbook (the wizard's under a hood or a hat, both kept), and the figure is one
   silhouette, a tunic tapering to a belted waist with the arms hanging against it.
-- **B3 — Every zone drawable, and the switch.** All terrain and all three settings (the lantern
-  underground), water and ground scatter. Anything not yet drawn shows a placeholder sprite. **2D
-  becomes the default**; 3D stays reachable for one phase as a fallback.
+- **B3 — Every zone drawable, and the switch. (Landed.)** **Every pair of grounds that meets in a
+  zone has an edge**, nine rows beside B2's two and a test sweeping the maps for a pair without one:
+  grass over sand, foam where the sea meets a beach, turf round the quarry, the mill pond's bank, the
+  fen's sand and its pools' mud, a stone kerb over water. **Rock stands up inside its own cell**:
+  since an edge never lays blocking ground over walkable, the floor reaches into the rock and the
+  rock shows **a face** there, sixteen rows drawn from a tile of fractured rock, its crest lit and
+  its foot in shadow. Stone is **irregular flagstones** rather than a bond that read as a brick wall,
+  and sand, stone, rock and marsh have **variants** that keep their plain tile's border. **Scatter**
+  is a sprite kind of its own (tufts, flowers, reeds, pebbles, shells), placed by a hash, baked into
+  the ground, outlined so it shows on ground textured in its own ramp, and never where an edge is
+  drawn or a building stands. **The lantern** is darkness stamped over the scene in dithered steps
+  with a warm glow in the clear, never black. Anything not yet drawn is still its placeholder.
+  **2D is the default**, and 3D is loaded only for `?renderer=3d`, kept until B7 deletes it rather
+  than for one phase, since the code stays until then either way. Every smoke section runs in 2D;
+  the drag checks ask a drag to turn nothing, and a `renderer-3d` section holds the fallback and
+  the camera only it turns. Twenty-seven files with its tests and docs. Decision 106 has the
+  forks.
 - **B4 — People.** A layered figure for all three classes: body, armour by slot, weapon and offhand,
   tier colours by recolouring. Four directions, walk, attack, cast, shoot, hurt, death, within B1's
   budget. B2 already has the figure kit, all three classes and an armour lookbook (decision 104):

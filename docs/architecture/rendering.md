@@ -1,5 +1,9 @@
 # Rendering
 
+_Since B3 this is the fallback's: the game is drawn by the 2D view (`docs/architecture/art.md`,
+decision 106), and the 3D view below is loaded only for `?renderer=3d` until B7 deletes it and
+rewrites this file for 2D._
+
 The Three.js side: the camera and the tab bar, how creatures and nodes pick their look, terrain, light and shadow, the draw budget, nameplates, effects, picking, gestures and occlusion.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._

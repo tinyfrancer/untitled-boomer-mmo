@@ -57,7 +57,8 @@ beyond that everything that has to happen around a zone without drawing it — t
 keyboard binding, the pointer, mounting the HUD, the reset that ends a session, and the load that
 replaces one with a character read from a save file. `Host` in `host/host.ts` is the only one,
 and it takes whichever view it is built with through the `ZoneView` interface
-(`host/zoneView.ts`): the Three.js view, or the pixel-art one behind `?renderer=2d` (decision 102).
+(`host/zoneView.ts`): the pixel-art one (decisions 102 and 106), or the Three.js view behind
+`?renderer=3d` until B7 deletes it.
 It lived in `render3d/` while there was one renderer. The split is what let the renderer be
 replaced under the game, so new host duties belong there rather than leaking into the world, the
 HUD or either view.
