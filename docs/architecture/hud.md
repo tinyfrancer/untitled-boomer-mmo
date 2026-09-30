@@ -21,7 +21,8 @@ list with a **Back** to the conversation put at the front of its head by `Overla
 by the panel, which is why each modal hands the host its `head` (`economy.md`). The options menu
 also holds the one setting
 that is not the character's — mute and volume, which the HUD is handed at mount and sends back
-whole on `SOUND_SETTINGS_CHANGED_EVENT` (`audio.md`).
+whole on `SOUND_SETTINGS_CHANGED_EVENT` (`audio.md`) — beside the two that are, the tips and the
+minimap, each a switch that asks and is answered by whoever keeps it.
 
 **The options menu holds the save too** (decision 97): Download Save, Copy Save Code and Load a
 Save, over Reset Character, in a body that scrolls with Close outside it, and it stops above the tab
@@ -161,9 +162,10 @@ with no subscriber and leave the map blank until the first zone walk. Terrain is
 identical tiles (`terrainBands`), which takes a 475-tile zone down to 65 rectangles, each in **its
 ground's own colour in the zone's light** (`tileColour` in `art/sprites/terrain.ts`, step 2 of the
 tile's terrain ramp in the zone's setting, decision 111), so the map of a cave is as dark as the
-cave and a pond is the pond's blue; a world-map cell is its zone's grass, or its rock when shut. **No mobs**:
-they wander, so drawing them means a moving position per frame, and a map of where the rats were a
-second ago is worse than a map with no rats on it. No tap-to-travel either.
+cave and a pond is the pond's blue; a world-map cell is its zone's grass, or its rock when shut. **No
+creatures on the sheet**: it is the plan of the place, opened to find the forge, and the creatures
+near the player are the minimap's (below), which is the map looked at mid-fight. No tap-to-travel
+either.
 
 **A building's name is drawn over the markers, and its ground under them.** The keepers of the
 counters stand inside the buildings they work from (the interiors plan moved them in), so a name
@@ -177,13 +179,55 @@ of "Quartermaster's Post" on the same map. An exit's name hangs under its marker
 the bottom edge**, where under it hung off the map and over the sheet's frame.
 `Hud.test.ts` holds the order.
 
-**The two top corners share the row rather than stacking**: who you are top-left, what you are
-fighting top-right. The column starts at the margin, not a target frame and a margin down the
-screen. The frame takes the width _left beside_ the column rather than `THEME.panelWidth.target`
-flat — at 375px a full-width one and the 190px column meet in the middle, and the narrower the phone
-the deeper they overlap. A desktop sheet opens in the right-hand column, which is the frame's own
-corner now, so `sheetRect` starts it below `topRowBottom` rather than below the player column alone;
-the column being the taller of the two today is a coincidence between two tuned heights, not a rule.
+**The minimap is the zone map windowed round the player** (decision 115, `hud/Minimap.ts`):
+twenty-seven tiles a side (`MINIMAP_TILES` in `systems/MapSystem.ts`) at four CSS pixels a tile
+(`THEME.minimap.tile`), in an iron panel with the zone's name under it in the world's font.
+Everything on it but the creatures and the player is `zoneMap()`'s, drawn through the helpers the
+sheet draws with (`hud/mapArt.ts`), so the two cannot disagree about where a tree is or what green
+it is. The ground, the buildings, the nodes and the people are built once a zone, and a tile
+crossing moves the SVG's `viewBox` over them with the player in the middle, held to a whole pixel of
+the minimap (`minimapOrigin`) so every edge lands on one; `crispEdges` does the rest. The window is
+the zone round the player rather than the whole of it, since a rebuilt zone of 45 by 32 in a corner a
+thumb wide is two pixels a tile. What stands on it is shaped for four pixels a tile rather than
+shrunk off the sheet: a node lies flat at two pixels and a person at three; **a creature is three
+pixels in the colour of its name** (`conColor`, worked out against the level the HUD holds, so a
+level-up recolours them without the world saying anything) **inside a ring of ink**, which is what
+tells a green rat from the green tree it stands by, and a boss is five; **an exit is an arrow**
+pointing off the edge it leaves by, the one question about an exit there is room to answer, and
+while it is out of the window it is drawn on the rim in the road's direction (`onMinimapRim`); the
+player is a cross, a shape nothing else takes. A gold square was an exit's first drawing, and a
+level 2 rat's yellow ring beside it was the same thing to the eye. It writes no names: the whole
+panel is a button, and a tap opens the zone map at this zone, where the names are, and shuts it as
+its tab would.
+
+**Creatures reach the HUD on the player's terms** (`creatures-changed`). The sheet had none because
+a creature's position was the per-frame channel the HUD is kept off; the minimap's arrive the way
+the player's tile does, from the tick, keyed to whole tiles: every living creature within
+`MINIMAP_REACH` tiles of the player's tile, whole, when one of them crosses a tile, dies, gets up or
+comes into reach or leaves it. So a rat at the far end of a rebuilt zone says nothing to anybody, and
+a dot is a tile's walk behind at worst, which at this size is a pixel or four. The payload carries a
+level rather than a colour, and it is unseeded like the map's two, so a new world with nothing near
+says so and the last zone's rats do not stay on.
+
+**The minimap has the top-right corner, and the target frame stands beside it or under it**
+(`hudLayout`). Beside it where the top row has room for both, which is a landscape phone and
+anything wider; under it on a phone held upright, where the column and the minimap all but meet. The
+frame moving between screens is a lesser thing than the minimap jumping down the screen each time
+something is picked, which is what the frame's corner with the minimap under it would have done.
+**The switch in Options** takes it down (`CharacterState.showMinimap`, save version 101, kept on the
+character like the tips switch and set by the session, since nothing in a zone reads it), and the
+corner is the frame's again. `tests/ui/layout.test.ts` holds it clear of the column, the frame, the
+tracker, the ability bar and the tip card at five screens with the column at its tallest, and smoke
+measures it at three.
+
+**The two top corners share the row rather than stacking**: who you are top-left, the minimap and
+what you are fighting top-right. The column starts at the margin, not a target frame and a margin
+down the screen. The frame takes the width _left beside_ the column rather than
+`THEME.panelWidth.target` flat — at 375px a full-width one and the 190px column meet in the middle,
+and the narrower the phone the deeper they overlap. A desktop sheet opens in the right-hand column,
+which is the minimap's and the frame's corner now, so `sheetRect` starts it below `topRowBottom`,
+which counts all three, rather than below the player column alone; which of them is the tallest is a
+coincidence between tuned heights, not a rule.
 
 **The quest tracker steps right of the column where the two would meet.** It sits over the ability
 bar at the full width, and on a portrait phone or a desktop the column never comes near it. A
@@ -379,8 +423,9 @@ would hold every tip for as long as the character sheet was left open. Overlays 
 children of the root, each closing itself, so `Hud` hears them through a `MutationObserver` on the
 root rather than a hook in every one; `OverlayHost.isAnyOpen()` says whether one is up. It sits
 at the top (`tipCardRect` in `ui/layout.ts`): between the two corners wherever that gap is wide
-enough to read in, which is a landscape phone and anything roomier, and under the whole top row on
-a portrait phone, where the corners all but meet. In the DOM it goes under the toast, which may
+enough to read in, which is a landscape phone and anything roomier, the gap stopping at whichever of
+the minimap and the target frame stands further left, and under the whole top row on a portrait
+phone, where the corners all but meet. In the DOM it goes under the toast, which may
 print across it on a short screen and is the more urgent of the two, and under every sheet and
 overlay. Smoke switches tips off for every character it makes except in its own `tips` section, since
 a card nobody answers would sit over whatever the next section taps.

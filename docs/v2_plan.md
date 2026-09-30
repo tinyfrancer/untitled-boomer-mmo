@@ -49,8 +49,10 @@ off the middle of a cell to reach a room two tiles deep; version 2's saves count
 version 1 character named once as they retire; the wizard's ids staffs; decision 113), **and C2** (the
 lore bible in `docs/lore/`: the Veymarch, a drowned kingdom's frontier whose lanterns are going out,
 its peoples, factions and places, the spirit who lit the light that drowned it, the tone and the
-names; decision 114). **Next: C3**, the minimap. Update this line as each phase lands: which phase,
-and which is next.
+names; decision 114), **and C3** (the minimap: the zone map windowed round the player in the
+top-right corner, the creatures near them in their names' colours, exits as arrows on its rim, a tap
+opening the zone map, and a switch in Options kept on the character; decision 115). **Next: C4**,
+smarter creatures. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -487,8 +489,17 @@ saved position stops meaning anything.
   name reaching the game when its zone is rebuilt; `tone.md` has the voice with lines right and
   wrong, and `naming.md` the old tongue's roots and every name taken. All four forks were the user's
   (decision 114).
-- **C3 — Minimap.** You, nearby creatures, exits and points of interest, in a corner that keeps
-  clear of everything `layout.ts` already reserves.
+- **C3 — Minimap. (Landed.)** **The zone map windowed round the player** (`hud/Minimap.ts`): 27
+  tiles a side at four pixels a tile, in an iron panel in **the top-right corner** with the zone's
+  name under it, drawn from `zoneMap()` through helpers the sheet now shares (`hud/mapArt.ts`), the
+  window moved on each tile crossing. Nodes lie flat, people are a size up, **a creature is a dot in
+  its name's colour ringed in ink** and a boss a bigger one, **an exit is an arrow** pointing off its
+  edge and drawn on the rim while out of view, and the player is a cross. **The creatures reach the
+  HUD as the player's tile does** (`creatures-changed`): those within reach, published on a tile
+  crossing, never once a frame. **The target frame stands beside the minimap** where the top row has
+  room and under it on a phone held upright. **A tap opens the zone map**, and a second shuts it.
+  **A switch in Options** takes it down, kept on the character (save version 101, version 2's first
+  migration step). Smoke gained a `minimap` section. All three forks were the user's (decision 115).
 - **C4 — Smarter creatures.** Mobs path around walls and obstacles (reversing decision 26), with
   leashing reworked for the distances. The spawn-safety sweeps run over the new maps.
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several

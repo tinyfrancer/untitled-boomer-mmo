@@ -88,7 +88,11 @@ in a test; see `src/ui/uiEvents.ts` for the event name constants (`target-select
 `level-up`, `equip-item-requested`, etc.). The host passes it into `ZoneWorld`, which is why the
 world can emit to the HUD without importing an engine; the world also subscribes to the HUD's
 requests itself and drops them in `destroy()`. The DOM HUD only listens and renders. Every one of
-these carries state the HUD re-renders from, so the latest one always describes the present.
+these carries state the HUD re-renders from, so the latest one always describes the present. **No
+position reaches the HUD once a frame**: the player's (`player-tile-changed`) and the creatures'
+near them, for the minimap (`creatures-changed`, decision 115), are published on a whole-tile
+crossing and carry where each one is at that moment, and the creatures only within the minimap's
+reach of the player (`MINIMAP_REACH`), so one wandering the far end of a zone says nothing.
 
 The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: `hit`, `swing`,
 `defend`, `heal`, `float`, `death`, `spawn`, `bolt-cast`, `gather-tick`, `level-up`, `wind-up`,
@@ -263,7 +267,10 @@ Taking one away is an ask and an answer on the HUD channel: `GameContext` hears
 holds the same), and answers `SAVE_EXPORTED_EVENT` on the same call stack, because the HUD does
 what a page does with it — a download, the clipboard — and a browser grants both only inside the
 tap. The session answers rather than the host because a save is the whole character and outlives
-every zone; it is the session's one subscription, cleared in `destroy()` with the world's.
+every zone. The minimap's switch (decision 115) is the session's for the same reason: nothing in a
+zone reads it, so `GameContext` hears `MINIMAP_SET_REQUESTED_EVENT`, sets it on the character,
+persists and answers `MINIMAP_STATE_CHANGED_EVENT`. Those two are the session's subscriptions,
+cleared in `destroy()` with the world's.
 
 Bringing one back is `readSave`: either form, the envelope's `game` (so "not a save" and "a damaged
 save" are two different things to be told), the version (newer is refused, older runs **the same
