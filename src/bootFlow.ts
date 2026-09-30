@@ -44,8 +44,8 @@ export function beginLoadedCharacter(host: GameHost, character: CharacterState):
 export function showCharacterCreate(host: GameHost): void {
   mountCharacterCreate({
     parent: uiRoot(),
-    onBegin: (name, classId) => {
-      const character = createNewCharacter(name, classId);
+    onBegin: (name, classId, look) => {
+      const character = createNewCharacter(name, classId, look);
       saveService.save(character);
       unmountCharacterCreate();
       beginSession(host, character);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { nth } from '../nth';
 import { Box3, BufferGeometry, CylinderGeometry, Group, Mesh, SphereGeometry } from 'three';
-import { paperdollSvg, weaponPreviewSvg } from '../../src/hud/paperdoll';
+import { paperdollSvg } from '../../src/hud/paperdoll';
 import { FIGURE_HEIGHT, buildFigure } from '../../src/render3d/figure';
 import {
   BASE_FIGURE_COLOR,
@@ -271,21 +271,5 @@ describe('paperdollSvg', () => {
   it('ignores a bag item worn in no slot', () => {
     const holding = paperdollSvg({ ...BARE, weapon: 'rat-bones' });
     expect(holding.childElementCount).toBe(paperdollSvg(BARE).childElementCount);
-  });
-});
-
-describe('weaponPreviewSvg', () => {
-  // The class previews on the creation screen: classes look alike apart from
-  // what they start holding, so that is the whole of the difference to show.
-  it('shows the weapon on an otherwise bare figure', () => {
-    const preview = weaponPreviewSvg('apprentice-wand');
-    const staff = ITEMS['apprentice-wand'];
-    if (staff?.kind !== 'equipment') throw new Error('the staff is not gear');
-    const painted = [...preview.querySelectorAll('[stroke], [fill]')].flatMap((node) => [
-      node.getAttribute('stroke'),
-      node.getAttribute('fill'),
-    ]);
-    expect(painted).toContain(cssColor(staff.color));
-    expect(painted).toContain(cssColor(SKIN_COLOR));
   });
 });

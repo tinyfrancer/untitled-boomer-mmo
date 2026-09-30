@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { bootIntoGame, showCharacterCreate, type GameHost } from '../../src/bootFlow';
 import { unmountCharacterCreate } from '../../src/hud/CharacterCreate';
+import { DEFAULT_LOOK, HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../../src/data/looks';
 import { createNewCharacter, saveService } from '../../src/persistence';
 import { writeSaveExport } from '../../src/persistence/saveFile';
 import { endGame, gameContext } from '../../src/world/GameContext';
@@ -101,6 +102,53 @@ describe('bootIntoGame', () => {
     expect(createScreen()).toBeNull();
     expect(startZone).toHaveBeenCalledOnce();
     expect(gameContext()?.character.state).toMatchObject({ name: 'Newcomer', classId: 'wizard' });
+  });
+
+  it('makes the character in the look chosen, the default until one is', () => {
+    bootIntoGame(host);
+    chooseClass('ranger');
+    for (const [part, value] of [
+      ['skin', 'deep'],
+      ['hair', 'red'],
+      ['hairstyle', 'tied'],
+    ]) {
+      document
+        .querySelector<HTMLButtonElement>(
+          `.create__choice[data-look="${part}"][data-value="${value}"]`,
+        )
+        ?.click();
+    }
+    const marked = [...document.querySelectorAll('.create__choice.is-selected')].map(
+      (choice) => (choice as HTMLElement).dataset.value,
+    );
+    begin().click();
+
+    expect(marked).toEqual(['deep', 'red', 'tied']);
+    expect(gameContext()?.character.state.look).toEqual({
+      skin: 'deep',
+      hair: 'red',
+      hairstyle: 'tied',
+    });
+  });
+
+  it('offers every skin, hair colour and hairstyle there is, with the default chosen', () => {
+    bootIntoGame(host);
+    const offered = (part: string) =>
+      [...document.querySelectorAll<HTMLElement>(`.create__choice[data-look="${part}"]`)].map(
+        (choice) => choice.dataset.value,
+      );
+    expect(offered('skin')).toEqual(Object.keys(SKIN_TONES));
+    expect(offered('hair')).toEqual(Object.keys(HAIR_COLOURS));
+    expect(offered('hairstyle')).toEqual(Object.keys(HAIRSTYLES));
+    expect(
+      [...document.querySelectorAll<HTMLElement>('.create__choice.is-selected')].map(
+        (choice) => choice.dataset.value,
+      ),
+    ).toEqual(Object.values(DEFAULT_LOOK));
+    // Every choice says what it is, a swatch as well as a written name.
+    for (const choice of document.querySelectorAll('.create__choice')) {
+      expect(choice.getAttribute('aria-label')).toMatch(/^(Skin|Hair|Style): \w/);
+    }
   });
 
   it('saves the new character before the first frame runs', () => {

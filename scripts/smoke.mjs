@@ -572,6 +572,28 @@ async function boot() {
   await page.screenshot({ path: `${OUT}/1-character-create.png` });
 
   await page.fill('.create__name', 'Adventurer');
+  // A look chosen on the screen (decision 107), drawn on every class's card in
+  // the world's own art: the cards' pictures are canvases the browser fills,
+  // which jsdom cannot, so only a browser shows the choice redraw them.
+  const cardsBefore = await page.evaluate(() =>
+    [...document.querySelectorAll('.create__card canvas')].map((canvas) =>
+      /** @type {HTMLCanvasElement} */ (canvas).toDataURL(),
+    ),
+  );
+  await page.click('.create__choice[data-look="hairstyle"][data-value="bearded"]');
+  await page.click('.create__choice[data-look="hair"][data-value="black"]');
+  const cardsAfter = await page.evaluate(() =>
+    [...document.querySelectorAll('.create__card canvas')].map((canvas) =>
+      /** @type {HTMLCanvasElement} */ (canvas).toDataURL(),
+    ),
+  );
+  check(
+    'the creation screen pictures every class in the look chosen, and draws them again',
+    cardsBefore.length === 3 &&
+      new Set(cardsBefore).size === 3 &&
+      cardsAfter.every((after, index) => after !== cardsBefore[index]),
+    `${cardsBefore.length} pictures`,
+  );
   await page.click('.create__card[data-class="warrior"]');
   check(
     'choosing a class arms the begin button',
@@ -582,6 +604,12 @@ async function boot() {
     timeout: 60000,
   });
   check('the game boots a session through the creation screen', true);
+  const look = await page.evaluate(() => window.world.character.state.look);
+  check(
+    'and makes the character in the look chosen',
+    look.hairstyle === 'bearded' && look.hair === 'black' && look.skin === 'fair',
+    JSON.stringify(look),
+  );
 
   // Version 2's pixel art, drawn at art resolution into a canvas the page
   // scales up by a whole number of device pixels (decision 101), so every art
@@ -4274,8 +4302,10 @@ async function reset() {
   await page.waitForSelector('.create', { timeout: 20000 });
   check(
     'a reset tears the renderer down and returns to character creation',
+    // The world's canvas, not any: the creation screen draws its cards on canvases of its own.
     (await page.evaluate(
-      () => document.querySelector('.hud') === null && document.querySelector('canvas') === null,
+      () =>
+        document.querySelector('.hud') === null && document.querySelector('#app > canvas') === null,
     )) === true,
   );
   await page.click('.create__card[data-class="wizard"]');

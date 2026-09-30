@@ -7,8 +7,8 @@ import {
   type StickFigure,
 } from '../systems/AppearanceSystem';
 import { cssColor } from '../ui/theme';
-import { NO_GEAR, type Gear } from '../systems/InventorySystem';
-import type { ItemId, OffhandShapeId, WeaponShapeId } from '../types/ids';
+import type { Gear } from '../systems/InventorySystem';
+import type { OffhandShapeId, WeaponShapeId } from '../types/ids';
 
 const OUTLINE_COLOR = 0x000000;
 const BOX = 100;
@@ -239,17 +239,4 @@ function svgEl(tag: string, attributes: Record<string, string | number>): SVGEle
     node.setAttribute(name, String(value));
   }
   return node;
-}
-
-/**
- * A bare figure holding what a class starts with, for the class previews on the
- * creation screen. Classes look alike apart from what they start holding, so
- * that is the whole of the difference the preview has to show — and for the
- * ranger that is a bow and the quiver beside it.
- */
-export function weaponPreviewSvg(
-  weaponItemId: ItemId,
-  offhandItemId: ItemId | null = null,
-): SVGSVGElement {
-  return paperdollSvg({ ...NO_GEAR, weapon: weaponItemId, offhand: offhandItemId });
 }
