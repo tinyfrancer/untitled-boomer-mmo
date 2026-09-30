@@ -5,8 +5,18 @@ import { TILE_SIZE } from '../../src/config/constants';
 import { doorPoint, occupant } from '../../src/data/buildings';
 import { ZONES } from '../../src/data/zones';
 import { BuildingSprite } from '../../src/render2d/buildings';
-import { MIN_PICK_SPAN, pickScene, pickTap, standingRect } from '../../src/render2d/picking';
+import {
+  MIN_PICK_SPAN,
+  pickScene,
+  pickTap,
+  standingRect,
+  type PickScene2D,
+} from '../../src/render2d/picking';
+import { LOOT_PILE_LIFETIME_MS } from '../../src/systems/LootSystem';
+import { LootPile } from '../../src/world/LootPile';
+import { nth } from '../nth';
 import { harness } from '../world/harness';
+import type { CharacterController } from '../../src/systems/CharacterController';
 import type { Point } from '../../src/systems/MovementSystem';
 import type { ZoneId } from '../../src/types/ids';
 import type { Mob } from '../../src/world/Mob';
@@ -25,6 +35,17 @@ function buildingsOf(world: ZoneWorld): BuildingSprite[] {
 function tapIn(world: ZoneWorld, point: Point, buildings = buildingsOf(world)) {
   buildings.forEach((building) => building.sync(world.player));
   return pickTap(point, pickScene(world, heightOf, buildings));
+}
+
+/**
+ * A pile where `mob` fell, left the way the game leaves one: killed with a pack
+ * too full to take what it dropped (the harness's dice loaded so it drops).
+ */
+function pileUnder(world: ZoneWorld, character: CharacterController, mob: Mob): LootPile {
+  character.addItem('crab-meat', Math.floor(character.carryCapacity() - character.carriedWeight()));
+  mob.takeDamage(mob.maxHp);
+  world.resolveKill(mob);
+  return nth(world.lootPiles);
 }
 
 describe('standingRect', () => {
@@ -100,9 +121,9 @@ describe('pickTap in 2D', () => {
   });
 
   /**
-   * A node is picked by its body, as the 3D view picked it: a tree up its
-   * trunk and the lower half of its crown, not the whole crown, and a fishing
-   * spot as the patch of water it is, on either side of the spot.
+   * A node is picked by its body: a tree up its trunk and the lower half of
+   * its crown, not the whole crown, and a fishing spot as the patch of water it
+   * is, on either side of the spot.
    */
   it('picks a tree by its body and a fishing spot lying flat round it', () => {
     const { world } = harness();
@@ -125,14 +146,107 @@ describe('pickTap in 2D', () => {
       signpost,
     });
   });
+
+  /**
+   * The order is a priority rather than a depth sort, which is the whole reason
+   * each kind is asked separately: a rat wandering in front of the shopkeeper
+   * does not stop you shopping. One box on one spot, offered by every kind, so
+   * that only the order can decide.
+   */
+  it('asks node, signpost, NPC, mob, station, building, pile, then ground', () => {
+    const { world } = harness();
+    const spot = { x: 700, y: 700 };
+    const door = { x: 0, y: 0 };
+    const standing = { baseY: spot.y, pickRect: () => standingRect(spot.x, spot.y, 64, 64) };
+    const full: PickScene2D = {
+      nodes: [{ ...standing, node: nth(world.nodes) }],
+      signposts: [{ ...standing, signpost: nth(world.signposts) }],
+      npcs: [{ ...standing, npc: nth(world.npcs) }],
+      mobs: [{ ...standing, mob: nth(world.mobs) }],
+      stations: [{ ...standing, station: nth(world.stations) }],
+      buildings: [
+        {
+          ...standing,
+          building: nth(world.buildings),
+          tapAnswer: () => ({ kind: 'ground', point: door }),
+        },
+      ],
+      piles: [{ ...standing, pile: new LootPile(spot, [{ itemId: 'rat-bones', quantity: 1 }]) }],
+    };
+    const order = ['nodes', 'signposts', 'npcs', 'mobs', 'stations', 'buildings', 'piles'] as const;
+    const answered = order.map((_, taken) => {
+      const scene = { ...full };
+      order.slice(0, taken).forEach((kind) => (scene[kind] = []));
+      const tapped = pickTap(spot, scene);
+      return tapped.kind === 'ground' && tapped.point === door ? 'building' : tapped.kind;
+    });
+    expect(answered).toEqual(['node', 'signpost', 'npc', 'mob', 'station', 'building', 'pile']);
+  });
+
+  it('takes from a loot pile tapped where it lies, and hands a lapsed one to the ground', () => {
+    const { world, character } = harness({ rolls: () => 0 });
+    const pile = pileUnder(world, character, nth(world.mobs));
+    expect(tapIn(world, { x: pile.x, y: pile.y })).toEqual({ kind: 'pile', pile });
+
+    // The corpse's twin: a pile that has lapsed offers no box in the frame
+    // before the view stops drawing its sack.
+    pile.update(LOOT_PILE_LIFETIME_MS);
+    expect(tapIn(world, { x: pile.x, y: pile.y }).kind).toBe('ground');
+  });
+
+  // Below everything but the ground: a pile lies wherever something died, which
+  // is wherever the next one is standing.
+  it('gives a tap on a pile to the creature standing over it', () => {
+    const { world, character } = harness({ rolls: () => 0 });
+    const pile = pileUnder(world, character, nth(world.mobs, 0));
+    const rat = nth(world.mobs, 1);
+    rat.setPosition(pile.x, pile.y);
+    expect(tapIn(world, { x: pile.x, y: pile.y })).toMatchObject({ kind: 'mob', mob: rat });
+  });
+
+  /**
+   * Into a building on the second tap, from its own doorstep, which is the only
+   * way there is onto a floor: from outside the roof is drawn over the room and
+   * every point on it is the building's, so without a second meaning for the
+   * same tap a room would be reachable by keyboard alone.
+   */
+  it('walks into a building on a second tap, from its own doorstep, shop or not', () => {
+    const { world } = harness();
+    for (const building of buildingsOf(world)) {
+      const { x, y } = building.building;
+      building.sync(doorPoint(building.building));
+      expect(building.tapAnswer(), building.building.definition.id).toEqual({
+        kind: 'ground',
+        point: { x, y },
+      });
+    }
+  });
+
+  // On the doorstep, the one spot where a creature and the front it stands
+  // before are drawn over each other: the case a depth sort gets wrong.
+  it('lets a rat on a shopfront doorstep still be attacked', () => {
+    const { world } = harness();
+    const store = world.buildings.find(({ definition }) => definition.id === 'general-store');
+    if (!store) throw new Error('town has no general store');
+    const rat = world.mobs[0] as Mob;
+    const door = doorPoint(store);
+    rat.setPosition(door.x, door.y);
+    world.teleport(door.x, door.y + TILE_SIZE * 3);
+    // High on the rat, where it is drawn over the shopfront's wall.
+    const aim = { x: rat.x, y: rat.y - TILE_SIZE * 0.6 };
+    const front = new BuildingSprite(store, null, () => null).outsideRect();
+    expect(aim.y).toBeLessThan(front.bottom);
+    expect(tapIn(world, aim)).toMatchObject({ kind: 'mob', mob: rat });
+  });
 });
 
 /**
- * The 3D view's sweep (`tests/render3d/picking.test.ts`), asked of the flat
- * one: every creature, everywhere its wander can take it, can be tapped from
- * where a player stands to fight it, with every counter, station and shopfront
- * in the scene. A kind ranked above the mobs wins wherever its box is, so a
- * box drawn too big in 2D eats a rat the 3D view never lost.
+ * Every creature, everywhere its wander can take it, can be tapped from where a
+ * player stands to fight it, with every counter, station and shopfront in the
+ * scene. A kind ranked above the mobs wins wherever its box is, so one box
+ * drawn too big eats every tap on the rat standing in it. The forge in town was
+ * moved for exactly that, and this is what holds it now, over every zone and
+ * every spawn at once.
  */
 describe('the approach to a creature in 2D', () => {
   function reachableSpots(mob: Mob): Point[] {
@@ -161,8 +275,8 @@ describe('the approach to a creature in 2D', () => {
           mob.setPosition(spot.x, spot.y);
           for (const back of [80, 150]) {
             world.player.setPosition(mob.x, mob.y + back);
-            // Counters, stations and shopfronts, as the 3D sweep has it: a node or a
-            // signpost ranks above a creature by design, and stands at a map's edges.
+            // Counters, stations and shopfronts: a node or a signpost ranks above
+            // a creature by design, and stands at a map's edges.
             buildings.forEach((building) => building.sync(world.player));
             const tapped = pickTap(
               { x: spot.x, y: spot.y - 10 },
