@@ -413,6 +413,12 @@ minimum, ▲, ▼ and Keep, which ask the world and redraw from the choice it an
 the buttons stay in columns. Smoke measures them at a portrait phone's width, where a row is
 tightest.
 
+**A secret found is said on the same card** (decision 117): its name in the world's type, Wick's
+line, and what was left there, ahead of any tip waiting to be heard and whether or not tips are on,
+since it is the reward rather than advice, with Got it alone to put it away. The zone map says how
+many of the zone's secrets are found under the map, "Secrets 1 / 2", read off `secretsFound` in
+`systems/MapSystem.ts` and the `secrets-changed` list; where one lies is on no map.
+
 **A tip is a card that waits for a tap** (decision 98, `hud/TipCard.ts`). The world offers one at a
 time on `tip-offered`, carrying the spirit's line already written (`simulation.md`), and the card
 holds it until **Got it** (`tip-heard`) or **No more tips** (`tips-set-requested`, off); Options

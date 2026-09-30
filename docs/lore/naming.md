@@ -93,8 +93,8 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Bess Mallow                 |             | Keeps the Wet Boot                                  | `places.md`   |
 | Big Gorb                    |             | A goblin tangle's Big One, not yet met              | `naming.md`   |
 | Blackwater Fen              |             | _In game_; the drowned low country's edge           | `places.md`   |
-| Candle Strand               |             | The beach (_in game_ as Beach)                      | `places.md`   |
-| the Candles                 |             | The sea-lights' stumps off Candle Strand            | `places.md`   |
+| Candle Strand               |             | _In game_; the strand south of Lampton              | `places.md`   |
+| the Candles                 |             | _In game_; the sea-lights' stumps off Candle Strand | `places.md`   |
 | Cobb Harrow                 |             | Lampton's absent smith                              | `places.md`   |
 | the Cutthroat's Cellar      |             | The bandit hideout (_in game_ as Bandit Hideout)    | `places.md`   |
 | the Deep Cut                |             | _In game_; Karn Tholl's outer workings              | `places.md`   |
@@ -113,8 +113,8 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Karra Deepvein              |             | The dwarf scout in the Deep Cut                     | `places.md`   |
 | the Keepers                 |             | The fenfolk as a faction                            | `factions.md` |
 | the kindling                |             | Binding a soul into a flame                         | `history.md`  |
-| the Lamp Stone              |             | The waymarker in Lampton's crossroads               | `places.md`   |
-| Lampton                     |             | The town (_in game_ as Town)                        | `places.md`   |
+| the Lamp Stone              |             | _In game_; the waymarker in Lampton's crossroads    | `places.md`   |
+| Lampton                     |             | _In game_; the Company's town                       | `places.md`   |
 | lortir                      | LOR-teer    | The fenfolk's name for themselves                   | `peoples.md`  |
 | Lorn                        | LORN        | Wick's name, the lampwright                         | `spirit.md`   |
 | Maren                       | MAR-en      | Keeper of the third light, a fenfolk elder          | `places.md`   |

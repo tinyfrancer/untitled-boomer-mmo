@@ -4,11 +4,13 @@ Every zone as it stands: what it is, what it was, who is there, what it hides, w
 about it, and what Wick remembers there. Then the lands past level 8.
 
 The rebuilds (C5-C9) take a zone's name, its secrets and its rumours from here and add its people;
-how a secret is found is C5's open question. D2's rumours start from the lines here, and D4 writes
+a secret is found by walking up to it, and pays a line of Wick's and a cache (decision 117). D2's rumours start from the lines here, and D4 writes
 Wick's beats from the lines here. A zone's name changes in the game in the phase that rebuilds it.
 Someone marked _not yet in the game_ is for a rebuild or for Part D to add.
 
-## Lampton (now "Town"), levels 1-3
+## Lampton, levels 1-3
+
+_Rebuilt in C5 (decision 117)._
 
 **What it is.** The Company's town, twenty-nine years old, at the crossroads of the four roads out:
 the strand south, the New Cut north, the east road to Aldmark, and the west road to Greyford. A
@@ -38,8 +40,11 @@ waystation's undercroft, which is where the rats come from.
 **Secrets.**
 
 - Writing round the Lamp Stone's foot, under the dirt, in the old tongue: a waymarker's blessing on
-  travellers, and the first Veymari the player can find.
+  travellers, and the first Veymari the player can find. _In game_, and Wick's stir below is said
+  on finding it.
 - The undercroft, down through the Wet Boot's cellar: a waystation's vault, and the rats' way up.
+  The cellar's hatch round the back of the Wet Boot is _in game_; the vault under it, and His
+  Majesty, wait for a later phase to open it.
 
 **Rumours.**
 
@@ -51,11 +56,14 @@ waystation's undercroft, which is where the rats come from.
 
 **Wick.** At the Lamp Stone, the first stir: "I know this shape. I don't know why I know this shape."
 
-## Candle Strand (now "Beach"), levels 1-3
+## Candle Strand, levels 1-3
+
+_Rebuilt in C5 (decision 117)._
 
 **What it is.** The strand south of Lampton: sand, crabs and the Company's fishers, and a spit down
-the west side that is the only way to the fen road. Offshore at low tide stand **the Candles**,
-stumps of stone in a line out of the sea, which the settlers named for what they look like.
+the west side that is the only way to the fen road. Offshore stand **the Candles**, stumps of stone
+in a line out of the sea, which the settlers named for what they look like. There is no tide to
+speak of (decision 117): the sea is where it is.
 
 **What it was.** Veymar's sea-wall. The Candles are its sea-lights, drowned to the stump.
 
@@ -64,8 +72,9 @@ _Not yet in the game._
 
 **Secrets.**
 
-- At the lowest tide the nearest Candle can be walked out to, and inside it is a warden's niche,
-  cold.
+- The nearest Candle can be walked out to along the top of the drowned sea-wall, which still shows
+  off the end of the spit and is easy to miss, and at its foot is a warden's niche, cold. _In
+  game._
 
 **Rumours.**
 
@@ -295,6 +304,6 @@ Part G sizes these (decision 84, C11). What each is for:
 - **The high Greyhills**, north: the goblins' tangles and their Big Ones, and past them something the
   dwarves call a dragon and do not go near.
 - **The barrow field**, south of Orlhal: Veymar's older kings in a row, waking one at a time.
-- **The sea-wall**, out from Candle Strand past the Candles at the lowest tide of the year, towards
+- **The sea-wall**, out from Candle Strand along the drowned wall past the Candles, towards
   Marhal.
 - **Marhal**, drowned, and Merrath the Last in the great light.
