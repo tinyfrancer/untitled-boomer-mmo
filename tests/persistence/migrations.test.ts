@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_LOOK } from '../../src/data/looks';
 import { migrateCharacterState } from '../../src/persistence/migrations';
 import { CHARACTER_STATE_VERSION, createNewCharacter } from '../../src/persistence/CharacterState';
 import { knownAbilities } from '../../src/systems/AbilitySystem';
@@ -687,6 +688,42 @@ describe('migrateCharacterState', () => {
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
     expect(migrated?.tips).toEqual({ heard: [], off: false });
     expect(migrated?.activeTitleId).toBe('rat-culler');
+  });
+
+  /**
+   * v26 -> v27: a character is made in a look (decision 107). One made before
+   * looks were chosen is drawn as every character was drawn: fair, brown and
+   * cropped.
+   */
+  it('looks the way every character looked before the choice, touching nothing else', () => {
+    const migrated = migrateCharacterState({
+      ...v4Save(),
+      version: 26,
+      currency: 0,
+      zoneId: 'town',
+      afk: null,
+      quests: {},
+      kills: {},
+      visits: {},
+      bounty: null,
+      activeTitleId: null,
+      unlockedZones: [],
+      learnedAbilities: [],
+      position: null,
+      bank: {},
+      bankSlots: STARTING_BANK_SLOTS,
+      mastery: {},
+      reforges: {},
+      quiver: null,
+      skills: createInitialSkills(),
+      idleFood: { order: [], keep: [] },
+      tips: { heard: ['first-level'], off: false },
+    });
+
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+    expect(migrated?.look).toEqual(DEFAULT_LOOK);
+    expect(migrated?.look).toEqual({ skin: 'fair', hair: 'brown', hairstyle: 'cropped' });
+    expect(migrated?.tips.heard).toEqual(['first-level']);
   });
 
   it('drops saves older than the migration chain', () => {

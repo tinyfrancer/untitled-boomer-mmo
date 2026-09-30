@@ -1,4 +1,5 @@
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
+import { DEFAULT_LOOK } from '../data/looks';
 import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { stripIllegalGear } from '../systems/EquipSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
@@ -192,6 +193,9 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // v25 → v26: the spirit's tips, heard once each. A save from before them has
   // heard none, and hears each as it comes rather than all at once (decision 98).
   25: (state) => ({ ...state, tips: { heard: [], off: false } }),
+  // v26 → v27: a character is made in a look (decision 107). One made before
+  // looks were chosen is drawn as every character was: fair, brown and cropped.
+  26: (state) => ({ ...state, look: { ...DEFAULT_LOOK } }),
 };
 
 /**

@@ -1,5 +1,11 @@
 export type ClassId = 'warrior' | 'wizard' | 'ranger';
 
+// What a character looks like, chosen when they are made (decision 107): the
+// one figure every person is, in a skin, a hair colour and a way of wearing it.
+export type SkinToneId = 'pale' | 'fair' | 'tan' | 'deep';
+export type HairColourId = 'brown' | 'black' | 'fair' | 'red' | 'grey';
+export type HairstyleId = 'cropped' | 'long' | 'tied' | 'shaved' | 'bearded';
+
 export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 
 // `studded` is the first tier the world drops that nothing in town sells and no
