@@ -1,9 +1,10 @@
 import { PLAYER_HALF_EXTENT } from '../config/constants';
-import type { CollisionWorld } from '../systems/CollisionSystem';
+import { hasLineOfSight, type CollisionWorld } from '../systems/CollisionSystem';
 import { approachRange, isInRange } from '../systems/CombatSystem';
 import { resolveApproach, type PendingInteraction } from '../systems/InteractionSystem';
 import { arriveRadius, distance, type Point } from '../systems/MovementSystem';
 import { findPath, standNear } from '../systems/PathSystem';
+import { Chase } from './Chase';
 import type { Targeting } from './targeting';
 import type { WorldContext } from './WorldContext';
 
@@ -39,18 +40,19 @@ export interface ApproachDriverDeps {
  * player's own reach rather than on top of it, and never carries an action,
  * because the swing is `CombatDirector`'s the moment the range check passes.
  *
- * The first two are routed and the third is not, which is the same call the
- * plan makes about mobs: a route to something that moves is a route re-planned
- * every frame, and one re-planned every frame is a walk that swings between two
- * ways round an obstacle as its quarry drifts. What a pursuit does instead is
- * exactly what it did before — bear down in a straight line — and what makes
- * that livable is that anything being chased is coming the other way.
+ * The first two are routed once, at the tap. The third is a `Chase`, the
+ * one a creature runs on the player (decision 116): straight while the line is
+ * clear, and round what is in the way on a route kept until its quarry drifts a
+ * tile, since one re-planned every frame swings between two ways round an
+ * obstacle as its quarry moves — which is why a pursuit went straight until
+ * creatures needed the same thing.
  */
 export class ApproachDriver {
   private readonly ctx: WorldContext;
   private readonly deps: ApproachDriverDeps;
   private pending: PendingApproach | null = null;
   private pursuing = false;
+  private readonly chase = new Chase(PLAYER_HALF_EXTENT);
 
   constructor(ctx: WorldContext, deps: ApproachDriverDeps) {
     this.ctx = ctx;
@@ -107,19 +109,20 @@ export class ApproachDriver {
     return findPath(collisionWorld, player, goal, PLAYER_HALF_EXTENT) ?? [at];
   }
 
-  /** Close on whatever is selected, until it is inside reach. */
+  /** Close on whatever is selected, until it is inside reach and in sight. */
   pursue(): void {
     this.pursuing = true;
   }
 
   stopPursuit(): void {
     this.pursuing = false;
+    this.chase.reset();
   }
 
   /** Gives up both walks, leaving the player wherever they stand. */
   cancel(): void {
     this.pending = null;
-    this.pursuing = false;
+    this.stopPursuit();
   }
 
   update(deltaMs: number): void {
@@ -152,14 +155,20 @@ export class ApproachDriver {
     if (!this.pursuing) return;
     const target = this.deps.targeting.target;
     if (!target || !target.isAlive()) {
-      this.pursuing = false;
+      this.stopPursuit();
       return;
     }
-    if (isInRange(distance(player, target), approachRange(player.attackRange))) {
-      this.pursuing = false;
+    const { collisionWorld } = this.deps;
+    // In sight as well as in reach, the rule a creature closing on the player
+    // keeps, or a tap on something behind a wall ends the walk against it.
+    if (
+      isInRange(distance(player, target), approachRange(player.attackRange)) &&
+      hasLineOfSight(collisionWorld, player, target)
+    ) {
+      this.stopPursuit();
       player.stopMoving();
     } else {
-      player.moveTo(target.x, target.y);
+      player.followPath(this.chase.legs(player, target, collisionWorld, player.speed, deltaMs));
     }
   }
 }

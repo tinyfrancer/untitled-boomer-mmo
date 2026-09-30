@@ -1,9 +1,15 @@
 import { approachRange } from '../systems/CombatSystem';
-import { distance, stepToward } from '../systems/MovementSystem';
-import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
+import { arriveRadius, distance, stepToward, type Point } from '../systems/MovementSystem';
+import {
+  hasLineOfSight,
+  moveWithCollision,
+  type Aabb,
+  type CollisionWorld,
+} from '../systems/CollisionSystem';
 import { scaleEnemyStats } from '../systems/EnemySystem';
 import type { EnemyAbilityId, LootTableId } from '../types/ids';
 import type { EnemyDefinition } from '../data/enemies';
+import { Chase } from './Chase';
 
 type AiState = 'wander' | 'chase' | 'returning';
 
@@ -13,6 +19,18 @@ type AiState = 'wander' | 'chase' | 'returning';
  * drawing the body; how long a view shows it falling and lying is the view's.
  */
 const DEATH_FADE_MS = 400;
+
+/**
+ * How long a chase may go nowhere before the creature gives up on it and goes
+ * home, healing as a leash does (decision 116).
+ *
+ * Nowhere is a step that went almost none of the way it was set, or with no
+ * route to be had one that got no nearer (`Chase`): a shore across the water
+ * from the player, the back wall of a room too narrow for it. Long enough that
+ * a route found a moment late is still taken, and short enough that standing
+ * somewhere it can never get to is an escape rather than a turret.
+ */
+export const GIVE_UP_MS = 2000;
 
 /**
  * An enemy, as simulation only. Like Player it owns its transform and
@@ -58,6 +76,8 @@ export class Mob {
   readonly spawnY: number;
 
   private readonly rng: () => number;
+  /** The one route it keeps, whether to the player or home. */
+  private readonly chase: Chase;
   private aiState: AiState = 'wander';
   private wanderTarget: { x: number; y: number } | null = null;
   private wanderPauseMs = 0;
@@ -86,6 +106,10 @@ export class Mob {
     this.attackCooldownMs = definition.attackCooldownMs;
     this.lootTableId = definition.lootTableId;
     this.rng = rng;
+    this.chase = new Chase({
+      halfWidth: definition.body.width / 2,
+      halfHeight: definition.body.height / 2,
+    });
 
     this.scheduleNextWander();
   }
@@ -117,22 +141,24 @@ export class Mob {
       return true;
     }
 
-    this.maybeAggro(playerX, playerY);
+    const player = { x: playerX, y: playerY };
+    this.maybeAggro(player, world, deltaMs);
 
     // Feet planted for the whole wind-up, which is what makes the telegraph
     // mean anything: something that could keep closing while it shouted would
     // land every one of these on a player who did walk away.
     if (this.windUp) {
       this.setVelocity(0, 0);
+      this.chase.hold();
       return false;
     }
 
     switch (this.aiState) {
       case 'chase':
-        this.updateChase(playerX, playerY, deltaMs);
+        this.updateChase(player, world, deltaMs);
         break;
       case 'returning':
-        this.updateReturning(deltaMs);
+        this.updateReturning(world, deltaMs);
         break;
       default:
         this.updateWander(deltaMs);
@@ -159,13 +185,23 @@ export class Mob {
     return step.arrived;
   }
 
-  // Aggressive enemies open combat themselves when the player wanders too
-  // close. Only from wander — a returning (leashed) mob has given up and
-  // walks home untouchable, exactly like a retaliating one.
-  private maybeAggro(playerX: number, playerY: number): void {
+  /**
+   * Aggressive enemies open combat themselves when the player wanders too
+   * close. Only from wander — a returning (leashed) mob has given up and
+   * walks home untouchable, exactly like a retaliating one.
+   *
+   * Close is not enough on its own (decision 116): a wall between them hides
+   * the player, so cover is somewhere to go past a camp, and something with no
+   * way to the player at all never starts a chase it could only give up.
+   * Asked cheapest first, so the search is only ever made for a player already
+   * inside the radius and in plain sight.
+   */
+  private maybeAggro(player: Point, world: CollisionWorld, deltaMs: number): void {
     const { aggressive, aggroRadius } = this.definition;
     if (!aggressive || !aggroRadius || this.aiState !== 'wander') return;
-    if (distance(this, { x: playerX, y: playerY }) <= aggroRadius) {
+    if (distance(this, player) > aggroRadius) return;
+    if (!hasLineOfSight(world, this, player)) return;
+    if (this.chase.canReach(this, player, world, deltaMs)) {
       this.engage();
     }
   }
@@ -180,6 +216,9 @@ export class Mob {
 
   engage(): void {
     if (!this.alive || this.aiState === 'chase') return;
+    // A route home is no use on the way back out, and one found to the player
+    // a moment ago by `maybeAggro` is exactly the one to start with.
+    if (this.aiState === 'returning') this.chase.reset();
     this.aiState = 'chase';
     this.wanderTarget = null;
   }
@@ -193,6 +232,7 @@ export class Mob {
     this.wanderTarget = null;
     this.lastAttackAt = -Infinity;
     this.forgetAbilities();
+    this.chase.reset();
     this.setVelocity(0, 0);
   }
 
@@ -224,26 +264,72 @@ export class Mob {
     }
   }
 
-  private updateChase(playerX: number, playerY: number, deltaMs: number): void {
+  /**
+   * Round whatever is in the way, until it is in reach and can see who it is
+   * reaching for.
+   *
+   * The leash is still a ring round home, measured as the crow flies (decision
+   * 116): one led round a building gives up at the same ring as one led across
+   * open ground, which is the one a player can learn by looking.
+   */
+  private updateChase(player: Point, world: CollisionWorld, deltaMs: number): void {
     const spawn = { x: this.spawnX, y: this.spawnY };
     if (distance(this, spawn) > this.definition.leashRadius) {
       this.disengage();
       return;
     }
 
-    const player = { x: playerX, y: playerY };
-    if (distance(this, player) <= approachRange(this.attackRange)) {
+    // In sight as well as in reach, the rule the player's pursuit keeps. No
+    // creature's reach is longer than a wall and two bodies today, so for one
+    // of them it is the rule for the day a reach is.
+    if (
+      distance(this, player) <= approachRange(this.attackRange) &&
+      hasLineOfSight(world, this, player)
+    ) {
       this.setVelocity(0, 0);
-    } else {
-      this.stepTo(player, this.definition.chaseSpeed, deltaMs);
+      this.chase.hold();
+      return;
     }
+
+    const { chaseSpeed } = this.definition;
+    const legs = this.chase.legs(this, player, world, chaseSpeed, deltaMs);
+    if (this.chase.goingNowhereMs() >= GIVE_UP_MS) {
+      this.disengage();
+      return;
+    }
+    this.stepTo(legs[0] ?? player, chaseSpeed, deltaMs);
   }
 
-  private updateReturning(deltaMs: number): void {
-    if (this.stepTo({ x: this.spawnX, y: this.spawnY }, this.definition.chaseSpeed, deltaMs)) {
-      this.aiState = 'wander';
-      this.scheduleNextWander();
+  /**
+   * Home by the way round, since a chase that went round something has to come
+   * back round it.
+   *
+   * And put there, when the walk has gone nowhere for as long as a chase is
+   * given: a creature pressed into a pocket exactly its own size has no route
+   * out that a search will hand back, and one stuck on its way home stays out of
+   * the zone's fights for good, since only a creature at home notices anyone.
+   */
+  private updateReturning(world: CollisionWorld, deltaMs: number): void {
+    const spawn = { x: this.spawnX, y: this.spawnY };
+    const { chaseSpeed } = this.definition;
+    if (distance(this, spawn) <= arriveRadius(chaseSpeed, deltaMs)) {
+      this.arriveHome();
+      return;
     }
+    const legs = this.chase.legs(this, spawn, world, chaseSpeed, deltaMs);
+    if (this.chase.goingNowhereMs() >= GIVE_UP_MS) {
+      this.setPosition(spawn.x, spawn.y);
+      this.arriveHome();
+      return;
+    }
+    this.stepTo(legs[0] ?? spawn, chaseSpeed, deltaMs);
+  }
+
+  private arriveHome(): void {
+    this.setVelocity(0, 0);
+    this.chase.reset();
+    this.aiState = 'wander';
+    this.scheduleNextWander();
   }
 
   private scheduleNextWander(): void {
@@ -257,6 +343,7 @@ export class Mob {
     this.wanderTarget = null;
     this.deadForMs = 0;
     this.forgetAbilities();
+    this.chase.reset();
     this.setVelocity(0, 0);
   }
 
