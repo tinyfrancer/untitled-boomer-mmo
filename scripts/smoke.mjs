@@ -75,32 +75,31 @@ const FRAMES_PER_POLL = 12;
 /**
  * What one drawn frame may cost, in milliseconds, on the throttled pass.
  *
- * Anchored to a measurement rather than chosen: `window.view.drawTime()` read
- * in the `throttled` section before the first lighting change of
- * `docs/archive/interiors_and_light_plan.md` phase 1 came back at 20.7ms on a full run,
- * on a game with two lights and no shadows. The sun, the shadow map and the
- * depth cue took it to 25.2ms on the same run — so the ceiling is set against
- * what the game cost when nothing cast a shadow, and what phase 1 spent of it
- * is on the record rather than in somebody's memory.
+ * Anchored to a measurement rather than chosen. `window.view.drawTime()` read
+ * 3.1ms on a full run in CI once the last of Part B's art was drawn (B6), and
+ * 2.0ms before it (B4); a dev container, which is loaded, reads 5-6ms. The 3D
+ * view it replaced read 25ms under the same throttle against a ceiling of 40,
+ * so the 2D view costs about an eighth of it, which is what decision 101's
+ * spike found of one scene, found true of the whole game.
  *
  * Read it off a **full run**, which is what the gate sees: the section carries
  * state forward from every one before it, so `--section=throttled` on its own
- * is a different and lighter game — it was 12-15ms there, both before and
- * after.
+ * is a different and lighter game.
  *
- * Three times that, for two reasons. It is a backstop rather than the
- * measurement — the phase's rule is that each change is read off this
- * instrument *before* it lands, and what a gate has to catch is the change
- * that made drawing several times more expensive, not the one that cost a
- * millisecond. And the number underneath it is a different machine's: a CI
- * runner has no GPU either, but it is not this one, and a ceiling that fails
- * on whose hardware ran it is a ceiling that gets raised rather than believed.
- * 40ms is also where the draw alone stops fitting in a 25fps frame, which is
- * the slowest the game is measured at anywhere.
+ * 16ms, where the draw alone stops fitting a 60fps frame on a CPU eight times
+ * slower than the runner's: five times what CI reads and three times what a
+ * loaded container does. It is a backstop rather than the measurement. What a
+ * gate has to catch is the change that made drawing several times more
+ * expensive, not the one that cost a millisecond, and a ceiling that fails on
+ * whose hardware ran it is a ceiling that gets raised rather than believed.
+ * The room above the reading is Part C's, whose zones are three times the size
+ * and fuller, and it should not have to re-decide this to spend it.
  *
- * Raising this is a decision about the game, not about the run that hit it.
+ * It was 40ms while the game was 3D, and decision 110 brought it down when the
+ * 3D view went. Raising it is a decision about the game, not about the run that
+ * hit it.
  */
-const SLOW_DRAW_BUDGET_MS = 40;
+const SLOW_DRAW_BUDGET_MS = 16;
 
 mkdirSync(OUT, { recursive: true });
 
