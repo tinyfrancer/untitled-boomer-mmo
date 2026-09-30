@@ -4,6 +4,7 @@ import { npcName } from '../data/npcs';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
 import { signpostPoint, zoneWorldSize } from './ZoneSystem';
+import type { Point } from './MovementSystem';
 import type { SkillId, ZoneEdge, ZoneId } from '../types/ids';
 
 /** What a marker stands for, which is the whole of how it is drawn. */
@@ -22,6 +23,8 @@ export interface MapMarker {
    * this carries the fact and not the shade.
    */
   skill: SkillId | null;
+  /** Which edge an exit leaves by, which the minimap points its arrow at; null for the rest. */
+  edge: ZoneEdge | null;
 }
 
 /**
@@ -64,6 +67,49 @@ export interface ZoneMap {
   markers: MapMarker[];
 }
 
+/**
+ * How many tiles the minimap frames, across and down (decision 115): the zone
+ * round the player rather than the whole of it, since a rebuilt zone of 45 by
+ * 32 in a corner a thumb wide is two pixels a tile. About two and a half times
+ * what a portrait phone shows across, which is room to see a creature coming
+ * before the screen does.
+ */
+export const MINIMAP_TILES = 27;
+
+/** How far from the player's tile a creature is still on the minimap, in whole tiles. */
+export const MINIMAP_REACH = Math.ceil(MINIMAP_TILES / 2);
+
+/**
+ * The top-left of the minimap's window, in tiles, for a player standing at
+ * `center`: the player in the middle, held to a whole pixel of the minimap so
+ * every tile's edge falls on one.
+ */
+export function minimapOrigin(center: Point, pixelsPerTile: number): Point {
+  const snap = (value: number): number =>
+    Math.round((value - MINIMAP_TILES / 2) * pixelsPerTile) / pixelsPerTile;
+  return { x: snap(center.x), y: snap(center.y) };
+}
+
+/**
+ * Where a point is drawn on the minimap: where it is while it is in the window,
+ * and on the window's rim in its direction while it is not, `inset` tiles in.
+ * It is how an exit is drawn, since which way out leads where is the question a
+ * map answers first, and the rim says which way to walk when the road is off
+ * the edge of it.
+ */
+export function onMinimapRim(
+  point: Point,
+  center: Point,
+  inset: number,
+): { x: number; y: number; onRim: boolean } {
+  const half = MINIMAP_TILES / 2 - inset;
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+  const far = Math.max(Math.abs(dx), Math.abs(dy));
+  if (far <= half) return { ...point, onRim: false };
+  return { x: center.x + (dx * half) / far, y: center.y + (dy * half) / far, onRim: true };
+}
+
 /** Where a world point falls on the map. Fractional — a dot is not on a grid. */
 export function toTile(x: number, y: number): { x: number; y: number } {
   return { x: x / TILE_SIZE, y: y / TILE_SIZE };
@@ -96,9 +142,9 @@ export function terrainBands(tiles: number[][]): TerrainBand[] {
  * the same points `populateZone` stands things at, so the map cannot disagree
  * with where things actually stand.
  *
- * Mobs are deliberately absent. They wander, so drawing them means a per-frame
- * channel into the HUD — and a map of where the rats were a second ago is worse
- * than a map with no rats on it.
+ * Mobs are absent: they wander, so where one is is not a fact about the zone.
+ * The minimap draws the ones near the player off `creatures-changed`, which the
+ * world publishes on a tile crossing (decision 115).
  */
 export function zoneMap(zoneId: ZoneId): ZoneMap {
   const zone = ZONES[zoneId];
@@ -112,6 +158,7 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
       ...toTile(x, y),
       label: node.name,
       skill: node.skill,
+      edge: null,
     });
   }
   for (const { x, y, npcId } of zone.npcSpawns) {
@@ -120,6 +167,7 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
       ...toTile(x, y),
       label: npcName(npcId),
       skill: null,
+      edge: null,
     });
   }
   for (const exit of zone.exits) {
@@ -130,6 +178,7 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
       // Where it goes, not what it is: "Beach" is the useful half of a signpost.
       label: ZONES[exit.to].name,
       skill: null,
+      edge: exit.edge,
     });
   }
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MINIMAP_REACH,
+  MINIMAP_TILES,
+  minimapOrigin,
+  onMinimapRim,
   terrainBands,
   tileOf,
   toTile,
@@ -23,6 +27,43 @@ describe('placing a world point on the map', () => {
 
   it('names the whole tile a point is standing in', () => {
     expect(tileOf(TILE_SIZE * 3.9, TILE_SIZE * 0.1)).toEqual({ x: 3, y: 0 });
+  });
+});
+
+/** The minimap's window onto the zone map (decision 115). */
+describe('the minimap window', () => {
+  it('puts the player in the middle of it, on a whole pixel', () => {
+    const origin = minimapOrigin({ x: 10.3, y: 7.9 }, 4);
+    expect(origin.x + MINIMAP_TILES / 2).toBeCloseTo(10.3, 0);
+    expect(origin.y + MINIMAP_TILES / 2).toBeCloseTo(7.9, 0);
+    expect(Number.isInteger(origin.x * 4)).toBe(true);
+    expect(Number.isInteger(origin.y * 4)).toBe(true);
+  });
+
+  it('reaches a creature standing anywhere in the window', () => {
+    expect(MINIMAP_REACH).toBeGreaterThanOrEqual(MINIMAP_TILES / 2);
+  });
+
+  it('draws a point in the window where it is', () => {
+    expect(onMinimapRim({ x: 14, y: 3 }, { x: 10, y: 10 }, 1)).toEqual({
+      x: 14,
+      y: 3,
+      onRim: false,
+    });
+  });
+
+  it('draws a point off the window on its rim, in its direction', () => {
+    const center = { x: 10, y: 10 };
+    const half = MINIMAP_TILES / 2 - 1;
+
+    const east = onMinimapRim({ x: 60, y: 10 }, center, 1);
+    expect(east).toEqual({ x: center.x + half, y: 10, onRim: true });
+
+    // Along the line to it, so a road off the corner is drawn toward the corner.
+    const southWest = onMinimapRim({ x: -40, y: 60 }, center, 1);
+    expect(southWest.onRim).toBe(true);
+    expect(southWest.x).toBeCloseTo(center.x - half);
+    expect(southWest.y).toBeCloseTo(center.y + half);
   });
 });
 

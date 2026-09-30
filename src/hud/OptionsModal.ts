@@ -4,15 +4,23 @@ import { Overlay } from './Overlay';
 import { actionButton, el } from './dom';
 import { copyText, downloadFile } from './saveTransfer';
 
-export interface OptionsModalHandlers {
+/** What the menu's switches open on, each kept by whoever it asks. */
+export interface OptionSettings {
   /** What the speaker is set to now, which the controls open on. */
   sound: SoundSettings;
+  /** Whether the spirit's tips are on. */
+  tipsOn: boolean;
+  /** Whether the minimap is up. */
+  minimapOn: boolean;
+}
+
+export interface OptionsModalHandlers extends OptionSettings {
   /** The whole setting, every time it moves; whoever keeps it applies it. */
   onSoundChanged: (settings: SoundSettings) => void;
-  /** Whether the spirit's tips are on, which the switch opens on. */
-  tipsOn: boolean;
   /** Asks for tips on or off; the character keeps the answer. */
   onTipsChanged: (on: boolean) => void;
+  /** Asks for the minimap up or down; the character keeps that too. */
+  onMinimapChanged: (on: boolean) => void;
   /** Asks for the save as a file or a code; the answer comes back to `exported`. */
   onExport: (kind: SaveExportKind) => void;
   onOpenLoad: () => void;
@@ -34,7 +42,8 @@ export interface OptionsModalHandlers {
  *
  * Tips are here too, although they are kept on the character rather than the
  * device (decision 98): this is where a player who tapped No more tips looks
- * to have them back.
+ * to have them back. So is the minimap's switch, kept on the character the
+ * same way (decision 115).
  *
  * The save is here for the reason Reset is: it is about the character as a
  * whole rather than anything in play. A code is shown as well as copied,
@@ -46,11 +55,13 @@ export class OptionsModal extends Overlay {
   private readonly soundButton: HTMLButtonElement;
   private readonly volume: HTMLInputElement;
   private readonly tipsButton: HTMLButtonElement;
+  private readonly minimapButton: HTMLButtonElement;
   private readonly saveStatus: HTMLElement;
   private readonly codeBox: HTMLTextAreaElement;
   private readonly handlers: OptionsModalHandlers;
   private sound: SoundSettings;
   private tipsOn: boolean;
+  private minimapOn: boolean;
   private confirmingReset = false;
 
   constructor(handlers: OptionsModalHandlers) {
@@ -58,6 +69,7 @@ export class OptionsModal extends Overlay {
     this.handlers = handlers;
     this.sound = handlers.sound;
     this.tipsOn = handlers.tipsOn;
+    this.minimapOn = handlers.minimapOn;
     const box = el('div', 'hud-modal__box');
     box.append(el('div', 'hud-modal__title', 'Options'));
 
@@ -83,8 +95,13 @@ export class OptionsModal extends Overlay {
 
     this.tipsButton = actionButton('', 'toggle-tips', () => {
       this.tipsOn = !this.tipsOn;
-      this.drawTips();
+      this.drawSwitches();
       handlers.onTipsChanged(this.tipsOn);
+    });
+    this.minimapButton = actionButton('', 'toggle-minimap', () => {
+      this.minimapOn = !this.minimapOn;
+      this.drawSwitches();
+      handlers.onMinimapChanged(this.minimapOn);
     });
 
     const download = actionButton('Download Save', 'download-save', () =>
@@ -118,6 +135,7 @@ export class OptionsModal extends Overlay {
       el('div', 'hud-modal__line', 'Volume'),
       this.volume,
       this.tipsButton,
+      this.minimapButton,
       el('div', 'hud-save__heading', 'Your save'),
       el(
         'div',
@@ -134,7 +152,7 @@ export class OptionsModal extends Overlay {
     box.append(body, close);
     this.root.append(box);
     this.drawSound();
-    this.drawTips();
+    this.drawSwitches();
     // A tap on the dimmed surround closes; the target check is what keeps a tap
     // inside the box from closing it too.
     this.root.addEventListener('click', (event) => {
@@ -157,9 +175,11 @@ export class OptionsModal extends Overlay {
     this.volume.disabled = this.sound.muted;
   }
 
-  private drawTips(): void {
+  private drawSwitches(): void {
     this.tipsButton.textContent = this.tipsOn ? 'Tips: On' : 'Tips: Off';
     this.tipsButton.setAttribute('aria-pressed', String(this.tipsOn));
+    this.minimapButton.textContent = this.minimapOn ? 'Minimap: On' : 'Minimap: Off';
+    this.minimapButton.setAttribute('aria-pressed', String(this.minimapOn));
   }
 
   /** The session's answer to `onExport`, still inside the tap that asked for it. */

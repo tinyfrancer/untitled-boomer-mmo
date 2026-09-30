@@ -1,3 +1,4 @@
+import { MINIMAP_TILES } from '../systems/MapSystem';
 import { clamp } from '../systems/math';
 import type { Point } from '../systems/MovementSystem';
 import { THEME, px } from './theme';
@@ -44,6 +45,16 @@ const TRACKER_LINE_HEIGHT = 18;
 // The ability buttons plus the two lines their names may take under them.
 const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 28;
 
+// The minimap's panel (decision 115): its map, MINIMAP_TILES tiles across at
+// THEME.minimap.tile pixels each, the zone's name in the world's font under it,
+// and a panel's iron and padding round both.
+const PANEL_INSET = THEME.frame.panel + (THEME.padding + 1 - THEME.frame.panel);
+const MINIMAP_NAME_HEIGHT = 20;
+/** The minimap's map, in CSS pixels a side: a whole number of them to a tile. */
+export const MINIMAP_MAP_SIZE = MINIMAP_TILES * THEME.minimap.tile;
+const MINIMAP_WIDTH = MINIMAP_MAP_SIZE + PANEL_INSET * 2;
+const MINIMAP_HEIGHT = MINIMAP_MAP_SIZE + MINIMAP_NAME_HEIGHT + PANEL_INSET * 2;
+
 /** How many quests the tracker strip will show before it stops growing. */
 export const MAX_TRACKED_QUESTS = 2;
 
@@ -68,6 +79,8 @@ export interface HudLayout {
   padding: number;
   targetFrame: Rect;
   playerColumn: Rect;
+  /** Top-right; no size at all while it is switched off, and the corner is the frame's again. */
+  minimap: Rect;
   /** Zero height when nothing is being tracked, and the strip is not drawn. */
   tracker: Rect;
   actionBar: Rect;
@@ -90,6 +103,8 @@ export interface HudLayoutOptions {
   // Whether the target is winding something up, which costs the frame a line.
   targetWinding?: boolean;
   trackedQuests?: number;
+  // Whether the minimap is shown, which the character keeps (Options).
+  hasMinimap?: boolean;
 }
 
 export function isNarrowViewport(width: number, height: number): boolean {
@@ -118,6 +133,7 @@ export function hudLayout(
     targetWinding = false,
     hasEffects = false,
     trackedQuests = 0,
+    hasMinimap = false,
   } = options;
   const margin = px(THEME.margin, scale);
   const padding = px(THEME.padding, scale);
@@ -175,13 +191,27 @@ export function hudLayout(
     height: trackerHeight,
   };
 
-  const targetWidth = Math.min(
-    px(THEME.panelWidth.target, scale),
-    width - margin * 2 - columnWidth - padding,
-  );
+  // The minimap has the top-right corner, where the genre keeps it (decision
+  // 115), and the target frame stands beside it where the top row has room for
+  // both and under it where it has not, which is a phone held upright: the
+  // frame moving between screens is a lesser thing than the map jumping down
+  // the screen each time something is picked.
+  const minimap: Rect = hasMinimap
+    ? {
+        x: width - margin - px(MINIMAP_WIDTH, scale),
+        y: margin,
+        width: px(MINIMAP_WIDTH, scale),
+        height: px(MINIMAP_HEIGHT, scale),
+      }
+    : { x: width - margin, y: margin, width: 0, height: 0 };
+  const columnRight = playerColumn.x + columnWidth + padding;
+  const frameWidth = px(THEME.panelWidth.target, scale);
+  const besideMinimap = minimap.width === 0 || minimap.x - padding - columnRight >= frameWidth;
+  const frameRight = besideMinimap && minimap.width > 0 ? minimap.x - padding : width - margin;
+  const targetWidth = Math.min(frameWidth, frameRight - columnRight);
   const targetFrame: Rect = {
-    x: width - margin - targetWidth,
-    y: margin,
+    x: frameRight - targetWidth,
+    y: besideMinimap ? margin : minimap.y + minimap.height + padding,
     width: targetWidth,
     height: px(TARGET_FRAME_HEIGHT + (targetWinding ? WIND_UP_LINE_HEIGHT : 0), scale),
   };
@@ -192,6 +222,7 @@ export function hudLayout(
     padding,
     targetFrame,
     playerColumn,
+    minimap,
     tracker,
     actionBar,
     tabBar,
@@ -226,10 +257,16 @@ export function playerColumnBottom(layout: HudLayout): number {
  *
  * The two corners are different heights and either may be the taller: the
  * player column grows with a title, a pool and a buff row, and the sheet opens
- * in the *right*-hand column, which is the target frame's own corner now.
+ * in the *right*-hand column, which is the minimap's and the target frame's
+ * corner now.
  */
 export function topRowBottom(layout: HudLayout): number {
-  return Math.max(playerColumnBottom(layout), layout.targetFrame.y + layout.targetFrame.height);
+  const { targetFrame, minimap } = layout;
+  return Math.max(
+    playerColumnBottom(layout),
+    targetFrame.y + targetFrame.height,
+    minimap.y + minimap.height,
+  );
 }
 
 // The tip card's width where there is room for it, and the least room between
@@ -254,8 +291,10 @@ export interface TipCardRect {
  * are fighting, and never at the bottom, which is the thumb's.
  */
 export function tipCardRect(layout: HudLayout, viewportWidth: number): TipCardRect {
+  const { targetFrame, minimap } = layout;
   const gapLeft = layout.playerColumn.x + layout.playerColumn.width + layout.padding;
-  const gapRight = layout.targetFrame.x - layout.padding;
+  const gapRight =
+    Math.min(targetFrame.x, minimap.width > 0 ? minimap.x : Infinity) - layout.padding;
   const between = gapRight - gapLeft;
   if (between >= TIP_CARD_MIN_WIDTH) {
     const width = Math.min(TIP_CARD_WIDTH, between);

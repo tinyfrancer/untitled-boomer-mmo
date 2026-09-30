@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_TRACKED_QUESTS,
+  MINIMAP_MAP_SIZE,
   channelBarTop,
   counterLayout,
   hudLayout,
@@ -13,6 +14,7 @@ import {
   toastTop,
   topRowBottom,
   type HudLayout,
+  type Rect,
 } from '../../src/ui/layout';
 import { THEME } from '../../src/ui/theme';
 
@@ -216,6 +218,98 @@ describe('hudLayout', () => {
     expect(winding.targetFrame.height).toBeGreaterThan(quiet.targetFrame.height);
     expect(winding.targetFrame.width).toBe(quiet.targetFrame.width);
     expect(topRowBottom(winding)).toBeGreaterThanOrEqual(topRowBottom(quiet));
+  });
+});
+
+/**
+ * The minimap has the top-right corner (decision 115), and the target frame
+ * stands beside it where the top row has room for both and under it on a phone
+ * held upright. Switched off, the corner is the frame's again.
+ */
+describe('the minimap', () => {
+  const EVERY = [
+    ['phone portrait', PHONE_PORTRAIT],
+    ['phone landscape', PHONE_LANDSCAPE],
+    ['small landscape', { width: SMALL_PHONE.height, height: SMALL_PHONE.width }],
+    ['small phone', SMALL_PHONE],
+    ['desktop', DESKTOP],
+  ] as const;
+  const TALLEST = {
+    hasMana: true,
+    hasQuiver: true,
+    hasTitle: true,
+    hasTraining: true,
+    hasEffects: true,
+    targetWinding: true,
+    trackedQuests: MAX_TRACKED_QUESTS,
+    hasMinimap: true,
+  };
+  const apart = (a: Rect, b: Rect, gap: number): boolean =>
+    a.x + a.width + gap <= b.x ||
+    b.x + b.width + gap <= a.x ||
+    a.y + a.height + gap <= b.y ||
+    b.y + b.height + gap <= a.y;
+
+  it('takes the top-right corner, and no room at all while it is off', () => {
+    const on = layoutFor(PHONE_PORTRAIT, { hasMinimap: true });
+    expect(on.minimap.x + on.minimap.width).toBe(PHONE_PORTRAIT.width - on.margin);
+    expect(on.minimap.y).toBe(on.margin);
+    expect(on.minimap.width).toBeGreaterThan(MINIMAP_MAP_SIZE);
+    expect(on.minimap.height).toBeGreaterThan(MINIMAP_MAP_SIZE);
+
+    const off = layoutFor(PHONE_PORTRAIT);
+    expect(off.minimap.width).toBe(0);
+    expect(off.minimap.height).toBe(0);
+    // And the frame is back where it stood before there was a minimap.
+    expect(off.targetFrame.y).toBe(off.margin);
+    expect(off.targetFrame.x + off.targetFrame.width).toBe(PHONE_PORTRAIT.width - off.margin);
+  });
+
+  it('stands the target frame under it on a phone held upright', () => {
+    for (const phone of [PHONE_PORTRAIT, SMALL_PHONE]) {
+      const layout = layoutFor(phone, { hasMinimap: true });
+      expect(layout.targetFrame.y).toBe(layout.minimap.y + layout.minimap.height + layout.padding);
+      expect(layout.targetFrame.x + layout.targetFrame.width).toBe(phone.width - layout.margin);
+    }
+  });
+
+  it('stands the target frame beside it, at its full width, where there is room', () => {
+    for (const viewport of [PHONE_LANDSCAPE, DESKTOP]) {
+      const layout = layoutFor(viewport, { hasMinimap: true });
+      expect(layout.targetFrame.y).toBe(layout.margin);
+      expect(layout.targetFrame.x + layout.targetFrame.width).toBe(
+        layout.minimap.x - layout.padding,
+      );
+      expect(layout.targetFrame.width).toBe(THEME.panelWidth.target);
+    }
+  });
+
+  it.each(EVERY)('meets nothing else on %s, at the tallest the rest gets', (_, viewport) => {
+    const layout = layoutFor(viewport, TALLEST);
+    const { minimap, padding } = layout;
+    expect(apart(minimap, layout.playerColumn, padding)).toBe(true);
+    expect(apart(minimap, layout.targetFrame, padding)).toBe(true);
+    expect(apart(minimap, layout.tracker, padding)).toBe(true);
+    expect(apart(minimap, layout.actionBar, padding)).toBe(true);
+    expect(apart(layout.targetFrame, layout.playerColumn, padding)).toBe(true);
+    expect(apart(layout.targetFrame, layout.tracker, padding)).toBe(true);
+    const card = tipCardRect(layout, viewport.width);
+    expect(apart(minimap, { ...card, height: 1 }, padding)).toBe(true);
+  });
+
+  it('opens a desktop sheet below it', () => {
+    const layout = layoutFor(DESKTOP, { hasMinimap: true });
+    const sheet = sheetRect(layout, DESKTOP.width, THEME.panelWidth.character);
+    expect(topRowBottom(layout)).toBe(layout.minimap.y + layout.minimap.height);
+    expect(sheet.y).toBeGreaterThan(layout.minimap.y + layout.minimap.height);
+    expect(sheet.height).toBeGreaterThan(THEME.touchMin * 2);
+  });
+
+  it('keeps the tip card between the corners on a landscape phone, clear of it', () => {
+    const layout = layoutFor(PHONE_LANDSCAPE, { hasMinimap: true });
+    const card = tipCardRect(layout, PHONE_LANDSCAPE.width);
+    expect(card.y).toBe(layout.margin);
+    expect(card.x + card.width).toBeLessThanOrEqual(layout.targetFrame.x);
   });
 });
 

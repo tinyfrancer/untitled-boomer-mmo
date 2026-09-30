@@ -747,6 +747,10 @@ export class CharacterController {
     this.state.tips = { ...this.state.tips, off };
   }
 
+  setMinimapShown(shown: boolean): void {
+    this.state.showMinimap = shown;
+  }
+
   setActiveTitle(titleId: TitleId | null): boolean {
     if (titleId !== null && !hasEarnedTitle(this.state.kills, titleId)) {
       return false;

@@ -22,7 +22,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 1;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -104,6 +104,12 @@ export interface CharacterState {
    * says a card was read and tapped away.
    */
   tips: TipsHeard;
+  /**
+   * Whether the minimap is up in the corner (decision 115). Kept on the
+   * character like the tips' switch, since it is a choice about how this
+   * character is played rather than about the device.
+   */
+  showMinimap: boolean;
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -205,6 +211,7 @@ export function createNewCharacter(
     afk: null,
     idleFood: { order: [], keep: [] },
     tips: { heard: [], off: false },
+    showMinimap: true,
     quests: {},
     bounty: null,
     kills: {},

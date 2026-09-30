@@ -227,6 +227,16 @@ export const UNLOCKED_ZONES_CHANGED_EVENT = 'unlocked-zones-changed';
 // is counted off is not in the bag the HUD already holds.
 export const VISITS_CHANGED_EVENT = 'visits-changed';
 export const PLAYER_TILE_CHANGED_EVENT = 'player-tile-changed';
+// The creatures near the player, for the minimap (decision 115): every living
+// one within its reach, whole, each time one of them crosses a tile, dies,
+// gets up again, or comes into reach or leaves it. Keyed to whole tiles like the
+// player's own, so a position still never reaches the HUD once a frame, and
+// unseeded like the map's two, so a world with nothing near says so.
+export const CREATURES_CHANGED_EVENT = 'creatures-changed';
+// Whether the minimap is shown, which the character keeps: asked for from
+// Options, saying which, and answered with what the save now holds.
+export const MINIMAP_SET_REQUESTED_EVENT = 'minimap-set-requested';
+export const MINIMAP_STATE_CHANGED_EVENT = 'minimap-state-changed';
 // The context menu, which is the one thing on this channel that starts with a
 // press on the *world* rather than on the HUD. The host resolves what was under
 // the pointer and asks the world what can be done with it; the world remembers
@@ -318,6 +328,16 @@ export interface BankState {
 export interface TilePoint {
   x: number;
   y: number;
+}
+
+/**
+ * Payload for CREATURES_CHANGED_EVENT: one creature as the minimap draws it.
+ * Its level rather than its colour, since how dangerous it looks is the HUD's
+ * to work out against the level it already holds, and a level-up redraws it.
+ */
+export interface CreatureDot extends TilePoint {
+  level: number;
+  boss: boolean;
 }
 
 /**
@@ -475,6 +495,9 @@ export interface UiEventMap {
   [UNLOCKED_ZONES_CHANGED_EVENT]: [zoneIds: ZoneId[]];
   [VISITS_CHANGED_EVENT]: [visits: ZoneVisits];
   [PLAYER_TILE_CHANGED_EVENT]: [tile: TilePoint];
+  [CREATURES_CHANGED_EVENT]: [creatures: CreatureDot[]];
+  [MINIMAP_SET_REQUESTED_EVENT]: [on: boolean];
+  [MINIMAP_STATE_CHANGED_EVENT]: [on: boolean];
   [CONTEXT_MENU_REQUESTED_EVENT]: [request: ContextMenuRequest];
   [CONTEXT_ACTION_REQUESTED_EVENT]: [actionId: ContextActionId];
   [KILLS_CHANGED_EVENT]: [kills: KillCounts];

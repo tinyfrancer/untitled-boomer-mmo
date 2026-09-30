@@ -245,6 +245,7 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
     (value) => isRecord(value) && listOf(isString)(value.heard) && typeof value.off === 'boolean',
     'a list of tips heard, and whether tips are off',
   ],
+  showMinimap: [(value) => typeof value === 'boolean', 'true or false'],
   quests: [
     (value) =>
       isRecord(value) &&

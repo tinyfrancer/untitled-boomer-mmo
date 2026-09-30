@@ -32,6 +32,7 @@ import {
   PLAYER_HP_CHANGED_EVENT,
   PLAYER_MANA_CHANGED_EVENT,
   PLAYER_TILE_CHANGED_EVENT,
+  CREATURES_CHANGED_EVENT,
   RESET_CHARACTER_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   SET_TITLE_REQUESTED_EVENT,
@@ -56,7 +57,7 @@ import { deathToll } from '../systems/DeathSystem';
 import { conColor } from '../systems/EnemySystem';
 import { effectElapsed } from '../systems/EffectSystem';
 import { zoneAccess } from '../systems/ZoneAccessSystem';
-import { tileOf, toTile } from '../systems/MapSystem';
+import { MINIMAP_REACH, tileOf, toTile } from '../systems/MapSystem';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { NPC_INTERACT_RADIUS, worksCounter, type CounterId } from '../data/npcs';
 import { STATION_RADIUS } from '../data/recipes';
@@ -252,7 +253,7 @@ export class ZoneWorld implements Targeting {
   private readonly loot: LootPiles;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
-  // The nine HUD publishers that only speak when what they publish moves; the
+  // The ten HUD publishers that only speak when what they publish moves; the
   // constructor says what each one counts as a change.
   private readonly publishPlayerHp: () => void;
   private readonly publishPlayerMana: () => void;
@@ -263,6 +264,7 @@ export class ZoneWorld implements Targeting {
   private readonly publishVisits: () => void;
   private readonly publishUnlockedZones: () => void;
   private readonly publishPlayerTile: () => void;
+  private readonly publishCreatures: () => void;
   /**
    * The locked edge the player is currently standing against, if any.
    *
@@ -403,6 +405,29 @@ export class ZoneWorld implements Targeting {
         return `${tile.x},${tile.y}`;
       },
       (tile) => this.ctx.events.emit(PLAYER_TILE_CHANGED_EVENT, tile),
+    );
+    // The minimap's creatures, on the player's terms: only those it can show,
+    // and only when one of them crosses a tile, so a rat wandering the far end of
+    // a rebuilt zone says nothing to anybody. Keyed by place in the list as well
+    // as by tile, since two rats swapping tiles is still two rats moving.
+    this.publishCreatures = publishOnChange(
+      () => this.creaturesInReach(),
+      (near) =>
+        near
+          .map(({ index, mob }) => {
+            const tile = tileOf(mob.x, mob.y);
+            return `${index}:${tile.x},${tile.y}`;
+          })
+          .join('|'),
+      (near) =>
+        this.ctx.events.emit(
+          CREATURES_CHANGED_EVENT,
+          near.map(({ mob }) => ({
+            ...toTile(mob.x, mob.y),
+            level: mob.level,
+            boss: mob.definition.boss === true,
+          })),
+        ),
     );
 
     this.approach = new ApproachDriver(this.ctx, {
@@ -588,6 +613,7 @@ export class ZoneWorld implements Targeting {
     this.publishVisits();
     this.publishUnlockedZones();
     this.publishPlayerTile();
+    this.publishCreatures();
     this.tips.update();
     this.updateNpcRange();
     this.checkZoneExit();
@@ -796,6 +822,23 @@ export class ZoneWorld implements Targeting {
       return;
     }
     this.approach.walkTo({ kind: 'loot', radius: LOOT_PILE_REACH }, pile, take);
+  }
+
+  /**
+   * The living creatures within the minimap's reach of the player's tile, each
+   * with its place in `mobs`. Measured in whole tiles, square rather than round,
+   * because the minimap is a square.
+   */
+  private creaturesInReach(): { index: number; mob: Mob }[] {
+    const here = tileOf(this.player.x, this.player.y);
+    const near: { index: number; mob: Mob }[] = [];
+    this.mobs.forEach((mob, index) => {
+      if (!mob.isAlive()) return;
+      const tile = tileOf(mob.x, mob.y);
+      if (Math.max(Math.abs(tile.x - here.x), Math.abs(tile.y - here.y)) > MINIMAP_REACH) return;
+      near.push({ index, mob });
+    });
+    return near;
   }
 
   // ---------------------------------------------------------------------------

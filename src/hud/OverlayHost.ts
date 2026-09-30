@@ -5,12 +5,11 @@ import { ContextMenu, type ContextMenuEntry } from './ContextMenu';
 import { InspectModal } from './InspectModal';
 import { LoadSaveModal, type CharacterSummary } from './LoadSaveModal';
 import { MenuOverlay } from './MenuOverlay';
-import { OptionsModal } from './OptionsModal';
+import { OptionsModal, type OptionSettings } from './OptionsModal';
 import { ShopModal, type ShopState } from './ShopModal';
 import { TrainerModal, type TrainerState } from './TrainerModal';
 import { OutfitterModal } from './OutfitterModal';
 import { ReforgeModal, type ReforgePanelState } from './ReforgeModal';
-import type { SoundSettings } from '../audio/settings';
 import type { SaveExport } from '../persistence/saveFile';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
@@ -37,6 +36,7 @@ import {
   SAVE_IMPORT_REQUESTED_EVENT,
   SOUND_SETTINGS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
+  MINIMAP_SET_REQUESTED_EVENT,
   SELL_ITEM_REQUESTED_EVENT,
   LEARN_ABILITY_REQUESTED_EVENT,
   CRAFT_REQUESTED_EVENT,
@@ -248,13 +248,13 @@ export class OverlayHost {
   }
 
   /** `current` is who a save loaded from here would replace. */
-  openOptions(sound: SoundSettings, tipsOn: boolean, current: CharacterSummary): void {
+  openOptions(settings: OptionSettings, current: CharacterSummary): void {
     this.options?.close();
     this.options = new OptionsModal({
-      sound,
-      onSoundChanged: (settings) => this.events.emit(SOUND_SETTINGS_CHANGED_EVENT, settings),
-      tipsOn,
+      ...settings,
+      onSoundChanged: (sound) => this.events.emit(SOUND_SETTINGS_CHANGED_EVENT, sound),
       onTipsChanged: (on) => this.events.emit(TIPS_SET_REQUESTED_EVENT, on),
+      onMinimapChanged: (on) => this.events.emit(MINIMAP_SET_REQUESTED_EVENT, on),
       onExport: (kind) => this.events.emit(SAVE_EXPORT_REQUESTED_EVENT, kind),
       onOpenLoad: () => {
         this.options?.close();

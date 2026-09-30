@@ -27,10 +27,10 @@ download and back through a real file picker. Reach for it whenever a
 change touches the renderer, an actor or the HUD. Screenshots land in gitignored `.smoke/`.
 
 It runs on a **portrait phone in a touch-capable context**, which is what the game is laid out
-for; two sections leave that viewport on purpose and say why (a landscape resize, and a desktop
-block for the HUD rules that differ on a roomy screen). Every section draws in the one view there
-is, the 2D one (a `renderer-3d` section held the 3D fallback from B3 until B7 deleted it). Five
-things in it exist nowhere else:
+for; three sections leave that viewport on purpose and say why (a landscape resize, a desktop
+block for the HUD rules that differ on a roomy screen, and the minimap's corner measured at both).
+Every section draws in the one view there is, the 2D one (a `renderer-3d` section held the 3D
+fallback from B3 until B7 deleted it). Five things in it exist nowhere else:
 
 - **The teardown.** Three zone round trips have to leave what the view holds where they found it:
   the canvases it made (`canvases()`, every one made and let go through `render2d/canvases.ts`).

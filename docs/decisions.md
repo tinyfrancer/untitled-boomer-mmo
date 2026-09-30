@@ -2745,3 +2745,52 @@ Claude's, alongside them:
   change how it is reached, not what it is about.
 - **Part D's open questions narrow**: which factions there are and what the spirit wants are
   answered here; whether raising one faction lowers another is still D3's.
+
+## 115. The minimap stands in the top-right corner with the target frame beside or under it, opens the zone map on a tap, and can be switched off on the character
+
+**2026-09-30 · the user, asked by Claude, building the plan's phase C3**
+
+C3 is the minimap decision 86 promised: you, nearby creatures, exits and points of interest, in a
+corner that keeps clear of everything `ui/layout.ts` already reserves. The user settled three forks
+at the start of the phase, the first two on Claude's recommendation:
+
+- **The top-right corner**, where RuneScape and World of Warcraft keep it. The target frame stands
+  beside it where the top row has room for both (a landscape phone, anything wider) and under it on a
+  phone held upright, where the player column and the minimap all but meet. **Rejected:** the
+  bottom-right, over the tab bar beside the ability buttons, the one corner nothing used, with the
+  quest tracker stopping short of it and a desktop's sheet stopping above it; it put the minimap under
+  the thumb and moved nothing at the top.
+- **A tap opens the zone map**, at this zone and turned from the world view if that was showing, and
+  a second tap shuts it as its tab would, since at four pixels a tile there is no room for a name and
+  the sheet is where the names are. **Rejected:** walking to the tapped spot, RuneScape's way, which
+  a thumb would miss by a tile or two at that size; a minimap that answers nothing.
+- **A switch in Options, kept on the character** like the tips switch (`CharacterState.showMinimap`,
+  save version 101, the first step of version 2's migration chain, which switches it on for everybody
+  made before it). **Rejected:** always on, which Claude recommended as one setting fewer.
+
+Claude's, alongside them:
+
+- **A window round the player, not the whole zone**: 27 tiles a side at four CSS pixels a tile, the
+  player in the middle, the window held to a whole pixel so every edge lands on one. The rebuilt zones
+  are 45 by 32, which in a corner a thumb wide is two pixels a tile. **Rejected:** the whole zone
+  scaled to fit, which on today's zones would have worked and on C5's would not.
+- **Creatures reach the HUD the way the player's tile does** (`creatures-changed`): every living
+  creature within `MINIMAP_REACH` tiles of the player's tile, whole, published when one crosses a
+  tile, dies, gets up, or comes into reach or leaves it, from the tick and unseeded. It carries a
+  level rather than a colour, and the HUD colours each dot as its name is coloured over its head,
+  against the level it holds. **Rejected:** positions once a frame, the channel the HUD has been kept
+  off since the map sheet was written; every creature in the zone, which on a rebuilt zone is a
+  stream of crossings nobody can see; drawing the minimap in the view's canvas, which would have been
+  smooth and free of any event but is HUD furniture the world's picking would have to step round, at
+  the world's scale rather than the HUD's, inside the draw budget.
+- **The zone map's drawing, windowed**: an SVG built from `zoneMap()` through helpers the sheet now
+  shares (`hud/mapArt.ts`), so the two cannot disagree about where a tree is, and jsdom can read it.
+  What stands on it is shaped for its size: nodes flat, people a size up, a creature ringed in ink so
+  a green rat is not the green tree beside it, a boss bigger, the player a cross. **An exit is an
+  arrow** pointing off the edge it leaves by, drawn on the rim in the road's direction while it is out
+  of the window; it was a gold square until the first look found a level 2 rat's yellow the same
+  thing to the eye. The zone's name is under it in the world's font.
+- **The zone sheet keeps no creatures.** It is the plan of the place, opened to find the forge; the
+  minimap is the map looked at mid-fight.
+- **The switch is the session's to set** (`GameContext`), as taking the save away is, since nothing
+  in a zone reads it.

@@ -31,6 +31,17 @@ describe('migrateCharacterState', () => {
     expect(CHARACTER_STATE_VERSION).toBeGreaterThanOrEqual(FIRST_VERSION_2_STATE);
   });
 
+  it('shows the minimap to a character made before its switch', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE,
+    };
+    delete before.showMinimap;
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.showMinimap).toBe(true);
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
   it('drops saves from the future', () => {
     const future = {
       ...createNewCharacter('Aria', 'wizard'),

@@ -184,7 +184,9 @@ channel** is the `EventBus` (`src/ui/uiEvents.ts`): state the HUD re-renders fro
 one always describes the present. The **view channel** is the `WorldEvent[]` that `update()`
 returns: moments (a hit, a bolt, a float) a view cannot recover from state, naming a `tone` rather
 than a colour. Add HUD-facing state by adding an event, not by reaching across modules; payloads of
-more than two or three values are one object.
+more than two or three values are one object. **No position travels on the HUD channel once a
+frame**: the player's tile and the creatures near them (the minimap's, decision 115) are published
+on a whole-tile crossing, the creatures only within `MINIMAP_REACH` of the player.
 
 **Zones are rows, not code, and each is written as text.** A new area is a `ZONES` row in
 `src/data/zones.ts` plus exits both ways, and its ground and everything standing on it are a block of
@@ -250,10 +252,12 @@ overlay is `pointer-events: none` with furniture opting back in, so no tap is ev
 against it. Geometry is computed in `ui/layout.ts` (unit-tested at real sizes), styling is one
 stylesheet interpolated from `ui/theme.ts`. **The bar holds five tabs; a new surface goes behind
 Menu** (`MENU_TABS`), and **nothing in the world may be drawn under the tab bar** — the camera's
-framing holds that, measured in `tests/render2d/camera.test.ts` and in smoke. **Every number says
-what it counts** (decisions 89 and 99): a stat is named in full off `BONUS_NAMES` in `data/items.ts`
-rather than abbreviated where it is drawn, a locked row says what it Needs, and a panel is titled
-with its tab's own word. Nothing but the panel titles is held by a test, so a new surface keeps it.
+framing holds that, measured in `tests/render2d/camera.test.ts` and in smoke. **The top-right
+corner is the minimap's** (decision 115), the target frame beside it or, on a phone held upright,
+under it; new top furniture is placed against both in `hudLayout`, which `tests/ui/layout.test.ts`
+holds apart at five screens. **Every number says what it counts** (decisions 89 and 99): a stat is
+named in full off `BONUS_NAMES` in `data/items.ts` rather than abbreviated where it is drawn, a
+locked row says what it Needs, and a panel is titled with its tab's own word. Nothing but the panel titles is held by a test, so a new surface keeps it.
 **The HUD is drawn in the world's art** (decision 111, `docs/architecture/hud.md`): **every colour
 it names is a step on the art's ramps**, read through `rampStep` rather than typed as a hex, which
 `tests/ui/theme.test.ts` holds over the whole stylesheet; a panel, button, row or slot wears a
