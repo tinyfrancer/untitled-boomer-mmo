@@ -122,8 +122,8 @@ Two environment notes that will otherwise waste your time:
 
 - **`tests/setup.ts` installs an in-memory `Storage`.** Don't delete it, and don't "fix"
   `LocalStorageSaveService` to work around the stub Node's own `localStorage` leaves in jsdom.
-- **The first `npm run dev` request cold-compiles ~520 kB of Three.js**, so browser waits need
-  generous timeouts on a cold cache.
+- **The first `npm run dev` request cold-compiles the whole game** (and `?renderer=3d` another
+  ~520 kB of Three.js), so browser waits need generous timeouts on a cold cache.
 
 **A frame-rate bug is reproduced by asking for the frame, not by throttling a machine**:
 `view.step(140, 50)` in a browser, `tick(steps, deltaMs)` in the harness. The draw budget is the
@@ -132,11 +132,12 @@ loaded dev container reads 10ms high). `docs/architecture/testing.md` has the fu
 
 ## Architecture
 
-**Stack**: TypeScript bundled with Vite, rendered in 3D with Three.js (`src/render3d/`). It was
-Phaser 4 in 2D until `docs/archive/3d_port_plan.md` replaced it, and version 2 takes it back to 2D:
-pixel art drawn with Canvas 2D at art resolution and scaled up by whole device pixels (decision 101,
-`docs/architecture/art.md`), which B2 started behind `?renderer=2d` (`src/render2d/`, honoured in
-production) and B7 finishes by deleting Three.js. No backend — everything is a static site.
+**Stack**: TypeScript bundled with Vite, rendered in 2D with Canvas 2D (`src/render2d/`): pixel art
+drawn at art resolution and scaled up by whole device pixels (decision 101,
+`docs/architecture/art.md`). It was Phaser 4 in 2D, then Three.js in 3D after
+`docs/archive/3d_port_plan.md`, and version 2 takes it back to 2D: B2 started the 2D view behind a
+flag, B3 made it the game (decision 106), and the 3D view (`src/render3d/`) is loaded only for
+`?renderer=3d`, honoured in production, until B7 deletes it and Three.js with it. No backend — everything is a static site.
 Character data lives in the browser's `localStorage`.
 
 **The core seam: `render3d/` knows there is an engine and nothing else does.** `systems/`, `data/`,
@@ -147,9 +148,9 @@ builds through the `ZoneView` interface both answer, so a host duty is written o
 renderer was swapped across. Put new rules in those modules and call them from the view, never
 inline in an actor. `tests/architecture/phaserFreeSeam.test.ts` guards the old engine staying out.
 
-**The simulation is `src/world/`; `src/render3d/` only draws it.** `ZoneWorld` owns the player, the
-mobs and the nodes and steps them from `update(deltaMs)`; the actor classes in `render3d/actors.ts`
-catch up to them in `sync()` once a frame. New gameplay goes in the world, not the view. Nothing in
+**The simulation is `src/world/`; a view only draws it.** `ZoneWorld` owns the player, the mobs and
+the nodes and steps them from `update(deltaMs)`; the 2D view draws each frame from it as it stands
+and keeps no scene, and the 3D view's actors (`render3d/actors.ts`) catch up to it in `sync()`. New gameplay goes in the world, not the view. Nothing in
 `world/` may own an engine timer or tween — every clock is an accumulator against the frame delta —
 and collision bodies are data (`EnemyDefinition.body`), never measured off anything drawn.
 
@@ -227,7 +228,7 @@ overlay is `pointer-events: none` with furniture opting back in, so no tap is ev
 against it. Geometry is computed in `ui/layout.ts` (unit-tested at real sizes), styling is one
 stylesheet interpolated from `ui/theme.ts`. **The bar holds five tabs; a new surface goes behind
 Menu** (`MENU_TABS`), and **nothing in the world may be drawn under the tab bar** — the camera's
-framing holds that, measured in `tests/render3d/camera.test.ts` and in smoke. **Every number says
+framing holds that, measured in `tests/render2d/camera.test.ts` and in smoke. **Every number says
 what it counts** (decisions 89 and 99): a stat is named in full off `BONUS_NAMES` in `data/items.ts`
 rather than abbreviated where it is drawn, a locked row says what it Needs, and a panel is titled
 with its tab's own word. Nothing but the panel titles is held by a test, so a new surface keeps it.
@@ -246,8 +247,10 @@ shared ramps, since only the ground changes with the setting. **How much animati
 fixed in `art/budget.ts`**, and `tests/art/sprites.test.ts` holds every sprite in `SPRITES` to it
 exactly, to the palette and to its size: raising a frame count is a decision about the game, since
 it multiplies across every sprite of the kind. Nobody draws an outline; the compiler does.
-**Where two grounds meet is a rule, not a picture** (`art/ground.ts`): a pair with an edge is a row
-in `sprites/edges.ts`, and no edge may lay blocking ground over walkable ground. **A building is a
+**Where two grounds meet is a rule, not a picture** (`art/ground.ts`): every pair that meets in a
+zone is a row in `sprites/edges.ts` (a test sweeps the maps, so a new pair is a new row), and no edge
+may lay blocking ground over walkable ground, which is why rock shows its face inside its own cell.
+**Scatter is baked into the ground** (`art/scatter.ts`), never where an edge is drawn. **A building is a
 kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
 and **who is drawn with what** is `art/cast.ts`, anything not in it being its kind's placeholder.
 **A person is one figure dressed and armed** (`art/sprites/figure.ts`, decision 104): its arms are

@@ -3,6 +3,7 @@ import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
 import { RAT } from './sprites/rat';
+import { SCATTER_SPRITES } from './sprites/scatter';
 import { RANGER, SHOPKEEPER, WARRIOR, WIZARD } from './sprites/people';
 
 /**
@@ -12,6 +13,7 @@ import { RANGER, SHOPKEEPER, WARRIOR, WIZARD } from './sprites/people';
  */
 export const SPRITES: readonly SpriteDef[] = [
   ...TERRAIN_SPRITES,
+  ...SCATTER_SPRITES,
   ...Object.values(PLACEHOLDERS),
   WARRIOR,
   WIZARD,

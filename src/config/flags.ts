@@ -18,10 +18,10 @@ export function manualLoopRequested(search: string): boolean {
 export type RendererId = '3d' | '2d';
 
 /**
- * `?renderer=2d` draws the world in version 2's pixel art, for as long as the 3D
- * view is still the default (decision 83). Honoured in production too, since the
- * slice it draws is there to be judged on a phone; anything else is the 3D view.
+ * Version 2's pixel art is the game (phase B3); `?renderer=3d` draws it the old
+ * way, a fallback kept until B7 retires the 3D view. Honoured in production too,
+ * since a fallback that only works in development is none.
  */
 export function rendererRequested(search: string): RendererId {
-  return new URLSearchParams(search).get('renderer') === '2d' ? '2d' : '3d';
+  return new URLSearchParams(search).get('renderer') === '3d' ? '3d' : '2d';
 }

@@ -28,12 +28,15 @@ change touches the renderer, an actor or the HUD. Screenshots land in gitignored
 
 It runs on a **portrait phone in a touch-capable context**, which is what the game is laid out
 for; two sections leave that viewport on purpose and say why (a landscape resize, and a desktop
-block for the HUD rules that differ on a roomy screen). Five things in it exist nowhere else:
+block for the HUD rules that differ on a roomy screen). Every section draws in 2D, the game's view
+since B3, and the `renderer-3d` section at the end holds the fallback, including the one thing only
+it has, a camera a drag turns (decision 106). Five things in it exist nowhere else:
 
-- **The GPU teardown.** Three zone round trips have to leave `renderer.info.memory` where they
-  found it. That number counts what has actually been _uploaded_, which is why both snapshots are
-  taken after sweeping the camera over the whole zone: compared from wherever the player happened
-  to be standing, it would move with a rat wandering into frame.
+- **The teardown.** Three zone round trips have to leave what the view holds where they found it:
+  the canvases the 2D view made (`gpuMemory().textures`, B7 renames it), and under `?renderer=3d`
+  `renderer.info.memory`. The 3D number counts what has actually been _uploaded_, which is why both
+  snapshots are taken after sweeping the camera over the whole zone: compared from wherever the
+  player happened to be standing, it would move with a rat wandering into frame.
 - **A finger, not a mouse.** The drag/tap disambiguation and `touch-action: none` are phone rules
   and a mouse can break neither — it never pans the page and is never a thumb resting on the
   screen. Touch sequences go through CDP `Input.dispatchTouchEvent`; Playwright's touchscreen can
@@ -43,9 +46,8 @@ block for the HUD rules that differ on a roomy screen). Five things in it exist 
   `context-menu` section holds a real finger still for 700ms and then checks that letting go walks
   nowhere. It is also where the two events one right click arrives as (`pointerdown` with a
   non-primary button, then `contextmenu`) are held to being one gesture.
-- **A landscape resize**, which is the one shape `tests/render3d/camera.test.ts` does not measure.
-  A landscape camera frames ten tiles of _depth_ rather than of width, so the south signpost is
-  out of frame from the spawn point; what holds is that walking toward it brings it into reach.
+- **A landscape resize**, which is the one shape the camera tests do not measure: what holds is
+  that walking toward the south signpost brings it into reach.
 - **A CPU-throttled pass at `rate: 8`, cranked at 140ms a frame** — see "Reproducing a
   frame-rate-dependent bug" below for why that is two questions rather than one.
 

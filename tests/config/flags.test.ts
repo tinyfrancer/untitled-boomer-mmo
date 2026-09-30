@@ -11,10 +11,11 @@ describe('manualLoopRequested', () => {
 });
 
 describe('rendererRequested', () => {
-  it('draws in 3D unless 2D is named', () => {
-    expect(rendererRequested('')).toBe('3d');
-    expect(rendererRequested('?renderer=webgl')).toBe('3d');
+  it('draws in 2D unless 3D is named', () => {
+    expect(rendererRequested('')).toBe('2d');
+    expect(rendererRequested('?renderer=webgl')).toBe('2d');
     expect(rendererRequested('?renderer=2d')).toBe('2d');
-    expect(rendererRequested('?loop=manual&renderer=2d')).toBe('2d');
+    expect(rendererRequested('?renderer=3d')).toBe('3d');
+    expect(rendererRequested('?loop=manual&renderer=3d')).toBe('3d');
   });
 });

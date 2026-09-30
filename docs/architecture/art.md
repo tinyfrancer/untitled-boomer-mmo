@@ -7,8 +7,10 @@ step, recolouring, the world's font, and which renderer draws it.
 _Written in version 2's phase B1 (`docs/decisions.md` 100 and 101); B2 added the edges between
 grounds, the world's font, the first people and creature, the building kit and the 2D view that
 draws them (decision 102), and the user's first look turned the whole of it from cute to heroic
-and weathered (decision 103). Where this and the code disagree, the code is right — and this file is
-what should be corrected. `rendering.md` is still the 3D renderer's until B7 retires it._
+and weathered (decision 103). B3 drew every ground, the edges and faces between them, the scatter
+and the lantern, and made the 2D view the game (decision 106). Where this and the code disagree, the
+code is right — and this file is what should be corrected. `rendering.md` is still the 3D renderer's,
+the fallback behind `?renderer=3d`, until B7 retires it._
 
 **The art is data, and it depends on nothing** (decision 81). A sprite is text in `src/art/`:
 rows of characters, one per pixel, each a key in the sprite's legend, which names a palette step.
@@ -85,15 +87,21 @@ and the top-left is where the pixel art of the games named above puts it.
 **Nothing casts a shadow; everything standing sits on one.** The renderer lays a flat ellipse under
 anything that stands, in the setting's `shadow` colour at partial opacity, which is what stops a
 sprite hovering. A cast shadow would have to be drawn for every frame of every facing, and would
-tell the player nothing a contact shadow does not. **Underground is lit by the lantern**: the
-renderer darkens everything but a disc of light round the player, as the 3D view did with a point
-light, and the underground palette is dark so the disc is where the colour is.
+tell the player nothing a contact shadow does not. **Underground is lit by the lantern**
+(`render2d/lantern.ts`, decision 106): the renderer darkens everything but a pool of light round the
+player, as the 3D view did with a point light, and the underground palette is dark so the pool is
+where the colour is. It is two stamps centred on the player's chest, drawn over everything standing
+and under the words: darkness, clear for three tiles and falling off to six and a half **in dithered
+steps** rather than a smooth gradient, as pixel art shades, wider than it is deep since the ground is
+seen at a slant, and **never black** (two thirds dark), so a creature at the edge of the screen is
+still a shape; and a faint warm glow added in the clear, which is what brings the colour back.
 
 ## The outline
 
-**People, beasts, props and icons are outlined; tiles and effects are not.** A figure against busy
-ground on a phone needs an edge to be a figure at all; ground has no edge to draw, and light has
-none either. **Nobody draws the outline: the compiler does.** Each empty pixel beside the silhouette, on
+**People, beasts, props, icons and scatter are outlined; tiles and effects are not.** A figure
+against busy ground on a phone needs an edge to be a figure at all; ground has no edge to draw, and
+light has none either. Scatter is ground, and outlined anyway (decision 106): drawn in the same ramp
+as ground already textured in it, a tuft with no edge was not there at all. **Nobody draws the outline: the compiler does.** Each empty pixel beside the silhouette, on
 its four sides, takes step 0 of the ramp it touches, and where it touches two, the darker. That is a
 _selective_ outline: a figure is edged in dark skin, dark cloth and dark steel rather than in one
 black line, which is the difference between pixel art and a colouring book. Four sides and not
@@ -108,14 +116,15 @@ better, and then every figure owes it four ways and every armour layer owes it a
 four frames, not three and not five, and the timing lives in the budget too, which is what lets the
 renderer play any creature's walk on one clock without asking the creature.
 
-| Kind   | Sizes                                    | Animations: frames × facings, ms a frame                                                                           |
-| ------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| tile   | 32×32                                    | still 1; loop 4 (250)                                                                                              |
-| person | 32×48; 48×64 for a boss                  | idle 2×4 (500), walk 4×4 (150), attack 3×4 (100), cast 3×4 (120), shoot 3×4 (100), hurt 1×4 (150), death 3×1 (150) |
-| beast  | 32×32, 48×48, 64×64                      | idle, walk, attack, hurt and death, as a person's                                                                  |
-| prop   | 16×16 to 64×64 (the list is in the code) | still 1; spent 1 (a stump, a worked-out vein); loop 4 (150)                                                        |
-| effect | 16×16, 32×32, 64×64                      | play 4 (60)                                                                                                        |
-| icon   | 16×16, 32×32                             | still 1                                                                                                            |
+| Kind    | Sizes                                    | Animations: frames × facings, ms a frame                                                                           |
+| ------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| tile    | 32×32                                    | still 1; loop 4 (250)                                                                                              |
+| scatter | 8×8, 16×16                               | still 1                                                                                                            |
+| person  | 32×48; 48×64 for a boss                  | idle 2×4 (500), walk 4×4 (150), attack 3×4 (100), cast 3×4 (120), shoot 3×4 (100), hurt 1×4 (150), death 3×1 (150) |
+| beast   | 32×32, 48×48, 64×64                      | idle, walk, attack, hurt and death, as a person's                                                                  |
+| prop    | 16×16 to 64×64 (the list is in the code) | still 1; spent 1 (a stump, a worked-out vein); loop 4 (150)                                                        |
+| effect  | 16×16, 32×32, 64×64                      | play 4 (60)                                                                                                        |
+| icon    | 16×16, 32×32                             | still 1                                                                                                            |
 
 Two idle frames are a breath, which separates a figure standing from a figure paused. Four walk
 frames are a stride: foot, pass, other foot, pass. Three to a blow are wind-up, strike and recover,
@@ -167,8 +176,11 @@ budget is held against real frames from the day it was written. The terrain tile
 (`sprites/terrain.ts`) were the first real sprites, each written in one terrain ramp's digits and
 repeating with no seam; B2 redrew grass and road with texture and gave each several **variants**
 (`TILE_VARIANTS`), a cell dealt one by where it is so a field is not one tile stamped over and
-over. What differs between variants is kept off a tile's edges, so any sits beside any other. B2
-drew the first figures, to **heroic proportions**: a head over a body three times its height, about
+over. What differs between variants is kept off a tile's edges, so any sits beside any other (a
+test holds every variant to its plain tile's two-pixel border). B3 gave sand, stone, rock and marsh
+theirs too, and redrew **stone as irregular flagstones** with their joints a step up from black,
+since a bond laid in a grid read as a brick wall lying flat; **rock** is the top of a mass of
+boulders, and its face is a tile of its own (below). B2 drew the first figures, to **heroic proportions**: a head over a body three times its height, about
 39 pixels of the frame's 48 (decision 103). **The rat** (`sprites/rat.ts`) is the first creature, a
 lean sewer rat with red eyes rather than a mouse.
 
@@ -233,8 +245,33 @@ tiles either side of it, and water's four frames move under a still bank.
 **The edge is drawn inside the lower cell, and never lays blocking ground over walkable ground**
 (held by a test): where the ground may be crossed is the one thing about terrain a player has to
 read at a glance, and a bank drawn a few pixels into the water's cell stops the player at the bank
-rather than in the water. A pair with no row meets at a hard line, which is what every pair B2 did
-not need still does; B3's are a row each.
+rather than in the water. **Every pair of grounds that meets in a zone has a row** (a test sweeps
+the maps), so no two grounds meet at a hard line.
+
+**Rock stands up inside its own cell** (decision 106). A true 3/4 view would draw a rock's top a
+face's height north of its footprint, over the floor behind it, which is blocking ground over
+walkable. So rock is the lower ground of every pair it is in, the floor reaching into its cell as
+any upper ground does, and a style may give the lower ground **a face** on one side: the rows
+nearest the edge drawn from the bottom rows of a tile of the face (`WALL_FACE`, fractured rock lit
+down its left edges and split by ledges), its foot at the edge, rather than inked flat. Rock shows
+sixteen rows of it on the south, the side the viewer sees, under half a figure so it hides no more
+than the boots of whoever stands behind it; its crest is lit on the north, its west side lit and its
+east dark, and the floor at its foot is a crevice of shadow. Rock standing in water is the same
+face with its foot in the water. The face is where rock stops a player, since it is inside the
+cell that does.
+
+## Scatter
+
+**What is strewn over the ground is a kind of its own, baked into it** (`sprites/scatter.ts`,
+`art/scatter.ts`, decision 106): clumps of long grass and wildflowers on grass, reeds in the marsh,
+pebbles on stone and shells on sand, the 3D view's scatter drawn. A table says what lies on which
+ground, how many a cell may hold and how likely each is, and a hash of where a cell is picks, so a
+zone is strewn the same every time it is built. Nothing is laid in a cell another ground reaches
+into, where it would lie across the edge, or on a building's footprint, and each piece lies wholly
+inside its cell (all held by `tests/art/scatter.test.ts`). It is drawn in terrain ramps where it
+grows out of the ground, so a tuft in the fen is a fen tuft, and the flowers come in three colours
+as variants. It is baked into the ground canvas with the tiles, since it is ground: a figure walks
+over it, and a frame pays nothing for it.
 
 ## Compiling, and recolouring
 
@@ -325,8 +362,9 @@ Headless Chromium has no GPU, so the spike's numbers are software drawing both w
 They are the numbers the budget is asserted on, and the ordering did not change with what was
 counted; on a phone, Chrome and Safari draw a canvas on the GPU.
 
-**The view as built** (`src/render2d/`, B2) is `ZoneView2D`, reached by `?renderer=2d` and handed
-to the same host as the 3D view (`host/host.ts`, behind the `ZoneView` interface both answer):
+**The view as built** (`src/render2d/`, B2) is `ZoneView2D`, **the game's view since B3** (decision
+106), with the 3D view loaded only for `?renderer=3d` until B7 deletes it; both are handed to the
+same host (`host/host.ts`, behind the `ZoneView` interface both answer):
 
 - **The camera** (`camera.ts`) picks the scale, sizes the canvas to the screen in art pixels
   rounded up, and stands the player in **the middle of the band above the tab bar**, following them
@@ -338,7 +376,9 @@ to the same host as the 3D view (`host/host.ts`, behind the `ZoneView` interface
   a soft vignette darkens the screen's corners, drawn over the world and under the words.
 - **What is drawn comes from the world each frame**; the view keeps no scene. The sprite sheet is
   compiled once a setting and kept for the session, the ground and the buildings once a zone, and
-  every word once while it is drawn (`text.ts`, bounded). **Every canvas is made through one pool**
+  every word once while it is drawn (`text.ts`): a word no frame drew is let go at the end of that
+  frame, so a fight's numbers do not pile up and the canvas count comes back when it is over.
+  **Every canvas is made through one pool**
   (`canvases.ts`) and counted, which is what `gpuMemory()` reports and smoke holds flat across
   zone round trips.
 - **An animation plays on the budget's clock** (`animation.ts`): a figure faces the way it mostly
@@ -351,6 +391,8 @@ to the same host as the 3D view (`host/host.ts`, behind the `ZoneView` interface
   the 3D one does, whoever works there or the ground at its door, and nothing from inside. The
   sweep that holds every creature tappable from where a player fights it runs over the flat boxes
   too (`tests/render2d/picking.test.ts`).
-- **What smoke asks of it** is its own section (`renderer-2d`): the canvas at a whole scale, every
-  thing drawn, canvases flat over three round trips, a click on a rat and on the ground, a click on
-  the shopfront walking in to the shopkeeper, and the draw budget under the eight-times throttle.
+- **What smoke asks of it** is the whole run, every section of which draws in 2D: the canvas at a
+  whole scale (`boot`), every thing drawn and canvases flat over three round trips (`teardown`),
+  picking, the shopfront, a drag that turns nothing, and the draw budget under the eight-times
+  throttle. The `renderer-3d` section holds the fallback: that it boots, draws town, and that its
+  camera still turns under a drag with W walking up the turned screen.

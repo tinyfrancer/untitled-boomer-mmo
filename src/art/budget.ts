@@ -21,10 +21,11 @@ export const TILE_PIXELS = 32;
  */
 export const ART_PIXEL = TILE_SIZE / TILE_PIXELS;
 
-export type SpriteKind = 'tile' | 'person' | 'beast' | 'prop' | 'effect' | 'icon';
+export type SpriteKind = 'tile' | 'scatter' | 'person' | 'beast' | 'prop' | 'effect' | 'icon';
 
 export const SPRITE_KINDS: readonly SpriteKind[] = [
   'tile',
+  'scatter',
   'person',
   'beast',
   'prop',
@@ -106,6 +107,20 @@ export const BUDGET: Readonly<Record<SpriteKind, KindBudget>> = {
     opaque: true,
     required: [],
     animations: { still: STILL, loop: looping(4, 250, 'one') },
+  },
+  // What lies on the ground and does nothing: a tuft, a flower, a reed, a
+  // pebble, a shell. Baked into the ground with it (`art/scatter.ts`) and never
+  // moving, but outlined as a prop is, since on ground already textured in its
+  // own ramp a tuft with no edge is not there at all.
+  scatter: {
+    sizes: [
+      [8, 8],
+      [16, 16],
+    ],
+    outlined: true,
+    opaque: false,
+    required: ['still'],
+    animations: { still: STILL },
   },
   // The player, an NPC, and every creature built like one: a bandit, a
   // goblin, a wight. A tile wide and half again as tall; the larger size is

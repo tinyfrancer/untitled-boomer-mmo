@@ -44,12 +44,32 @@ export interface GroundArt {
   cells: GroundCell[];
 }
 
-const EDGE_OF = new Map(EDGES.map(({ lower, upper, style }) => [`${lower}>${upper}`, style]));
+// Indexed by the two tile ids rather than keyed by a string of them: it is
+// asked for every pixel of every edge cell, many times over.
+const EDGE_OF: (EdgeStyle | undefined)[][] = [];
+for (const { lower, upper, style } of EDGES) (EDGE_OF[lower] ??= [])[upper] = style;
 
 /** The style of the edge where `upper` reaches into `lower`, if the pair has one. */
 export function edgeStyle(lower: number, upper: number): EdgeStyle | undefined {
-  return EDGE_OF.get(`${lower}>${upper}`);
+  return EDGE_OF[lower]?.[upper];
 }
+
+/** How far into a lower ground's cell, from each side, any style it has draws a band or a face. */
+function bandDepth(lower: number, side: Side): number {
+  return Math.max(
+    0,
+    ...EDGES.filter((edge) => edge.lower === lower).map(({ style }) =>
+      Math.max(style.lower[side].length, style.face?.side === side ? style.face.rows : 0),
+    ),
+  );
+}
+
+const BAND_DEPTH = new Map<number, Readonly<Record<Side, number>>>(
+  [...new Set(EDGES.map(({ lower }) => lower))].map((lower) => [
+    lower,
+    Object.fromEntries(SIDES.map((side) => [side, bandDepth(lower, side)])) as Record<Side, number>,
+  ]),
+);
 
 const STEP: Readonly<Record<Side, readonly [number, number]>> = {
   north: [0, -1],
@@ -61,7 +81,7 @@ const STEP: Readonly<Record<Side, readonly [number, number]>> = {
 const SIDE_SEED: Readonly<Record<Side, number>> = { north: 0, south: 1, west: 2, east: 3 };
 
 /** A number in [0, 1) that is the same for the same three integers, and only for them. */
-function hash(a: number, b: number, c: number): number {
+export function hash(a: number, b: number, c: number): number {
   let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 1274126177);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   h ^= h >>> 16;
@@ -288,12 +308,6 @@ function pixelCover(
   return own;
 }
 
-/** The deepest any style's bands reach, which is how far a pixel looks for an edge. */
-const MAX_BAND = Math.max(
-  ...EDGES.flatMap(({ style }) => SIDES.map((side) => style.lower[side].length)),
-  1,
-);
-
 /**
  * The ground of a whole map, and `apron` cells of it carried outward on every
  * side, in one setting's light.
@@ -341,6 +355,11 @@ export function composeGround(
     return frames;
   };
 
+  const faceOf = (id: string): Uint8ClampedArray | undefined => {
+    const def = TERRAIN_BY_ID.get(id);
+    return def ? framesOf(def)[0] : undefined;
+  };
+
   const cells: GroundCell[] = [];
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < cols; c += 1) {
@@ -350,7 +369,9 @@ export function composeGround(
         cells.push({ kind: 'tile', sprite: sprite.id, animated: tileAnimated(own) });
         continue;
       }
-      cells.push(composeEdgeCell(cover, width, height, c, r, own, sprite, setting, framesOf));
+      cells.push(
+        composeEdgeCell(cover, width, height, c, r, own, sprite, setting, framesOf, faceOf),
+      );
     }
   }
   return { cols, rows, apron, cells };
@@ -371,9 +392,11 @@ function composeEdgeCell(
   ownSprite: SpriteDef,
   setting: ZoneSetting,
   framesOf: (def: SpriteDef) => Uint8ClampedArray[],
+  faceOf: (sprite: string) => Uint8ClampedArray | undefined,
 ): EdgeCell {
   const shown = new Uint8Array(T * T);
   const ink = new Int32Array(T * T).fill(-1);
+  const depth = BAND_DEPTH.get(own);
   // The cell's own ground in the variant it was dealt, and whatever reaches in
   // in its plain one, which is what keeps a tuft from being cut by a seam.
   const spriteOf = (tile: number): SpriteDef => (tile === own ? ownSprite : tileSprite(tile));
@@ -404,23 +427,37 @@ function composeEdgeCell(
         continue;
       }
 
-      // The lower ground's rows nearest an edge, whichever edge is nearest.
-      let best: { distance: number; ink: EdgeInk; upper: number } | null = null;
+      // The lower ground's rows nearest an edge, whichever edge is nearest: an
+      // ink, or a row of the face it shows there.
+      if (!depth) continue;
+      let best: { distance: number; ink: number } | null = null;
       for (const side of SIDES) {
         const [dx, dy] = STEP[side];
-        for (let d = 1; d <= MAX_BAND; d += 1) {
+        const reach = Math.min(depth[side], best ? best.distance - 1 : Infinity);
+        for (let d = 1; d <= reach; d += 1) {
           const nx = gx + dx * d;
           const ny = gy + dy * d;
           if (nx < 0 || ny < 0 || nx >= width || ny >= height) break;
           const upper = cover[ny * width + nx] ?? own;
           if (upper === own) continue;
-          const band = edgeStyle(own, upper)?.lower[side];
-          const step = band?.[d - 1];
-          if (step && (!best || d < best.distance)) best = { distance: d, ink: step, upper };
+          const style = edgeStyle(own, upper);
+          const face = style?.face;
+          if (face && face.side === side && d <= face.rows) {
+            const pixels = faceOf(face.sprite);
+            const at = ((T - d) * T + (gx % T)) * 4;
+            if (pixels) {
+              const colour =
+                ((pixels[at] ?? 0) << 16) | ((pixels[at + 1] ?? 0) << 8) | (pixels[at + 2] ?? 0);
+              best = { distance: d, ink: colour };
+            }
+            break;
+          }
+          const step = style?.lower[side][d - 1];
+          if (step) best = { distance: d, ink: inkColour(step, own, upper, setting) };
           break;
         }
       }
-      if (best) ink[i] = inkColour(best.ink, own, best.upper, setting);
+      if (best) ink[i] = best.ink;
     }
   }
 

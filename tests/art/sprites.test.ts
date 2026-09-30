@@ -166,7 +166,11 @@ describe('the sprite list', () => {
     const atlas = compileAtlas(SPRITES, setting);
     expect(atlas.width).toBeLessThanOrEqual(4096);
     expect(atlas.height).toBeLessThanOrEqual(4096);
-    expect(atlas.frames.size).toBe(SPRITES.flatMap((def) => expandFrames(def)).length);
+    // A variant compiles as a sprite of its own, every frame again.
+    const frames = SPRITES.flatMap((def) =>
+      Array.from({ length: 1 + Object.keys(def.variants ?? {}).length }, () => expandFrames(def)),
+    ).flat();
+    expect(atlas.frames.size).toBe(frames.length);
   });
 });
 
