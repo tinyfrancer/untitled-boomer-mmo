@@ -1,11 +1,23 @@
 import type { CreatureShapeId, EnemyId, NpcId } from '../types/ids';
+import { variantId } from './compile';
 import type { SpriteDef } from './format';
-import { standingSprite, type Getup } from './outfit';
-import { APRON_DOWN, APRON_RIGHT, APRON_UP, TUNIC } from './sprites/people';
+import { fighterSprite, standingSprite, type Build, type Getup } from './outfit';
+import {
+  BANDANA,
+  BREECHES,
+  CAP,
+  CLOAKED_PLATE,
+  GREAVES,
+  STUDDED_JERKIN,
+  VEST,
+} from './sprites/armour';
+import { GOBLIN_EARS } from './sprites/hair';
+import { APRON_DOWN, APRON_RIGHT, APRON_UP, CORDED, ROBE, TUNIC } from './sprites/people';
 import { PLACEHOLDERS } from './sprites/placeholders';
+import { CRAB } from './sprites/crab';
+import { LURKER } from './sprites/lurker';
 import { RAT } from './sprites/rat';
-import { VEST } from './sprites/armour';
-import { MAUL } from './sprites/weapons';
+import { BEARDED_AXE, DAGGER, GAFF, MAUL, ROUND_SHIELD, RUSTY_SWORD } from './sprites/weapons';
 import { offhandAs, wieldedAs, wornAs } from './wardrobe';
 
 /**
@@ -104,8 +116,134 @@ export const TOWNSFOLK_SPRITES: readonly SpriteDef[] = Object.entries(TOWNSFOLK)
   ([npcId, getup]) => standingSprite(npcId, getup),
 );
 
+/**
+ * The creatures built like people, each on the figure in what it wears and
+ * with what it carries, which is mostly what it drops (`data/lootTables.ts`):
+ * told apart across a field by their colours and their builds, as their 3D
+ * colours told them (`NPC_APPEARANCES`). A boss is drawn bigger than his men,
+ * a goblin smaller (`Build`).
+ */
+const FOES: Readonly<Partial<Record<EnemyId, { getup: Getup; build: Build }>>> = {
+  // An outlaw in undyed cloth under a brown jerkin, a red rag over the face
+  // and the knife it throws when it cannot reach you.
+  bandit: {
+    getup: townsperson(
+      'linen',
+      { skin: 'fair', hair: 'brown', hairstyle: 'cropped' },
+      {
+        helmet: { piece: BANDANA, ramp: 'red' },
+        chest: wornAs('brown-chestplate'),
+        legs: { piece: BREECHES, ramp: 'leather' },
+        weapon: { art: DAGGER },
+      },
+    ),
+    build: 'man',
+  },
+  // Their chief, a head taller, in a merchant's coat he did not pay for, the
+  // cutthroat's bandana and cutlass he drops.
+  'bandit-chief': {
+    getup: townsperson(
+      'ochre',
+      { skin: 'tan', hair: 'black', hairstyle: 'cropped' },
+      {
+        helmet: wornAs('cutthroats-bandana'),
+        chest: { piece: STUDDED_JERKIN, ramp: 'leather' },
+        legs: { piece: BREECHES, ramp: 'leather' },
+        weapon: wieldedAs('cutthroats-blade'),
+      },
+    ),
+    build: 'boss',
+  },
+  // Green, bald and pinched, its eyes catching the light, in rags, swinging
+  // an axe it found.
+  'goblin-scavenger': {
+    getup: townsperson(
+      'ochre',
+      { skin: 'fair', hair: 'black', hairstyle: 'shaved' },
+      { skin: 'skinGoblin', extra: GOBLIN_EARS, eyes: 'yellow', weapon: { art: BEARDED_AXE } },
+    ),
+    build: 'goblin',
+  },
+  // The same goblin gone pale underground, sooted, in a leather cap, with the
+  // pick it works the seam with.
+  'goblin-miner': {
+    getup: townsperson(
+      'masonry',
+      { skin: 'fair', hair: 'black', hairstyle: 'shaved' },
+      {
+        skin: 'skinGoblinPale',
+        extra: GOBLIN_EARS,
+        eyes: 'yellow',
+        helmet: { piece: CAP, ramp: 'leather' },
+        weapon: wieldedAs('pickaxe'),
+      },
+    ),
+    build: 'goblin',
+  },
+  // Oilskin against the water under a fenweave hood, and a boat's gaff.
+  'fen-raider': {
+    getup: townsperson(
+      'oilskin',
+      { skin: 'tan', hair: 'black', hairstyle: 'bearded' },
+      {
+        helmet: wornAs('fenweave-hood'),
+        legs: wornAs('fenweave-leggings'),
+        weapon: { art: GAFF },
+      },
+    ),
+    build: 'man',
+  },
+  // Bone under a grave-shroud and a linen wrap, lank grey hair, eyes lit
+  // green, and the sword and shield it was buried with gone to verdigris.
+  'barrow-wight': {
+    getup: {
+      ...townsperson(
+        'grave',
+        { skin: 'fair', hair: 'grey', hairstyle: 'long' },
+        {
+          helmet: { piece: BANDANA, ramp: 'linen' },
+          weapon: { art: RUSTY_SWORD, blade: 'grave' },
+          offhand: { art: ROUND_SHIELD, ramp: 'grave' },
+          skin: 'bone',
+          eyes: 'nature',
+        },
+      ),
+      garment: CORDED(ROBE),
+      robed: true,
+    },
+    build: 'man',
+  },
+  // Their king, bigger than any of them, crowned, in plate gone green under a
+  // cloak gone dark, and the leaf blade he drops.
+  'barrow-king': {
+    getup: townsperson(
+      'grave',
+      { skin: 'fair', hair: 'grey', hairstyle: 'bearded' },
+      {
+        helmet: wornAs('barrow-crown'),
+        chest: { piece: CLOAKED_PLATE, ramp: 'grave' },
+        legs: { piece: GREAVES, ramp: 'grave' },
+        weapon: wieldedAs('barrow-blade'),
+        cloak: 'violet',
+        skin: 'bone',
+        eyes: 'nature',
+      },
+    ),
+    build: 'boss',
+  },
+};
+
+/** Every humanoid creature as a sprite, for the sheet the game compiles at boot. */
+export const FOE_SPRITES: readonly SpriteDef[] = Object.entries(FOES).flatMap(([enemyId, foe]) =>
+  foe ? [fighterSprite(enemyId, foe.getup, foe.build)] : [],
+);
+
 const CREATURE_SPRITES: Readonly<Partial<Record<EnemyId, string>>> = {
   rat: RAT.id,
+  crab: CRAB.id,
+  'cave-crawler': variantId(CRAB.id, 'cave'),
+  'bog-lurker': LURKER.id,
+  ...Object.fromEntries(Object.keys(FOES).map((enemyId) => [enemyId, enemyId])),
 };
 
 /** A person who stands behind a counter. */

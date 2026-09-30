@@ -120,6 +120,43 @@ export function rekeyed(frame: Grid, swaps: Readonly<Record<string, string>>): G
   return frame.map((row) => [...row].map((key) => swaps[key] ?? key).join(''));
 }
 
+/** Which whole rows and columns of a frame to draw twice, and which to leave out. */
+export interface Refit {
+  doubleRows?: readonly number[];
+  dropRows?: readonly number[];
+  doubleColumns?: readonly number[];
+  dropColumns?: readonly number[];
+}
+
+/**
+ * A frame grown or shrunk by drawing whole rows and columns twice or not at
+ * all, and set in a frame `width` by `height` with its bottom row at the
+ * bottom and its middle in the middle, which is where a figure's feet are.
+ *
+ * It is how a pixel artist makes a figure bigger without scaling it: rows are
+ * added where the drawing is flat (a chest, a shin) and a face or a buckle is
+ * left as it was drawn, so every pixel stays one pixel, where scaling by a
+ * fraction would draw some of them twice as wide as their neighbours at random.
+ */
+export function refitted(frame: Grid, fit: Refit, width: number, height: number): Grid {
+  const count = (keys: readonly number[] | undefined, before: number): number =>
+    (keys ?? []).filter((key) => key < before).length;
+  const times = (index: number, double?: readonly number[], drop?: readonly number[]): number =>
+    drop?.includes(index) ? 0 : double?.includes(index) ? 2 : 1;
+  const rows = frame.flatMap((row, y) =>
+    Array<string>(times(y, fit.doubleRows, fit.dropRows)).fill(
+      [...row]
+        .flatMap((key, x) => Array<string>(times(x, fit.doubleColumns, fit.dropColumns)).fill(key))
+        .join(''),
+    ),
+  );
+  const middle = (frame[0]?.length ?? 0) / 2;
+  const moved = middle + count(fit.doubleColumns, middle) - count(fit.dropColumns, middle);
+  return composed(width, height, [
+    { grid: rows, x: Math.round(width / 2 - moved), y: height - rows.length },
+  ]);
+}
+
 /** A part of a frame, and where its top-left corner goes. */
 export interface Placed {
   grid: Grid;

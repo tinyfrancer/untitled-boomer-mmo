@@ -2,9 +2,11 @@ import type { SpriteDef } from './format';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
+import { CRAB } from './sprites/crab';
+import { LURKER } from './sprites/lurker';
 import { RAT } from './sprites/rat';
 import { SCATTER_SPRITES } from './sprites/scatter';
-import { TOWNSFOLK_SPRITES } from './cast';
+import { FOE_SPRITES, TOWNSFOLK_SPRITES } from './cast';
 
 /**
  * Every sprite in the game. `sprites.test.ts` walks this list, so a sprite
@@ -16,7 +18,10 @@ export const SPRITES: readonly SpriteDef[] = [
   ...SCATTER_SPRITES,
   ...Object.values(PLACEHOLDERS),
   ...TOWNSFOLK_SPRITES,
+  ...FOE_SPRITES,
   RAT,
+  CRAB,
+  LURKER,
   SIGNPOST,
 ];
 

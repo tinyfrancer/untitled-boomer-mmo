@@ -387,7 +387,8 @@ export class ZoneView2D implements ZoneView {
       const def = sheet.def(sprite);
       const motion = this.mobMotions.get(mob);
       if (mob.isAlive()) {
-        shadowAt(mob.x, mob.y, def.kind === 'beast' ? 18 : 16);
+        // A boss's shadow is as much wider as he is.
+        shadowAt(mob.x, mob.y, ((def.kind === 'beast' ? 18 : 16) * def.width) / 32);
         const pose = motion ? motion.pose(def, now, mob.vx, mob.vy) : deathPose(def, 0);
         standing.push({
           baseY: mob.y,
