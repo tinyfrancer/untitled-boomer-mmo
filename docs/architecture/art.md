@@ -10,7 +10,9 @@ draws them (decision 102), and the user's first look turned the whole of it from
 and weathered (decision 103). B3 drew every ground, the edges and faces between them, the scatter
 and the lantern, and made the 2D view the game (decision 106). B4 put a person together from what
 they chose and what they have on, drew every weapon and offhand as the item it is, and the
-townsfolk (decision 107). Where this and the code disagree, the
+townsfolk (decision 107). B5 drew every creature, the bosses grown and the goblins shrunk from the
+same figure, and the moments: hits, crits, a level, what flies, the telegraphs, the loot sack
+(decision 108). Where this and the code disagree, the
 code is right — and this file is what should be corrected. `rendering.md` is still the 3D renderer's,
 the fallback behind `?renderer=3d`, until B7 retires it._
 
@@ -172,7 +174,9 @@ the thing's position in the world; the feet stand on the third row from the bott
 them is the outline, and the last row is the clear pixel the outline rule asks for.
 
 **Anything not yet drawn is drawn as its kind's placeholder**: a mannequin, a grey lump on four
-paws, a crate, a ring of light, a token with a question on it, a purple checker. Each fills every
+paws, a crate, a ring of light, a token with a question on it, a purple checker. Since B5 every
+person and creature is drawn and only props (nodes, stations, the campfire) and icons are left,
+which are B6's and B8's. Each fills every
 animation its kind's budget allows, so the renderer never asks whether a pose exists, and so the
 budget is held against real frames from the day it was written. The terrain tiles
 (`sprites/terrain.ts`) were the first real sprites, each written in one terrain ramp's digits and
@@ -265,9 +269,79 @@ were in 3D (a merchant in ochre under an apron, a clerk in teal with a shaved he
 in iron plate with a sword, the quartermaster in a cap and studded leather with a shield, the
 outfitter in leather over linen, and the fettler sooted under an apron with a hammer); and a
 creature, anything not in it falling back on its kind's placeholder, a creature's kind read off its
-`shape`. The player is not there: they are what they chose and what they have on.
+`shape` (`tests/art/cast.test.ts` holds every creature the game has drawn for real). The player is
+not there: they are what they chose and what they have on.
 **The signpost** (`sprites/props.ts`) is the one prop drawn ahead of B6, a post with two boards
 pointing either way, because a crate standing where a zone says where its exits go said nothing.
+
+## Creatures
+
+**A creature built like a person is a getup on the figure** (`art/cast.ts`, decision 108), dressed
+the way the townsfolk are and carrying mostly what it drops, so the thing a player takes off a
+body is the thing they saw it holding: the bandit in undyed cloth under a brown jerkin, a red rag
+over the face and the knife it throws (`DAGGER`); the fen raider in oilskin under a fenweave hood
+with a boat's hook (`GAFF`); the goblins green and bald with their ears swept out (`GOBLIN_EARS`,
+laid under the head so only what sticks out shows), the scavenger in rags with an axe it found,
+the miner pale in a leather cap with its pick; the wight bone under a grave-shroud and a linen
+wrap, lank grey hair, the sword and shield it was buried with gone to verdigris. A getup may name
+a **skin** nobody is made in (a goblin's green, the bone of the dead), a **cloak** colour, and
+**eyes lit from inside** in a glow ramp (the goblins' yellow, the dead's green). A creature fights
+and does nothing else (`fighterSprite`): no spell and no shot, since a creature's throw is its
+swing.
+
+**A body is built one of three ways** (`Build` in `art/outfit.ts`): as the figure is drawn, a
+goblin, or a boss. **A boss is drawn bigger rather than scaled up** (the budget's 48×64): the
+figure's frames are refit (`refitted`, `art/format.ts`), a dozen rows doubled through the chest,
+the waist and the shins and six columns through the shoulders, the cheeks and the legs, so he
+stands a third again as tall and as broad with the face he was drawn with, and every pixel stays
+one pixel. Scaling by four thirds would draw some pixels twice as wide as their neighbours at
+random, which is the shimmer the whole-number scale exists to prevent. **A goblin is the same
+refit the other way**, four rows and two columns left out, a head shorter than the men it robs
+and pinched. A body lying where it fell is refit along its length rather than its height, being
+seen from above. The chief is a head taller than his men in a merchant's coat he did not pay for,
+the cutthroat's bandana and his cutlass; the king is crowned, in plate gone green under a cloak
+gone dark, with the leaf blade he drops.
+
+**The beasts are drawn as parts** the way the rat is (`sprites/crab.ts`, `sprites/lurker.ts`): a
+body, legs by stance, and what they bite with. **The crab** is a low broad shell on six legs, a
+pincer either side of the front and black eyes on stalks, the pincers raised and shut for a blow;
+**the cave crawler is the crab in chalk** (`crab@cave`, a variant swapping `shell` for
+`shellCave`), as this guide's own example had it. **The bog lurker** is a toad the size of a dog,
+warty and humped, a mouth right across its flat head that drops open on a red maw to bite, and
+yellow eyes bulging on top.
+
+## Moments
+
+**A moment is an effect sprite played once and held fading** (`sprites/effects.ts`,
+`render2d/effects.ts`, decision 108). Each plays its four frames on the budget's clock, and the
+view may hold the last one and fade it, in four steps rather than smoothly, for as long as the
+moment wants, as a corpse lies after its fall: the budget fixes the frames, not how long light
+lingers. **A blow landing** is a star of light at the chest of whatever it landed on, white
+through gold, and in blood when it is the player who took it (`hit@blood`); **a crit** is the same
+star twice the size, its rays running out through fire. **A level** is a ring spreading over the
+ground from the feet and a column of light standing up through the figure, motes rising off it,
+drawn at four fifths so the player shows through and held for most of a second. **A fireball**
+flickers as it flies and **a knife** turns end over end (`thrownSprite`, `art/cast.ts`: a knife for
+the bandit's throw and a fireball for every spell). **The loot sack** is a prop, sackcloth tied at
+the neck with a coin spilled beside it, and blinks its last ten seconds as the 3D one did.
+
+**Two moments are not sprites**, since no fixed frame can be them. **An arrow** is a line of
+pixels in the palette's ramps (a steel head, a pale shaft, bone fletching), stepped a pixel at a
+time along whichever axis it travels further in so it has no gap and no doubled pixel at any
+angle (`arrowPixels`); a sprite turned to the angle would smear, and the budget gives an effect no
+facings. **A telegraph** is a rim at the reach an enemy ability lands at and a disc filling out to
+meet it over the wind-up, in `red`, laid on the ground under everything standing, the 3D view's
+rule drawn flat: the shout over the creature's head says something is coming, and the ring says
+where. The rim and a full disc are baked the first time a reach is wound up (`Telegraphs`) and the
+fill drawn from the disc at whole pixels with no smoothing, so a disc stays a disc of pixels as it
+grows; tracing it a row at a time would be hundreds of calls a frame for the king's.
+
+**A number rises off the top of whatever it came off**, from its health bar up past its name, so
+one thrown off a boss clears his head as one off a rat clears the rat's (`heightAt` in the view,
+which finds the creature or the player standing at the spot a moment names). It holds full for the
+first half of its life and fades in steps, a crit's climbs further and lasts longer, and one born
+at a spot where another was a moment ago goes up a line over it: a blow soaked and a blow landed,
+the XP and the level, are told at once.
 
 ## Edges between grounds
 
@@ -433,6 +507,11 @@ same host (`host/host.ts`, behind the `ZoneView` interface both answer):
   moves, walks when moving and breathes when not, and a blow or a flinch told by a `WorldEvent`
   plays through once over it. A corpse falls on the world's `deadForMs` and lies for 300ms after
   its fall before it is gone.
+- **The moments are a layer of their own** (`effects.ts`): what a `WorldEvent` became (a number,
+  a burst, a flight), each timed from the first frame that draws it, drawn over everything
+  standing and under the lantern and the words; and the telegraphs, drawn from each creature's
+  wind-up, which is state, on the ground under everything standing. A contact shadow is cut
+  once a width a zone, so a sack, which comes and goes mid-zone, stands on a person's.
 - **A tap is picked against flat boxes in the 3D view's priority** (`picking.ts`): a rectangle
   standing up the screen from where a thing's feet are, no smaller than a thumb and reaching a
   little below the feet, and within one kind the one drawn in front wins. A building answers as
