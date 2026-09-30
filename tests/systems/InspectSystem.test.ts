@@ -143,7 +143,7 @@ describe('describing the rest of the world', () => {
   it('tells a signpost what is at the other end of it', () => {
     const panel = describeSignpost(nth(ZONES.town.exits, 0));
 
-    expect(panel.title).toBe('Signpost: Beach');
+    expect(panel.title).toBe('Signpost: Candle Strand');
     expect(panel.subtitle).toBe('South edge');
     expect(panel.note).toBe(ZONES.beach.description);
   });
@@ -235,7 +235,7 @@ describe('describing an item', () => {
     const done = { quests: { 'rat-bones': { status: 'done' as const, baseline: 0 } } };
     expect(describeItem('rat-bones').uses).toContain('Quest: Bones for the Broth wants 10');
     expect(describeItem('rat-bones', done).uses).toEqual([
-      'Used in: Bone Char, at the Forge (Town)',
+      'Used in: Bone Char, at the Forge (Lampton)',
       'Sells for 2c',
     ]);
   });

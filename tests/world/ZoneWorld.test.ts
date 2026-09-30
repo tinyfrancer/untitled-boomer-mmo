@@ -37,7 +37,7 @@ describe('ZoneWorld', () => {
     expect(world.signposts.map((post) => post.exit.to)).toEqual(
       ZONES.town.exits.map((exit) => exit.to),
     );
-    expect(world.player.x).toBe(world.worldWidth / 2);
+    expect(world.player).toMatchObject(ZONES.town.start);
   });
 
   it('weights town spawns toward level 1 and scales their HP with level', () => {

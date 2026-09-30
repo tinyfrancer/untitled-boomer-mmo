@@ -37,8 +37,20 @@ describe('migrateCharacterState', () => {
       version: FIRST_VERSION_2_STATE,
     };
     delete before.showMinimap;
+    delete before.secrets;
     const migrated = migrateCharacterState(before);
     expect(migrated?.showMinimap).toBe(true);
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
+  it('has found no secrets, made before there were any (decision 117)', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 1,
+    };
+    delete before.secrets;
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.secrets).toEqual([]);
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
   });
 

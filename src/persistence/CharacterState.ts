@@ -10,7 +10,7 @@ import type { MasteryXp } from '../systems/MasterySystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
-import type { AbilityId, ClassId, TipId, TitleId, ZoneId } from '../types/ids';
+import type { AbilityId, ClassId, SecretId, TipId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
 /**
@@ -22,7 +22,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 1;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 2;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -110,6 +110,12 @@ export interface CharacterState {
    * character is played rather than about the device.
    */
   showMinimap: boolean;
+  /**
+   * The secrets this character has found (decision 117), in the order found.
+   * Stored for the reason the tips heard are: finding one leaves nothing else
+   * behind, since the cache is spent and the thing itself is still there.
+   */
+  secrets: SecretId[];
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -212,6 +218,7 @@ export function createNewCharacter(
     idleFood: { order: [], keep: [] },
     tips: { heard: [], off: false },
     showMinimap: true,
+    secrets: [],
     quests: {},
     bounty: null,
     kills: {},

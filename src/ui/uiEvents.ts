@@ -8,6 +8,7 @@ import type {
   NpcId,
   QuestId,
   RecipeId,
+  SecretId,
   TipId,
   TitleId,
   ZoneId,
@@ -196,6 +197,11 @@ export const IDLE_FOOD_CHANGED_EVENT = 'idle-food-changed';
 // card's No more tips and from Options, and the answer is what the save holds.
 export const TIP_OFFERED_EVENT = 'tip-offered';
 export const TIP_HEARD_EVENT = 'tip-heard';
+// A secret found (decision 117): which, for the card that says so, once. And
+// every one this character has found, for the zone map's count: unseeded, like
+// the map's other two, so the world that opens says so on its first frame.
+export const SECRET_FOUND_EVENT = 'secret-found';
+export const SECRETS_CHANGED_EVENT = 'secrets-changed';
 export const TIPS_SET_REQUESTED_EVENT = 'tips-set-requested';
 export const TIPS_STATE_CHANGED_EVENT = 'tips-state-changed';
 // What a camp earned while the tab was closed is not an event: the load that
@@ -489,6 +495,8 @@ export interface UiEventMap {
   [IDLE_FOOD_CHANGED_EVENT]: [choice: IdleFoodChoice];
   [TIP_OFFERED_EVENT]: [tip: OfferedTip];
   [TIP_HEARD_EVENT]: [tipId: TipId];
+  [SECRET_FOUND_EVENT]: [secretId: SecretId];
+  [SECRETS_CHANGED_EVENT]: [found: SecretId[]];
   [TIPS_SET_REQUESTED_EVENT]: [on: boolean];
   [TIPS_STATE_CHANGED_EVENT]: [on: boolean];
   [ZONE_ENTERED_EVENT]: [zoneId: ZoneId];

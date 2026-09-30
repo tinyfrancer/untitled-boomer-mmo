@@ -5,7 +5,7 @@ import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
 import { signpostPoint, zoneWorldSize } from './ZoneSystem';
 import type { Point } from './MovementSystem';
-import type { SkillId, ZoneEdge, ZoneId } from '../types/ids';
+import type { SecretId, SkillId, ZoneEdge, ZoneId } from '../types/ids';
 
 /** What a marker stands for, which is the whole of how it is drawn. */
 export type MapMarkerKind = 'node' | 'npc' | 'exit';
@@ -246,6 +246,23 @@ export function zoneLevels(zoneId: ZoneId): { min: number; max: number } | null 
     return null;
   }
   return { min: Math.min(...levels), max: Math.max(...levels) };
+}
+
+/**
+ * How many of a zone's secrets this character has found, and how many it hides
+ * (decision 117): the zone map's one line about them, since where they lie is
+ * on no map. Null for a zone that hides none, which says nothing at all.
+ */
+export function secretsFound(
+  zoneId: ZoneId,
+  found: readonly SecretId[],
+): { found: number; total: number } | null {
+  const hidden = ZONES[zoneId].secretSpawns.map(({ secretId }) => secretId);
+  if (hidden.length === 0) return null;
+  return {
+    found: hidden.filter((secretId) => found.includes(secretId)).length,
+    total: hidden.length,
+  };
 }
 
 /**

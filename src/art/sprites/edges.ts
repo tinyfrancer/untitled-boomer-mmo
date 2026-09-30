@@ -249,6 +249,21 @@ const WATER_UNDER_STONE: EdgeStyle = {
 };
 
 /**
+ * The top of the drowned sea-wall where the strand's sand has drifted over it
+ * (decision 117): the sand a hair higher, as it is over the fen, lying in a
+ * drift that shades the dressed stone a row under it.
+ */
+const STONE_UNDER_SAND: EdgeStyle = {
+  reach: 4,
+  wander: 2.5,
+  span: 10,
+  grain: 0.35,
+  rounding: 6,
+  lower: { north: ['sand.1', 'lower.1'], west: ['lower.1'], east: [], south: [] },
+  upper: { south: 'upper.2', east: 'upper.2', north: 'upper.4', west: 'upper.3' },
+};
+
+/**
  * Every pair of grounds with an edge drawn between them, lower first: the one
  * reached into. Every pair that meets in a zone is a row (held by a test).
  */
@@ -264,4 +279,5 @@ export const EDGES: readonly { lower: number; upper: number; style: EdgeStyle }[
   { lower: WALL_TILE, upper: STONE_TILE, style: WALL_UNDER_STONE },
   { lower: WALL_TILE, upper: WATER_TILE, style: WALL_UNDER_WATER },
   { lower: WATER_TILE, upper: STONE_TILE, style: WATER_UNDER_STONE },
+  { lower: STONE_TILE, upper: SAND_TILE, style: STONE_UNDER_SAND },
 ];

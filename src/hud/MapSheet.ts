@@ -6,6 +6,7 @@ import { GRASS_TILE, PATH_TILE, WALL_TILE } from '../data/tiles';
 import { ZONES } from '../data/zones';
 import { tileColour } from '../art/sprites/terrain';
 import {
+  secretsFound,
   worldMap,
   zoneMap,
   type MapBuilding,
@@ -16,7 +17,7 @@ import {
 import { zoneAccess, type ZoneAccess, type ZoneAccessContext } from '../systems/ZoneAccessSystem';
 import { THEME, cssColor } from '../ui/theme';
 import type { TilePoint } from '../ui/uiEvents';
-import type { ZoneId, ZoneSetting } from '../types/ids';
+import type { SecretId, ZoneId, ZoneSetting } from '../types/ids';
 
 // Marker sizes in tiles, since the drawing is done in tile units. A node is
 // smaller than the tile it stands on so the terrain still reads under it.
@@ -276,6 +277,7 @@ export interface MapSheetOptions {
  */
 export class MapSheet extends Sheet {
   private readonly figure: HTMLElement;
+  private readonly secretsLine: HTMLElement;
   private readonly zoomButton: HTMLButtonElement;
   private readonly access: () => ZoneAccessContext;
   private svg: SVGSVGElement | null = null;
@@ -284,6 +286,7 @@ export class MapSheet extends Sheet {
   private map: ZoneMap | null = null;
   private tile: TilePoint | null = null;
   private zoomedOut = false;
+  private secretsFound: readonly SecretId[] = [];
 
   constructor(options: MapSheetOptions) {
     super('Map', THEME.panelWidth.map, 'hud-sheet--map');
@@ -294,7 +297,22 @@ export class MapSheet extends Sheet {
     this.zoomButton.dataset.action = 'toggle-map-zoom';
     this.zoomButton.addEventListener('click', () => this.setZoomedOut(!this.zoomedOut));
     this.head.append(this.zoomButton);
-    this.body.append(this.figure);
+    // Under the map rather than on it: where a secret lies is on no map.
+    this.secretsLine = el('p', 'hud-map__secrets');
+    this.body.append(this.figure, this.secretsLine);
+  }
+
+  /** Every secret this character has found, for the zone's count under its map. */
+  setSecretsFound(found: readonly SecretId[]): void {
+    this.secretsFound = found;
+    this.writeSecrets();
+  }
+
+  private writeSecrets(): void {
+    const count =
+      !this.zoomedOut && this.drawn ? secretsFound(this.drawn, this.secretsFound) : null;
+    this.secretsLine.textContent = count ? `Secrets ${count.found} / ${count.total}` : '';
+    this.secretsLine.classList.toggle('hud-hidden', count === null);
   }
 
   /** Rebuilds the whole thing; only a zone change may call this. */
@@ -333,6 +351,7 @@ export class MapSheet extends Sheet {
 
   private redraw(): void {
     this.zoomButton.textContent = this.zoomedOut ? 'Zone' : 'World';
+    this.writeSecrets();
     if (this.zoomedOut) {
       this.setTitle('World');
       this.buildWorld();

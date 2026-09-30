@@ -3,7 +3,7 @@ import { PLAYER_SPRITE, playerSprite } from '../art/outfit';
 import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { ART_PIXEL } from '../art/budget';
 import { variantId } from '../art/compile';
-import { nodeSprite, stationSprite, strokeSprite } from '../art/places';
+import { nodeSprite, secretSprite, stationSprite, strokeSprite } from '../art/places';
 import { CRIT, HIT, LEVEL_UP, LOOT_SACK } from '../art/sprites/effects';
 import { SIGNPOST } from '../art/sprites/props';
 import { TEXT_HEIGHT, textWidth } from '../art/font';
@@ -453,6 +453,14 @@ export class ZoneView2D implements ZoneView {
       const pose: Pose = { animation: 'loop', facing: null, index: frameIndex(def, 'loop', now) };
       sheet.draw(context, sprite, pose, p.x, p.y + Math.floor(def.height / 2));
     }
+    // A secret that lies in the ground, a hatch, likewise under anyone on it.
+    for (const secret of world.secrets) {
+      const { sprite, flat } = secretSprite(secret.secretId);
+      if (!flat) continue;
+      const p = at(secret.x, secret.y);
+      const pose: Pose = { animation: 'still', facing: null, index: 0 };
+      sheet.draw(context, sprite, pose, p.x, p.y + Math.floor(sheet.def(sprite).height / 2));
+    }
 
     // What everything stands on: a shadow under it, and a ring under the target.
     const shadowAt = (x: number, y: number, width: number): void => {
@@ -596,6 +604,12 @@ export class ZoneView2D implements ZoneView {
     for (const signpost of world.signposts) {
       shadowAt(signpost.x, signpost.y, 20);
       standing.push(prop(signpost.x, signpost.y, SIGNPOST.id, 'still'));
+    }
+    for (const secret of world.secrets) {
+      const { sprite, flat } = secretSprite(secret.secretId);
+      if (flat) continue;
+      shadowAt(secret.x, secret.y, 20);
+      standing.push(prop(secret.x, secret.y, sprite, 'still'));
     }
     for (const station of world.stations) {
       const sprite = stationSprite(station.station);
@@ -1038,6 +1052,7 @@ export class ZoneView2D implements ZoneView {
         mobs: 0,
         nodes: 0,
         signposts: 0,
+        secrets: 0,
         npcs: 0,
         buildings: 0,
         labels: 0,
@@ -1058,6 +1073,7 @@ export class ZoneView2D implements ZoneView {
       mobs: this.mobMotions.size,
       nodes: world.nodes.length,
       signposts: world.signposts.length,
+      secrets: world.secrets.length,
       npcs: world.npcs.length,
       buildings: this.buildings.length,
       // One name over every creature, person and signpost, and the player.
@@ -1074,6 +1090,7 @@ export class ZoneView2D implements ZoneView {
       counts.mobs +
       counts.nodes +
       counts.signposts +
+      counts.secrets +
       counts.npcs +
       counts.buildings +
       world.stations.length +

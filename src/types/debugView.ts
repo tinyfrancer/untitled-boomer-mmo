@@ -79,6 +79,8 @@ export interface DrawnCounts {
   mobs: number;
   nodes: number;
   signposts: number;
+  /** What the zone hides, drawn whether found or not (decision 117), and never named. */
+  secrets: number;
   npcs: number;
   buildings: number;
   labels: number;

@@ -138,11 +138,14 @@ describe('Camera2D', () => {
   describe('the south signpost stays clear of the tab bar', () => {
     const post = signpostPoint('south', WORLD.width, WORLD.height);
 
+    // Where the camera is pinned hardest against the map's foot: a traveller
+    // just arrived from the strand, on the strip an arrival keeps.
     it.each(SCREENS.filter((screen) => screen.height > screen.width))(
-      'on $name, with the player on the spawn point',
+      'on $name, with the player just arrived on the south edge',
       (screen) => {
         const barTop = worldViewportHeight(screen.width, screen.height);
-        expect(cameraOn(screen).toScreen(post.x, post.y).y).toBeLessThan(barTop);
+        const arrived = { x: post.x, y: WORLD.height - TILE_SIZE * 1.5 };
+        expect(cameraOn(screen, arrived).toScreen(post.x, post.y).y).toBeLessThan(barTop);
       },
     );
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nth } from '../nth';
-import { harness } from './harness';
+import { TILE_SIZE } from '../../src/config/constants';
+import { harness, mobsByReach } from './harness';
 import {
   AFK_SET_REQUESTED_EVENT,
   AFK_STATE_CHANGED_EVENT,
@@ -205,6 +206,11 @@ describe('camping a making skill', () => {
     const { world, character, until } = smithing();
 
     character.removeItem('tin-ore', character.itemCount('tin-ore'));
+    // A rat wandered up to the smithy: the forge is up the quarry road, out of
+    // reach of the town's rats where they live.
+    const forge = world.stations.find((station) => station.station === 'forge');
+    const rat = nth(mobsByReach(world));
+    if (forge) rat.setPosition(forge.x + TILE_SIZE * 2, forge.y + TILE_SIZE);
 
     until(() => world.target !== null, 'the camp to pick a fight instead', 60000);
   });

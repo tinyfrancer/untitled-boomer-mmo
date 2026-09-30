@@ -100,7 +100,7 @@ describe('the skills book', () => {
   });
 
   it('names the station a making skill is worked at, and the zone it stands in', () => {
-    expect(skillPage('smithing', state()).about).toContain('Worked at the Forge (Town).');
+    expect(skillPage('smithing', state()).about).toContain('Worked at the Forge (Lampton).');
     expect(skillPage('cooking', state()).about).toContain('Worked at a campfire.');
   });
 

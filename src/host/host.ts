@@ -40,6 +40,7 @@ const EMPTY_COUNTS: DrawnCounts = {
   mobs: 0,
   nodes: 0,
   signposts: 0,
+  secrets: 0,
   npcs: 0,
   buildings: 0,
   labels: 0,

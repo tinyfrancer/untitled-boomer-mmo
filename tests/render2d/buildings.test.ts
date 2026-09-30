@@ -3,7 +3,6 @@ import { ART_PIXEL } from '../../src/art/budget';
 import { BUILDINGS, buildingRect } from '../../src/data/buildings';
 import { BuildingSprite } from '../../src/render2d/buildings';
 import { boxesOverlap } from '../../src/render2d/plates';
-import { harness } from '../world/harness';
 import type { WorldBuilding } from '../../src/world/zoneEntities';
 
 /** A canvas that is only ever handed to the context below, which never reads it. */
@@ -30,15 +29,18 @@ function recordingContext(): { context: CanvasRenderingContext2D; calls: string[
   return { context: context as unknown as CanvasRenderingContext2D, calls };
 }
 
-/** The town's pair: a smithy with the training hall standing close in front of it. */
+/**
+ * The pair B6 found in the old town: a smithy with a training hall standing
+ * close in front of it, a tile of grass between. Built here rather than read off
+ * a zone, since a rebuilt town is laid out otherwise and the rule is still owed.
+ */
 function smithyAndHall(): { smithy: BuildingSprite; hall: BuildingSprite } {
-  const { world } = harness({ zoneId: 'town' });
-  const sprite = (id: string): BuildingSprite => {
-    const building = world.buildings.find((each) => each.definition.id === id);
-    if (!building) throw new Error(`town has no ${id}`);
-    return new BuildingSprite(building, null, () => CANVAS);
+  const smithy = { x: 352, y: 192, definition: BUILDINGS.smithy };
+  const hall = { x: 352, y: 416, definition: BUILDINGS['training-hall'] };
+  return {
+    smithy: new BuildingSprite(smithy, null, () => CANVAS),
+    hall: new BuildingSprite(hall, null, () => CANVAS),
   };
-  return { smithy: sprite('smithy'), hall: sprite('training-hall') };
 }
 
 function standIn(sprite: BuildingSprite, building: WorldBuilding): void {
