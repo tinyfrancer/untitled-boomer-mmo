@@ -54,25 +54,30 @@ describe('LocalStorageSaveService', () => {
     expect(service.hasSave()).toBe(false);
   });
 
-  it('migrates a v4 save on load and persists the upgraded shape', () => {
+  // Decision 82: the save is dropped the first time it is read, and who it held
+  // is said once, so the next visit is a device with nobody on it.
+  it('retires a version 1 save, keeping who it held for one ask', () => {
+    const brom = { ...createNewCharacter('Brom', 'warrior'), version: 27, level: 8 };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(brom));
     const service = new LocalStorageSaveService();
-    const v4 = {
-      ...createNewCharacter('Aria', 'wizard'),
-      version: 4,
-      inventory: { 'felling-axe': 1, 'fishing-pole': 1 },
-    } as Record<string, unknown>;
-    delete v4.currency;
-    delete v4.zoneId;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(v4));
 
-    const loaded = service.load();
-    expect(loaded?.currency).toBe(0);
-    expect(loaded?.zoneId).toBe('town');
-    expect(loaded?.inventory).toEqual({ 'felling-axe': 1, 'fishing-pole': 1 });
+    expect(service.load()).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(service.takeRetired()).toEqual({ name: 'Brom', level: 8, classId: 'warrior' });
+    expect(service.takeRetired()).toBeNull();
 
-    // The upgrade is written back, so the next load doesn't migrate again.
-    const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-    expect(persisted?.version).toBe(loaded?.version);
+    const nextVisit = new LocalStorageSaveService();
+    expect(nextVisit.load()).toBeNull();
+    expect(nextVisit.takeRetired()).toBeNull();
+  });
+
+  it('names nobody for a save it dropped from the future', () => {
+    const future = { ...createNewCharacter('Aria', 'wizard'), version: 1000 };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(future));
+    const service = new LocalStorageSaveService();
+
+    expect(service.load()).toBeNull();
+    expect(service.takeRetired()).toBeNull();
   });
 
   it('does not throw when localStorage.setItem fails (e.g. quota exceeded)', () => {

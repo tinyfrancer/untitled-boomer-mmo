@@ -1689,6 +1689,13 @@ export function hudCss(): string {
   color: ${THEME.color.levelUp};
   text-align: center;
 }
+.create__retired {
+  max-width: 420px;
+  margin: 0;
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  text-align: center;
+}
 .create__name {
   width: 220px;
   max-width: 100%;

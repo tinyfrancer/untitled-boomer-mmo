@@ -95,14 +95,6 @@ describe('reading a save back', () => {
     expect(result.ok && result.character.afk).toBeNull();
   });
 
-  it('brings an older save up to date through the same migration chain a stored one takes', () => {
-    const older: Record<string, unknown> = { ...played(), version: 24 };
-    delete older.idleFood;
-    const result = readSave(withCharacter(older));
-    expect(result.ok && result.character.version).toBe(CHARACTER_STATE_VERSION);
-    expect(result.ok && result.character.idleFood).toEqual({ order: [], keep: [] });
-  });
-
   it('loads what a hand-edit changed, however generous, as long as it is well formed', () => {
     const result = readSave(withCharacter({ ...played(), currency: 999999, level: 9 }));
     expect(result.ok && result.character.currency).toBe(999999);
@@ -137,8 +129,10 @@ describe('refusing what cannot be loaded', () => {
     );
   });
 
-  it('says a save from before the migration chain is too old', () => {
-    expect(refusal(withCharacter({ ...played(), version: 2 }))).toMatch(/too old to load/);
+  it('says who retired with a version 1 save rather than loading it', () => {
+    expect(refusal(withCharacter({ ...played(), version: 27 }))).toBe(
+      'That save is from version 1, and Aria, level 5 warrior, retired with it. Version 2 is a fresh start.',
+    );
   });
 
   it('names the field a damaged save got wrong, so a hand-edit can be put right', () => {
@@ -176,7 +170,7 @@ describe('refusing what cannot be loaded', () => {
     expect(refusal(withCharacter({ ...played(), version: 'new' }))).toMatch(/version/);
   });
 
-  it('says an old save too broken to bring up to date is damaged rather than throwing', () => {
-    expect(refusal(withCharacter({ version: 4 }))).toMatch(/^That save is damaged: /);
+  it('says a version 1 save too broken to name anybody is still from version 1', () => {
+    expect(refusal(withCharacter({ version: 4 }))).toMatch(/^That save is from version 1, whose/);
   });
 });
