@@ -470,7 +470,9 @@ saved position stops meaning anything.
   ids became `apprentice-staff`, `stolen-staff` and `barrow-staff`. All three forks were the
   user's (decision 113).
 - **C2 — The lore bible. (Landed.)** `docs/lore/`, an index and seven files, written before any
-  zone is rebuilt, the user's review of it part of the phase. **The realm is the Veymarch**, the frontier
+  zone is rebuilt, and **handed to Claude** by the user once they had read it, so the story is
+  new to them in play: later phases extend it without asking, and say which parts moved rather than
+  what they now say. **The realm is the Veymarch**, the frontier
   the Veymarch Company is settling for the Crown of Aldmark over **Veymar**, a kingdom of low country
   that held back the sea and kept its dead kings asleep with **kindled lights**, lanterns with a
   soul in them, and drowned six hundred years ago when its last king, Merrath, had every light drawn

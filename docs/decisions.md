@@ -2718,7 +2718,14 @@ each on Claude's recommendation, and the bible is built on them:
   from the barrows they keep. **Rejected:** every outlaw band grey, each with a leader to deal with;
   outlaws only ever enemies.
 
-Claude's, alongside them, and all of it the user's to change in the review the phase includes:
+**The lore is Claude's from here.** The user read the draft and handed it over: the game is mainly
+for them, and a story they have not read is one they get to find out in play. Later phases write
+and extend `docs/lore/` without asking the user about story, and a PR or a summary says which parts
+it touched rather than retelling what they now say. The game's mechanics stay the user's to settle,
+faction standing among them. **Rejected:** the user reviewing each lore change, which the plan had
+for C2.
+
+Claude's, alongside them:
 
 - **An index and seven files** (history, peoples, factions, places, spirit, tone, naming) rather
   than one document, so a later phase reads the part it needs. **The bible is canon for anything not

@@ -4,7 +4,9 @@ What the world of version 2 is: its name and history, its peoples and factions, 
 spirit's story, the tone, and how things are named. Written in phase C2 of `docs/v2_plan.md`
 (decision 114), before any zone is rebuilt, so the rebuilds (C5-C9) take their names, secrets and
 rumours from one place, and Part D's dialog, journal, factions and spirit are written against it.
-The user's review of it is part of that phase.
+The user read it there and handed it to Claude, so the story is new to them in play:
+a phase extends it without asking them, and its PR says which parts moved rather than what they now
+say.
 
 ## The realm in a page
 
