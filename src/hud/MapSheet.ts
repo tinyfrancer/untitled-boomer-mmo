@@ -28,10 +28,20 @@ const EXIT_SIZE = 1.2;
 const LABEL_HEIGHT = 1.4;
 
 // A building's name, and how deep a footprint has to be to carry one. Two tiles
-// is the shallowest thing in BUILDINGS, and a name across it still clears the
+// is the shallowest thing in BUILDINGS, and two lines of a name still clear the
 // walls either side of it.
-const BUILDING_NAME_SIZE = 0.85;
+const BUILDING_NAME_SIZE = 0.8;
 const BUILDING_NAME_MIN_TILES = 2;
+/** How far apart two lines of a name are, as a share of its size. */
+const NAME_LINE = 1.05;
+/** How much of a footprint's width a line of its name may take. */
+const NAME_ACROSS = 0.9;
+/**
+ * About how wide a letter of the map's type is, as a share of its size: a
+ * guess at how many fit, which only decides where a name breaks and whether a
+ * line is squeezed. SVG does the squeezing, knowing the glyphs as this does not.
+ */
+const LETTER_WIDTH = 0.56;
 
 /**
  * One zone's square on the zoomed-out view, in its own units. The whole view is
@@ -128,14 +138,45 @@ function labelAnchor(x: number, columns: number): string {
   return 'middle';
 }
 
-function buildMarker(marker: MapMarker, columns: number): SVGElement[] {
+/**
+ * Where a label's baseline sits by the marker it names: under it, and over it
+ * for a marker against the bottom edge, whose name under it would hang off the
+ * map and over the sheet's frame (decision 112).
+ */
+function labelBaseline(y: number, rows: number): number {
+  return y > rows - LABEL_HEIGHT * 2 ? y - EXIT_SIZE * 0.75 : y + EXIT_SIZE;
+}
+
+/**
+ * A name in one line, or in two broken at the space that leaves the longer
+ * line shortest, when it is longer than `fits` letters and has a space to break
+ * at. The same size either way, so "Bank" and "Quartermaster's Post" are the
+ * same type on one map.
+ */
+export function nameLines(name: string, fits: number): string[] {
+  const words = name.split(' ');
+  if (name.length <= fits || words.length < 2) return [name];
+  let best: string[] = [name];
+  let longest = Infinity;
+  for (let at = 1; at < words.length; at += 1) {
+    const lines = [words.slice(0, at).join(' '), words.slice(at).join(' ')];
+    const long = Math.max(...lines.map((line) => line.length));
+    if (long < longest) {
+      best = lines;
+      longest = long;
+    }
+  }
+  return best;
+}
+
+function buildMarker(marker: MapMarker, columns: number, rows: number): SVGElement[] {
   const color = markerColor(marker);
   if (marker.kind === 'exit') {
-    // A square with the name of where it goes under it: on a map, which way out
+    // A square with the name of where it goes by it: on a map, which way out
     // leads where is the whole question.
     const label = svgEl('text', {
       x: marker.x,
-      y: marker.y + EXIT_SIZE,
+      y: labelBaseline(marker.y, rows),
       class: 'hud-map__label',
       'font-size': LABEL_HEIGHT,
       'text-anchor': labelAnchor(marker.x, columns),
@@ -173,16 +214,17 @@ function buildMarker(marker: MapMarker, columns: number): SVGElement[] {
 /**
  * A building, as the ground it covers with its name across it.
  *
- * The name is set to the width of the footprint rather than to a font size, for
- * the reason a zone's cell name is on the world view: SVG knows the glyph widths
- * and this does not, and "Quartermaster's Post" over a three-tile shed is the
- * one that proves it. A footprint too small for a name at all is left unnamed —
- * the hover title still answers, and an illegible smear is worse than a shape.
+ * Every name is set at one size and broken onto two lines when it is long,
+ * and a line is squeezed to the footprint only when it still would not fit:
+ * never stretched. Set to the footprint's width instead, "Bank" came out three
+ * times the size of "Quartermaster's Post" on the same map (decision 112). A
+ * footprint too small for a name at all is left unnamed — the hover title still
+ * answers, and an illegible smear is worse than a shape.
  */
 function buildFootprint(
   building: MapBuilding,
   setting: ZoneSetting,
-): { ground: SVGElement; name: SVGElement | null } {
+): { ground: SVGElement; name: SVGElement[] } {
   const rect = svgEl('rect', {
     x: building.x,
     y: building.y,
@@ -196,19 +238,30 @@ function buildFootprint(
   const title = svgEl('title', {});
   title.textContent = building.label;
   rect.append(title);
-  if (building.height < BUILDING_NAME_MIN_TILES) return { ground: rect, name: null };
+  if (building.height < BUILDING_NAME_MIN_TILES) return { ground: rect, name: [] };
 
-  const label = text(
-    building.label,
-    building.x + building.width / 2,
-    building.y + building.height / 2 + BUILDING_NAME_SIZE / 3,
-    BUILDING_NAME_SIZE,
-    THEME.color.text,
-  );
-  label.setAttribute('textLength', String(building.width * 0.86));
-  label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-  label.setAttribute('data-building-name', building.label);
-  return { ground: rect, name: label };
+  const across = building.width * NAME_ACROSS;
+  const fits = Math.floor(across / (BUILDING_NAME_SIZE * LETTER_WIDTH));
+  const lines = nameLines(building.label, fits);
+  const step = BUILDING_NAME_SIZE * NAME_LINE;
+  const first =
+    building.y + building.height / 2 + BUILDING_NAME_SIZE / 3 - (step * (lines.length - 1)) / 2;
+  const name = lines.map((line, index) => {
+    const label = text(
+      line,
+      building.x + building.width / 2,
+      first + step * index,
+      BUILDING_NAME_SIZE,
+      THEME.color.text,
+    );
+    if (line.length > fits) {
+      label.setAttribute('textLength', String(across));
+      label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    }
+    label.setAttribute('data-building-name', building.label);
+    return label;
+  });
+  return { ground: rect, name };
 }
 
 function svgEl<K extends keyof SVGElementTagNameMap>(
@@ -462,11 +515,11 @@ export class MapSheet extends Sheet {
     for (const building of map.buildings) {
       const { ground, name } = buildFootprint(building, setting);
       svg.append(ground);
-      if (name) names.push(name);
+      names.push(...name);
     }
 
     for (const marker of map.markers) {
-      svg.append(...buildMarker(marker, map.columns));
+      svg.append(...buildMarker(marker, map.columns, map.rows));
     }
     svg.append(...names);
 

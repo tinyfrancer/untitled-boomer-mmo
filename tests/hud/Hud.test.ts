@@ -2208,6 +2208,39 @@ describe('the map', () => {
     expect(drawn.at(-1)).toBe(dot());
   });
 
+  /**
+   * Each name was once set to its footprint's width, so "Bank" came out three
+   * times the size of "Quartermaster's Post" on the same map (decision 112).
+   */
+  it('sets every building name at one size, breaking a long one rather than stretching it', () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    const lines = [...parent.querySelectorAll('[data-building-name]')];
+    expect(new Set(lines.map((line) => line.getAttribute('font-size'))).size).toBe(1);
+    const linesOf = (name: string): string[] =>
+      lines
+        .filter((line) => line.getAttribute('data-building-name') === name)
+        .map((line) => line.textContent ?? '');
+    expect(linesOf('Bank')).toEqual(['Bank']);
+    expect(linesOf("Quartermaster's Post")).toEqual(["Quartermaster's", 'Post']);
+    const bank = lines.find((line) => line.textContent === 'Bank');
+    expect(bank?.hasAttribute('textLength')).toBe(false);
+  });
+
+  it("keeps an exit's name on the map at the bottom edge, over its marker", () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'beach');
+    const map = zoneMap('beach');
+    const exits = map.markers.filter((marker) => marker.kind === 'exit');
+    const labels = [...parent.querySelectorAll('.hud-map__label')];
+    for (const exit of exits) {
+      const label = labels.find((each) => each.textContent === exit.label);
+      const baseline = Number(label?.getAttribute('y'));
+      expect(baseline).toBeLessThan(map.rows);
+      if (exit.y > map.rows / 2) expect(baseline).toBeLessThan(exit.y);
+    }
+  });
+
   // A dot parked in the corner would read as a position rather than as an
   // absence, so it waits for a tile of its own.
   it('shows the player only once it has been told where they are', () => {
