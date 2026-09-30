@@ -1,5 +1,6 @@
 import { Sheet } from './Sheet';
 import { el } from './dom';
+import { footprintFill, markerColor, svgEl, terrainRect } from './mapArt';
 import { describeItemName } from '../data/items';
 import { GRASS_TILE, PATH_TILE, WALL_TILE } from '../data/tiles';
 import { ZONES } from '../data/zones';
@@ -15,9 +16,7 @@ import {
 import { zoneAccess, type ZoneAccess, type ZoneAccessContext } from '../systems/ZoneAccessSystem';
 import { THEME, cssColor } from '../ui/theme';
 import type { TilePoint } from '../ui/uiEvents';
-import type { SkillId, ZoneId, ZoneSetting } from '../types/ids';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
+import type { ZoneId, ZoneSetting } from '../types/ids';
 
 // Marker sizes in tiles, since the drawing is done in tile units. A node is
 // smaller than the tile it stands on so the terrain still reads under it.
@@ -81,33 +80,6 @@ function cellName(content: string, x: number, y: number): SVGElement {
     node.setAttribute('lengthAdjust', 'spacingAndGlyphs');
   }
   return node;
-}
-
-/**
- * What each marker is drawn in.
- *
- * A node is coloured by the skill that works it rather than by being a node:
- * at this size the colour is the only thing telling a tree from a fishing spot,
- * and each is a lighter shade of the ground its own kind sits on — a pale green
- * on the grass, a pale blue on the water. A vein breaks that rule because its
- * ground cannot keep it: the quarry floor is grey, so the marker is the metal in
- * the rock instead of a lighter version of the rock. The gold pair are the two
- * things that are about a person rather than a resource, and they are told apart
- * by shape.
- */
-const NODE_COLOR: Partial<Record<SkillId, string>> = {
-  woodcutting: THEME.color.heal,
-  fishing: THEME.color.skillUp,
-  mining: THEME.color.ore,
-};
-const MARKER_COLOR: Record<MapMarker['kind'], string> = {
-  node: THEME.color.skillUp,
-  npc: THEME.color.levelUp,
-  exit: THEME.color.levelUp,
-};
-
-function markerColor(marker: MapMarker): string {
-  return (marker.skill && NODE_COLOR[marker.skill]) || MARKER_COLOR[marker.kind];
 }
 
 /**
@@ -230,7 +202,7 @@ function buildFootprint(
     y: building.y,
     width: building.width,
     height: building.height,
-    fill: cssColor(tileColour(WALL_TILE, setting)),
+    fill: footprintFill(setting),
     stroke: THEME.color.muted,
     'stroke-width': 0.12,
     'data-building': building.label,
@@ -264,17 +236,6 @@ function buildFootprint(
   return { ground: rect, name };
 }
 
-function svgEl<K extends keyof SVGElementTagNameMap>(
-  tag: K,
-  attributes: Record<string, string | number>,
-): SVGElementTagNameMap[K] {
-  const node = document.createElementNS(SVG_NS, tag);
-  for (const [name, value] of Object.entries(attributes)) {
-    node.setAttribute(name, String(value));
-  }
-  return node;
-}
-
 export interface MapSheetOptions {
   /**
    * What the world view needs to tell a shut door from an open one, read fresh
@@ -293,11 +254,11 @@ export interface MapSheetOptions {
  * all come out of the same tables the world was built from, and the map cannot
  * disagree with where things actually stand.
  *
- * There are no mobs on it, deliberately. They wander, so drawing them means
- * feeding a moving position to the HUD every frame, and a map of where the rats
- * were a second ago is worse than a map with no rats on it. Nor is there
- * tap-to-travel *within* a zone: this tells you where things are, and walking
- * there is still the game.
+ * There are no creatures on it, deliberately: it is the plan of the place,
+ * opened to find the forge, and the creatures near the player are the
+ * minimap's (`hud/Minimap.ts`), which is the map looked at mid-fight. Nor is
+ * there tap-to-travel *within* a zone: this tells you where things are, and
+ * walking there is still the game.
  *
  * The terrain is rebuilt only when the zone changes and the dot is moved on its
  * own — which is why the two arrive as separate events rather than as one
@@ -346,6 +307,11 @@ export class MapSheet extends Sheet {
     // is not where they are — but the tile event that says so is published by
     // the same frame, so this only has to not draw a stale one.
     this.moveDot();
+  }
+
+  /** Whether the world is showing rather than this zone. */
+  isZoomedOut(): boolean {
+    return this.zoomedOut;
   }
 
   /** Which view is showing: this zone, or the world the roads join up. */
@@ -495,15 +461,7 @@ export class MapSheet extends Sheet {
     // as dark as the cave.
     const setting = this.drawn ? ZONES[this.drawn].setting : 'open';
     for (const band of map.terrain) {
-      svg.append(
-        svgEl('rect', {
-          x: band.x,
-          y: band.y,
-          width: band.width,
-          height: 1,
-          fill: cssColor(tileColour(band.tile, setting)),
-        }),
-      );
+      svg.append(terrainRect(band, setting));
     }
 
     // A building's ground goes between the terrain and the markers, and its name

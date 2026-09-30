@@ -86,6 +86,12 @@ export const THEME = {
   /** One buff icon: the square itself, and the two lines of caption under it. */
   effectIcon: { size: 34, caption: 14 },
   /**
+   * The minimap's CSS pixels to a tile: a whole number, so every tile is the
+   * same square as every pixel of art the HUD draws, and four, which fits the
+   * 27 tiles it frames into a corner a thumb wide.
+   */
+  minimap: { tile: 4 },
+  /**
    * The frames' widths: how far a panel's iron and a button's stone come in
    * from the edge (`art/hud.ts` cuts them there). A panel's padding is what is
    * left of the old eight once the frame has taken its share.

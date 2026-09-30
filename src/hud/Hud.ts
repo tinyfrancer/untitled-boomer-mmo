@@ -6,7 +6,9 @@ import { IdleSheet } from './IdleSheet';
 import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
+import { Minimap } from './Minimap';
 import { OverlayHost } from './OverlayHost';
+import type { OptionSettings } from './OptionsModal';
 import { PlayerColumn } from './PlayerColumn';
 import { QuestSheet } from './QuestSheet';
 import { QuestTracker } from './QuestTracker';
@@ -104,6 +106,8 @@ import {
   VISITS_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
+  CREATURES_CHANGED_EVENT,
+  MINIMAP_STATE_CHANGED_EVENT,
   type AvailableActions,
   type ContextMenuRequest,
   type ScreenPoint,
@@ -211,6 +215,9 @@ interface HudModel {
   // Whether the spirit's tips are on, for the options menu's switch. Seeded
   // from the save, where it is kept, and kept current by the world.
   tipsOn: boolean;
+  // Whether the minimap is up, for the layout and the options menu's switch.
+  // Seeded from the save and kept current by the session.
+  minimapOn: boolean;
 }
 
 /**
@@ -249,6 +256,7 @@ class Hud {
   private readonly featsSheet: FeatsSheet;
   private readonly combatLogSheet: CombatLogSheet;
   private readonly mapSheet: MapSheet;
+  private readonly minimap: Minimap;
   private readonly skillsSheet: SkillsSheet;
   private readonly idleSheet: IdleSheet;
   private readonly sheets: Partial<Record<TabId, Sheet>>;
@@ -308,6 +316,7 @@ class Hud {
       afkActive: false,
       idleFood: character.idleFood ?? { order: [], keep: [] },
       tipsOn: !(character.tips?.off ?? false),
+      minimapOn: character.showMinimap ?? true,
     };
 
     injectHudStyles();
@@ -351,6 +360,10 @@ class Hud {
         inventory: this.model.inventory,
         unlockedZones: this.model.unlockedZones,
       }),
+    });
+    this.minimap = new Minimap({
+      level: character.level,
+      onOpen: () => this.toggleZoneMap(),
     });
     this.playerColumn = new PlayerColumn(character.name, {
       onOpenSkill: (skillId) => this.openSkillPage(skillId),
@@ -423,6 +436,7 @@ class Hud {
     this.root.append(
       this.targetFrame.root,
       this.playerColumn.root,
+      this.minimap.root,
       this.tracker.root,
       this.actionBar.root,
       this.channelBar.root,
@@ -528,10 +542,13 @@ class Hud {
       hasEffects: this.playerColumn.hasEffects(),
       targetWinding: this.targetFrame.isWinding(),
       trackedQuests: this.trackedLines(),
+      hasMinimap: this.model.minimapOn,
     });
 
     this.targetFrame.layout(layout.targetFrame);
     this.playerColumn.layout(layout.playerColumn);
+    this.minimap.layout(layout.minimap);
+    this.minimap.setShown(this.model.minimapOn);
     this.tracker.layout(layout.tracker);
     this.actionBar.layout(layout.actionBar);
     this.channelBar.layout(height);
@@ -603,7 +620,7 @@ class Hud {
       return;
     }
     if (tab === 'options') {
-      this.overlays.openOptions(this.model.sound, this.model.tipsOn, {
+      this.overlays.openOptions(this.optionSettings(), {
         name: this.name,
         classId: this.classId,
         level: this.model.level,
@@ -617,6 +634,20 @@ class Hud {
       this.skillsSheet.showIndex();
     }
     this.setOpenSheet(this.openSheet === tab ? null : tab);
+  }
+
+  /**
+   * A tap on the minimap: the zone map, at this zone, the way the tab does it —
+   * again, and it goes. Open on the world, it turns to the zone instead, since
+   * the zone is what the tap asked for.
+   */
+  private toggleZoneMap(): void {
+    if (this.openSheet === 'map' && !this.mapSheet.isZoomedOut()) {
+      this.setOpenSheet(null);
+      return;
+    }
+    this.mapSheet.setZoomedOut(false);
+    this.setOpenSheet('map');
   }
 
   /** A skill's row on the character sheet: the book, open at that skill's page. */
@@ -736,6 +767,15 @@ class Hud {
       this.model.reforges,
     );
     this.playerColumn.setHp(Math.min(this.model.hp, maxHp), maxHp);
+  }
+
+  /** What the options menu's switches open on. */
+  private optionSettings(): OptionSettings {
+    return {
+      sound: this.model.sound,
+      tipsOn: this.model.tipsOn,
+      minimapOn: this.model.minimapOn,
+    };
   }
 
   /** The three tallies a quest objective may be counted off, as the model holds them. */
@@ -905,6 +945,8 @@ class Hud {
     listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
       this.refreshCharacterSheet();
+      // Every creature's colour is its level against this one.
+      this.minimap.setLevel(level);
       // A level raises every combat skill's cap, which the book says, and so
       // may the training bar.
       this.refreshSkillsBook();
@@ -942,11 +984,16 @@ class Hud {
       this.model.zoneId = zoneId;
       this.refreshIdle();
       this.mapSheet.setZone(zoneId);
+      this.minimap.setZone(zoneId);
       // The HUD outlives the world; a menu about something in the last zone
       // does not.
       this.overlays.closeContextMenu();
     });
-    listen(PLAYER_TILE_CHANGED_EVENT, (tile) => this.mapSheet.setPlayerTile(tile));
+    listen(PLAYER_TILE_CHANGED_EVENT, (tile) => {
+      this.mapSheet.setPlayerTile(tile);
+      this.minimap.setPlayerTile(tile);
+    });
+    listen(CREATURES_CHANGED_EVENT, (creatures) => this.minimap.setCreatures(creatures));
     listen(UNLOCKED_ZONES_CHANGED_EVENT, (zoneIds) => {
       this.model.unlockedZones = zoneIds;
       this.mapSheet.refreshAccess();
@@ -1151,6 +1198,12 @@ class Hud {
     listen(TIPS_STATE_CHANGED_EVENT, (on) => {
       this.model.tipsOn = on;
       if (!on) this.tipCard.clear();
+    });
+    // The corner is the target frame's again while it is off, and the tip card
+    // and a desktop's sheet move up with it.
+    listen(MINIMAP_STATE_CHANGED_EVENT, (on) => {
+      this.model.minimapOn = on;
+      this.applyLayout();
     });
 
     listen(AFK_STATE_CHANGED_EVENT, (active) => {

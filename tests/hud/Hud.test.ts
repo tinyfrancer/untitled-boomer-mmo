@@ -26,6 +26,7 @@ import { ALL_TABS, isMenuTab } from '../../src/ui/tabs';
 import { NO_GEAR, type Gear } from '../../src/systems/InventorySystem';
 import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
+import { conColor } from '../../src/systems/EnemySystem';
 import { SHOP_STOCK } from '../../src/data/shop';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
 import { describeEnemy, describeEnemyLoot, describePile } from '../../src/systems/InspectSystem';
@@ -86,11 +87,14 @@ import {
   TIP_OFFERED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
+  CREATURES_CHANGED_EVENT,
+  MINIMAP_SET_REQUESTED_EVENT,
+  MINIMAP_STATE_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
-import type { NpcId, SkillId } from '../../src/types/ids';
+import type { NpcId, SkillId, ZoneId } from '../../src/types/ids';
 
 // A page's downloads and clipboard, which jsdom has neither of. What the HUD
 // hands them is what is asserted.
@@ -1064,7 +1068,9 @@ describe('the training bar', () => {
   // where the sheet starts: up a bar while the bar is up, and back after.
   it('costs the column a bar while it is up, and gives it back when it goes', () => {
     setViewport(DESKTOP.width, DESKTOP.height);
-    mount();
+    // Without the minimap, which is taller than the column even with the bar,
+    // so the sheet under the top row is measuring the column.
+    mount({ showMinimap: false });
     const sheetTop = (): number =>
       parseFloat(parent.querySelector<HTMLElement>('[data-sheet="character"]')?.style.top ?? '');
     const before = sheetTop();
@@ -2116,6 +2122,8 @@ describe('every overlay has the same lifecycle', () => {
       onSoundChanged: noop,
       tipsOn: true,
       onTipsChanged: noop,
+      minimapOn: true,
+      onMinimapChanged: noop,
       onExport: noop,
       onOpenLoad: noop,
       onResetCharacter: noop,
@@ -2282,6 +2290,175 @@ describe('the map', () => {
     events.emit(ZONE_ENTERED_EVENT, 'beach');
     expect(svg()).not.toBe(town);
     expect(markers('npc')).toBe(0);
+  });
+});
+
+/**
+ * The minimap (decision 115): the zone map's drawing windowed round the player
+ * in the top-right corner, with the creatures near them on it.
+ */
+describe('the minimap', () => {
+  const minimap = (): HTMLButtonElement => {
+    const found = parent.querySelector<HTMLButtonElement>('.hud-minimap');
+    if (!found) throw new Error('no minimap');
+    return found;
+  };
+  const drawn = (kind: string): SVGElement[] => [
+    ...parent.querySelectorAll<SVGElement>(`.hud-minimap__map [data-minimap="${kind}"]`),
+  ];
+  /** The window's top-left corner and its span, in tiles. */
+  const viewBox = (): { left: number; top: number; span: number } => {
+    const [left = NaN, top = NaN, span = NaN] = (
+      parent.querySelector('.hud-minimap__map')?.getAttribute('viewBox') ?? ''
+    )
+      .split(' ')
+      .map(Number);
+    return { left, top, span };
+  };
+  /** The colour a ringed thing is filled with, inside its ring of ink. */
+  const fill = (group: SVGElement | undefined): string | null =>
+    group?.children[1]?.getAttribute('fill') ?? null;
+  const arrive = (zoneId: ZoneId, tile: { x: number; y: number }): void => {
+    events.emit(ZONE_ENTERED_EVENT, zoneId);
+    events.emit(PLAYER_TILE_CHANGED_EVENT, tile);
+  };
+
+  it('stands in the top-right corner, named for its zone', () => {
+    setViewport(PHONE.width, PHONE.height);
+    mount();
+    arrive('town', { x: 12, y: 9 });
+    const box = minimap();
+    const right = parseFloat(box.style.left) + parseFloat(box.style.width);
+    expect(right).toBe(PHONE.width - THEME.margin);
+    expect(parseFloat(box.style.top)).toBe(THEME.margin);
+    expect(box.classList.contains('hud-hidden')).toBe(false);
+    expect(parent.querySelector('.hud-minimap__name')?.textContent).toBe('Town');
+  });
+
+  it('draws the zone map’s ground and what stands on it, and nothing round a player not yet placed', () => {
+    mount();
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    const map = zoneMap('town');
+    expect(drawn('player')).toHaveLength(0);
+    expect(drawn('building')).toHaveLength(map.buildings.length);
+    expect(drawn('node')).toHaveLength(map.markers.filter((m) => m.kind === 'node').length);
+    expect(drawn('npc')).toHaveLength(map.markers.filter((m) => m.kind === 'npc').length);
+
+    events.emit(PLAYER_TILE_CHANGED_EVENT, { x: 12, y: 9 });
+    expect(drawn('player')).toHaveLength(1);
+    expect(drawn('exit')).toHaveLength(map.markers.filter((m) => m.kind === 'exit').length);
+  });
+
+  it('keeps the player in the middle, moving the window rather than the ground', () => {
+    mount();
+    arrive('town', { x: 12, y: 9 });
+    const ground = drawn('building')[0];
+    const here = viewBox();
+    expect(here.left + here.span / 2).toBeCloseTo(12, 0);
+    expect(here.top + here.span / 2).toBeCloseTo(9, 0);
+
+    events.emit(PLAYER_TILE_CHANGED_EVENT, { x: 3, y: 4 });
+    const moved = viewBox();
+    expect(moved.left + moved.span / 2).toBeCloseTo(3, 0);
+    expect(moved.top + moved.span / 2).toBeCloseTo(4, 0);
+    expect(drawn('building')[0]).toBe(ground);
+  });
+
+  it('draws an exit off the window on its rim, and one in it where it is', () => {
+    mount();
+    arrive('town', { x: 1, y: 9 });
+    const exits = drawn('exit');
+    const rim = exits.filter((exit) => exit.getAttribute('data-rim') === 'true');
+    expect(rim.length).toBeGreaterThan(0);
+    expect(rim.length).toBeLessThan(exits.length);
+    const { left, top, span } = viewBox();
+    for (const exit of rim) {
+      for (const pixel of exit.children) {
+        const x = Number(pixel.getAttribute('x'));
+        const y = Number(pixel.getAttribute('y'));
+        expect(x).toBeGreaterThanOrEqual(left);
+        expect(x).toBeLessThan(left + span);
+        expect(y).toBeGreaterThanOrEqual(top);
+        expect(y).toBeLessThan(top + span);
+      }
+    }
+  });
+
+  it('draws each creature in the colour of its name, a boss bigger, and a level moves them', () => {
+    mount({ level: 3 });
+    arrive('town', { x: 12, y: 9 });
+    events.emit(CREATURES_CHANGED_EVENT, [
+      { x: 10, y: 9, level: 3, boss: false },
+      { x: 14, y: 9, level: 6, boss: true },
+    ]);
+    const [rat] = drawn('creature');
+    const [boss] = drawn('boss');
+    expect(fill(rat)).toBe(conColor(3, 3));
+    expect(fill(boss)).toBe(conColor(3, 6));
+    expect(Number(boss?.children[1]?.getAttribute('width'))).toBeGreaterThan(
+      Number(rat?.children[1]?.getAttribute('width')),
+    );
+
+    events.emit(LEVEL_UP_EVENT, 6);
+    expect(fill(drawn('creature')[0])).toBe(conColor(6, 3));
+    expect(conColor(6, 3)).not.toBe(conColor(3, 3));
+  });
+
+  it('forgets the last zone’s creatures on the way into the next', () => {
+    mount();
+    arrive('town', { x: 12, y: 9 });
+    events.emit(CREATURES_CHANGED_EVENT, [{ x: 10, y: 9, level: 1, boss: false }]);
+    expect(drawn('creature')).toHaveLength(1);
+
+    arrive('beach', { x: 12, y: 1 });
+    expect(drawn('creature')).toHaveLength(0);
+    expect(parent.querySelector('.hud-minimap__name')?.textContent).toBe('Beach');
+  });
+
+  it('opens the zone map on a tap, turns it to the zone from the world, and a second tap shuts it', () => {
+    mount();
+    arrive('town', { x: 12, y: 9 });
+    minimap().click();
+    expect(openSheets()).toEqual(['map']);
+
+    parent.querySelector<HTMLButtonElement>('[data-action="toggle-map-zoom"]')?.click();
+    expect(parent.querySelector('.hud-map__svg--world')).not.toBeNull();
+    minimap().click();
+    expect(openSheets()).toEqual(['map']);
+    expect(parent.querySelector('.hud-map__svg--world')).toBeNull();
+
+    minimap().click();
+    expect(openSheets()).toEqual([]);
+  });
+
+  it('puts its switch in Options, on what the save says, and asks the session', () => {
+    mount({ showMinimap: false });
+    expect(minimap().classList.contains('hud-hidden')).toBe(true);
+    menuItem('options');
+    const button = parent.querySelector<HTMLButtonElement>('[data-action="toggle-minimap"]');
+    expect(button?.textContent).toBe('Minimap: Off');
+    button?.click();
+    expect(button?.textContent).toBe('Minimap: On');
+    expect(button?.getAttribute('aria-pressed')).toBe('true');
+    expect(
+      emitted.filter((e) => e.event === MINIMAP_SET_REQUESTED_EVENT).map((e) => e.args),
+    ).toEqual([[true]]);
+  });
+
+  it('gives the corner back to the target frame while it is off', () => {
+    setViewport(PHONE.width, PHONE.height);
+    mount();
+    const frameTop = (): number =>
+      parseFloat(parent.querySelector<HTMLElement>('.hud-target')?.style.top ?? '');
+    expect(frameTop()).toBeGreaterThan(THEME.margin);
+
+    events.emit(MINIMAP_STATE_CHANGED_EVENT, false);
+    expect(minimap().classList.contains('hud-hidden')).toBe(true);
+    expect(frameTop()).toBe(THEME.margin);
+
+    events.emit(MINIMAP_STATE_CHANGED_EVENT, true);
+    expect(minimap().classList.contains('hud-hidden')).toBe(false);
+    expect(frameTop()).toBeGreaterThan(THEME.margin);
   });
 });
 

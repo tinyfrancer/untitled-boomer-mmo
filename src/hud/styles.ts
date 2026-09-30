@@ -1025,6 +1025,37 @@ export function hudCss(): string {
   padding: 0 7px;
 }
 
+/* --- Minimap ------------------------------------------------------------- */
+
+/* A panel that is a button: the map and the zone's name under it, and a tap
+   anywhere on it opens the zone map (decision 115). */
+.hud-minimap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: ${THEME.color.text};
+  font: inherit;
+  cursor: pointer;
+}
+.hud-minimap__map {
+  display: block;
+  flex: none;
+  /* What lies past the zone's edge: the dark the world's ground runs out into. */
+  background: ${INK};
+  /* Every edge is held to a whole pixel of it, and left to itself the browser
+     blends each one into its neighbour at four pixels a tile. */
+  shape-rendering: crispEdges;
+}
+.hud-minimap__name {
+  ${pixelType(1)}
+  width: 100%;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* --- Quests, feats, log -------------------------------------------------- */
 
 .hud-quest {
