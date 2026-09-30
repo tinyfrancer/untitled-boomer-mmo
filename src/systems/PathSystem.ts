@@ -67,6 +67,20 @@ const ELBOW_ROOM = TILE_SIZE;
 /** How finely it looks for it, and so how precisely a waypoint is placed. */
 const ELBOW_STEP = TILE_SIZE / 8;
 
+/**
+ * How far off the middle of its cell a body will stand, in a cell something
+ * reaches into.
+ *
+ * A building's wall is a quarter tile thick and stands just inside its
+ * footprint, and since zones are written as text every footprint lies on tile
+ * lines (decision 113). A room two tiles deep is then three quarters of a tile
+ * wider than the body inside its walls: the body fits in it, but not at the
+ * middle of either cell, since each has a wall's thickness of the room's edge
+ * in it. Standing only at the middle, a two-tile room had no cell a route could
+ * pass through, and the only way into one was a straight line through its door.
+ */
+const FOOTHOLD_REACH = TILE_SIZE / 4;
+
 function bodyAt(at: Point, halfExtent: number): Aabb {
   return { x: at.x, y: at.y, halfWidth: halfExtent, halfHeight: halfExtent };
 }
@@ -98,6 +112,36 @@ function roomToMove(
 }
 
 /**
+ * Where in a cell the body can stand at all: the middle of it, or the nearest
+ * spot within `FOOTHOLD_REACH` of the middle, or nowhere.
+ *
+ * Ground that is itself solid has no foothold anywhere in it, since a body a
+ * tile wide off the middle by a quarter still stands mostly on it, so it is
+ * refused before anything is searched: a zone cut out of rock is most of its
+ * cells, and a route asks about the ones it reaches.
+ */
+function foothold(world: CollisionWorld, cell: Point, halfExtent: number): Point | null {
+  if (!isBlocked(world, bodyAt(cell, halfExtent))) return cell;
+  const tile = world.grid[Math.floor(cell.y / TILE_SIZE)]?.[Math.floor(cell.x / TILE_SIZE)];
+  if (tile !== undefined && world.blockingTiles.has(tile)) return null;
+  let best: Point | null = null;
+  let bestDistance = Infinity;
+  for (let dy = -FOOTHOLD_REACH; dy <= FOOTHOLD_REACH; dy += ELBOW_STEP) {
+    for (let dx = -FOOTHOLD_REACH; dx <= FOOTHOLD_REACH; dx += ELBOW_STEP) {
+      const distance = Math.hypot(dx, dy);
+      if (distance >= bestDistance) continue;
+      const spot = { x: cell.x + dx, y: cell.y + dy };
+      const body = bodyAt(spot, halfExtent);
+      const reachable = clampToWorld(body, world);
+      if (reachable.x !== spot.x || reachable.y !== spot.y || isBlocked(world, body)) continue;
+      best = spot;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/**
  * Where in a cell the body stands, or `null` when a route may not go through
  * it.
  *
@@ -111,17 +155,18 @@ function roomToMove(
  * not, which is what this refuses.
  */
 function footing(world: CollisionWorld, cell: Point, halfExtent: number): Point | null {
-  if (isBlocked(world, bodyAt(cell, halfExtent))) return null;
-  const room = (dx: number, dy: number): number => roomToMove(world, cell, dx, dy, halfExtent);
+  const from = foothold(world, cell, halfExtent);
+  if (from === null) return null;
+  const room = (dx: number, dy: number): number => roomToMove(world, from, dx, dy, halfExtent);
   const east = room(1, 0);
   const west = room(-1, 0);
   const south = room(0, 1);
   const north = room(0, -1);
   if (east + west < CLEARANCE || north + south < CLEARANCE) return null;
-  const moved = { x: cell.x + (east - west) / 2, y: cell.y + (south - north) / 2 };
+  const moved = { x: from.x + (east - west) / 2, y: from.y + (south - north) / 2 };
   // The two axes are measured apart and taken together, which an inside corner
   // can make a step into the corner itself.
-  return isBlocked(world, bodyAt(moved, halfExtent)) ? cell : moved;
+  return isBlocked(world, bodyAt(moved, halfExtent)) ? from : moved;
 }
 
 /**
@@ -190,6 +235,27 @@ export function standNear(
     if (!isBlocked(world, bodyAt(probe, halfExtent))) return probe;
   }
   return goal;
+}
+
+/**
+ * The corner a step between two cells turns at, when it cannot be walked
+ * straight: along one axis and then the other, whichever way round is clear.
+ *
+ * A doorway is the case. A door two tiles wide is centred on a tile line, so
+ * the spot outside it is never level with it, and the straight step in clips
+ * the end of the wall beside the opening where squaring up to it first does
+ * not.
+ */
+function cornerBetween(world: CollisionWorld, from: Point, to: Point, reach: number): Point | null {
+  const turns = [
+    { x: from.x, y: to.y },
+    { x: to.x, y: from.y },
+  ];
+  return (
+    turns.find(
+      (turn) => hasClearLine(world, from, turn, reach) && hasClearLine(world, turn, to, reach),
+    ) ?? null
+  );
 }
 
 /** Octile distance: the diagonals a straight run would use, then the rest. */
@@ -289,11 +355,18 @@ export function findPath(
   // reaches a corner of the map never pays for it, and most taps are answered
   // by the straight line above without one of these being asked at all.
   const stood: (Point | null | undefined)[] = new Array(cellCount);
+  // A cell with something reaching into it, stood in off its middle. A step
+  // between two cells with nothing in either is clear by construction, since
+  // the body at a cell's middle is the whole cell; a step touching one of these
+  // is not, since the thing reaching in may be a wall between the two.
+  const crowded: boolean[] = new Array(cellCount).fill(false);
   const standing = (index: number): Point | null => {
     const known = stood[index];
     if (known !== undefined) return known;
-    const answer = footing(world, centre(index % cols, Math.floor(index / cols)), halfExtent);
+    const cell = centre(index % cols, Math.floor(index / cols));
+    const answer = footing(world, cell, halfExtent);
     stood[index] = answer;
+    crowded[index] = answer !== null && isBlocked(world, bodyAt(cell, halfExtent));
     return answer;
   };
 
@@ -305,12 +378,19 @@ export function findPath(
   // `moveWithCollision` makes one level down, and for the same reason: a body a
   // tree grew on top of would otherwise be stuck there for good. The spot is
   // where it is standing, since that is the one place it is known to fit.
+  // Its steps are checked like any crowded cell's when there is something in
+  // the cell, which in a room two tiles deep is the wall behind it, but not when
+  // the body is inside something already: nothing is clear of there.
   stood[startIndex] = start;
+  crowded[startIndex] =
+    !isBlocked(world, bodyAt(start, halfExtent)) &&
+    isBlocked(world, bodyAt(centre(startIndex % cols, Math.floor(startIndex / cols)), halfExtent));
   if (standing(goalIndex) === null) return null;
 
   const gScore: number[] = new Array(cellCount).fill(Infinity);
   const fScore: number[] = new Array(cellCount).fill(Infinity);
   const cameFrom: number[] = new Array(cellCount).fill(-1);
+  const turnedAt: (Point | null)[] = new Array(cellCount).fill(null);
   const closed: boolean[] = new Array(cellCount).fill(false);
   const queued: boolean[] = new Array(cellCount).fill(false);
   const costTo = (index: number): number => gScore[index] ?? Infinity;
@@ -356,16 +436,28 @@ export function findPath(
       // No cutting a corner. Two blockers meeting at their corners leave a gap
       // of no width at all between them, and a body that squeezed through it
       // diagonally is a route the walk would press into a wall trying to take.
-      if (
-        step.dc !== 0 &&
-        step.dr !== 0 &&
-        (standing(row * cols + nextCol) === null || standing(nextRow * cols + col) === null)
-      ) {
-        continue;
+      const corners =
+        step.dc !== 0 && step.dr !== 0 ? [row * cols + nextCol, nextRow * cols + col] : [];
+      if (corners.some((corner) => standing(corner) === null)) continue;
+      let turn: Point | null = null;
+      if ([current, next, ...corners].some((index) => crowded[index] === true)) {
+        const from = standing(current);
+        const to = standing(next);
+        if (from === null || to === null) continue;
+        // With the room a shortcut has to earn, since the walk arrives near a
+        // waypoint rather than on it and a leg along a wall's end with none to
+        // spare catches on it. Not out of where the body stands now, which may
+        // be closer to something than a route would ever choose to be.
+        const reach = current === startIndex ? halfExtent : halfExtent + CLEARANCE;
+        if (!hasClearLine(world, from, to, reach)) {
+          turn = cornerBetween(world, from, to, reach);
+          if (turn === null) continue;
+        }
       }
       const cost = costTo(current) + step.cost;
       if (cost >= costTo(next)) continue;
       cameFrom[next] = current;
+      turnedAt[next] = turn;
       gScore[next] = cost;
       fScore[next] = cost + heuristic(nextCol, nextRow, goalCol, goalRow);
       if (queued[next] !== true) {
@@ -387,9 +479,11 @@ export function findPath(
   // tap lands where it was aimed.
   const points: Point[] = [
     start,
-    ...cells
-      .slice(1)
-      .map((index) => standing(index) ?? centre(index % cols, Math.floor(index / cols))),
+    ...cells.slice(1).flatMap((index) => {
+      const at = standing(index) ?? centre(index % cols, Math.floor(index / cols));
+      const turn = turnedAt[index];
+      return turn ? [turn, at] : [at];
+    }),
     goal,
   ];
   return pullStraight(world, points, halfExtent);

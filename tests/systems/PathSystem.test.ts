@@ -210,6 +210,47 @@ describe('a room with a door', () => {
   });
 });
 
+/**
+ * A room two tiles deep with its walls on tile lines, which is every building
+ * since zones are written as text: the body fits inside it, but at the middle of
+ * neither cell, and its door is centred on the line between them.
+ */
+describe('a room two tiles deep, on tile lines', () => {
+  const wall = TILE_SIZE / 4;
+  // A smithy's shell over tiles 3-5 across and 1-2 down, open to the west.
+  const [left, top, right, bottom] = [3 * TILE_SIZE, TILE_SIZE, 6 * TILE_SIZE, 3 * TILE_SIZE];
+  const map = world(
+    ['........', '........', '........', '........', '........', '........'],
+    [
+      { left, right, top, bottom: top + wall },
+      { left, right, top: bottom - wall, bottom },
+      { left: right - wall, right, top, bottom },
+    ],
+  );
+  const inside = { x: (left + right) / 2, y: (top + bottom) / 2 };
+
+  it('has no cell whose middle the body fits in', () => {
+    expect(isBlocked(map, body(at(4, 1)))).toBe(true);
+    expect(isBlocked(map, body(at(4, 2)))).toBe(true);
+    expect(isBlocked(map, body(inside))).toBe(false);
+  });
+
+  it('walks in around the corner from the far side of its back wall', () => {
+    const from = at(6, 4);
+    expect(hasClearLine(map, from, inside, PLAYER_HALF_EXTENT)).toBe(false);
+    const path = findPath(map, from, inside, PLAYER_HALF_EXTENT);
+    expect(path).not.toBeNull();
+    expect(arrivesAt(map, from, path ?? [], inside)).toBe(true);
+  });
+
+  it('walks back out of it', () => {
+    const to = at(4, 4);
+    const path = findPath(map, inside, to, PLAYER_HALF_EXTENT);
+    expect(path).not.toBeNull();
+    expect(arrivesAt(map, inside, path ?? [], to)).toBe(true);
+  });
+});
+
 describe('a goal nothing can reach', () => {
   it('answers null for a room with no door', () => {
     const map = world(['.....', '.###.', '.#.#.', '.###.', '.....']);
