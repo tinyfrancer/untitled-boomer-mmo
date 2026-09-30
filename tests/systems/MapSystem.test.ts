@@ -4,6 +4,7 @@ import {
   MINIMAP_TILES,
   minimapOrigin,
   onMinimapRim,
+  secretsFound,
   terrainBands,
   tileOf,
   toTile,
@@ -119,7 +120,7 @@ describe('zoneMap', () => {
   it('is drawn from the zone id alone, at the size the world is built at', () => {
     const map = zoneMap('town');
     const size = zoneWorldSize(ZONES.town);
-    expect(map.name).toBe('Town');
+    expect(map.name).toBe('Lampton');
     expect(map.columns).toBe(size.width / TILE_SIZE);
     expect(map.rows).toBe(size.height / TILE_SIZE);
   });
@@ -305,5 +306,18 @@ describe('zoneLevels', () => {
     // lie rather than an absence.
     const empty = ZONE_IDS.filter((id) => ZONES[id].mobSpawns.length === 0);
     for (const id of empty) expect(zoneLevels(id)).toBeNull();
+  });
+});
+
+describe('secretsFound', () => {
+  // Decision 117: where a secret lies is on no map, and the zone map says only
+  // how many of the zone's own are found.
+  it("counts only the zone's own, found or not", () => {
+    expect(secretsFound('town', [])).toEqual({ found: 0, total: 2 });
+    expect(secretsFound('town', ['lamp-stone', 'warden-niche'])).toEqual({ found: 1, total: 2 });
+  });
+
+  it('says nothing for a zone that hides none', () => {
+    expect(secretsFound('quarry', ['lamp-stone'])).toBeNull();
   });
 });

@@ -561,6 +561,18 @@ export function hudCss(): string {
   font-style: normal;
   color: ${THEME.color.skillUp};
 }
+/* A secret found (decision 117): what it is, in the world's type, over Wick's
+   line, and what was left there under it. */
+.hud-tip__heading {
+  margin: 0 0 ${THEME.padding / 2}px;
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
+}
+.hud-tip__cache {
+  margin: 0 0 ${THEME.padding}px;
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.muted};
+}
 .hud-tip__actions {
   display: flex;
   gap: ${THEME.padding}px;
@@ -1023,6 +1035,14 @@ export function hudCss(): string {
 .hud-map__zoom {
   min-height: 28px;
   padding: 0 7px;
+}
+/* How many of the zone's secrets are found: under the map, since where they lie
+   is on no map (decision 117). */
+.hud-map__secrets {
+  margin: ${THEME.padding}px 0 0;
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  text-align: center;
 }
 
 /* --- Minimap ------------------------------------------------------------- */

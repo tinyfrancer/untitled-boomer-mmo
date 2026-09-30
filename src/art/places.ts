@@ -1,7 +1,8 @@
 import type { StationId } from '../data/recipes';
-import type { NodeShapeId, ResourceNodeId } from '../types/ids';
+import type { NodeShapeId, ResourceNodeId, SecretId } from '../types/ids';
 import { variantId } from './compile';
 import { CHIPS, SPLASH } from './sprites/chips';
+import { CELLAR_HATCH, LAMP_STONE, WARDEN_NICHE } from './sprites/secrets';
 import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
 import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
 import { RICH_VEIN, SEAM, VEIN } from './sprites/veins';
@@ -60,4 +61,19 @@ const STROKE_SPRITES: Readonly<Record<NodeShapeId, string>> = {
 
 export function strokeSprite(shape: NodeShapeId): string {
   return STROKE_SPRITES[shape];
+}
+
+/**
+ * What each secret is drawn as (decision 117), and whether it lies flat in the
+ * ground, drawn with the ground under everything standing on it, or stands up
+ * out of it and is sorted by its foot like a station.
+ */
+const SECRET_SPRITES: Readonly<Record<SecretId, { sprite: string; flat: boolean }>> = {
+  'lamp-stone': { sprite: LAMP_STONE.id, flat: false },
+  'cellar-hatch': { sprite: CELLAR_HATCH.id, flat: true },
+  'warden-niche': { sprite: WARDEN_NICHE.id, flat: false },
+};
+
+export function secretSprite(secretId: SecretId): { sprite: string; flat: boolean } {
+  return SECRET_SPRITES[secretId];
 }

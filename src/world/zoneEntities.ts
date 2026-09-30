@@ -1,13 +1,14 @@
 import { BUILDINGS, buildingWalls, type BuildingDefinition } from '../data/buildings';
 import { ENEMIES } from '../data/enemies';
 import { RESOURCE_NODES } from '../data/resourceNodes';
+import { SECRETS } from '../data/secrets';
 import { BLOCKING_TILES } from '../data/tiles';
 import { ZONES, type ZoneDefinition, type ZoneExit } from '../data/zones';
 import type { CollisionWorld } from '../systems/CollisionSystem';
 import type { Point } from '../systems/MovementSystem';
 import { signpostPoint } from '../systems/ZoneSystem';
 import type { StationId } from '../data/recipes';
-import type { NpcId } from '../types/ids';
+import type { NpcId, SecretId } from '../types/ids';
 import { Mob } from './Mob';
 import { ResourceNode } from './ResourceNode';
 
@@ -27,6 +28,16 @@ export interface WorldStation {
   x: number;
   y: number;
   station: StationId;
+}
+
+/**
+ * Something the zone hides (decision 117): where it lies, and which it is. Found
+ * or not is the character's to say, so the same list serves either.
+ */
+export interface WorldSecret {
+  x: number;
+  y: number;
+  secretId: SecretId;
 }
 
 /**
@@ -60,6 +71,7 @@ export interface ZoneEntities {
   nodes: ResourceNode[];
   npcs: WorldNpc[];
   stations: WorldStation[];
+  secrets: WorldSecret[];
   buildings: WorldBuilding[];
   signposts: WorldSignpost[];
   collisionWorld: CollisionWorld;
@@ -91,6 +103,8 @@ export function populateZone(
 
   const stations = zone.stationSpawns.map(({ x, y, station }) => ({ x, y, station }));
 
+  const secrets = zone.secretSpawns.map(({ x, y, secretId }) => ({ x, y, secretId }));
+
   const buildings = zone.buildingSpawns.map(({ x, y, buildingId }) => ({
     x,
     y,
@@ -109,6 +123,7 @@ export function populateZone(
     nodes,
     npcs,
     stations,
+    secrets,
     buildings,
     signposts,
     // Nothing walks into the pond, a tree trunk or a wall. One description of
@@ -132,6 +147,19 @@ export function populateZone(
         // them. `buildingRect` is still the footprint — the map, the pick box
         // and the fade all want that — and these are the other question.
         ...buildings.flatMap(buildingWalls),
+        // The one that stands up out of the ground, as a trunk does.
+        ...secrets.flatMap(({ x, y, secretId }) => {
+          const body = SECRETS[secretId].blocks;
+          if (!body) return [];
+          return [
+            {
+              left: x - body.width / 2,
+              right: x + body.width / 2,
+              top: y - body.height / 2,
+              bottom: y + body.height / 2,
+            },
+          ];
+        }),
       ],
     },
   };

@@ -55,8 +55,11 @@ opening the zone map, and a switch in Options kept on the character; decision 11
 (smarter creatures: a chase routed round what is in the way and kept rather than re-made, the
 player's pursuit on the same chase, noticing only who a creature can see and reach, giving up on a
 chase going nowhere, the leash still a ring round home, and each creature's way home held by a sweep;
-decision 116). **Next: C5**, the first two zones rebuilt at 3×. Update this line as each phase lands:
-which phase, and which is next.
+decision 116), **and C5** (Lampton and Candle Strand rebuilt at 45×32 under their own names, with
+side paths and places to do things; secrets, found by walking up to one and paying a line of Wick's
+and a cache, counted under the zone map, three of them; no tide, and no travel until C10 decides;
+decision 117). **Next: C6**, the next two zones rebuilt. Update this line as each phase lands: which
+phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -519,6 +522,16 @@ saved position stops meaning anything.
   no walk could end at from C1's half-tile snap, and a tree, the barrow king, a lurker and a pool
   tile moved. A rat cannot follow the player into a room two tiles wide, and gives up there. All four
   forks were the user's (decision 116).
+- **C5 — Lampton and Candle Strand. (Landed.)** Both at 45×32 and under their own names. **Lampton**
+  keeps its four counters fronting the high street, starts a new player at the inn's door, stands
+  the Lamp Stone in the crossroads, and gains lanes, cottages, a larger grove and pond, and rats by
+  the inn and in the grove. **Candle Strand** keeps the spit and the strand the fen road needs, and
+  stands the Candles in the sea with a causeway of stone out to the nearest. **Secrets**
+  (`data/secrets.ts`): a small thing drawn where it lies, on no map and never named over, found by
+  walking up to it once per character (save version 102), paying a line of Wick's on the tips'
+  card and a cache of coin and now and then an item, the zone map counting the zone's own under
+  it; two in Lampton and one on the strand. The townsfolk keep their trades as names until D1. All
+  four forks were the user's (decision 117).
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
   activity spots each. Spawns, nodes and stations re-placed; the progression test re-held. **Every
   creature, node, station and building a rebuild adds is drawn in the phase that adds it** (a row in
@@ -533,9 +546,9 @@ saved position stops meaning anything.
 - **C11 — Part C review**, which **measures how long a zone took to build**, the number Part G is
   sized from.
 
-**Open questions for Part C**: how are secrets found (hidden paths, a tool, a rumour)? Do larger
-zones need fast travel back, having taken it out once (decision in PR #111)? How many minutes should
-a level take, early and near the cap (C10)?
+**Open questions for Part C**: how many minutes should a level take, early and near the cap (C10)?
+And, since C5 left it to C10 (decision 117), does travel come back once the walks are measured, and
+at what price? C5 answered how secrets are found: by walking up to them.
 
 ---
 

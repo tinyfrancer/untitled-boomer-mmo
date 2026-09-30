@@ -231,6 +231,26 @@ const park = async () => {
 };
 
 /**
+ * Stands the player some tiles north of something, parked as \`park\` does: in
+ * a zone twice the old size, what a check taps is often off the screen from the
+ * start, and a tap has to land on something drawn.
+ *
+ * @param {string} what
+ * @param {number} [tiles]
+ */
+const parkNorthOf = async (what, tiles = 4) => {
+  await page.evaluate(`(() => {
+    const w = window.world;
+    const at = ${what};
+    w.clearTarget();
+    w.player.stopMoving();
+    w.teleport(at.x, at.y - ${tiles} * 64);
+  })()`);
+  await step(2);
+  await draw();
+};
+
+/**
  * A real press-and-release on the canvas, given a frame to be processed.
  *
  * @param {{ x: number; y: number }} point
@@ -766,7 +786,17 @@ async function tabBar() {
   // left on a phone — the edge-walk band is untappably thin under a thumb. A
   // perspective camera cannot shrink its viewport to make room, so the rule is
   // held by how the camera is framed, and this is the measurement of it. ---
+  // Measured where the camera is pinned hardest against the map's foot: on the
+  // strip a traveller arrives on from the strand, below which there is nothing.
   await park();
+  await page.evaluate(() => {
+    const w = window.world;
+    const post = w.signposts.find((s) => s.exit.edge === 'south');
+    if (!post) throw new Error('town has no south signpost');
+    w.teleport(post.x, w.worldHeight - 96);
+  });
+  await step(2);
+  await draw();
   const signpost = await page.evaluate(() => {
     const post = window.world.signposts.find((s) => s.exit.edge === 'south');
     if (!post) throw new Error('town has no south signpost');
@@ -2201,6 +2231,69 @@ async function forge() {
   await step(2);
 }
 
+async function secrets() {
+  // --- Secrets (decision 117): drawn where they lie and named nowhere, found by
+  // walking up to one, said once on the card the tips are said on, and counted
+  // under the zone map. The walk is a real tap on the ground by the stone, and
+  // the card and the count are what only a browser shows. Started from nothing
+  // found, since the town's crossroads are walked through by the sections
+  // above. ---
+  await park();
+  const start = await page.evaluate(() => {
+    window.world.character.state.secrets = [];
+    return {
+      zone: window.world.zone.id,
+      drawn: window.view.drawnCounts().secrets,
+      hidden: window.world.secrets.length,
+    };
+  });
+  check(
+    'every secret in Lampton is drawn where it lies',
+    start.zone === 'town' && start.hidden === 2 && start.drawn === start.hidden,
+    `${start.drawn} drawn of ${start.hidden} in ${start.zone}`,
+  );
+
+  const STONE = "window.world.secrets.find((s) => s.secretId === 'lamp-stone')";
+  await parkNorthOf(STONE, -3);
+  const foot = await page.evaluate(`(() => {
+    const at = ${STONE};
+    return window.view.worldToScreen(at.x, at.y + 48);
+  })()`);
+  await clickAt(foot);
+  const card = await stepFor(
+    () =>
+      page.evaluate(() => {
+        const found = document.querySelector('.hud-tip[data-find]');
+        return found && !found.classList.contains('hud-hidden')
+          ? { find: found.getAttribute('data-find'), text: found.textContent ?? '' }
+          : null;
+      }),
+    (value) => value !== null,
+    'the walk up to the Lamp Stone to find it',
+  );
+  check(
+    'a tap by the Lamp Stone walks up to it, and the card says what was found',
+    card?.find === 'lamp-stone' && (card?.text ?? '').includes("The Lamp Stone's Words"),
+    `${card?.find}: ${card?.text}`,
+  );
+  await page.screenshot({ path: `${OUT}/45-secret-found.png` });
+  await page.click('.hud-tip [data-action="tip-heard"]');
+  await draw();
+  check(
+    'and Got it puts it away',
+    await page.evaluate(
+      () => document.querySelector('.hud-tip')?.classList.contains('hud-hidden') === true,
+    ),
+  );
+
+  await tapTab('map');
+  const count = await page.evaluate(
+    () => document.querySelector('.hud-map__secrets')?.textContent ?? '',
+  );
+  check('the zone map counts it under the map', count === 'Secrets 1 / 2', count);
+  await tapTab('map');
+}
+
 async function interiors() {
   // --- Going indoors, which is a thing the world could not do at all until this
   // phase: a building was one solid rect, and its inside was somewhere nothing
@@ -2625,7 +2718,7 @@ async function touchGestures() {
 
   // And the one that matters most on a phone: the signpost is how a zone is
   // left, since the edge-walk band is untappably thin under a thumb.
-  await park();
+  await parkNorthOf(SOUTH_SIGNPOST);
   await clickAt(await screenAt(SOUTH_SIGNPOST));
   await stepUntilZone('beach', 'the tapped signpost to walk the player to the beach');
   check('a real click on a signpost walks over and changes zone', true);
@@ -5378,6 +5471,7 @@ const SECTIONS = [
   ['landscape', landscape],
   ['picking', picking],
   ['interiors', interiors],
+  ['secrets', secrets],
   ['context-menu', contextMenu],
   ['feedback', feedback],
   ['loot-piles', lootPiles],

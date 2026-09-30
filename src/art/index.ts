@@ -2,6 +2,7 @@ import type { SpriteDef } from './format';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
+import { CELLAR_HATCH, LAMP_STONE, WARDEN_NICHE } from './sprites/secrets';
 import { CHIPS, SPLASH } from './sprites/chips';
 import {
   BED,
@@ -47,6 +48,9 @@ export const SPRITES: readonly SpriteDef[] = [
   LEVEL_UP,
   LOOT_SACK,
   SIGNPOST,
+  LAMP_STONE,
+  CELLAR_HATCH,
+  WARDEN_NICHE,
   TREE,
   HARDWOOD,
   WILLOW,

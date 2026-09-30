@@ -145,6 +145,10 @@ export function logTitleEarned(titleName: string): CombatLogEntry {
   return { text: `You are now known as ${titleName}.`, color: THEME.color.levelUp };
 }
 
+export function logSecretFound(secretName: string): CombatLogEntry {
+  return { text: `Found: ${secretName}.`, color: THEME.color.levelUp };
+}
+
 export function logDeathToll(copper: number): CombatLogEntry {
   return { text: `Recovering costs you ${formatCurrency(copper)}.`, color: THEME.color.dim };
 }

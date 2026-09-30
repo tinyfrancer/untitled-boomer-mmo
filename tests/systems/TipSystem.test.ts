@@ -97,8 +97,8 @@ describe('what each tip says', () => {
     const full = facts({ capacity: inventoryWeight(inventory) }, { inventory });
     const line = tipLine('pack-full', full);
     expect(line).toContain('a minute');
-    expect(line).toContain('Shopkeeper (Town)');
-    expect(line).toContain('Banker (Town)');
+    expect(line).toContain('Shopkeeper (Lampton)');
+    expect(line).toContain('Banker (Lampton)');
     expect(tipLine('pack-full', { ...full, capacity: 1000 })).toBeNull();
   });
 
@@ -137,14 +137,14 @@ describe('what each tip says', () => {
 
   it('sends a material to the station that takes it, and not logs to the fletcher', () => {
     expect(tipLine('first-material', facts({}, { inventory: { 'tin-ore': 1 } }))).toContain(
-      'Tin Ore is worked at the Forge (Town)',
+      'Tin Ore is worked at the Forge (Lampton)',
     );
     expect(tipLine('first-material', facts({}, { inventory: { logs: 5 } }))).toBeNull();
   });
 
   it('names the lesson a level opened, its price and who teaches it', () => {
     const line = tipLine('first-level', facts({}, { level: 2, learnedAbilities: [] }));
-    expect(line).toContain('Trainer (Town)');
+    expect(line).toContain('Trainer (Lampton)');
     expect(line).toContain(ABILITIES['battle-fury'].name);
     expect(line).toContain(formatCurrency(120));
     expect(tipLine('first-level', facts({}, { level: 1, learnedAbilities: [] }))).toBeNull();

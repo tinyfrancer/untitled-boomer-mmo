@@ -1,5 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
-import type { BuildingId, EnemyId, NpcId, ResourceNodeId } from '../types/ids';
+import type { BuildingId, EnemyId, NpcId, ResourceNodeId, SecretId } from '../types/ids';
 import { BUILDINGS, counterPoint } from './buildings';
 import type { StationId } from './recipes';
 import {
@@ -54,6 +54,7 @@ export type Marker =
   | { mob: EnemyId; level: number; on: GroundName }
   | { node: ResourceNodeId; on: GroundName }
   | { station: StationId; on: GroundName }
+  | { secret: SecretId; on: GroundName }
   | { building: BuildingId; worker?: NpcId; on: GroundName };
 
 export type ZoneLegend = Readonly<Record<string, Marker>>;
@@ -90,6 +91,12 @@ export interface BuildingSpawnPoint {
   buildingId: BuildingId;
 }
 
+export interface SecretSpawnPoint {
+  x: number;
+  y: number;
+  secretId: SecretId;
+}
+
 /** Everything a zone's text says, in world pixels. */
 export interface ZoneLayout {
   /** The ground, a row of tile ids a line. Its size is the zone's. */
@@ -110,6 +117,8 @@ export interface ZoneLayout {
    * a zone may stand inside one (`tests/systems/BuildingSystem.test.ts`).
    */
   buildingSpawns: BuildingSpawnPoint[];
+  /** What the zone hides (`data/secrets.ts`), each drawn where it lies and on no map. */
+  secretSpawns: SecretSpawnPoint[];
 }
 
 /** The rows of a block of text: blank lines at either end and the shared indent dropped. */
@@ -162,6 +171,7 @@ export function layoutZone(name: string, text: string, legend: ZoneLegend): Zone
     npcSpawns: [],
     stationSpawns: [],
     buildingSpawns: [],
+    secretSpawns: [],
   };
   let starts = 0;
   const claimed = rows.map((row) => [...row].map(() => false));
@@ -184,6 +194,8 @@ export function layoutZone(name: string, text: string, legend: ZoneLegend): Zone
         layout.nodeSpawns.push({ x: middle(x), y: middle(y), nodeId: marker.node });
       } else if ('station' in marker) {
         layout.stationSpawns.push({ x: middle(x), y: middle(y), station: marker.station });
+      } else if ('secret' in marker) {
+        layout.secretSpawns.push({ x: middle(x), y: middle(y), secretId: marker.secret });
       } else {
         placeBuilding(marker, key, x, y);
       }

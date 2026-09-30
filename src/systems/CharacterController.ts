@@ -78,6 +78,7 @@ import type {
   MasteryTargetId,
   QuestId,
   ReforgeId,
+  SecretId,
   SkillId,
   TipId,
   TitleId,
@@ -741,6 +742,13 @@ export class CharacterController {
   markTipHeard(tipId: TipId): void {
     if (this.state.tips.heard.includes(tipId)) return;
     this.state.tips = { ...this.state.tips, heard: [...this.state.tips.heard, tipId] };
+  }
+
+  /** Notes a secret found, answering false for one this character had already found. */
+  markSecretFound(secretId: SecretId): boolean {
+    if (this.state.secrets.includes(secretId)) return false;
+    this.state.secrets = [...this.state.secrets, secretId];
+    return true;
   }
 
   setTipsOff(off: boolean): void {

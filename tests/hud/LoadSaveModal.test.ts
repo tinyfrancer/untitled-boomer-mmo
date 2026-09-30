@@ -98,7 +98,7 @@ describe('the preview', () => {
     expect(cards[0]).toContain('Wizard · Level 6 · Blackwater Fen');
     expect(cards[0]).toContain('Saved ');
     expect(cards[1]).toContain('Current');
-    expect(cards[1]).toContain('Warrior · Level 3 · Town');
+    expect(cards[1]).toContain('Warrior · Level 3 · Lampton');
   });
 
   it('asks twice before it replaces anybody, and hands over the character it read', () => {

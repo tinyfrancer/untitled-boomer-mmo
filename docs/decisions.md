@@ -2860,3 +2860,53 @@ inn), since a route may not turn without a quarter tile to spare each side and a
 it gives up there. Loosening the clearance for it would have re-opened routes decisions 34 and 35
 closed for the player. Every creature the player's size follows them into any room they can walk
 into.
+
+## 117. Secrets are found by walking up to them and pay a line and a cache; travel waits for C10; the strand has no tide; Lampton and Candle Strand rebuilt at 45×32
+
+**2026-09-30 · the user, asked by Claude, building the plan's phase C5**
+
+C5 is the first of the rebuilds: Lampton (town) and Candle Strand (the beach) at decision 86's
+45×32, each with its secrets. The user settled four forks at the start, each on Claude's
+recommendation:
+
+- **A secret is found by walking up to it.** It is a small thing drawn in the world, on neither map
+  and with no name over it, often down a way that is not obvious; coming within a tile and a
+  quarter finds it (`SECRET_REACH`), and so does a tap on the ground by it, which is a walk there.
+  Once per character, kept on the character (`CharacterState.secrets`, save version 102), since
+  finding one leaves nothing else behind. Measured along the stretch the body walked each frame, so
+  a phone stepping forty pixels a frame finds one it walked past, and not across a jump.
+  **Rejected:** a Search action, which has to be taught; a tool, which with no rumours before D2
+  is guesswork; hidden until a rumour, which leaves every secret dark until D2.
+- **A find pays a line and a cache.** Wick says what it is, once, on the card the tips are said on,
+  ahead of any tip waiting and whether or not tips are on, since it is the reward and not advice;
+  the cache is coin and now and then something worth having at the zone's level, and what the pack
+  cannot take is left in a pile where it was found. The zone map says "Secrets 1 / 2" under the
+  map for a zone that hides any, and nothing for one that hides none. **Rejected:** a line alone;
+  a cache alone.
+- **No travel yet.** The rebuilt zones make every walk longer, and C10, which tunes the grind in
+  minutes of play, decides whether travel comes back and at what price. **Rejected:** a paid
+  carter between the hubs; a recall home on a long cooldown; never.
+- **The strand has no tide.** The map never changes under anyone's feet, so pathing, spawns and
+  every sweep ask about one map, and what a tide would have uncovered is reached another way that
+  is always there. **Rejected:** a tide on a clock, which changes walkable ground under the
+  pathfinder and needs rules and tests of its own.
+
+Claude's, building it:
+
+- **Three secrets, two in Lampton and one on the strand**, from `docs/lore/places.md`, each a row in
+  `data/secrets.ts`, a marker in its zone's text (`{ secret }`) and a drawing in
+  `art/sprites/secrets.ts`, one of which stands up out of the ground and blocks like a trunk. A
+  secret is drawn whether found or not, since it is a thing in the world. A test holds each placed
+  once, in its own zone.
+- **The zones take their names**: Lampton and Candle Strand, on signposts, the minimap and every
+  line that names a place, as `docs/lore/README.md` has it. **The townsfolk keep their trades as
+  names** until D1 lets them introduce themselves. **Rejected:** their own names over their heads
+  now, which tell a new player nothing about where to buy a pickaxe.
+- **Lampton** keeps its counters on the high street, a new player starts at the inn's door rather
+  than the crossroads, and it gains lanes, cottages, a larger grove and pond, and rats by the inn
+  and in the grove. **Candle Strand** keeps the spit and strand the fen road needs, and gains a
+  causeway of stone out into the sea, which needed one new edge, stone under sand.
+- **Tests that assumed the old town** now stage what they need, or read what they want by name:
+  the pair of buildings B6's cutaway was found on is built in its own test, the south signpost is
+  measured from the arrival strip where the camera is pinned hardest, and smoke taps it from a few
+  tiles up the road. Smoke gained a `secrets` section.

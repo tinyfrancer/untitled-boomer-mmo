@@ -175,7 +175,7 @@ how the story is reached, but not what it is about.
   of the barrow, Wick hears its name.
 - **9-20, Part G.** The fenfolk's hidden holm, and what they did to Lorn; the Stillwood and Karn
   Tholl opening their doors because they know what is coming; more barrows waking; the Candles off
-  the strand at the lowest tide of the year, and the drowned sea-wall out towards Marhal; and at the
+  the strand, and the drowned sea-wall past them out towards Marhal; and at the
   top, Merrath the Last in the great light, and the answer to what Wick did.
 
 **The ending, as intended.** The great light can only be put out from inside, by a soul in it

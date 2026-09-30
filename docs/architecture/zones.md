@@ -8,8 +8,9 @@ _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs
 
 A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as a learning
 side project by a professional software engineer with no prior game-dev experience. Currently
-v1: single-player only; ten zones (town with leveled rats, a shop, a bank and a trainer, a beach
-with crabs and ocean fishing, a quarry cut into the hills north of town with tin and iron to mine,
+v1: single-player only; ten zones (Lampton, the town, with leveled rats, a shop, a bank and a
+trainer, Candle Strand, a beach with crabs and ocean fishing, the two of them rebuilt at version 2's
+45×32 in C5, a quarry cut into the hills north of town with tin and iron to mine,
 a bandit camp with aggressive humanoids, the bandit hideout behind a locked
 door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
 where the eels and the cloth are, the Deep Cut under the quarry where the coal is, the Sunken
@@ -75,6 +76,22 @@ character is in neither table, there is not exactly one start, a block is the wr
 legend row is on no tile: a zone that does not read is found at the first import, not in play. The
 lists `layoutZone` hands back come out in the order the text is read, which is why a test that
 wants a particular person or creature names it rather than taking the first.
+
+**A zone may hide secrets** (`data/secrets.ts`, decision 117): a small thing drawn where it lies,
+on neither map and never named over, found by walking up to it (`world/SecretFinder.ts`). A secret
+is a marker in its zone's text like anything else placed, and its row says which zone it is in,
+which a test holds against where the text put it. Finding one is kept on the character, pays a line
+of Wick's on the tips' card and a cache, and the zone map counts the zone's own under it. Lampton
+hides two and Candle Strand one; a rebuild adds its zone's from `docs/lore/places.md`, each drawn
+in the phase that adds it.
+
+**The rebuilt zones are 45×32** (decision 86), and a rebuild keeps what the old zone was for while
+giving it room: side paths, a few places to do things, a secret or two. **Lampton** keeps its four
+counters fronting the high street, starts a new player at the inn's door rather than on the
+crossroads, and stands the Lamp Stone in the crossroads where everybody passes it. **Candle
+Strand** keeps the spit and the southern strand the fen road needs, and the sea stops two rows short
+of the south edge for the arrival strip, the bill the fen road charged it first. What an old test
+assumed about the old town's geometry was moved into the test itself, or read by name.
 
 The quarry is what that claim looks like when it is cashed: a map file, a row and one
 exit each way, and it appeared on the world map, in the zone map and in the offline camp with

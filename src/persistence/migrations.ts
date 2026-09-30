@@ -15,6 +15,8 @@ type MigrationStep = (state: Record<string, unknown>) => Record<string, unknown>
 const MIGRATIONS: Record<number, MigrationStep> = {
   // The minimap's switch (decision 115), on for everybody made before it.
   100: (state) => ({ ...state, showMinimap: true }),
+  // Secrets (decision 117): nobody made before them has found one.
+  101: (state) => ({ ...state, secrets: [] }),
 };
 
 /**

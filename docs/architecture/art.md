@@ -365,6 +365,14 @@ decision 109), as creatures are `cast.ts`: a node by its id, falling back on the
 what a stroke of the tool knocks loose by the node's shape (`tests/art/places.test.ts` holds every
 node, station and stroke to a real drawing).
 
+**What a zone hides is drawn as the thing it is** (`sprites/secrets.ts`, decision 117), and
+`art/places.ts` says for each whether it lies flat in the ground, drawn with the ground under
+everything standing, or stands up and is sorted by its foot like a station: the Lamp Stone a pillar
+with an empty iron cage, the cellar hatch planks bound in iron with a ring, the warden's niche a
+dark arch in dressed stone. Nothing is written over one. The Candles are no drawing of their own but
+rock standing in the sea, and the sea-wall's top the stone floor, which met sand for the first time
+and so added the one edge `STONE_UNDER_SAND`.
+
 **A tree is a canopy of leaf clumps over a trunk** (`sprites/trees.ts`), at the prop budget's 64
 square: a crown two tiles across standing half again as tall as a person, since a tree a person
 could see over is a bush. Each clump is a ball lit from the top-left with a crescent of light inside

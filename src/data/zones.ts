@@ -56,7 +56,7 @@ export interface ZoneDefinition extends ZoneLayout {
 export const ZONES: Record<ZoneId, ZoneDefinition> = {
   town: {
     id: 'town',
-    name: 'Town',
+    name: 'Lampton',
     setting: 'open',
     description: 'A shop, a pond and more rats than anyone will admit to.',
     ...TOWN_LAYOUT,
@@ -69,7 +69,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   },
   beach: {
     id: 'beach',
-    name: 'Beach',
+    name: 'Candle Strand',
     setting: 'open',
     description: 'Crabs along the shore and deep water to fish. Bring a pan.',
     ...BEACH_LAYOUT,

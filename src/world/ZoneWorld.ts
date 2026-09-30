@@ -41,6 +41,7 @@ import {
   TURN_IN_QUEST_REQUESTED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
+  SECRETS_CHANGED_EVENT,
   VISITS_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
@@ -85,6 +86,7 @@ import {
   type WorldBuilding,
   type WorldNpc,
   type WorldSignpost,
+  type WorldSecret,
   type WorldStation,
 } from './zoneEntities';
 import { ResourceNode } from './ResourceNode';
@@ -108,6 +110,7 @@ import { QuestDesk } from './QuestDesk';
 import { ShopSession } from './ShopSession';
 import { TalkSession } from './TalkSession';
 import { TipDesk } from './TipDesk';
+import { SecretFinder } from './SecretFinder';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
@@ -234,6 +237,7 @@ export class ZoneWorld implements Targeting {
   readonly npcs: WorldNpc[];
   readonly stations: WorldStation[];
   readonly buildings: WorldBuilding[];
+  readonly secrets: WorldSecret[];
   readonly signposts: WorldSignpost[];
   readonly collisionWorld: CollisionWorld;
   target: Mob | null = null;
@@ -250,6 +254,7 @@ export class ZoneWorld implements Targeting {
   private readonly quests: QuestDesk;
   private readonly contextMenu: ContextMenuSession;
   private readonly tips: TipDesk;
+  private readonly secretFinder: SecretFinder;
   private readonly loot: LootPiles;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -263,6 +268,7 @@ export class ZoneWorld implements Targeting {
   private readonly publishZone: () => void;
   private readonly publishVisits: () => void;
   private readonly publishUnlockedZones: () => void;
+  private readonly publishSecrets: () => void;
   private readonly publishPlayerTile: () => void;
   private readonly publishCreatures: () => void;
   /**
@@ -291,6 +297,7 @@ export class ZoneWorld implements Targeting {
     this.npcs = entities.npcs;
     this.stations = entities.stations;
     this.buildings = entities.buildings;
+    this.secrets = entities.secrets;
     this.signposts = entities.signposts;
     this.collisionWorld = entities.collisionWorld;
 
@@ -395,6 +402,13 @@ export class ZoneWorld implements Targeting {
       (zoneIds) => zoneIds.join('|'),
       (zoneIds) => this.ctx.events.emit(UNLOCKED_ZONES_CHANGED_EVENT, zoneIds),
     );
+    // Every secret found, for the zone map's count; unseeded for the same
+    // reason, since the HUD may be holding the last character's.
+    this.publishSecrets = publishOnChange(
+      () => [...this.character.state.secrets],
+      (found) => found.join('|'),
+      (found) => this.ctx.events.emit(SECRETS_CHANGED_EVENT, found),
+    );
     // Keyed to whole tiles so this speaks on a crossing rather than every
     // frame, but carrying the fractional position, so the dot sits where the
     // player is rather than snapping to the corner of a tile.
@@ -493,6 +507,10 @@ export class ZoneWorld implements Targeting {
       perform: (subject) => this.tap(subject),
     });
     this.tips = new TipDesk(this.ctx, { isIdle: () => this.afk.active });
+    this.secretFinder = new SecretFinder(this.ctx, {
+      secrets: this.secrets,
+      leavePile: (at, drops) => this.loot.leave(at, drops),
+    });
 
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt by a zone
@@ -614,6 +632,8 @@ export class ZoneWorld implements Targeting {
     this.publishUnlockedZones();
     this.publishPlayerTile();
     this.publishCreatures();
+    this.secretFinder.update();
+    this.publishSecrets();
     this.tips.update();
     this.updateNpcRange();
     this.checkZoneExit();

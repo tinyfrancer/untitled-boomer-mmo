@@ -35,11 +35,11 @@ describe('what an item is for', () => {
     expect(itemUses('lurker-hide')).toContain(
       'Tan at the Tannery (Greyford Outpost) → Cured Leather',
     );
-    expect(itemUses('tin-ore')).toContain('Smith at the Forge (Town) → Tin Bar');
+    expect(itemUses('tin-ore')).toContain('Smith at the Forge (Lampton) → Tin Bar');
   });
 
   it('says how many go in and how many come out, where either is more than one', () => {
-    expect(itemUses('hardwood')).toContain('Smith 2 at the Forge (Town) → Charcoal');
+    expect(itemUses('hardwood')).toContain('Smith 2 at the Forge (Lampton) → Charcoal');
     expect(itemUses('logs')).toContain(
       "Fletch at the Fletcher's Bench (Greyford Outpost) → 15 Arrow Shafts",
     );
@@ -52,16 +52,18 @@ describe('what an item is for', () => {
   // steel bar are one fact about an iron bar.
   it('gathers the recipes it is one ingredient of into a line per station', () => {
     const uses = itemUses('tin-bar');
-    expect(uses).toContain('Used in: Iron Helmet, Iron Legs, Iron Chestplate, at the Forge (Town)');
+    expect(uses).toContain(
+      'Used in: Iron Helmet, Iron Legs, Iron Chestplate, at the Forge (Lampton)',
+    );
     expect(uses).toContain(
       'Used in: Fenhide Cowl, Fenhide Leggings, Fenhide Vest, at the Tannery (Greyford Outpost)',
     );
   });
 
   it('says what it is made from, as the reverse of what it is made into', () => {
-    expect(itemUses('iron-bar')).toContain('Made from: Iron Ore, at the Forge (Town)');
+    expect(itemUses('iron-bar')).toContain('Made from: Iron Ore, at the Forge (Lampton)');
     expect(itemUses('iron-helmet')).toContain(
-      'Made from: Iron Bar ×2, Tin Bar, Bone Char, at the Forge (Town)',
+      'Made from: Iron Bar ×2, Tin Bar, Bone Char, at the Forge (Lampton)',
     );
   });
 

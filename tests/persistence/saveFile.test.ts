@@ -153,6 +153,7 @@ describe('refusing what cannot be loaded', () => {
       [{ ...state, learnedAbilities: ['fly'] }, /learnedAbilities/],
       [{ ...state, inventory: { logs: 'lots' } }, /inventory should be a count for each item/],
       [{ ...state, tips: { heard: [], off: 'no' } }, /tips should be a list of tips heard/],
+      [{ ...state, secrets: 'all of them' }, /secrets should be a list of secrets found/],
       [
         { ...state, look: { ...state.look, hairstyle: 'mohawk' } },
         /look should be a skin \(pale, fair, tan, deep\), a hair colour .* and a hairstyle \(cropped/,

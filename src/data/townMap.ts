@@ -1,54 +1,70 @@
 import { layoutZone } from './zoneText';
 
 /**
- * The town, laid out against its two roads: the shops front the high street
- * from the north side, the hall and the inn from the south, and the two
- * counters whose work is out of town sit up the north lane with the forge
- * between them. The cottages have nobody behind them and are the point: they
- * are what makes the counters part of somewhere.
+ * Lampton, the Company's town at the crossroads of the four roads out (decision
+ * 117, `docs/lore/places.md`): the quarry road north and the strand road south,
+ * the high street east to Aldmark and west to Greyford, three tiles wide so
+ * there is room to walk down the middle of a street with shopfronts on it.
  *
- * The roads are three tiles wide, and it is the buildings that made it worth
- * widening them. A counter stands at the back of its own room with the
- * shopfront between it and the street, so a one-tile lane would put every
- * person in town in the hedge; three is a street with room to walk down the
- * middle of it, and the middle lane is where it always was.
+ * The counters front the high street from its north side, each at the back of
+ * its own room with the doorstep on the street, the two whose work is in town
+ * nearest the crossroads and the two whose work is out of it further along.
+ * The smithy stands up the quarry road with its forge off the corner of its
+ * open front, and nobody in it. The cottages have nobody behind them either,
+ * and are the point: they are what makes the counters part of somewhere, and
+ * their lanes are the town's side paths.
  *
- * The fourth road, west, cost the town a re-layout. An exit keeps a strip of its
- * own edge for arrivals, and the smithy stood across the west one when there
- * was no road there, so the smithy and its forge moved up into the north-west
- * block, a cottage moved across town and one rat moved a tile east.
- * `tests/systems/BuildingSystem.test.ts` sweeps every building against it.
+ * The Lamp Stone stands in the middle of the crossroads, where the town got its
+ * name, and anybody crossing town passes it. A player starts at the Wet Boot's
+ * door, where they woke, rather than on the stone, so the first walk anywhere
+ * is the walk past it. The cellar hatch is round the back of the Wet Boot,
+ * which nothing else is.
  *
- * The pond is south-east, clear of the crossroads and of every rat, so fishing
- * is a walk out of town rather than on top of it, and south of its fishing
+ * The pond is south-east of the crossroads and the grove south-west, both a
+ * walk out rather than on top of anything, and the pond south of its fishing
  * spots on purpose: the camera centres the player, and a pond to the north
- * would sit behind the character sheet.
+ * would sit behind the character sheet. An exit keeps a strip of its own edge
+ * for arrivals, so the outermost two rows and columns hold nothing that
+ * blocks.
  */
 export const TOWN_LAYOUT = layoutZone(
   'town',
   `
-    ...........===...........
-    ...........===...........
-    .d..MMM..b.===..b..CC....
-    ....MMM....===.....CC....
-    ...F.......===........c..
-    ....TTT.BBB===SSS........
-    ....TTT.BBB===SSS.QQQ....
-    ....TTT.BBB===SSS.QQQ....
-    =========================
-    ============@============
-    =========================
-    .b.....II..===...........
-    ...CC..II..===...~f~~f...
-    ...CC..II..=a=...~~~~~...
-    .....t.....===...~~~~~...
-    ...tt..t.b.===...~~~~~...
-    ...........===.....c.....
-    ...c.......===...........
-    ...........===...........
+    .....................===.....................
+    .........c...........===.....................
+    ..b..................===..................b..
+    .....................=r=.....................
+    .....................===.....................
+    ....CC..CC..=........===.......=...CC........
+    ....CC..CC..=..a.....===MMM..a.=...CC........
+    ............=........===MMM....=.......CC....
+    ............=........===F......=.......CC....
+    ............=........===.......=.............
+    .........TTT=...BBB..===..SSS..=.............
+    ..b......TTT=...BBB..===..SSS..=..QQQ........
+    .........TTT=...BBB..===..SSS..=..QQQ........
+    ............=........===.......=.............
+    =============================================
+    ===r==================L==================r===
+    =============================================
+    ......a.....=.@......===..............a......
+    ............=.II.....===.....................
+    ....CC.....a=.II.....===.....................
+    ....CC......=.II.....===.......~f~~f~f.......
+    ............=........=========~~~~~~~~~...b..
+    .........a..=..h.....===......~~~~~~~~~......
+    .......t....=........===......~~~~~~~~~......
+    ....t.......=........===......~~~~~~~~~......
+    .....................=r=.......~~~~~~~.......
+    ...t.....t....t....a.===..a.............CC...
+    .....t...............===................CC...
+    ........t..t.........===.....................
+    .................b...===......b..........c...
+    .....................===.....................
+    .....................===.....................
   `,
   {
-    '@': { start: true, on: 'road' },
+    '@': { start: true, on: 'grass' },
     /**
      * The four who work in town each stand at the back of the room they work in,
      * at `counterPoint` of their building, so moving a shopfront moves its
@@ -70,8 +86,7 @@ export const TOWN_LAYOUT = layoutZone(
      * standing level with it is a smithy nobody walks into. A station is solid
      * and tapped, so it must not stand where a tap meant for something else
      * lands either: the first forge stood just short of a rat, and smoke caught
-     * it as a tap that selected nothing one run in three. It is also why the
-     * smithy is the one building with its anvil outdoors.
+     * it as a tap that selected nothing one run in three.
      */
     F: { station: 'forge', on: 'grass' },
     /**
@@ -80,23 +95,27 @@ export const TOWN_LAYOUT = layoutZone(
      */
     f: { node: 'fishing-spot', on: 'water' },
     /**
-     * A grove in the south-west, a row south of where it first stood, which is
-     * what the cottage on the south side of the street cost it: a tree inside a
-     * wall is drawn inside it and chopped through it.
+     * The grove, out past the south-west lane, the trees two tiles apart or
+     * more: a tree inside a wall is drawn inside it and chopped through it, and
+     * two trunks a body's width apart are a gap nobody is routed through.
      */
     t: { node: 'tree', on: 'grass' },
+    // The waymarker the town is named for, and the writing round its foot.
+    L: { secret: 'lamp-stone', on: 'road' },
+    // Round the back of the Wet Boot, where the rats come up.
+    h: { secret: 'cellar-hatch', on: 'grass' },
     /**
-     * Rats, out along the roads and into the corners, which is what the
-     * buildings left, and climbing a level the further they are from the
+     * Rats, out along the roads and lanes and into the corners, which is what
+     * the buildings left, and climbing a level the further they are from the
      * crossroads. A rat's whole wander disc stays off the counters, since a
      * creature at a counter's shoulder cannot be tapped past the person
      * standing there, and off the buildings, since a rat behind a shopfront is a
      * rat drawn inside a wall. `tests/render2d/picking.test.ts` sweeps the first
      * and `tests/systems/BuildingSystem.test.ts` the second.
      */
-    a: { mob: 'rat', level: 1, on: 'road' },
-    b: { mob: 'rat', level: 1, on: 'grass' },
-    c: { mob: 'rat', level: 2, on: 'grass' },
-    d: { mob: 'rat', level: 3, on: 'grass' },
+    a: { mob: 'rat', level: 1, on: 'grass' },
+    r: { mob: 'rat', level: 1, on: 'road' },
+    b: { mob: 'rat', level: 2, on: 'grass' },
+    c: { mob: 'rat', level: 3, on: 'grass' },
   },
 );

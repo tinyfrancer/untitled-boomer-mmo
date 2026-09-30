@@ -85,6 +85,8 @@ import {
   SKILL_XP_GAINED_EVENT,
   TIP_HEARD_EVENT,
   TIP_OFFERED_EVENT,
+  SECRET_FOUND_EVENT,
+  SECRETS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
   CREATURES_CHANGED_EVENT,
@@ -526,6 +528,33 @@ describe("the spirit's tips", () => {
     expect(showing()).toBe(false);
   });
 
+  // Decision 117: what was found is said once, ahead of a tip still waiting to
+  // be heard, and whether or not tips are on, since it is the reward.
+  it('says a secret found ahead of a waiting tip, and then the tip', () => {
+    mount();
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    events.emit(SECRET_FOUND_EVENT, 'cellar-hatch');
+    expect(card().dataset.find).toBe('cellar-hatch');
+    expect(card().textContent).toContain('The Cellar Hatch');
+    expect(card().textContent).toContain('Left there: 20c and Pickaxe.');
+    expect(card().querySelector('[data-action="tips-off"]')?.classList.contains('hud-hidden')).toBe(
+      true,
+    );
+
+    answer('tip-heard');
+    expect(sent(TIP_HEARD_EVENT)).toEqual([]);
+    expect(card().dataset.tip).toBe('raw-food');
+    expect(card().textContent).toContain(TIP.text);
+  });
+
+  it('says a secret found with tips off', () => {
+    mount({ tips: { heard: [], off: true } });
+    events.emit(SECRET_FOUND_EVENT, 'lamp-stone');
+    expect(showing()).toBe(true);
+    answer('tip-heard');
+    expect(showing()).toBe(false);
+  });
+
   it('puts the switch in Options, on what the save says', () => {
     mount({ tips: { heard: [], off: true } });
     menuItem('options');
@@ -611,7 +640,7 @@ describe("the options menu's save", () => {
     box.value = writeSaveExport('code', createNewCharacter('Aria', 'ranger')).text;
     box.dispatchEvent(new Event('input'));
     action('load-save-code').click();
-    expect(parent.textContent).toContain('Warrior · Level 4 · Beach');
+    expect(parent.textContent).toContain('Warrior · Level 4 · Candle Strand');
   });
 
   it('asks the host to load the character once the second tap confirms it', () => {
@@ -1748,7 +1777,7 @@ describe('the bag says what an item is for', () => {
     events.emit(QUEST_LOG_CHANGED_EVENT, { 'rat-bones': { status: 'done', baseline: 0 } });
 
     expect(strip()).not.toContain('Quest: Bones for the Broth wants 10');
-    expect(strip()).toContain('Used in: Bone Char, at the Forge (Town)');
+    expect(strip()).toContain('Used in: Bone Char, at the Forge (Lampton)');
   });
 });
 
@@ -1796,7 +1825,7 @@ describe('every row that stands for an item opens its card', () => {
     ask('.hud-list-row[data-recipe="iron-helmet"]');
 
     expect(title()).toBe('Iron Helmet');
-    expect(uses()).toContain('Made from: Iron Bar ×2, Tin Bar, Bone Char, at the Forge (Town)');
+    expect(uses()).toContain('Made from: Iron Bar ×2, Tin Bar, Bone Char, at the Forge (Lampton)');
   });
 
   it('answers a row of the skills book with what it makes', () => {
@@ -2192,7 +2221,24 @@ describe('the map', () => {
     expect(markers('exit')).toBe(map.markers.filter((m) => m.kind === 'exit').length);
     expect(
       parent.querySelector('.hud-sheet[data-sheet="map"] .hud-sheet__title')?.textContent,
-    ).toBe('Town');
+    ).toBe('Lampton');
+  });
+
+  // Decision 117: where a secret lies is on no map; how many the zone hides,
+  // and how many are found, is the one line under it.
+  it("counts the zone's secrets found under it, and says nothing where there are none", () => {
+    mount();
+    menuItem('map');
+    events.emit(ZONE_ENTERED_EVENT, 'town');
+    const line = (): HTMLElement | null => parent.querySelector('.hud-map__secrets');
+    expect(line()?.textContent).toBe('Secrets 0 / 2');
+
+    events.emit(SECRETS_CHANGED_EVENT, ['lamp-stone']);
+    expect(line()?.textContent).toBe('Secrets 1 / 2');
+    expect(parent.querySelectorAll('.hud-map__svg [data-secret]')).toHaveLength(0);
+
+    events.emit(ZONE_ENTERED_EVENT, 'quarry');
+    expect(line()?.classList.contains('hud-hidden')).toBe(true);
   });
 
   /**
@@ -2332,7 +2378,7 @@ describe('the minimap', () => {
     expect(right).toBe(PHONE.width - THEME.margin);
     expect(parseFloat(box.style.top)).toBe(THEME.margin);
     expect(box.classList.contains('hud-hidden')).toBe(false);
-    expect(parent.querySelector('.hud-minimap__name')?.textContent).toBe('Town');
+    expect(parent.querySelector('.hud-minimap__name')?.textContent).toBe('Lampton');
   });
 
   it('draws the zone map’s ground and what stands on it, and nothing round a player not yet placed', () => {
@@ -2412,7 +2458,7 @@ describe('the minimap', () => {
 
     arrive('beach', { x: 12, y: 1 });
     expect(drawn('creature')).toHaveLength(0);
-    expect(parent.querySelector('.hud-minimap__name')?.textContent).toBe('Beach');
+    expect(parent.querySelector('.hud-minimap__name')?.textContent).toBe('Candle Strand');
   });
 
   it('opens the zone map on a tap, turns it to the zone from the world, and a second tap shuts it', () => {

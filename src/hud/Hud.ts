@@ -116,6 +116,8 @@ import {
   SOUND_SETTINGS_CHANGED_EVENT,
   TIP_HEARD_EVENT,
   TIP_OFFERED_EVENT,
+  SECRET_FOUND_EVENT,
+  SECRETS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
 } from '../ui/uiEvents';
@@ -1199,6 +1201,11 @@ class Hud {
       this.model.tipsOn = on;
       if (!on) this.tipCard.clear();
     });
+    listen(SECRET_FOUND_EVENT, (secretId) => {
+      this.tipCard.found(secretId);
+      this.holdTip();
+    });
+    listen(SECRETS_CHANGED_EVENT, (found) => this.mapSheet.setSecretsFound(found));
     // The corner is the target frame's again while it is off, and the tip card
     // and a desktop's sheet move up with it.
     listen(MINIMAP_STATE_CHANGED_EVENT, (on) => {
