@@ -77,3 +77,18 @@ describe('the HUD draws only in the palette', () => {
     expect([...written, ...channels].filter((hex) => !STEPS.has(hex.toLowerCase()))).toEqual([]);
   });
 });
+
+describe('the player column', () => {
+  /**
+   * The column is words and bars laid straight on the world, and a name the
+   * world wrote under it read between its lines (decision 112). Its backing is
+   * drawn round it rather than inside it, so the height `ui/layout.ts` counts
+   * for the column is still the column's.
+   */
+  it('stands on a backing of its own, drawn round it rather than inside it', () => {
+    const rule = /\.hud-player::before\s*\{([^}]*)\}/.exec(hudCss())?.[1] ?? '';
+    expect(rule).toMatch(/background:\s*rgba\(/);
+    expect(rule).toMatch(/inset:\s*-\d+px/);
+    expect(rule).toMatch(/z-index:\s*-1/);
+  });
+});
