@@ -25,6 +25,7 @@ import { Motion, deathPose, frameIndex, playMs, type Pose } from './animation';
 import { BuildingSprite } from './buildings';
 import { Camera2D } from './camera';
 import { CanvasPool } from './canvases';
+import { LANTERN, Lantern } from './lantern';
 import { pickScene, pickTap } from './picking';
 import { SpriteSheet } from './sheet';
 import { BakedGround, HAZE } from './terrain';
@@ -120,6 +121,8 @@ export class ZoneView2D implements ZoneView {
   private buildings: BuildingSprite[] = [];
   private shadows = new Map<number, HTMLCanvasElement>();
   private ring: HTMLCanvasElement | null = null;
+  // Underground only: the light the player carries.
+  private lantern: Lantern | null = null;
   // The view's own and the screen's size, made again when the screen changes shape.
   private vignette: HTMLCanvasElement | null = null;
   private readonly playerMotion = new Motion();
@@ -180,6 +183,7 @@ export class ZoneView2D implements ZoneView {
     this.mobMotions = new Map(
       world.mobs.map((mob) => [mob, new Motion((mob.spawnX * 7 + mob.spawnY * 13) % 1000)]),
     );
+    this.lantern = this.setting === 'underground' ? new Lantern(this.pool) : null;
     this.camera.follow(world.player);
   }
 
@@ -197,6 +201,8 @@ export class ZoneView2D implements ZoneView {
     this.shadows = new Map();
     this.pool.release(this.ring);
     this.ring = null;
+    this.lantern?.release();
+    this.lantern = null;
     this.mobMotions = new Map();
     this.effects = [];
     this.gatherBeat.reset();
@@ -478,8 +484,18 @@ export class ZoneView2D implements ZoneView {
     for (const thing of standing) thing.draw();
 
     this.drawEffects(now);
+    if (this.lantern) {
+      const flame = at(player.x, player.y);
+      this.lantern.draw(
+        context,
+        flame.x,
+        flame.y - LANTERN.height,
+        this.canvas.width,
+        this.canvas.height,
+      );
+    }
     // Over the world and under the words, so a name at the edge of the screen
-    // reads as well as one in the middle.
+    // reads as well as one in the middle, underground as well.
     if (this.vignette) context.drawImage(this.vignette, 0, 0);
     this.drawWords(world, sheet, playerSprite);
   }
