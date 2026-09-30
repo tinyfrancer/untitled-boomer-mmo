@@ -1,6 +1,7 @@
 import {
   GRASS_TILE,
   MARSH_TILE,
+  MASONRY_TILE,
   PATH_TILE,
   SAND_TILE,
   STONE_TILE,
@@ -8,7 +9,7 @@ import {
   WATER_TILE,
 } from '../../data/tiles';
 import type { RampId, Step } from '../palette';
-import { ROCK_FACE } from './terrain';
+import { MASONRY_FACE_ID, ROCK_FACE } from './terrain';
 
 /**
  * How one kind of ground meets another: the upper one reaches into the lower
@@ -264,6 +265,52 @@ const STONE_UNDER_SAND: EdgeStyle = {
 };
 
 /**
+ * A wall of dressed stone over the floor it was built on (decision 118): rock's
+ * rule, the floor reaching into the wall's cell and the wall showing its face
+ * there, but square, since somebody laid it straight. Its courses are drawn from
+ * `MASONRY_FACE`.
+ */
+const MASONRY_UNDER_STONE: EdgeStyle = {
+  reach: 3,
+  wander: 0.5,
+  span: 16,
+  grain: 0,
+  rounding: 2,
+  lower: {
+    north: ['lower.4', 'lower.3'],
+    south: [],
+    west: ['lower.3'],
+    east: ['lower.0', 'lower.1'],
+  },
+  upper: { north: 'upper.0', south: 'upper.1', east: 'upper.1', west: 'upper.1' },
+  face: { side: 'south', sprite: MASONRY_FACE_ID, rows: FACE_ROWS },
+};
+
+/** The same wall standing in grass, the grass growing up to its foot a blade at a time. */
+const MASONRY_UNDER_GRASS: EdgeStyle = {
+  ...MASONRY_UNDER_STONE,
+  wander: 1,
+  span: 7,
+  grain: 0.35,
+  upper: { north: 'upper.0', south: 'upper.1', east: 'upper.1', west: 'upper.3' },
+};
+
+/**
+ * The waystation's paving where the east road runs onto it (decision 118): the
+ * road's dirt a hair higher, trodden over the edge of the slabs, as grass lies
+ * over a road.
+ */
+const STONE_UNDER_PATH: EdgeStyle = {
+  reach: 4,
+  wander: 2,
+  span: 9,
+  grain: 0.35,
+  rounding: 5,
+  lower: { north: ['lower.1'], west: ['lower.1'], east: [], south: [] },
+  upper: { south: 'upper.2', east: 'upper.2', north: 'upper.4', west: 'upper.3' },
+};
+
+/**
  * Every pair of grounds with an edge drawn between them, lower first: the one
  * reached into. Every pair that meets in a zone is a row (held by a test).
  */
@@ -280,4 +327,7 @@ export const EDGES: readonly { lower: number; upper: number; style: EdgeStyle }[
   { lower: WALL_TILE, upper: WATER_TILE, style: WALL_UNDER_WATER },
   { lower: WATER_TILE, upper: STONE_TILE, style: WATER_UNDER_STONE },
   { lower: STONE_TILE, upper: SAND_TILE, style: STONE_UNDER_SAND },
+  { lower: MASONRY_TILE, upper: STONE_TILE, style: MASONRY_UNDER_STONE },
+  { lower: MASONRY_TILE, upper: GRASS_TILE, style: MASONRY_UNDER_GRASS },
+  { lower: STONE_TILE, upper: PATH_TILE, style: STONE_UNDER_PATH },
 ];

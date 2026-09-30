@@ -12,10 +12,15 @@ export const WALL_TILE = 5;
 // ponds in it reads as a park, and the difference between ground you may cross
 // and water you may not is the one thing a player has to see here at a glance.
 export const MARSH_TILE = 6;
+// Dressed stone laid up as a wall by somebody, where the wall tile is rock
+// nobody laid: the Veymari ruins (decision 118). It blocks as rock does, and is
+// drawn as coursed blocks rather than boulders, since a ruin drawn in rock
+// reads as an outcrop.
+export const MASONRY_TILE = 7;
 
 // Tiles nothing can walk over. CollisionSystem blocks exactly these,
 // so adding a walkable tile needs no change there — only a blocking one does.
-export const BLOCKING_TILES = [WATER_TILE, WALL_TILE];
+export const BLOCKING_TILES = [WATER_TILE, WALL_TILE, MASONRY_TILE];
 
 /**
  * Every tile the maps are made of. What each is drawn as, in the world and on
@@ -30,6 +35,7 @@ export const TILE_IDS: readonly number[] = [
   STONE_TILE,
   WALL_TILE,
   MARSH_TILE,
+  MASONRY_TILE,
 ];
 
 export interface TileRect {

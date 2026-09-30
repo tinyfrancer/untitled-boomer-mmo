@@ -5,6 +5,7 @@ import type { StationId } from './recipes';
 import {
   GRASS_TILE,
   MARSH_TILE,
+  MASONRY_TILE,
   PATH_TILE,
   SAND_TILE,
   STONE_TILE,
@@ -40,6 +41,7 @@ export const GROUNDS = {
   stone: { key: '_', tile: STONE_TILE },
   rock: { key: '#', tile: WALL_TILE },
   marsh: { key: ',', tile: MARSH_TILE },
+  masonry: { key: '%', tile: MASONRY_TILE },
 } as const;
 
 export type GroundName = keyof typeof GROUNDS;
