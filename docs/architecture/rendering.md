@@ -36,13 +36,22 @@ budget is asserted on, and on a phone Chrome and Safari draw a canvas on the GPU
 
 **The canvas is drawn at art resolution and scaled up by whole device pixels** (`render2d/camera.ts`,
 `docs/architecture/art.md` for why whole). `pixelScale` picks the whole number of device pixels to
-the art pixel that frames closest to ten tiles across the screen's smaller side; the canvas is as
-many art pixels as the screen holds, rounded up, and its CSS size is that times the scale, a hair
-larger than the screen where the art pixels do not divide it, the overhang cut off by the page
-rather than the pixels stretched. `image-rendering: pixelated` and `imageSmoothingEnabled = false`
-(reset whenever the canvas is resized, since resizing resets the context) keep every art pixel a
-square. Smoke's `boot` checks the scale is whole in a real browser, and `landscape` checks it again
-turned on its side.
+the art pixel that frames closest to ten tiles across the screen's smaller side, **and never more
+than two CSS pixels to the art pixel** (`MAX_CSS_PER_ART`, decision 112); the canvas is as many art
+pixels as the screen holds, rounded up, and its CSS size is that times the scale, a hair larger
+than the screen where the art pixels do not divide it, the overhang cut off by the page rather than
+the pixels stretched. `image-rendering: pixelated` and `imageSmoothingEnabled = false` (reset
+whenever the canvas is resized, since resizing resets the context) keep every art pixel a square.
+Smoke's `boot` checks the scale is whole in a real browser, `landscape` checks it again turned on
+its side, and `sheets` checks the cap on a desktop.
+
+**A big screen sees more of the world, not a bigger one.** Ten tiles across a desktop's height drew a
+1280×800 window at three CSS pixels to the art pixel, eight tiles tall, with names 27 pixels high
+beside a HUD whose words are 12. Two is the size the character sheet draws the same figure at and
+the HUD sets its titles at, so at the cap the world and the HUD are drawn to one measure: a desktop
+frames 12.5 tiles tall at 1280×800 and 17 at 1920×1080. No phone reaches it (a 390-point phone
+draws at one and a third), so the phone's framing, which the tab bar's rule below is measured
+against, did not move.
 
 **`touch-action` is `pinch-zoom`, not `none`.** A one-finger drag and a double tap are the game's,
 so the stream of pointer events that tells a drag from a tap is never claimed halfway through by a
@@ -163,9 +172,17 @@ hides you and what a thumb aims at, where what stops you is its walls. **A build
 inside is cut away instead** (`docs/architecture/buildings.md`): its roof and front come off and
 only the back wall stands, which is the same question with the opposite answer.
 
+**Nothing is drawn over the room the player is standing in** (decision 112). A building close in
+front of it reaches over it, since a roof stands up the screen from its footprint: from inside the
+smithy, the training hall's roof, faded, lay across the floor with its name written over it. So
+while the player is in a room (`roomRect`: its floor and the back wall over it), any other building
+whose picture reaches over the room is drawn with the room clipped out of it, and a sign that would
+be written there is not. Only buildings: a crown in front of a room still fades as it does
+anywhere, being the one thing the player may be standing behind.
+
 ## Words
 
-**A plate over a head is stacked up from its bars** (`plate` in `ZoneView2D`): the mana bar at the
+**A plate over a head is stacked up from its bars** (`Plate` in `ZoneView2D`): the mana bar at the
 bottom, then health, then the name, then a worn title or a quest marker over that. The bars are at
 the bottom so nothing put on above them moves them, since a health bar is the one thing on a plate
 read mid-fight; the mana bar is the player's alone and is left off outright for a class with no
@@ -173,6 +190,18 @@ pool, since an empty bar reads as a caster who is out rather than a warrior. A c
 coloured by its level against the player's (`conColor`), and a creature's level is in its name
 (`Rat (Lv 1)`, decision 99). What moves a plate (an item in the bag moving a quest marker, a title
 put on) publishes nothing, so each is read off `character.state` every frame.
+
+**A crowd's plates stack rather than overlap** (`render2d/plates.ts`, decision 112). Every plate
+and sign is laid out before any is written, and then stood in an order: one that would be written
+over a plate already stood is lifted straight up until it lands clear of everything placed, bars
+and all, and never sideways, so a name is still over what it names. The order decides what never
+moves: the player, whose name is the one always looked for; the target, whose health bar is the one
+read mid-fight; the signs over doors and the signposts, which stand still; the townsfolk; then the
+creatures, front first. A plate
+that touches nothing stands where it would alone, so only a crowd looks any different: goblins
+standing side by side wrote "Goblin Scavenger (LvGoblin Scavenger (Lv 4)" before it, and now stand
+under a short column of names. The layout is a pure function of boxes, unit-tested apart from any
+canvas, and the widths are the font's own (`textWidth`), which is what the baked word will be.
 
 **`drawnCounts()` counts one label per name over a creature, a person, a signpost and the player**,
 and nothing else, so smoke can hold the total to what the zone spawned; the name over a building's

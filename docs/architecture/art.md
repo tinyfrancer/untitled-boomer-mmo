@@ -18,7 +18,8 @@ same figure, and the moments: hits, crits, a level, what flies, the telegraphs, 
 chips a stroke knocks loose, and what stands in a room, the counter included (decision 109). B7
 deleted the 3D view and moved this file's account of the 2D one into `rendering.md` (decision 110).
 B8 drew the HUD in the same art: its frames, an icon for every item, ability, buff and tab, and the
-world's font compiled into a font file for its headings (decision 111).
+world's font compiled into a font file for its headings (decision 111). B9, the Part B review,
+capped an art pixel at two CSS pixels, so a big screen sees more of the world (decision 112).
 Where this and the code disagree, the code is right — and this file is what should be corrected._
 
 **The art is data, and it depends on nothing** (decision 81). A sprite is text in `src/art/`:
@@ -42,6 +43,10 @@ with `image-rendering: pixelated`. The scale is the whole number of device pixel
 that frames closest to ten tiles across the screen's smaller side, which is the framing the 3D
 camera held (`TARGET_TILES_ACROSS`): four on a 390-point phone at three device pixels to the point
 (9.1 tiles across), two on a 360-point phone at two (11.3), two on a 1280×720 desktop (11.3 tall).
+**An art pixel is never drawn wider than two CSS pixels** (`MAX_CSS_PER_ART`, decision 112), the
+size the character sheet draws the same figure at, so a big screen sees more of the world rather
+than a bigger one: two on a 1280×800 desktop (12.5 tiles tall, where ten tiles drew it at three and
+eight tall) and on a 1920×1080 one (17). No phone reaches the cap.
 A whole number is what keeps every art pixel the same square on screen; a fraction would draw some
 pixels a device pixel wider than their neighbours, and a pixel-art game shimmers when it scrolls.
 It follows that **nothing is drawn between art pixels**: a sprite moves a whole art pixel at a time,

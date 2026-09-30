@@ -40,8 +40,11 @@ the camera fixed facing north, a game that imports no package, the memory check 
 and the draw budget brought down to 16ms, `rendering.md` the 2D view's; decision 110), **and B8**
 (the HUD drawn in the world's art: iron and brass frames, the world's font on its headings compiled
 into a font file, every item, ability, buff and tab a pixel icon, the world's figure on the
-character sheet, and every colour a step on the art's ramps; decision 111). **Next: B9**, the Part B
-review. Update this line as each phase lands: which phase, and which is next.
+character sheet, and every colour a step on the art's ramps; decision 111), **and B9** (the Part B
+review: nothing drawn over the room the player stands in, a crowd's names stacked, a big screen
+seeing more of the world, the map's names one size, the player column backed, and Part C next as
+planned; decision 112). **Next: C1**, big maps and the version 2 save era. Update this line as each
+phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -419,7 +422,21 @@ discovered at the end.
   went to about seventy files with its tests and docs and stayed whole, the user's choice: the look
   is one thing to judge, and frames round vector icons would have been neither the old HUD nor the
   new one. Decision 111 has the forks.
-- **B9 — Part B review.**
+- **B9 — Part B review. (Landed.)** Walked B1-B8 against the pillars and the user's first list at a
+  portrait phone and a 1280×800 desktop, every zone from its spawn and a grid of points across it
+  and every panel through smoke's screenshots. Part B's promise held: every zone, creature, place
+  and panel drawn, nothing left a placeholder, the throttled draw at 6.5ms against 16. It **mended
+  five things in place**, all the user's choice: **nothing is drawn over the room the player stands
+  in** (B6's smithy under the training hall's roof, a building cut out of the room and its sign not
+  written there); **a crowd's names stack** (`render2d/plates.ts`: every plate laid out before any
+  is written, one that would be written over another lifted straight up clear of it, the player and
+  then the target never moving); **a big screen sees more of the world** (an art pixel never wider
+  than two CSS pixels, so a 1280×800 desktop frames 12.5 tiles tall where it framed 8, and no phone
+  changed); **the zone map's building names are one size**, on two lines when long and never
+  stretched, and a bottom exit's name sits over its marker; and **the player column stands on a
+  backing** of the darkest ink, so a name in the world under it is not read through it. It
+  **amended the plan**: Part C next as planned, and each rebuild draws what it adds. Nineteen
+  files with its tests and docs. Decision 112 has the forks.
 
 **Open questions for Part B**: none left. B1 answered all three: tiles are 32 pixels, the HUD keeps
 a system font while the world gets a pixel font drawn as data, and every creature faces four ways
@@ -445,7 +462,10 @@ saved position stops meaning anything.
 - **C4 — Smarter creatures.** Mobs path around walls and obstacles (reversing decision 26), with
   leashing reworked for the distances. The spawn-safety sweeps run over the new maps.
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
-  activity spots each. Spawns, nodes and stations re-placed; the progression test re-held.
+  activity spots each. Spawns, nodes and stations re-placed; the progression test re-held. **Every
+  creature, node, station and building a rebuild adds is drawn in the phase that adds it** (a row in
+  `art/cast.ts`, `art/places.ts`, the building kit, and an icon for anything it hands out), since
+  Part B left nothing a placeholder and the tests hold every row to a drawing (decision 112).
 - **C10 — Less grind.** Pillar 3's promise, "tune curves down before adding systems up", which no
   phase kept until the Part A review added this one (decision 99). The curves are tuned against the
   rebuilt zones, since their longer walks between kills are what moves the pace, and before Parts
