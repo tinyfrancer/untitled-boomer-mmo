@@ -6,6 +6,7 @@ import { variantId } from '../art/compile';
 import { nodeSprite, stationSprite, strokeSprite } from '../art/places';
 import { CRIT, HIT, LEVEL_UP, LOOT_SACK } from '../art/sprites/effects';
 import { SIGNPOST } from '../art/sprites/props';
+import { TEXT_HEIGHT, textWidth } from '../art/font';
 import { TILE_SIZE } from '../config/constants';
 import { ABILITIES } from '../data/abilities';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
@@ -33,6 +34,7 @@ import { CanvasPool } from './canvases';
 import { Effects2D, Telegraphs } from './effects';
 import { LANTERN, Lantern } from './lantern';
 import { pickScene, pickTap, type PickRect } from './picking';
+import { boxesOverlap, stackPlates, stackableBox, type Box } from './plates';
 import { SpriteSheet } from './sheet';
 import { BakedGround, HAZE } from './terrain';
 import { TextCache } from './text';
@@ -116,6 +118,44 @@ function css(hex: number): string {
 interface Standing {
   baseY: number;
   draw: () => void;
+}
+
+/**
+ * What is written over something, in canvas art pixels: its bars from the
+ * bottom up, then its words, centred on `x` and standing on `bottom`.
+ *
+ * `rank` is the order plates are stood in when a crowd is sorted out, lowest
+ * first, and `depth` breaks a tie, the front first: what stands first never
+ * moves (`render2d/plates.ts`).
+ */
+interface Plate {
+  x: number;
+  bottom: number;
+  bars: { value: number; max: number; fill: string; width: number }[];
+  words: { text: string; colour: string }[];
+  rank: number;
+  depth: number;
+}
+
+/**
+ * The order a crowd's plates are stood in: the player, whose name is the one
+ * always looked for, then what they are fighting, whose health bar is the one
+ * read mid-fight, then the signs over doors and the signposts, which stand
+ * still, then the townsfolk, and the creatures front first.
+ */
+const PLATE_RANK = { player: 0, target: 1, sign: 2, signpost: 3, npc: 4, mob: 5 } as const;
+
+function plateSize(plate: Plate): { width: number; height: number } {
+  const widest = Math.max(
+    0,
+    ...plate.bars.map((bar) => bar.width + 2),
+    ...plate.words.map((word) => textWidth(word.text)),
+  );
+  const words = plate.words.length;
+  return {
+    width: widest,
+    height: plate.bars.length * (BAR_HEIGHT + 2) + (words > 0 ? words * (TEXT_HEIGHT - 1) + 1 : 0),
+  };
 }
 
 /**
@@ -576,11 +616,13 @@ export class ZoneView2D implements ZoneView {
     if (campfire) standing.push(prop(campfire.x, campfire.y, stationSprite('fire'), 'loop'));
 
     const player = world.player;
+    const room = this.room();
     for (const building of this.buildings) {
       const behind = this.hidesPlayer(building.outsideRect(), building.baseY);
+      const keepClear = building.isInside ? null : room;
       standing.push({
         baseY: building.standingBase,
-        draw: () => building.drawStanding(context, left, top, behind),
+        draw: () => building.drawStanding(context, left, top, behind, keepClear),
       });
       // What stands in a room is seen only from inside it, as its floor is.
       if (!building.isInside) continue;
@@ -606,7 +648,7 @@ export class ZoneView2D implements ZoneView {
     // Over the world and under the words, so a name at the edge of the screen
     // reads as well as one in the middle, underground as well.
     if (this.vignette) context.drawImage(this.vignette, 0, 0);
-    this.drawWords(world, sheet, figure);
+    this.drawWords(world, sheet, figure, room);
     this.text.endFrame();
   }
 
@@ -623,6 +665,11 @@ export class ZoneView2D implements ZoneView {
       player.x < rect.right &&
       player.y - TILE_SIZE / 2 > rect.top
     );
+  }
+
+  /** The room the player is standing in, in simulation units, if they are in one. */
+  private room(): PickRect | null {
+    return this.buildings.find((building) => building.isInside)?.roomRect() ?? null;
   }
 
   /**
@@ -734,26 +781,49 @@ export class ZoneView2D implements ZoneView {
     return Math.round(this.heightAt(at) * CHEST);
   }
 
-  /** Every word the world writes: the plates over heads, the signs over doors. */
-  private drawWords(world: ZoneWorld, sheet: SpriteSheet, figure: SpriteSheet): void {
+  /**
+   * Every word the world writes: the plates over heads, the signs over doors.
+   *
+   * Laid out before any is written, so a crowd can be sorted out: a plate that
+   * would be written over one already stood is lifted clear of it
+   * (`render2d/plates.ts`, decision 112). A sign over the room the player is
+   * standing in is not written, as the roof it stands on is not drawn there.
+   */
+  private drawWords(
+    world: ZoneWorld,
+    sheet: SpriteSheet,
+    figure: SpriteSheet,
+    room: PickRect | null,
+  ): void {
     const state = world.character.state;
+    const camera = this.camera;
+    const plates: Plate[] = [];
+    const roomBox: Box | null = room && {
+      left: room.left / ART_PIXEL - camera.left,
+      top: room.top / ART_PIXEL - camera.top,
+      right: room.right / ART_PIXEL - camera.left,
+      bottom: room.bottom / ART_PIXEL - camera.top,
+    };
     for (const building of this.buildings) {
       if (building.isInside) continue;
       const sign = building.signAt();
-      this.word(
-        building.building.definition.name,
-        THEME.color.text,
-        sign.x - this.camera.left,
-        sign.y - this.camera.top - PLATE_GAP,
-      );
+      const plate: Plate = {
+        x: sign.x - camera.left,
+        bottom: sign.y - camera.top - PLATE_GAP,
+        bars: [],
+        words: [{ text: building.building.definition.name, colour: THEME.color.text }],
+        rank: PLATE_RANK.sign,
+        depth: building.baseY,
+      };
+      const overRoom =
+        roomBox !== null && boxesOverlap(stackableBox({ ...plate, ...plateSize(plate) }), roomBox);
+      if (!overRoom) plates.push(plate);
     }
     for (const signpost of world.signposts) {
-      this.plate(
-        signpost.x,
-        signpost.y,
-        sheet.drawnHeight(SIGNPOST.id),
-        signpost.label,
-        THEME.color.levelUp,
+      plates.push(
+        this.plate(signpost, sheet.drawnHeight(SIGNPOST.id), PLATE_RANK.signpost, [
+          { text: signpost.label, colour: THEME.color.levelUp },
+        ]),
       );
     }
     for (const npc of world.npcs) {
@@ -762,86 +832,99 @@ export class ZoneView2D implements ZoneView {
         bountyMarker(npc.npcId, state),
       );
       const style = marker ? QUEST_MARKER_STYLE[marker] : null;
-      this.plate(
-        npc.x,
-        npc.y,
-        sheet.drawnHeight(npcSprite(npc.npcId)),
-        npcName(npc.npcId),
-        THEME.color.levelUp,
-        {
-          marker: style ?? undefined,
-        },
-      );
+      const words = [{ text: npcName(npc.npcId), colour: THEME.color.levelUp }];
+      if (style) words.push({ text: style.glyph, colour: style.color });
+      plates.push(this.plate(npc, sheet.drawnHeight(npcSprite(npc.npcId)), PLATE_RANK.npc, words));
     }
     for (const mob of world.mobs) {
       if (!mob.isAlive()) continue;
       const sprite = creatureSprite(mob.definition.id, mob.definition.shape);
-      this.plate(
-        mob.x,
-        mob.y,
-        sheet.drawnHeight(sprite),
-        enemyDisplayName(mob.definition, mob.level),
-        conColor(state.level, mob.level),
-        { health: [mob.hp, mob.maxHp] },
+      plates.push(
+        this.plate(
+          mob,
+          sheet.drawnHeight(sprite),
+          mob === world.target ? PLATE_RANK.target : PLATE_RANK.mob,
+          [
+            {
+              text: enemyDisplayName(mob.definition, mob.level),
+              colour: conColor(state.level, mob.level),
+            },
+          ],
+          [{ value: mob.hp, max: mob.maxHp, fill: css(THEME.hpFill), width: BAR_WIDTH }],
+        ),
       );
     }
     const player = world.player;
-    this.plate(
-      player.x,
-      player.y,
-      figure.drawnHeight(PLAYER_SPRITE),
-      player.name,
-      THEME.color.text,
-      {
-        health: [player.hp, player.maxHp],
-        mana: player.maxMana > 0 ? [player.mana, player.maxMana] : undefined,
-        title: state.activeTitleId ? titleName(state.activeTitleId) : undefined,
-        barWidth: PLAYER_BAR_WIDTH,
-      },
+    const title = state.activeTitleId ? titleName(state.activeTitleId) : null;
+    const playerBars = [
+      { value: player.hp, max: player.maxHp, fill: css(THEME.hpFill), width: PLAYER_BAR_WIDTH },
+    ];
+    // The mana bar under the health, and left off outright for a class with
+    // no pool, since an empty bar reads as a caster who is out.
+    if (player.maxMana > 0) {
+      playerBars.unshift({
+        value: player.mana,
+        max: player.maxMana,
+        fill: css(THEME.manaFill),
+        width: PLAYER_BAR_WIDTH,
+      });
+    }
+    plates.push(
+      this.plate(
+        player,
+        figure.drawnHeight(PLAYER_SPRITE),
+        PLATE_RANK.player,
+        [
+          { text: player.name, colour: THEME.color.text },
+          ...(title ? [{ text: title, colour: THEME.color.levelUp }] : []),
+        ],
+        playerBars,
+      ),
     );
+
+    const order = plates
+      .map((plate, index) => ({ plate, index }))
+      .sort((a, b) => a.plate.rank - b.plate.rank || b.plate.depth - a.plate.depth);
+    const bottoms = stackPlates(order.map(({ plate }) => ({ ...plate, ...plateSize(plate) })));
+    order.forEach(({ plate }, at) => {
+      plate.bottom = bottoms[at] ?? plate.bottom;
+    });
+    for (const plate of plates) this.writePlate(plate);
   }
 
   /**
-   * A plate over a head, stacked up from the bars: the mana under the health,
-   * the name over it, and a title or a marker over that. The health bar is the
-   * one thing on a plate that must not move, being what is read mid-fight.
+   * The plate over something standing at `at`, `height` tall: its bars from
+   * the bottom up, then its words, the health bar low where it is read
+   * mid-fight and a title or a marker over the name.
    */
   private plate(
-    x: number,
-    y: number,
+    at: Point,
     height: number,
-    name: string,
-    colour: string,
-    extra: {
-      health?: [number, number];
-      mana?: [number, number];
-      title?: string;
-      marker?: { glyph: string; color: string };
-      barWidth?: number;
-    } = {},
-  ): void {
+    rank: number,
+    words: Plate['words'],
+    bars: Plate['bars'] = [],
+  ): Plate {
+    const p = this.camera.toCanvas(at.x, at.y);
+    return { x: p.x, bottom: p.y - height - PLATE_GAP, bars, words, rank, depth: at.y };
+  }
+
+  private writePlate(plate: Plate): void {
     const context = this.context;
-    const p = this.camera.toCanvas(x, y);
-    let bottom = p.y - height - PLATE_GAP;
-    const barWidth = extra.barWidth ?? BAR_WIDTH;
-    const bar = (value: number, max: number, fill: string): void => {
-      const left = p.x - Math.floor(barWidth / 2);
+    let bottom = plate.bottom;
+    for (const bar of plate.bars) {
+      const left = plate.x - Math.floor(bar.width / 2);
       context.fillStyle = css(SHARED_RAMPS.ink[0]);
-      context.fillRect(left - 1, bottom - BAR_HEIGHT - 2, barWidth + 2, BAR_HEIGHT + 2);
-      context.fillStyle = fill;
+      context.fillRect(left - 1, bottom - BAR_HEIGHT - 2, bar.width + 2, BAR_HEIGHT + 2);
+      context.fillStyle = bar.fill;
       context.fillRect(
         left,
         bottom - BAR_HEIGHT - 1,
-        Math.round(barWidth * barFill(value, max)),
+        Math.round(bar.width * barFill(bar.value, bar.max)),
         BAR_HEIGHT,
       );
       bottom -= BAR_HEIGHT + 2;
-    };
-    if (extra.mana) bar(extra.mana[0], extra.mana[1], css(THEME.manaFill));
-    if (extra.health) bar(extra.health[0], extra.health[1], css(THEME.hpFill));
-    bottom = this.word(name, colour, p.x, bottom);
-    if (extra.title) bottom = this.word(extra.title, THEME.color.levelUp, p.x, bottom);
-    if (extra.marker) this.word(extra.marker.glyph, extra.marker.color, p.x, bottom);
+    }
+    for (const word of plate.words) bottom = this.word(word.text, word.colour, plate.x, bottom);
   }
 
   /** A word centred over a point, its bottom at `bottom`; answers where its top is. */
