@@ -3,7 +3,12 @@ import { nth } from '../nth';
 import { ART_PIXEL, TILE_PIXELS } from '../../src/art/budget';
 import { TILE_SIZE } from '../../src/config/constants';
 import { TOWN_MAP } from '../../src/data/townMap';
-import { Camera2D, TARGET_TILES_ACROSS, pixelScale } from '../../src/render2d/camera';
+import {
+  Camera2D,
+  MAX_CSS_PER_ART,
+  TARGET_TILES_ACROSS,
+  pixelScale,
+} from '../../src/render2d/camera';
 import { signpostPoint } from '../../src/systems/ZoneSystem';
 import { worldViewportHeight } from '../../src/ui/layout';
 
@@ -13,8 +18,8 @@ const WORLD = {
 };
 const SPAWN = { x: WORLD.width / 2, y: WORLD.height / 2 };
 
-/** Phones and a desktop, in CSS pixels and device pixels to one. */
-const SCREENS = [
+/** Phones and a small desktop, in CSS pixels and device pixels to one. */
+const PHONES = [
   { name: 'a 390-point phone', width: 390, height: 844, dpr: 3 },
   { name: 'a 375-point phone', width: 375, height: 812, dpr: 3 },
   { name: 'a 414-point phone at two', width: 414, height: 896, dpr: 2 },
@@ -23,6 +28,17 @@ const SCREENS = [
   { name: 'a landscape phone', width: 844, height: 390, dpr: 3 },
   { name: 'a desktop', width: 1280, height: 720, dpr: 1 },
 ] as const;
+
+/** Screens big enough that ten tiles would draw an art pixel wider than the cap. */
+const BIG_SCREENS = [
+  { name: 'a 1280x800 desktop', width: 1280, height: 800, dpr: 1 },
+  { name: 'a 1920x1080 desktop', width: 1920, height: 1080, dpr: 1 },
+  { name: 'a laptop at two', width: 1440, height: 900, dpr: 2 },
+  { name: 'a laptop at a quarter over one', width: 1536, height: 864, dpr: 1.25 },
+  { name: 'a tablet', width: 820, height: 1180, dpr: 2 },
+] as const;
+
+const SCREENS = [...PHONES, ...BIG_SCREENS];
 
 function cameraOn(screen: (typeof SCREENS)[number], player = SPAWN): Camera2D {
   const camera = new Camera2D();
@@ -38,11 +54,28 @@ describe('pixelScale', () => {
     expect(pixelScale(1280, 720, 1)).toBe(2);
   });
 
-  it.each(SCREENS)('draws $name about ten tiles across its smaller side', (screen) => {
+  it.each(PHONES)('draws $name about ten tiles across its smaller side', (screen) => {
     const scale = pixelScale(screen.width, screen.height, screen.dpr);
     expect(Number.isInteger(scale)).toBe(true);
     const across = (Math.min(screen.width, screen.height) * screen.dpr) / scale / TILE_PIXELS;
     expect(Math.abs(across - TARGET_TILES_ACROSS)).toBeLessThan(3);
+  });
+
+  it.each(SCREENS)('never draws an art pixel wider than the cap on $name', (screen) => {
+    const scale = pixelScale(screen.width, screen.height, screen.dpr);
+    expect(Number.isInteger(scale)).toBe(true);
+    expect(scale / screen.dpr).toBeLessThanOrEqual(MAX_CSS_PER_ART);
+  });
+
+  /**
+   * Ten tiles across a desktop's height drew a figure a hand tall and names at
+   * three times the HUD's type, beside a character sheet drawing the same
+   * figure at two. A big screen sees more of the world instead.
+   */
+  it.each(BIG_SCREENS)('shows $name more than ten tiles across its smaller side', (screen) => {
+    const scale = pixelScale(screen.width, screen.height, screen.dpr);
+    const across = (Math.min(screen.width, screen.height) * screen.dpr) / scale / TILE_PIXELS;
+    expect(across).toBeGreaterThan(TARGET_TILES_ACROSS + 2);
   });
 });
 
