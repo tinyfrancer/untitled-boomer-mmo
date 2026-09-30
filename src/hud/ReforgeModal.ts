@@ -1,6 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row } from './dom';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { bindItemCard } from './itemCard';
 import { ITEMS } from '../data/items';
 import { REFORGES } from '../data/reforges';
@@ -115,7 +115,7 @@ export class ReforgeModal extends Overlay {
 
     const head = row({
       className: 'hud-list-row',
-      icon: itemIconSvg(itemId),
+      icon: itemIconEl(itemId),
       label: reforgedName(itemId, offer.current),
       value: worn ? 'Worn' : '',
       valueClass: 'hud-muted',

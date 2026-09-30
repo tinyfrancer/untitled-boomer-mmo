@@ -70,6 +70,8 @@ export interface InspectPanel {
   held?: InspectStack[];
   /** Present only on an item's card: what it is for, a line of English each. */
   uses?: string[];
+  /** Present only on an item's card: the item, whose picture heads it. */
+  itemId?: ItemId;
   /** One sentence of English under the numbers, where numbers alone mislead. */
   note?: string;
 }
@@ -453,6 +455,7 @@ export function describeItem(itemId: ItemId, context: ItemUseContext = {}): Insp
     subtitle: itemSubtitle(itemId),
     lines,
     uses: itemUses(itemId, context),
+    itemId,
   };
 }
 

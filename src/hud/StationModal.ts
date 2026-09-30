@@ -1,6 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, row, sectionHeader } from './dom';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { bindItemCard } from './itemCard';
 import { describeItemName } from '../data/items';
 import { batchSize, recipesAt } from '../systems/CraftingSystem';
@@ -101,7 +101,7 @@ export class StationModal extends Overlay {
       label: name,
       value: locked ? `Needs ${SKILLS[recipe.skill].name} ${recipe.requiredLevel}` : 'Make',
       valueClass: 'hud-list-row__value',
-      icon: itemIconSvg(recipe.outputItemId),
+      icon: itemIconEl(recipe.outputItemId),
       onClick: () => this.handlers.onMake(id),
     });
     entry.root.dataset.recipe = id;

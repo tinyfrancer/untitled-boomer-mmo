@@ -1,6 +1,6 @@
 # The HUD
 
-The HTML overlay: the player column, the map, buffs, layout, icons, the tab bar and the menu, and the channel bar.
+The HTML overlay: its look, the player column, the map, buffs, layout, icons, the tab bar and the menu, and the channel bar.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
@@ -35,6 +35,42 @@ character in the save beside the one playing now, and Replace asks twice. The cr
 offers the same panel (a new device has nobody to replace, so one tap loads), hung beside the
 screen rather than in it, since the screen scrolls on a short phone, and dimmed behind.
 
+**The HUD is drawn in the world's art** (B8, decision 111), so Part A's words and Part B's world
+look like one game. Three things carry it, each made at boot out of data like every sprite, and
+none of them a file loaded:
+
+- **Frames.** Every panel is dark stone inside a bevelled iron band with a brass plate riveted over
+  each corner, every button a slab of stone that presses in, a list's row a lower slab and a
+  bag's cell a pit sunk into the panel (`art/sprites/frames.ts`). A frame is a sprite kind of its
+  own, and the page cuts it in nine (`border-image`), so its corners are drawn once and its edges
+  stretched, which only works because every edge is the same all along its length
+  (`tests/art/hud.test.ts`). A counter still says which it is by colour: its accent, the line
+  inside the iron and the stone in each rivet, is recoloured per counter (`FRAME_ACCENT` in
+  `ui/theme.ts`), the way its border did before.
+- **Type.** Headings, tabs, buttons and names are set in the world's own font, written as a
+  TrueType file in memory from `art/font.ts`'s glyphs (`art/fontFile.ts`) and handed to the page as
+  a `FontFace`; the dense lines, the numbers Part A labelled and the sentences, keep the system
+  sans, which is also what the page draws in until the font has loaded, or if it never does. The
+  font is only ever set at a whole multiple (16px, a glyph pixel to a CSS pixel, or 32px for a
+  title) and never made bold or slanted, which would smear the pixels it is made of.
+- **Colour.** Every colour the HUD names is a step on the art's ramps (`THEME` reads them through
+  `rampStep`), and `tests/ui/theme.test.ts` holds the theme and every colour the stylesheet writes
+  to the palette, so a new rule with a hex in it fails. A bar's fill is shaded in its ramp as pixel
+  art is, a lit top row and a shaded foot.
+
+**The HUD's pixel is one CSS pixel.** An icon of 32 is 32 CSS pixels, a panel's iron is eight, and
+only a title (the font at two) and the character sheet's figure (at two) are bigger. On a phone that
+is the world's own pixel, near enough; on a desktop, where the HUD was already drawn phone-sized, it
+is finer. `.hud` scales every picture nearest-neighbour, since a phone draws each CSS pixel two or
+three times over.
+
+**The pictures reach the page once a page** (`hud/hudArt.ts`, installed with the stylesheet): each
+frame and one sheet of every icon are written onto a canvas and handed to a stylesheet of their own
+as custom properties (`--hud-frame-panel`, `--hud-icons`), and an icon is an element showing its
+square of the sheet (`iconEl`), keyed by its frame (`data-icon`). jsdom has no canvas to write on, so
+a test's HUD comes up in the stylesheet's plain borders and the system font, every box the size the
+frame would have made it; smoke is what sees the art reach a page (its `hud-art` section).
+
 **The creation screen draws in the world's art** (decision 107). Each class's card is a picture of
 it as it starts, compiled from the same outfit the world draws (`art/outfit.ts`'s `portrait`) onto
 a canvas at three CSS pixels to the art pixel, and under the cards a row each for skin, hair colour
@@ -53,7 +89,7 @@ first.
 level on one line, then health, mana and XP stacked, then the buff row. Three bars with three
 captions under them is six rows of eye travel for three facts, and the top-left corner is read at a
 glance mid-fight or not at all — so `.hud-bar__label` sits over the fill rather than beside it, which
-is also why the backing is nearly opaque (over grass, a half-transparent empty end reads as grass).
+is also why the trough is solid (over grass, a half-transparent empty end reads as grass).
 Max HP is not on the wire — `player-hp-changed` carries the current value alone — so the ceiling is
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
@@ -115,7 +151,10 @@ the dot without rebuilding the terrain under it; the tile event is keyed to whol
 never reaches the HUD on the per-frame channel, and both are published **from the tick with no seed**
 — the host mounts the HUD after building the world, so a constructor-time emit would fire into a bus
 with no subscriber and leave the map blank until the first zone walk. Terrain is banded into runs of
-identical tiles (`terrainBands`), which takes a 475-tile zone down to 65 rectangles. **No mobs**:
+identical tiles (`terrainBands`), which takes a 475-tile zone down to 65 rectangles, each in **its
+ground's own colour in the zone's light** (`tileColour` in `art/sprites/terrain.ts`, step 2 of the
+tile's terrain ramp in the zone's setting, decision 111), so the map of a cave is as dark as the
+cave and a pond is the pond's blue; a world-map cell is its zone's grass, or its rock when shut. **No mobs**:
 they wander, so drawing them means a moving position per frame, and a map of where the rats were a
 second ago is worse than a map with no rats on it. No tap-to-travel either.
 
@@ -143,8 +182,8 @@ tracker a padding right of the column whenever the column's bottom would reach i
 **What buffs are up is derived, not tracked** (`systems/EffectSystem.ts`). `world/Player` keeps its
 mana shield, its haste and its meal private and `activeEffects()` builds the list off them each time
 it is asked, so an expired buff cannot survive in a second copy nobody cleared; `data/effects.ts`
-says what each one is and `EFFECT_STYLE` in `ui/theme.ts` says what it looks like, the same split
-`QUEST_MARKER_STYLE` makes. `ZoneWorld` publishes the whole list on `player-effects-changed`
+says what each one is and `effectIconKey` in `art/icons.ts` what it is drawn as: what gave it, the
+shield its spell, haste Battle Fury and a full stomach a roast. `ZoneWorld` publishes the whole list on `player-effects-changed`
 whenever any icon's sweep would visibly move, and deliberately **without a seed** — a zone walk
 builds a new player carrying none of the old one's buffs, and a HUD that outlives the world has to be
 told that. A `debuff` kind exists in the table with nothing using it yet, so the first one is a row
@@ -173,9 +212,10 @@ than left to CSS: it is unit-tested at viewport sizes nobody sits down and tries
 `worldViewportHeight()` is derived from the same numbers. Put new HUD geometry there. The breakpoint
 keys on **height as well as width**, because a landscape phone (844x390) is wide by any measure and
 has less vertical room than a portrait one. Styling is one stylesheet, `hud/styles.ts`, interpolated
-from `THEME` — which stores fills as `0x` numbers for the renderer's materials and `#` strings for
-text, so the DOM side goes through `cssColor`/`cssRgba` rather than keeping a second copy of the
-palette. `hud-hidden`
+from `THEME` — which reads its colours off the art's ramps and stores fills as `0x` numbers for the
+view and `#` strings for text, so the DOM side goes through `cssColor`/`cssRgba` rather than keeping
+a second copy of the palette. A frame's width comes out of the padding its element had, so the
+content inside stands where it did and the layout's heights hold. `hud-hidden`
 is `display: none !important` on purpose: it is a utility and has to beat whatever display the
 element sets for itself.
 
@@ -184,21 +224,24 @@ element sets for itself.
 a tap, a drag or a question) and `ui/uiEvents.ts` (the event names and payloads) are shared,
 tested, engine-free definitions; everything that builds an element lives in `hud/`.
 
-**An item's icon is derived from what the item already is** (`ui/itemIcons.ts`, drawn by
-`hud/itemIcon.ts`). Equipment needs no icon data: a weapon names its `weaponShape`, armour fills a
-`slot`, and both name the `color` the paperdoll paints them — so a new equipment row gets a thumbnail
-by construction. Only materials and consumables carry an `icon`, and the shapes are deliberately
-coarser than the item list, since at thumbnail size a raw fish and a cooked one are one outline in
-two colours. The bag, the equip picker and the shop all draw it through the one `row({icon})` helper
-in `hud/dom.ts` rather than formatting an item three ways.
+**An item's icon is what it is on the figure** (`art/icons.ts`, decision 111). Gear is read off the
+wardrobe's answer (`art/wardrobe.ts`): the piece a helmet puts on, the weapon in the hand, and the
+ramps each is dyed, so the helm in the bag is the helm on the figure in the same steel and a new
+item of gear is drawn the day its wardrobe row is. Everything else is a row, a drawing and what it
+is dyed (a cooked fish is the raw one in `roast`, a burnt one in `char`), falling back on the
+drawing of its data's `icon.shape`; `tests/art/icons.test.ts` holds every item to a picture of its
+own. The bag, the equip picker, the counters and the idle panel all hang it through
+`itemIconEl` and the one `row({icon})` helper in `hud/dom.ts`, and an item's card opens on the item
+at twice a row's size. An ability's button is its picture, the name under it and a wizard's price
+across its foot; a second rank is the first's picture. A tab and a menu entry wear a sixteen-pixel
+mark over their word (`TabDefinition.icon`), and the purse a coin.
 
-**The paperdoll is SVG built from a stick-figure rig** (`systems/AppearanceSystem.stickFigure`,
-drawn by `hud/paperdoll.ts`). The HUD does not reach into the renderer for a canvas, which is what
-let the sheet keep showing what you are wearing when the world became meshes and again when it
-became pixel art. The 3D figure in the world was built on the same rig, so a shoulder was in the
-same place in either; since B4 the figure in the world is pixel art put together from what is worn
-(`art/outfit.ts`), and since B7 the rig has the sheet alone. Drawing the sheet's figure to match the
-world's is B8's, with the rest of the HUD's look.
+**The character sheet draws the world's figure** (decision 111): `portrait` of the player's own
+getup (`art/outfit.ts`), their class, their look and what they have on, on a canvas at two CSS pixels
+to the art pixel, compiled again only when what is worn changes. It still never reaches into the
+view: the art is the renderer-free half, and the sheet compiles the figure the way the view does.
+The stick-figure rig it was drawn with until B8 is gone, with the vector icons, and so is every
+colour an item or a class carried for them.
 
 **The bar holds five; everything else folds behind Menu.** It splits its width evenly (`ui/tabs.ts`),
 so every seat costs every other seat: seven tabs gave each one 44.4px on a 375px phone against a

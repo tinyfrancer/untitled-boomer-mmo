@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { variantId } from '../../src/art/compile';
 import type { SpriteDef } from '../../src/art/format';
 import { PLACEHOLDERS, SPRITES } from '../../src/art/index';
-import { SHARED_RAMPS, parseColourRef, type SharedRampId } from '../../src/art/palette';
+import { parseColourRef, type SharedRampId } from '../../src/art/palette';
 import { nodeSprite, stationSprite, strokeSprite } from '../../src/art/places';
 import { STATION_IDS } from '../../src/data/recipes';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
-import { itemIcon } from '../../src/ui/itemIcons';
-import type { ResourceNodeId } from '../../src/types/ids';
+import { itemIconRow } from '../../src/art/icons';
+import type { ItemId, ResourceNodeId } from '../../src/types/ids';
 
 /**
  * What each place a player works is drawn as (`art/places.ts`): every node,
@@ -28,6 +28,16 @@ function defOf(id: string): SpriteDef {
   const def = DEFS.get(id);
   if (!def) throw new Error(`no sprite called ${id}`);
   return def;
+}
+
+/** The ramps an item's icon is drawn in, once it is dyed for the item. */
+function iconRamps(itemId: ItemId): SharedRampId[] {
+  const row = itemIconRow(itemId);
+  if (!row) throw new Error(`${itemId} has no icon of its own`);
+  return Object.values(row.art.legend).map((ref) => {
+    const ramp = parseColourRef(ref)?.ramp as SharedRampId;
+    return (row.recolour?.[ramp] as SharedRampId | undefined) ?? ramp;
+  });
 }
 
 const NODES = Object.entries(RESOURCE_NODES) as [
@@ -67,9 +77,9 @@ describe('what each place is drawn as', () => {
   });
 
   /**
-   * Which metal is in the rock is a fact the whole game shares: step 2 of the
-   * ramp a vein's ore is drawn in is the colour the ore it yields is drawn in
-   * the pack.
+   * Which metal is in the rock is a fact the whole game shares: the ramp a
+   * vein's ore is drawn in is one the icon of what it yields is drawn in, so a
+   * lump of tin is the same grey in the rock as in the pack.
    */
   it("draws every vein's ore in the colour of what it yields", () => {
     for (const [id, node] of NODES) {
@@ -80,7 +90,7 @@ describe('what each place is drawn as', () => {
       const def = defOf(base ?? '');
       const ore = def.variants?.[variant ?? '']?.ore as SharedRampId | undefined;
       expect(ore, id).toBeDefined();
-      expect(SHARED_RAMPS[ore as SharedRampId][2], id).toBe(itemIcon(node.yieldItemId).color);
+      expect(iconRamps(node.yieldItemId), id).toContain(ore as SharedRampId);
       // And the ore is drawn at all: the sprite names the ramp it recolours.
       expect(
         Object.values(def.legend).some((ref) => parseColourRef(ref)?.ramp === 'ore'),

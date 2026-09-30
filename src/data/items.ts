@@ -10,7 +10,6 @@ import type {
   WeaponShapeId,
 } from '../types/ids';
 import { SKILLS } from './skills';
-import { TIER_COLORS } from './tiers';
 
 // Who can wear what. Class restrictions hang off the armor type rather than off
 // each item, so a new armor row inherits its rules from the type it names.
@@ -42,16 +41,13 @@ interface BaseItemDefinition {
 interface EquipmentItemDefinition extends BaseItemDefinition {
   kind: 'equipment';
   slot: GearSlotId;
-  // Color the stick figure paints this piece with: the matching body part for
-  // armor, the weapon itself for weapons.
-  color: number;
   tier?: TierId;
   // Armor pieces name a type, which is what decides who can wear them; weapons
   // and tools leave it unset and stay open to every class.
   armorType?: ArmorTypeId;
   weaponShape?: WeaponShapeId;
   // What fills the other hand. Same bargain `weaponShape` makes: the row says
-  // what it is and both the figure and the paperdoll draw it from that.
+  // what it is, and the figure and its icon are drawn from that.
   offhandShape?: OffhandShapeId;
   // How far this weapon can reach. Unset means melee — only something built to
   // strike at distance says so, and empty hands are shorter still.
@@ -92,13 +88,12 @@ interface EquipmentItemDefinition extends BaseItemDefinition {
 }
 
 /**
- * What the bag draws this as. Equipment needs none — it already says which slot
- * it fills, which shape of weapon it is and what colour to paint it, and that
- * is the whole of an icon. Everything else has to name one.
+ * What the item is, as a picture: what `art/icons.ts` draws it as when it has
+ * no row of its own. Equipment needs none, since its slot and its shape of
+ * weapon already say it.
  */
 export interface ItemIcon {
   shape: ItemIconShape;
-  color: number;
 }
 
 interface MaterialItemDefinition extends BaseItemDefinition {
@@ -135,70 +130,6 @@ export type ItemDefinition =
   | ConsumableItemDefinition
   | AmmunitionItemDefinition;
 
-// The bag's palette. What cooking did to something is read off colour rather
-// than shape — a raw fish, a cooked one and a burnt one are the same outline at
-// the size a thumbnail is drawn — so these steps have to stay tellable apart.
-const ICON_COLOR = {
-  bone: 0xe8e4d8,
-  rawMeat: 0xbf4a4a,
-  rawCrab: 0xef9a9a,
-  rawFish: 0x90a4ae,
-  cookedFish: 0xc9944a,
-  cookedCrab: 0xe0703c,
-  // Roasted rather than seared: the worst food in the game should not look like
-  // the best one, and beside the crab's orange this reads as the browner meat.
-  cookedRat: 0x8a5a2b,
-  // Charcoal rather than near-black: burnt food should look worthless, but the
-  // cells it sits in are almost black themselves and #424242 read as an empty
-  // slot rather than as a dark item.
-  burnt: 0x6d6257,
-  wood: 0x8d6e63,
-  iron: 0xb0a48c,
-  // A bar of it, which is the ore's colour cleaned up rather than a new one.
-  ironBar: 0xcfd8dc,
-  // The two ores, which are one rock in two colours the way the fish are one
-  // outline in three: pale grey tin against the warm rust of iron.
-  tinOre: 0x9aa7ad,
-  ironOre: 0xa0562f,
-  // Darker and greener than the fish, which is the whole of how an eel is told
-  // from one at thumbnail size — the same trick the two ores play.
-  rawEel: 0x4e6b52,
-  cookedEel: 0xb07840,
-  hide: 0x6b5140,
-  // The same pelt with the rot taken out of it. Lighter and warmer than the raw
-  // one, since the two sit in the bag together for as long as a tanning run
-  // lasts and one blob in two browns is the whole of how they are told apart.
-  curedHide: 0xb08457,
-  // The Deep Cut's four. Coal is the darkest thing in the bag and stops short of
-  // black, for the reason burnt food does: a cell is nearly black itself, and a
-  // near-black item in it reads as an empty slot.
-  coal: 0x3b3a38,
-  hardwood: 0x5d4037,
-  // Cooler and brighter than the iron bar it is made of, which is the whole of
-  // how the two are told apart at the size a bar is drawn.
-  steelBar: 0xe7eff5,
-  // Chalk and cave water, and nothing like the crab's orange: what a shell looks
-  // like on something that has never seen the sun.
-  shell: 0x9aa6b0,
-  // Hot and unlike every other rock in the bag, which are all greys and rusts.
-  // This is the one thing on the shelf that does something to gear, and it has
-  // to read as that at thumbnail size rather than as a third ore.
-  reforgeStone: 0x7e57c2,
-  // Pale fletching on a dark shaft, so an arrow is not a stick of wood.
-  crudeArrow: 0xd7c8a8,
-  // The made arrows are told from the crude one and from each other by the
-  // fletch, which is the only part of the outline an item's colour paints:
-  // goose-grey for the iron, and a dyed red for the steel, which is the arrow
-  // worth finding in a full bag at a glance.
-  ironArrow: 0x90a4ae,
-  steelArrow: 0xc62828,
-  // Pale and green-grey where hardwood is the darkest wood in the bag: willow is
-  // the soft, pliant one, and the two sit in a woodcutter's pack together.
-  willow: 0xb5b27a,
-  // A shaft is the wood it was cut from, planed: lighter than the log.
-  shaft: 0xc8b596,
-} as const;
-
 export const ITEMS: Record<ItemId, ItemDefinition> = {
   'rusty-sword': {
     id: 'rusty-sword',
@@ -207,7 +138,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0xcfd8dc,
     weaponShape: 'sword',
     attackPowerBonus: 2,
   },
@@ -221,7 +151,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x8d6e63,
     weaponShape: 'staff',
     // The only weapon that reaches: shorter than Fireball, so a wizard who wants
     // real distance casts for it.
@@ -245,7 +174,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 1,
     kind: 'equipment',
     slot: 'helmet',
-    color: 0x8e1c1c,
     armorType: 'cloth',
     armorValue: 3,
     healthBonus: 5,
@@ -257,7 +185,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0xcfd8dc,
     weaponShape: 'sword',
     attackPowerBonus: 6,
     strengthBonus: 1,
@@ -271,7 +198,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x7e57c2,
     weaponShape: 'staff',
     attackRange: 220,
     attackPowerBonus: 4,
@@ -293,7 +219,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 6,
     kind: 'equipment',
     slot: 'offhand',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'leather',
     offhandShape: 'shield',
@@ -307,7 +232,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'offhand',
-    color: 0x5c6bc0,
     armorType: 'cloth',
     offhandShape: 'orb',
     armorValue: 1,
@@ -320,7 +244,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Hideout Key',
     weight: 1,
     kind: 'material',
-    icon: { shape: 'key', color: ICON_COLOR.iron },
+    icon: { shape: 'key' },
   },
   // The second, on the same terms and at the same 3%: no price, because it is
   // spent on the barrow's door and `unlockedZones` remembers afterwards.
@@ -329,7 +253,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Barrow Key',
     weight: 1,
     kind: 'material',
-    icon: { shape: 'key', color: ICON_COLOR.bone },
+    icon: { shape: 'key' },
   },
   /**
    * What the dead were buried holding, and the answer to the oldest dead slot in
@@ -354,7 +278,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 7,
     kind: 'equipment',
     slot: 'offhand',
-    color: 0x6b6a5e,
     armorType: 'leather',
     offhandShape: 'shield',
     armorValue: 6,
@@ -367,7 +290,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'offhand',
-    color: 0x8ea89b,
     armorType: 'cloth',
     offhandShape: 'orb',
     armorValue: 3,
@@ -391,7 +313,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'helmet',
-    color: 0xc9b458,
     armorType: 'cloth',
     armorValue: 5,
     healthBonus: 8,
@@ -404,7 +325,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 5,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0xb9c6cf,
     weaponShape: 'sword',
     attackPowerBonus: 9,
     strengthBonus: 2,
@@ -416,7 +336,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x9575cd,
     weaponShape: 'staff',
     attackRange: 240,
     attackPowerBonus: 7,
@@ -439,7 +358,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x8d6e63,
     weaponShape: 'bow',
     attackRange: 200,
     attackPowerBonus: 2,
@@ -452,7 +370,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'weapon',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     weaponShape: 'bow',
     attackRange: 210,
@@ -468,7 +385,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x6d4c41,
     weaponShape: 'bow',
     attackRange: 220,
     attackPowerBonus: 4,
@@ -481,7 +397,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0xa1887f,
     weaponShape: 'bow',
     attackRange: 240,
     attackPowerBonus: 7,
@@ -502,7 +417,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 1,
     kind: 'equipment',
     slot: 'offhand',
-    color: 0x795548,
     offhandShape: 'quiver',
     quiverCapacity: 50,
   },
@@ -514,7 +428,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'offhand',
-    color: TIER_COLORS.studded,
     tier: 'studded',
     offhandShape: 'quiver',
     quiverCapacity: 80,
@@ -530,7 +443,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'offhand',
-    color: 0x6b6a5e,
     offhandShape: 'quiver',
     quiverCapacity: 120,
     armorValue: 2,
@@ -550,7 +462,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 0.1,
     kind: 'ammunition',
     damage: 1,
-    icon: { shape: 'arrow', color: ICON_COLOR.crudeArrow },
+    icon: { shape: 'arrow' },
   },
   /**
    * The two made arrows, and the rungs above the crude one: each doubles what
@@ -569,7 +481,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 0.1,
     kind: 'ammunition',
     damage: 2,
-    icon: { shape: 'arrow', color: ICON_COLOR.ironArrow },
+    icon: { shape: 'arrow' },
   },
   'steel-arrows': {
     id: 'steel-arrows',
@@ -578,7 +490,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 0.1,
     kind: 'ammunition',
     damage: 4,
-    icon: { shape: 'arrow', color: ICON_COLOR.steelArrow },
+    icon: { shape: 'arrow' },
   },
   /**
    * The halves of an arrow, fifteen to a log or a bar.
@@ -594,42 +506,42 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Arrow Shafts',
     weight: 0.1,
     kind: 'material',
-    icon: { shape: 'shaft', color: ICON_COLOR.shaft },
+    icon: { shape: 'shaft' },
   },
   'willow-shafts': {
     id: 'willow-shafts',
     name: 'Willow Shafts',
     weight: 0.1,
     kind: 'material',
-    icon: { shape: 'shaft', color: ICON_COLOR.willow },
+    icon: { shape: 'shaft' },
   },
   'iron-arrowheads': {
     id: 'iron-arrowheads',
     name: 'Iron Arrowheads',
     weight: 0.1,
     kind: 'material',
-    icon: { shape: 'arrowhead', color: ICON_COLOR.ironBar },
+    icon: { shape: 'arrowhead' },
   },
   'steel-arrowheads': {
     id: 'steel-arrowheads',
     name: 'Steel Arrowheads',
     weight: 0.1,
     kind: 'material',
-    icon: { shape: 'arrowhead', color: ICON_COLOR.steelBar },
+    icon: { shape: 'arrowhead' },
   },
   'rat-bones': {
     id: 'rat-bones',
     name: 'Rat Bones',
     value: 2,
     kind: 'material',
-    icon: { shape: 'bone', color: ICON_COLOR.bone },
+    icon: { shape: 'bone' },
   },
   'rat-meat': {
     id: 'rat-meat',
     name: 'Rat Meat',
     value: 3,
     kind: 'material',
-    icon: { shape: 'meat', color: ICON_COLOR.rawMeat },
+    icon: { shape: 'meat' },
   },
   // The leather set carries strength and the cloth set intellect, never both:
   // armor that fed every stat was why nobody could tell which one mattered.
@@ -640,7 +552,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 6,
     kind: 'equipment',
     slot: 'chest',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'leather',
     armorValue: 4,
@@ -654,7 +565,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'equipment',
     slot: 'helmet',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'leather',
     armorValue: 2,
@@ -667,7 +577,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 5,
     kind: 'equipment',
     slot: 'pants',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'leather',
     armorValue: 3,
@@ -681,7 +590,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'chest',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'cloth',
     armorValue: 2,
@@ -695,7 +603,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'helmet',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'cloth',
     armorValue: 1,
@@ -708,7 +615,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'pants',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     armorType: 'cloth',
     armorValue: 1,
@@ -722,7 +628,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 5,
     kind: 'equipment',
     slot: 'weapon',
-    color: TIER_COLORS.brown,
     tier: 'brown',
     weaponShape: 'axe',
     attackPowerBonus: 3,
@@ -736,7 +641,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x9e9e9e,
     weaponShape: 'axe',
     attackPowerBonus: 1,
     toolFor: 'woodcutting',
@@ -748,7 +652,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0xa1887f,
     weaponShape: 'pole',
     attackPowerBonus: 0,
     toolFor: 'fishing',
@@ -763,7 +666,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 6,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x90a4ae,
     weaponShape: 'pick',
     attackPowerBonus: 1,
     toolFor: 'mining',
@@ -795,7 +697,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 6,
     kind: 'equipment',
     slot: 'weapon',
-    color: TIER_COLORS.steel,
     tier: 'steel',
     weaponShape: 'pick',
     attackPowerBonus: 1,
@@ -809,7 +710,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 5,
     kind: 'equipment',
     slot: 'weapon',
-    color: TIER_COLORS.steel,
     tier: 'steel',
     weaponShape: 'axe',
     attackPowerBonus: 1,
@@ -823,7 +723,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'equipment',
     slot: 'weapon',
-    color: TIER_COLORS.steel,
     tier: 'steel',
     weaponShape: 'pole',
     attackPowerBonus: 0,
@@ -836,7 +735,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 3,
     weight: 2,
     kind: 'material',
-    icon: { shape: 'log', color: ICON_COLOR.wood },
+    icon: { shape: 'log' },
   },
   /**
    * What the road west finally has a tree worth chopping for.
@@ -853,7 +752,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 7,
     weight: 3,
     kind: 'material',
-    icon: { shape: 'log', color: ICON_COLOR.hardwood },
+    icon: { shape: 'log' },
   },
   /**
    * What the millpond grows, and the third rung woodcutting climbs to.
@@ -870,7 +769,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 9,
     weight: 2,
     kind: 'material',
-    icon: { shape: 'log', color: ICON_COLOR.willow },
+    icon: { shape: 'log' },
   },
   /**
    * What comes out of the quarry, and the heaviest thing in the game that is
@@ -888,7 +787,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 5,
     weight: 3,
     kind: 'material',
-    icon: { shape: 'ore', color: ICON_COLOR.tinOre },
+    icon: { shape: 'ore' },
   },
   'iron-ore': {
     id: 'iron-ore',
@@ -896,7 +795,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 10,
     weight: 4,
     kind: 'material',
-    icon: { shape: 'ore', color: ICON_COLOR.ironOre },
+    icon: { shape: 'ore' },
   },
   /**
    * What the Deep Cut is for, and the thing that turns iron into steel.
@@ -912,7 +811,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 13,
     weight: 3,
     kind: 'material',
-    icon: { shape: 'ore', color: ICON_COLOR.coal },
+    icon: { shape: 'ore' },
   },
   // What the forge makes out of ore, and what it makes out of those. Bars are
   // lighter than the ore they came from: two trips of rock become one of metal,
@@ -923,7 +822,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 12,
     weight: 2,
     kind: 'material',
-    icon: { shape: 'bar', color: ICON_COLOR.tinOre },
+    icon: { shape: 'bar' },
   },
   'iron-bar': {
     id: 'iron-bar',
@@ -931,7 +830,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 24,
     weight: 3,
     kind: 'material',
-    icon: { shape: 'bar', color: ICON_COLOR.ironBar },
+    icon: { shape: 'bar' },
   },
   /**
    * Rat bones and a log burnt down together in the furnace, and what the plate
@@ -952,7 +851,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 8,
     weight: 1,
     kind: 'material',
-    icon: { shape: 'bone', color: ICON_COLOR.burnt },
+    icon: { shape: 'bone' },
   },
   /**
    * Hardwood burnt down, and what a steel piece is worked over.
@@ -972,7 +871,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 18,
     weight: 1,
     kind: 'material',
-    icon: { shape: 'log', color: ICON_COLOR.burnt },
+    icon: { shape: 'log' },
   },
   // Two iron bars married in a coal fire. Worth more than what went into it,
   // like every smelt here, and heavier than one bar and lighter than two.
@@ -982,7 +881,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 80,
     weight: 4,
     kind: 'material',
-    icon: { shape: 'bar', color: ICON_COLOR.steelBar },
+    icon: { shape: 'bar' },
   },
   // The plate tier, and the first armour in the game nothing drops. Every piece
   // stops more than the leather it replaces and weighs more for it, which is
@@ -994,7 +893,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 6,
     kind: 'equipment',
     slot: 'helmet',
-    color: TIER_COLORS.iron,
     tier: 'iron',
     armorType: 'plate',
     armorValue: 5,
@@ -1007,7 +905,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 9,
     kind: 'equipment',
     slot: 'chest',
-    color: TIER_COLORS.iron,
     tier: 'iron',
     armorType: 'plate',
     armorValue: 9,
@@ -1021,7 +918,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 8,
     kind: 'equipment',
     slot: 'pants',
-    color: TIER_COLORS.iron,
     tier: 'iron',
     armorType: 'plate',
     armorValue: 7,
@@ -1048,7 +944,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 7,
     kind: 'equipment',
     slot: 'helmet',
-    color: TIER_COLORS.steel,
     tier: 'steel',
     armorType: 'plate',
     armorValue: 7,
@@ -1061,7 +956,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 11,
     kind: 'equipment',
     slot: 'chest',
-    color: TIER_COLORS.steel,
     tier: 'steel',
     armorType: 'plate',
     armorValue: 12,
@@ -1075,7 +969,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 10,
     kind: 'equipment',
     slot: 'pants',
-    color: TIER_COLORS.steel,
     tier: 'steel',
     armorType: 'plate',
     armorValue: 10,
@@ -1089,7 +982,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 9,
     kind: 'equipment',
     slot: 'offhand',
-    color: TIER_COLORS.steel,
     tier: 'steel',
     armorType: 'plate',
     offhandShape: 'shield',
@@ -1114,7 +1006,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 5,
     kind: 'equipment',
     slot: 'helmet',
-    color: TIER_COLORS.studded,
     tier: 'studded',
     armorType: 'leather',
     armorValue: 3,
@@ -1127,7 +1018,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 7,
     kind: 'equipment',
     slot: 'chest',
-    color: TIER_COLORS.studded,
     tier: 'studded',
     armorType: 'leather',
     armorValue: 6,
@@ -1140,7 +1030,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 6,
     kind: 'equipment',
     slot: 'pants',
-    color: TIER_COLORS.studded,
     tier: 'studded',
     armorType: 'leather',
     armorValue: 5,
@@ -1163,7 +1052,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 8,
     kind: 'equipment',
     slot: 'weapon',
-    color: 0x6d6a63,
     weaponShape: 'pick',
     attackPowerBonus: 4,
     strengthBonus: 1,
@@ -1188,7 +1076,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'equipment',
     slot: 'helmet',
-    color: TIER_COLORS.fenweave,
     tier: 'fenweave',
     armorType: 'cloth',
     armorValue: 3,
@@ -1202,7 +1089,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'equipment',
     slot: 'chest',
-    color: TIER_COLORS.fenweave,
     tier: 'fenweave',
     armorType: 'cloth',
     armorValue: 5,
@@ -1216,7 +1102,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'pants',
-    color: TIER_COLORS.fenweave,
     tier: 'fenweave',
     armorType: 'cloth',
     armorValue: 4,
@@ -1250,7 +1135,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 3,
     kind: 'equipment',
     slot: 'helmet',
-    color: TIER_COLORS.fenhide,
     tier: 'fenhide',
     armorType: 'cloth',
     armorValue: 4,
@@ -1264,7 +1148,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 5,
     kind: 'equipment',
     slot: 'chest',
-    color: TIER_COLORS.fenhide,
     tier: 'fenhide',
     armorType: 'cloth',
     armorValue: 7,
@@ -1278,7 +1161,6 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 4,
     kind: 'equipment',
     slot: 'pants',
-    color: TIER_COLORS.fenhide,
     tier: 'fenhide',
     armorType: 'cloth',
     armorValue: 6,
@@ -1300,7 +1182,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 14,
     weight: 2,
     kind: 'material',
-    icon: { shape: 'fish', color: ICON_COLOR.rawEel },
+    icon: { shape: 'fish' },
   },
   'cooked-eel': {
     id: 'cooked-eel',
@@ -1309,14 +1191,14 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'consumable',
     healAmount: 45,
     healDurationMs: 10000,
-    icon: { shape: 'fish', color: ICON_COLOR.cookedEel },
+    icon: { shape: 'fish' },
   },
   'burnt-eel': {
     id: 'burnt-eel',
     name: 'Burnt Eel',
     value: 1,
     kind: 'material',
-    icon: { shape: 'fish', color: ICON_COLOR.burnt },
+    icon: { shape: 'fish' },
   },
   /**
    * What a lurker is made of, which is all a beast may drop.
@@ -1336,7 +1218,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     // The meat outline in a leather colour, rather than a shape of its own: the
     // icon vocabulary is deliberately coarser than the item list, and at
     // thumbnail size a pelt and a cut are one blob in two colours.
-    icon: { shape: 'meat', color: ICON_COLOR.hide },
+    icon: { shape: 'meat' },
   },
   /**
    * The hide with the rot taken out of it, and the tannery's only intermediate.
@@ -1356,7 +1238,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     // water and the parts of it nobody wants.
     weight: 2,
     kind: 'material',
-    icon: { shape: 'meat', color: ICON_COLOR.curedHide },
+    icon: { shape: 'meat' },
   },
   /**
    * What a crawler is made of, and the one beast part in the game that was not
@@ -1372,14 +1254,14 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 20,
     weight: 2,
     kind: 'material',
-    icon: { shape: 'bone', color: ICON_COLOR.shell },
+    icon: { shape: 'bone' },
   },
   'raw-fish': {
     id: 'raw-fish',
     name: 'Raw Fish',
     value: 4,
     kind: 'material',
-    icon: { shape: 'fish', color: ICON_COLOR.rawFish },
+    icon: { shape: 'fish' },
   },
   'cooked-fish': {
     id: 'cooked-fish',
@@ -1388,21 +1270,21 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'consumable',
     healAmount: 15,
     healDurationMs: 10000,
-    icon: { shape: 'fish', color: ICON_COLOR.cookedFish },
+    icon: { shape: 'fish' },
   },
   'burnt-fish': {
     id: 'burnt-fish',
     name: 'Burnt Fish',
     value: 1,
     kind: 'material',
-    icon: { shape: 'fish', color: ICON_COLOR.burnt },
+    icon: { shape: 'fish' },
   },
   'crab-meat': {
     id: 'crab-meat',
     name: 'Crab Meat',
     value: 5,
     kind: 'material',
-    icon: { shape: 'meat', color: ICON_COLOR.rawCrab },
+    icon: { shape: 'meat' },
   },
   // Heals more than cooked fish: beach-tier food for beach-tier fights.
   'cooked-crab': {
@@ -1412,14 +1294,14 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'consumable',
     healAmount: 25,
     healDurationMs: 10000,
-    icon: { shape: 'meat', color: ICON_COLOR.cookedCrab },
+    icon: { shape: 'meat' },
   },
   'burnt-crab': {
     id: 'burnt-crab',
     name: 'Burnt Crab',
     value: 1,
     kind: 'material',
-    icon: { shape: 'meat', color: ICON_COLOR.burnt },
+    icon: { shape: 'meat' },
   },
   /**
    * What the first thing anyone kills is worth once there is a fire to put it
@@ -1438,14 +1320,14 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'consumable',
     healAmount: 10,
     healDurationMs: 10000,
-    icon: { shape: 'meat', color: ICON_COLOR.cookedRat },
+    icon: { shape: 'meat' },
   },
   'burnt-rat': {
     id: 'burnt-rat',
     name: 'Burnt Rat',
     value: 1,
     kind: 'material',
-    icon: { shape: 'meat', color: ICON_COLOR.burnt },
+    icon: { shape: 'meat' },
   },
   /**
    * What a reforge costs, and the only thing in the game bought in one place to
@@ -1467,7 +1349,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     value: 120,
     weight: 2,
     kind: 'material',
-    icon: { shape: 'ore', color: ICON_COLOR.reforgeStone },
+    icon: { shape: 'ore' },
   },
 };
 

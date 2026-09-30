@@ -9,7 +9,7 @@ export interface EffectDefinition {
   id: EffectId;
   name: string;
   /**
-   * What fits under a 30px icon in the 190px player column. The full name is
+   * What fits under an icon in the 190px player column. The full name is
    * the icon's tooltip, which a phone will never show and a desktop will.
    */
   short: string;

@@ -41,8 +41,8 @@ const TITLE_LINE_HEIGHT = 16;
 // the first rather than under it.
 const EFFECT_ROW_HEIGHT = THEME.effectIcon.size + THEME.effectIcon.caption * 2 + 6;
 const TRACKER_LINE_HEIGHT = 18;
-// The ability buttons plus the mana-cost line printed under them.
-const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 16;
+// The ability buttons plus the two lines their names may take under them.
+const ACTION_BAR_HEIGHT = THEME.touchMin + 8 + 28;
 
 /** How many quests the tracker strip will show before it stops growing. */
 export const MAX_TRACKED_QUESTS = 2;

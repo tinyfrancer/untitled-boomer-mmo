@@ -71,6 +71,11 @@ export const SHARED_RAMPS = {
   arcane: [0x1a1450, 0x2e2e9a, 0x4a5ee0, 0x7aa2f8, 0xc8e6ff],
   nature: [0x0e3a2a, 0x1a6a3a, 0x33a84a, 0x7ae070, 0xd0ffb0],
   blood: [0x2a0612, 0x5a0a1a, 0x9a1426, 0xd8303a, 0xff7a70],
+  // What a fire does to food: meat and fish browned, and too long over it,
+  // charred. Char stops short of black, since an item drawn in it sits in a
+  // bag cell nearly as dark and has to read as a thing rather than a hole.
+  roast: [0x2a120a, 0x582a14, 0x8c4a22, 0xbc7a3a, 0xe8b066],
+  char: [0x0e0b0c, 0x201a1a, 0x3a302d, 0x5c5048, 0x857668],
   // The creatures, each ramp built round the colour its placeholder was, so a
   // player who knew the rat by its brown still does.
   fur: [0x1b1615, 0x332926, 0x4f423a, 0x6f5f52, 0x96836f],
@@ -80,8 +85,8 @@ export const SHARED_RAMPS = {
   // What a vein is drawn in before it has an ore, the way gear is drawn in
   // `tier`: `ORE_RAMPS` recolours it into the ore the vein yields.
   ore: [0x2a2630, 0x55505c, 0x857e88, 0xb3adb3, 0xe3dee0],
-  // Step 2 of each is the ore's colour in the bag (`ICON_COLOR`), so a lump of
-  // tin is the same grey in the rock as in the pack (held by a test).
+  // A lump of each in the bag is drawn in the ramp its vein's ore is, so tin is
+  // the same grey in the rock as in the pack (held by a test).
   oreTin: [0x262c33, 0x56626b, 0x9aa7ad, 0xc9d3d6, 0xf2f7f7],
   oreIron: [0x2b120c, 0x5e2816, 0xa0562f, 0xcc7f45, 0xf0b673],
   oreCoal: [0x0b0a0d, 0x1c1b1e, 0x3b3a38, 0x625f59, 0xb8b2a3],
@@ -99,8 +104,8 @@ export const SHARED_RAMPS = {
   // helmet is authored in `tier`, and `TIER_VARIANTS` recolours it into each
   // tier's own ramp. Neutral, so the authored frames still read.
   tier: [0x2a2a33, 0x4d4d57, 0x76767f, 0xa3a3aa, 0xd2d2d6],
-  // Step 2 of each is the tier's `TIER_COLORS` entry, which the paperdoll
-  // draws in, so a set reads as the same set on the sheet and in the world.
+  // Each tier's colour, which its gear is drawn in on the figure and in the
+  // bag alike, so a set reads as the same set in the pack and in the world.
   tierBrown: [0x3a2528, 0x5f4640, 0x8d6e63, 0xb59585, 0xdcc1ac],
   tierStudded: [0x221812, 0x3e3020, 0x5f4b32, 0x86714c, 0xae9a6c],
   tierIron: [0x3a3f52, 0x646d80, 0x9aa5b1, 0xc3cbd3, 0xebeff2],

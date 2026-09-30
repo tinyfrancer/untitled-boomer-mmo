@@ -1,5 +1,7 @@
 import { Overlay } from './Overlay';
 import { el } from './dom';
+import { iconEl } from './hudArt';
+import { markIconKey } from '../art/icons';
 import { MENU_TABS, type TabId } from '../ui/tabs';
 
 /**
@@ -21,7 +23,8 @@ export class MenuOverlay extends Overlay {
 
     const grid = el('div', 'hud-menu__grid');
     for (const tab of MENU_TABS) {
-      const button = el('button', 'hud-button hud-menu__item', tab.label);
+      const button = el('button', 'hud-button hud-menu__item');
+      button.append(iconEl(markIconKey(tab.icon)), el('span', 'hud-menu__label', tab.label));
       button.type = 'button';
       button.dataset.menuTab = tab.id;
       button.addEventListener('click', () => {

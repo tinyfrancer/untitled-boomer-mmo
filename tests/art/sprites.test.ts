@@ -9,9 +9,11 @@ import {
   type SpriteDef,
 } from '../../src/art/format';
 import { PLACEHOLDERS, SPRITES, TILE_SPRITES } from '../../src/art/index';
+import { HUD_SPRITES } from '../../src/art/hud';
 import { OUTFITS } from './outfits';
 import { isTerrainRamp, parseColourRef } from '../../src/art/palette';
-import { TILE_COLORS } from '../../src/data/tiles';
+import { TILE_IDS } from '../../src/data/tiles';
+import { TILE_RAMPS } from '../../src/art/sprites/terrain';
 import type { ZoneSetting } from '../../src/types/ids';
 
 /**
@@ -36,9 +38,12 @@ function writtenFrames(def: SpriteDef): Grid[] {
 }
 
 // What a kind that is drawn the same wherever it goes may not reach for.
-const ACTOR_KINDS = new Set(['person', 'beast', 'effect', 'icon']);
+const ACTOR_KINDS = new Set(['person', 'beast', 'effect', 'icon', 'frame']);
 
-describe.each([...SPRITES, ...OUTFITS].map((def) => [def.id, def] as const))('%s', (_, def) => {
+// The world's, the lookbook's, and the HUD's frames and icons (decision 111).
+const HELD = [...SPRITES, ...OUTFITS, ...HUD_SPRITES];
+
+describe.each(HELD.map((def) => [def.id, def] as const))('%s', (_, def) => {
   const budget = BUDGET[def.kind];
 
   it("is a size its kind's budget allows", () => {
@@ -154,9 +159,11 @@ describe('the sprite list', () => {
   });
 
   it('draws every tile the maps are made of', () => {
-    for (const tile of Object.keys(TILE_COLORS).map(Number)) {
+    for (const tile of TILE_IDS) {
       const def = SPRITES.find(({ id }) => id === TILE_SPRITES[tile]);
       expect(def?.kind, `tile ${tile}`).toBe('tile');
+      // And names the ground it is, which the zone map draws it as.
+      expect(TILE_RAMPS[tile], `tile ${tile}`).toBeDefined();
     }
   });
 

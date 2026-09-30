@@ -18,37 +18,19 @@ export const MARSH_TILE = 6;
 export const BLOCKING_TILES = [WATER_TILE, WALL_TILE];
 
 /**
- * What each tile is made of, as one flat colour: what the zone map draws it in
- * (`hud/MapSheet.ts`). The world draws each tile as a sprite in its setting's
- * ramps (`art/palette.ts`), and a test holds every tile here to one.
- *
- * It lives beside the tiles rather than in the HUD because the ground the
- * simulation calls water is a decision the whole game makes, not one whatever
- * is drawing it gets to make alone.
+ * Every tile the maps are made of. What each is drawn as, in the world and on
+ * the zone map, is the art's to say (`art/sprites/terrain.ts`), and a test
+ * holds every tile here to a sprite and a ground.
  */
-// Named, because it doubles as what an uncoloured tile falls back to.
-const GRASS_COLOR = 0x2e7d32;
-
-export const TILE_COLORS: Record<number, number> = {
-  [GRASS_TILE]: GRASS_COLOR,
-  [PATH_TILE]: 0x8d6e63,
-  [WATER_TILE]: 0x1565c0,
-  [SAND_TILE]: 0xe0c184,
-  [STONE_TILE]: 0x6d6a63,
-  // Darker than the floor by enough to read as solid at a glance on the map,
-  // and light enough to read as rock rather than as a hole once the renderer
-  // stands it up: at height zero only the colour said "solid", and it was
-  // nearly black to say it.
-  [WALL_TILE]: 0x4f4a43,
-  // Olive and desaturated, so it sits between the grass it is not and the water
-  // it is next to without being mistaken for either.
-  [MARSH_TILE]: 0x4d5b3c,
-};
-
-/** A tile's colour; anything nobody has coloured yet reads as ground. */
-export function tileColor(tile: number): number {
-  return TILE_COLORS[tile] ?? GRASS_COLOR;
-}
+export const TILE_IDS: readonly number[] = [
+  GRASS_TILE,
+  PATH_TILE,
+  WATER_TILE,
+  SAND_TILE,
+  STONE_TILE,
+  WALL_TILE,
+  MARSH_TILE,
+];
 
 export interface TileRect {
   left: number;

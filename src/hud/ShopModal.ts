@@ -2,7 +2,7 @@ import { Overlay } from './Overlay';
 import { CounterSides } from './counterSides';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
 import { Purse } from './purse';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { bindItemCard } from './itemCard';
 import { describeItemName, itemValue } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
@@ -173,7 +173,7 @@ function listRow(options: ListRowOptions): HTMLElement {
     label,
     value,
     valueClass: 'hud-list-row__value',
-    icon: itemIconSvg(itemId),
+    icon: itemIconEl(itemId),
     onClick,
   });
   entry.root.dataset.item = itemId;

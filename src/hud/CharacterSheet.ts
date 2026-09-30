@@ -1,7 +1,8 @@
 import { Sheet } from './Sheet';
 import { el, row, sectionHeader } from './dom';
 import { setSkillProgress, skillRow, type SkillRow } from './skillRows';
-import { paperdollSvg } from './paperdoll';
+import { drawPortrait } from './hudArt';
+import { playerGetup, portrait } from '../art/outfit';
 import { bindItemCard } from './itemCard';
 import { BONUS_NAMES, describeBonuses, describeItemName } from '../data/items';
 import { reforgedBonuses, reforgedName, type Reforges } from '../systems/ReforgeSystem';
@@ -14,7 +15,8 @@ import type { Quiver } from '../systems/QuiverSystem';
 import { isQuiver } from '../data/items';
 import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import { exhaustive, mapKeys } from '../types/exhaustive';
-import type { GearSlotId, SkillId } from '../types/ids';
+import type { ClassId, GearSlotId, SkillId } from '../types/ids';
+import type { Look } from '../data/looks';
 
 const SLOT_ORDER = exhaustive<GearSlotId>()(['weapon', 'offhand', 'helmet', 'chest', 'pants']);
 export const SLOT_LABELS: Record<GearSlotId, string> = {
@@ -65,31 +67,40 @@ interface SlotRow {
 }
 
 /**
- * The character sheet: paperdoll, stats, the four gear slots and the skill
- * lists. Clicking a filled slot unequips it; clicking an empty one asks for a
+ * The character sheet: the figure as the world draws it in what is worn, stats,
+ * the four gear slots and the skill lists. Clicking a filled slot unequips it; clicking an empty one asks for a
  * picker, so the sheet is self-sufficient without the bag open. A skill's row
  * opens its page in the skills book, which is where what it does is said.
  */
 export class CharacterSheet extends Sheet {
-  private readonly doll: HTMLElement;
+  private readonly doll: HTMLCanvasElement;
+  private readonly classId: ClassId;
+  private readonly look: Look;
+  private drawnGear = '';
   private readonly statLines: HTMLElement[];
   private readonly slots: Record<GearSlotId, SlotRow>;
   private readonly skills: Record<SkillId, SkillRow>;
   private gear: Gear = NO_GEAR;
 
   constructor(
+    classId: ClassId,
+    look: Look,
     onSlotClicked: (slot: GearSlotId, isEmpty: boolean) => void,
     onSkillClicked: (skillId: SkillId) => void,
   ) {
     super('Character', THEME.panelWidth.character);
+    this.classId = classId;
+    this.look = look;
 
     const top = el('div', 'hud-char__top');
-    this.doll = el('div', 'hud-char__doll');
-    this.doll.append(paperdollSvg(this.gear));
+    const frame = el('div', 'hud-char__doll');
+    this.doll = el('canvas', 'hud-paperdoll');
+    frame.append(this.doll);
+    this.drawDoll();
     const stats = el('div', 'hud-char__stats');
     this.statLines = [0, 1, 2, 3, 4, 5].map(() => el('div'));
     stats.append(...this.statLines);
-    top.append(this.doll, stats);
+    top.append(frame, stats);
     this.body.append(top);
 
     this.slots = mapKeys(SLOT_ORDER, (slot) => {
@@ -135,7 +146,7 @@ export class CharacterSheet extends Sheet {
 
   update(state: CharacterSheetState): void {
     this.gear = state.gear;
-    this.doll.replaceChildren(paperdollSvg(state.gear));
+    this.drawDoll();
 
     const { hp, maxHp, strength, intellect, agility, attackPower, attackStat, armor } = state.stats;
     const lines = [
@@ -170,6 +181,22 @@ export class CharacterSheet extends Sheet {
       const xpToNext = skillXpToNextLevel(skillId, skill.level, state.level);
       setSkillProgress(this.skills[skillId], skill.level, skill.xp, xpToNext);
     }
+  }
+
+  /**
+   * The figure the world draws for this character (decision 107), compiled
+   * again only when what is worn changes, as the world compiles its own.
+   */
+  private drawDoll(): void {
+    const worn = JSON.stringify(this.gear);
+    if (worn === this.drawnGear) return;
+    this.drawnGear = worn;
+    this.doll.dataset.gear = worn;
+    drawPortrait(
+      this.doll,
+      portrait(playerGetup(this.classId, this.look, this.gear)),
+      THEME.paperdollScale,
+    );
   }
 
   /** Where a slot row sits on screen, for the picker that anchors to it. */

@@ -1,7 +1,7 @@
 import { Sheet } from './Sheet';
 import { el, sectionHeader } from './dom';
 import { bindItemCard } from './itemCard';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { describeItemName } from '../data/items';
 import type { IdleFoodMove, IdleFoodRow } from '../systems/IdleFoodSystem';
 import type { IdlePlan } from '../systems/IdlePlanSystem';
@@ -115,7 +115,7 @@ export class IdleSheet extends Sheet {
       el('div', 'hud-idle-food__name', `${describeItemName(food.itemId)} ×${food.count}`),
       el('div', 'hud-list-row__sub', food.keep ? 'Kept' : `Heals ${food.healAmount} Health`),
     );
-    item.append(itemIconSvg(food.itemId), text);
+    item.append(itemIconEl(food.itemId), text);
     bindItemCard(item, food.itemId);
 
     const earlier = this.foodButton('▲', 'food-earlier', 'Eat sooner');

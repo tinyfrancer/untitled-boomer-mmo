@@ -2,7 +2,8 @@
 
 The style guide version 2 is drawn to, and how a sprite gets from text to the screen: the tile, the
 scale, the palette, the light, the outline, the animation budget, the sprite format, the people,
-creatures, moments and places drawn in it, the compile step, recolouring and the world's font.
+creatures, moments and places drawn in it, the compile step, recolouring, the world's font, and the
+HUD's frames, icons and font file.
 How the view draws it all is `docs/architecture/rendering.md`.
 
 _Written in version 2's phase B1 (`docs/decisions.md` 100 and 101); B2 added the edges between
@@ -16,6 +17,8 @@ same figure, and the moments: hits, crits, a level, what flies, the telegraphs, 
 (decision 108). B6 drew the places: every node and what it leaves, the stations and the fire, the
 chips a stroke knocks loose, and what stands in a room, the counter included (decision 109). B7
 deleted the 3D view and moved this file's account of the 2D one into `rendering.md` (decision 110).
+B8 drew the HUD in the same art: its frames, an icon for every item, ability, buff and tab, and the
+world's font compiled into a font file for its headings (decision 111).
 Where this and the code disagree, the code is right — and this file is what should be corrected._
 
 **The art is data, and it depends on nothing** (decision 81). A sprite is text in `src/art/`:
@@ -56,9 +59,10 @@ which is most of what makes a small sprite read as lit rather than flat. Two ste
 
 - **Step 0 is the outline.** The compiler outlines each edge in step 0 of the ramp it touches, so
   step 0 has to be the darkest, and `palette.test.ts` holds every ramp to running dark to light.
-- **Step 2 is the material's own colour**, the one a player would name it by. The tier ramps are
-  built round the tier's `TIER_COLORS` entry at step 2, which the paperdoll draws in, so a set of
-  gear is the same set on the character sheet and in the world (held by a test).
+- **Step 2 is the material's own colour**, the one a player would name it by. Each gear tier has
+  a ramp of its own (held by a test), which its pieces are recoloured into on the figure and in the
+  bag alike, so a set is the same set in the pack and in the world. Since B8 the HUD draws only in
+  these ramps too (`THEME` reads them through `rampStep`, `tests/ui/theme.test.ts`).
 
 **The palette is heroic and weathered** (decision 103, which turned decision 100's "warm and
 bright" a long way down once the user saw it and called it farmvilley): deep forest greens, worn
@@ -105,7 +109,7 @@ still a shape; and a faint warm glow added in the clear, which is what brings th
 
 ## The outline
 
-**People, beasts, props, icons and scatter are outlined; tiles and effects are not.** A figure
+**People, beasts, props, icons and scatter are outlined; tiles, effects and frames are not.** A figure
 against busy ground on a phone needs an edge to be a figure at all; ground has no edge to draw, and
 light has none either. Scatter is ground, and outlined anyway (decision 106): drawn in the same ramp
 as ground already textured in it, a tuft with no edge was not there at all. **Nobody draws the outline: the compiler does.** Each empty pixel beside the silhouette, on
@@ -133,6 +137,7 @@ renderer play any creature's walk on one clock without asking the creature.
 | prop    | 16×16 to 64×64 (the list is in the code) | still 1; spent 1 (a stump, a worked-out vein); loop 4 (150)                                                        |
 | effect  | 16×16, 32×32, 64×64                      | play 4 (60)                                                                                                        |
 | icon    | 16×16, 32×32                             | still 1                                                                                                            |
+| frame   | 8×8, 16×16, 24×24                        | still 1                                                                                                            |
 
 Two idle frames are a breath, which separates a figure standing from a figure paused. Four walk
 frames are a stride: foot, pass, other foot, pass. Three to a blow are wind-up, strike and recover,
@@ -178,8 +183,8 @@ the thing's position in the world; the feet stand on the third row from the bott
 them is the outline, and the last row is the clear pixel the outline rule asks for.
 
 **Anything not yet drawn is drawn as its kind's placeholder**: a mannequin, a grey lump on four
-paws, a crate, a ring of light, a token with a question on it, a purple checker. Since B6 every
-person, creature and place is drawn and only icons are left, which are B8's. Each fills every
+paws, a crate, a ring of light, a token with a question on it, a purple checker, a purple border.
+Since B8 everything the game draws is drawn for real, the HUD's icons and frames included. Each fills every
 animation its kind's budget allows, so the renderer never asks whether a pose exists, and so the
 budget is held against real frames from the day it was written. The terrain tiles
 (`sprites/terrain.ts`) were the first real sprites, each written in one terrain ramp's digits and
@@ -481,10 +486,11 @@ of gear the moment its ramp exists.
 
 ## Text in the world
 
-**The HUD keeps a readable system font, and the world gets a pixel font drawn as data** (decision
-100). The HUD is HTML and dense with the numbers Part A labelled; what the world writes (a
-nameplate, a damage number, a sign) is baked onto the canvas anyway, so a font drawn as sprites
-costs no file. **A capital is at least nine art pixels tall**, drawn at one art pixel: the smallest
+**The world gets a pixel font drawn as data** (decision 100), and since B8 the HUD sets its
+headings, tabs and buttons in it too, while its dense lines keep a readable system font (decision
+111). What the world writes (a nameplate, a damage number, a sign) is baked onto the canvas, so a
+font drawn as sprites costs no file; the HUD is HTML, so its copy of the font is written as a font
+file in memory (below, under The HUD). **A capital is at least nine art pixels tall**, drawn at one art pixel: the smallest
 scale a phone is given is one CSS pixel to the art pixel (a 360-point phone at two device pixels to
 the point), and the nameplate has held nine pixels of glyph as its floor since act three
 (`tests/art/font.test.ts` holds the capitals). Drawing the font at two art pixels to its pixel would clear the
@@ -532,3 +538,41 @@ picking, what the view holds and what a frame costs — is `docs/architecture/re
 became the 2D view's when B7 deleted the 3D one (decision 110). What the choice of renderer asks of
 the art is all said above: a sprite is drawn at whole art pixels, light is drawn over the scene
 rather than computed, and what never moves is baked.
+
+## The HUD
+
+**The HUD is drawn in the same art** (B8, decision 111): its frames and its icons are sprites like
+any other, held to the budget, the palette and the outline by `sprites.test.ts`, and compiled by the
+same compiler; `hud/hudArt.ts` only writes the results onto a canvas once a page and hands them to
+the stylesheet. `rendering.md` has nothing to say about them, since the view never draws them.
+
+**A frame is a sprite kind of its own** (`sprites/frames.ts`, `art/hud.ts`): drawn to be cut in nine
+by the page, its corners once and its edges stretched to whatever box it goes round, so every edge
+is the same all along its length and the middle one colour (`tests/art/hud.test.ts`). It draws its
+own edge, which is what a frame is, so the compiler outlines none. **A panel** is an outline of ink,
+an iron band four pixels wide bevelled like a bar standing proud of the panel, a line of the accent
+inside it and a brass plate riveted over each corner, the rivet a stone in the accent, round a face
+of dark stone. The accent is drawn in `tier` and recoloured per counter (`frame-panel@gold`), the
+brass left alone. **A button** is a slab of masonry lit on its top and left, pressed in (the light on
+its bottom and right), flat when it cannot be pressed, gone to blood when armed, or ringed in an
+accent (the tab that is open, Idle while it runs); **a row** is a lower slab, and **a slot** a pit
+of ink with a lip of light along its bottom and right.
+
+**An icon is what the thing is, drawn at 32 pixels** (`art/icons.ts`, `sprites/itemIcons.ts`,
+`sprites/abilityIcons.ts`), a tab's mark at 16 (`sprites/markIcons.ts`). Gear is drawn off the
+wardrobe (above): a piece in `tier`, a weapon's blade in `metal`, its haft in `wood`, its fittings in
+`gold` and its stone in `arcane`, and each item a variant dyed as the figure dyes it, so the helm in
+the bag is the helm on the figure. What is not gear is drawn in its plainest self, raw and uncooked,
+and cooking, burning, curing and smelting are recolours, into `roast` and `char` where nothing
+else would do; a vein's ore and a lump of it in the bag are one ramp (held by `places.test.ts`).
+The icons were **painted by a generator and pasted in**, as the trees were: shapes filled as
+materials, shaded by the light above (a sphere for what is round), and written into the source as
+the grids they made, so the source reads as the pictures and a hand can touch up a pixel.
+
+**The HUD's copy of the world's font is a TrueType file written in memory** (`art/fontFile.ts`):
+every inked pixel of `font.ts` a square of the outline, runs of them merged into rectangles, sixteen
+glyph pixels to the em, so set at 16px a glyph pixel is a CSS pixel and nothing is smoothed. It is
+plain arithmetic over bytes like the compiler (`tests/art/fontFile.test.ts` holds its tables, its
+checksums and that each glyph is exactly its pixels), and a page takes it through `FontFace`; smoke
+holds that a real browser does. A character the font does not have falls through to the system
+font beside it, so a heading with a dash in it still reads.

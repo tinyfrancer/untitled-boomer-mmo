@@ -98,7 +98,8 @@ cannot recover it from anywhere. They deliberately name a `tone` rather than a c
 decides what "reward" looks like. Anything the renderer needs to know about but cannot read off the
 state belongs here. `render2d/effects.ts` draws them as short-lived moments from the tick that
 returns them, taking the tone's colour from `FLOAT_TONE_COLORS` in `ui/theme.ts` — which lives
-beside the palette the HUD uses rather than in the renderer, for the same reason `TILE_COLORS` does.
+beside the palette the HUD uses rather than in the renderer, since the number over a hit and the log's
+line about it are one colour, a step on the art's ramps like every colour the HUD names.
 
 Mutations of `CharacterState` itself (inventory, gear, xp, skills, location) go through the
 engine-free `systems/CharacterController.ts` rather than being inlined anywhere. Add new HUD-facing

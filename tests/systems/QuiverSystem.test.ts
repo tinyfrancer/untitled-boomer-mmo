@@ -28,7 +28,7 @@ function withBetterArrow(run: (better: ItemId) => void): void {
     weight: 0.1,
     kind: 'ammunition',
     damage: 3,
-    icon: { shape: 'arrow', color: 0xffffff },
+    icon: { shape: 'arrow' },
   };
   try {
     run(better);

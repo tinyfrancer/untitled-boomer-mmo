@@ -1,4 +1,6 @@
 import { el } from './dom';
+import { iconEl } from './hudArt';
+import { markIconKey } from '../art/icons';
 import { TABS, isMenuTab, type TabId } from '../ui/tabs';
 
 /**
@@ -15,7 +17,8 @@ export class TabBar {
   constructor(onSelect: (tab: TabId) => void) {
     this.root = el('div', 'hud-tabs');
     for (const tab of TABS) {
-      const button = el('button', 'hud-button hud-tabs__tab', tab.label);
+      const button = el('button', 'hud-button hud-tabs__tab');
+      button.append(iconEl(markIconKey(tab.icon)), el('span', 'hud-tabs__label', tab.label));
       button.type = 'button';
       button.dataset.tab = tab.id;
       button.addEventListener('click', () => onSelect(tab.id));

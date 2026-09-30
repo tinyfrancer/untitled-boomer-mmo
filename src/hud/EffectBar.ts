@@ -5,7 +5,8 @@ import {
   effectSeconds,
   type ActiveEffect,
 } from '../systems/EffectSystem';
-import { EFFECT_STYLE } from '../ui/theme';
+import { iconEl } from './hudArt';
+import { effectIconKey } from '../art/icons';
 import type { EffectId } from '../types/ids';
 
 interface EffectIcon {
@@ -58,7 +59,6 @@ export class EffectBar {
     this.icons.clear();
     for (const effect of effects) {
       const definition = effectById(effect.effectId);
-      const style = EFFECT_STYLE[effect.effectId];
 
       const root = el('div', 'hud-effect');
       root.dataset.effect = effect.effectId;
@@ -66,8 +66,7 @@ export class EffectBar {
       root.title = definition.name;
 
       const icon = el('div', `hud-effect__icon is-${definition.kind}`);
-      icon.style.color = style.color;
-      icon.append(el('div', 'hud-effect__glyph', style.glyph));
+      icon.append(iconEl(effectIconKey(effect.effectId)));
       const sweep = el('div', 'hud-effect__sweep');
       icon.append(sweep);
 

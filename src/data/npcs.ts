@@ -30,8 +30,8 @@ export interface NpcDefinition {
   /**
    * What they are called, everywhere: the nameplate over their head, the marker
    * on the zone map, and the title of the card that describes them. One string,
-   * for the reason `TILE_COLORS` is one table — what a shopkeeper is called is a
-   * decision the whole game makes rather than each renderer's own.
+   * because what a shopkeeper is called is a decision the whole game makes
+   * rather than each renderer's own.
    */
   name: string;
   role: NpcRoleId;

@@ -1,6 +1,6 @@
 import { Overlay } from './Overlay';
 import { el, emptyLine, row } from './dom';
-import { itemIconSvg } from './itemIcon';
+import { itemIconEl } from './hudArt';
 import { bindItemCard } from './itemCard';
 import { describeItemName } from '../data/items';
 import { formatChance, type InspectPanel } from '../systems/InspectSystem';
@@ -24,7 +24,17 @@ export class InspectModal extends Overlay {
     const box = el('div', 'hud-modal__box hud-modal__box--inspect');
 
     const head = el('div', 'hud-modal__head');
-    head.append(el('div', 'hud-modal__title', panel.title));
+    const title = el('div', 'hud-modal__title', panel.title);
+    if (panel.itemId) {
+      // The item itself heads its card, twice the size a row draws it.
+      const named = el('div', 'hud-inspect__head');
+      const picture = itemIconEl(panel.itemId, 2);
+      picture.classList.add('hud-inspect__picture');
+      named.append(picture, title);
+      head.append(named);
+    } else {
+      head.append(title);
+    }
     const close = el('button', 'hud-button hud-modal__close', '×');
     close.type = 'button';
     close.dataset.action = 'close-inspect';
@@ -68,7 +78,7 @@ export class InspectModal extends Overlay {
           label: describeItemName(drop.itemId),
           value: formatChance(drop.chance),
           valueClass: 'hud-list-row__value',
-          icon: itemIconSvg(drop.itemId),
+          icon: itemIconEl(drop.itemId),
         });
         entry.root.dataset.item = drop.itemId;
         bindItemCard(entry.root, drop.itemId);
@@ -82,7 +92,7 @@ export class InspectModal extends Overlay {
         label: describeItemName(stack.itemId),
         value: `×${stack.quantity}`,
         valueClass: 'hud-list-row__value',
-        icon: itemIconSvg(stack.itemId),
+        icon: itemIconEl(stack.itemId),
       });
       entry.root.dataset.item = stack.itemId;
       bindItemCard(entry.root, stack.itemId);
