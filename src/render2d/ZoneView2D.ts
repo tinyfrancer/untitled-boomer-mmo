@@ -96,9 +96,10 @@ interface Standing {
  * at art resolution into a canvas the page scales up by whole device pixels
  * (`docs/decisions.md` 101, `docs/architecture/art.md`).
  *
- * Phase B2's checkpoint, reached by `?renderer=2d`: town's ground with its
- * edges, the warrior, the shopkeeper, the rat and a building kit are drawn
- * for real, and everything else as its kind's placeholder.
+ * The game's view since phase B3 (decision 106): every zone's ground with its
+ * edges, scatter and the lantern underground, the three classes, the
+ * shopkeeper, the rat and a building kit drawn for real, and everything else
+ * as its kind's placeholder until B4 to B6 draw it.
  *
  * It holds no scene. Every frame is drawn from the world as it stands, in
  * painter's order — the ground, the shadows, everything standing sorted by
@@ -498,6 +499,7 @@ export class ZoneView2D implements ZoneView {
     // reads as well as one in the middle, underground as well.
     if (this.vignette) context.drawImage(this.vignette, 0, 0);
     this.drawWords(world, sheet, playerSprite);
+    this.text.endFrame();
   }
 
   /** The moments in flight: projectiles, bursts, and the numbers over them. */
