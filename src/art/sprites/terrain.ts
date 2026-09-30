@@ -9,7 +9,8 @@ import {
 } from '../../data/tiles';
 import { TILE_PIXELS } from '../budget';
 import { grid, type SpriteDef } from '../format';
-import type { ColourRef, TerrainRampId } from '../palette';
+import { rampIn, type ColourRef, type TerrainRampId } from '../palette';
+import type { ZoneSetting } from '../../types/ids';
 
 /**
  * The ground, one tile a sprite, each written in the steps of a single
@@ -1052,6 +1053,30 @@ export const TERRAIN_SPRITES: readonly SpriteDef[] = [
 
 /** The face rock shows over lower ground, which an edge draws from (`sprites/edges.ts`). */
 export const ROCK_FACE = WALL_FACE.id;
+
+/**
+ * The ground each tile is, as a terrain ramp: what it is drawn in, in the
+ * setting it is laid in, and so what the zone map draws it as (`tileColour`).
+ */
+export const TILE_RAMPS: Readonly<Record<number, TerrainRampId>> = {
+  [GRASS_TILE]: 'grass',
+  [PATH_TILE]: 'path',
+  [SAND_TILE]: 'sand',
+  [WATER_TILE]: 'water',
+  [STONE_TILE]: 'stone',
+  [WALL_TILE]: 'rock',
+  [MARSH_TILE]: 'marsh',
+};
+
+/**
+ * A tile as one flat colour, for the zone map (`hud/MapSheet.ts`): its ground's
+ * own colour, step 2 of its ramp in the setting it is laid in, so the map of a
+ * cave is as dark as the cave and a pond on it is the pond's blue (B8, decision
+ * 111). Anything nobody gave a ground reads as grass.
+ */
+export function tileColour(tile: number, setting: ZoneSetting): number {
+  return rampIn(TILE_RAMPS[tile] ?? 'grass', setting)[2];
+}
 
 /** The sprite each tile the maps are made of is drawn with. */
 export const TILE_SPRITES: Readonly<Record<number, string>> = {

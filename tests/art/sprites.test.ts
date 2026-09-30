@@ -12,7 +12,8 @@ import { PLACEHOLDERS, SPRITES, TILE_SPRITES } from '../../src/art/index';
 import { HUD_SPRITES } from '../../src/art/hud';
 import { OUTFITS } from './outfits';
 import { isTerrainRamp, parseColourRef } from '../../src/art/palette';
-import { TILE_COLORS } from '../../src/data/tiles';
+import { TILE_IDS } from '../../src/data/tiles';
+import { TILE_RAMPS } from '../../src/art/sprites/terrain';
 import type { ZoneSetting } from '../../src/types/ids';
 
 /**
@@ -158,9 +159,11 @@ describe('the sprite list', () => {
   });
 
   it('draws every tile the maps are made of', () => {
-    for (const tile of Object.keys(TILE_COLORS).map(Number)) {
+    for (const tile of TILE_IDS) {
       const def = SPRITES.find(({ id }) => id === TILE_SPRITES[tile]);
       expect(def?.kind, `tile ${tile}`).toBe('tile');
+      // And names the ground it is, which the zone map draws it as.
+      expect(TILE_RAMPS[tile], `tile ${tile}`).toBeDefined();
     }
   });
 

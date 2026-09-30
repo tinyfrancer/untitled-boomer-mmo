@@ -1,7 +1,9 @@
 import { Sheet } from './Sheet';
 import { el } from './dom';
 import { describeItemName } from '../data/items';
-import { GRASS_TILE, PATH_TILE, WALL_TILE, tileColor } from '../data/tiles';
+import { GRASS_TILE, PATH_TILE, WALL_TILE } from '../data/tiles';
+import { ZONES } from '../data/zones';
+import { tileColour } from '../art/sprites/terrain';
 import {
   worldMap,
   zoneMap,
@@ -13,7 +15,7 @@ import {
 import { zoneAccess, type ZoneAccess, type ZoneAccessContext } from '../systems/ZoneAccessSystem';
 import { THEME, cssColor } from '../ui/theme';
 import type { TilePoint } from '../ui/uiEvents';
-import type { SkillId, ZoneId } from '../types/ids';
+import type { SkillId, ZoneId, ZoneSetting } from '../types/ids';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -177,13 +179,16 @@ function buildMarker(marker: MapMarker, columns: number): SVGElement[] {
  * one that proves it. A footprint too small for a name at all is left unnamed —
  * the hover title still answers, and an illegible smear is worse than a shape.
  */
-function buildFootprint(building: MapBuilding): { ground: SVGElement; name: SVGElement | null } {
+function buildFootprint(
+  building: MapBuilding,
+  setting: ZoneSetting,
+): { ground: SVGElement; name: SVGElement | null } {
   const rect = svgEl('rect', {
     x: building.x,
     y: building.y,
     width: building.width,
     height: building.height,
-    fill: cssColor(tileColor(WALL_TILE)),
+    fill: cssColor(tileColour(WALL_TILE, setting)),
     stroke: THEME.color.muted,
     'stroke-width': 0.12,
     'data-building': building.label,
@@ -348,7 +353,7 @@ export class MapSheet extends Sheet {
           y1: from.row * CELL + CELL / 2,
           x2: to.column * CELL + CELL / 2,
           y2: to.row * CELL + CELL / 2,
-          stroke: cssColor(tileColor(PATH_TILE)),
+          stroke: cssColor(tileColour(PATH_TILE, 'open')),
           'stroke-width': CELL * 0.12,
         }),
       );
@@ -382,7 +387,9 @@ export class MapSheet extends Sheet {
         rx: CELL * 0.06,
         // Rock rather than grass for a zone that is shut: the fill is what the
         // eye reaches before any of the three lines on the cell.
-        fill: cssColor(tileColor(access.kind === 'open' ? GRASS_TILE : WALL_TILE)),
+        fill: cssColor(
+          tileColour(access.kind === 'open' ? GRASS_TILE : WALL_TILE, ZONES[zone.zoneId].setting),
+        ),
         stroke: here ? THEME.color.text : THEME.color.levelUp,
         'stroke-width': here ? CELL * 0.035 : CELL * 0.015,
       }),
@@ -431,6 +438,9 @@ export class MapSheet extends Sheet {
       preserveAspectRatio: 'xMidYMid meet',
     });
 
+    // In the ground's own colour in this zone's light, so the map of a cave is
+    // as dark as the cave.
+    const setting = this.drawn ? ZONES[this.drawn].setting : 'open';
     for (const band of map.terrain) {
       svg.append(
         svgEl('rect', {
@@ -438,7 +448,7 @@ export class MapSheet extends Sheet {
           y: band.y,
           width: band.width,
           height: 1,
-          fill: cssColor(tileColor(band.tile)),
+          fill: cssColor(tileColour(band.tile, setting)),
         }),
       );
     }
@@ -450,7 +460,7 @@ export class MapSheet extends Sheet {
     // crosses, and the dot still shows round its edges.
     const names: SVGElement[] = [];
     for (const building of map.buildings) {
-      const { ground, name } = buildFootprint(building);
+      const { ground, name } = buildFootprint(building, setting);
       svg.append(ground);
       if (name) names.push(name);
     }
@@ -469,7 +479,7 @@ export class MapSheet extends Sheet {
       r: PLAYER_RADIUS,
       class: 'hud-map__player',
       fill: THEME.color.text,
-      stroke: '#000000',
+      stroke: cssColor(THEME.inkLine),
       'stroke-width': 0.25,
       visibility: 'hidden',
     });
