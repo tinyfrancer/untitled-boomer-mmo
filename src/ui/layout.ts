@@ -201,12 +201,11 @@ export function hudLayout(
 /**
  * How tall the world camera may be: the screen, less the tab bar.
  *
- * Nothing in production calls this, and that is not an oversight. The canvas is
- * full-bleed and a perspective camera cannot shrink without changing what it
- * shows, so the requirement is held by how the camera is *framed* instead
- * (`render3d/camera.ts`: pitch, distance, and a look point aimed short of the
- * player). This is the specification of the band that framing has to keep
- * clear, and the oracle `tests/render3d/camera.test.ts` measures it against.
+ * The canvas is full-bleed, so the bar is held by where the camera stands the
+ * player rather than by a smaller canvas: in the middle of this band
+ * (`render2d/camera.ts`), so what is tapped on comes up out of the bar by
+ * walking toward it. `tests/render2d/camera.test.ts` measures the south
+ * signpost against it at real phone sizes.
  *
  * The band exists because the bar is opaque and swallows every tap that lands
  * on it: the south signpost in town once rendered four pixels inside it and

@@ -97,9 +97,9 @@ describe('Camera2D', () => {
   });
 
   /**
-   * The rule the 3D camera holds by its framing and this one by where it puts
-   * the player: the tab bar is opaque and eats every tap on it, and the south
-   * signpost in town once rendered inside it with no way to reach it.
+   * Held by where the camera puts the player: the tab bar is opaque and eats
+   * every tap on it, and the south signpost in town once rendered inside it
+   * with no way to reach it.
    */
   describe('the south signpost stays clear of the tab bar', () => {
     const post = signpostPoint('south', WORLD.width, WORLD.height);

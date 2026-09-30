@@ -28,18 +28,19 @@ export interface DebugView {
   /**
    * The player's figure, as opposed to the simulation: its walk cycle, and
    * what it was last put together from, which changes when what the player
-   * has on does (the 2D view's; the 3D view leaves it out).
+   * has on does.
    */
   playerFigure(): PlayerFigure;
   /**
-   * What the renderer is holding on the GPU. An object nobody disposed is
-   * invisible to every state assertion and to the screen: it is memory the card
-   * never gets back, and this is the only thing that can see it.
+   * How many canvases the view is holding: the sprite sheets, the baked
+   * ground, the buildings, the words on screen. One nobody let go is invisible
+   * to every state assertion and to the screen — it is memory the page never
+   * gets back — and this count is the only thing that can see it.
    */
-  gpuMemory(): { geometries: number; textures: number };
+  canvases(): number;
   /**
    * What a drawn frame costs in *time* — the third question about a frame,
-   * beside what is in it and what it costs the card to hold.
+   * beside what is in it and what it holds.
    *
    * The one thing here that is a budget rather than an observation: smoke's
    * throttled section asserts a ceiling on the mean, which is what makes "a
@@ -53,7 +54,7 @@ export interface DebugView {
 export interface PlayerFigure {
   walking: boolean;
   pose: string;
-  wearing?: string;
+  wearing: string;
 }
 
 /** What a drawn frame costs, from `drawTime()`. */

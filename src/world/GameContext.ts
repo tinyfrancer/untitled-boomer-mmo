@@ -57,9 +57,9 @@ export interface GameContextOptions {
  * keyboard state and whichever ZoneWorld is currently running, and it is the
  * only thing that builds or tears down a world.
  *
- * Building and tearing down through one named seam is the point: the renderer
- * leaks GPU memory for every geometry, material and texture nobody calls
- * `.dispose()` on, and a zone walk is exactly the loop that finds such a leak.
+ * Building and tearing down through one named seam is the point: the view
+ * leaks every canvas it made for a zone and never let go, and a zone walk is
+ * exactly the loop that finds such a leak.
  */
 export class GameContext {
   readonly character: CharacterController;

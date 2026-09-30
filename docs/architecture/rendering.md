@@ -1,314 +1,278 @@
 # Rendering
 
-_Since B3 this is the fallback's: the game is drawn by the 2D view (`docs/architecture/art.md`,
-decision 106), and the 3D view below is loaded only for `?renderer=3d` until B7 deletes it and
-rewrites this file for 2D._
+The view: the canvas and its scale, the camera and the tab bar, painter's order, the ground, what
+stands and what hides the player, the words over heads, the moments, picking, gestures and the
+menu, what the view holds, and what a frame costs.
 
-The Three.js side: the camera and the tab bar, how creatures and nodes pick their look, terrain, light and shadow, the draw budget, nameplates, effects, picking, gestures and occlusion.
+_Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57), when the game was drawn in 3D.
+Rewritten in version 2's B7 (decision 110), when the 3D view was deleted: the paragraphs about the
+game rather than the engine (the tab bar, the priority a tap is picked in, the gestures, the menu,
+the loot pile) are kept, said of the flat view, and everything about meshes, light and a turning
+camera went with Three.js. `docs/architecture/art.md` is what the view draws; this is how it draws
+it. Where this and the code disagree, the code is right — and this file is what should be
+corrected._
 
-_Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
+## One view
+
+**The world is drawn by `src/render2d/`, and nothing but `main.ts` knows it is there.**
+`ZoneView2D` answers the `ZoneView` interface (`host/zoneView.ts`) the host is built with, and
+the host owns the frame loop, the pointer, the keyboard, the HUD and the sound around it. The
+interface was drawn in B2 so that two views could answer it while version 2 moved from Three.js to
+Canvas 2D, and it stays with one because it keeps the host free of anything the view is drawn with.
+`tests/architecture/seam.test.ts` holds the seam three ways: nothing in `src/` imports a package,
+`package.json` has no runtime dependency, and `render2d/` is imported by `main.ts` alone. The
+browser is the engine: the art is data (`src/art/`), the sound is recipes (`src/audio/`), and the
+view draws with the canvas every browser has.
+
+**Version 2 is drawn with Canvas 2D** (decision 101), chosen by the spike B1 was asked to run
+against Three.js with an orthographic camera and PixiJS. The three drew the same scene, a zone at
+C1's size with 60 and then 150 figures, their shadows and nameplates, ten effects and the lantern,
+under the eight-times CPU throttle smoke's budget is asserted at, and Canvas 2D was the cheapest by
+every measure: under a millisecond a frame against two for PixiJS and three to four for Three.js,
+still the cheapest by two and a half times with each frame forced to finish, and the only one whose
+frames kept pace. It adds no dependency, where the others add 100 kB or more. Headless Chromium has
+no GPU, so those numbers are software drawing both ways, not a phone; they are the numbers the
+budget is asserted on, and on a phone Chrome and Safari draw a canvas on the GPU.
+
+**The canvas is drawn at art resolution and scaled up by whole device pixels** (`render2d/camera.ts`,
+`docs/architecture/art.md` for why whole). `pixelScale` picks the whole number of device pixels to
+the art pixel that frames closest to ten tiles across the screen's smaller side; the canvas is as
+many art pixels as the screen holds, rounded up, and its CSS size is that times the scale, a hair
+larger than the screen where the art pixels do not divide it, the overhang cut off by the page
+rather than the pixels stretched. `image-rendering: pixelated` and `imageSmoothingEnabled = false`
+(reset whenever the canvas is resized, since resizing resets the context) keep every art pixel a
+square. Smoke's `boot` checks the scale is whole in a real browser, and `landscape` checks it again
+turned on its side.
+
+**`touch-action` is `pinch-zoom`, not `none`.** A one-finger drag and a double tap are the game's,
+so the stream of pointer events that tells a drag from a tap is never claimed halfway through by a
+pan the browser decided to take. A two-finger pinch is left to the browser, because the canvas is
+full-bleed under a `pointer-events: none` overlay: whatever it refuses, the page has no other
+surface to be unzoomed through.
+
+## The camera and the tab bar
 
 **Nothing in the world may be drawn under the tab bar.** The bar is opaque and above the canvas, so
 it swallows every tap that lands on it: the south signpost in town once rendered four pixels inside
-it on a portrait phone and could not be tapped at all. The canvas is full-bleed and a perspective
-camera cannot shrink without changing what it shows, so the requirement is held by how the camera is
-_framed_ (`render3d/camera.ts`: pitch, distance, and a look point aimed short of the player, because
-ground nearer the camera spreads over more pixels than ground further away). `worldViewportHeight()`
-in `ui/layout.ts` is where the reserved band is decided. It is measured at real phone sizes, in
-`tests/render3d/camera.test.ts` and repeatedly in `npm run smoke`. If you add bottom furniture,
-reserve its height in `layout.ts` rather than hoping nothing important lands in the last sixty
-pixels.
+it on a portrait phone and could not be tapped at all. The canvas is full-bleed, so the rule is held
+by where the camera stands the player: **in the middle of the band above the bar**, not the middle
+of the screen, so the world's middle is the middle of what can be tapped and anything on the map
+comes up out of the bar by walking toward it. `worldViewportHeight()` in `ui/layout.ts` is where
+the reserved band is decided; `tests/render2d/camera.test.ts` measures the south signpost against
+it at real phone sizes, and smoke measures it again. If you add bottom furniture, reserve its
+height in `layout.ts` rather than hoping nothing important lands in the last sixty pixels.
 
-**The pitch is a band rather than a number somebody liked, and it is 45°.** The bar is the floor
-under it — ground behind the player is where the perspective squeezes hardest, and a shallower
-camera squeezes it harder — and under that is half the field of view, where the horizon comes into
-frame and a tap aimed past the ground has nothing to land on. The ceiling over it is what a steep
-camera costs: a world unit standing up is worth `cos(pitch)` on screen and one lying flat is worth
-`sin(pitch)`, so at the 58° this used to be, a wall was worth 0.62 of its own footprint and every
-building read as a roof plane. `camera.test.ts` holds all three. **Two other numbers move when the
-pitch does** and neither says so on its face: `TARGET_TILES_ACROSS` used to frame the view by its
-_depth_, so tilting the camera also zoomed it, and `FOG_FAR` is a ratio to a camera whose axis a
-shallower pitch lays down closer to the ground. Framing by width instead is what makes the pitch a
-decision about the angle alone; the fog is re-derived when it moves, and the tests measure the cue in
-tiles ahead of the player rather than in the multiples it is written in.
+**The camera follows the player all the way to the map's edge rather than stopping at it**, and the
+ground runs on past the map to meet it. A camera clamped to the map is what pinned the south
+signpost under the bar at _every_ distance the first time the game was 2D, which made the south exit
+of town unreachable on a landscape phone. **In landscape the rule is about approaching, not about
+standing still**: the ten tiles are framed across the smaller side, which is the height, so less
+of the map south of the player is in frame than on a portrait phone, and what holds is that walking
+toward the south signpost lifts it clear of the bar, which smoke's `landscape` section measures three
+tiles out.
 
-**In landscape the rule is about approaching, not about standing still.** The camera frames its
-tile budget across the viewport's _smaller_ axis, so a landscape phone spends it on depth: the south
-signpost is eight tiles behind a player on the town spawn point and is simply out of frame there.
-That resolves itself — the camera follows all the way to the map edge rather than clamping to the
-world bounds, so walking toward the signpost lifts it up the screen and it clears the bar about four
-tiles out, which is what smoke measures. The 2D camera did clamp, which pinned the signpost below
-the viewport at _every_ distance and made the south exit of town unreachable on a landscape phone;
-that was left unfixed on purpose and went away with the renderer it was in.
+**The camera never turns and never zooms** (decision 110). North is up the screen, so W walks north;
+the art is lit from the top-left and drawn four ways round, and a camera turned off north would show
+every sprite lit from somewhere the sun is not. The 3D camera turned under a drag, which is why W was
+rotated into the camera's frame (`InputState.setViewYaw`, gone with it) and why the pitch was a band
+kept clear of the horizon; none of that has anything to do in a view that looks straight down the
+map's rows.
 
-**The renderer is on the far side of that too**: an `EnemyDefinition` names a
-`shape` (`quadruped | crustacean | humanoid`) and `render3d/creatures.ts` switches on _that_, so a
-new row picks a body it is drawn with rather than waiting for a builder written for its id. Colour
-stays the renderer's, keyed by the same shape in `render3d/palette.ts` — with the exceptions the
-table always said would come. `CREATURE_OVERRIDES` there keys a look to an `EnemyId`, for a humanoid
-who is not the same man as the first: a named mob standing in a room full of its own men is precisely
-the case where sharing a shape's colour is wrong, and so is a goblin, and so is a fen raider, and so
-is the same goblin underground.
-`BEAST_OVERRIDES` beside it is the same escape hatch for fur and shell, added when the bog lurker
-became the second quadruped and the first one that is not brown — which is exactly the change the
-shape table's own comment said to make when it arrived, and the cave crawler is that argument again
-for the second crustacean: the crab's boiled orange is a thing that lives in the sun. The default
-stays the rule and both are read
-through one accessor each (`humanoidLook`, `beastLook`), so a new `ENEMIES` row is still drawn with
-no view code written for it unless it asks to be. **How big a person is drawn comes
-off the body too**: `buildHumanoid` scales the rig by `body.width / TILE_SIZE`, so the chief takes
-up half again the room a bandit does and looks it, in the same direction everything else here runs
-— what it _is_ decides what it looks like, never the other way round.
+**Every position is a whole art pixel.** The camera is rounded from the player's own rounded
+position, so the player is drawn at the same screen pixel every frame rather than jittering a pixel
+either way as the world scrolls past, and a sprite moves an art pixel at a time, which is what every
+pixel-art game does.
 
-**A `ResourceNodeDefinition` names a `shape` for the same reason** (`tree | ripple | vein`, switched
-on in `render3d/props.ts`). It used to be picked out by `solid`, which was a two-way question
-standing in for "is it a tree" — and the day a solid node that was not a tree arrived, an ore vein
-would have been drawn with a trunk and a canopy. The one thing a vein's prop does _not_ decide for
-itself is what colour the metal in it is: that is read off the ore the row yields
-(`itemIcon(yieldItemId).color`), because a lump of tin that is grey in the bag and rust-red in the
-ground is two answers to one question. Same argument as `TILE_COLORS`, one prop down.
+## Painter's order
 
-**There are no art assets, and the renderer loads no image at all** (placeholder shapes only, per
-the "no art skills" constraint in `docs/initial_design.txt`). Terrain is one vertex-coloured mesh
-(`render3d/ground.ts`, see below) and every entity is untextured primitives (`render3d/figure.ts`,
-`creatures.ts`, `props.ts`). The only textures uploaded are text baked onto a canvas by
-`render3d/text.ts` — a nameplate's name and a floating damage number — which is also the reason
-`disposeTree` names `material.map` explicitly, and the reason the unit suite stubs a 2D context
-(jsdom has none). The tile vocabulary is small and grows by a constant plus a colour — `MARSH_TILE`
-is the fen's brackish ground and cost exactly that, since `BLOCKING_TILES` is a list and a walkable
-tile needs no change to collision at all. Tile colours live in `TILE_COLORS` in `data/tiles.ts` rather
-than in the renderer,
-for the same reason the stick-figure rig behind the paperdoll does: the ground the simulation calls
-water is a decision the whole game makes. Creature colour is not — `render3d/palette.ts` is the
-renderer's own, and nothing outside it asks what colour a rat is.
+**What is in front is decided by the order things are drawn in, and by nothing else.** A frame
+draws, in order: the haze; the baked ground, with whatever moves on it (water) drawn over its
+window; the floor of any room the player is in; what lies flat and moves (a fishing spot's rings);
+the contact shadows and the ring under the target; the telegraphs; **everything standing, sorted by
+where its feet are** — the player, the creatures, the townsfolk, the nodes, the signposts, the
+stations, the fire, the loot sacks, the buildings, and a room's furniture while the player is in
+it; then the moments; the lantern underground; a vignette darkening the corners; and last the
+words, so a name at the edge of the screen reads as well as one in the middle. A building sorts on
+its front from outside and on its back wall from inside, since anyone in the room stands in front
+of the wall left standing.
 
-**A ground vertex is coloured by what it touches, and a blocking tile touches nothing**
-(`buildGroundGeometry`). A tile is four quads rather than one, and each vertex takes the mean of the
-tiles that reach it — the one under a tile's middle, the two either side of an edge, the four that
-meet at a corner — so a road fades into the grass over the outer half of each of them instead of
-ending in the staircase a grid of flat squares draws. The middle sample is why the tile is cut up at
-all: with four corner samples and every one an average, a three-tile road has no pure road anywhere
-in it and reads as a smear. **What may not blend is a boundary a body is stopped at.** `blends` puts
-two tiles in the same mean only if they agree about being crossable, because a shore drawn as a
-gradient is a gradient somewhere in the middle of which walking stops working, and where the ground
-may be crossed is the one thing about terrain a player has to read at a glance. The brightness wobble
-had to move with it — `cornerShade` is per grid corner and `shadeAt` interpolates between them, since
-a shade held flat across a tile would put the grid of hard squares straight back in, drawn in
-brightness rather than in hue.
+**The view keeps no scene.** Every frame is drawn from the world as it stands; what the view keeps
+is only what it has to remember between frames — each creature's `Motion`, when each wind-up was
+first seen, the moments in flight — and what it has baked. The player's figure is compiled again
+when what they have on changes, which the view reads off the world each frame and compares
+(`[classId, look, gear]`) rather than being told; the old sheet's canvas is let go as the new one
+is made, and one compile serves every setting, since a person is drawn only in shared ramps.
 
-**Where the ground steps down, it grows the face it steps down.** A water tile sits `WATER_DEPTH`
-below the land and nothing joined the two, so the far rim of every pond was a band of the background
-showing through the hole in the world. Each tile now grows a vertical quad on any side whose
-neighbour stands higher, in the colour of the ground it is cut into, darkened — a bank rather than a
-palette entry of its own. It is written against tile _height_ rather than against water by name, so
-the next thing that steps down is drawn already, and it is single-sided and wound toward the low
-tile: the face is only ever seen from inside the dip, and wound the other way it is the void it was
-added to fill.
+## The ground
 
-**Rock stands up, and it cost one constant** (`WALL_HEIGHT`, act three phase 5). A wall was paint at
-height zero, which made the Deep Cut and the barrow a floor with dark rectangles on it; the face code
-above was written against tile _height_ rather than against water by name, so raising `WALL_TILE`
-grew every rock face in the game with no new mesh. The height is the least that reads as solid: at a
-45° camera a wall hides as much ground behind it as it is tall, so it stays well under a figure and
-what it hides is a pair of boots. The rock colour was lightened in the same change, because at height
-zero only its darkness said "solid" and stood up it read as a hole.
+**The ground is baked, not drawn a tile at a time** (`render2d/terrain.ts`, decision 101). A zone's
+tiles, the edges between them and its scatter are drawn once onto a canvas of their own when the
+zone is built, scatter kept off every building's footprint, and a frame draws the window the camera
+sees in one call. Only what moves is drawn over it each frame: the cells of water, and the edges
+with water in them, on the tile budget's four-frame loop, their frames kept on a sheet of their
+own.
 
-**The ground runs on past the map, into a haze that is also the clear colour** (`APRON_TILES` in
-`ground.ts`, act three phase 4). A portrait camera at 45° sees about twenty-nine tiles north of the
-player at the top of the frame, far past the map's edge, and for as long as the mesh stopped there
-the top fifth of every portrait frame was the clear colour — a navy hole. The apron is the map's own
-edge carried outward, one quad a tile, so a road leaving by an exit keeps going and the beach's ocean
-keeps going east; it dims over its first three tiles so the bounds clamp does not read as an
-invisible wall. The fog's colour and the scene's background are **one colour on purpose**: the far
-ground fades into it and whatever the ground does not cover is it, so the world has no edge at all.
-Nothing in the simulation knows the apron exists, and it is still one mesh, so the teardown check
-counts it as it always did.
+**The ground runs on past the map, into a haze.** Eight tiles of it (`APRON_TILES`), the map's own
+edge carried outward, fading over four into a dark murk a setting (`HAZE`), so a road leaving by an
+exit keeps going and the beach's sea keeps going east, and the edge of the map reads as land running
+out into shadow rather than a wall the player walks into (decision 103). Nothing in the simulation
+knows the apron exists, and it is inside the one baked canvas, so the teardown check counts it as it
+always did.
 
-**A zone says what kind of place it is, and the renderer says what that looks like**
-(`ZoneDefinition.setting` into `render3d/atmosphere.ts`). `open`, `marsh` or `underground` is a fact
-about the world — the fen is a marsh whatever draws it — and the haze, the fill's two colours, the
-fill and sun strengths and the lantern are the renderer's answer, the same split `shape` makes for a
-creature. Required rather than defaulted, so a new zone says what it is instead of inheriting the
-beach's weather. **Underground is lit by what the player carries**: the one point light in the scene
-is the room lamp indoors and a warm lantern over the player's head underground, which is safe because
-the two can never be wanted at once — nothing is built underground — and which keeps the light count,
-and so every compiled program, the same in every zone. `Sunlight.breathe` dims and recolours the same
-two lights rather than adding any, for the same reason.
+**A zone says what kind of place it is, and the art says what that looks like** (`ZoneDefinition.setting`).
+`open`, `marsh` or `underground` is a fact about the world — the fen is a marsh whatever draws it —
+and the ground's ramps in that setting's light (`art/palette.ts`) and the lantern underground are
+the view's answer, the same split `shape` makes for a creature. Required rather than defaulted, so a
+new zone says what it is instead of inheriting the beach's light. **Underground is lit by what the
+player carries** (`render2d/lantern.ts`): darkness stamped over the scene with a clear pool round
+the player, in dithered steps and never black, and a warm glow added in the pool, drawn over
+everything standing and under the words (`docs/architecture/art.md` has how it looks).
 
-**The ground is dressed, and the dressing is the renderer's own** (`render3d/scatter.ts` and
-`water.ts`, act three phase 8). Tufts and flowers on grass, reeds in the marsh, pebbles on stone and
-paths, shells on sand — one `InstancedMesh` per kind per zone, so a zone's thousand tufts are five draw
-calls, placed off a tile hash so a zone grows the same every time it is built, and kept off building
-floors. Water gets glints: a thin additive sheet over every water tile whose brightness is three
-crossing waves of world position and a shared clock, computed in the shader rather than by moving
-vertices, which would be a buffer upload a frame for something the card can work out from a time. None
-of it blocks, is picked, casts, or is known to the simulation. **`disposeTree` calls an instanced
-mesh's own `dispose()`**: its per-instance buffers belong to the mesh rather than to the geometry, and
-the renderer lets them go only when the mesh says so.
+## What stands
 
-**There is a sun now, and everything standing in it sits on the ground** (`render3d/lights.ts`).
-Two flat lights and no shadows was the right call while there was nothing to cast one; by the end
-of act two there were buildings, trees, veins, signposts, creatures and a player, and every one of
-them hovered. A `HemisphereLight` fill is what gives a face pointing up a different value from one
-pointing sideways with no sun on it, which a flat ambient could never do; the sun itself comes from
-the **south-west**, because the camera's resting place is due south and a light from the north put
-every face anyone ever looked at in shade. It does not follow the camera — turning the view round to
-look into the sun is most of what makes turning it worth doing.
+**Everything standing sits on a contact shadow**: a flat ellipse under it in the setting's
+`shadow` colour at a third strength, cut once a width a zone, so a sack, which comes and goes
+mid-zone, stands on a person's rather than on one of its own. A boss's is as much wider as he is. A
+fishing spot lies on the water and stands on nothing, and the fire stands on no shadow, since what it
+throws is light.
 
-Four things about it were decided against alternatives:
+**What anything is drawn as is read off the data, and a new row is on screen the day it lands.** A
+creature is drawn as `art/cast.ts` says, falling back on the placeholder of its `shape`
+(`quadruped | crustacean | humanoid`); a node as `art/places.ts` says, falling back on the drawing of
+its `shape` (`tree | ripple | vein`); a station and the fire by their ids. A shape rather than a
+check on `solid` or on the id, because the day a solid node that was not a tree arrived, an ore vein
+would have been drawn with a canopy, and a switch over ids would make every new row a change to the
+view. **What colour the metal in a vein is** is the one thing a vein's drawing does not decide for
+itself: step 2 of its ore's ramp is the colour the ore it yields is drawn in the bag
+(`ORE_VARIANTS`, held by a test), because a lump of tin grey in the bag and rust-red in the ground is
+two answers to one question.
 
-- **The shadow camera is cut to the zone, not to what the camera can see**, which reverses what
-  `docs/archive/interiors_and_light_plan.md` asked for and is what the arithmetic says. The camera
-  sees ground from a few hundred units in front of itself out past 2500 — from the middle of town
-  both edges of the zone are on screen at once — so a frustum framed on the viewport is _larger_
-  than one framed on the map. Framed on the zone it is also fixed in the world for the life of that
-  zone, so a shadow's edge does not crawl as the player walks, and it is the frame a **pitch change
-  leaves alone**: the camera coming down to 45° moved the viewport's frustum and this one not at all.
-- **Only the ground receives.** It is the surface a shadow is actually read on, and it is the one
-  that must not also cast: a single flat plane covering the whole zone, tested against a depth map
-  it wrote itself, is the shortest road to acne over the entire floor.
-- **A builder decides what casts, not an actor.** `castsShadow` is called on the group each builder
-  returns, which keeps a nameplate, a shop sign, a damage number and a selection ring out of the map
-  by construction — those hang on the actor _around_ the body — and keeps the player's shadow across
-  a gear change, which rebuilds the figure and never touches the actor. The exceptions are the two
-  transparent things: a fishing spot's ripples, and a campfire's flames, whose logs cast where the
-  fire does not. `tests/render3d/lights.test.ts` sweeps `ENEMIES`, `RESOURCE_NODES` and `BUILDINGS`
-  for it, so a row added later answers for itself.
-- **The depth cue is measured in camera distances, and starts nearer than the player**
-  (`fogRange` in `camera.ts`). That is where it stops being weather and becomes a cue: real haze
-  would not care which way the phone is held, but a landscape camera sits less than half as far back
-  as a portrait one, so a fog in world units grazes the horizon on one and swallows half the zone on
-  the other. There are barely 1.6 camera distances between the player's feet and the furthest ground
-  anyone looks at, so starting past them leaves nothing to fade with — three's fog ramps on a
-  smoothstep, whose near end is flat, so starting at 0.9 puts the player three percent in and buys
-  the whole range back. A **readout** opts out of it entirely (`fog: false` on the nameplates, the
-  signs, the floats, the bolt and the selection ring), for the reason those already opt out of the
-  depth test: the post fades and the word over it does not.
+**An animation plays on the budget's clock** (`render2d/animation.ts`): a figure faces the way it
+mostly moves, walks while moving and breathes while not, and a blow, a cast, a shot or a flinch told
+by a `WorldEvent` plays through once over it. Each creature's clock starts somewhere of its own, off
+where it spawned, so a knot of bandits does not breathe in step. **A corpse falls on the world's
+clock** (`mob.deadForMs`), since the world has to respawn it on time with nothing drawing it at all,
+and then lies fading for 300ms of the view's; a corpse is never a target.
 
-**What it costs is measured rather than assumed.** `DebugView.drawTime()` is a rolling mean of what
-the last thirty drawn frames cost, kept by the host so it times the call _into_ whatever is drawing;
-smoke's throttled section asserts `SLOW_DRAW_BUDGET_MS` on it under an eight-times slower CPU. The
-sun, the shadow map and the depth cue together took a full run from 20.7ms to 25.2ms against a 40ms
-ceiling. Read it off a **full** run — the section carries state forward from every one before it, so
-`--section=throttled` alone is a lighter game and a different number. Raising the ceiling is a
-decision about the game, not about the run that hit it.
+**Whatever hides the player is faded** to half strength while they are behind it — a roof, and a
+tree's crown — because you cannot tap what you cannot see and tapping is the whole game. Behind is
+north of its foot and far enough inside what is drawn that it covers them. A crown is measured as the
+middle seven-tenths of its frame across and its whole height, not the collision trunk it stops you
+with or the body it is picked by: three questions about the same tree. A building answers two of the three with the picture of it, what
+hides you and what a thumb aims at, where what stops you is its walls. **A building the player is
+inside is cut away instead** (`docs/architecture/buildings.md`): its roof and front come off and
+only the back wall stands, which is the same question with the opposite answer.
 
-**A nameplate stacks up to five things and only the health bar may not move** (`render3d/nameplate.ts`):
-the quest marker, the name, the worn title, the bar at the group's origin, and the player's mana
-under it. Putting a title on pushes the _name_ up rather than sliding the bar down, because the bar
-is the one thing there read at a glance mid-fight; the mana bar hangs _below_ the origin for the same
-reason, since anything inserted above it would move everything else. Only the player has one, and it
-disappears outright for a class with no pool — an empty bar reads as a caster who is out, not as a
-warrior. The name is the only line counted as a `label` by `drawnCounts` — `marker` and
-`title` have their own kinds precisely so smoke's one-label-per-drawn-creature assertion stays true
-by construction. All three are polled off `character.state` once a frame rather than pushed by an
-event, since what moves them (an item in the bag, a title worn) publishes nothing.
+## Words
 
-**A name is sized in phone pixels, and every baked word wears an outline** (act three phase 6). A
-world unit is worth whatever the camera makes it, and a portrait camera stands far enough back to fit
-ten tiles across that it draws about 0.6 pixels to the unit at the player: the twelve units a name
-used to be came out five pixels of glyph, unreadable. `DEFAULT_LABEL_HEIGHT` is 22 now and
-`tests/render3d/nameplate.test.ts` holds it in pixels on a 390x844 phone rather than in units. The
-outline is baked into the same texture in `text.ts` — a coloured glyph with nothing round it reads
-only over the grounds it happens to contrast with — and it is the same black under every tone, so
-what a line says and what colour it says it in are still the fill's alone.
+**A plate over a head is stacked up from its bars** (`plate` in `ZoneView2D`): the mana bar at the
+bottom, then health, then the name, then a worn title or a quest marker over that. The bars are at
+the bottom so nothing put on above them moves them, since a health bar is the one thing on a plate
+read mid-fight; the mana bar is the player's alone and is left off outright for a class with no
+pool, since an empty bar reads as a caster who is out rather than a warrior. A creature's name is
+coloured by its level against the player's (`conColor`), and a creature's level is in its name
+(`Rat (Lv 1)`, decision 99). What moves a plate (an item in the bag moving a quest marker, a title
+put on) publishes nothing, so each is read off `character.state` every frame.
 
-**Every line on a plate is a fraction of the one it hangs off**, so `labelHeight` is the single
-number that squishes a whole plate and the gaps close with it — a plate that shrank its bar and kept
-a mob's spacing around it would not have got any smaller. The player's is squished and floats higher
-than everyone else's (`PLAYER_PLATE` / `PLAYER_PLATE_CLEARANCE` in `actors.ts`): theirs is the only
-one stacking a pool under the bar and a title over the name, and it is drawn on the figure the camera
-keeps centred, where a low camera angle pushes anything at head height into the head.
+**`drawnCounts()` counts one label per name over a creature, a person, a signpost and the player**,
+and nothing else, so smoke can hold the total to what the zone spawned; the name over a building's
+ridge is a `sign`, a quest marker a `marker` and a worn title a `title`, each counted apart for that
+reason.
 
-**`render3d/actors.ts` is one actor per simulated thing**, catching up to it in `sync()` once a
-frame — and an actor that forgets `dispose()` leaks GPU memory, so every one of them ends in
-`disposeTree` (`render3d/dispose.ts`, which frees geometry, material _and_ any texture hanging off
-it). An actor is three layers on purpose: an outer group holding the world position, a facing group
-holding the yaw from `facingYaw`, and the nameplate — which is billboarded by having its own
-rotation overwritten from the camera each frame, and so cannot live under something being turned to
-face where the creature is walking.
+**Every word is written in the world's font and baked once while it is drawn** (`render2d/text.ts`,
+`art/font.ts`). A word is outlined in the darkest ink whatever colour it is written in, which is what
+lets a name read over grass, water and a roof alike, and the view colours the ink, since what colour
+a name is is the game's to say. A word no frame drew is let go at the end of that frame: a damage
+number is a new word every blow, and a zone fought in for an hour would otherwise keep every number
+it ever showed. It is also what brings the canvas count back once a fight is over, which is how
+smoke sees a leak. **A capital is nine art pixels tall** (`tests/art/font.test.ts`), drawn at one art
+pixel, which a phone is given at a CSS pixel or more: the floor a name has held since act three
+(`docs/architecture/art.md` has the arithmetic).
 
-**A fight has motion in it, played off moments** (act three phase 7). `swing` is said from the one
-place each side swings (`CombatDirector`, and `AbilityCaster` for a blow), whether or not it lands,
-naming who swung and what at; a `hit` names the creature it landed on. The view hands both to the
-actor they belong to — `render3d/reactions.ts` brings a weapon over its grip or darts a beast forward,
-and flashes the emissive term of whatever was struck, white for a creature and red for the player —
-and `fx.ts` sprays sparks off a crit, chips off each of a gather's two beats, and a ring of light off
-`level-up`. None of it is state the world keeps: a mob is never "mid-swing" to anything but the view.
-**An enemy wind-up is drawn at the reach it lands at** (`render3d/telegraph.ts`): a red rim at the
-ability's `range` under the creature and a disc filling out to it as the wind-up runs down. The shout
-says something is coming; the rim says where the line is to be on the far side of, which is the whole
-of what the player can do about it. It reads `mob.windUp`, which is state, and fills on the view's
-clock from when it first saw it; it is built on a creature's first wind-up, since most never have one.
-A damage ability says whether it is `thrown` in its effect, the word enemy abilities already used;
-this asked `range > 0` before, which every damage ability has, so a Power Slash threw a magic bolt.
-**A shot is its own moment** (`shot`, act three phase 12): an arrow flown from the player to the
-target, pointing the way it goes and quicker than a bolt, and the figure drawing for it the way it
-swings. The bow is `WEAPON_RIGS.bow`, a stave bent away from its string (`WeaponHead` `bend`) that the
-world draws as a torus cut short and the paperdoll as a curve; the quiver is a tube at the hip with
-the fletching standing out of it. Both are rows in the shared rig, so the sheet and the world hold
-the same bow.
+## Moments
 
-**What is a moment and what is a state are drawn on different clocks** (`render3d/fx.ts`,
-`selection.ts`). A damage number and a bolt come off the `WorldEvent` channel, are handed to
-`FxLayer` by the host's tick, and age against the _view's_ clock — the same one the walk cycles and
-the campfire's flicker run on — because how long a number takes to fade is a decision about what is
-comfortable to read. A corpse's fall and fade are the opposite: `MobActor` reads them off
-`mob.deadForMs`, since the world has to respawn on time with nothing drawing it at all. Both the fx
-layer and the selection ring outlive a zone, like the camera and the lights, so a teardown `clear()`s
-them instead of taking them out of the scene. Effects play from a 0-1 progress rather than a delta,
-which is what makes a dropped frame invisible; `drawnCounts().fx` is how many are in flight, and it
-is the one thing in `DrawnCounts` a browser is genuinely needed for (jsdom cannot bake the text).
-**An effect's clock starts on the first frame that draws it**, not on the last frame before it was
-born. Effects arrive from the tick between two renders, and the gap was taken for a millisecond; on
-a phone taking 150ms a frame it is longer than an arrow's whole 140ms flight, so an arrow dated to
-the frame before was retired without ever being drawn. CI's smoke runner found it first, where the
-ranger's arrow-in-flight check read nothing; `fx.test.ts` now asks for the slow frame directly.
+**What is a moment and what is a state are drawn on different clocks.** A number, a burst and a
+flight come off the `WorldEvent` channel, are handed to the view by the host's tick
+(`render2d/effects.ts`), and age against the _view's_ clock — the one the walk cycles and the fire
+run on — because how long a number takes to fade is a decision about what is comfortable to read. A
+corpse's fall is the opposite (above). `drawnCounts().fx` is how many moments are in flight.
 
-**A tap is picked against boxes, not against the meshes** (`render3d/picking.ts`). Each actor
-answers `pickBox()` with the box a ray has to cross — its collision footprint, standing as tall as
-it is drawn, and never smaller than `MIN_PICK_SPAN`. Raycasting the real geometry looks more honest
-and is wrong twice over: a ray aimed at a figure's feet — which is what `view.worldToScreen(x, y)`
-answers, and roughly where a player aims — passes between its legs and out the other side, and a
-crab is 18 screen pixels wide on a phone. `pickTap` then tries node → signpost → NPC → mob →
-station → building → loot pile → ground, which is a **priority, not a depth sort**: a rat in
-front of the shopkeeper does not stop you shopping. Only within one kind does the nearest win. The
-ground is the mathematical `y = 0` plane rather than the terrain mesh, because the mesh stops at
-the map edge and the simulation does not.
+**A moment's clock starts on the first frame that draws it**, not on the last frame before it was
+born. Moments arrive from the tick between two renders, and on a phone taking 150ms a frame that gap
+is longer than an arrow's whole 140ms flight, so an arrow dated to the frame before was retired
+without ever being drawn. CI's smoke runner found it first, in the 3D view, where the ranger's
+arrow-in-flight check read nothing; the 2D view's effects are timed the same way from the start.
+
+**A fight has motion in it, played off moments.** `swing` is said from the one place each side
+swings (`CombatDirector`, and `AbilityCaster` for a blow), whether or not it lands, naming who swung
+and what at; the view turns that figure toward it and plays its blow, and a `hit` flinches whatever
+it landed on and bursts a star at its chest, in blood on the player and twice the size for a crit.
+A `shot` flies an arrow drawn as a line of pixels; a `bolt-cast` a fireball or the bandit's knife;
+each beat of a gather knocks chips, stone or a splash off the node on the side the player stands;
+a `level-up` stands a column of light up through the player. None of it is state the world keeps:
+a mob is never "mid-swing" to anything but the view. **A number rises off the top of what it came
+off**, found by what stands at the spot the moment names, so one thrown off a boss clears his head
+as one off a rat clears the rat's.
+
+**A wind-up is drawn at the reach it lands at**: a rim at the ability's `range` round the creature
+and a disc filling out to it as the wind-up runs down, on the ground under everything standing. The
+shout says something is coming; the ring says where the line is to be on the far side of, which is
+the whole of what the player can do about it. It reads `mob.windUp`, which is state, and fills on
+the view's clock from when it first saw that wind-up; the rim and disc are baked once a reach
+(`Telegraphs`), since a disc traced a row at a time would be hundreds of calls a frame for the
+king's.
+
+## Picking
+
+**A tap is picked against boxes, not against the pixels drawn** (`render2d/picking.ts`). A box is a
+rectangle on the ground's plane standing up the screen from where a thing's feet are
+(`standingRect`): its body's width or a tile for a figure, as tall as its sprite is drawn, reaching a
+quarter-tile below the feet since a thumb aims at a figure's feet as often as its middle and
+`view.worldToScreen(x, y)` answers the feet, and never smaller than `MIN_PICK_SPAN` either way,
+since a crab is a thumb's width at best. **A node is picked by its body**: a tree up its trunk and
+the lower half of its crown, so a creature behind the crown is still the creature, and a fishing
+spot as the patch of water round it (`lyingRect`). A corpse and a lapsed pile answer no box at all.
+
+**The kinds are asked in a priority, not a depth sort**: node → signpost → NPC → mob → station →
+building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
+within one kind does what is drawn in front win, the one whose feet are further down the screen.
+Every point is ground at worst: a flat view has no sky to miss into.
 
 **The last two are below the creatures for the same reason, and the building is the extreme case of
-it.** A kind ranked above mobs wins from _anywhere along the ray_, including well behind what is
-being aimed at — a forge is a tile of furniture near the middle of town and a shopfront is three
-tiles of it, so either one above the mobs silently eats every tap on the rat beyond it. The building
-is also the only kind that answers as something else: it resolves to `{kind: 'ground'}` at whatever
-`tapPoint` says — its doorstep, or the room once you are standing on that doorstep — which needs no
-new `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the context menu. Left to fall through
-instead, the ray would carry on over the roof and land on the grass _behind_ the building — which
-used to walk the player into the back wall and, now that a walk routes, walks them all the way round
-the block instead. The second is the worse of the two: a tap on a shopfront that ends up behind the
-shop is a minute of walking rather than a wall to back away from. And from _inside_, a building is
-not picked at all (`pickBox()` answers `null`), because there the same box is a lid over the floor.
+it.** A kind ranked above mobs wins wherever its box is — a forge is a tile of furniture near the
+middle of town and a shopfront is three tiles of it, so either one above the mobs silently eats
+every tap on the rat drawn over it. The building is also the only kind that answers as something
+else: whoever works in it, or `{kind: 'ground'}` at its door — or the room once you are standing on
+that doorstep — which needs no new `WorldTap` kind, no case in `ZoneWorld.tap` and no line in the
+context menu (`docs/architecture/buildings.md`). And from _inside_, a building is not picked at all
+(`pickRect()` answers `null`), because there the same box is a lid over the floor.
 
 **A loot pile is below all of them, and only above the ground**, for the forge's reason in its
 plainest form: a pile lies wherever something died, which is wherever the next creature is standing,
-so a sack ranked any higher would eat the tap on the rat standing over it — or on a rat anywhere in
-front of it along the ray. It is also the one drawn thing besides the fire that comes and goes
-mid-zone, and the only one there can be several of: `ZoneView3D` builds a `LootPileActor` the frame
-a pile appears in `world.lootPiles` and disposes it the frame the pile is gone, lapsed or emptied, so
-`drawnCounts().piles` follows the world's list and smoke holds the GPU flat across one being dropped
-and taken up. The sack is three primitives and no nameplate. It **blinks through the last ten
-seconds of its minute**, read off the pile's own clock rather than the view's, which is how it says
-it is going without a timer drawn over it (`docs/decisions.md` 66).
+so a sack ranked any higher would eat the tap on the rat standing over it. It is also the one drawn
+thing besides the fire that comes and goes mid-zone, and the only one there can be several of: the
+view draws a sack for each pile in `world.lootPiles` while it lasts, so `drawnCounts().piles`
+follows the world's list and smoke holds the canvas count flat across one being dropped and taken
+up. It **blinks through the last ten seconds of its minute**, read off the pile's own clock rather
+than the view's, which is how it says it is going without a timer drawn over it (`docs/decisions.md`
+66).
 
-**A tap and a drag are the same three events, and `host/orbit.ts` is what tells them apart.**
-A drag turns the camera's yaw around the player; a tap asks the world for something. The rule is a
-**latch**, not a comparison: a gesture becomes a drag once its _cumulative_ travel passes
-`TAP_SLOP_PX` and can never go back, because a drag out and back finishes where it started and
-releasing there must not walk the player somewhere. Time is the other half — a thumb resting on the
-screen past `TAP_MAX_MS` is not a request to walk. Only the horizontal component turns anything:
-pitch is not the player's to change, since it is what keeps the world clear of the tab bar _and_
-what guarantees every pixel on screen is ground rather than sky. The host owns the events, the
-pointer capture and `touch-action: none`; `ZoneView3D` owns the angle, and it outlives a zone.
+`tests/render2d/picking.test.ts` holds the priority, the boxes, the building's answers and the pile,
+and sweeps every creature in every zone across its whole wander disc, tapped from where a player
+stands to fight it with every counter, station and shopfront in the scene, since a creature is only
+ever _at_ its spawn on the frame the zone was built.
+
+## Gestures and the menu
+
+**A tap and a drag are the same three events, and `host/gesture.ts` is what tells them apart.** A
+tap asks the world for something; a drag asks for nothing. It turned the 3D camera, and since the
+camera no longer turns it is kept for what it still prevents: a flick meant to scroll, or a thumb
+sliding off a button, must not also walk the character. The rule is a **latch**, not a comparison:
+a gesture becomes a drag once its _cumulative_ travel passes `TAP_SLOP_PX` and can never go back,
+because a drag out and back finishes where it started and releasing there must not walk the player
+somewhere. Time is the other half — a thumb resting on the screen past `TAP_MAX_MS` is not a request
+to walk. The host owns the events, the pointer capture (so a drag that runs off the canvas still
+ends in a release here) and the canvas's `touch-action`.
 
 **A press held is the third thing those events can mean, and it is a question rather than a
 request.** Right-clicking — or, on a phone, resting a finger — asks what something is: the host
@@ -318,9 +282,9 @@ resolves the same pick a tap uses and calls `world.inspect(tap)`, which answers 
 tap and did nothing at all, so the phone's right click costs no gesture that meant something else.
 Reaching it **latches** (`holdAsLongPress`) — at exactly 500ms the press is a menu and never also a
 walk, which is not something a comparison against the clock can promise. The numbers live in
-`ui/gestures.ts` rather than in the renderer because `hud/longPress.ts` reads them too: a bag cell
-and a rat have to answer to the same press, and an element in an overlay has no drag to
-disambiguate against and no pointer to capture, so all that is left of the rule there is a timer.
+`ui/gestures.ts` rather than in the host because `hud/longPress.ts` reads them too: a bag cell and a
+rat have to answer to the same press, and an element in an overlay has no drag to disambiguate
+against and no pointer to capture, so all that is left of the rule there is a timer.
 
 The menu itself is the ask/answer split the shop makes, and the reason is the same one twice over.
 `world/ContextMenuSession.ts` holds **the only reference to the rat**; the HUD is handed a
@@ -333,23 +297,32 @@ a pure function of the data tables and is settled at the moment the menu opens: 
 screen is the number `rollLootTable` rolls against, and a card left up is describing rats rather
 than a stale rat. A loot pile is the one card handed state rather than an id, since there is no
 table to read a pile off; it is still settled at the open, and a pile only ever gets smaller, so a
-card left up can promise too much but never too little — Take is answered against what is there. Anything that ticks stays off it on purpose — a creature's current HP belongs to
-the target frame, which is redrawn as it changes.
+card left up can promise too much but never too little — Take is answered against what is there.
+Anything that ticks stays off it on purpose — a creature's current HP belongs to the target frame,
+which is redrawn as it changes.
 
-Two things follow from the camera being movable at all:
+## What the view holds, and what a frame costs
 
-- **W means up the screen, not north.** `InputState.setViewYaw()` rotates the keyboard's vector into
-  simulation space, and the host sets it whenever a drag moves the camera. Without it the two mean
-  the same thing only while the camera is looking north, which is disorienting in a way no state
-  assertion calls a bug.
-- **Whatever the camera ends up behind gets faded** (`render3d/occlusion.ts`), because you cannot
-  tap what you cannot see and tapping is the whole game. One ray from the camera to the player's
-  feet — the lowest point on them, so it fades a fraction early — against a box per prop. The box is
-  the **drawn** canopy, not the collision trunk it stops you with and not the thumb-sized volume it
-  is picked by: three different questions about the same tree. A **building** answers two of the
-  three with its footprint — what hides you and what a thumb aims at — where what stops you is its
-  walls, and it is the thing the fade exists for most, being the only object big enough to leave
-  nothing on screen to tap. Its sign is deliberately left solid: a shopfront the camera is behind
-  still has to say which shop it is. Fishing spots are excluded on purpose, being the one prop drawn
-  transparent already. And a building the player is _inside_ opts out of the fade entirely — see the
-  cutaway above, which is the same question with the opposite answer.
+**Every canvas the view makes is made and let go through one pool** (`render2d/canvases.ts`), and
+`view.canvases()` is the count. What it holds is canvases: a sprite sheet a setting, kept for the
+session since the beach and town draw from the same one; the player's figure; and for the zone, the
+baked ground, each building's three pictures, the shadows it has cut, the telegraph rings, the
+lantern, and every word on screen. A zone change is a view rebuild: `teardown()` lets go of
+everything made for the zone, and `build()` makes it again for the next. A canvas nobody let go is
+invisible to every state assertion and to the screen, so smoke's `teardown` holds the count flat
+across three zone round trips, having swept the camera over the zone first since some canvases are
+made only when a frame first asks for them; the loot sack, a helmet put on, a landed arrow and a
+round trip out of Greyford are held to it too.
+
+**What a frame costs is measured rather than assumed.** `DebugView.drawTime()` is a rolling mean of
+what the last thirty drawn frames cost, kept by the host so it times the call _into_ the view
+(`host/frameTimer.ts`); smoke's `throttled` section asserts `SLOW_DRAW_BUDGET_MS` on it under an
+eight-times slower CPU. **It is 16ms** (decision 110): the 2D view reads 2-3ms on CI on a full run
+and 5-8ms in a loaded dev container, against the 25ms the 3D view read under a 40ms ceiling, and 16
+is where the draw alone stops fitting a 60fps frame. A regression planted to test it, every word on
+screen baked again each frame, read 46ms in the container — about seven times the game, which on
+CI's baseline is over the new ceiling and would have been under the old one — and no other check in
+smoke noticed it, since the canvas count stayed flat. Read it off a **full** run — the section
+carries state forward from every one before it, so `--section=throttled` alone is a lighter game
+and a different number — and off CI rather than a dev container before believing a failure
+(decision 50). Raising the ceiling is a decision about the game, not about the run that hit it.

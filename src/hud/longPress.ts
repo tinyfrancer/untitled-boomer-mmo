@@ -5,8 +5,8 @@ import type { ScreenPoint } from '../ui/uiEvents';
  * "Ask about this", on a piece of HUD furniture: a right click, or a finger
  * held still on it.
  *
- * The world makes this decision inside the gesture that also turns the camera
- * (`host/orbit.ts`), and the two share the numbers rather than the code:
+ * The world makes this decision inside the gesture that also tells a tap from
+ * a drag (`host/gesture.ts`), and the two share the numbers rather than the code:
  * an element in an overlay has no drag to disambiguate against and no pointer
  * to capture, so all that is left of the rule here is a timer and the slop that
  * cancels it. `ui/gestures.ts` is what keeps a bag cell and a rat answering to

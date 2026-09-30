@@ -28,16 +28,18 @@ change touches the renderer, an actor or the HUD. Screenshots land in gitignored
 
 It runs on a **portrait phone in a touch-capable context**, which is what the game is laid out
 for; two sections leave that viewport on purpose and say why (a landscape resize, and a desktop
-block for the HUD rules that differ on a roomy screen). Every section draws in 2D, the game's view
-since B3, and the `renderer-3d` section at the end holds the fallback, including the one thing only
-it has, a camera a drag turns (decision 106). Five things in it exist nowhere else:
+block for the HUD rules that differ on a roomy screen). Every section draws in the one view there
+is, the 2D one (a `renderer-3d` section held the 3D fallback from B3 until B7 deleted it). Five
+things in it exist nowhere else:
 
 - **The teardown.** Three zone round trips have to leave what the view holds where they found it:
-  the canvases the 2D view made (`gpuMemory().textures`, B7 renames it), and under `?renderer=3d`
-  `renderer.info.memory`. The 3D number counts what has actually been _uploaded_, which is why both
-  snapshots are taken after sweeping the camera over the whole zone: compared from wherever the
-  player happened to be standing, it would move with a rat wandering into frame.
-- **A finger, not a mouse.** The drag/tap disambiguation and `touch-action: none` are phone rules
+  the canvases it made (`canvases()`, every one made and let go through `render2d/canvases.ts`).
+  Some are made only when a frame first asks for them (a shadow of a new width, a word while it is
+  on screen), which is why both snapshots are taken after sweeping the camera over the whole zone
+  and parking in the same spot: compared from wherever the player happened to be standing, the
+  count would move with a rat wandering into frame. The loot sack, a gear change, a landed arrow
+  and a round trip out of Greyford are held to the same count.
+- **A finger, not a mouse.** The drag/tap disambiguation and the canvas's `touch-action` are phone rules
   and a mouse can break neither — it never pans the page and is never a thumb resting on the
   screen. Touch sequences go through CDP `Input.dispatchTouchEvent`; Playwright's touchscreen can
   tap but not drag.
@@ -63,11 +65,11 @@ It reaches the game through three dev-only handles, one per channel:
 - **`window.world`** — the live `ZoneWorld`, re-set on every zone change since each builds a new
   world: `world.mobs`, `world.player.hp`, `world.teleport(x, y)`.
 - **`window.view`** — the handful of questions only whatever is drawing can answer:
-  `worldToScreen(x, y)`, `drawnCounts()`, `playerFigure()`, `gpuMemory()`, `drawTime()` and
+  `worldToScreen(x, y)`, `drawnCounts()`, `playerFigure()`, `canvases()`, `drawTime()` and
   `step()`. The interface is `src/types/debugView.ts`, and it is deliberately a small
   renderer-agnostic one — that is what let the renderer be replaced under smoke rather than
   alongside it. There are three questions about a frame and they are different questions:
-  `drawnCounts()` is what is in it, `gpuMemory()` is what the card is holding, and `drawTime()` is
+  `drawnCounts()` is what is in it, `canvases()` is what the view is holding, and `drawTime()` is
   what it costs in milliseconds — the last of which is a **budget** rather than an observation, and
   is the one thing on this handle smoke asserts a ceiling on.
 - **`window.events`** — the HUD channel, which is neither of the other two. It is how a check
@@ -101,9 +103,8 @@ Two environment notes that will otherwise waste your time:
   global that vitest's jsdom environment leaves as an unusable stub, which broke every
   persistence test with `localStorage.clear is not a function`. Don't delete that setup file, and
   don't "fix" `LocalStorageSaveService` to work around it — the source was never the problem.
-- **The first `npm run dev` request cold-compiles the whole engine** — ~520 kB of Three.js — and
-  can take far longer than a normal page load, so browser waits need generous timeouts on a cold
-  cache.
+- **The first `npm run dev` request cold-compiles the whole game**, and can take far longer than a
+  normal page load, so browser waits need generous timeouts on a cold cache.
 
 **Reproducing a frame-rate-dependent bug.** A cheap phone steps the game at single-digit fps and
 bugs hide there (see "Frame rate is not an assumption you may make" below). Ask for the frame you
@@ -111,14 +112,16 @@ want rather than throttling a machine into producing it: `view.step(140, 50)` is
 ~7fps, deterministically, and in vitest the harness's `tick(steps, deltaMs)` does the same thing.
 
 That covers bugs in our own maths, which is all of them so far — and it is only half of what a
-cheap phone is. The other half is a machine that cannot draw a frame in time, and **smoke's last
+cheap phone is. The other half is a machine that cannot draw a frame in time, and **smoke's throttled
 section throttles itself for it**: `Emulation.setCPUThrottlingRate` at `rate: 8` while the crank is
 turned at 140ms. Keep the two straight, because they fail differently. The delta is the
 simulation's question and is arithmetic — `arriveRadius`, the substep cap, the exit margin — so it
 is unit-testable and mostly unit-tested. The throttle is the renderer's, and is not testable
 anywhere else: whether a real press and release still read as a tap when the only clock between
 them is a slow device's (`TAP_MAX_MS` is wall clock, and wall clock is exactly what a slow device
-inflates), and whether the camera a ray is cast through has been moved this frame.
+inflates), whether the camera a tap is read through has been moved this frame, and what a frame
+costs to draw: `SLOW_DRAW_BUDGET_MS`, 16ms since B7 (decision 110), which the throttled section
+asserts on `drawTime()` off a full run.
 
 Reach for the recipe directly only for something smoke does not cover:
 

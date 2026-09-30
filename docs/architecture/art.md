@@ -1,8 +1,9 @@
 # Art
 
 The style guide version 2 is drawn to, and how a sprite gets from text to the screen: the tile, the
-scale, the palette, the light, the outline, the animation budget, the sprite format, the compile
-step, recolouring, the world's font, and which renderer draws it.
+scale, the palette, the light, the outline, the animation budget, the sprite format, the people,
+creatures, moments and places drawn in it, the compile step, recolouring and the world's font.
+How the view draws it all is `docs/architecture/rendering.md`.
 
 _Written in version 2's phase B1 (`docs/decisions.md` 100 and 101); B2 added the edges between
 grounds, the world's font, the first people and creature, the building kit and the 2D view that
@@ -13,16 +14,16 @@ they chose and what they have on, drew every weapon and offhand as the item it i
 townsfolk (decision 107). B5 drew every creature, the bosses grown and the goblins shrunk from the
 same figure, and the moments: hits, crits, a level, what flies, the telegraphs, the loot sack
 (decision 108). B6 drew the places: every node and what it leaves, the stations and the fire, the
-chips a stroke knocks loose, and what stands in a room, the counter included (decision 109). Where
-this and the code disagree, the
-code is right — and this file is what should be corrected. `rendering.md` is still the 3D renderer's,
-the fallback behind `?renderer=3d`, until B7 retires it._
+chips a stroke knocks loose, and what stands in a room, the counter included (decision 109). B7
+deleted the 3D view and moved this file's account of the 2D one into `rendering.md` (decision 110).
+Where this and the code disagree, the code is right — and this file is what should be corrected._
 
 **The art is data, and it depends on nothing** (decision 81). A sprite is text in `src/art/`:
 rows of characters, one per pixel, each a key in the sprite's legend, which names a palette step.
 The compiler turns that into pixels at boot, so the game still loads no image file. `src/art/`
-imports no package at all (`tests/art/sprites.test.ts` holds it), because it has to outlive the
-renderer that first draws it: Part B replaces one renderer with another, and B7 deletes the old one
+imports no package at all (`tests/art/sprites.test.ts` holds it, and since B7
+`tests/architecture/seam.test.ts` holds the whole of `src/` to it), because it has to outlive the
+renderer that first draws it: Part B replaced one renderer with another, and B7 deleted the old one
 underneath whatever was written against it.
 
 ## The tile and the scale
@@ -36,7 +37,7 @@ Link to the Past or Stardew; a beast is a tile square, or 48 or 64 pixels for a 
 renderer draws into is as many art pixels as the screen holds, and the page scales it to the screen
 with `image-rendering: pixelated`. The scale is the whole number of device pixels to the art pixel
 that frames closest to ten tiles across the screen's smaller side, which is the framing the 3D
-camera holds (`TARGET_TILES_ACROSS`): four on a 390-point phone at three device pixels to the point
+camera held (`TARGET_TILES_ACROSS`): four on a 390-point phone at three device pixels to the point
 (9.1 tiles across), two on a 360-point phone at two (11.3), two on a 1280×720 desktop (11.3 tall).
 A whole number is what keeps every art pixel the same square on screen; a fraction would draw some
 pixels a device pixel wider than their neighbours, and a pixel-art game shimmers when it scrolls.
@@ -399,9 +400,9 @@ since a splash is light and the water it comes off is coloured by the setting), 
 node the player stands on and at the height the tool lands.
 
 **What stands in a room is `art/rooms.ts`** (decision 109): the 3D view's fittings table moved out of
-`render3d/` so both views stand the same furniture in the same places (the 3D view reads it until
-B7), each fitting against a wall named from the doorway looking in, on ground no deeper than the
-wall. The 2D view draws each against its wall by compass: from the front against the north wall
+`render3d/` in B6 so both views stood the same furniture in the same places, each fitting against a
+wall named from the doorway looking in, on ground no deeper than the wall. The view draws each
+against its wall by compass: from the front against the north wall
 (**shelves** long enough to show either side of whoever stands in front, a **hearth** with its
 chimney breast up the wall, a heavy **bench**), along its length against a side wall (the bench seen
 lengthways, a **bed** seen from above, a hearth with its mouth facing the room), and against the
@@ -486,7 +487,7 @@ nameplate, a damage number, a sign) is baked onto the canvas anyway, so a font d
 costs no file. **A capital is at least nine art pixels tall**, drawn at one art pixel: the smallest
 scale a phone is given is one CSS pixel to the art pixel (a 360-point phone at two device pixels to
 the point), and the nameplate has held nine pixels of glyph as its floor since act three
-(`tests/render3d/nameplate.test.ts`). Drawing the font at two art pixels to its pixel would clear the
+(`tests/art/font.test.ts` holds the capitals). Drawing the font at two art pixels to its pixel would clear the
 floor with smaller glyphs, and would put two sizes of pixel on one screen, which is the one thing
 the whole-number scale exists to prevent. **The font is `art/font.ts`**: capitals nine pixels tall,
 small letters six with three more for a tail, the punctuation names and numbers need, and a
@@ -519,85 +520,15 @@ coin for the bank, crossed swords, a shield, an anvil, a tankard, a sheaf and sc
 hung from a bracket just inside the doorway over the dark of the room, or in the middle of a wall
 with no door in it. From inside it is a plank floor
 ringed by the walls' tops, drawn with the ground, and **only the back wall standing**, open where a
-north door is in it: the roof and the front come off the way the 3D cutaway takes them. The three
+north door is in it: the roof and the front come off the way the 3D cutaway took them. The three
 shapes are the one kit recoloured (`BUILDING_LOOKS`): slate over plaster for a hall, thatch for a
 cottage, shingles over boards for a workshop. What stands in a room is below, under Places.
 
 ## The renderer
 
-**Version 2 is drawn with Canvas 2D** (decision 101), chosen by the spike B1 was asked to run
-against Three.js with an orthographic camera and PixiJS. The three drew the same scene, a zone at
-C1's size with 60 and then 150 figures, their shadows and nameplates, ten effects and the lantern,
-under the eight-times CPU throttle smoke's budget is asserted at, and Canvas 2D was the cheapest by
-every measure: under a millisecond a frame against two for PixiJS and three to four for Three.js,
-still the cheapest by two and a half times with each frame forced to finish, and the only one whose
-frames kept pace. It adds no dependency, where the others add 100 kB or more.
-
-What that asks of the 2D view, which the 3D one got from its engine:
-
-- **Draw in painter's order.** The ground, then shadows, then everything standing sorted by where
-  its feet are, then effects, then the words. Nothing else decides what is in front.
-- **The terrain is baked, not drawn a tile at a time.** A zone's ground is drawn once onto a canvas
-  of its own when the zone is built, and a frame draws the window the camera sees in one call; only
-  what moves (water, a fire) is drawn over it each frame.
-- **Light is drawn over the scene, not computed.** The lantern is a stamp of darkness with a clear
-  disc in it, drawn centred on the player; a flash is a frame the compiler made, not a tint.
-- **The memory check counts canvases.** The 3D view's leak check read what the GPU held; the 2D
-  view holds canvases (the atlas, the baked ground), and a zone change that does not let go of the
-  last zone's is the leak smoke has to find. B7 rewrites the check.
-
-Headless Chromium has no GPU, so the spike's numbers are software drawing both ways, not a phone.
-They are the numbers the budget is asserted on, and the ordering did not change with what was
-counted; on a phone, Chrome and Safari draw a canvas on the GPU.
-
-**The view as built** (`src/render2d/`, B2) is `ZoneView2D`, **the game's view since B3** (decision
-106), with the 3D view loaded only for `?renderer=3d` until B7 deletes it; both are handed to the
-same host (`host/host.ts`, behind the `ZoneView` interface both answer):
-
-- **The camera** (`camera.ts`) picks the scale, sizes the canvas to the screen in art pixels
-  rounded up, and stands the player in **the middle of the band above the tab bar**, following them
-  to the map's edge rather than stopping at it: the tab bar eats every tap on it, and a camera
-  clamped to the map is what hid the south signpost under it the last time the game was 2D.
-  Every position is a whole art pixel, the camera's rounded from the player's own, so the player is
-  drawn at the same screen pixel every frame. The ground runs on past the map for eight tiles and
-  fades over four into a dark murk (`terrain.ts`), the 3D apron's trick in the 2D view's mood, and
-  a soft vignette darkens the screen's corners, drawn over the world and under the words.
-- **What is drawn comes from the world each frame**; the view keeps no scene. The sprite sheet is
-  compiled once a setting and kept for the session, and **the player's figure is a sheet of its
-  own**, put together from their class, their look and their gear (`playerSprite`) and compiled
-  again when one of those changes, which the view reads off the world each frame and compares
-  rather than being told; the old sheet's canvas is let go as the new one is made, and one compile
-  serves every setting, since a person is drawn only in shared ramps. The ground and the buildings
-  are compiled once a zone, and every word once while it is drawn (`text.ts`): a word no frame drew is let go at the end of that
-  frame, so a fight's numbers do not pile up and the canvas count comes back when it is over.
-  **Every canvas is made through one pool**
-  (`canvases.ts`) and counted, which is what `gpuMemory()` reports and smoke holds flat across
-  zone round trips.
-- **What lies on the ground is drawn with it** and everything standing is sorted with the
-  people: a fishing spot's rings over the ground and under the shadows, and nodes, stations, the
-  fire, a sack and, while the player is in a room, its furniture and counter, each by where its foot
-  is. A tree's crown the player has walked behind is drawn at half strength, the roof's rule.
-- **An animation plays on the budget's clock** (`animation.ts`): a figure faces the way it mostly
-  moves, walks when moving and breathes when not, and a blow or a flinch told by a `WorldEvent`
-  plays through once over it. A corpse falls on the world's `deadForMs` and lies for 300ms after
-  its fall before it is gone.
-- **The moments are a layer of their own** (`effects.ts`): what a `WorldEvent` became (a number,
-  a burst, a flight), each timed from the first frame that draws it, drawn over everything
-  standing and under the lantern and the words; and the telegraphs, drawn from each creature's
-  wind-up, which is state, on the ground under everything standing. A contact shadow is cut
-  once a width a zone, so a sack, which comes and goes mid-zone, stands on a person's.
-- **A tap is picked against flat boxes in the 3D view's priority** (`picking.ts`): a rectangle
-  standing up the screen from where a thing's feet are, no smaller than a thumb and reaching a
-  little below the feet, and within one kind the one drawn in front wins. A building answers as
-  the 3D one does, whoever works there or the ground at its door, and nothing from inside. A node
-  is picked by its body, as the 3D view picked it: a tree up its trunk and the lower half of its
-  crown, so a creature behind the crown is still the creature, and a fishing spot as the patch of
-  water round it. The sweep that holds every creature tappable from where a player fights it runs over the flat boxes
-  too (`tests/render2d/picking.test.ts`).
-- **What smoke asks of it** is the whole run, every section of which draws in 2D: the canvas at a
-  whole scale (`boot`), every thing drawn and canvases flat over three round trips (`teardown`),
-  picking, the shopfront, a drag that turns nothing, and the draw budget under the eight-times
-  throttle; the creation screen's cards drawn in the look chosen and drawn again when it changes,
-  and the character made in it (`boot`), and a helmet put on the figure with the canvas count flat
-  (`character-sheet`). The `renderer-3d` section holds the fallback: that it boots, draws town, and that its
-  camera still turns under a drag with W walking up the turned screen.
+**Version 2 is drawn with Canvas 2D** (decision 101), and how the view draws what this guide
+describes — painter's order, the baked ground, the camera and the tab bar, the words, the moments,
+picking, what the view holds and what a frame costs — is `docs/architecture/rendering.md`, which
+became the 2D view's when B7 deleted the 3D one (decision 110). What the choice of renderer asks of
+the art is all said above: a sprite is drawn at whole art pixels, light is drawn over the scene
+rather than computed, and what never moves is baked.

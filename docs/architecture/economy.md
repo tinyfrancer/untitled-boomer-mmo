@@ -135,7 +135,7 @@ data in four crafting tables.
 `ZoneWorld.approachNpc` keeps that honest with two tables keyed by counter — `COUNTER_WALKS`, what
 the walk toward each is called, and `Counters`, the session behind each — rather than a pair of
 matching conditionals: which counter to open and what the walk toward it is called are the same
-fact, and the two drifting apart is how a walk ends at the wrong desk. `NPC_APPEARANCES` is keyed by `NpcId` for
+fact, and the two drifting apart is how a walk ends at the wrong desk. `TOWNSFOLK` in `art/cast.ts` is keyed by `NpcId` for
 the same reason `NO_GEAR` is keyed by `GearSlotId`: a new person is a compile error until they have a
 look, and `zoneMap` puts them on the map off `npcSpawns` with nothing else written down.
 
@@ -218,7 +218,7 @@ should give (a rat in front of the shopkeeper must not stop you shopping), so wh
 spacing: the two town rats spawned with the banker and the shopkeeper _inside_ their wander disc,
 and were untappable whenever they drifted that way. `zones.ts` had already written this down over
 the forge's placement and moved the furniture for it, having learned it the same way — as a finger
-tap in smoke that selected nothing, one run in three. `tests/render3d/picking.test.ts` holds it now
+tap in smoke that selected nothing, one run in three. `tests/render2d/picking.test.ts` holds it now
 over every zone, swept across each mob's whole wander disc rather than checked at the spawn point,
 because a creature is only ever _at_ its spawn on the frame the zone was built. The counters moving
 indoors is the same rule paid by somebody else: no mob's disc may reach inside a building either, so

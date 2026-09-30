@@ -33,7 +33,7 @@ export const TOWN_MOB_SPAWNS: MobSpawnPoint[] = [
    * The disc has to stay out of the **buildings** too, and that one is about
    * seeing rather than tapping: a rat behind the general store is a rat drawn
    * inside a wall, and nothing fades a building the player is not standing
-   * behind. `tests/render3d/picking.test.ts` sweeps the first and
+   * behind. `tests/render2d/picking.test.ts` sweeps the first and
    * `tests/systems/BuildingSystem.test.ts` the second.
    */
   { dx: 0, dy: 224, enemyId: 'rat', level: 1 },

@@ -15,19 +15,17 @@ export const FRAME_WINDOW = 30;
  * A rolling mean of what the last frames cost to draw.
  *
  * This is the whole of the frame budget's instrument: `drawnCounts()` answers
- * what is drawn and `gpuMemory()` what it costs the card to hold, and until
- * this existed nothing answered what it costs in *time* — so the rule that
- * every lighting change is measured before it lands was a comment rather than a
- * check.
+ * what is drawn and `canvases()` what the view holds, and until this existed
+ * nothing answered what it costs in *time* — so the rule that every lighting
+ * change is measured before it lands was a comment rather than a check.
  *
  * It measures the call into whatever is drawing, which is CPU time spent
- * issuing a frame rather than the card's own. That is the half a second shadow
- * pass moves and the half a throttled CPU inflates, which is what the gate in
- * `scripts/smoke.mjs` is about; a fill-rate regression would need a different
- * instrument and does not have one.
+ * issuing a frame rather than the GPU's own. That is the half a throttled CPU
+ * inflates, which is what the gate in `scripts/smoke.mjs` is about; a
+ * fill-rate regression would need a different instrument and does not have one.
  *
- * Engine-free on purpose, like `orbit.ts` beside it: the host times its own
- * call to the view, so a renderer swapped in underneath is measured with
+ * Kept by the host rather than by the view, like the gesture beside it: the
+ * host times its own call to the view, so whatever draws is measured with
  * nothing written for it.
  */
 export class FrameTimer {

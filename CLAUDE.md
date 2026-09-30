@@ -106,9 +106,9 @@ vitest. `tests/world/harness.ts` hands back the world, the character, the keyboa
 `tick`/`until` pair measured in game milliseconds.
 
 **`scripts/smoke.mjs` covers what only a browser can**: the game booting, real mouse, touch and key
-events, the view building and _unbuilding_ itself (GPU memory flat across zone round trips), the
+events, the view building and _unbuilding_ itself (canvases flat across zone round trips), the
 HUD's geometry at real viewport sizes, the save round trip through a reload, and a CPU-throttled
-draw budget. Reach for it whenever a change touches the renderer, an actor or the HUD. It runs on a
+draw budget. Reach for it whenever a change touches the renderer, the art or the HUD. It runs on a
 portrait phone in a touch-capable context, under **`?loop=manual`**, which puts the simulation on a
 hand crank (`window.view.step(deltaMs, frames)`), so every wait is in game milliseconds.
 
@@ -122,8 +122,8 @@ Two environment notes that will otherwise waste your time:
 
 - **`tests/setup.ts` installs an in-memory `Storage`.** Don't delete it, and don't "fix"
   `LocalStorageSaveService` to work around the stub Node's own `localStorage` leaves in jsdom.
-- **The first `npm run dev` request cold-compiles the whole game** (and `?renderer=3d` another
-  ~520 kB of Three.js), so browser waits need generous timeouts on a cold cache.
+- **The first `npm run dev` request cold-compiles the whole game**, so browser waits need generous
+  timeouts on a cold cache.
 
 **A frame-rate bug is reproduced by asking for the frame, not by throttling a machine**:
 `view.step(140, 50)` in a browser, `tick(steps, deltaMs)` in the harness. The draw budget is the
@@ -135,22 +135,24 @@ loaded dev container reads 10ms high). `docs/architecture/testing.md` has the fu
 **Stack**: TypeScript bundled with Vite, rendered in 2D with Canvas 2D (`src/render2d/`): pixel art
 drawn at art resolution and scaled up by whole device pixels (decision 101,
 `docs/architecture/art.md`). It was Phaser 4 in 2D, then Three.js in 3D after
-`docs/archive/3d_port_plan.md`, and version 2 takes it back to 2D: B2 started the 2D view behind a
-flag, B3 made it the game (decision 106), and the 3D view (`src/render3d/`) is loaded only for
-`?renderer=3d`, honoured in production, until B7 deletes it and Three.js with it. No backend — everything is a static site.
-Character data lives in the browser's `localStorage`.
+`docs/archive/3d_port_plan.md`, and version 2 took it back to 2D: B3 made the 2D view the game
+(decision 106) and B7 deleted the 3D view and Three.js with it (decision 110). **The game has no
+runtime dependency**: `package.json` has no `dependencies`, and nothing in `src/` imports a package.
+No backend — everything is a static site. Character data lives in the browser's `localStorage`.
 
-**The core seam: `render3d/` knows there is an engine and nothing else does.** `systems/`, `data/`,
-`persistence/`, `types/`, `config/`, `world/`, `hud/`, `ui/`, `host/` and `art/` are plain
-TypeScript that would run under any renderer or none, and `src/bootFlow.ts` takes a `GameHost`
-rather than anything the engine defines. The host (`host/host.ts`) takes whichever view `main.ts`
-builds through the `ZoneView` interface both answer, so a host duty is written once for both. It is what makes them unit-testable with no engine to mock, and the boundary a whole
-renderer was swapped across. Put new rules in those modules and call them from the view, never
-inline in an actor. `tests/architecture/phaserFreeSeam.test.ts` guards the old engine staying out.
+**The core seam: `render2d/` draws the world and nothing but `main.ts` imports it.** `systems/`,
+`data/`, `persistence/`, `types/`, `config/`, `world/`, `hud/`, `ui/`, `host/`, `audio/` and `art/`
+are plain TypeScript that would run under any renderer or none, and `src/bootFlow.ts` takes a
+`GameHost` rather than anything a view defines. The host (`host/host.ts`) takes the view `main.ts`
+builds through the `ZoneView` interface (`host/zoneView.ts`), so a host duty is never written inside
+the view. It is what makes the rest unit-testable with nothing to mock, and the boundary the renderer
+was swapped across twice. Put new rules in those modules and call them from the view, never inline
+in a drawing. `tests/architecture/seam.test.ts` holds all three: no package imported anywhere in
+`src/`, no runtime dependency, and `render2d/` imported by `main.ts` alone.
 
 **The simulation is `src/world/`; a view only draws it.** `ZoneWorld` owns the player, the mobs and
-the nodes and steps them from `update(deltaMs)`; the 2D view draws each frame from it as it stands
-and keeps no scene, and the 3D view's actors (`render3d/actors.ts`) catch up to it in `sync()`. New gameplay goes in the world, not the view. Nothing in
+the nodes and steps them from `update(deltaMs)`; the view draws each frame from it as it stands and
+keeps no scene. New gameplay goes in the world, not the view. Nothing in
 `world/` may own an engine timer or tween — every clock is an accumulator against the frame delta —
 and collision bodies are data (`EnemyDefinition.body`), never measured off anything drawn.
 
@@ -163,9 +165,9 @@ the tick order, what is selected, the publishers that speak only on change, and 
 that stop everything at once: a zone change, a death, a teardown.
 
 **`GameContext` is the session** — everything that outlives a zone — and the only thing that builds
-or tears down a world. **A zone change is a view rebuild**: whatever creates a mesh destroys it
-(`disposeTree` frees geometry, material and texture), and smoke holds GPU memory flat across round
-trips because a leak is invisible everywhere else. Anything the HUD must hear before it is mounted
+or tears down a world. **A zone change is a view rebuild**: every canvas the view makes is made and
+let go through one pool (`render2d/canvases.ts`), whatever makes one lets it go, and smoke holds the
+count (`view.canvases()`) flat across round trips because a leak is invisible everywhere else. Anything the HUD must hear before it is mounted
 goes in the notification queue, not an event.
 
 **There are two channels out of the simulation, and they are not interchangeable.** The **HUD
@@ -179,15 +181,15 @@ more than two or three values are one object.
 ways, and its map, mobs, nodes, NPCs, buildings and stations come from that row. Walking is the only
 way into a zone. **An exit needs its whole shared edge walkable on both sides, one arrival-inset
 in**, and every spawn, building and wander disc is held by sweeps (`ZoneSystem.test.ts`,
-`BuildingSystem.test.ts`, `spawnSafety.test.ts`, `render3d/picking.test.ts`) — expect a new zone or
+`BuildingSystem.test.ts`, `spawnSafety.test.ts`, `render2d/picking.test.ts`) — expect a new zone or
 exit to cost a spawn or a building moved somewhere else.
 
 **Data-driven definitions** (`src/data/`, keyed by the id unions in `src/types/ids.ts`): classes,
 items, enemies, spawns, loot, quests, bounties, recipes, zones, maps. Prefer a row over code — a new
-enemy is an `ENEMIES` row plus a loot table, and the renderer picks its body from `shape` and its
-colour from `render3d/palette.ts` without a line written for its id. `Record<Id, …>` and
+enemy is an `ENEMIES` row plus a loot table, and it is drawn as its `shape`'s placeholder without a
+line written for its id. `Record<Id, …>` and
 `exhaustive<Id>()` are how a new id becomes a compile error everywhere it has to be answered.
-In the 2D view a new creature is also a row in `art/cast.ts` saying what it is drawn as, which a
+A new creature is also a row in `art/cast.ts` saying what it is drawn as, which a
 test holds every creature to (until then it is its shape's placeholder), and a new node or station
 a row in `art/places.ts` (until then a node is its shape's drawing, and a vein drawn in no ore,
 which a test holds every vein against: its ore is drawn in the colour of what it yields).
@@ -237,11 +239,14 @@ what it counts** (decisions 89 and 99): a stat is named in full off `BONUS_NAMES
 rather than abbreviated where it is drawn, a locked row says what it Needs, and a panel is titled
 with its tab's own word. Nothing but the panel titles is held by a test, so a new surface keeps it.
 
-**The renderer loads no files.** Every mesh is primitives, terrain is one vertex-coloured mesh, and
-the only textures are text baked onto a canvas (`docs/decisions.md` 54 keeps it that way). A tap is
+**The renderer loads no files and draws in painter's order** (`docs/decisions.md` 54 and 101).
+Every picture is a sprite compiled from data at boot, the ground is baked onto one canvas once a
+zone, and a frame draws the ground, the shadows, everything standing sorted by where its feet are,
+the moments, the lantern and then the words — nothing else decides what is in front. A tap is
 picked against boxes in a fixed **priority** (node, signpost, NPC, mob, station, building, loot
-pile, ground), not a depth sort. What a frame costs is a budget smoke asserts under an eight-times-throttled CPU;
-raising it is a decision about the game, not about the run that hit it.
+pile, ground), not a depth sort. What a frame costs is a budget smoke asserts under an
+eight-times-throttled CPU (`SLOW_DRAW_BUDGET_MS`, 16ms since decision 110); raising it is a decision
+about the game, not about the run that hit it. `docs/architecture/rendering.md` has the view.
 
 **Version 2's art is data** (`src/art/`, decisions 81 and 100): a sprite is rows of characters
 naming palette steps, compiled at boot into an atlas, and `src/art/` imports no package so it
@@ -256,8 +261,8 @@ zone is a row in `sprites/edges.ts` (a test sweeps the maps, so a new pair is a 
 may lay blocking ground over walkable ground, which is why rock shows its face inside its own cell.
 **Scatter is baked into the ground** (`art/scatter.ts`), never where an edge is drawn. **A building is a
 kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
-and **what stands in its room is `art/rooms.ts`** (decision 109), which the 3D view reads too until
-B7: nothing in it blocks, so `tests/art/rooms.test.ts` is all that keeps the furniture and the
+and **what stands in its room is `art/rooms.ts`** (decision 109): nothing in it blocks, so
+`tests/art/rooms.test.ts` is all that keeps the furniture and the
 counter out of where the game stands a body. **Who is drawn with what** is
 `art/cast.ts`, anything not in it being its kind's placeholder, and **what each place is drawn as**
 is `art/places.ts`.
@@ -296,15 +301,15 @@ Change a stat, a table or a curve and retune until those pass rather than eyebal
 | ------------------------------------------------------------------ | --------------------------------- |
 | The tick, collaborators, session, channels, death, pathing, saves  | `docs/architecture/simulation.md` |
 | The zone roster, exits, locks, the Greyford loop                   | `docs/architecture/zones.md`      |
-| Walls, doorways, rooms, counters indoors, the cutaway, room light  | `docs/architecture/buildings.md`  |
+| Walls, doorways, rooms, counters indoors, the cutaway              | `docs/architecture/buildings.md`  |
 | Shop shelf, selling, bank, NPC roles, reforging, the full pack     | `docs/architecture/economy.md`    |
 | Tools, recipes, stations, tiers, cooking, dead ends                | `docs/architecture/making.md`     |
 | Loot rules, quests, bounties, stored tallies, mastery              | `docs/architecture/content.md`    |
 | Abilities, levels, difficulty, the cap, crits, armour, bosses      | `docs/architecture/combat.md`     |
 | Idle (the AFK camp), its panel and food order, offline progress    | `docs/architecture/afk.md`        |
 | The HUD's pieces, the map, layout, tabs                            | `docs/architecture/hud.md`        |
-| Camera, terrain, light, draw budget, nameplates, picking, gestures | `docs/architecture/rendering.md`  |
-| Pixel art: palette, light, outline, budget, sprites, the renderer  | `docs/architecture/art.md`        |
+| The 2D view: camera, painter's order, words, picking, draw budget  | `docs/architecture/rendering.md`  |
+| Pixel art: palette, light, outline, budget, sprites, places, edges | `docs/architecture/art.md`        |
 | Sound: what it hears, cues, ambience, unlocking, mute and volume   | `docs/architecture/audio.md`      |
 | Tests vs smoke, the dev handles, the hand crank, frame-rate bugs   | `docs/architecture/testing.md`    |
 

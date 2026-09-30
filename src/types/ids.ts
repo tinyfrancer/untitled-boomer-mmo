@@ -360,9 +360,9 @@ export type BuildingShapeId = 'hall' | 'workshop' | 'cottage';
 export type ZoneEdge = 'north' | 'south' | 'east' | 'west';
 
 // What kind of place a zone is, which is the game's to say — the fen is a marsh
-// whatever draws it — and what the air there looks like is the renderer's
-// (`render3d/atmosphere.ts`). Underground is anywhere cut out of rock: the
-// hideout, the Deep Cut and the barrow.
+// whatever draws it — and what that looks like is the art's: the ground's ramps
+// in `art/palette.ts`, and the lantern underground. Underground is anywhere cut
+// out of rock: the hideout, the Deep Cut and the barrow.
 export type ZoneSetting = 'open' | 'marsh' | 'underground';
 
 // Who stands still in a town and is worth walking up to. What each one *does*

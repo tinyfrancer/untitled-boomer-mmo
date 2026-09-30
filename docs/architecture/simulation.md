@@ -4,28 +4,28 @@ How the world is stepped and what it owes the view: `ZoneWorld` and its collabor
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
-**The simulation is `src/world/`; `src/render3d/` only draws it.** `ZoneWorld` owns the player, the
+**The simulation is `src/world/`; `src/render2d/` only draws it.** `ZoneWorld` owns the player, the
 mobs and the nodes, and steps everything that moves them from `update(deltaMs)`. `world/Player.ts`,
 `world/Mob.ts`, `world/ResourceNode.ts`, `world/Campfire.ts` and `world/LootPile.ts` are the
-simulated things; the
-actor classes in `render3d/actors.ts` hold a reference to one and catch up to it in `sync()` once a
-frame. New gameplay goes in the world, not the view. Two consequences worth knowing before you
-add to it:
+simulated things; the view keeps no scene of them and draws each frame from the world as it stands
+(`render2d/ZoneView2D.ts`). New gameplay goes in the world, not the view. Two consequences worth
+knowing before you add to it:
 
 - **Nothing in `world/` may own an engine timer or tween.** Mob wandering, the death fade and the
   respawn were three `scene.time` calls; they are accumulators counted down against the frame delta
   now, which is what lets a whole zone run in vitest with nothing rendering it. A view may still
-  animate — `MobActor` reads `mob.deadForMs` and topples against it — but the clock that decides
-  anything has to be the world's.
+  animate — the 2D view reads `mob.deadForMs` and plays the fall against it — but the clock that
+  decides anything has to be the world's.
 - **Collision bodies are data** (`EnemyDefinition.body`, `ResourceNodeDefinition.body`), not
   measurements off anything drawn, for the same reason `PLAYER_HALF_EXTENT` is: how big a rat looks
-  is the renderer's decision and how big a rat _is_ is not. `render3d/creatures.ts` sizes the mesh
-  _from_ the data, which is the direction that keeps the two agreeing. **How much of a node's body
+  is the renderer's decision and how big a rat _is_ is not. The art is drawn to agree with the data
+  rather than the other way round: a boss is the figure grown and a goblin the figure shrunk
+  (`art/cast.ts`), which `tests/art/cast.test.ts` holds. **How much of a node's body
   blocks is data too** (`ResourceNodeDefinition.blocks`, a fraction of the footprint or `null` for
   something you walk straight through), and that had to stop being one constant the day a second
   solid node existed: a tree is a canopy you walk under on a trunk you cannot, where a vein is rock
-  all the way up. `props.ts` draws both off `blockerRect()`, so what stops you stays what you can
-  see stopping you.
+  all the way up, and the art draws a tree's trunk and a vein's stone over what `blockerRect()`
+  stops, so what stops you stays what you can see stopping you.
 
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
@@ -56,12 +56,11 @@ be shown before one exists.
 beyond that everything that has to happen around a zone without drawing it — the frame loop, the
 keyboard binding, the pointer, mounting the HUD, the reset that ends a session, and the load that
 replaces one with a character read from a save file. `Host` in `host/host.ts` is the only one,
-and it takes whichever view it is built with through the `ZoneView` interface
-(`host/zoneView.ts`): the pixel-art one (decisions 102 and 106), or the Three.js view behind
-`?renderer=3d` until B7 deletes it.
-It lived in `render3d/` while there was one renderer. The split is what let the renderer be
-replaced under the game, so new host duties belong there rather than leaking into the world, the
-HUD or either view.
+and it takes the view it is built with through the `ZoneView` interface (`host/zoneView.ts`): the
+pixel-art one, `render2d/ZoneView2D.ts`, which `main.ts` hands it. It lived in `render3d/` while
+the game was drawn in 3D, and stood apart from both views while there were two (B2 to B7). The
+split is what let the renderer be replaced under the game twice, so new host duties belong there
+rather than leaking into the world, the HUD or the view.
 
 **`GameContext` is the session — everything that outlives a zone** (`world/GameContext.ts`,
 engine-free). It owns the `CharacterController`, the `InputState`, whichever `ZoneWorld` is running,
@@ -71,12 +70,12 @@ the next zone when a `zone-exit` or a fatal `death` asked it to. `startGame` / `
 `endGame` are how the host reaches it, and `CharacterState` never travels through a global.
 Two things follow that are easy to get wrong:
 
-- **A zone change is a view rebuild.** `ZoneView3D` tears its own actors, nameplates and ground
-  mesh down and builds them again against the new world; whatever creates something destroys it
-  (`disposeTree` in `render3d/dispose.ts`, which frees geometry, material _and_ any texture hanging
-  off it). `npm run smoke` compares `drawnCounts()` and `renderer.info.memory` across three round
-  trips, because a leak here is invisible to every state assertion and to the screen — it is memory
-  the card never gets back.
+- **A zone change is a view rebuild.** The view lets go of everything it made for the last zone
+  (the baked ground, the buildings, the shadows, the words, the lantern) and makes them again
+  against the new world; every canvas is made and let go through one pool
+  (`render2d/canvases.ts`), and whatever makes one lets it go. `npm run smoke` compares
+  `drawnCounts()` and `canvases()` across three round trips, because a leak here is invisible to
+  every state assertion and to the screen — it is memory the page never gets back.
 - **Anything the HUD must hear but is not yet mounted for goes in the notification queue**, not an
   event: `takeNotifications()` is drained once, by the host on the boot that mounts the HUD and
   handed straight to it. The offline AFK payout is resolved on the load that finds a parked
@@ -97,9 +96,9 @@ The **view channel** is the `WorldEvent[]` `world.update()` returns each frame: 
 state — a bolt left the caster's hand, a number floated off a corpse — and a view that misses one
 cannot recover it from anywhere. They deliberately name a `tone` rather than a colour: the view
 decides what "reward" looks like. Anything the renderer needs to know about but cannot read off the
-state belongs here. `render3d/fx.ts` draws them as short-lived objects from the tick that returns
-them, taking the tone's colour from `FLOAT_TONE_COLORS` in `ui/theme.ts` — which lives beside the
-palette the HUD uses rather than in the renderer, for the same reason `TILE_COLORS` does.
+state belongs here. `render2d/effects.ts` draws them as short-lived moments from the tick that
+returns them, taking the tone's colour from `FLOAT_TONE_COLORS` in `ui/theme.ts` — which lives
+beside the palette the HUD uses rather than in the renderer, for the same reason `TILE_COLORS` does.
 
 Mutations of `CharacterState` itself (inventory, gear, xp, skills, location) go through the
 engine-free `systems/CharacterController.ts` rather than being inlined anywhere. Add new HUD-facing
@@ -138,8 +137,8 @@ The sweep holds **two rules of different strength, and the difference is the who
 centre is clear of an aggressive creature's _whole wander disc_, because a respawn is not a choice:
 dying already costs the walk and the fee, and what stops that being a spiral is a moment to gather
 yourself. Measuring at the spawn offset would guarantee nothing, since a creature is only ever _at_
-its spawn on the frame the zone was built — the same argument `render3d/picking.test.ts` makes about
-tapping one. An arrival strip is held to the weaker rule of not landing anyone _already_ inside an
+its spawn on the frame the zone was built — the same argument `tests/render2d/picking.test.ts` makes
+about tapping one. An arrival strip is held to the weaker rule of not landing anyone _already_ inside an
 aggro radius, because walking through a door is a choice and something wandering over to meet you on
 the far side is the zone working. What that refuses is a trap: no frame in which to walk back out.
 

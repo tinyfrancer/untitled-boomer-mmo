@@ -8,11 +8,11 @@ import type { EnemyDefinition } from '../data/enemies';
 type AiState = 'wander' | 'chase' | 'returning';
 
 /**
- * How long a corpse lingers before its respawn timer starts — the length of
- * the fade a view draws it toppling through. Keeping it in the simulation is
- * what makes the delay the same whether or not anything is drawing that fade.
+ * How long a corpse lingers before its respawn timer starts. Keeping it in the
+ * simulation is what makes the delay the same whether or not anything is
+ * drawing the body; how long a view shows it falling and lying is the view's.
  */
-export const DEATH_FADE_MS = 400;
+const DEATH_FADE_MS = 400;
 
 /**
  * An enemy, as simulation only. Like Player it owns its transform and

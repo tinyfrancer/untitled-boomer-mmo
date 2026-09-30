@@ -8,8 +8,8 @@ export interface ResourceNodeDefinition {
   // The node's footprint; how much of it blocks is `blocks` below. See
   // BodySize for why this is data rather than a measurement off anything drawn.
   body: BodySize;
-  // What it is drawn as. A switch over the id would have made every new row a
-  // change to render3d/props.ts.
+  // What it is drawn as when `art/places.ts` names nothing for its id, so a
+  // new row is on screen as its shape the day it lands.
   shape: NodeShapeId;
   /**
    * How much of the footprint actually stops you, as a fraction of it — or null

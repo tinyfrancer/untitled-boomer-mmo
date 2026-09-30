@@ -14,12 +14,12 @@ const OUTLINE_COLOR = 0x000000;
 const BOX = 100;
 
 /**
- * The character sheet's paperdoll, as inline SVG.
+ * The character sheet's paperdoll, as inline SVG: the rig (`stickFigure`) and
+ * the `Appearance` of what is worn, drawn with strokes.
  *
- * The figure in the world is meshes; this is the same rig (`stickFigure`) and
- * the same `Appearance` drawn with strokes instead, so the two agree about
- * where a shoulder is without the HUD ever reaching into the renderer for a
- * canvas.
+ * It is the one drawing of the stick figure left. The 3D view built the
+ * figure in the world on the same rig until B7 retired it; the world's figure
+ * is pixel art now (`art/outfit.ts`), which B8 redraws the sheet to match.
  */
 export function paperdollSvg(gear: Gear): SVGSVGElement {
   const appearance = computeAppearance(gear);
@@ -206,8 +206,8 @@ function weapon(
   if (rig.head?.kind === 'bend') {
     out.push(line(buttX, buttY, tipX, tipY, BOX * 0.012, BOWSTRING_COLOR));
   }
-  // The line hanging off a fishing pole, which no mesh in the world draws and
-  // which is what says "pole" rather than "staff" at this size.
+  // The line hanging off a fishing pole, which is what says "pole" rather than
+  // "staff" at this size.
   if (shape === 'pole') {
     out.push(line(tipX, tipY, tipX + BOX * 0.02, tipY + BOX * 0.16, BOX * 0.012, 0xeceff1));
   }

@@ -24,9 +24,8 @@ import {
  *
  * The renderer's own rather than the simulation's, as creature colour is:
  * nothing here blocks, is gathered, is tapped or is stood on. It moved here
- * from the 3D view's interiors in B6 (decision 109), which still furnishes its
- * rooms from it until B7 deletes that view, so the two views stand the same
- * furniture in the same places.
+ * from the 3D view's interiors in B6 (decision 109), so both views stood the
+ * same furniture in the same places while there were two.
  *
  * **Nothing in here blocks, and that is the room's own arithmetic rather than a
  * shortcut.** A three-tile shop is 160 units of floor with the counter a tile

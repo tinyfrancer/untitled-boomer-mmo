@@ -3,15 +3,10 @@ import { staleItemId } from '../staleIds';
 import {
   BASE_FIGURE_COLOR,
   SKIN_COLOR,
-  appearanceKey,
   computeAppearance,
-  legOffsets,
-  type LegPhase,
 } from '../../src/systems/AppearanceSystem';
 import { TIER_COLORS } from '../../src/data/tiers';
 import type { Gear } from '../../src/systems/InventorySystem';
-
-const PHASES: LegPhase[] = [0, 1, 2];
 
 const EMPTY_GEAR: Gear = { helmet: null, chest: null, pants: null, weapon: null, offhand: null };
 
@@ -71,57 +66,5 @@ describe('computeAppearance', () => {
       weapon: null,
       offhand: null,
     });
-  });
-});
-
-describe('legOffsets', () => {
-  it('stands with the feet evenly either side of centre', () => {
-    const stance = legOffsets(0);
-    expect(stance.leftX).toBe(-stance.rightX);
-    expect(stance.rightX).toBeGreaterThan(0);
-  });
-
-  it('swings one foot out and trails the other on each half of the stride', () => {
-    const left = legOffsets(1);
-    const right = legOffsets(2);
-    // Mirror images of each other, so the two halves read as the same stride.
-    expect(left.leftX).toBe(-right.rightX);
-    expect(left.rightX).toBe(-right.leftX);
-  });
-
-  it('keeps every phase the same total stride width', () => {
-    const widths = PHASES.map((phase) => {
-      const { leftX, rightX } = legOffsets(phase);
-      return Math.round((rightX - leftX) * 100);
-    });
-    expect(new Set(widths).size).toBe(1);
-  });
-});
-
-describe('appearanceKey', () => {
-  it('is stable for the same gear', () => {
-    const gear: Gear = {
-      ...EMPTY_GEAR,
-      helmet: 'brown-helmet',
-      weapon: 'brown-axe',
-      offhand: null,
-    };
-    expect(appearanceKey(computeAppearance(gear))).toBe(appearanceKey(computeAppearance(gear)));
-  });
-
-  it('differs when any visible piece differs', () => {
-    const naked = appearanceKey(computeAppearance(EMPTY_GEAR));
-    const helmeted = appearanceKey(computeAppearance({ ...EMPTY_GEAR, helmet: 'brown-helmet' }));
-    const armed = appearanceKey(computeAppearance({ ...EMPTY_GEAR, weapon: 'brown-axe' }));
-    // The other hand is drawn too, so a shield put on in the middle of a zone
-    // has to change the key or the figure keeps the empty hand until a rebuild.
-    const shielded = appearanceKey(computeAppearance({ ...EMPTY_GEAR, offhand: 'brown-shield' }));
-    expect(new Set([naked, helmeted, armed, shielded]).size).toBe(4);
-  });
-
-  it('pads color components so keys stay uniform', () => {
-    expect(appearanceKey(computeAppearance(EMPTY_GEAR))).toBe(
-      'player:e0b088:111111:111111:none:none',
-    );
   });
 });

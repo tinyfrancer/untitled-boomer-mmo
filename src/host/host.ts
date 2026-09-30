@@ -26,7 +26,7 @@ import {
 } from '../world/GameContext';
 import { LONG_PRESS_MS } from '../ui/gestures';
 import { FrameTimer } from './frameTimer';
-import { OrbitGesture } from './orbit';
+import { PointerGesture } from './gesture';
 import type { ZoneView, ZoneViewFactory } from './zoneView';
 import type { CharacterState } from '../persistence';
 import type { DebugView, DrawnCounts } from '../types/debugView';
@@ -73,8 +73,9 @@ const MAX_FRAME_MS = 100;
  * was built with. Neither the `GameContext` under it nor the HUD over it knows
  * what is drawing — which is what made swapping the renderer possible, and is
  * why host duties belong here rather than leaking into either. It lived in
- * `render3d/` while there was one renderer; version 2 draws with a second one
- * beside it, so it stands apart from both.
+ * `render3d/` until version 2 drew a second view beside that one (B2), and it
+ * stands apart from the one view left (B7) for the same reason: a duty of the
+ * host's is written once, and never inside whatever draws.
  */
 class Host implements GameHost {
   readonly events = createEventBus();
@@ -82,11 +83,10 @@ class Host implements GameHost {
   private context: GameContext | null = null;
   private view: ZoneView | null = null;
   private readonly createView: ZoneViewFactory;
-  private readonly gesture = new OrbitGesture();
-  // Only the first pointer down drives the camera. A second finger arriving is
-  // a pinch, which is the browser's (see `touch-action` on the canvas) — it
-  // takes the gesture away as a pointercancel, and letting the finger join in
-  // first would make the yaw jump between two thumbs on its way out.
+  private readonly gesture = new PointerGesture();
+  // Only the first pointer down is a gesture. A second finger arriving is a
+  // pinch, which is the browser's (see `touch-action` on the canvas) — it
+  // takes the gesture away as a pointercancel.
   private pointerId: number | null = null;
   // Where the held finger is, and the timer watching it. A press that goes
   // nowhere produces no events, so noticing that it has been held is the one
@@ -200,9 +200,9 @@ class Host implements GameHost {
     // have its release walk the player to the thing they were asking about.
     if (event.button !== 0) return;
     this.pointerId = event.pointerId;
-    // Captured, so a drag that runs off the canvas — or off the window — keeps
-    // reporting instead of leaving the camera stuck mid-turn with no pointerup
-    // ever arriving.
+    // Captured, so a drag that runs off the canvas — or off the window — still
+    // ends in a pointerup here, rather than leaving a gesture open that turns
+    // away every press after it.
     this.view.canvas.setPointerCapture(event.pointerId);
     this.gesture.start(event.clientX, event.clientY, event.timeStamp);
     this.pressAt = { x: event.clientX, y: event.clientY };
@@ -217,18 +217,13 @@ class Host implements GameHost {
   private readonly handlePointerMove = (event: PointerEvent): void => {
     if (event.pointerId !== this.pointerId) return;
     this.pressAt = { x: event.clientX, y: event.clientY };
-    const yawDelta = this.gesture.move(event.clientX, event.clientY);
-    if (yawDelta === 0 || !this.view || !this.context) return;
-    this.view.orbitBy(yawDelta);
-    // Turning the camera turns what W means. Set here rather than every frame
-    // because this is the only thing that moves it.
-    this.context.input.setViewYaw(this.view.cameraYaw());
+    this.gesture.move(event.clientX, event.clientY);
   };
 
   /**
    * A release that was a tap: what it landed on is the view's question, what to
-   * do about it is the world's. A release that ended a drag has already spent
-   * itself on the camera and asks the world for nothing.
+   * do about it is the world's. A release that ended a drag, or a press held
+   * into a menu, asks the world for nothing.
    */
   private readonly handlePointerUp = (event: PointerEvent): void => {
     if (event.pointerId !== this.pointerId) return;
@@ -239,8 +234,8 @@ class Host implements GameHost {
 
     const bounds = view.canvas.getBoundingClientRect();
     const tap = view.resolveTap(event.clientX - bounds.left, event.clientY - bounds.top);
-    // Null is a ray that never reaches the ground. The orbit is yaw only, so
-    // the camera still cannot be aimed at the sky — see `groundUnder`.
+    // Null is a view with no zone built in it. With one, every point is
+    // ground at worst: a flat view has no sky to miss into.
     if (tap) context.currentWorld.tap(tap);
   };
 
@@ -253,8 +248,8 @@ class Host implements GameHost {
   /**
    * The desktop half: a right click asks what something is.
    *
-   * The browser's own menu is refused whatever the click landed on, including
-   * the sky — offering "Save Image As" over a game world is nobody's intent,
+   * The browser's own menu is refused whatever the click landed on — offering
+   * "Save Image As" over a game world is nobody's intent,
    * and on a touch device this is also the callout a long press would raise on
    * top of the menu we are about to open ourselves.
    */
@@ -412,8 +407,9 @@ class Host implements GameHost {
         }
       },
       drawnCounts: () => this.view?.drawnCounts() ?? EMPTY_COUNTS,
-      playerFigure: () => this.view?.playerFigure() ?? { walking: false, pose: 'none' },
-      gpuMemory: () => this.view?.gpuMemory() ?? { geometries: 0, textures: 0 },
+      playerFigure: () =>
+        this.view?.playerFigure() ?? { walking: false, pose: 'none', wearing: '' },
+      canvases: () => this.view?.canvases() ?? 0,
       drawTime: () => this.frameTimer.reading(),
     };
     (window as unknown as { view: DebugView }).view = view;

@@ -12,11 +12,11 @@
  *   - the save round trip through an actual page reload
  *
  * It reaches the game through three dev-only handles, none of which mentions
- * the rendering engine: `window.world` for everything about the simulation,
+ * how the world is drawn: `window.world` for everything about the simulation,
  * `window.view` for the few questions only whatever is drawing can answer (see
  * src/types/debugView.ts), and `window.events` for the HUD channel between
- * them. That is what let the renderer be replaced under this file rather than
- * alongside it.
+ * them. That is what let the renderer be replaced under this file, twice,
+ * rather than alongside it.
  *
  * The game runs under `?loop=manual`, so nothing advances until this script
  * cranks it with `view.step()`. Waits are therefore in *game* milliseconds and
@@ -75,32 +75,31 @@ const FRAMES_PER_POLL = 12;
 /**
  * What one drawn frame may cost, in milliseconds, on the throttled pass.
  *
- * Anchored to a measurement rather than chosen: `window.view.drawTime()` read
- * in the `throttled` section before the first lighting change of
- * `docs/archive/interiors_and_light_plan.md` phase 1 came back at 20.7ms on a full run,
- * on a game with two lights and no shadows. The sun, the shadow map and the
- * depth cue took it to 25.2ms on the same run — so the ceiling is set against
- * what the game cost when nothing cast a shadow, and what phase 1 spent of it
- * is on the record rather than in somebody's memory.
+ * Anchored to a measurement rather than chosen. `window.view.drawTime()` read
+ * 3.1ms on a full run in CI once the last of Part B's art was drawn (B6), and
+ * 2.0ms before it (B4); a dev container, which is loaded, reads 5-6ms. The 3D
+ * view it replaced read 25ms under the same throttle against a ceiling of 40,
+ * so the 2D view costs about an eighth of it, which is what decision 101's
+ * spike found of one scene, found true of the whole game.
  *
  * Read it off a **full run**, which is what the gate sees: the section carries
  * state forward from every one before it, so `--section=throttled` on its own
- * is a different and lighter game — it was 12-15ms there, both before and
- * after.
+ * is a different and lighter game.
  *
- * Three times that, for two reasons. It is a backstop rather than the
- * measurement — the phase's rule is that each change is read off this
- * instrument *before* it lands, and what a gate has to catch is the change
- * that made drawing several times more expensive, not the one that cost a
- * millisecond. And the number underneath it is a different machine's: a CI
- * runner has no GPU either, but it is not this one, and a ceiling that fails
- * on whose hardware ran it is a ceiling that gets raised rather than believed.
- * 40ms is also where the draw alone stops fitting in a 25fps frame, which is
- * the slowest the game is measured at anywhere.
+ * 16ms, where the draw alone stops fitting a 60fps frame on a CPU eight times
+ * slower than the runner's: five times what CI reads and three times what a
+ * loaded container does. It is a backstop rather than the measurement. What a
+ * gate has to catch is the change that made drawing several times more
+ * expensive, not the one that cost a millisecond, and a ceiling that fails on
+ * whose hardware ran it is a ceiling that gets raised rather than believed.
+ * The room above the reading is Part C's, whose zones are three times the size
+ * and fuller, and it should not have to re-decide this to spend it.
  *
- * Raising this is a decision about the game, not about the run that hit it.
+ * It was 40ms while the game was 3D, and decision 110 brought it down when the
+ * 3D view went. Raising it is a decision about the game, not about the run that
+ * hit it.
  */
-const SLOW_DRAW_BUDGET_MS = 40;
+const SLOW_DRAW_BUDGET_MS = 16;
 
 mkdirSync(OUT, { recursive: true });
 
@@ -147,10 +146,10 @@ const step = (frames = 1, deltaMs = FRAME_MS) =>
 /**
  * Lets the browser draw.
  *
- * The meshes are built and synced on the render loop rather than on our steps,
- * and a geometry is only counted against `info.memory` once it has actually
- * been uploaded — so anything about to read a screen coordinate or a GPU
- * figure waits for a drawn frame rather than for wall-clock time.
+ * The view draws on the render loop rather than on our steps, and makes some
+ * of its canvases only when a frame first asks for them — so anything about to
+ * read a screen coordinate or a canvas count waits for a drawn frame rather
+ * than for wall-clock time.
  */
 const draw = () =>
   page.evaluate(
@@ -281,7 +280,7 @@ const touchDrag = async (from, dx) => {
 };
 
 const drawnCounts = () => page.evaluate(() => window.view.drawnCounts());
-const gpuMemory = () => page.evaluate(() => window.view.gpuMemory());
+const canvases = () => page.evaluate(() => window.view.canvases());
 const tabBarTop = () =>
   page.evaluate(() =>
     Math.round(
@@ -406,12 +405,12 @@ const checkZoneDrawn = async (zone) => {
  * Walks the camera over the whole zone, so everything in it has been drawn at
  * least once.
  *
- * `renderer.info.memory` counts what has actually been *uploaded* to the
- * card, which is what makes it an honest measure of a leak — and also means
- * it counts only what the camera has looked at. Comparing two snapshots taken
- * from wherever the player happened to be standing would therefore move with
- * a rat wandering into frame. Sweeping first makes both snapshots the zone's
- * entire GPU footprint instead.
+ * The view makes some canvases the first time a frame asks for them — a
+ * shadow of a width it has not cut yet, a word while it is on screen — so the
+ * count moves with what the camera is looking at. Comparing two snapshots taken
+ * from wherever the player happened to be standing would therefore move with a
+ * rat wandering into frame. Sweeping first, and parking in the same spot after,
+ * makes both snapshots the same view of the zone instead.
  */
 const sweep = async () => {
   const spans = [0.17, 0.5, 0.83];
@@ -542,13 +541,6 @@ const screenAt = (what) =>
     return window.view.worldToScreen(at.x, at.y);
   })()`);
 
-// Where a fixed spot in the world is drawn, which is how the camera's angle
-// is read without a handle for it: turn the camera and the world swings.
-const northOfPlayer = () =>
-  page.evaluate(() =>
-    window.view.worldToScreen(window.world.player.x, window.world.player.y - 200),
-  );
-
 async function boot() {
   // --- Booting: a fresh character through the real creation screen, which is
   // plain HTML — so this is the form a player fills in, typed and clicked. ---
@@ -661,16 +653,16 @@ async function boot() {
 async function teardown() {
   // --- The view's own teardown, which is the thing here with no other cover at
   // all. A zone change is a view rebuild, so everything the last zone drew has
-  // to come down by hand: a geometry nobody disposed is invisible to every
-  // state assertion and to the screen, and is memory the card never gets back.
-  // Run before anything fights, so no floating number is mid-flight in either
+  // to be let go by hand: a canvas nobody let go is invisible to every state
+  // assertion and to the screen, and is memory the page never gets back. Run
+  // before anything fights, so no floating number is mid-flight in either
   // count. ---
   await sweep();
-  const before = { drawn: await drawnCounts(), gpu: await gpuMemory() };
+  const before = { drawn: await drawnCounts(), canvases: await canvases() };
   check(
-    'the zone builds its terrain as a single mesh',
+    'the zone bakes its ground once',
     before.drawn.ground === 1,
-    `${before.drawn.total} objects, ${before.gpu.geometries} geometries`,
+    `${before.drawn.total} objects, ${before.canvases} canvases`,
   );
   await checkZoneDrawn('town');
   await page.screenshot({ path: `${OUT}/2-town.png` });
@@ -692,11 +684,11 @@ async function teardown() {
     await stepUntilZone('town', 'the north exit to return to town');
   }
   await sweep();
-  const after = { drawn: await drawnCounts(), gpu: await gpuMemory() };
+  const after = { drawn: await drawnCounts(), canvases: await canvases() };
   check(
-    'three zone round trips hand every geometry back to the GPU',
-    JSON.stringify(before.gpu) === JSON.stringify(after.gpu),
-    `${JSON.stringify(before.gpu)} -> ${JSON.stringify(after.gpu)}`,
+    'three zone round trips let go of every canvas they made',
+    before.canvases === after.canvases,
+    `${before.canvases} -> ${after.canvases} canvases`,
   );
   check(
     'three zone round trips leave the scene exactly as they found it',
@@ -720,9 +712,8 @@ async function teardown() {
   });
   await stepUntilZone('town', 'the west exit to return to town');
   // And the fourth, for the same reason one zone up but about props rather than
-  // creatures: an ore vein is the first new prop since the port, and the quarry
-  // is the only place one is drawn. A shape built and never uploaded to a real
-  // GPU is a shape whose only cover is jsdom counting its meshes.
+  // creatures: an ore vein is drawn nowhere else, and a sprite no browser ever
+  // drew is a sprite whose only cover is the unit suite compiling it.
   await page.evaluate(() => {
     const w = window.world;
     w.teleport(w.worldWidth / 2, 33);
@@ -790,19 +781,17 @@ async function tabBar() {
 
 async function landscape() {
   // --- A resize, which has to move two things that can be forgotten
-  // separately: the drawing buffer and the camera's aspect ratio. A buffer that
+  // separately: the drawing buffer and the camera's window. A buffer that
   // never resized would still draw, stretched, and every assertion in this file
   // that reads a screen coordinate would still pass.
   //
   // Landscape on purpose. `layout.ts` keys its breakpoint on height as well as
   // width because a landscape phone is wide by any measure and has less
-  // vertical room than a portrait one, and `tests/render3d/camera.test.ts`
-  // measures the tab-bar rule only at portrait sizes. This is the other
-  // orientation of the same rule, and it is not the same statement — a
-  // landscape camera frames ten tiles of *depth* rather than of width, so
-  // the south signpost is eight tiles behind the player at the spawn point and
-  // simply out of frame there. What has to hold is that walking toward it
-  // brings it into reach, which is measured below. ---
+  // vertical room than a portrait one. The camera frames its ten tiles across
+  // the smaller side, which in landscape is the height, so the south signpost
+  // is far further down the screen from the spawn point than on a portrait
+  // phone. What has to hold is that walking toward it brings it into reach,
+  // which is measured below. ---
   await page.setViewportSize({ width: 844, height: 390 });
   await page.waitForTimeout(300);
   await draw();
@@ -814,8 +803,8 @@ async function landscape() {
     return {
       cssW: Math.round(box.width),
       cssH: Math.round(box.height),
-      // What the card is actually asked to fill, which is the half of a resize
-      // that has no visible failure mode.
+      // What the canvas is actually drawn at, in art pixels, which is the half
+      // of a resize that has no visible failure mode.
       bufferW: canvas.width,
       bufferH: canvas.height,
       dpr: window.devicePixelRatio,
@@ -825,12 +814,17 @@ async function landscape() {
       post: { x: post.x, y: post.y },
     };
   });
+  // The buffer is in art pixels, a whole number of device pixels each, and
+  // covers the screen: turned on its side, it is wider than it is tall.
+  const landscapeScale = (landscape.cssW * landscape.dpr) / landscape.bufferW;
   check(
     'a landscape resize retargets the canvas and its drawing buffer',
-    landscape.cssW === 844 &&
-      landscape.bufferW === Math.round(844 * landscape.dpr) &&
-      landscape.bufferH === Math.round(landscape.cssH * landscape.dpr),
-    `${landscape.cssW}x${landscape.cssH} css, ${landscape.bufferW}x${landscape.bufferH} buffer at dpr ${landscape.dpr}`,
+    landscape.cssW >= 844 &&
+      landscape.bufferW > landscape.bufferH &&
+      Math.abs(landscapeScale - Math.round(landscapeScale)) < 1e-6 &&
+      Math.abs((landscape.cssH * landscape.dpr) / landscape.bufferH - landscapeScale) < 1e-6,
+    `${landscape.cssW}x${landscape.cssH} css, ${landscape.bufferW}x${landscape.bufferH} art ` +
+      `pixels at ${landscapeScale} device pixels each`,
   );
   // The tab bar sits flush against the bottom of the canvas, so a canvas taller
   // than the visible viewport hides it outright — which is what 100vh did on
@@ -881,10 +875,10 @@ async function picking() {
   // the view says a thing is drawn at.
   //
   // The priority order and the boxes themselves are unit-tested in
-  // tests/render3d/picking.test.ts, which can cast a ray with no GPU in the
-  // room. What only a browser shows is the wiring either side of it: a real
-  // PointerEvent landing on the canvas, in page coordinates, against a camera
-  // the render loop has already moved this frame. ---
+  // tests/render2d/picking.test.ts. What only a browser shows is the wiring
+  // either side of it: a real PointerEvent landing on the canvas, in page
+  // coordinates, against a camera the render loop has already moved this
+  // frame. ---
 
   await standSouthOf(RAT);
   await clickAt(await screenAt(RAT));
@@ -1470,7 +1464,7 @@ async function lootPiles() {
   // draws a sack off the sheet it draws everything else from, so it holds
   // nothing of its own: what is checked is that it leaves nothing behind. ---
   await page.evaluate(() => window.world.mobs.forEach((m) => m.disengage()));
-  // Every geometry in town uploaded before the first reading, so the camera
+  // Every canvas town asks for made before the first reading, so the camera
   // walking a few steps to the sack cannot bring anything new into it.
   await sweep();
   // The floats a fight leaves are text on a canvas, faded on the view's wall
@@ -1480,7 +1474,7 @@ async function lootPiles() {
       await page.waitForTimeout(100);
     }
     await draw();
-    return gpuMemory();
+    return canvases();
   };
   const before = await settled();
   const bag = await page.evaluate(() => ({ ...window.world.character.state.inventory }));
@@ -1506,7 +1500,7 @@ async function lootPiles() {
   check(
     'a kill the pack cannot hold leaves one sack where it fell',
     dropped.length > 0 && shown.piles === 1,
-    `holding ${dropped.join(', ')}; ${shown.piles} drawn, ${JSON.stringify(before)} -> ${JSON.stringify(during)}`,
+    `holding ${dropped.join(', ')}; ${shown.piles} drawn, ${before} -> ${during} canvases`,
   );
   await standSouthOf(PILE);
   await page.screenshot({ path: `${OUT}/8b-loot-pile.png` });
@@ -1562,11 +1556,8 @@ async function lootPiles() {
   // is back.
   check(
     'a tap takes the sack up, and nothing it was drawn with is left behind',
-    carried &&
-      (await drawnCounts()).piles === 0 &&
-      after.geometries <= before.geometries &&
-      after.textures <= before.textures,
-    `carried: ${carried}, ${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
+    carried && (await drawnCounts()).piles === 0 && after <= before,
+    `carried: ${carried}, ${before} -> ${after} canvases`,
   );
 
   // The bag as the sections after this one expect to find it.
@@ -2166,19 +2157,18 @@ async function interiors() {
   //
   // The geometry either side of this is unit-tested — the walls and the gap in
   // `tests/world/buildings.test.ts`, the route in `tests/systems/PathSystem.ts`
-  // and `BuildingSystem.test.ts`, the cutaway and the two meanings of a tap in
-  // `tests/render3d/`. What only a browser has is the whole of it at once: a
-  // real press on the canvas, a ray through a camera the render loop has already
-  // moved, a route round a wall, and a roof that has to come off at the end of
-  // it. ---
+  // and `BuildingSystem.test.ts`, the cutaway in `tests/art/building.test.ts`
+  // and the two meanings of a tap in `tests/render2d/picking.test.ts`. What only
+  // a browser has is the whole of it at once: a real press on the canvas,
+  // through a camera the render loop has already moved, a route round a wall,
+  // and a roof that has to come off at the end of it. ---
 
   await park();
 
-  // Which building is asked at the last moment rather than written down, for the
-  // reason the turned-camera tap below is: `pickTap` is a priority and not a
-  // depth sort, so a wandering rat anywhere along the ray is picked over the
-  // building behind it — and a person standing at a door is picked over their
-  // own shop. Both are correct behaviour and neither is what this is about.
+  // Which building is asked at the last moment rather than written down:
+  // `pickTap` is a priority and not a depth sort, so a wandering rat drawn over
+  // a building is picked over it — and a person standing at a door is picked
+  // over their own shop. Both are correct behaviour and neither is what this is about.
   const target = await page.evaluate(() => {
     const w = window.world;
     /** @type {{ x: number; y: number }[]} */
@@ -2261,9 +2251,9 @@ async function interiors() {
     }`,
   );
 
-  // The roof coming off is `tests/render3d/buildings.test.ts`'s to assert — it
-  // can read a mesh's visibility with no GPU. What is only true here is that the
-  // screenshot below is of a room rather than of a lid.
+  // The roof coming off is `tests/art/building.test.ts`'s to assert, since the
+  // room is a picture of its own. What is only true here is that the screenshot
+  // below is of a room rather than of a lid.
   await page.screenshot({ path: `${OUT}/6b-interior.png` });
 
   // And back out, so the sections after this one find the player in the open.
@@ -2272,31 +2262,23 @@ async function interiors() {
 
 async function canvasDrag() {
   // --- The drag, which is the same stream of PointerEvents as the tap and has
-  // to be told apart from it. The 2D camera never turns (it looks north for
-  // good), so a drag is the gesture that asks for nothing: what only a browser
-  // has is a real press-move-release and a pointer capture being told apart
-  // from a tap made of the same three events. `renderer-3d` holds the camera
-  // that did turn, for as long as it is reachable. ---
+  // to be told apart from it. The camera never turns, so a drag is the gesture
+  // that asks for nothing: what only a browser has is a real press-move-release
+  // and a pointer capture being told apart from a tap made of the same three
+  // events. ---
   await park();
 
-  const beforeDrag = await northOfPlayer();
   const stood = await page.evaluate(() => ({
     x: window.world.player.x,
     y: window.world.player.y,
   }));
 
   await drag({ x: 195, y: 400 }, 140);
-  const afterDrag = await northOfPlayer();
   const stayed = await page.evaluate(() => ({
     x: window.world.player.x,
     y: window.world.player.y,
     walking: window.world.player.hasMoveTarget(),
   }));
-  check(
-    'a drag on the canvas turns nothing: north stays up the screen',
-    Math.abs(afterDrag.x - beforeDrag.x) < 1 && Math.abs(afterDrag.y - beforeDrag.y) < 1,
-    `the ground north of the player moved from x=${Math.round(beforeDrag.x)} to ${Math.round(afterDrag.x)}`,
-  );
   check(
     'a drag on the canvas asks the world for nothing',
     !stayed.walking && Math.hypot(stayed.x - stood.x, stayed.y - stood.y) < 1,
@@ -2372,14 +2354,13 @@ const holdW = async () => {
 };
 
 async function heading() {
-  // --- W means up the screen. In 2D that is north, always, since the camera
-  // never turns; what a browser adds is a real key reaching the game and the
-  // ground the player left sliding down the screen. `renderer-3d` asks the
-  // turned camera the question that could be wrong there. ---
+  // --- W means up the screen, which is north, always, since the camera never
+  // turns; what a browser adds is a real key reaching the game and the ground
+  // the player left sliding down the screen. ---
   await park();
   const w = await holdW();
   check(
-    'a real W press walks the player up the screen, which in 2D is north',
+    'a real W press walks the player up the screen, which is north',
     w.walked > 40 && w.toY < w.fromY - 10 && w.offNorth < 5,
     `walked ${Math.round(w.walked)}px, ${w.offNorth}° off north, screen y ` +
       `${Math.round(w.fromY)} -> ${Math.round(w.toY)}`,
@@ -2473,25 +2454,18 @@ async function touchGestures() {
   // canvas's `touch-action` is untested by it, and it is never a thumb resting
   // on the screen. Chromium synthesises the pointer events these listeners are
   // written against, so this is the real path a phone takes. ---
-  const beforeTouch = await northOfPlayer();
   const stoodTouch = await page.evaluate(() => ({
     x: window.world.player.x,
     y: window.world.player.y,
   }));
   await touchDrag({ x: 195, y: 400 }, 140);
-  const afterTouch = await northOfPlayer();
   const stayedTouch = await page.evaluate(() => ({
     x: window.world.player.x,
     y: window.world.player.y,
     walking: window.world.player.hasMoveTarget(),
   }));
   check(
-    'a finger dragged across the canvas turns nothing',
-    Math.abs(afterTouch.x - beforeTouch.x) < 1,
-    `the ground north of the player moved from x=${Math.round(beforeTouch.x)} to ${Math.round(afterTouch.x)}`,
-  );
-  check(
-    'and asks the world for nothing, rather than walking where it started',
+    'a finger dragged across the canvas asks the world for nothing, rather than walking where it started',
     !stayedTouch.walking &&
       Math.hypot(stayedTouch.x - stoodTouch.x, stayedTouch.y - stoodTouch.y) < 1,
     `player at ${Math.round(stayedTouch.x)},${Math.round(stayedTouch.y)}, walking: ${stayedTouch.walking}`,
@@ -3651,8 +3625,8 @@ async function characterSheet() {
   );
   await draw();
   const undressed = await page.evaluate(() => ({
-    wearing: window.view.playerFigure().wearing ?? '',
-    canvases: window.view.gpuMemory().textures,
+    wearing: window.view.playerFigure().wearing,
+    canvases: window.view.canvases(),
   }));
   await page.click('.hud-picker__row[data-item="brown-helmet"]');
   await page.waitForTimeout(200);
@@ -3661,8 +3635,8 @@ async function characterSheet() {
   // compiled again when the gear changes, the old one let go as the new one is
   // made, so a change of helmet is not a canvas that never comes back.
   const redressed = await page.evaluate(() => ({
-    wearing: window.view.playerFigure().wearing ?? '',
-    canvases: window.view.gpuMemory().textures,
+    wearing: window.view.playerFigure().wearing,
+    canvases: window.view.canvases(),
   }));
   check(
     'and puts the helmet on the figure in the world, letting the old figure go',
@@ -4711,8 +4685,8 @@ async function offlineCamping() {
 async function throttled() {
   // --- The same game on a phone that cannot keep up.
   //
-  // Everything above runs at 40ms a frame on a machine that renders one in a
-  // fraction of that. A cheap phone drawing a WebGL scene is the case the
+  // Everything above runs at 40ms a frame on a machine that draws one in a
+  // fraction of that. A cheap phone that cannot keep up is the case the
   // simulation was written to survive and the case nothing here has yet asked
   // for: `Emulation.setCPUThrottlingRate` makes each real frame roughly eight
   // times more expensive, and the hand crank is turned at 140ms — 7fps, which
@@ -4723,7 +4697,7 @@ async function throttled() {
   // the frame's travel, because a fixed one leaves the player orbiting a
   // destination forever. The renderer's cannot be unit-tested at all — whether
   // a real press and release still reads as a tap when the clock between them
-  // is a slow device's, and whether the camera a ray is cast through has been
+  // is a slow device's, and whether the camera a tap is read through has been
   // moved this frame. ---
   const SLOW_FRAME_MS = 140;
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 });
@@ -4779,25 +4753,20 @@ async function throttled() {
 
   // And the other reading of it, which must not have become the easy one.
   await park();
-  const beforeSlowDrag = await northOfPlayer();
   const stoodSlow = await page.evaluate(() => ({
     x: window.world.player.x,
     y: window.world.player.y,
   }));
   await touchDrag({ x: 195, y: 400 }, 140);
-  const afterSlowDrag = await northOfPlayer();
   const stayedSlow = await page.evaluate(() => ({
     x: window.world.player.x,
     y: window.world.player.y,
     walking: window.world.player.hasMoveTarget(),
   }));
   check(
-    'a finger drag still turns nothing and asks for nothing at 7fps',
-    Math.abs(afterSlowDrag.x - beforeSlowDrag.x) < 1 &&
-      !stayedSlow.walking &&
-      Math.hypot(stayedSlow.x - stoodSlow.x, stayedSlow.y - stoodSlow.y) < 1,
-    `the ground north of the player moved from x=${Math.round(beforeSlowDrag.x)} to ` +
-      `${Math.round(afterSlowDrag.x)}, walking: ${stayedSlow.walking}`,
+    'a finger drag still asks for nothing at 7fps',
+    !stayedSlow.walking && Math.hypot(stayedSlow.x - stoodSlow.x, stayedSlow.y - stoodSlow.y) < 1,
+    `player at ${Math.round(stayedSlow.x)},${Math.round(stayedSlow.y)}, walking: ${stayedSlow.walking}`,
   );
 
   // Leaving a zone is the case the slow frame was always most likely to break:
@@ -4835,9 +4804,9 @@ async function throttled() {
 
   // --- The frame budget, read where it actually bites.
   //
-  // This is the gate the lighting work is measured against, and it is here
-  // rather than on the unthrottled sections above because a machine that draws
-  // a frame in a fraction of a millisecond has no budget to blow. The reading
+  // This is the gate a change to what is drawn is measured against, and it is
+  // here rather than on the unthrottled sections above because a machine that
+  // draws a frame in a fraction of a millisecond has no budget to blow. The reading
   // is a rolling mean over the last frames drawn, every one of which was drawn
   // under the throttle set at the top of this section.
   //
@@ -4926,7 +4895,7 @@ async function ranger() {
       await page.waitForTimeout(100);
     }
     await draw();
-    return gpuMemory();
+    return canvases();
   };
   const before = await settled();
   // Then a rat stood inside the bow's reach and outside a fist's, and made the target.
@@ -4972,9 +4941,9 @@ async function ranger() {
   });
   const after = await settled();
   check(
-    'an arrow that has landed is handed back to the GPU',
-    after.geometries <= before.geometries && after.textures <= before.textures,
-    `${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
+    'an arrow that has landed leaves nothing behind',
+    after <= before,
+    `${before} -> ${after} canvases`,
   );
 }
 
@@ -4985,8 +4954,8 @@ async function fletchersBench() {
   // The rules — fifteen a job, arrows into the quiver, the camp settling to two
   // inputs — are tests/world/fletching.test.ts. What only a browser shows is the
   // prop drawn and picked by a real click, the panel headed for it and saying
-  // how many a row makes, a real tap running the channel, and the bench handed
-  // back to the GPU when the zone comes down. Walked to, since walking is the
+  // how many a row makes, a real tap running the channel, and the bench let go
+  // of when the zone comes down. Walked to, since walking is the
   // only way into a zone: west to the mill road and north into Greyford. ---
   if ((await zoneId()) !== 'greyford') {
     if ((await zoneId()) !== 'old-mill-road') {
@@ -5004,7 +4973,7 @@ async function fletchersBench() {
     await stepUntilZone('greyford', 'the road north into Greyford');
   }
   await sweep();
-  const before = await gpuMemory();
+  const before = await canvases();
 
   await page.evaluate(() => {
     const w = window.world;
@@ -5062,65 +5031,11 @@ async function fletchersBench() {
   });
   await stepUntilZone('greyford', 'the road north back into Greyford');
   await sweep();
-  const after = await gpuMemory();
+  const after = await canvases();
   check(
-    'a round trip out of Greyford hands the bench back to the GPU',
-    after.geometries <= before.geometries && after.textures <= before.textures,
-    `${JSON.stringify(before)} -> ${JSON.stringify(after)}`,
-  );
-}
-
-async function renderer3d() {
-  // --- The 3D view, kept reachable behind `?renderer=3d` as a fallback from
-  // phase B3, when the 2D view became the game, until B7 retires it. Every
-  // section above runs in 2D; this holds that the fallback still boots, draws
-  // town, and keeps the one thing only it has: a camera a drag turns, under
-  // which W walks up the screen rather than north. Last, since it boots a fresh
-  // warrior into a different renderer from every section above. ---
-  // Reset first rather than clearing storage and leaving: a page with a
-  // session in it writes the save back on its way out.
-  await tapTab('options');
-  await page.click('.hud-modal [data-action="reset-character"]');
-  await page.click('.hud-modal [data-action="reset-character"]');
-  await page.waitForSelector('.create', { timeout: 20000 });
-  await page.goto(query('loop=manual&renderer=3d'), { waitUntil: 'domcontentloaded' });
-  // Generous: on a cold cache this is the first request for all of Three.js.
-  await page.waitForSelector('.create', { timeout: 120000 });
-  await page.fill('.create__name', 'Adventurer');
-  await page.click('.create__card[data-class="warrior"]');
-  await page.click('.create__begin');
-  await page.waitForFunction(() => window.world != null && window.view != null, null, {
-    timeout: 120000,
-  });
-  await quietTips();
-  await park();
-  const geometries = (await gpuMemory()).geometries;
-  check(
-    'the 3D fallback boots behind ?renderer=3d and holds geometry on the GPU',
-    geometries > 0,
-    `${geometries} geometries`,
-  );
-  await sweep();
-  await checkZoneDrawn('town in 3D');
-  await page.screenshot({ path: `${OUT}/3d-1-town.png` });
-
-  await park();
-  const beforeDrag = await northOfPlayer();
-  await drag({ x: 195, y: 400 }, 140);
-  const afterDrag = await northOfPlayer();
-  check(
-    'a drag on the 3D canvas turns the camera',
-    afterDrag.x - beforeDrag.x > 40,
-    `the ground north of the player moved from x=${Math.round(beforeDrag.x)} to ${Math.round(afterDrag.x)}`,
-  );
-  // The camera still turned, which is the only state in which W and north can
-  // disagree: `InputState.setViewYaw` is what keeps them apart.
-  const w = await holdW();
-  check(
-    'a real W press walks up the turned screen rather than north',
-    w.walked > 40 && w.toY < w.fromY - 10 && w.offNorth > 20,
-    `walked ${Math.round(w.walked)}px, ${w.offNorth}° off north, screen y ` +
-      `${Math.round(w.fromY)} -> ${Math.round(w.toY)}`,
+    'a round trip out of Greyford lets go of everything the bench was drawn with',
+    after <= before,
+    `${before} -> ${after} canvases`,
   );
 }
 
@@ -5167,7 +5082,6 @@ const SECTIONS = [
   ['throttled', throttled],
   ['ranger', ranger],
   ['fletchers-bench', fletchersBench],
-  ['renderer-3d', renderer3d],
 ];
 
 const known = SECTIONS.map(([name]) => name);

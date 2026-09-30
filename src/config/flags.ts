@@ -13,15 +13,3 @@
 export function manualLoopRequested(search: string): boolean {
   return new URLSearchParams(search).get('loop') === 'manual';
 }
-
-/** Which renderer draws the world. */
-export type RendererId = '3d' | '2d';
-
-/**
- * Version 2's pixel art is the game (phase B3); `?renderer=3d` draws it the old
- * way, a fallback kept until B7 retires the 3D view. Honoured in production too,
- * since a fallback that only works in development is none.
- */
-export function rendererRequested(search: string): RendererId {
-  return new URLSearchParams(search).get('renderer') === '3d' ? '3d' : '2d';
-}

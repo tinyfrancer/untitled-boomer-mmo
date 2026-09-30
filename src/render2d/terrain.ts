@@ -9,9 +9,9 @@ import type { SpriteSheet } from './sheet';
 
 /**
  * How many tiles of ground run on past the map's edge, carried outward from
- * it: the 3D view's apron, for the same reason. The camera follows the player
- * to the edge rather than stopping, so what is past it is on screen, and a map
- * that ended in a colour would read as a wall the player walks into.
+ * it. The camera follows the player to the edge rather than stopping, so what
+ * is past it is on screen, and a map that ended in a colour would read as a
+ * wall the player walks into.
  */
 export const APRON_TILES = 8;
 
@@ -19,10 +19,10 @@ export const APRON_TILES = 8;
 const APRON_FADE = 4;
 
 /**
- * What lies past the apron, and what it fades into: a dark murk a setting
- * rather than the 3D view's pale sky, since the edge of the map is somewhere
- * the land runs out into shadow (decision 103). The renderer's to choose, as
- * the palette is not asked to hold a colour nothing is drawn in.
+ * What lies past the apron, and what it fades into: a dark murk a setting,
+ * since the edge of the map is somewhere the land runs out into shadow
+ * (decision 103). The renderer's to choose, as the palette is not asked to
+ * hold a colour nothing is drawn in.
  */
 export const HAZE: Readonly<Record<ZoneSetting, string>> = {
   open: '#161b17',

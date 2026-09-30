@@ -5,7 +5,7 @@
  * cue is a handful of voices — an oscillator or a burst of noise, swept from one
  * pitch to another under a short envelope — and `SoundBoard` builds each one out
  * of Web Audio nodes when it is played. What a swing sounds like is a row here,
- * the way what a rat looks like is a row in `render3d/palette.ts`.
+ * the way what a rat looks like is a row in `art/cast.ts`.
  */
 export type CueId =
   | 'swing'

@@ -1,7 +1,7 @@
 import { flipped, grid, type SpriteDef } from '../format';
 
 /**
- * What stands in a room (decision 109), the 3D fittings drawn: shelves, a
+ * What stands in a room (decision 109): shelves, a
  * hearth, a bench, crates and a bed, set against the walls `art/rooms.ts`
  * says, and the counter whoever works there is served across. None of them
  * blocks anybody, which is the room's arithmetic (`docs/architecture/

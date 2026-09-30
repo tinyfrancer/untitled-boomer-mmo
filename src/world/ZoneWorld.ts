@@ -158,9 +158,9 @@ export type WorldTap =
  * What the walk toward each counter is called.
  *
  * Keyed by `CounterId` so a new counter is a compile error here until someone
- * says what walking up to it is — the same argument `NPC_APPEARANCES` makes for
- * what a person looks like, and `Counters` below makes for what standing at
- * them does.
+ * says what walking up to it is — the same argument `TOWNSFOLK` in `art/cast.ts`
+ * makes for what a person looks like, and `Counters` below makes for what
+ * standing at them does.
  */
 const COUNTER_WALKS = {
   talk: 'talk',

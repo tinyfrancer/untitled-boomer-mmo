@@ -27,8 +27,8 @@ import { offhandAs, wieldedAs, wornAs } from './wardrobe';
  * Partial on purpose: anything not in a table is drawn as its kind's
  * placeholder (`docs/architecture/art.md`), so a new creature or person is on
  * screen the day its row is, and drawing it properly is a line here. The kind
- * a creature falls back to is read off its `shape`, the same bargain the 3D
- * view made: what it is decides what it looks like.
+ * a creature falls back to is read off its `shape`: what it is decides what it
+ * looks like.
  *
  * The player is not here: what they look like is what they chose and what they
  * have on, put together in `outfit.ts` whenever that changes.
@@ -59,9 +59,9 @@ const APRON = {
 };
 
 /**
- * The six who stand in a town, each told from the others at a glance, which is
- * the job `NPC_APPEARANCES` gave their colours in 3D: two of them stand in one
- * yard at Greyford, and three either side of one crossroads in town.
+ * The six who stand in a town, each told from the others at a glance: two of
+ * them stand in one yard at Greyford, and three either side of one crossroads
+ * in town.
  */
 const TOWNSFOLK: Readonly<Record<NpcId, Getup>> = {
   // A grey-haired merchant in ochre under a leather apron.
@@ -120,9 +120,8 @@ export const TOWNSFOLK_SPRITES: readonly SpriteDef[] = Object.entries(TOWNSFOLK)
 /**
  * The creatures built like people, each on the figure in what it wears and
  * with what it carries, which is mostly what it drops (`data/lootTables.ts`):
- * told apart across a field by their colours and their builds, as their 3D
- * colours told them (`NPC_APPEARANCES`). A boss is drawn bigger than his men,
- * a goblin smaller (`Build`).
+ * told apart across a field by their colours and their builds. A boss is drawn
+ * bigger than his men, a goblin smaller (`Build`).
  */
 const FOES: Readonly<Partial<Record<EnemyId, { getup: Getup; build: Build }>>> = {
   // An outlaw in undyed cloth under a brown jerkin, a red rag over the face

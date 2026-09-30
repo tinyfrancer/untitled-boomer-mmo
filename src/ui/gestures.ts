@@ -2,8 +2,8 @@
  * When a press is a tap, when it is a drag, and when it is a question.
  *
  * These live beside the palette and the layout arithmetic rather than in the
- * renderer because two very different things read them: the gesture that turns
- * the camera (`host/orbit.ts`) and the one that opens a menu on a bag cell
+ * renderer because two very different things read them: the gesture on the
+ * world (`host/gesture.ts`) and the one that opens a menu on a bag cell
  * (`hud/longPress.ts`). A press has to mean the same thing wherever a thumb
  * lands, and it cannot if each surface keeps its own copy of the numbers.
  */
@@ -33,7 +33,7 @@ export const TAP_MAX_MS = 500;
  * The same number as `TAP_MAX_MS`, and that is the point rather than a
  * coincidence: a press held that long already stopped being a tap and until now
  * did nothing at all, so the phone's right click costs no gesture that meant
- * something else. Reaching it latches (see `OrbitGesture.holdAsLongPress`),
+ * something else. Reaching it latches (see `PointerGesture.holdAsLongPress`),
  * which is what keeps the boundary from being a race — at exactly 500ms the
  * press is a menu, never both a menu and a walk.
  */

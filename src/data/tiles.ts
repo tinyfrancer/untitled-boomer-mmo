@@ -18,12 +18,13 @@ export const MARSH_TILE = 6;
 export const BLOCKING_TILES = [WATER_TILE, WALL_TILE];
 
 /**
- * What each tile is made of, as one palette.
+ * What each tile is made of, as one flat colour: what the zone map draws it in
+ * (`hud/MapSheet.ts`). The world draws each tile as a sprite in its setting's
+ * ramps (`art/palette.ts`), and a test holds every tile here to one.
  *
- * It lives here rather than in the renderer that puts it on vertices, for the
- * same reason the stick-figure rig behind the paperdoll lives in
- * `AppearanceSystem`: the ground the simulation calls water is a decision the
- * whole game makes, not one whatever is drawing it gets to make alone.
+ * It lives beside the tiles rather than in the HUD because the ground the
+ * simulation calls water is a decision the whole game makes, not one whatever
+ * is drawing it gets to make alone.
  */
 // Named, because it doubles as what an uncoloured tile falls back to.
 const GRASS_COLOR = 0x2e7d32;

@@ -67,7 +67,7 @@ describe('the spawn point', () => {
    * to gather yourself. So the centre is held clear of an aggressive creature's
    * whole wander disc rather than of where its row happens to say it starts —
    * a creature is only ever *at* its spawn on the frame the zone was built,
-   * which is the same argument `render3d/picking.test.ts` makes about tapping
+   * which is the same argument `tests/render2d/picking.test.ts` makes about tapping
    * one.
    *
    * Travelling from the world map lands on the same point, so this covers both.

@@ -192,12 +192,13 @@ coarser than the item list, since at thumbnail size a raw fish and a cooked one 
 two colours. The bag, the equip picker and the shop all draw it through the one `row({icon})` helper
 in `hud/dom.ts` rather than formatting an item three ways.
 
-**The paperdoll is SVG built from the same rig the figure in the world is built from**
-(`systems/AppearanceSystem.stickFigure`, drawn by `hud/paperdoll.ts` and by `render3d/figure.ts`).
-The HUD does not reach into the renderer for a canvas, which is what let the sheet keep showing
-what you are wearing when the world became meshes. Both read that rig, so a shoulder is in the same
-place in either; `NPC_APPEARANCES` beside it is the same argument for the figures nobody is wearing
-gear for — the three who stand in town, and the two bandits.
+**The paperdoll is SVG built from a stick-figure rig** (`systems/AppearanceSystem.stickFigure`,
+drawn by `hud/paperdoll.ts`). The HUD does not reach into the renderer for a canvas, which is what
+let the sheet keep showing what you are wearing when the world became meshes and again when it
+became pixel art. The 3D figure in the world was built on the same rig, so a shoulder was in the
+same place in either; since B4 the figure in the world is pixel art put together from what is worn
+(`art/outfit.ts`), and since B7 the rig has the sheet alone. Drawing the sheet's figure to match the
+world's is B8's, with the rest of the HUD's look.
 
 **The bar holds five; everything else folds behind Menu.** It splits its width evenly (`ui/tabs.ts`),
 so every seat costs every other seat: seven tabs gave each one 44.4px on a 375px phone against a

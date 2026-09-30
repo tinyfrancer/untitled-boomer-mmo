@@ -35,8 +35,10 @@ grown to 48×64 and the goblins shrunk by refitting it; hits, crits, a level, fi
 and arrows, the telegraphs and the loot sack; decision 108), **and B6** (every place drawn: three
 woods and their stumps, veins in the ore they yield, rings on the water, the forge, the tannery, the
 fletcher's bench and the fire, chips off each stroke, and rooms furnished from one layout with a
-counter in front of whoever works there; decision 109). **Next: B7**, retire 3D. Update this line
-as each phase lands: which phase, and which is next.
+counter in front of whoever works there; decision 109), **and B7** (3D deleted whole with Three.js,
+the camera fixed facing north, a game that imports no package, the memory check counting canvases
+and the draw budget brought down to 16ms, `rendering.md` the 2D view's; decision 110). **Next: B8**,
+the HUD's look. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -377,8 +379,22 @@ discovered at the end.
   fishing spot as the water round it. About twenty-six files with its tests and docs. Found and left
   for B9: town's training hall stands close enough south of the smithy that its faded roof is drawn
   over the smithy's room. Decision 109 has the forks.
-- **B7 — Retire 3D.** Three.js and `render3d/` deleted; smoke's draw budget and memory checks
-  rewritten for 2D; `rendering.md` rewritten.
+- **B7 — Retire 3D. (Landed.)** **`render3d/` and Three.js are deleted**, its tests with it, the
+  `?renderer=3d` flag and smoke's `renderer-3d` section, and the shared tables only the 3D view read
+  (the townsfolk's and outlaws' colours, the masks, the stride, the appearance key). What its tests
+  held of the game rather than the engine was **ported to the 2D picking test** first: the priority
+  asked of every kind, loot piles, the second tap from a doorstep, a rat on a shopfront's step.
+  **The camera never turns**: the orbit, the yaw and W's rotation went with it, and a drag, still
+  told from a tap by `host/gesture.ts`, asks for nothing. **The game imports no package**:
+  `tests/architecture/seam.test.ts` holds that nothing in `src/` imports one, that there is no
+  runtime dependency, and that nothing but `main.ts` imports `render2d/`. **The view reports a
+  canvas count** (`canvases()`) in place of GPU memory, and every leak check in smoke reads it. **The
+  draw budget is 16ms**, from the 3D view's 40: the 2D view reads 2-3ms on CI, and a planted
+  regression the old ceiling would have passed fails the new one. **`rendering.md` is the 2D view's**,
+  taking `art.md`'s account of it. The paperdoll keeps its stick-figure rig for B8. About a hundred
+  files, forty-odd of them deleted and most of the rest a comment or a paragraph that named the 3D
+  view; it stayed whole because a deletion that leaves the docs and comments pointing at files that
+  are gone is not finished. Decision 110 has the forks.
 - **B8 — The HUD's look.** A full UI pass to match the art: theme, panels, icons as pixel data, a
   type choice. Part A said what things are; this makes them look like one game.
 - **B9 — Part B review.**
@@ -508,4 +524,4 @@ Sized at C11 from how long a zone actually took, not guessed now.
 - **No art or sound files.** Sprites are code compiled at boot (decision 81); sound stays
   synthesised (decision 54 still holds for it).
 - **No keeping old saves** (decision 82).
-- **No second renderer kept alive.** 3D goes in B7.
+- **No second renderer kept alive.** 3D went in B7 (decision 110).

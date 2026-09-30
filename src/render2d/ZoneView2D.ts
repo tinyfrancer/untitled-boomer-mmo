@@ -44,7 +44,7 @@ const BAR_WIDTH = 20;
 const PLAYER_BAR_WIDTH = 26;
 const BAR_HEIGHT = 2;
 
-/** How long an arrow and a bolt take to cross, the 3D view's numbers. */
+/** How long an arrow and a bolt take to cross: an arrow is the quicker. */
 const ARROW_MS = 140;
 const BOLT_MS = 250;
 
@@ -65,7 +65,7 @@ const LEVEL_UP_ALPHA = 0.8;
 /** How long a corpse lies after its fall before it is gone, fading as it goes. */
 const CORPSE_FADE_MS = 300;
 
-/** A loot pile's last ten seconds, blinking: the 3D view's rule (`docs/decisions.md` 66). */
+/** A loot pile's last ten seconds, blinking (`docs/decisions.md` 66). */
 const PILE_BLINK_FROM_MS = 10_000;
 const PILE_BLINK_MS = 250;
 
@@ -182,8 +182,12 @@ export class ZoneView2D implements ZoneView {
     this.canvas.style.top = '0';
     this.canvas.style.display = 'block';
     this.canvas.style.imageRendering = 'pixelated';
-    // The 3D view's policy and for its reasons: a one-finger drag and a double
-    // tap are the game's, a two-finger pinch is left to the browser.
+    // `pinch-zoom` and not `none`: a one-finger drag and a double tap are the
+    // game's, so the stream of pointer events that tells a drag from a tap is
+    // not claimed halfway through by a pan the browser decided to take. A
+    // two-finger pinch is left to the browser, because the canvas is full-bleed
+    // under a `pointer-events: none` overlay: whatever it refuses, the page has
+    // no other surface to be unzoomed through.
     this.canvas.style.touchAction = 'pinch-zoom';
     parent.appendChild(this.canvas);
     this.resize();
@@ -275,13 +279,6 @@ export class ZoneView2D implements ZoneView {
     this.context.imageSmoothingEnabled = false;
     this.pool.release(this.vignette);
     this.vignette = this.shade(this.camera.artWidth, this.camera.artHeight);
-  }
-
-  /** A 2D camera never turns: north is always up the screen, and a drag asks for nothing. */
-  orbitBy(): void {}
-
-  cameraYaw(): number {
-    return 0;
   }
 
   draw(events: readonly WorldEvent[]): void {
@@ -1011,8 +1008,8 @@ export class ZoneView2D implements ZoneView {
     };
   }
 
-  /** What the view is holding: no geometries, and every canvas it made. */
-  gpuMemory(): { geometries: number; textures: number } {
-    return { geometries: 0, textures: this.pool.count() };
+  /** Every canvas the view made and has not let go, all through one pool. */
+  canvases(): number {
+    return this.pool.count();
   }
 }

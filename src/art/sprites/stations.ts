@@ -2,7 +2,7 @@ import { grid, type SpriteDef } from '../format';
 
 /**
  * What a maker works at (decision 109): the three stations a zone came with,
- * each a silhouette of its own at a glance as the 3D ones were, and the fire
+ * each a silhouette of its own at a glance, and the fire
  * the player lights. Drawn in shared ramps, since a forge is the same stone
  * and iron in any light, and standing on the ground as a prop does.
  */
@@ -234,9 +234,9 @@ const TANNERY_STILL = grid(`
 `);
 
 /**
- * The tannery: a vat of liquor with a hide laced to a frame behind it, which
- * is what the 3D one was built as: a wooden thing full of liquid with
- * something soft hanging off it, the forge's opposite at a glance.
+ * The tannery: a vat of liquor with a hide laced to a frame behind it, a
+ * wooden thing full of liquid with something soft hanging off it, the forge's
+ * opposite at a glance.
  */
 export const TANNERY: SpriteDef = {
   id: 'tannery',
