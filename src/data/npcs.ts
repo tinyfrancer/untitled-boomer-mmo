@@ -37,8 +37,8 @@ export interface NpcDefinition {
   role: NpcRoleId;
   /**
    * What they open a conversation with: one line, in their own voice. It names
-   * no place and no person, since the lore that will name them is not written
-   * yet, and a greeting is the first thing a rewrite in that voice replaces.
+   * no place and no person yet: `docs/lore/` names them, and a greeting is the
+   * first thing D1's rewrite in that voice replaces.
    */
   greeting: string;
 }

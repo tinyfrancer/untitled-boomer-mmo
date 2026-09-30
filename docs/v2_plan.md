@@ -46,8 +46,11 @@ seeing more of the world, the map's names one size, the player column backed, an
 planned; decision 112), **and C1** (every zone written as text, the start, creatures, nodes,
 stations and buildings included and the townsfolk placed from where they work; a route that stands
 off the middle of a cell to reach a room two tiles deep; version 2's saves counting from 100, a
-version 1 character named once as they retire; the wizard's ids staffs; decision 113). **Next:
-C2**, the lore bible. Update this line as each phase lands: which phase, and which is next.
+version 1 character named once as they retire; the wizard's ids staffs; decision 113), **and C2** (the
+lore bible in `docs/lore/`: the Veymarch, a drowned kingdom's frontier whose lanterns are going out,
+its peoples, factions and places, the spirit who lit the light that drowned it, the tone and the
+names; decision 114). **Next: C3**, the minimap. Update this line as each phase lands: which phase,
+and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -466,10 +469,22 @@ saved position stops meaning anything.
   screen names who was in it, once; a version 1 file is refused in the same words. The wizard's
   ids became `apprentice-staff`, `stolen-staff` and `barrow-staff`. All three forks were the
   user's (decision 113).
-- **C2 — The lore bible.** Before any zone is rebuilt: the realm's name and history, its peoples
-  (humans, elves, dwarves and stranger things), its factions, its places, the tone with examples,
-  the spirit's story, how things are named (`docs/lore/`). The user reviews it; rebuilt zones get
-  their names, secrets and rumours from it.
+- **C2 — The lore bible. (Landed.)** `docs/lore/`, an index and seven files, written before any
+  zone is rebuilt, the user's review of it part of the phase. **The realm is the Veymarch**, the frontier
+  the Veymarch Company is settling for the Crown of Aldmark over **Veymar**, a kingdom of low country
+  that held back the sea and kept its dead kings asleep with **kindled lights**, lanterns with a
+  soul in them, and drowned six hundred years ago when its last king, Merrath, had every light drawn
+  into one to keep himself for ever. The **fenfolk**, its last people, have kept the barrows'
+  lanterns lit with their own dead since; the Company's pans, drains and quarry are putting them
+  out, and every soul that goes out is drawn to Merrath's light under the sea. **The spirit is
+  Wick**, who was Lorn, the lampwright who lit it, sealed by the survivors in the hill the quarry
+  cracked, and remembering a piece at each zone and boss. The elves of the Stillwood and the dwarves
+  of Karn Tholl are met once each before level 9 and come back in Part G; the fen raiders have a
+  cause and Hollis's Red Rags do not. `places.md` gives every zone its name (Town is **Lampton**, the
+  beach **Candle Strand**, the quarry **the New Cut**), people, secrets, rumours and Wick's beat, a
+  name reaching the game when its zone is rebuilt; `tone.md` has the voice with lines right and
+  wrong, and `naming.md` the old tongue's roots and every name taken. All four forks were the user's
+  (decision 114).
 - **C3 — Minimap.** You, nearby creatures, exits and points of interest, in a corner that keeps
   clear of everything `layout.ts` already reserves.
 - **C4 — Smarter creatures.** Mobs path around walls and obstacles (reversing decision 26), with
@@ -509,8 +524,9 @@ a level take, early and near the cap (C10)?
   surfaces at new zones and bosses. It takes over A9's tips.
 - **D5 — Part D review.**
 
-**Open questions for Part D**: which factions, and can two be opposed (raising one lowers another)?
-What does the spirit want?
+**Open questions for Part D**: can two factions be opposed, so that raising one lowers another?
+C2 answered which factions there are and what the spirit wants (`docs/lore/factions.md` and
+`spirit.md`, decision 114), and left D3 the mechanics.
 
 ---
 

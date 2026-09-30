@@ -29,6 +29,11 @@ next — and its "Starting cold" section. Its parts each end in a review phase t
 so read it as it stands, not as it was. Finished plans go to `docs/archive/`. Anything big enough to
 phase gets a new plan doc rather than being started against this file alone.
 
+**The world's lore is `docs/lore/`** (decision 114): the realm, its history, peoples, factions and
+places, the spirit's story, the tone with examples, and how things are named. A new name, person,
+rumour or line of dialog is taken from it and written in its voice, a fact it lacks is added to it
+in the same change, and a name reaches the game in the phase that rebuilds where it is.
+
 **Decisions that closed off a real alternative go in `docs/decisions.md`**, appended and never
 edited. That file is not a duplicate of this one: this describes the shape of the system as it
 stands, where that records the _forks_ — what was chosen, by whom, what was rejected and why — so

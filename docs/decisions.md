@@ -2684,3 +2684,57 @@ user settled three forks at the start of the phase:
   the old ids, which no save needs any more.
 - **The camera needed nothing new.** It already framed whatever size the world is, clamped to its
   edges; the per-zone size is the text's.
+
+## 114. The realm is the Veymarch, a drowned kingdom's frontier whose lanterns are going out; the spirit is the lampwright who drowned it; the elves and dwarves come back; the fen raiders have a cause
+
+**2026-09-30 · the user, asked by Claude, building the plan's phase C2**
+
+C2 writes the lore bible (`docs/lore/`) before any zone is rebuilt, so the rebuilds take their
+names, secrets and rumours from one place. The user settled four forks at the start of the phase,
+each on Claude's recommendation, and the bible is built on them:
+
+- **The history is an old kingdom stirring**, built on what the game already said: Orlath's barrow
+  sunk under the fen, "older work than any I know" buried in it, raiders carrying its key. The
+  kingdom is **Veymar**, which held back the sea and kept its dead kings asleep with lanterns that
+  had a soul kindled into them, and drowned when its last king, Merrath, had every light drawn into
+  one to keep himself for ever. The fenfolk have kept the barrows' lanterns lit with their own dead
+  since; the Company's settling is putting them out, and every soul that goes out is drawn to
+  Merrath's light under the sea, which is the stakes the climb to 20 rises through. **Rejected:**
+  magic seeping back into the world, the stakes being who wields it; a frontier pushing into the
+  wild with no single great evil.
+- **The spirit is a soul of the old age**, woken with it and remembering in pieces, a piece at each
+  new zone and boss, as D4 promises. It is **Wick**, who was **Lorn**, the lampwright who lit
+  Merrath's light, kindled unwilling by the survivors and sealed in the hill the New Cut's blasting
+  cracked; it fastened on the player because a soul held near a living one is not drawn to the
+  light. **Rejected:** a wisp of the land, the last of its kind; the ghost of the last hero to try
+  the climb; a helper hiding what it is until the end, which Wick is without knowing it.
+- **Elves and dwarves withdrew, and are coming back.** The elves left Veymar's courts over the
+  kindling, the dwarves shut their doors when the Drowning took their deepest halls, and the lanterns
+  going out brings both back. Before level 9 each is met once, as an event: an elf at the millpond,
+  a dwarf at a door in the Deep Cut; their homelands are Part G's. **Rejected:** peoples near but
+  apart, ordinary at their borders; peoples mostly gone.
+- **The outlaws are mixed.** Hollis's Red Rags are criminals with no grievance but greed. The fen
+  raiders are the fenfolk's young, who strike the Company's salt pans because the pans cut them off
+  from the barrows they keep. **Rejected:** every outlaw band grey, each with a leader to deal with;
+  outlaws only ever enemies.
+
+Claude's, alongside them, and all of it the user's to change in the review the phase includes:
+
+- **An index and seven files** (history, peoples, factions, places, spirit, tone, naming) rather
+  than one document, so a later phase reads the part it needs. **The bible is canon for anything not
+  yet built**, and a phase that needs a fact it lacks adds it there in the same change, as
+  `docs/architecture/` is corrected.
+- **A name reaches the game in the phase that rebuilds where it is**: Town becomes Lampton in its
+  rebuild, the beach Candle Strand, the quarry the New Cut, and C2 changes no data. Part C shows the
+  world half renamed while it is rebuilt, which decision 83 already accepts. **Rejected:** renaming
+  every zone now, which names Candle Strand before any Candle stands off it.
+- **What the game already said is kept and explained** rather than contradicted: the fettler's "none
+  of it was theirs" is his mistake, since fenweave is the fenfolk's own cloth; the raiders carry the
+  barrow's key because they keep it; Orlath's grave goods are dwarven work; a cave crawler is a sea
+  crab come up through the dwarves' drowned halls; and the smithy is empty because its smith went
+  east to a wedding and never came back.
+- **The ending is written as intended**, so rumours and Wick's memories have something to point at:
+  Wick goes into Merrath's light and lets go, and every soul of Veymar goes on with it. Part G may
+  change how it is reached, not what it is about.
+- **Part D's open questions narrow**: which factions there are and what the spirit wants are
+  answered here; whether raising one faction lowers another is still D3's.
