@@ -2910,3 +2910,57 @@ Claude's, building it:
   the pair of buildings B6's cutaway was found on is built in its own test, the south signpost is
   measured from the arrival strip where the camera is pinned hardest, and smoke taps it from a few
   tiles up the road. Smoke gained a `secrets` section.
+
+## 118. The rebuilds go the starter band first, add more of what a zone has rather than something new, and leave its people to Part D; ruins get a ground of their own; the New Cut and Redrag Camp rebuilt at 45×32
+
+**2026-09-30 · the user, asked by Claude, building the plan's phase C6**
+
+C6 is the second of the rebuilds. The user settled three forks at the start, each on Claude's
+recommendation, and all three hold for the rebuilds after it:
+
+- **The New Cut and Redrag Camp are rebuilt next**, the rest of the starter band's open ground, so a
+  new character's first hours are all at the new size. The rest pair as the two vaults (the
+  Cutthroat's Cellar and the Sunken Barrow, which are the same shape on purpose), then Old Mill Road
+  and Greyford, then Blackwater Fen and the Deep Cut. **Rejected:** the New Cut with the Deep Cut,
+  the two joined by the shaft so their shared edge is settled once; Redrag Camp with the Cellar, the
+  waystation and the vault under it rebuilt as one place.
+- **A rebuild adds more of what its zone has**: veins, creatures of the kinds it had, room, side
+  paths and secrets, and no new kind of thing to do, so what each zone yields stays fixed until C10
+  tunes the grind against it and the progression tests measure the layout alone. **Rejected:** a
+  new activity per zone, the bandits' fire to cook at or trees on the Cut's rim, which changes what
+  a zone is for and what idle can do there.
+- **The people the lore names for a zone come in Part D**, with dialog to make them worth a tap, as
+  C5 left Bess Mallow. **Rejected:** placing them in each rebuild with a greeting and nothing else.
+
+Claude's, building it:
+
+- **Ruins are a ground of their own**, masonry (`MASONRY_TILE`, `%`): blocking as rock is, standing
+  its face up inside its own cell as rock does, and drawn as dressed stone in courses in the `rock`
+  ramp, so a wall is the hill's dark in any light and the zone map draws it as rock. Redrag Camp's
+  waystation is the first; the Cellar, the barrow, Greyford's bridge and the mill road's shrine are
+  what it is for next. **Rejected:** building the ruin from rock, which reads as an outcrop; a
+  roofless building on the building kit, whose walls are a quarter of a tile and whose room is one
+  box with one door, where a ruin is broken in several places.
+- **The road meets the waystation's paving** along one new edge, the dirt over the slabs, since a
+  road that stopped a tile short of the gate on grass read as no road into it.
+- **The New Cut keeps the quarry's shape**: the shelf along the north edge for the Deep Cut's
+  arrivals, the face under it with the shaft through its middle, the west ledge to Greyford, turf
+  along the south. A ridge across the pit makes two benches, the gated ore and the biggest rats on
+  the upper. A vein stands against rock or two tiles off it, never a body's width off.
+- **Redrag Camp is the waystation's ruin on the road**, entered at its gate, broken in the north,
+  east and south walls, with the wardens' hall at the back holding the lamp niche and the level 3
+  men. Every bandit stands in columns 12-37, where the sweeps put the bound: out of aggro across from
+  both arrival strips, and out of a wander disc and an aggro radius from the start on the road. The
+  way down to the vault stays the east edge, off the back of the yard.
+- **Two secrets**, one a zone, from `docs/lore/places.md`: the broken cell behind the Cut's face,
+  through a breach a spoil heap stands in front of, with Wick's line from the lore and a little coin;
+  and the lamp niche in the hall's back wall, past every Red Rag in the yard, with a purse in it.
+  Both are drawn set into the wall behind the floor tile they are found from.
+- **The zones take their names**, the New Cut and Redrag Camp; the hideout keeps its name until the
+  phase that rebuilds it. Smoke's zone checks count secrets among what is drawn.
+
+**Left open, for the vaults' phase:** an underground zone joined by an edge keeps that edge open end
+to end, since an arrival lands at the fraction of the edge it was crossed at (the hideout's whole
+west side, the Deep Cut's whole south). At 45×32 that is a strip thirty-two tiles long down one side
+of a vault. Whether an exit into a vault becomes a door somewhere in it, or an arrival at a mouth
+narrower than its edge, is that phase's question.

@@ -58,7 +58,10 @@ chase going nowhere, the leash still a ring round home, and each creature's way 
 decision 116), **and C5** (Lampton and Candle Strand rebuilt at 45×32 under their own names, with
 side paths and places to do things; secrets, found by walking up to one and paying a line of Wick's
 and a cache, counted under the zone map, three of them; no tide, and no travel until C10 decides;
-decision 117). **Next: C6**, the next two zones rebuilt. Update this line as each phase lands: which
+decision 117), **and C6** (the New Cut and Redrag Camp rebuilt at 45×32 under their own names, the
+Cut in two benches under its face and the camp in a ruined waystation of dressed stone, a ground of
+its own; a secret in each; a rebuild adds more of what a zone has and leaves its people to Part D;
+decision 118). **Next: C7**, the two vaults rebuilt. Update this line as each phase lands: which
 phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
@@ -532,11 +535,26 @@ saved position stops meaning anything.
   card and a cache of coin and now and then an item, the zone map counting the zone's own under
   it; two in Lampton and one on the strand. The townsfolk keep their trades as names until D1. All
   four forks were the user's (decision 117).
+- **C6 — The New Cut and Redrag Camp. (Landed.)** Both at 45×32 and under their own names. **The
+  New Cut** keeps the quarry's shape: the shelf along the north edge for the Deep Cut's arrivals,
+  the face with the shaft through it, the west ledge to Greyford, and turf where Lampton's road comes
+  up; a ridge across the pit makes two benches, tin and small rats on the lower, iron and big ones on
+  the upper. **Redrag Camp** is a Veymari waystation's ruin on the east road, entered at its gate:
+  walls broken in three places round a paved yard, the wardens' hall at the back, a stable, a
+  well-house up a track and a pond, every bandit where neither arrival strip nor the start is in
+  reach. **Ruins are a ground of their own**, masonry, dressed stone standing its face up as rock
+  does, and the road meets the paving along a new edge. **The broken cell** behind the Cut's face
+  and **the lamp niche** in the hall's back wall are the secrets. A rebuild adds more of what its
+  zone has rather than a new kind of thing to do, and the people the lore names come in Part D.
+  All three forks were the user's (decision 118).
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
-  activity spots each. Spawns, nodes and stations re-placed; the progression test re-held. **Every
-  creature, node, station and building a rebuild adds is drawn in the phase that adds it** (a row in
-  `art/cast.ts`, `art/places.ts`, the building kit, and an icon for anything it hands out), since
-  Part B left nothing a placeholder and the tests hold every row to a drawing (decision 112).
+  activity spots each, **the activities being more of what the zone already has** (decision 118).
+  Spawns, nodes and stations re-placed; the progression test re-held. **Every creature, node,
+  station and building a rebuild adds is drawn in the phase that adds it** (a row in `art/cast.ts`,
+  `art/places.ts`, the building kit, and an icon for anything it hands out), since Part B left
+  nothing a placeholder and the tests hold every row to a drawing (decision 112). **The order**
+  after C6 (decision 118): **C7** the two vaults, the Cutthroat's Cellar and the Sunken Barrow, the
+  same shape on purpose; **C8** Old Mill Road and Greyford; **C9** Blackwater Fen and the Deep Cut.
 - **C10 — Less grind.** Pillar 3's promise, "tune curves down before adding systems up", which no
   phase kept until the Part A review added this one (decision 99). The curves are tuned against the
   rebuilt zones, since their longer walks between kills are what moves the pace, and before Parts
@@ -548,7 +566,11 @@ saved position stops meaning anything.
 
 **Open questions for Part C**: how many minutes should a level take, early and near the cap (C10)?
 And, since C5 left it to C10 (decision 117), does travel come back once the walks are measured, and
-at what price? C5 answered how secrets are found: by walking up to them.
+at what price? For C7 (decision 118): a vault is joined by an edge, and an arrival lands at the
+fraction of the edge it was crossed at, so each keeps a whole side open end to end; does an exit into
+a vault become a door somewhere in it, or an arrival at a mouth narrower than its edge, or stay as it
+is? C5 answered how secrets are found: by walking up to them. C6 answered what a rebuild may add
+(more of what the zone has) and when the lore's people arrive (Part D).
 
 ---
 
