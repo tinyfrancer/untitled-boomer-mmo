@@ -3,6 +3,7 @@ import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
 import { CRAB } from './sprites/crab';
+import { CRIT, FIREBALL, HIT, KNIFE, LEVEL_UP, LOOT_SACK } from './sprites/effects';
 import { LURKER } from './sprites/lurker';
 import { RAT } from './sprites/rat';
 import { SCATTER_SPRITES } from './sprites/scatter';
@@ -22,6 +23,12 @@ export const SPRITES: readonly SpriteDef[] = [
   RAT,
   CRAB,
   LURKER,
+  HIT,
+  CRIT,
+  FIREBALL,
+  KNIFE,
+  LEVEL_UP,
+  LOOT_SACK,
   SIGNPOST,
 ];
 

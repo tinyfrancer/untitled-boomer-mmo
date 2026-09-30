@@ -1,4 +1,4 @@
-import type { CreatureShapeId, EnemyId, NpcId } from '../types/ids';
+import type { AbilityId, CreatureShapeId, EnemyAbilityId, EnemyId, NpcId } from '../types/ids';
 import { variantId } from './compile';
 import type { SpriteDef } from './format';
 import { fighterSprite, standingSprite, type Build, type Getup } from './outfit';
@@ -15,6 +15,7 @@ import { GOBLIN_EARS } from './sprites/hair';
 import { APRON_DOWN, APRON_RIGHT, APRON_UP, CORDED, ROBE, TUNIC } from './sprites/people';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { CRAB } from './sprites/crab';
+import { FIREBALL, KNIFE } from './sprites/effects';
 import { LURKER } from './sprites/lurker';
 import { RAT } from './sprites/rat';
 import { BEARDED_AXE, DAGGER, GAFF, MAUL, ROUND_SHIELD, RUSTY_SWORD } from './sprites/weapons';
@@ -256,4 +257,14 @@ export function creatureSprite(enemyId: EnemyId, shape: CreatureShapeId): string
   const drawn = CREATURE_SPRITES[enemyId];
   if (drawn) return drawn;
   return shape === 'humanoid' ? PLACEHOLDERS.person.id : PLACEHOLDERS.beast.id;
+}
+
+/** What each thrown thing is drawn as crossing the gap: a knife, and every spell a fireball. */
+const THROWN: Readonly<Partial<Record<AbilityId | EnemyAbilityId, string>>> = {
+  'throw-knife': KNIFE.id,
+};
+
+/** The sprite a thrown ability flies as. */
+export function thrownSprite(abilityId: AbilityId | EnemyAbilityId): string {
+  return THROWN[abilityId] ?? FIREBALL.id;
 }

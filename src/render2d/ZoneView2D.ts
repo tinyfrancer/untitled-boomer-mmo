@@ -1,11 +1,14 @@
-import { creatureSprite, npcSprite } from '../art/cast';
+import { creatureSprite, npcSprite, thrownSprite } from '../art/cast';
 import { PLAYER_SPRITE, playerSprite } from '../art/outfit';
 import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { ART_PIXEL } from '../art/budget';
 import { PLACEHOLDERS } from '../art/index';
+import { variantId } from '../art/compile';
+import { CRIT, HIT, LEVEL_UP, LOOT_SACK } from '../art/sprites/effects';
 import { SIGNPOST } from '../art/sprites/props';
 import { TILE_SIZE } from '../config/constants';
 import { ABILITIES } from '../data/abilities';
+import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { buildingRect, occupant } from '../data/buildings';
 import { npcName } from '../data/npcs';
 import { titleName } from '../systems/AchievementSystem';
@@ -26,6 +29,7 @@ import { Motion, deathPose, frameIndex, playMs, type Pose } from './animation';
 import { BuildingSprite } from './buildings';
 import { Camera2D } from './camera';
 import { CanvasPool } from './canvases';
+import { Effects2D, Telegraphs } from './effects';
 import { LANTERN, Lantern } from './lantern';
 import { pickScene, pickTap } from './picking';
 import { SpriteSheet } from './sheet';
@@ -39,12 +43,23 @@ const BAR_WIDTH = 20;
 const PLAYER_BAR_WIDTH = 26;
 const BAR_HEIGHT = 2;
 
-/** How long a floating number lives and how far it climbs, in art pixels. */
-const FLOAT_MS = 600;
-const FLOAT_RISE = 16;
 /** How long an arrow and a bolt take to cross, the 3D view's numbers. */
 const ARROW_MS = 140;
 const BOLT_MS = 250;
+
+/**
+ * How high over its feet a figure's chest is, as a share of how tall it is
+ * drawn: where a blow lands and what a shot is loosed from and aimed at.
+ */
+const CHEST = 0.55;
+/** How tall a thing is taken to be when a moment names only a spot: a person. */
+const STANDING_HEIGHT = 40;
+/** How far over the top of a thing a number starts: from its health bar, up past its name. */
+const FLOAT_OVER = PLATE_GAP + BAR_HEIGHT + 2;
+
+/** How long a level's light lingers after it has played, fading, and how strong it is. */
+const LEVEL_UP_HOLD_MS = 700;
+const LEVEL_UP_ALPHA = 0.8;
 
 /** How long a corpse lies after its fall before it is gone, fading as it goes. */
 const CORPSE_FADE_MS = 300;
@@ -65,25 +80,9 @@ const VIGNETTE_DARK = 0.5;
 const VIGNETTE_FROM = 0.45;
 
 const PROP = PLACEHOLDERS.prop.id;
-const EFFECT = PLACEHOLDERS.effect.id;
 
 function css(hex: number): string {
   return `#${hex.toString(16).padStart(6, '0')}`;
-}
-
-/** A moment being drawn out over the frames after it: a number rising, an arrow flying. */
-interface Effect {
-  kind: 'float' | 'projectile' | 'burst';
-  from: Point;
-  to: Point;
-  text: string;
-  colour: string;
-  lift: number;
-  lifeMs: number;
-  // Null until the first frame that draws it, which is when its clock starts:
-  // on a phone taking 150ms a frame an arrow dated to the frame before it was
-  // born would be retired without ever being drawn (`rendering.md`).
-  bornAt: number | null;
 }
 
 /** Something standing, to be drawn in order of where its feet are. */
@@ -98,9 +97,9 @@ interface Standing {
  * (`docs/decisions.md` 101, `docs/architecture/art.md`).
  *
  * The game's view since phase B3 (decision 106): every zone's ground with its
- * edges, scatter and the lantern underground, the three classes, the
- * shopkeeper, the rat and a building kit drawn for real, and everything else
- * as its kind's placeholder until B4 to B6 draw it.
+ * edges, scatter and the lantern underground, a building kit, every person
+ * (B4) and every creature and moment (B5) drawn for real; nodes, stations and
+ * the campfire are still their kind's placeholder until B6 draws them.
  *
  * It holds no scene. Every frame is drawn from the world as it stands, in
  * painter's order — the ground, the shadows, everything standing sorted by
@@ -127,13 +126,17 @@ export class ZoneView2D implements ZoneView {
   private buildings: BuildingSprite[] = [];
   private shadows = new Map<number, HTMLCanvasElement>();
   private ring: HTMLCanvasElement | null = null;
+  // The reach of every enemy ability winding up, and when each wind-up was
+  // first seen, which is what its disc fills from.
+  private telegraphs: Telegraphs | null = null;
+  private windUps = new Map<Mob, { landsAt: number; seenAt: number }>();
   // Underground only: the light the player carries.
   private lantern: Lantern | null = null;
   // The view's own and the screen's size, made again when the screen changes shape.
   private vignette: HTMLCanvasElement | null = null;
   private readonly playerMotion = new Motion();
   private mobMotions = new Map<Mob, Motion>();
-  private effects: Effect[] = [];
+  private readonly effects = new Effects2D();
   private readonly gatherBeat = new GatherBeat();
   private playerPose: Pose = { animation: 'idle', facing: 'down', index: 0 };
   private readonly startedAt = performance.now();
@@ -190,6 +193,7 @@ export class ZoneView2D implements ZoneView {
       world.mobs.map((mob) => [mob, new Motion((mob.spawnX * 7 + mob.spawnY * 13) % 1000)]),
     );
     this.lantern = this.setting === 'underground' ? new Lantern(this.pool) : null;
+    this.telegraphs = new Telegraphs(this.pool);
     this.camera.follow(world.player);
   }
 
@@ -209,8 +213,11 @@ export class ZoneView2D implements ZoneView {
     this.ring = null;
     this.lantern?.release();
     this.lantern = null;
+    this.telegraphs?.release();
+    this.telegraphs = null;
+    this.windUps = new Map();
     this.mobMotions = new Map();
-    this.effects = [];
+    this.effects.clear();
     this.gatherBeat.reset();
     this.world = null;
   }
@@ -275,7 +282,14 @@ export class ZoneView2D implements ZoneView {
             event.to.y - world.player.y,
             'shoot',
           );
-          this.effect('projectile', event.from, event.to, ARROW_MS);
+          this.effects.flight(
+            event.from,
+            event.to,
+            ARROW_MS,
+            null,
+            this.chestAt(event.from),
+            this.chestAt(event.to),
+          );
           break;
         case 'bolt-cast':
           // A creature's throw is already its swing; the player's is a spell.
@@ -287,12 +301,19 @@ export class ZoneView2D implements ZoneView {
               'cast',
             );
           }
-          this.effect('projectile', event.from, event.to, BOLT_MS);
+          this.effects.flight(
+            event.from,
+            event.to,
+            BOLT_MS,
+            thrownSprite(event.abilityId),
+            this.chestAt(event.from),
+            this.chestAt(event.to),
+          );
           break;
         case 'hit': {
           if (event.mob) this.mobMotions.get(event.mob)?.flinch(now);
           else if (event.damage > event.absorbed) this.playerMotion.flinch(now);
-          if (event.absorbed > 0) this.float(event.at, `(${event.absorbed} absorbed)`, 'skill', 10);
+          const height = this.heightAt(event.at);
           if (event.damage > event.absorbed) {
             const shown = event.on === 'player' ? event.damage - event.absorbed : event.damage;
             const tone: FloatTone = event.crit
@@ -302,7 +323,12 @@ export class ZoneView2D implements ZoneView {
                 : event.on === 'player'
                   ? 'player-damage'
                   : 'damage';
-            this.float(event.at, event.crit ? `-${shown}!` : `-${shown}`, tone);
+            this.float(event.at, event.crit ? `-${shown}!` : `-${shown}`, tone, height, event.crit);
+            this.impact(event.at, height, event.crit, event.on === 'player');
+          }
+          // Over the wound, so a soak and the damage through it can both be read.
+          if (event.absorbed > 0) {
+            this.float(event.at, `(${event.absorbed} absorbed)`, 'skill', height);
           }
           break;
         }
@@ -312,16 +338,22 @@ export class ZoneView2D implements ZoneView {
           }
           break;
         case 'defend':
-          this.float(event.at, event.skillName, 'heal');
+          this.float(event.at, event.skillName, 'heal', this.heightAt(event.at));
           break;
         case 'heal':
-          this.float(event.at, `+${event.amount}`, 'heal');
+          this.float(event.at, `+${event.amount}`, 'heal', this.heightAt(event.at));
           break;
         case 'float':
-          this.float(event.at, event.text, event.tone);
+          this.float(event.at, event.text, event.tone, this.heightAt(event.at));
           break;
         case 'level-up':
-          this.effect('burst', event.at, event.at, playMs(PLACEHOLDERS.effect, 'play'));
+          if (this.sheet) {
+            this.effects.burst(this.sheet, event.at, LEVEL_UP.id, {
+              drop: 3,
+              holdMs: LEVEL_UP_HOLD_MS,
+              alpha: LEVEL_UP_ALPHA,
+            });
+          }
           break;
         default:
           break;
@@ -368,6 +400,8 @@ export class ZoneView2D implements ZoneView {
         p.y - Math.floor(ring.height / 2) - 1,
       );
     }
+
+    this.drawTelegraphs(world, now);
 
     const standing: Standing[] = [];
     const figure = this.dressed(world);
@@ -470,7 +504,10 @@ export class ZoneView2D implements ZoneView {
       if (pile.isGone()) continue;
       const left = pile.remainingMs;
       if (left <= PILE_BLINK_FROM_MS && Math.floor(left / PILE_BLINK_MS) % 2 === 1) continue;
-      standing.push(still(pile.x, pile.y, 'still'));
+      // A person's width, whose shadow is already cut: a sack comes and goes
+      // mid-zone, and what it is drawn with must go with it.
+      shadowAt(pile.x, pile.y, 16);
+      standing.push(still(pile.x, pile.y, 'still', 1, LOOT_SACK.id));
     }
     const campfire = world.campfire;
     if (campfire) standing.push(still(campfire.x, campfire.y, 'loop'));
@@ -492,7 +529,7 @@ export class ZoneView2D implements ZoneView {
     standing.sort((a, b) => a.baseY - b.baseY);
     for (const thing of standing) thing.draw();
 
-    this.drawEffects(now);
+    this.effects.draw(context, camera, sheet, this.text, now);
     if (this.lantern) {
       const flame = at(player.x, player.y);
       this.lantern.draw(
@@ -529,43 +566,73 @@ export class ZoneView2D implements ZoneView {
     return sheet;
   }
 
-  /** The moments in flight: projectiles, bursts, and the numbers over them. */
-  private drawEffects(now: number): void {
-    const sheet = this.sheet;
-    const text = this.text;
-    if (!sheet || !text) return;
-    const context = this.context;
-    this.effects = this.effects.filter((effect) => {
-      effect.bornAt ??= now;
-      const progress = (now - effect.bornAt) / effect.lifeMs;
-      if (progress >= 1) return false;
-      if (effect.kind === 'float') {
-        const p = this.camera.toCanvas(effect.from.x, effect.from.y);
-        const word = text.get(effect.text, effect.colour);
-        context.globalAlpha = 1 - progress;
-        context.drawImage(
-          word,
-          p.x - Math.floor(word.width / 2),
-          p.y - 40 - effect.lift - Math.round(FLOAT_RISE * progress),
-        );
-        context.globalAlpha = 1;
-        return true;
+  /**
+   * The reach of every enemy ability winding up, on the ground round the one
+   * winding it: a rim where it lands and a disc filling out to meet it, the
+   * shout over its head saying what and this saying where, which is the whole
+   * of what the player can do about it. Read off the mob's wind-up, which is
+   * state, and filled on the view's clock from when this first saw it.
+   */
+  private drawTelegraphs(world: ZoneWorld, now: number): void {
+    const telegraphs = this.telegraphs;
+    if (!telegraphs) return;
+    for (const mob of world.mobs) {
+      const windUp = mob.isAlive() ? mob.windUp : null;
+      if (!windUp) {
+        this.windUps.delete(mob);
+        continue;
       }
-      const x = effect.from.x + (effect.to.x - effect.from.x) * progress;
-      const y = effect.from.y + (effect.to.y - effect.from.y) * progress;
-      const p = this.camera.toCanvas(x, y);
-      const pose: Pose =
-        effect.kind === 'burst'
-          ? {
-              animation: 'play',
-              facing: null,
-              index: frameIndex(PLACEHOLDERS.effect, 'play', now - effect.bornAt),
-            }
-          : { animation: 'play', facing: null, index: 0 };
-      // A projectile flies at chest height, not along the ground.
-      sheet.draw(context, EFFECT, pose, p.x, p.y + (effect.kind === 'burst' ? 0 : -8));
-      return true;
+      let seen = this.windUps.get(mob);
+      // A new wind-up is one landing at a different moment from the last one.
+      if (seen?.landsAt !== windUp.landsAt) {
+        seen = { landsAt: windUp.landsAt, seenAt: now };
+        this.windUps.set(mob, seen);
+      }
+      const ability = ENEMY_ABILITIES[windUp.abilityId];
+      const p = this.camera.toCanvas(mob.x, mob.y);
+      telegraphs.draw(
+        this.context,
+        p.x,
+        p.y,
+        Math.round(ability.range / ART_PIXEL),
+        (now - seen.seenAt) / ability.windUpMs,
+      );
+    }
+  }
+
+  /** A burst where a blow landed, at the chest of whatever it landed on. */
+  private impact(at: Point, height: number, crit: boolean, onPlayer: boolean): void {
+    const sheet = this.sheet;
+    if (!sheet) return;
+    const sprite = crit ? CRIT.id : HIT.id;
+    const def = sheet.def(sprite);
+    this.effects.burst(sheet, at, onPlayer ? variantId(sprite, 'blood') : sprite, {
+      drop: Math.floor(def.height / 2) - Math.round(height * CHEST),
     });
+  }
+
+  /**
+   * How tall the thing standing at a spot is drawn: a creature, the player, or
+   * a person's height when nothing stands there. A moment names only a spot,
+   * and a number thrown off a boss has to clear his head as one off a rat does.
+   */
+  private heightAt(at: Point): number {
+    const world = this.world;
+    const sheet = this.sheet;
+    if (!world || !sheet) return STANDING_HEIGHT;
+    const mob = world.mobs.find(
+      (candidate) => Math.abs(candidate.x - at.x) < 1 && Math.abs(candidate.y - at.y) < 1,
+    );
+    if (mob) return sheet.drawnHeight(creatureSprite(mob.definition.id, mob.definition.shape));
+    const player = world.player;
+    if (Math.abs(player.x - at.x) < 1 && Math.abs(player.y - at.y) < 1) {
+      return this.figure?.sheet.drawnHeight(PLAYER_SPRITE) ?? STANDING_HEIGHT;
+    }
+    return STANDING_HEIGHT;
+  }
+
+  private chestAt(at: Point): number {
+    return Math.round(this.heightAt(at) * CHEST);
   }
 
   /** Every word the world writes: the plates over heads, the signs over doors. */
@@ -686,21 +753,9 @@ export class ZoneView2D implements ZoneView {
     return bottom - baked.height + 1;
   }
 
-  private float(at: Point, text: string, tone: FloatTone, lift = 0): void {
-    this.effects.push({
-      kind: 'float',
-      from: at,
-      to: at,
-      text,
-      colour: FLOAT_TONE_COLORS[tone],
-      lift,
-      lifeMs: FLOAT_MS,
-      bornAt: null,
-    });
-  }
-
-  private effect(kind: 'projectile' | 'burst', from: Point, to: Point, lifeMs: number): void {
-    this.effects.push({ kind, from, to, text: '', colour: '', lift: 0, lifeMs, bornAt: null });
+  /** A number or a word rising off whatever stands at a spot, `height` tall, from its health bar. */
+  private float(at: Point, text: string, tone: FloatTone, height: number, crit = false): void {
+    this.effects.float(at, text, FLOAT_TONE_COLORS[tone], height + FLOAT_OVER, this.now(), crit);
   }
 
   /** A flat ellipse `width` art pixels across, in the setting's shadow, hard-edged like everything else. */
@@ -829,7 +884,7 @@ export class ZoneView2D implements ZoneView {
       markers,
       titles: state.activeTitleId ? 1 : 0,
       piles,
-      fx: this.effects.length,
+      fx: this.effects.count(),
     };
     const total =
       counts.ground +

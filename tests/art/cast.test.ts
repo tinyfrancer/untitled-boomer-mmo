@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creatureSprite, npcSprite } from '../../src/art/cast';
+import { creatureSprite, npcSprite, thrownSprite } from '../../src/art/cast';
 import { drawnHeight, variantId } from '../../src/art/compile';
 import { PLACEHOLDERS, SPRITES } from '../../src/art/index';
 import { ENEMIES } from '../../src/data/enemies';
@@ -66,5 +66,14 @@ describe('who is drawn with what', () => {
     expect(height('barrow-king')).toBeGreaterThan(height('barrow-wight') + 8);
     expect(height('goblin-scavenger')).toBeLessThan(height('bandit'));
     expect(height('goblin-miner')).toBeLessThan(height('fen-raider'));
+  });
+
+  it('throws a knife for the bandit and a fireball for every spell', () => {
+    expect(thrownSprite('throw-knife')).toBe('knife');
+    expect(thrownSprite('fireball')).toBe('fireball');
+    expect(thrownSprite('firestorm-2')).toBe('fireball');
+    for (const sprite of [thrownSprite('throw-knife'), thrownSprite('fireball')]) {
+      expect(KINDS.get(sprite)).toBe('effect');
+    }
   });
 });
