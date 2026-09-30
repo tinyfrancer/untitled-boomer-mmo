@@ -372,6 +372,7 @@ const spawned = () =>
     ).length,
     signposts: window.world.signposts.length,
     buildings: window.world.buildings.length,
+    secrets: window.world.secrets.length,
   }));
 
 /**
@@ -387,13 +388,14 @@ const checkZoneDrawn = async (zone) => {
   const drawn = await drawnCounts();
   const spawn = await spawned();
   check(
-    `every mob, node, npc, signpost and building in the ${zone} is drawn`,
+    `every mob, node, npc, signpost, building and secret in the ${zone} is drawn`,
     drawn.ground === 1 &&
       drawn.mobs === spawn.mobs &&
       drawn.nodes === spawn.nodes &&
       drawn.npcs === spawn.npcs &&
       drawn.signposts === spawn.signposts &&
-      drawn.buildings === spawn.buildings,
+      drawn.buildings === spawn.buildings &&
+      drawn.secrets === spawn.secrets,
     `drew ${JSON.stringify(drawn)} for ${JSON.stringify(spawn)}`,
   );
   // A sign is counted apart from the labels for the reason a marker is: the
@@ -723,8 +725,8 @@ async function teardown() {
     const w = window.world;
     w.teleport(w.worldWidth - 33, w.worldHeight / 2);
   });
-  await stepUntilZone('bandit-camp', 'the east exit to load the bandit camp');
-  await checkZoneDrawn('bandit camp');
+  await stepUntilZone('bandit-camp', 'the east exit to load Redrag Camp');
+  await checkZoneDrawn('camp');
   await page.screenshot({ path: `${OUT}/4-bandit-camp.png` });
   await page.evaluate(() => {
     const w = window.world;
@@ -738,8 +740,8 @@ async function teardown() {
     const w = window.world;
     w.teleport(w.worldWidth / 2, 33);
   });
-  await stepUntilZone('quarry', 'the north exit to load the quarry');
-  await checkZoneDrawn('quarry');
+  await stepUntilZone('quarry', 'the north exit to load the New Cut');
+  await checkZoneDrawn('New Cut');
   await page.screenshot({ path: `${OUT}/5-quarry.png` });
   await page.evaluate(() => {
     const w = window.world;
@@ -747,7 +749,7 @@ async function teardown() {
   });
   await stepUntilZone('town', 'the south exit to return to town');
   check(
-    'zone travel round-trips town -> beach -> town -> bandit camp -> town -> quarry -> town',
+    'zone travel round-trips Lampton -> the strand -> Lampton -> Redrag Camp -> Lampton -> the New Cut -> Lampton',
     true,
   );
 }

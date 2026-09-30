@@ -197,7 +197,7 @@ repeating with no seam; B2 redrew grass and road with texture and gave each seve
 (`TILE_VARIANTS`), a cell dealt one by where it is so a field is not one tile stamped over and
 over. What differs between variants is kept off a tile's edges, so any sits beside any other (a
 test holds every variant to its plain tile's two-pixel border). B3 gave sand, stone, rock and marsh
-theirs too, and redrew **stone as irregular flagstones** with their joints a step up from black,
+theirs too (and C6 masonry, below), and redrew **stone as irregular flagstones** with their joints a step up from black,
 since a bond laid in a grid read as a brick wall lying flat; **rock** is the top of a mass of
 boulders, and its face is a tile of its own (below). B2 drew the first figures, to **heroic proportions**: a head over a body three times its height, about
 39 pixels of the frame's 48 (decision 103). **The rat** (`sprites/rat.ts`) is the first creature, a
@@ -371,7 +371,12 @@ everything standing, or stands up and is sorted by its foot like a station: the 
 with an empty iron cage, the cellar hatch planks bound in iron with a ring, the warden's niche a
 dark arch in dressed stone. Nothing is written over one. The Candles are no drawing of their own but
 rock standing in the sea, and the sea-wall's top the stone floor, which met sand for the first time
-and so added the one edge `STONE_UNDER_SAND`.
+and so added the one edge `STONE_UNDER_SAND`. C6 added two set into a wall rather than standing
+free (decision 118): the broken cell a slab of dressed stone in the New Cut's face with an empty
+lantern niche, a line of letters cut over it and the blast's crack through it, its chips on the
+floor; and the lamp niche a sooted arch in the wall of Redrag Camp's hall, the iron the lamp hung
+from, and a strip of Company red tucked into it. Each is drawn on the floor tile in front of the
+wall, its top half over the wall's face, which is where a prop's foot puts it.
 
 **A tree is a canopy of leaf clumps over a trunk** (`sprites/trees.ts`), at the prop budget's 64
 square: a crown two tiles across standing half again as tall as a person, since a tree a person
@@ -467,6 +472,17 @@ than the boots of whoever stands behind it; its crest is lit on the north, its w
 east dark, and the floor at its foot is a crevice of shadow. Rock standing in water is the same
 face with its foot in the water. The face is where rock stops a player, since it is inside the
 cell that does.
+
+**Masonry is rock somebody laid** (`MASONRY_TILE`, `%` in a zone's text, decision 118): the
+Veymari ruins' walls, a ground of its own because a ruin drawn in rock reads as an outcrop. It
+blocks as rock does and stands up the same way, the floor reaching into its cell and its face drawn
+there from `MASONRY_FACE`, coursed blocks with their joints staggered; its top is capstones in
+courses (`MASONRY`, with a cracked and a worn variant), and both are written in the `rock` ramp, so
+a wall is as dark as the hill in whatever light it stands in and the zone map draws it as rock. Its
+edges are rock's rule made square: little wander, corners barely rounded, since somebody laid it
+straight, and the grass at its foot grainier than the paving. Redrag Camp's road running onto the
+waystation's paving added the one edge a road had never met, `STONE_UNDER_PATH`, the dirt trodden
+over the edge of the slabs.
 
 ## Scatter
 

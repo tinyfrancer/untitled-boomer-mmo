@@ -59,6 +59,27 @@ export const SECRETS: Record<SecretId, SecretDefinition> = {
     cache: { copper: 30, items: [] },
     blocks: null,
   },
+  // Behind the New Cut's face, where the third blast broke in this spring and
+  // the crew carried out a cracked lantern with nothing in it. Wick was the
+  // nothing in it (`docs/lore/spirit.md`), and this is where it remembers so.
+  'broken-cell': {
+    id: 'broken-cell',
+    zoneId: 'quarry',
+    name: 'The Broken Cell',
+    line: "I was in there. I don't want to be in there.",
+    cache: { copper: 25, items: [] },
+    blocks: null,
+  },
+  // In the back wall of the waystation's hall, past every Red Rag in the yard.
+  // A lamp-warden's light was kept here for travellers; a bandit's purse is now.
+  'lamp-niche': {
+    id: 'lamp-niche',
+    zoneId: 'bandit-camp',
+    name: 'The Lamp Niche',
+    line: "There was a light in here once, for people on the road. It's somebody's purse now.",
+    cache: { copper: 50, items: [] },
+    blocks: null,
+  },
 };
 
 /**

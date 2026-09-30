@@ -121,7 +121,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Marhal                      | MAR-hal     | Veymar's capital, drowned                           | `history.md`  |
 | Marta Hale                  |             | The trainer (_in game_ as the Trainer)              | `places.md`   |
 | Merrath the Last            | MER-ath     | Veymar's last king, in the great light              | `history.md`  |
-| the New Cut                 |             | The quarry (_in game_ as Quarry)                    | `places.md`   |
+| the New Cut                 |             | _In game_; the Company's quarry                     | `places.md`   |
 | Old Mill Road, the Old Mill |             | _In game_; the first charter's mill and its road    | `places.md`   |
 | the Old Shell               |             | A crab the size of a cart                           | `places.md`   |
 | Oona Rook                   |             | The outfitter (_in game_ as the Outfitter)          | `places.md`   |
@@ -130,7 +130,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Pocket                      |             | The crow at Greyford                                | `peoples.md`  |
 | the Quiet Court             |             | The elves                                           | `peoples.md`  |
 | the Red Rags                |             | Hollis's gang                                       | `factions.md` |
-| Redrag Camp                 |             | The bandit camp (_in game_ as Bandit Camp)          | `places.md`   |
+| Redrag Camp                 |             | _In game_; the Red Rags' camp in the waystation     | `places.md`   |
 | Silas Quill                 |             | The fettler (_in game_ as the Fettler)              | `places.md`   |
 | the Stillwood               |             | The elves' wood, west past Greyford                 | `peoples.md`  |
 | strays                      |             | Loose souls over the fen                            | `peoples.md`  |

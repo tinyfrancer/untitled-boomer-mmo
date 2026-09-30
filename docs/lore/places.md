@@ -86,10 +86,15 @@ _Not yet in the game._
 **Wick.** It does not like the sea and cannot say why: "I don't like it out there. It's too big, and
 it's pulling."
 
-## The New Cut (now "Quarry"), levels 1-3
+## The New Cut, levels 1-3
+
+_Rebuilt in C6 (decision 118)._
 
 **What it is.** The Company's quarry in the south face of the Greyhills, opened this spring: tin and
-iron in the rock, rats in the spoil, and a shaft at the back that goes down into the Deep Cut.
+iron in the rock, rats in the spoil, and a shaft at the back that goes down into the Deep Cut. The
+crew cut it in two benches with a ridge of the hill left standing between them, and the iron they
+were following stands either side of the shaft's mouth. A ledge under the face runs west over the
+hill to Greyford.
 
 **What it was.** A hillside nobody had dug, with the fenfolk's cell for Lorn inside it.
 
@@ -100,7 +105,8 @@ game._
 
 - The broken cell: a little stone room behind the face, with a niche for a lantern and a line cut
   over it in the old tongue that nobody can read yet. In Part G it reads: _Here the keepers keep the
-  one who put out the lights._
+  one who put out the lights._ _In game_, behind a spoil heap at the east end of the face, through
+  the breach the third blast made; the crew dropped some of their beer money on the way out.
 
 **Rumours.**
 
@@ -110,10 +116,15 @@ game._
 **Wick.** At the cell, the dark and nothing else, and it will not go in: "I was in there. I don't
 want to be in there."
 
-## Redrag Camp (now "Bandit Camp"), levels 1-3
+## Redrag Camp, levels 1-3
+
+_Rebuilt in C6 (decision 118)._
 
 **What it is.** The Red Rags' camp on the east road, where carts from Aldmark are robbed, pitched in
-the ruin of a Veymari waystation.
+the ruin of a Veymari waystation: broken walls of dressed stone round a paved yard, the hall where
+the wardens slept in its far corner, and a stable along its south wall. Up an old track off the road
+stands what is left of the well-house, and south of the road is the pond the carters water their
+horses at, when there are carters. The way down to the vault is off the back of the yard.
 
 **What it was.** A waystation on Veymar's road east, where lamp-wardens rested on the way to and from
 the eastern lights, with a warden's tomb under it.
@@ -122,7 +133,8 @@ the eastern lights, with a warden's tomb under it.
 
 **Secrets.**
 
-- The waystation's lamp niche, in what is left of its wall.
+- The waystation's lamp niche, in what is left of its wall. _In game_, in the back wall of the
+  wardens' hall, where a Red Rag keeps his purse.
 
 **Rumours.**
 

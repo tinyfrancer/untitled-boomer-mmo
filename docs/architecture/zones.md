@@ -10,8 +10,9 @@ A small, old-school-flavored MMORPG (EverQuest/RuneScape/WoW-inspired), built as
 side project by a professional software engineer with no prior game-dev experience. Currently
 v1: single-player only; ten zones (Lampton, the town, with leveled rats, a shop, a bank and a
 trainer, Candle Strand, a beach with crabs and ocean fishing, the two of them rebuilt at version 2's
-45×32 in C5, a quarry cut into the hills north of town with tin and iron to mine,
-a bandit camp with aggressive humanoids, the bandit hideout behind a locked
+45×32 in C5, the New Cut, a quarry cut into the hills north of town with tin and iron to mine,
+Redrag Camp, the bandits' camp in a ruined waystation on the east road, those two rebuilt in C6,
+the bandit hideout behind a locked
 door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
 where the eels and the cloth are, the Deep Cut under the quarry where the coal is, the Sunken
 Barrow under the bottom of the fen where the dead are, and Greyford Outpost between the road west and
@@ -64,7 +65,8 @@ with a price on it rather than a free line on a panel.
 **A zone is written as text** (`data/zoneText.ts`, decision 113), because at version 2's size a
 zone painted in rectangles of code, its contents a list of offsets from the middle of the map,
 cannot be read, let alone laid out. One character is one tile. The grounds are characters every zone
-shares — `.` grass, `=` road, `~` water, `:` sand, `_` stone, `#` rock, `,` marsh — and everything
+shares — `.` grass, `=` road, `~` water, `:` sand, `_` stone, `#` rock, `,` marsh, `%` masonry —
+and everything
 standing on them is a marker of the zone's own: `@` the start, where a new character and a death
 put somebody, and a letter for each kind of creature at its level, node, station and building, each
 a legend row saying what it is and the ground under it. A marker stands in the middle of its tile. A
@@ -82,8 +84,8 @@ on neither map and never named over, found by walking up to it (`world/SecretFin
 is a marker in its zone's text like anything else placed, and its row says which zone it is in,
 which a test holds against where the text put it. Finding one is kept on the character, pays a line
 of Wick's on the tips' card and a cache, and the zone map counts the zone's own under it. Lampton
-hides two and Candle Strand one; a rebuild adds its zone's from `docs/lore/places.md`, each drawn
-in the phase that adds it.
+hides two, and Candle Strand, the New Cut and Redrag Camp one each; a rebuild adds its zone's from
+`docs/lore/places.md`, each drawn in the phase that adds it.
 
 **The rebuilt zones are 45×32** (decision 86), and a rebuild keeps what the old zone was for while
 giving it room: side paths, a few places to do things, a secret or two. **Lampton** keeps its four
@@ -92,6 +94,21 @@ crossroads, and stands the Lamp Stone in the crossroads where everybody passes i
 Strand** keeps the spit and the southern strand the fen road needs, and the sea stops two rows short
 of the south edge for the arrival strip, the bill the fen road charged it first. What an old test
 assumed about the old town's geometry was moved into the test itself, or read by name.
+
+**The New Cut** (decision 118) keeps the quarry's shape at the new size: a shelf along the north
+edge for the Deep Cut's arrivals, the face under it with the shaft cut through its middle, the ledge
+down the west edge the Greyford road runs along, and the turf along the south where Lampton's road
+comes up. A ridge of rock across the pit makes two benches, tin and the smallest rats on the lower,
+iron and the biggest under the face, and a spoil heap stands in front of the breach into the broken
+cell. **Redrag Camp** is a Veymari waystation's ruin on the east road, walls of dressed stone (the
+masonry ground) round a paved yard, entered at its gate and broken in three more places, with the
+hall at the back holding the lamp niche and the biggest men; the road comes in on the rows Lampton's
+high street leaves by. It is the first camp of aggressive men with walls in it, and a creature
+notices only a player it can see (decision 116), so a player outside a wall is unseen by the men
+inside it. Every bandit stands in columns 12-37, the sweep's answer for an aggro radius across from
+either arrival strip and a wander disc round the start. **Nothing a rebuild adds is a new kind of
+thing to do** (decision 118): more veins and more creatures of the kinds the zone had, and room, so
+what each zone yields stays what C10 tunes against.
 
 The quarry is what that claim looks like when it is cashed: a map file, a row and one
 exit each way, and it appeared on the world map, in the zone map and in the offline camp with
@@ -153,6 +170,6 @@ border is water or rock is a zone that has to be re-cut before it can have a nei
 The quarry paid the same bill in rock the moment the Deep Cut opened, which is what makes it a rule
 rather than a story about the beach: the face ran across the whole north edge and its comment said
 that was why the zone had no north exit — the same sentence the beach's map had, about a different
-material. It now sits at rows 2-4 with a shelf along the top of it and a break through the middle
-where the shaft was driven, and every existing spawn stayed put. **Expect the sentence explaining why
+material. It then sat at rows 2-4 with a shelf along the top of it and a break through the middle
+where the shaft was driven, and every existing spawn stayed put; the rebuilt Cut kept that shape. **Expect the sentence explaining why
 a zone has no exit somewhere to be the thing that has to go when it gets one.**

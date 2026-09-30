@@ -472,4 +472,5 @@ export type TipId =
 
 // A secret a zone hides (decision 117): found by walking up to it, once per
 // character, and written into its zone's text where it lies.
-export type SecretId = 'lamp-stone' | 'cellar-hatch' | 'warden-niche';
+export type SecretId =
+  'lamp-stone' | 'cellar-hatch' | 'warden-niche' | 'broken-cell' | 'lamp-niche';

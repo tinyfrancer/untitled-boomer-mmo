@@ -318,6 +318,6 @@ describe('secretsFound', () => {
   });
 
   it('says nothing for a zone that hides none', () => {
-    expect(secretsFound('quarry', ['lamp-stone'])).toBeNull();
+    expect(secretsFound('deep-cut', ['lamp-stone'])).toBeNull();
   });
 });
