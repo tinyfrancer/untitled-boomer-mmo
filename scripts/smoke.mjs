@@ -5070,60 +5070,6 @@ async function fletchersBench() {
   );
 }
 
-async function renderer3d() {
-  // --- The 3D view, kept reachable behind `?renderer=3d` as a fallback from
-  // phase B3, when the 2D view became the game, until B7 retires it. Every
-  // section above runs in 2D; this holds that the fallback still boots, draws
-  // town, and keeps the one thing only it has: a camera a drag turns, under
-  // which W walks up the screen rather than north. Last, since it boots a fresh
-  // warrior into a different renderer from every section above. ---
-  // Reset first rather than clearing storage and leaving: a page with a
-  // session in it writes the save back on its way out.
-  await tapTab('options');
-  await page.click('.hud-modal [data-action="reset-character"]');
-  await page.click('.hud-modal [data-action="reset-character"]');
-  await page.waitForSelector('.create', { timeout: 20000 });
-  await page.goto(query('loop=manual&renderer=3d'), { waitUntil: 'domcontentloaded' });
-  // Generous: on a cold cache this is the first request for all of Three.js.
-  await page.waitForSelector('.create', { timeout: 120000 });
-  await page.fill('.create__name', 'Adventurer');
-  await page.click('.create__card[data-class="warrior"]');
-  await page.click('.create__begin');
-  await page.waitForFunction(() => window.world != null && window.view != null, null, {
-    timeout: 120000,
-  });
-  await quietTips();
-  await park();
-  const geometries = (await gpuMemory()).geometries;
-  check(
-    'the 3D fallback boots behind ?renderer=3d and holds geometry on the GPU',
-    geometries > 0,
-    `${geometries} geometries`,
-  );
-  await sweep();
-  await checkZoneDrawn('town in 3D');
-  await page.screenshot({ path: `${OUT}/3d-1-town.png` });
-
-  await park();
-  const beforeDrag = await northOfPlayer();
-  await drag({ x: 195, y: 400 }, 140);
-  const afterDrag = await northOfPlayer();
-  check(
-    'a drag on the 3D canvas turns the camera',
-    afterDrag.x - beforeDrag.x > 40,
-    `the ground north of the player moved from x=${Math.round(beforeDrag.x)} to ${Math.round(afterDrag.x)}`,
-  );
-  // The camera still turned, which is the only state in which W and north can
-  // disagree: `InputState.setViewYaw` is what keeps them apart.
-  const w = await holdW();
-  check(
-    'a real W press walks up the turned screen rather than north',
-    w.walked > 40 && w.toY < w.fromY - 10 && w.offNorth > 20,
-    `walked ${Math.round(w.walked)}px, ${w.offNorth}° off north, screen y ` +
-      `${Math.round(w.fromY)} -> ${Math.round(w.toY)}`,
-  );
-}
-
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -5167,7 +5113,6 @@ const SECTIONS = [
   ['throttled', throttled],
   ['ranger', ranger],
   ['fletchers-bench', fletchersBench],
-  ['renderer-3d', renderer3d],
 ];
 
 const known = SECTIONS.map(([name]) => name);
