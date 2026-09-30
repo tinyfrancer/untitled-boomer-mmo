@@ -69,7 +69,7 @@ export interface WeaponAppearance {
   color: number;
 }
 
-/** The gem a wand is tipped with, which is not the item's own colour. */
+/** The stone a staff is topped with, which is not the item's own colour. */
 export const WEAPON_GEM_COLOR = 0xffd54f;
 
 export type WeaponHead =
@@ -118,10 +118,13 @@ const WEAPON_RIGS: Record<WeaponShapeId, WeaponRig> = {
     guard: { above: 0.035, reach: 0.05 },
     head: null,
   },
-  wand: {
-    butt: 0,
-    tip: 0.23,
-    lean: 0.06,
+  // Taller than a sword and planted upright, a stone at its head: a staff, which
+  // is what the wizard's weapons are drawn as since a wand read as a dagger
+  // (decision 107).
+  staff: {
+    butt: 0.2,
+    tip: 0.36,
+    lean: 0,
     thickness: 0.03,
     guard: null,
     head: { kind: 'gem', radius: 0.045 },
@@ -147,7 +150,7 @@ const WEAPON_RIGS: Record<WeaponShapeId, WeaponRig> = {
     head: { kind: 'blade', reach: 0.17, drop: 0.05 },
   },
   // Held by the middle, so as much of it runs below the hand as above, and
-  // stood straight up: a bow leant over like a wand reads as a stick with a
+  // stood straight up: a bow leant over like a pole reads as a stick with a
   // thread on it at the size a figure is drawn.
   bow: {
     butt: 0.27,

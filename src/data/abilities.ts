@@ -102,7 +102,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     classId: 'wizard',
     manaCost: 8,
     cooldownMs: 6000,
-    // Matches the wizard's wand reach, so anything they can shoot they can burn.
+    // Matches the wizard's staff reach, so anything they can shoot they can burn.
     range: 280,
     // Long enough to be a decision in a fight and short enough to land one
     // between a bandit's swings, which are 1400ms apart at their fastest.
@@ -233,7 +233,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     classId: 'ranger',
     manaCost: 0,
     cooldownMs: 8000,
-    // Past the starter bow's 200 by the margin Fireball has over the wand, so
+    // Past the starter bow's 200 by the margin Fireball has over the staff, so
     // anything a ranger can shoot at they can aim at.
     range: 240,
     // The one cast in the kit. Moving breaks it and a ranger at range is rarely

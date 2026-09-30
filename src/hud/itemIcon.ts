@@ -45,12 +45,14 @@ function draw(shape: ItemIconShape, color: number): SVGElement[] {
       return [
         blade(color),
         // Crossguard and grip, which is the whole of what separates a sword
-        // from a wand at this size.
+        // from a staff at this size.
         ...line(28, 66, 72, 66, BOX * 0.07, 0x8d6e63),
         ...line(50, 66, 50, 86, BOX * 0.06, 0x8d6e63),
       ];
-    case 'wand':
-      return [...line(30, 80, 68, 32, BOX * 0.07, color), circle(72, 26, BOX * 0.13, 0x7e57c2)];
+    case 'staff':
+      // Longer than a sword and topped with a stone, which is what says "staff"
+      // rather than "pole".
+      return [...line(24, 90, 70, 26, BOX * 0.07, color), circle(74, 20, BOX * 0.12, 0x7e57c2)];
     case 'axe':
       return [
         ...line(38, 88, 62, 22, BOX * 0.06, 0x8d6e63),

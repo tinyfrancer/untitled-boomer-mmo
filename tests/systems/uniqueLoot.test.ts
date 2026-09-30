@@ -65,7 +65,7 @@ const slotOf = (itemId: ItemId): string | null => {
 
 /**
  * What a piece is worth, as one number. Deliberately blunt — it is the same sum
- * for a wand and a helmet — because what it is asked is only ever "is this the
+ * for a staff and a helmet — because what it is asked is only ever "is this the
  * best thing in its slot", and a metric that weighted armour against intellect
  * would be answering a different question badly.
  */
@@ -128,7 +128,7 @@ describe('the tables behind a locked door', () => {
 
       const shapes = weapons.map((item) => (item.kind === 'equipment' ? item.weaponShape : null));
       expect(shapes).toContain('sword');
-      expect(shapes).toContain('wand');
+      expect(shapes).toContain('staff');
       expect(shapes).toContain('bow');
 
       weapons.forEach((weapon) => {

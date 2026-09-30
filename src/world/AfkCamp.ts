@@ -67,7 +67,7 @@ export interface ParkedAfkResult {
  * **What it does is decided by what is in hand and what is underfoot, not by a
  * mode.** A fishing pole or an axe in the weapon slot makes this a gathering
  * camp; a fire or a forge in reach with something on the bench makes it a making
- * one; a sword, a wand or an empty hand makes it the fighting one. Nothing is
+ * one; a sword, a staff or an empty hand makes it the fighting one. Nothing is
  * stored and nothing is chosen twice — see `afkCampJob`, which is where the
  * order between the three is argued.
  *

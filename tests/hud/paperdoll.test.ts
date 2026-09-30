@@ -191,7 +191,7 @@ describe('the paperdoll and the figure in the world are the same rig', () => {
    */
   it.each<[WeaponShapeId, ItemId]>([
     ['sword', 'rusty-sword'],
-    ['wand', 'apprentice-wand'],
+    ['staff', 'apprentice-wand'],
     ['pole', 'fishing-pole'],
     ['axe', 'felling-axe'],
   ])('draws a %s the same length in both', (_shape, itemId) => {
@@ -258,7 +258,7 @@ describe('paperdollSvg', () => {
     const bare = paperdollSvg(BARE).childElementCount;
     const shapes: Array<[WeaponShapeId, ItemId]> = [
       ['sword', 'rusty-sword'],
-      ['wand', 'apprentice-wand'],
+      ['staff', 'apprentice-wand'],
       ['pole', 'fishing-pole'],
       ['axe', 'felling-axe'],
     ];
@@ -279,13 +279,13 @@ describe('weaponPreviewSvg', () => {
   // what they start holding, so that is the whole of the difference to show.
   it('shows the weapon on an otherwise bare figure', () => {
     const preview = weaponPreviewSvg('apprentice-wand');
-    const wand = ITEMS['apprentice-wand'];
-    if (wand?.kind !== 'equipment') throw new Error('the wand is not gear');
+    const staff = ITEMS['apprentice-wand'];
+    if (staff?.kind !== 'equipment') throw new Error('the staff is not gear');
     const painted = [...preview.querySelectorAll('[stroke], [fill]')].flatMap((node) => [
       node.getAttribute('stroke'),
       node.getAttribute('fill'),
     ]);
-    expect(painted).toContain(cssColor(wand.color));
+    expect(painted).toContain(cssColor(staff.color));
     expect(painted).toContain(cssColor(SKIN_COLOR));
   });
 });

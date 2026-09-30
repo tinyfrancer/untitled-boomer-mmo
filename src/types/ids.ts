@@ -132,9 +132,9 @@ export type ItemId =
   | 'steel-pickaxe'
   | 'steel-axe'
   | 'steel-pole'
-  // The ranger's: a bow for every rung a sword and a wand have, a quiver for the
+  // The ranger's: a bow for every rung a sword and a staff have, a quiver for the
   // hand the bow leaves free, and the arrow both are for. The chief's and the
-  // king's bows join their blades and wands as things off one creature.
+  // king's bows join their blades and staves as things off one creature.
   | 'shortbow'
   | 'hunting-bow'
   | 'poachers-bow'
@@ -229,7 +229,7 @@ export type LootTableId =
   | 'barrow-wight'
   | 'barrow-king';
 
-export type WeaponShapeId = 'sword' | 'wand' | 'axe' | 'pole' | 'pick' | 'bow';
+export type WeaponShapeId = 'sword' | 'staff' | 'axe' | 'pole' | 'pick' | 'bow';
 
 // What fills the hand that is not holding the weapon. Its own union rather than
 // a slice of WeaponShapeId: nothing here is swung, and the two hands are drawn

@@ -51,7 +51,7 @@ describe('stripIllegalGear', () => {
     );
     expect(result.gear.chest).toBeNull();
     expect(result.inventory).toEqual({ 'rat-bones': 2, 'brown-chestplate': 1 });
-    // The wand carries no armor type, so it stays equipped.
+    // The staff carries no armor type, so it stays equipped.
     expect(result.gear.weapon).toBe('apprentice-wand');
   });
 
