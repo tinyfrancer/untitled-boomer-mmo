@@ -151,6 +151,8 @@ const REPORT: OfflineAfkReport = {
   outOfArrows: false,
   capped: false,
   rested: 0,
+  drunk: {},
+  potions: {},
 };
 
 let parent: HTMLElement;
@@ -320,7 +322,7 @@ describe('the idle panel', () => {
     return found;
   };
   const foods = (): string[] =>
-    [...(panel()?.querySelectorAll<HTMLElement>('.hud-idle-food') ?? [])].map(
+    [...(panel()?.querySelectorAll<HTMLElement>('.hud-idle-food[data-food]') ?? [])].map(
       (row) => row.dataset.food ?? '',
     );
   const sent = (event: string) => emitted.filter((e) => e.event === event).map((e) => e.args);
@@ -413,6 +415,33 @@ describe('the idle panel', () => {
     });
     tab('idle').click();
     expect(foods()).toEqual(['cooked-crab', 'cooked-rat']);
+  });
+
+  // Version 2 phase E3: potions are rows the way food is, asked for by the same
+  // two requests, each saying what it does for the job or that it is passed over.
+  it('lists the potions in the order idle drinks them, and asks to move or keep one', () => {
+    mount({ inventory: { 'samphire-tonic': 1, 'keepers-draught': 2 } });
+    tab('idle').click();
+    const rows = [...(panel()?.querySelectorAll<HTMLElement>('[data-potion]') ?? [])];
+    expect(rows.map((row) => row.dataset.potion)).toEqual(['samphire-tonic', 'keepers-draught']);
+    expect(rows[0]?.textContent).toContain('passed over');
+    expect(rows[1]?.textContent).toContain('30 min');
+    expect(lines()).toContain(
+      "Drinks in turn, as each wears off: Keeper's Draught ×2, 60 minutes in all",
+    );
+
+    panel()
+      ?.querySelector<HTMLButtonElement>(
+        '[data-potion="keepers-draught"] [data-action="potion-earlier"]',
+      )
+      ?.click();
+    panel()
+      ?.querySelector<HTMLButtonElement>(
+        '[data-potion="keepers-draught"] [data-action="potion-keep"]',
+      )
+      ?.click();
+    expect(sent(IDLE_FOOD_MOVE_REQUESTED_EVENT)).toEqual([['keepers-draught', 'earlier']]);
+    expect(sent(IDLE_FOOD_KEEP_REQUESTED_EVENT)).toEqual([['keepers-draught', true]]);
   });
 });
 
@@ -2220,6 +2249,13 @@ describe('the away report', () => {
     expect(modals()[0]?.textContent).toContain(
       'Stopped at the most a night pays: one Fishing level',
     );
+  });
+
+  it('lists the potions a night drank', () => {
+    mount({}, [{ kind: 'offline-afk', report: { ...REPORT, drunk: { 'keepers-draught': 2 } } }]);
+    const text = modals()[0]?.textContent ?? '';
+    expect(text).toContain('Drank:');
+    expect(text).toContain("Keeper's Draught x2");
   });
 
   it('says what a night banked as rested', () => {

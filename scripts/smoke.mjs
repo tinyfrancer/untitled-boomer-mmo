@@ -3580,8 +3580,8 @@ async function idlePanel() {
       return {
         visible: getComputedStyle(sheet).display !== 'none',
         button: sheet.querySelector('.hud-idle__button')?.textContent ?? '',
-        foods: foods('.hud-idle-food'),
-        kept: foods('.hud-idle-food.is-kept'),
+        foods: foods('.hud-idle-food[data-food]'),
+        kept: foods('.hud-idle-food[data-food].is-kept'),
         smallest: Math.round(Math.min(...buttons.map((rect) => Math.min(rect.width, rect.height)))),
         inside: buttons.every(
           (rect) => rect.left >= box.left - 0.5 && rect.right <= box.right + 0.5,
@@ -3651,6 +3651,101 @@ async function idlePanel() {
     const w = window.world;
     w.character.removeItem('cooked-rat', 3);
     w.character.removeItem('cooked-crab', 2);
+    w.character.state.idleFood = { order: [], keep: [] };
+    window.events.emit('inventory-changed', { ...w.character.state.inventory });
+    window.events.emit('idle-food-changed', w.character.state.idleFood);
+  });
+  if (viewport) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(300);
+  }
+}
+
+async function idlePotions() {
+  // --- Potions on the idle panel (version 2 phase E3): rows moved and kept the
+  // way food's are, and idle drinking the first that works for its job once
+  // nothing is running. Which potion, when, and what a night drinks are
+  // tests/systems/IdleFoodSystem.test.ts and tests/world/AfkCamp.test.ts; what
+  // needs a browser is the rows as thumb targets on a portrait phone and a real
+  // tap going round the world and back before idle drinks in the order set. ---
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.character.state.potions = {};
+    w.character.state.idleFood = { order: [], keep: [] };
+    w.character.addItem('samphire-tonic', 1);
+    w.character.addItem('keepers-draught', 2);
+    window.events.emit('inventory-changed', { ...w.character.state.inventory });
+    window.events.emit('idle-food-changed', w.character.state.idleFood);
+  });
+
+  const panel = () =>
+    page.evaluate(() => {
+      const sheet = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="idle"]')
+      );
+      const box = sheet.getBoundingClientRect();
+      const rows = [...sheet.querySelectorAll('.hud-idle-food[data-potion]')].map(
+        (row) => /** @type {HTMLElement} */ (row),
+      );
+      const buttons = rows.flatMap((row) =>
+        [...row.querySelectorAll('button')].map((button) => button.getBoundingClientRect()),
+      );
+      return {
+        potions: rows.map((row) => row.dataset.potion),
+        subs: rows.map((row) => row.querySelector('.hud-list-row__sub')?.textContent ?? ''),
+        smallest: Math.round(Math.min(...buttons.map((rect) => Math.min(rect.width, rect.height)))),
+        inside: buttons.every(
+          (rect) => rect.left >= box.left - 0.5 && rect.right <= box.right + 0.5,
+        ),
+      };
+    });
+
+  await tapTab('idle');
+  const opened = await panel();
+  check(
+    'the idle panel lists the potions in the bag, a tonic passed over in a fight',
+    JSON.stringify(opened.potions) === JSON.stringify(['samphire-tonic', 'keepers-draught']) &&
+      (opened.subs[0] ?? '').includes('passed over'),
+    `${opened.potions.join(', ')}; "${opened.subs[0]}"`,
+  );
+  check(
+    'every potion button is a thumb target inside the panel',
+    opened.smallest >= 44 && opened.inside,
+    `smallest ${opened.smallest}px, inside ${opened.inside}`,
+  );
+  await page.screenshot({ path: `${OUT}/13c-idle-potions.png` });
+
+  await page.tap('.hud-idle-food[data-potion="keepers-draught"] [data-action="potion-earlier"]');
+  await page.waitForTimeout(80);
+  const moved = await panel();
+  await page.tap('.hud-sheet[data-sheet="idle"] [data-action="start-idle"]');
+  await step(3);
+  const drank = await page.evaluate(() => ({
+    left: window.world.character.state.inventory['keepers-draught'] ?? 0,
+    watching: (window.world.character.state.potions['keepers-watch'] ?? 0) > 0,
+    order: window.world.character.state.idleFood.order,
+  }));
+  check(
+    'a real tap moves a potion, and idle drinks the first that works for it',
+    JSON.stringify(moved.potions) === JSON.stringify(['keepers-draught', 'samphire-tonic']) &&
+      drank.left === 1 &&
+      drank.watching,
+    `${moved.potions.join(', ')}; ${drank.left} draught left, watching ${drank.watching}`,
+  );
+
+  await tapTab('idle');
+  await page.tap('.hud-sheet[data-sheet="idle"] [data-action="stop-idle"]');
+  await page.waitForTimeout(80);
+  await tapTab('idle');
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.removeItem('samphire-tonic', w.character.state.inventory['samphire-tonic'] ?? 0);
+    w.character.removeItem('keepers-draught', w.character.state.inventory['keepers-draught'] ?? 0);
+    w.character.state.potions = {};
     w.character.state.idleFood = { order: [], keep: [] };
     window.events.emit('inventory-changed', { ...w.character.state.inventory });
     window.events.emit('idle-food-changed', w.character.state.idleFood);
@@ -6248,6 +6343,7 @@ const SECTIONS = [
   ['spirit', spirit],
   ['still', still],
   ['house', house],
+  ['idle-potions', idlePotions],
 ];
 
 const known = SECTIONS.map(([name]) => name);

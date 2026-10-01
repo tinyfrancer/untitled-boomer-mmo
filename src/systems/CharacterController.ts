@@ -20,6 +20,7 @@ import { addSkillXp, skillLevel, skillXpToNextLevel } from './SkillSystem';
 import {
   addItemToInventory,
   equipItem,
+  inventoryEntries,
   removeItemFromInventory,
   unequipItem,
   type Gear,
@@ -66,7 +67,12 @@ import {
 } from './AchievementSystem';
 import { bonusYieldChance, crossedMasteryTiers, masteryXp, recordMastery } from './MasterySystem';
 import { keepIdleFood, moveIdleFood, type IdleFoodMove } from './IdleFoodSystem';
-import { drinkPotion, fortuneYieldChance, spendPotionTime } from './PotionSystem';
+import {
+  drinkPotion,
+  fortuneYieldChance,
+  spendPotionTime,
+  type PotionTimers,
+} from './PotionSystem';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
 import type { AchievementDefinition } from '../data/achievements';
@@ -719,6 +725,21 @@ export class CharacterController {
   spendPotionTime(elapsedMs: number): void {
     if (Object.keys(this.state.potions).length === 0) return;
     this.state.potions = spendPotionTime(this.state.potions, elapsedMs);
+  }
+
+  /**
+   * What a parked night did with the potions (phase E3): the ones it drank off
+   * the bag, and every clock as the morning finds it. Refuses as a whole, taking
+   * nothing, if the bag no longer holds what the night drank.
+   */
+  settleNightPotions(drunk: Inventory, potions: PotionTimers): boolean {
+    const entries = inventoryEntries(drunk);
+    if (entries.some(([itemId, quantity]) => this.itemCount(itemId) < quantity)) return false;
+    for (const [itemId, quantity] of entries) {
+      this.removeItem(itemId, quantity);
+    }
+    this.state.potions = { ...potions };
+    return true;
   }
 
   /** The three tallies a quest objective is read off. */
