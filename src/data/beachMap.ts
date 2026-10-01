@@ -20,6 +20,8 @@ import { layoutZone } from './zoneText';
  * barrow's. There is no tide (decision 117), so the nearest is reached along
  * the wall's top where it still shows, a line of dressed stone out from the spit
  * that is always there and easy to miss, and the warden's niche is at its foot.
+ * The wall's top is two tiles wide, the narrowest a walk is routed along: one,
+ * exactly a body, was walked only in a straight line from the spit's end.
  */
 export const BEACH_LAYOUT = layoutZone(
   'beach',
@@ -48,7 +50,7 @@ export const BEACH_LAYOUT = layoutZone(
     ::::~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::::~~~~~~~#~~~~~#~~~~~#~~~~~#~~~~~#~~~~~#~~~
     ::::_______n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ::::~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ::::________~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::::~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     :::::::::::::::::::::::::::::::::::::::::::::
     :::::::::::::::::::::::::::::::::::::::::::::
