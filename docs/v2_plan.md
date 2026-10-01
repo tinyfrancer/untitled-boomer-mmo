@@ -70,8 +70,12 @@ it; the shrine, the ledger, the keystone and the fettler's back room; decision 1
 (Blackwater Fen and the Deep Cut rebuilt at 45×32, the fen's south edge a mouth at the barrow's
 door and the New Cut's shaft a mouth on either side, its shelf given back to the rock; the drowned
 village, the lantern still burning, the sealed door and the maker's mark, the lantern the first
-standing secret that loops; no scenery yet; decision 121). **Next: C10**, less grind. Update this
-line as each phase lands: which phase, and which is next.
+standing secret that loops; no scenery yet; decision 121), **and C10** (less grind: a level takes
+its number plus four minutes of play, measured by a bot playing every class through the zones; the
+curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
+on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122).
+**Next: C11**, the Part C review. Update this line as each phase lands: which phase, and which is
+next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -615,18 +619,29 @@ saved position stops meaning anything.
   same shape on purpose (landed); **C8** Old Mill Road and Greyford (landed); **C9** Blackwater Fen and
   the Deep Cut, whose shared edges with the Cut and the barrow narrowed to a mouth as the mill road's
   and Greyford's did round their stream (decision 121, landed).
-- **C10 — Less grind.** Pillar 3's promise, "tune curves down before adding systems up", which no
-  phase kept until the Part A review added this one (decision 99). The curves are tuned against the
-  rebuilt zones, since their longer walks between kills are what moves the pace, and before Parts
-  D-G add anything up. Which levers move (the XP curves, what a kill or a gather pays, respawns) is
-  this phase's to choose; what it holds is the progression tests measuring each arc **in minutes of
-  play** rather than in kills.
+- **C10 — Less grind. (Landed.)** Pillar 3's promise, which no phase kept until the Part A review
+  added this one (decision 99). **Measured first, by playing it**: a bot (`tests/world/pace.ts`)
+  fights each zone at the level and in the kit meant for it, on the real map and pathing, and found
+  the warrior at about seventy minutes from 1 to 9, the wizard about two hours, half to three-quarters
+  of it standing still for regen, the mill road a level in four minutes and the Deep Cut in up to
+  twenty-nine. The longest walk was thirty-one seconds. **A level takes its number plus four
+  minutes** (five from 1 to 2, twelve from 8 to 9, sixty-eight in all), every class held to it by
+  `tests/world/pace.test.ts`, which plays each twice and holds the arcs `progression.test.ts` used to
+  count in kills. **The curve is 100n² − 200**, and the mill road's goblins pay a quarter less.
+  **Food is the answer to the wait**, regen left as it was: heals of 20, 30, 40 and 70 over six
+  seconds, rations on every humanoid and eels on the fen's lurkers, the shelf's at half price.
+  **The wizard and the ranger grow six health a level**, as the warrior does, and Mana Shield II soaks
+  70; measured, both had died in two or three blows in the upper band. **No travel**; G1 decides again.
+  The barrow killing every class often in the bot's hands, the Deep Cut slow for the ranged classes
+  and a first level spent mostly resting are left to the review. About twenty files with its tests
+  and docs. Two of the three forks were the user's on Claude's recommendation and the third the
+  user's against it (decision 122).
 - **C11 — Part C review**, which **measures how long a zone took to build**, the number Part G is
   sized from.
 
-**Open questions for Part C**: how many minutes should a level take, early and near the cap (C10)?
-And, since C5 left it to C10 (decision 117), does travel come back once the walks are measured, and
-at what price? C5 answered how secrets are found: by walking up to them. C6 answered what a rebuild
+**Open questions for Part C**: none left. C10 answered how long a level takes (its number plus four
+minutes, every class) and whether travel comes back (not yet: the longest walk is half a minute, and
+G1 asks again, decision 122). C5 answered how secrets are found: by walking up to them. C6 answered what a rebuild
 may add (more of what the zone has) and when the lore's people arrive (Part D). C7 answered how a
 vault is entered: at a mouth narrower than its edge, a door inside a zone left for the undercroft and
 Karn Tholl (decision 119). C8 answered whether a mouth is only a vault's (no: an outdoor edge narrows
@@ -699,7 +714,8 @@ trophy be displayed and still used?
 Sized at C11 from how long a zone actually took, not guessed now.
 
 - **G1 — The shape of 9-20.** How many bands, zones, gear tiers, making tiers and bosses, written
-  into this plan as phases.
+  into this plan as phases, each level paced by `tests/world/pace.test.ts` as 1-9 is (decision 122),
+  and whether travel comes back once the world is past these ten zones.
 - **G2 — Specialisations at 10.** Two paths for each class (decision 84), each with its own
   abilities and ranks; the bar stays four buttons. The duels hold each path to the curve.
 - **G3 onward — The bands**, one zone or one system a phase: magical creatures, new gear and making

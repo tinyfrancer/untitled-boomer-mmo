@@ -18,7 +18,8 @@ should be an `ENEMIES` row plus a loot table, not a new `Mob` subclass with numb
 what decides what a loot table may hold — the rule is enforced over `ENEMIES` and `LOOT_TABLES` by
 a test rather than by construction, since the tables are hand-written. It is also the thing that
 makes same-level zones worth visiting: rats give quest parts, crabs give food, bandits give
-gear and coin. The bandit table carries **both** armor types on purpose: the shop sells tools
+gear and coin. Every humanoid carries a ration as well, and a beast with meat on it gives it raw,
+since food is the answer to the wait between fights (decision 122, `making.md`). The bandit table carries **both** armor types on purpose: the shop sells tools
 only, so that table plus the two class-keyed quest rewards is the whole of anyone's armor supply.
 It also carries the hideout key at 3%, which is the rarest thing on any table by a distance and is
 meant to be a run of bandits rather than an errand. The chief's table is the other end of the same

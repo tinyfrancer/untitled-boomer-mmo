@@ -3150,3 +3150,73 @@ Claude's, building it:
   none empty one for their length instead, since a zone Part G adds may hide none. Smoke walks down
   the shaft into the Deep Cut and back, holding the arrival across the mouth and everything drawn
   there, and into the fen for the lantern, which nothing but a browser draws looping.
+
+## 122. A level takes its number plus four minutes of play, measured by playing it; food is the answer to the wait; no travel until G1
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase C10**
+
+C10 is pillar 3's promise, "tune curves down before adding systems up", and the first time anything
+measured the game in time rather than in kills. Claude measured it first, with a bot that plays each
+zone at the level and in the kit meant for it (`tests/world/pace.ts`, below). In the right zones the
+warrior climbed from 1 to 9 in about seventy minutes of play, the ranger in about an hour and a half
+and the wizard in about two hours. **Half to three-quarters of that time was standing still for
+regen**, which waits five seconds after a fight and then returns 2% a second. The curve was lumpy too:
+the mill road gave a level in four minutes and the Deep Cut the same level in fourteen to
+twenty-nine. The longest walk was thirty-one seconds, and each gathering skill capped in twenty to
+twenty-five minutes, about 85% of it spent channelling. The user settled three forks, two on
+Claude's recommendation:
+
+- **A level takes about five minutes at the start and twelve at the cap's door, every class held to
+  it**, measured on the bot: level n to n + 1 takes n + 4 minutes, sixty-eight from 1 to 9. A person
+  takes longer than the bot, and the quests pay on top of the grind it measures. **Rejected:** about
+  ten a level throughout; five early and twenty at the top; three early and eight at the top.
+- **No travel; G1 decides again**, once zones past these ten exist. The longest walk is Greyford to
+  the barrow's door, and Lampton to anywhere takes twenty seconds or less, so travel would save
+  seconds and a price on it would be a coin sink with no reason behind it. **Rejected:** a free
+  recall to Lampton on a long cooldown; a paid carter between the hubs.
+- **Regen stays as it is, and food is the answer to the wait**, the user's call against Claude's
+  recommendation: food heals more and faster, more of it drops, and the shelf's rations cost less, so
+  eating between fights is the way to skip the wait and cooking stays central, at the cost of a tap
+  in the bag between pulls. **Rejected:** faster regen out of combat, which Claude recommended;
+  leaving the downtime alone and tuning XP and respawns only, which makes the climb faster on paper
+  and still spends most of it standing still.
+
+Claude's, building it:
+
+- **The pace is measured by playing it.** `tests/world/pace.ts` plays a zone from a level to the
+  next on the real map with the real pathing and seeded dice: the nearest thing at most a level
+  above, abilities as they come up, out of a telegraph where there is the time to leave, and between
+  fights a meal, a field fire for whatever dropped raw, or a rest when there is nothing to eat. A bow
+  or a staff is fought from its reach on the keys, which keep the target where a tap on the ground
+  drops it, and **inside the creature's leash**, since one drawn out of its ring walks home healed. A
+  long cast is started only with the room to finish it or behind a shield. `tests/world/pace.test.ts`
+  plays every class at every level twice and holds the mean between 0.6 and 1.5 of n + 4, the
+  starter arc and the whole climb in minutes, the climb past the arc between two and eight arcs long,
+  resting under a fifth of a level once there is food to carry, the rations under a third of the
+  coin a level picks up, and no level kept by dying more often than killing. It takes about fifteen
+  seconds. `progression.test.ts` gave up its two kill counts that stood in for time and keeps what
+  the arcs are made of. **Rejected:** expected-value seconds per kill, which cannot see a walk, a
+  knot or a leash.
+- **The curve is 100n² − 200** to reach level n (200, 700, 1,400 … 7,900; 26,800 to level 9 where
+  it was 22,720). Fitted to what each zone pays a minute, it puts every level within about a quarter
+  of n + 4 once the mill road pays less.
+- **The mill road's goblins pay a quarter less** (36 at level 4 and 44 at 5, from 49 and 60), since
+  a knot of three dies with no walk between them; still more than a level 3 bandit. **Rejected:** a
+  bump in the curve, which would show a smaller bar at a higher level.
+- **Food**: cooked rat heals 20, fish 30, crab 40 and eel 70, each over six seconds (from 10, 15, 25
+  and 45 over ten), about half of what a body at the band's level holds. Bandits and goblin
+  scavengers carry cooked fish four times in ten (from 15% and 12%), goblin miners cooked rat half
+  the time (12%), fen raiders raw eel four times in ten (18%), and a bog lurker gives up the eel it
+  was eating three times in ten, so the fen feeds itself; the barrow and the crawlers feed nobody, and
+  a player carries in. The shelf sells raw fish at 6, cooked fish at 12 and cooked crab at 18 (from
+  12, 24 and 36). Food still heals only out of a fight.
+- **The wizard and the ranger grow six health a level, as the warrior does** (from three and four).
+  Measured, both died in two or three blows from a level 8 raider or wight, the wizard most fights in
+  the barrow, which the duels never saw because they model a ranged class standing still. The
+  classes still start apart, and armour still separates them. **Mana Shield II soaks 70** (from 45),
+  so the wizard's survival in the upper band is its own kit's rather than only a thicker body.
+- **Found and left:** the barrow kills every class often in the bot's hands (the warrior about
+  nineteen times a level, the wizard about thirty-four in fifty-five kills), its wights coming in
+  groups through rooms a kite cannot open up; the Deep Cut takes the ranged classes longer than the
+  mill road at the same level; and a level 1 character with nothing to eat or light rests most of the
+  five minutes the first level takes. The review (C11) and Part G are where these are looked at.

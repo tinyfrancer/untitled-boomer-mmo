@@ -1,6 +1,6 @@
 # Testing and verification
 
-What goes in `tests/world/`, what goes in smoke, the three dev handles, the hand crank, and how to reproduce a frame-rate bug.
+What goes in `tests/world/`, what goes in smoke, how the pace is measured, the three dev handles, the hand crank, and how to reproduce a frame-rate bug.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
@@ -9,6 +9,18 @@ zone can be driven through combat, leashing, aggro, gathering, trading, cooking,
 casting in vitest — `tests/world/harness.ts` is what every test there is built on, and it hands
 back the world, the character, the keyboard and a `tick`/`until` pair measured in game
 milliseconds. That is the first place to add cover for anything the game _does_.
+
+**How long the game takes is measured by playing it** (`tests/world/pace.ts`, decision 122). The
+pacer is a player who never stops to look, driven through the same `ZoneWorld` the harness builds:
+it picks the nearest creature at most a level above, presses abilities as they come up, steps out of
+a telegraph when there is the time to, fights a bow or a staff from its reach on the keys (which keep
+the target, where a tap on the ground drops it) and inside the creature's leash, eats, cooks what
+dropped raw at a field fire, or rests when there is nothing to eat. It reports the game time a level
+took and what went into it. `pace.test.ts` plays every class at every level twice and holds the
+mean; a bot's luck moves a run by about a fifth, which is why the bands are wide and the runs are
+two. It throws if it ever walks off the edge of its zone, since the world stops stepping there and
+a level would silently never come. A person is slower than it; what it measures is the game's share
+of the time, the share tuning moves.
 
 **A zone has two random sources, and a test can pin either** (act three phase 3). `rng` is where the
 rats walk and where spawns fall, and the harness pins it at 0.5 by default so a failure is never a
