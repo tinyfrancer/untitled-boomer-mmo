@@ -25,7 +25,8 @@ export type CueId =
   | 'level-up'
   | 'coin'
   | 'achievement'
-  | 'sack';
+  | 'sack'
+  | 'chime';
 
 export type VoiceWave = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'noise';
 
@@ -181,5 +182,16 @@ export const CUES: Record<CueId, Cue> = {
       { wave: 'noise', from: 500, ms: 120, gain: 0.14, filter: 'lowpass' },
     ],
     spacingMs: 150,
+  },
+  // Wick with something to say (D4): a small glass bell, high and soft, two
+  // partials a fifth apart ringing down. Quiet, because it says something is
+  // waiting rather than that anything happened, and it may wait a long time.
+  chime: {
+    voices: [
+      { wave: 'sine', from: 1568, ms: 600, gain: 0.07 },
+      { wave: 'sine', from: 2349, ms: 420, gain: 0.04, delayMs: 15 },
+      { wave: 'sine', from: 1976, ms: 520, gain: 0.05, delayMs: 140 },
+    ],
+    spacingMs: 1000,
   },
 };
