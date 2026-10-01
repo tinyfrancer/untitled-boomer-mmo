@@ -337,6 +337,8 @@ leads the raiders, talks at all before Part G or is met only in Maren's lines; a
 perches, since a person stands on the ground and a crow on a roof is drawn over a building it does
 not block.
 
+**Answered (2026-10-01):** A person with no counter is a `'none'` role, Talk their only button and no service line, so every `Record<NpcRoleId>` gains a row and nothing becomes nullable. Tirrow is a name in Maren's lines until Part G gives him a scene; the raiders stay enemies. Pocket perches on a post by the longhouse door, drawn and tapped like a small person at ground level, and the lore's roof becomes the porch post. All three on Claude's recommendation.
+
 **Do:** five rows in `NPCS` with their topics in D1's schema: Bess Mallow named on the Wet Boot's
 row in Lampton's text; the old fisher on the strand; Pocket on Greyford's longhouse, a new shape
 drawn within the budget; Maren, and Tirrow if chosen, in the fen, where no building stands, so each
@@ -529,6 +531,8 @@ moved.
 2. Where a lore fragment is found: a secret, a boss, a line of dialog, or all three?
 3. Does the journal count toward anything beyond its own counts (F3's log reads it)?
 
+**Answered (2026-10-01):** Rumours only for what exists, the fifteen secrets, the caches and the two bosses, the rest held in the lore until Part G builds what they lead to (the user's, on Claude's recommendation). The user declined the round's second card, so these two are settled by Claude on its recommendation for the wave review to overturn: a fragment is found at a secret, off a boss or in a line of dialog, all three; and the journal keeps its own counts, which F3's log reads, and finding lore pays nothing else.
+
 **Do:** `data/rumours.ts` (a rumour: who tells it, the line, what it leads to) and
 `data/loreFragments.ts` (a fragment: a paragraph of `history.md`'s voice, where it is found);
 heard and found kept on the character (a save version at the merge); rumours delivered as
@@ -554,6 +558,8 @@ factions with standing before 9 (the Company, the Keepers, Greyford) with the Co
 met once each; and where standing shows, a block on the character sheet with ranks on Feats, or a
 seat of its own.
 
+**Answered (2026-10-01):** The user declined the round's card with the first two, so they are settled by Claude on its recommendation for the wave review to overturn: the Company and the Keepers are opposed on deeds rather than a seesaw, a raider killed or a salt pan worked costing the Keepers while it pays the Company and other deeds moving one alone; and the upper chain's ten raiders cost standing with the Keepers, which putting Orlath back to rest earns back. The user's, on Claude's recommendation: three factions have standing before 9, the Company, the Keepers and Greyford, the Court and Karn Tholl met once each and given standing in Part G; and standing shows as a block on the character sheet with the ranks earned on Feats, no seat of its own.
+
 **Do:** `data/factions.ts` and a `FactionId`; standing as a fourth stored tally on the character (a
 save version at the merge; `CLAUDE.md`'s "only three tallies are stored" gains one, with the reason:
 a deed leaves nothing behind); moved in `turnInQuest`, `resolveKill` (a raider down moves two
@@ -574,6 +580,8 @@ progression test if the chain's cost changes what a level 8 can buy. **Docs:** `
 **Ask the user first:** does a closed game drink (a potion's minutes against eight hours), or only
 idle with the game open? Does idle drink on a timer, when the last wears off, or once at the start?
 
+**Answered (2026-10-01):** A parked night drinks what Keep allows, a potion's minutes counted against the hours away as E2 already honours a clock; and idle drinks the next one when the last wears off, in the order set, never stacking, as it eats when hurt. Both on Claude's recommendation.
+
 **Do:** `IdleFoodSystem` becomes idle's consumables, food and potions in one order with Keep; the
 camp drinks as the user chose; the parked payout applies what a night could drink if it drinks; the
 panel orders them and says what the night will do with them, derived.
@@ -593,6 +601,8 @@ larger block the row switches to? Which upgrades: rooms, stands, a garden (E2's 
 the player's), a workbench (a station of the player's that persists)? Priced how far: a long goal
 should take most of the climb's coin, which the bot reports.
 
+**Answered (2026-10-01):** The house's block is its final footprint from the start and its rooms are shut until bought, one block and no re-layout of the town; the upgrades are all four in stages, more stands, a second room, a garden of E2's herbs as a node of the player's, and a workbench that persists; and the lot together costs about most of the coin the climb to 9 earns by the pace bot's count, the first stage cheap. All three on Claude's recommendation.
+
 **Do:** upgrades as rows with prices and what each opens, bought at home, kept on the character (a
 save version at the merge); the room's furniture and the kit read the stage; a garden node and a
 workbench station if chosen, each the thing it is everywhere else (a node spawns and regrows, a
@@ -610,6 +620,8 @@ pacer reports. **Tests:** `house.test.ts` grows; a pricing test. **Docs:** `buil
 **Ask the user first:** a seat of its own behind Menu, **Collection**, or the Feats sheet growing
 pages (Feats, Bestiary, Collection)? Drops seen is a new stored tally (a drop seen leaves nothing to
 count), so `CLAUDE.md`'s rule gains another: say so.
+
+**Answered (2026-10-01):** Collection, a seat of its own behind Menu, the one the collision table reserved; and drops seen become the fourth stored tally, since a drop seen leaves nothing behind to count, with `CLAUDE.md`'s rule gaining that line and its reason. Both on Claude's recommendation.
 
 **Do:** the bestiary per creature (slain off kills, drops seen off the new tally, lore off D2,
 trophies off achievements) with completion counts; the log of items collected; the item card learns
