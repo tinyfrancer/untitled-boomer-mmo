@@ -6,13 +6,12 @@ import { layoutZone } from './zoneText';
  * Lampton's quarry road comes up to the lip, the cut floor through the middle,
  * and the face across the north, the hill wrapping down the east side.
  *
- * Every edge but the east is somebody's arrival strip, and an arrival lands
- * anywhere along the edge it crosses, a tile and a half in. So the face stops
- * two rows short of the north edge, leaving a shelf along the top that the
- * Deep Cut's travellers come up onto, and two columns short of the west edge,
- * leaving the ledge the road to Greyford runs along. The shaft is cut through
- * the middle of the face to the shelf, the iron it was following standing
- * either side of its mouth.
+ * The face runs up to the north edge, and the shaft is cut through the middle
+ * of it, the iron it was following standing either side of its mouth: the way
+ * down to the Deep Cut is the shaft's head, a mouth seven tiles across (decision
+ * 121), and the rest of that edge is rock. The west edge is the road to
+ * Greyford's arrival strip end to end, a tile and a half in, so the face stops
+ * two columns short of it, leaving the ledge the road runs along.
  *
  * A ridge of rock runs across the pit with a ramp through its middle, so the
  * floor is two benches: the lower one near the way in, tin and the smallest
@@ -24,8 +23,8 @@ import { layoutZone } from './zoneText';
 export const QUARRY_LAYOUT = layoutZone(
   'quarry',
   `
-    _____________________________________________
-    _____________________________________________
+    __#################_______###################
+    __#################_______###################
     __#################_______###################
     __#################w_____w########_n__#######
     __#################_______########____#######

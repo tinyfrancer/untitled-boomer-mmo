@@ -8,7 +8,7 @@ import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { ZONES } from '../../src/data/zones';
 import { worldMap } from '../../src/systems/MapSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
-import { zoneWorldSize } from '../../src/systems/ZoneSystem';
+import { arrivalPoint, zoneWorldSize } from '../../src/systems/ZoneSystem';
 import type { ItemId, ResourceNodeId, ZoneId } from '../../src/types/ids';
 
 /**
@@ -167,30 +167,35 @@ describe('what the Deep Cut is', () => {
   });
 
   /**
-   * The gallery is arrived in, not fought for.
+   * The shaft is arrived in, not fought for.
    *
-   * A traveller materialises anywhere along the south edge, at whatever fraction
-   * of the quarry's north edge they crossed at, and someone who dies down here
-   * respawns at the zone's start — so neither spot may sit inside the reach
-   * of something that opens fights on its own. Everything aggressive is up in the
-   * workings, which is also what makes the crawler the first thing anybody meets:
-   * the zone introduces itself with something that will not start anything.
+   * A traveller materialises across the shaft's mouth, at whatever fraction of
+   * the New Cut's they crossed at, and someone who dies down here respawns at
+   * the zone's start at the shaft's foot — so neither may sit inside the reach
+   * of something that opens fights on its own, wander and all. Everything
+   * aggressive is up in the workings, which is also what makes the crawler the
+   * first thing anybody meets: the zone introduces itself with something that
+   * will not start anything.
    */
   it('leaves the way in and the respawn clear of anything that starts a fight', () => {
-    const { height } = zoneWorldSize(ZONE);
+    const { width, height } = zoneWorldSize(ZONE);
+    const back = ZONE.exits.find((exit) => exit.to === 'quarry');
+    if (!back) throw new Error('the Deep Cut has no way back up');
     // The inset `ZoneWorld` arrives on, re-derived the way the other sweeps do.
-    const arrivalY = height - TILE_SIZE * 1.5;
+    const ends = [0, 1].map((fraction) =>
+      arrivalPoint(back, fraction, width, height, TILE_SIZE * 1.5),
+    );
+    const [west, east] = ends as [{ x: number; y: number }, { x: number; y: number }];
 
     ZONE.mobSpawns
       .filter((spawn) => ENEMIES[spawn.enemyId].aggressive)
       .forEach((spawn) => {
         const enemy = ENEMIES[spawn.enemyId];
         const reach = (enemy.aggroRadius ?? 0) + enemy.wander.radius;
+        const nearest = { x: Math.min(Math.max(spawn.x, west.x), east.x), y: west.y };
 
-        // The arrival runs the whole width, so the nearest point on it is always
-        // the one directly north or south of the spawn.
         expect(
-          arrivalY - spawn.y,
+          Math.hypot(spawn.x - nearest.x, spawn.y - nearest.y),
           `${spawn.enemyId} at ${spawn.x},${spawn.y} greets the traveller`,
         ).toBeGreaterThan(reach);
         expect(
@@ -198,6 +203,19 @@ describe('what the Deep Cut is', () => {
           `${spawn.enemyId} at ${spawn.x},${spawn.y} is standing on the respawn`,
         ).toBeGreaterThan(reach);
       });
+  });
+
+  /**
+   * Down the shaft and up it, and nowhere else (decision 121): the New Cut's
+   * north edge opens only at the shaft's head and this zone's south edge only
+   * at its foot, the same seven tiles, so a body crossing either lands where it
+   * would have walked to.
+   */
+  it('is entered down the shaft, a mouth its width either side', () => {
+    const down = ZONES.quarry.exits.find((exit) => exit.to === 'deep-cut');
+    const up = ZONE.exits.find((exit) => exit.to === 'quarry');
+    expect(down?.mouth).toBeDefined();
+    expect(up?.mouth).toEqual(down?.mouth);
   });
 });
 

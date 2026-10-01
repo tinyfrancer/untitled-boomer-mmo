@@ -6,8 +6,6 @@ import { RECIPES } from '../../src/data/recipes';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { ZONES } from '../../src/data/zones';
 import { worldMap } from '../../src/systems/MapSystem';
-import { zoneWorldSize } from '../../src/systems/ZoneSystem';
-import { TILE_SIZE } from '../../src/config/constants';
 import type { ItemId } from '../../src/types/ids';
 
 /**
@@ -47,29 +45,18 @@ describe('the way in', () => {
   });
 
   /**
-   * And the way on, which is what this zone's south edge cost it.
-   *
-   * The barrow's mouth is at the bottom of the marsh, so the fen is now a zone
-   * with a door at either end — and an arrival strip spans the *whole* of the
-   * edge it lands on. That is what moved the deep pools two rows north and the
-   * raiders standing over them with them: no aggressive creature may sit within
-   * its own aggro radius of a strip that reaches every x, and the only thing that
-   * can hold one clear of it is distance up the map. `spawnSafety.test.ts` holds
-   * the arithmetic; this holds the claim that the road exists at all.
+   * And the way on, at the barrow's door (decisions 119 and 121). The south
+   * edge was an arrival strip end to end once, which moved the deep pools and
+   * the men over them two rows north off it; it is the door's five tiles now,
+   * the same five as the barrow's own, the water either side of it, and
+   * `spawnSafety.test.ts` keeps every raider's aggro radius off those five.
    */
-  it('carries the road on to the barrow off its south edge', () => {
+  it('carries the road on to the barrow at its door, a mouth either side', () => {
     const onward = ZONE.exits.find((exit) => exit.to === 'sunken-barrow');
+    const back = ZONES['sunken-barrow'].exits.find((exit) => exit.to === 'blackwater-fen');
     expect(onward?.edge).toBe('south');
-
-    const strip = zoneWorldSize(ZONE).height - TILE_SIZE * 1.5;
-    ZONE.mobSpawns
-      .filter((spawn) => ENEMIES[spawn.enemyId].aggressive)
-      .forEach((spawn) => {
-        expect(
-          strip - spawn.y,
-          `${spawn.enemyId} at y ${spawn.y} is standing on the causeway`,
-        ).toBeGreaterThan(ENEMIES[spawn.enemyId].aggroRadius ?? 0);
-      });
+    expect(onward?.mouth).toBeDefined();
+    expect(onward?.mouth).toEqual(back?.mouth);
   });
 
   it('lands two south of town on the world map, on a cell of its own', () => {

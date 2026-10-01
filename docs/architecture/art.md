@@ -393,7 +393,21 @@ cut as a lantern read at that size as a padlock; and the fettler's back room is 
 goods with its lock broken, a ring on its lid, and a lantern beside it cracked down its pane. The
 two in rooms stand with the furniture, the ledger's desk kept clear of the wall it stands against.
 The ford is no drawing of its own: the bridge's abutments and piers are masonry and its crossing the
-stone floor, every pair of which already met somewhere.
+stone floor, every pair of which already met somewhere. C9 added four (decision 121): **the drowned
+village is a mark**, as the shrine is, the roofs of a street seen through the fen's mere a step
+paler than the water, one hipped and fallen in with a chimney at its ridge and a gable beyond, the
+light drifting down over them on the water's clock; drawn darker than the water, as roofs in shadow
+would be, it did not show at all at play size. **The lantern still burning** is a post of bog oak
+with a lantern hung from its arm over the mound of the barrow it keeps, the keeper's bowl and a fold
+of fenweave at its foot, and **the first standing secret that loops**: its flame, the blue-white of a
+kindled light in `arcane`, gutters on the prop budget's four frames, and the view plays a standing
+secret's loop where it has one, as it does a station's. **The sealed door** is the prop budget's 64
+square, iron leaves in a frame of dressed stone set into the Deep Cut's hall wall as the frieze is
+into the gallery's, barred, with a seal of gold on the bar and **a peak struck in it, Karn Tholl's
+mark**, cut again in the lintel; and **the maker's mark** is a face of the passage wall dressed
+smooth, the peak cut deep in it, a name under it, and under that a reckoning in strokes of five. The
+fen's chimneys are no drawing of their own but masonry standing in the mere, as the ford's piers
+stand in the stream.
 
 **A tree is a canopy of leaf clumps over a trunk** (`sprites/trees.ts`), at the prop budget's 64
 square: a crown two tiles across standing half again as tall as a person, since a tree a person
@@ -503,7 +517,10 @@ over the edge of the slabs. The vaults (decision 119) are rock with every room l
 added the two edges that needed: `MASONRY_UNDER_ROCK`, the hill packed ragged against the back of the
 dressed stone and darkening a row of it, neither showing a face since both block; and
 `MASONRY_UNDER_WATER`, a wall's face over its foot in the water come into the barrow, as rock stands
-in it.
+in it. The barrow's door at the bottom of the fen (decision 121) added the two the marsh had never
+met: `MASONRY_UNDER_MARSH`, the door's kerb with the reeds ragged at its foot as grass is at a
+ruin's, and `STONE_UNDER_MARSH`, the fen's mud washed a hair over the threshold's slabs as the
+strand's sand drifts over the sea-wall.
 
 ## Scatter
 

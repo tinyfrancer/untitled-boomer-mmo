@@ -247,9 +247,15 @@ mine. No. One like it. I had one like it."
 
 ## Blackwater Fen, levels 5-7
 
+_Rebuilt in C9 (decision 121)._
+
 **What it is.** Black water, reed and marsh south of the strand: eels in the deep pools, bog
 lurkers, the raiders, and lanterns on posts over the water, burning, which the Company's people never
-go near. The Company's salt pans are on its northern edge.
+go near. The Company's salt pans are cut into the sand at its northern edge, two rows of four, and a
+drain runs straight down out of the marsh to feed them, with a crossing of stone over it where it
+cut the fenfolk's old channel. A mere in the west has a village under it, two of its chimneys still
+standing out of the water. At the bottom of the fen the water closes in on a causeway to Orlhal's
+door, its kerb of dressed stone above the water since the drains lowered it.
 
 **What it was.** Veymar's low country: farms and villages under a man's depth of water, their roofs
 still showing in places. Orlhal is at its southern edge.
@@ -263,10 +269,13 @@ still showing in places. Orlhal is at its southern edge.
 
 **Secrets.**
 
-- A drowned village, its roofs under the water.
+- A drowned village, its roofs under the water. _In game_, under the mere's south shore, a whole
+  street of roofs, one fallen in, with what the fenfolk threw in for it in the silt.
 - A lantern still burning on a post in the reeds, a barrow under it, and a keeper's offering beside
-  it.
-- The way towards the holm, which goes nowhere yet.
+  it. _In game_, on a holm in the south-west cut off but for a neck of reed: a lantern on an arm of
+  bog oak over the mound, and a bowl with an eel in it and a fold of fenweave at its foot. Wick knows
+  somebody is in it, holding still for the one underneath.
+- The way towards the holm, which goes nowhere yet. _Part G's_, with the holm.
 
 **Rumours.**
 
@@ -280,8 +289,14 @@ that?" She does not say.
 
 ## The Deep Cut, levels 5-6
 
+_Rebuilt in C9 (decision 121)._
+
 **What it is.** The New Cut's shaft followed down until it stopped being a shaft: coal and rich iron,
-goblin miners who were here first, and cave crawlers.
+goblin miners who were here first, and cave crawlers. The shaft comes down into the goblins'
+gallery, rough and wide, with water standing in its east end where the crawlers come up, and the
+goblins' two workings go north off it. Between them runs a road cut square and lined in dressed
+stone, which the goblins broke into from the gallery, up to a hall at the bottom of it all, where
+they stopped digging.
 
 **What it was.** The outer workings of Karn Tholl, left when the dwarves shut their doors. At the
 bottom of them is the door.
@@ -294,9 +309,15 @@ bottom of them is the door.
 
 **Secrets.**
 
-- The door the goblins stopped digging at: dwarven, sealed and marked.
-- The dwarves' mark on the old workings, cut into the rock where no goblin's pick has reached.
-- The crawlers' way up: a flooded passage going down, towards the sea.
+- The door the goblins stopped digging at: dwarven, sealed and marked. _In game_, in the hall's north
+  wall: two iron leaves, barred, a seal of gold on the bar with Karn Tholl's peak struck in it, and the
+  goblins' coin where they gave up. Wick's beat for the Deep Cut is said on finding it.
+- The dwarves' mark on the old workings, cut into the rock where no goblin's pick has reached. _In
+  game_, at the end of a passage off the hall that the east working comes to within a wall of: the
+  peak, a dwarf's name, and under it a reckoning in strokes of five that goes on a long way. Wick:
+  "Whoever signed this wall expects to be paid."
+- The crawlers' way up: a flooded passage going down, towards the sea. _Part G's_, with the drowned
+  halls; the water it comes up through stands in the gallery's east end.
 
 **Rumours.**
 

@@ -3081,3 +3081,72 @@ Claude's, building it:
   through the ford cannot be, so it is where the stream pooled below the hills. Smoke gained a
   `back-room` section: a tap on the store's roof walks round to its door, a second goes in, and the
   back room is found.
+
+## 121. The fen's south edge and both sides of the New Cut's shaft open at a mouth; two of the lore's three secrets in each zone; no scenery yet; Blackwater Fen and the Deep Cut rebuilt at 45×32
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase C9**
+
+C9 is the last of the rebuilds, the upper band's marsh and its mine. The user settled four forks at
+the start, each on Claude's recommendation:
+
+- **The fen's south edge opens at a mouth, at the barrow's door**: the same five tiles as the
+  barrow's own (`[20, 24]`, decision 119), at the end of a causeway, with the black water either side
+  of it and the rest of that edge water that does not leave. A raider is kept off the door's five
+  tiles rather than off a strip forty-five long. **Rejected:** keeping the edge whole, every raider an
+  aggro radius off the whole bottom of the marsh, and arrivals from the barrow across the full width.
+- **Both sides of the New Cut's shaft narrow to it**: the Deep Cut is entered at a mouth at the
+  shaft's foot, and the New Cut's north edge opens only at the shaft's head (`[19, 25]`, the shaft's
+  seven tiles), its shelf given back to the face, so a body coming up the shaft arrives in the shaft.
+  This touched the New Cut, rebuilt in C6, as C7 touched Redrag Camp. **Rejected:** narrowing the
+  Deep Cut's side only, which lands a body coming up anywhere along a shelf forty-five tiles long;
+  neither, which keeps a gallery the full width of the Deep Cut's south side.
+- **Two of the lore's three secrets in each zone**: the drowned village and the lantern still burning
+  in the fen, the sealed door and the maker's mark in the Deep Cut, the door carrying Wick's beat for
+  the zone. The way towards the holm and the crawlers' flooded passage wait for Part G, where the
+  places they lead to are built. **Rejected:** all six, two of them pointing at places nobody can go
+  yet; three in the fen and two in the Deep Cut.
+- **No scenery yet**: the lore's lanterns on posts across the fen are the one lantern that is a
+  secret, and the fen's look comes from its ground, its pools, the salt pans and the drowned roofs.
+  **Rejected:** a new kind of marker, a prop that stands, is drawn and does nothing, which later zones
+  could reuse but which is a new concept in the zone text, left until a zone needs it more.
+
+Claude's, building it:
+
+- **Blackwater Fen** reads north to south, depth the dial as it was. The strand along the north is
+  the beach road's arrival end to end; the Company's salt pans are cut into its east end, two rows of
+  four, with a drain run straight down out of the marsh to feed them and a crossing of stone over it,
+  since the lore says the drains are what lowered the water over the barrow. The mere in the west has
+  the drowned village under it, two chimneys of dressed stone standing out of it; four deep pools
+  each with a raider over it hold six fishing spots where there were four; the lantern stands on a
+  holm in the south-west reached by a neck of reed two tiles wide. Twenty-one creatures where there
+  were eleven, every five north of every six and every six of every seven, and the start on the
+  strand.
+- **The barrow's door is masonry and its threshold the stone floor**, the door's kerb across the
+  bottom edge either side, which needed the two edges the marsh had never met: `MASONRY_UNDER_MARSH`,
+  the wall's face over the reeds at its foot, and `STONE_UNDER_MARSH`, the mud washed over the
+  threshold's slabs.
+- **The Deep Cut** is the outer workings of Karn Tholl, read south to north: the shaft, the goblins'
+  rough gallery with water standing in its east end where the crawlers come up, two workings north
+  off it with coal at their near ends and rich iron at their backs, and between them **the dwarves'
+  road, cut square and lined in masonry**, into the hall where the goblins stopped digging, the door
+  in its north wall. A passage off the hall ends a wall short of the east working, and the mark is cut
+  there: the goblins dug to within a wall of it and never through. Sixteen creatures where there were
+  ten and eleven seams where there were six, nothing aggressive in the shaft or the gallery.
+- **The four secrets**, each drawn: the drowned village **a mark**, as the shrine under the millpond
+  is, roofs a step paler than the water seen from the mere's south shore; the lantern still burning
+  a post of bog oak with a lantern hung from its arm over the barrow's mound, the keeper's bowl and
+  a fold of fenweave at its foot, and **the first standing secret that loops**, its blue-white flame
+  guttering on the prop budget's clock, as a station's fire does; the sealed door the prop budget's 64
+  square, iron leaves in a frame of dressed stone, barred and sealed in gold with a peak struck in
+  the seal, the same peak cut in the lintel; and the maker's mark a face of the wall dressed smooth,
+  the peak cut in it, a name, and a reckoning in strokes of five under it. **The peak is Karn Tholl's
+  mark**, the one on every grave good out of a barrow, written into the lore with it.
+- **A diagonal squeeze is a gap a body's width too.** The fen's raiders are a whole tile wide, and
+  the way-home sweep found one wedged on its way home between a pool's corner and a scrap of water at
+  the causeway's head, a tile apart on a diagonal: a passage with no slack in it, though nothing
+  across it in a straight line is a tile wide. The scraps went, and the pools' outlines were laid
+  clear of each other's corners.
+- **Every zone now hides a secret**, so the two tests that took the Deep Cut as a zone that hides
+  none empty one for their length instead, since a zone Part G adds may hide none. Smoke walks down
+  the shaft into the Deep Cut and back, holding the arrival across the mouth and everything drawn
+  there, and into the fen for the lantern, which nothing but a browser draws looping.

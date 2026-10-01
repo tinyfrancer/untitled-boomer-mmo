@@ -614,7 +614,7 @@ export class ZoneView2D implements ZoneView {
       const { sprite, flat } = secretSprite(secret.secretId);
       if (flat) continue;
       shadowAt(secret.x, secret.y, 20);
-      standing.push(prop(secret.x, secret.y, sprite, 'still'));
+      standing.push(prop(secret.x, secret.y, sprite, moving(sprite)));
     }
     for (const station of world.stations) {
       const sprite = stationSprite(station.station);

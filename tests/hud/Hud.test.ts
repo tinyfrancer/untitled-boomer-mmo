@@ -26,6 +26,7 @@ import { ALL_TABS, isMenuTab } from '../../src/ui/tabs';
 import { NO_GEAR, type Gear } from '../../src/systems/InventorySystem';
 import { worldMap, zoneMap } from '../../src/systems/MapSystem';
 import { ENEMIES } from '../../src/data/enemies';
+import { ZONES } from '../../src/data/zones';
 import { conColor } from '../../src/systems/EnemySystem';
 import { SHOP_STOCK } from '../../src/data/shop';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
@@ -2238,7 +2239,19 @@ describe('the map', () => {
     expect(parent.querySelectorAll('.hud-map__svg [data-secret]')).toHaveLength(0);
 
     events.emit(ZONE_ENTERED_EVENT, 'deep-cut');
-    expect(line()?.classList.contains('hud-hidden')).toBe(true);
+    expect(line()?.textContent).toBe('Secrets 0 / 2');
+
+    // Every zone hides one since the rebuilds (decision 121), so one is emptied
+    // to see the line go, as it will for a zone Part G adds with none.
+    const zone = ZONES['bandit-camp'];
+    const hidden = zone.secretSpawns;
+    zone.secretSpawns = [];
+    try {
+      events.emit(ZONE_ENTERED_EVENT, 'bandit-camp');
+      expect(line()?.classList.contains('hud-hidden')).toBe(true);
+    } finally {
+      zone.secretSpawns = hidden;
+    }
   });
 
   /**
