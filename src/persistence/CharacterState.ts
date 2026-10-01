@@ -10,7 +10,7 @@ import type { MasteryXp } from '../systems/MasterySystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
-import type { AbilityId, ClassId, SecretId, TipId, TitleId, ZoneId } from '../types/ids';
+import type { AbilityId, ClassId, ItemId, SecretId, TipId, TitleId, ZoneId } from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
 /**
@@ -27,6 +27,14 @@ export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 2;
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
 export const STARTING_COPPER = 75;
+
+/**
+ * Something to eat before there is anything to cook: a level 1 with an empty
+ * bag spent most of its first level standing still for regen, and food is the
+ * answer to that wait (decision 122). Cooked rat, since the first creature
+ * drops it raw, so the next meal is plainly on the rats.
+ */
+export const STARTING_FOOD: Partial<Record<ItemId, number>> = { 'cooked-rat': 16 };
 
 export interface CharacterState {
   version: number;
@@ -178,6 +186,21 @@ export interface AfkSession {
    * about a parked camp that could not be re-derived in the morning.
    */
   station: StationId | null;
+}
+
+/**
+ * A character as the creation screen hands it over: `createNewCharacter` with
+ * the starting food in the bag. Kept apart so a fixture built on a new
+ * character still starts from an empty pack.
+ */
+export function createStartingCharacter(
+  name: string,
+  classId: ClassId,
+  look: Look = DEFAULT_LOOK,
+): CharacterState {
+  const state = createNewCharacter(name, classId, look);
+  state.inventory = { ...STARTING_FOOD };
+  return state;
 }
 
 export function createNewCharacter(

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { SHOP_STOCK } from '../../src/data/shop';
+import { STARTING_FOOD } from '../../src/persistence/CharacterState';
 import type { Gear } from '../../src/systems/InventorySystem';
 import type { ClassId, ItemId, ZoneId } from '../../src/types/ids';
 import { playToNextLevel, type PaceResult } from './pace';
@@ -106,14 +107,14 @@ interface Band {
 }
 
 /**
- * The way up. A new character has nothing to eat and nothing to light; by the
+ * The way up. A new character has the starting bag's food and nothing to light; by the
  * strand the first quest has paid for logs, and from the camp on the shelf's
  * ration is carried in, the crab once the fen hits too hard for a fish, and
  * more of it into the barrow, which feeds nobody and whose wights come one at a
  * time (C11), so a level there is eaten through rather than died through.
  */
 const BANDS: Band[] = [
-  { level: 1, zoneId: 'town', kit: STARTING, food: {}, logs: 0 },
+  { level: 1, zoneId: 'town', kit: STARTING, food: STARTING_FOOD, logs: 0 },
   { level: 2, zoneId: 'beach', kit: STARTING, food: {}, logs: 10 },
   { level: 3, zoneId: 'bandit-camp', kit: CAMP, food: { 'cooked-fish': 20 }, logs: 10 },
   { level: 4, zoneId: 'old-mill-road', kit: CAMP, food: { 'cooked-fish': 20 }, logs: 10 },
@@ -255,13 +256,17 @@ describe('the time between fights', () => {
   /**
    * And the food is cheap enough to eat: what a level eats out of what it
    * carried in, bought at the shelf, costs well under the coin the level picks
-   * up. The starter levels drop no coin and carry no ration, so they are left
-   * to the quests that pay for their logs.
+   * up. The starter levels drop no coin and buy no ration, the first eating
+   * what the bag started with, so they are left to the quests that pay for
+   * their logs.
    */
   it('pays for its rations out of a small share of what the level earns', () => {
     const shelf = (itemId: ItemId): number =>
       SHOP_STOCK.find((entry) => entry.itemId === itemId)?.price ?? 0;
-    for (const band of BANDS.filter((candidate) => Object.keys(candidate.food).length > 0)) {
+    const bought = BANDS.filter(
+      (candidate) => candidate.food !== STARTING_FOOD && Object.keys(candidate.food).length > 0,
+    );
+    for (const band of bought) {
       for (const classId of CLASSES) {
         for (const run of resultsFor(classId, band.level)) {
           const spent = Object.entries(band.food).reduce(

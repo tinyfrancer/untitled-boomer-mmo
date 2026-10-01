@@ -76,7 +76,7 @@ export const BOUNTIES: Record<BountyId, BountyDefinition> = {
     description: 'The cellars are overrun again. Fifteen of them and I stop hearing about it.',
     postedByNpcId: 'quartermaster',
     objective: { kind: 'kill', enemyId: 'rat', quantity: 15 },
-    reward: { copper: 60, xp: 40 },
+    reward: { copper: 60, xp: 25 },
   },
   // The only coin a tree has ever been worth beyond its vendor price, and the
   // reason woodcutting is worth levelling for something other than firewood.

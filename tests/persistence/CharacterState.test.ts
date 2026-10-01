@@ -3,8 +3,12 @@ import { createInitialSkills } from '../../src/systems/SkillSystem';
 import {
   CHARACTER_STATE_VERSION,
   STARTING_COPPER,
+  STARTING_FOOD,
   createNewCharacter,
+  createStartingCharacter,
 } from '../../src/persistence/CharacterState';
+import { consumableFor } from '../../src/data/items';
+import type { ItemId } from '../../src/types/ids';
 
 describe('createNewCharacter', () => {
   it('sets the starting weapon and leaves helmet/chest/pants empty', () => {
@@ -22,6 +26,20 @@ describe('createNewCharacter', () => {
     const character = createNewCharacter('Aria', 'wizard');
     expect(character.inventory).toEqual({});
     expect(character.currency).toBe(STARTING_COPPER);
+  });
+
+  it('hands a character off the creation screen something to eat, and nothing else', () => {
+    const character = createStartingCharacter('Aria', 'wizard');
+    expect(character.inventory).toEqual(STARTING_FOOD);
+    expect(Object.keys(STARTING_FOOD).length).toBeGreaterThan(0);
+    (Object.keys(STARTING_FOOD) as ItemId[]).forEach((itemId) =>
+      expect(consumableFor(itemId), itemId).not.toBeNull(),
+    );
+    expect({ ...character, inventory: {} }).toEqual({
+      ...createNewCharacter('Aria', 'wizard'),
+      createdAt: character.createdAt,
+      updatedAt: character.updatedAt,
+    });
   });
 
   it('starts in the town zone', () => {

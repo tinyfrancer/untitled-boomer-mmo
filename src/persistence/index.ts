@@ -8,4 +8,4 @@ export const saveService: SaveService = new LocalStorageSaveService();
 
 export type { SaveService } from './SaveService';
 export type { CharacterState } from './CharacterState';
-export { createNewCharacter } from './CharacterState';
+export { createNewCharacter, createStartingCharacter } from './CharacterState';

@@ -100,7 +100,10 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     aggressive: false,
     // Tuned so a fresh level 1 melee character beats a level 1 rat comfortably,
     // sweats against a level 2, and loses to a level 3 without gear or kiting.
-    base: { maxHp: 20, attackPower: 3, xpReward: 5 },
+    // A level 1 pays little because a new character no longer waits between
+    // them: with the starting bag's food (C11) the first level is fighting rather
+    // than resting, and still the five minutes `pace.test.ts` holds it to.
+    base: { maxHp: 20, attackPower: 3, xpReward: 2 },
     perLevel: { maxHp: 20, attackPower: 3, xpReward: 8 },
     attackRange: 64,
     attackCooldownMs: 1600,
