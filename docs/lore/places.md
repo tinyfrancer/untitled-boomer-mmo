@@ -29,6 +29,16 @@ Post. The Company lets its houses to its own people and to whoever has been usef
 does the letting. _In game_ (F1): let to the player once the Red Rags are broken, for the timber its
 roof wants, with stands for what they bring home, a chest, and a wall for their plaques.
 
+The surveyor drew the house before it was built, and built less of it than was drawn. **The plans**
+are still on the table by the bed where the surveyor left them, the lot as meant: a herb garden in the
+yard, a bench beside it, and the room behind the house fitted out. Only the room went up, **the
+Drawing Room**, where the four roads were drawn out from the Lamp Stone on a table the length of
+the south window; its door was nailed shut the week the survey went west, and the garden and the
+bench never got further than the paper. The plans are drawn in the surveyor's own hand, careful and
+small, with the herbs named in the margin: samphire off the strand and meadowsweet off the mill
+water, the two that would take in Lampton's soil. The fen's own herbs are not on them. _In game_
+(F2): built out by the player off the plans, a stage at a time and for most of a climb's coin.
+
 **People.**
 
 - **Tilda Pell**, the shopkeeper: warm and nosy, with three carts on the east road and a view on

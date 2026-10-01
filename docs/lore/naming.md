@@ -102,6 +102,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Cobb Harrow                 |             | Lampton's absent smith                              | `places.md`   |
 | the Cutthroat's Cellar      |             | _In game_; the vault under Redrag Camp              | `places.md`   |
 | the Deep Cut                |             | _In game_; Karn Tholl's outer workings              | `places.md`   |
+| the Drawing Room            |             | _In game_; the room behind the Surveyor's House     | `places.md`   |
 | the Drowning                |             | The night Veymar went under the sea                 | `history.md`  |
 | Essmar                      | ESS-mar     | The fenfolk's name for the fen                      | `naming.md`   |
 | fenweave                    |             | _In game_; the fenfolk's cloth                      | `peoples.md`  |

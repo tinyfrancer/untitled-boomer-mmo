@@ -89,7 +89,9 @@ once, a line of its own otherwise, quiet the tips alone, and its light the one u
 version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
 clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
-with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). **and F2** (the house grows off the surveyor's plans in four stages for 80s, two thirds of the
+climb's coin: a garden of samphire and meadowsweet and a fletcher's bench in the yard, and the Drawing Room
+behind the house, walled up until it is built, with two stands and then two more; decision 136). Wave 1 is folded onto
 `claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
 `claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
 phase lands:
@@ -789,7 +791,17 @@ nodes and drops? Does rested XP come only from idle, or from being away too? (Bo
   where a body stands to use it. 51 files, past the guide, kept whole since the save, the room and
   the panel are one feature to play.
 - **F2 — A house that grows.** Upgrades bought with coin: more rooms, more stands, a garden, a
-  workbench. A long goal and a coin sink, priced by simulation like everything else.
+  workbench. A long goal and a coin sink, priced by simulation like everything else. _Landed (decision
+  136):_ four stages bought in one order at the surveyor's plans, a new fixture on the house's west
+  wall: the Herb Garden (two beds, samphire and meadowsweet, 5s), the Workbench (a fletcher's bench,
+  12s), the Drawing Room (25s) and More Stands (38s), 80s in all, held by the pace test at two thirds
+  of what each class picks up on the climb and the first stage under the first coin-dropping level's
+  take. The Drawing Room is a building of its own against the back of the house, written into
+  Lampton's text from the start, its doorway walled up until it is built; the beds and the bench are
+  placed off the house rather than in the zone's spawns, so they are no wild herb and nobody's bench,
+  and a parked night does not yet count the garden (E4 or F4's, the idle files being E3's). A stage
+  is in the zone the moment it is paid for. A walk out of a two-tile doorway from beside it no longer
+  stalls a hair inside the wall's end.
 - **F3 — Collection log and bestiary.** Creatures slain and the drops seen from each, lore found,
   trophies earned, each with completion counts; what is collected here is what the house displays.
   An item's card learns where the item comes from (what drops it, what node yields it), which A2

@@ -260,8 +260,9 @@ of Wick's story heard (`CharacterState.beats`, decision 128); which beat waits w
 secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and the time left
 on each potion drunk (`CharacterState.potions`, decision 129), which a night away reads.
 secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and what stands
-on the house's stands and lies in its chest (`CharacterState.house`, decision 130); whose the house
-is, what is a trophy and which plaques hang are derived.
+on the house's stands and lies in its chest (`CharacterState.house`, decision 130), and which of its
+stages are built (decision 136), since a room paid for leaves nothing but the coin gone; whose the
+house is, what is a trophy, which plaques hang and what a stage puts on the lot are derived.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
@@ -332,10 +333,14 @@ may lay blocking ground over walkable ground, which is why rock shows its face i
 kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
 and **what stands in its room is `art/rooms.ts`** (decision 109): nothing in it blocks, so
 `tests/art/rooms.test.ts` is all that keeps the furniture and the
-counter out of where the game stands a body. **The house's stands, chest and wall are the one
-furniture tapped** (decision 130): where they stand is `data/house.ts`, since the world walks up to
-them, aimed at where a body stands rather than at the fixture, and `tests/world/house.test.ts` holds
-them clear and in reach as `rooms.test.ts` does the rest. **Who is drawn with what** is
+counter out of where the game stands a body. **The house's stands, chest, wall and plans are the one
+furniture tapped** (decisions 130 and 136): where they stand is `data/house.ts`, since the world walks
+up to them, aimed at where a body stands rather than at the fixture, and `tests/world/house.test.ts`
+holds them clear and in reach as `rooms.test.ts` does the rest. **The yard's beds and bench are
+placed off the house too, not in Lampton's spawns** (decision 136), which every table reads as where
+a herb grows wild and a bench stands for anybody, so the zone sweeps do not see them and
+`house.test.ts` sweeps them instead; a room shut until a stage is built has its doorway walled up
+until then. **Who is drawn with what** is
 `art/cast.ts`, anything not in it being its kind's placeholder, and **what each place is drawn as**
 is `art/places.ts`.
 **A creature built like a person is a getup on the figure in a build** (decision 108): a boss is
