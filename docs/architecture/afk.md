@@ -120,7 +120,7 @@ zone is the one thing it had to be seeded with, from the save, since the world s
 on its first frame — so it needed no publisher of its own.
 
 **What idle eats is the player's to set** (decision 96, `systems/IdleFoodSystem.ts`): an order, and
-food marked Keep that idle never eats. It is the one idle setting stored (`CharacterState.idleFood`),
+food marked Keep that idle never eats (and, since E3, potions in the same order and Keep: below). It is the one idle setting stored (`CharacterState.idleFood`),
 because a choice leaves nothing behind to derive it from, and it starts empty, which is the old rule
 exactly: weakest first, everything fair game. A move swaps a food with its neighbour **in the bag**,
 which is all the panel lists, and the first move writes down every food in the game, so a food not
@@ -169,5 +169,24 @@ its rate (`offlineRate`, and the gathering branch's quicker swings first), and t
 under the same ceilings as ever. The fight and luck potions do nothing offline — a night is a rate,
 with no fight to armour and no roll to better — and `OFFLINE_POTIONS` is the list the panel reads to
 say so. **The idle panel says which potions are running and whether each counts away**, drawn again
-when one starts or runs out rather than on every tick of its clock. Which potions idle drinks itself,
-and in what order, is E3's.
+when one starts or runs out rather than on every tick of its clock.
+
+**Idle drinks what it is given, one at a time, the next when the last wears off** (version 2 phase
+E3, decision 135). Potions are rows on the idle panel beside the food, moved and kept the same way and
+stored in the same choice (`CharacterState.idleFood`, which kept its name so the save kept its
+shape), but a potion moves past potions and a food past food, since one is drunk when the last wears
+off and the other eaten when hurt. **It drinks only what works for what it is doing**
+(`IDLE_POTION_USE` in `systems/IdleFoodSystem.ts`): with the game open, Quick Hands for a gather,
+Dulled Pain and Keeper's Watch for a fight, Fortune for anything; with it closed, the two in
+`OFFLINE_POTIONS`, which is derived from the same table. A potion that does nothing for the job stays
+in the bag and its row says it is passed over. **Never two at once**: while any potion is working,
+whoever drank it, idle waits (`chooseIdlePotion`), which the camp asks every frame after it has
+fought or worked. **A parked night drinks too** (`nightPotionWindows`): what was running when the
+tab closed runs out first, counted from the close rather than from when idle started (the session's
+`restedMs` is how long idle ran with the game open), and then the next in the order out of the bag,
+each window the payout reads Keeper's Watch's share and Quick Hands' pace off. It drinks only until
+the night stops, so a night that met its ceiling early leaves the rest in the bag, and the report
+carries what was drunk (`drunk`, listed under Drank) and the clocks the morning wakes to
+(`potions`), which `resolveParked` hands to `CharacterController.settleNightPotions` whatever else
+the night earned. **The panel names what a night will drink off the list the payout drinks out of**
+(`nightPotionSupply`), and `IdlePlanSystem.test.ts` sweeps every zone and job for it.

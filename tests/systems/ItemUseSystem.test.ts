@@ -107,6 +107,16 @@ describe('what an item is for', () => {
     );
   });
 
+  // And a potion's, off the table idle drinks by (decision 135).
+  it('tells a potion what idle drinks it for, and whether a night away does', () => {
+    expect(itemUses('samphire-tonic')).toContain(
+      'Idle drinks this while gathering, and through a night away, one at a time in the order set on the Idle tab',
+    );
+    expect(itemUses('bogbean-cordial')).toContain(
+      'Idle drinks this whatever it is doing, one at a time in the order set on the Idle tab',
+    );
+  });
+
   it('tells a tool what it is held for, and armour who may wear it', () => {
     expect(itemUses('fishing-pole')).toContain('Equip it to fish');
     expect(itemUses('brown-helmet')).toContain('Worn by: Warrior, Ranger');

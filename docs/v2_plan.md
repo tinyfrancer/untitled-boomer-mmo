@@ -780,6 +780,11 @@ Idle and active each get a reason (decision 85).
   XP, faster gathering. Some may help in a fight.
 - **E3 — What idle uses.** Idle drinks the potions it is given. Potions join the rows A7's idle
   panel orders and keeps, so the player sets when idle drinks them the way they set its food.
+  **Landed** (decision 135): potions are rows beside the food in the one stored order and Keep,
+  fair game until kept; idle drinks the first that works for its job once nothing is running, never
+  two at once; a parked night drinks the same way, counted from when the tab closed and only until
+  it stops, and the morning wakes to the last one's clock; the panel names what a night will drink
+  and the away report what it drank. No save version.
 - **E4 — Part E review.**
 
 **Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing

@@ -9,7 +9,8 @@ import { skillXpToNextLevel } from '../../src/systems/SkillSystem';
 import { RESTED_FILL_MS, restedCap } from '../../src/systems/RestedSystem';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import type { StationId } from '../../src/data/recipes';
-import type { ClassId, ZoneId } from '../../src/types/ids';
+import type { ClassId, ItemId, ZoneId } from '../../src/types/ids';
+import { ITEMS } from '../../src/data/items';
 
 /**
  * What the idle panel says before idle starts (decision 96). Every line is read
@@ -288,5 +289,83 @@ describe('what idle banks as rested', () => {
       }),
     );
     expect(plan.rested).toEqual(['Nothing banks at the top level']);
+  });
+});
+
+// Version 2 phase E3: potions on the panel, ordered and kept as food is.
+describe("idle's potions", () => {
+  const bag = { 'samphire-tonic': 1, 'keepers-draught': 2 };
+
+  it('lists the potions in drinking order, saying which works for the job', () => {
+    const plan = idlePlan(standing('town', (state) => (state.inventory = { ...bag })));
+    expect(plan.potionRows.map((row) => [row.itemId, row.works])).toEqual([
+      ['samphire-tonic', false],
+      ['keepers-draught', true],
+    ]);
+    expect(plan.potionRule).toBe(
+      'Drunk top first, one at a time, the next when the last wears off',
+    );
+    expect(plan.away).toContain(
+      "Drinks in turn, as each wears off: Keeper's Draught ×2, 60 minutes in all",
+    );
+  });
+
+  it('says when there is nothing it may drink', () => {
+    expect(idlePlan(standing('town')).potionRule).toBe('No potions in the bag');
+    const kept = idlePlan(
+      standing('town', (state) => {
+        state.inventory = { 'keepers-draught': 1 };
+        state.idleFood = { order: [], keep: ['keepers-draught'] };
+      }),
+    );
+    expect(kept.potionRule).toBe('All of them kept: idle drinks none');
+    expect(kept.away).toContain('Drinks none of the potions in the bag');
+    const useless = idlePlan(
+      standing('town', (state) => (state.inventory = { 'samphire-tonic': 1 })),
+    );
+    expect(useless.potionRule).toBe('None of them does anything for this');
+  });
+
+  // The panel never promises what the payout does not pay: in every zone and
+  // for every job, what a long night drinks is what the panel named, all of it.
+  it('names what the night drinks, in every zone', () => {
+    const potions = {
+      'samphire-tonic': 1,
+      'keepers-draught': 1,
+      'meadowsweet-draught': 1,
+      'bogbean-cordial': 1,
+    };
+    for (const zoneId of Object.keys(ZONES) as ZoneId[]) {
+      for (const weapon of ['rusty-sword', 'sickle', 'fishing-pole'] as const) {
+        const input = standing(zoneId, (state) => {
+          state.level = 5;
+          state.gear = { ...state.gear, weapon };
+          state.inventory = { ...potions };
+        });
+        const report = resolveOfflineAfk(
+          { startedAt: new Date(0).toISOString(), zoneId, station: null, restedMs: 0 },
+          {
+            now: 3_600_000,
+            classId: input.classId,
+            characterLevel: input.level,
+            inventory: input.inventory,
+            capacity: 1000,
+            gear: input.gear,
+            skills: input.skills,
+            quiver: input.quiver,
+            idleFood: input.idleFood,
+            rng: () => 0.5,
+          },
+        );
+        const away = idlePlan(input).away.join('\n');
+        const drunk = Object.keys(report.drunk) as ItemId[];
+        if (drunk.length === 0) {
+          expect(away, `${zoneId} ${weapon}`).toContain('Drinks none of the potions in the bag');
+        }
+        for (const itemId of drunk) {
+          expect(away, `${zoneId} ${weapon}`).toContain(`${ITEMS[itemId].name} ×1`);
+        }
+      }
+    }
   });
 });

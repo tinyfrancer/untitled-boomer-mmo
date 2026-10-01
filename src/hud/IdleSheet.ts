@@ -3,22 +3,25 @@ import { el, sectionHeader } from './dom';
 import { bindItemCard } from './itemCard';
 import { itemIconEl } from './hudArt';
 import { describeItemName } from '../data/items';
-import type { IdleFoodMove, IdleFoodRow } from '../systems/IdleFoodSystem';
+import type { IdleFoodMove, IdleFoodRow, IdlePotionRow } from '../systems/IdleFoodSystem';
 import type { IdlePlan } from '../systems/IdlePlanSystem';
+import { describePotionEffect, potionDuration } from '../systems/PotionSystem';
 import { THEME } from '../ui/theme';
 import type { ItemId } from '../types/ids';
 
 export interface IdleSheetHandlers {
   /** Asked with what the button said, so a stale panel cannot flip the wrong way. */
   onSet(active: boolean): void;
+  /** A food or a potion: the two share the one order and the one Keep. */
   onMoveFood(itemId: ItemId, move: IdleFoodMove): void;
   onKeepFood(itemId: ItemId, keep: boolean): void;
 }
 
 /**
  * What idle will do, said before it starts, and what it is doing while it runs
- * (decision 96): the job, what it pays, the food it eats in the player's order,
- * the arrows it spends, and what a closed game pays and at most.
+ * (decision 96): the job, what it pays, the food it eats and the potions it
+ * drinks in the player's order, the arrows it spends, and what a closed game
+ * pays and at most.
  *
  * Everything drawn comes out of `idlePlan`, so this file decides only how the
  * panel looks and which buttons ask for what. Like the skills book it draws only
@@ -97,9 +100,11 @@ export class IdleSheet extends Sheet {
     if (plan.arrows.length > 0) {
       view.push(sectionHeader('Arrows'), ...lines(plan.arrows));
     }
-    if (plan.potions.length > 0) {
-      view.push(sectionHeader('Potions'), ...lines(plan.potions));
-    }
+    view.push(sectionHeader('Potions'), ...lines([plan.potionRule]));
+    plan.potionRows.forEach((row, index) =>
+      view.push(this.potionRow(row, index, plan.potionRows.length)),
+    );
+    view.push(...lines(plan.potions));
     view.push(sectionHeader('Away', 'with the game closed'), ...lines(plan.away));
     view.push(sectionHeader('Rested', 'for XP earned by hand'), ...lines(plan.rested));
     return view;
@@ -110,27 +115,56 @@ export class IdleSheet extends Sheet {
    * it. Held or right-clicked it is the item's card, as every item row is.
    */
   private foodRow(food: IdleFoodRow, index: number, count: number): HTMLElement {
-    const wrapper = el('div', `hud-idle-food${food.keep ? ' is-kept' : ''}`);
-    wrapper.dataset.food = food.itemId;
+    const row = this.supplyRow(food, index === 0, index === count - 1, {
+      kind: 'food',
+      sub: food.keep ? 'Kept' : `Heals ${food.healAmount} Health`,
+      verb: 'Eat',
+      never: 'Never eaten by idle',
+    });
+    row.dataset.food = food.itemId;
+    return row;
+  }
+
+  /** A potion in the bag, moved and kept the way a food is, saying what it does here. */
+  private potionRow(potion: IdlePotionRow, index: number, count: number): HTMLElement {
+    const does = `${describePotionEffect(potion.effectId)}, ${potionDuration(potion.effectId)}`;
+    const row = this.supplyRow(potion, index === 0, index === count - 1, {
+      kind: 'potion',
+      sub: potion.keep ? 'Kept' : potion.works ? does : 'Does nothing for this: passed over',
+      verb: 'Drink',
+      never: 'Never drunk by idle',
+    });
+    row.dataset.potion = potion.itemId;
+    return row;
+  }
+
+  private supplyRow(
+    supply: { itemId: ItemId; count: number; keep: boolean },
+    first: boolean,
+    last: boolean,
+    words: { kind: 'food' | 'potion'; sub: string; verb: string; never: string },
+  ): HTMLElement {
+    const wrapper = el('div', `hud-idle-food${supply.keep ? ' is-kept' : ''}`);
 
     const item = el('div', 'hud-idle-food__item');
     const text = el('div', 'hud-row__text');
     text.append(
-      el('div', 'hud-idle-food__name', `${describeItemName(food.itemId)} ×${food.count}`),
-      el('div', 'hud-list-row__sub', food.keep ? 'Kept' : `Heals ${food.healAmount} Health`),
+      el('div', 'hud-idle-food__name', `${describeItemName(supply.itemId)} ×${supply.count}`),
+      el('div', 'hud-list-row__sub', words.sub),
     );
-    item.append(itemIconEl(food.itemId), text);
-    bindItemCard(item, food.itemId);
+    item.append(itemIconEl(supply.itemId), text);
+    bindItemCard(item, supply.itemId);
 
-    const earlier = this.foodButton('▲', 'food-earlier', 'Eat sooner');
-    earlier.disabled = index === 0;
-    earlier.addEventListener('click', () => this.handlers.onMoveFood(food.itemId, 'earlier'));
-    const later = this.foodButton('▼', 'food-later', 'Eat later');
-    later.disabled = index === count - 1;
-    later.addEventListener('click', () => this.handlers.onMoveFood(food.itemId, 'later'));
-    const keep = this.foodButton('Keep', 'food-keep', 'Never eaten by idle');
-    keep.classList.toggle('is-lit', food.keep);
-    keep.addEventListener('click', () => this.handlers.onKeepFood(food.itemId, !food.keep));
+    const { kind } = words;
+    const earlier = this.foodButton('▲', `${kind}-earlier`, `${words.verb} sooner`);
+    earlier.disabled = first;
+    earlier.addEventListener('click', () => this.handlers.onMoveFood(supply.itemId, 'earlier'));
+    const later = this.foodButton('▼', `${kind}-later`, `${words.verb} later`);
+    later.disabled = last;
+    later.addEventListener('click', () => this.handlers.onMoveFood(supply.itemId, 'later'));
+    const keep = this.foodButton('Keep', `${kind}-keep`, words.never);
+    keep.classList.toggle('is-lit', supply.keep);
+    keep.addEventListener('click', () => this.handlers.onKeepFood(supply.itemId, !supply.keep));
 
     wrapper.append(item, earlier, later, keep);
     return wrapper;

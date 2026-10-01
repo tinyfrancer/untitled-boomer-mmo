@@ -18,8 +18,17 @@ import {
 import { hasInputs } from './CraftingSystem';
 import { canCarry, carryCapacity, inventoryWeight } from './EncumbranceSystem';
 import { canGather, gatherDurationMs } from './GatherSystem';
-import { idleFoods, type IdleFoodChoice, type IdleFoodRow } from './IdleFoodSystem';
+import {
+  idleFoods,
+  idlePotions,
+  nightPotionSupply,
+  type IdleActivity,
+  type IdleFoodChoice,
+  type IdleFoodRow,
+  type IdlePotionRow,
+} from './IdleFoodSystem';
 import { describePotionEffect } from './PotionSystem';
+import { POTION_EFFECTS } from '../data/potions';
 import type { Gear, Inventory } from './InventorySystem';
 import { ingredients, recipeOutput } from './ItemUseSystem';
 import {
@@ -29,6 +38,7 @@ import {
   OFFLINE_POTIONS,
   OFFLINE_RATE_MULTIPLIER,
   offlineAmmo,
+  offlineActivity,
   offlineJob,
   offlineXpCeiling,
   type OfflineJob,
@@ -78,6 +88,10 @@ export interface IdlePlan {
   food: IdleFoodRow[];
   /** What a bow in hand spends; empty for anything else. */
   arrows: string[];
+  /** When it drinks, or why it will not. */
+  potionRule: string;
+  /** The potions in the bag, in the order they are drunk: rows the player sets as food's are. */
+  potionRows: IdlePotionRow[];
   /** What each potion running does for idle, open and closed; empty with none. */
   potions: string[];
   /** What a closed game pays. */
@@ -100,6 +114,8 @@ export function idlePlan(input: IdlePlanInput): IdlePlan {
   const nodes = job.kind === 'gather' ? workableNodes(input, job.skill) : [];
   const fights = job.kind === 'fight' || (job.kind === 'gather' && nodes.length === 0);
   const food = idleFoods(input.inventory, input.idleFood);
+  const activity: IdleActivity = fights ? 'fight' : job.kind;
+  const potionRows = idlePotions(input.inventory, input.idleFood, activity);
   const skill = afkJobSkill(job);
   return {
     job: jobLines(input, job, nodes),
@@ -110,6 +126,8 @@ export function idlePlan(input: IdlePlanInput): IdlePlan {
     foodRule: foodRule(food),
     food,
     arrows: fights ? arrowLines(input) : [],
+    potionRule: potionRule(potionRows),
+    potionRows,
     potions: (input.potionsRunning ?? []).map(potionLine),
     away: awayLines(input, job),
     rested: restedLines(input),
@@ -180,6 +198,13 @@ function foodRule(food: IdleFoodRow[]): string {
   return `Eaten top first, out of a fight and below ${percent(AFK_EAT_FRACTION)} health`;
 }
 
+function potionRule(rows: IdlePotionRow[]): string {
+  if (rows.length === 0) return 'No potions in the bag';
+  if (rows.every((row) => row.keep)) return 'All of them kept: idle drinks none';
+  if (!rows.some((row) => !row.keep && row.works)) return 'None of them does anything for this';
+  return 'Drunk top first, one at a time, the next when the last wears off';
+}
+
 /**
  * What one running potion does for idle. Only the two brewed for it count with
  * the game closed (`OfflineAfkSystem`), and the panel says which, since
@@ -219,6 +244,8 @@ function awayLines(input: IdlePlanInput, job: AfkCampJob): string[] {
     lines.push(`The ${STATION_LABELS[station].toLowerCase()} goes out, so instead:`);
   }
   lines.push(...awayJobLines(input, away));
+  const drinks = awayPotionLine(input, offlineActivity(away));
+  if (drinks) lines.push(drinks);
   lines.push('Eats nothing, and what the pack cannot hold is lost');
   return lines;
 }
@@ -259,6 +286,20 @@ function awayJobLines(input: IdlePlanInput, away: OfflineJob): string[] {
     );
   }
   return lines;
+}
+
+// What a closed game drinks: the list the payout drinks out of, one at a time,
+// for as long as the night and the potions last. Nothing to say with none.
+function awayPotionLine(input: IdlePlanInput, activity: IdleActivity | null): string | null {
+  if (idlePotions(input.inventory, input.idleFood, null).length === 0) return null;
+  const supply = nightPotionSupply(input.inventory, input.idleFood, activity);
+  if (supply.length === 0) return 'Drinks none of the potions in the bag';
+  const lasts = supply.reduce(
+    (total, { effectId, count }) => total + POTION_EFFECTS[effectId].durationMs * count,
+    0,
+  );
+  const named = supply.map(({ itemId, count }) => `${describeItemName(itemId)} ×${count}`);
+  return `Drinks in turn, as each wears off: ${named.join(', ')}, ${minutes(lasts)} in all`;
 }
 
 // What idle banks, read off the constants the bank fills and spends by, so a

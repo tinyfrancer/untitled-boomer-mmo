@@ -82,6 +82,19 @@ export class AwayReportModal extends Overlay {
       );
     }
 
+    // The potions the night drank (phase E3), under their own heading for the
+    // reason the used ore is: a bag lighter by three draughts with nothing
+    // saying where they went reads as a bug.
+    const drunk = inventoryEntries(report.drunk);
+    if (drunk.length > 0) {
+      body.append(el('div', 'hud-modal__line', 'Drank:'));
+      body.append(
+        ...drunk.map(([itemId, quantity]) =>
+          el('div', 'hud-modal__line', `${describeItemName(itemId)} x${quantity}`),
+        ),
+      );
+    }
+
     // What the pack had no room for, itemised under its own heading. A full
     // pack never stopped the session — it kept fighting or working and kept
     // earning — so this is the only place the cost of it is ever stated.

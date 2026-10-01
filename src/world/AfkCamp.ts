@@ -12,7 +12,12 @@ import { SKILLS } from '../data/skills';
 import type { CraftingRecipe, StationId } from '../data/recipes';
 import { logNotice } from '../systems/CombatLogSystem';
 import { canGather } from '../systems/GatherSystem';
-import { chooseIdleFood, type IdleFoodMove } from '../systems/IdleFoodSystem';
+import {
+  chooseIdleFood,
+  chooseIdlePotion,
+  type IdleActivity,
+  type IdleFoodMove,
+} from '../systems/IdleFoodSystem';
 import { inventoryEntries } from '../systems/InventorySystem';
 import {
   OFFLINE_KILL_INTERVAL_MS,
@@ -43,6 +48,7 @@ export interface AfkCampDeps {
   /** Both of them: nobody trades or banks while the character is parked. */
   closeCounters(): void;
   eat(itemId: ItemId): void;
+  drink(itemId: ItemId): void;
   /** Walk over and start the channel — the same approach a tap on a node uses. */
   gatherAt(node: ResourceNode): void;
   /** Which stations the player is standing at, which is half of what a camp is. */
@@ -160,7 +166,7 @@ export class AfkCamp {
     this.ctx.events.emit(AFK_STATE_CHANGED_EVENT, this.active);
   }
 
-  /** A food in the bag moved a place in what idle eats first (decision 96). */
+  /** A food or potion in the bag moved a place in what idle uses first (decision 96). */
   moveFood(itemId: ItemId, move: IdleFoodMove): void {
     if (this.ctx.character.moveIdleFood(itemId, move)) {
       this.ctx.persistCharacter();
@@ -168,7 +174,7 @@ export class AfkCamp {
     this.publishFood();
   }
 
-  /** A food marked for idle to leave alone, or to eat again. */
+  /** A food or potion marked for idle to leave alone, or to use again. */
   keepFood(itemId: ItemId, keep: boolean): void {
     if (this.ctx.character.keepIdleFood(itemId, keep)) {
       this.ctx.persistCharacter();
@@ -214,11 +220,13 @@ export class AfkCamp {
       quiver: character.state.quiver,
       reforges: character.state.reforges,
       potions: character.state.potions,
+      idleFood: character.state.idleFood,
       rng: this.ctx.rolls,
     });
     const report = { ...paid, rested };
-    // The night spent the potions' time whether anything used it or not.
-    character.spendPotionTime(report.elapsedMs);
+    // The night spent the potions' time whether anything used it or not, and
+    // drank what it drank whatever else it earned.
+    character.settleNightPotions(report.drunk, report.potions);
     if (report.kills <= 0 && report.gathers <= 0 && report.crafts <= 0) {
       this.ctx.persistCharacter();
       // A bow with nothing to shoot is the one parked camp that earned nothing
@@ -277,10 +285,12 @@ export class AfkCamp {
     // ignored the thing chewing on it would stand there re-arming a channel it
     // could never finish until it died. A pan and a forge break the same way,
     // which is why this is asked of the job rather than of the gather.
-    if (!this.hunted() && this.work(this.job())) {
-      return;
+    const job = this.job();
+    const working = !this.hunted() && this.work(job);
+    if (!working) {
+      this.fight();
     }
-    this.fight();
+    this.drink(working ? job.kind : 'fight');
   }
 
   /**
@@ -473,6 +483,18 @@ export class AfkCamp {
     // The world's own approach code walks into range and its combat swings, so
     // camping is the same fight, just without a hand on the mouse.
     targeting.pursueTarget(mob);
+  }
+
+  /**
+   * The next potion, once the last has worn off (phase E3): the first in the
+   * player's order that does something for what idle is doing, one at a time.
+   */
+  private drink(activity: IdleActivity): void {
+    const { inventory, idleFood, potions } = this.ctx.character.state;
+    const potion = chooseIdlePotion(inventory, idleFood, potions, activity);
+    if (potion) {
+      this.deps.drink(potion);
+    }
   }
 
   private eat(): void {

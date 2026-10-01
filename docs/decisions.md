@@ -3800,3 +3800,52 @@ Claude's, alongside them, for the wave review to overturn:
   tap on them is about them. The walk up to them is the existing counter sweep, which reaches every
   person in every zone. The fisher moved off the samphire to the spit for it.
 - **Nothing about the save or the pace moves.** What is asked of them is kept where D1 keeps it.
+
+## 135. Idle drinks: potions join the idle order and Keep, one at a time, the next when the last wears off, and a parked night drinks what Keep allows
+
+**2026-10-01 · the user, asked by Claude in wave 2's question round, building the plan's phase E3**
+
+E3 is the rest of E2: idle drinks the potions it is given. The brief's two questions were answered
+before the wave launched, both on Claude's recommendation:
+
+- **A parked night drinks.** What Keep allows is drunk through a closed game, each potion's minutes
+  counted against the hours away, as E2 already counts a potion drunk before the tab closed.
+  **Rejected:** potions drunk only with the game open, which would leave the two brewed for idle
+  worth one half-hour of a night.
+- **Idle drinks the next one when the last wears off, in the order set, never stacking**, as it eats
+  when hurt. **Rejected:** a potion on a timer, which drinks over one still working; one drunk once
+  at the start, which leaves a night of draughts in the bag.
+
+Claude's, building it, each a fork the brief did not foresee and settled on the recommended option
+for the wave review to overturn:
+
+- **Food and potions share the one stored order and the one Keep** (`CharacterState.idleFood`, its
+  name kept so the save keeps its shape: no save version), but a food moves past food and a potion
+  past potions, since one is eaten when hurt and the other drunk when the last wears off, and the
+  panel lists them in two sections. **Rejected:** one list mixing the two, where moving a fish past
+  a draught means nothing; a second stored choice for potions, a save version for the same idea.
+- **A potion is fair game until kept**, as food always was, so the rule a character who never opens
+  the panel gets is still "everything idle can use". Nobody having chosen, **the two that work
+  through a closed game come first**. **Rejected:** potions kept until the player lets idle have
+  them, which would need a stored list of the other sign.
+- **Idle drinks only a potion that does something for what it is doing** (`IDLE_POTION_USE`): with
+  the game open, Quick Hands for a gather, Dulled Pain and Keeper's Watch for a fight (work at a node
+  or a bench already pays its full XP awake), Fortune for anything; with it closed, Keeper's Watch
+  for any night that earns and Quick Hands for a night of gathering. A potion that does nothing here
+  stays in the bag, and its row says it is passed over. **Rejected:** drinking strictly in the order
+  set, which spends a tonic on a fight by default.
+- **"Never stacking" is never two at once, whoever drank the first**: idle waits out a potion drunk
+  by hand before it drinks one of its own. **Rejected:** one a kind side by side, which is stacking
+  by another name.
+- **A night's potions are counted from when the tab closed**, not from when idle started: the clocks
+  were read at the close, and the time idle ran with the game open is the session's `restedMs`
+  (decision 127). E2 read them from the start and spent the whole session off them in the morning;
+  both now count from the close. What was running then runs out first, and the night drinks the next
+  as the last wears off, **only until it stops**: a night that met its ceiling at three hours drank
+  nothing after, and one too short to finish anything drank nothing. The morning wakes to the clock
+  of the last one drunk.
+- **The panel names what a night will drink off the list the payout drinks out of**
+  (`nightPotionSupply`), and `IdlePlanSystem.test.ts` sweeps every zone and job for the night's
+  draughts being the ones it named. The away report lists what was drunk under **Drank**, as a
+  making night's ore is under Used.
+- **The pace is not moved**: the pace bot never idles and plays unpotioned (rule 8).

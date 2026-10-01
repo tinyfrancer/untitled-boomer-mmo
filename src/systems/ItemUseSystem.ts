@@ -28,11 +28,12 @@ import { SKILLS } from '../data/skills';
 import { ZONES, type ZoneDefinition } from '../data/zones';
 import { batchSize } from './CraftingSystem';
 import { describePotionEffect, potionDuration } from './PotionSystem';
+import { IDLE_POTION_USE, type IdleActivity } from './IdleFoodSystem';
 import { formatCurrency } from './CurrencySystem';
 import { isTrophy, ownsHouse } from './HouseSystem';
 import { isQuestDone, type QuestLog } from './QuestSystem';
 import { eligibleReforges } from './ReforgeSystem';
-import type { BuildingId, GearSlotId, ItemId } from '../types/ids';
+import type { BuildingId, GearSlotId, ItemId, PotionEffectId } from '../types/ids';
 
 /**
  * What an item is *for*, read off every table that names it.
@@ -133,9 +134,28 @@ function consuming(itemId: ItemId): string[] {
   if (item.kind === 'ammunition') lines.push('Shot from a bow, out of a quiver');
   if (item.kind === 'potion') {
     lines.push(`Drink: ${describePotionEffect(item.effect)}, for ${potionDuration(item.effect)}`);
+    lines.push(idleDrinks(item.effect));
   }
   if (itemId === FIRE_INPUT_ITEM_ID) lines.push('Lights a campfire, one a fire');
   return lines;
+}
+
+// Idle's rule for a potion (`IDLE_POTION_USE`, decision 135): what it is drunk
+// for, and whether a night away drinks it too.
+const IDLE_ACTIVITY_WORDS: Record<IdleActivity, string> = {
+  fight: 'fighting',
+  gather: 'gathering',
+  craft: 'making',
+};
+
+function idleDrinks(effectId: PotionEffectId): string {
+  const { open, away } = IDLE_POTION_USE[effectId];
+  const doing =
+    open.length === Object.keys(IDLE_ACTIVITY_WORDS).length
+      ? 'whatever it is doing'
+      : `while ${open.map((activity) => IDLE_ACTIVITY_WORDS[activity]).join(' or ')}`;
+  const night = away.length > 0 ? ', and through a night away' : '';
+  return `Idle drinks this ${doing}${night}, one at a time in the order set on the Idle tab`;
 }
 
 /**
