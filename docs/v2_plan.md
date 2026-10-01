@@ -73,7 +73,9 @@ village, the lantern still burning, the sealed door and the maker's mark, the la
 standing secret that loops; no scenery yet; decision 121), **and C10** (less grind: a level takes
 its number plus four minutes of play, measured by a bot playing every class through the zones; the
 curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
-on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122).
+on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
+**and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 124).
 **Next: C11**, the Part C review, and from here the phases are built several at a time, by the
 rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.
@@ -702,7 +704,14 @@ nodes and drops? Does rested XP come only from idle, or from being away too?
 ## Part F — Home and collections
 
 - **F1 — The house.** A building in town that is yours: walk in, set trophies on stands and a wall
-  (boss drops, quest keepsakes, achievement plaques), keep things in a chest.
+  (boss drops, quest keepsakes, achievement plaques), keep things in a chest. _Landed (decision
+  124):_ the Surveyor's House at the east end of Lampton's counters' row, let by the quartermaster's
+  A Roof in Lampton (twenty logs, after The Cutthroat); four stands that take a boss's drop or a
+  keepsake and hand it back on a tap; a chest of eight kinds, the bank's rule; a wall of plaques, one
+  a creature at its highest rank, derived; a keepsake from each capstone quest; no station. The
+  fixtures are a new tappable kind, picked from inside the room, and the walk to one is aimed at
+  where a body stands to use it. 51 files, past the guide, kept whole since the save, the room and
+  the panel are one feature to play.
 - **F2 — A house that grows.** Upgrades bought with coin: more rooms, more stands, a garden, a
   workbench. A long goal and a coin sink, priced by simulation like everything else.
 - **F3 — Collection log and bestiary.** Creatures slain and the drops seen from each, lore found,

@@ -112,6 +112,20 @@ either side. `tests/art/rooms.test.ts` puts a body on all three spots the game s
 somebody on — the middle of the room, the counter, and where the walk to that counter ends — and
 fails on anything deeper.
 
+**The house is the one room whose furniture is tapped** (decision 124, `data/house.ts`). The
+Surveyor's House is let to the player by a quest, and stands four stands, a chest and a wall of
+plaques against its walls. Where each stands is data rather than the renderer's, since the
+simulation walks up to them: `HOUSE_FIXTURES` places each in the house's frame, `FITTING_DEPTH` deep
+against its wall, the house's door south and its west wall the bed's (`art/rooms.ts`). None blocks,
+as nothing in a room does. **The walk to one is aimed at where a body stands to use it**
+(`fixtureAccess`), half a tile off its wall inside the room, not at the fixture: A\* walks tile
+centres, and a stand in a back corner is nearer the middle of the cell outside the side wall than of
+any cell inside, so a walk aimed at the stand went round the outside of the house and pressed against
+its wall. `tests/world/house.test.ts` walks a body from Lampton's start to every fixture and holds
+each in reach, and holds their ground clear of the middle of the room, of the way in and of each
+other. What is open closes when the player walks out of the house, rather than at a distance, since
+everything in it is a few steps from everything else.
+
 **The view draws each fitting by its wall, and a counter** (decision 109, `docs/architecture/art.md`
 under Places): each fitting against its wall from the front, along its length on a side wall, and
 only as low as it stands against the south wall the cutaway takes away; and in front of whoever works
