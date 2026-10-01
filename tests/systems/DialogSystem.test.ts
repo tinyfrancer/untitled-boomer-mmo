@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { FACTION_RANKS } from '../../src/data/factions';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import { CLASSES } from '../../src/data/classes';
 import { DIALOG, type DialogRequirement } from '../../src/data/dialog';
@@ -16,7 +17,7 @@ const PEOPLE = Object.keys(NPCS) as NpcId[];
 const CLASS_IDS = Object.keys(CLASSES) as ClassId[];
 
 function reader(overrides: Partial<DialogReader> = {}): DialogReader {
-  return { level: 1, classId: 'warrior', quests: {}, asked: {}, ...overrides };
+  return { level: 1, classId: 'warrior', quests: {}, asked: {}, standing: {}, ...overrides };
 }
 
 /** Every requirement written anywhere in a person's conversation. */
@@ -77,10 +78,14 @@ describe('everybody’s conversation', () => {
           expect(Object.keys(QUESTS)).toContain(requirement.questId);
           break;
         case 'asked':
+        case 'unasked':
           expect(
             DIALOG[requirement.npcId].topics.map((topic) => topic.id),
             `${npcId} waits on ${requirement.npcId}'s ${requirement.topicId}`,
           ).toContain(requirement.topicId);
+          break;
+        case 'standing':
+          expect(Object.keys(FACTION_RANKS)).toContain(requirement.rankId);
           break;
       }
     }
@@ -112,6 +117,42 @@ describe('everybody’s conversation', () => {
  * A person remembers what they have been asked for good, and a topic is grey
  * while what it would say has been heard — until it has something new.
  */
+/**
+ * Standing in a conversation (D3): a rank a line waits on, and a choice, two
+ * topics each waiting on the other unasked, so the first said is the one kept.
+ */
+describe('standing in a conversation', () => {
+  const offered = (r: DialogReader): string[] =>
+    topicsFor('quartermaster', r).map((offer) => offer.topic.id);
+
+  it('offers both sides of the pans until one is taken, then only the one taken', () => {
+    const fresh = { quartermaster: ['fen', 'pans'] };
+    expect(offered(reader({ asked: fresh }))).toEqual(expect.arrayContaining(['dig', 'first']));
+    const dug = offered(reader({ asked: { quartermaster: [...fresh.quartermaster, 'dig'] } }));
+    expect(dug).toContain('dig');
+    expect(dug).not.toContain('first');
+  });
+
+  it('moves the Company and the Keepers apart, whichever side is taken', () => {
+    const effects = (topicId: string) =>
+      DIALOG.quartermaster.topics.find((topic) => topic.id === topicId)?.answers[0]?.effects ?? [];
+    const [dig] = effects('dig');
+    const [first] = effects('first');
+    expect(dig).toEqual({ kind: 'standing', move: { company: 15, keepers: -15 } });
+    expect(first?.kind).toBe('standing');
+    expect(first?.move.company).toBeLessThan(0);
+    expect(first?.move.keepers).toBeGreaterThan(0);
+  });
+
+  it('says more to somebody the yard knows', () => {
+    const yard = DIALOG.outfitter.topics.find((topic) => topic.id === 'yard');
+    if (!yard) throw new Error('the outfitter has no word on standing');
+    expect(currentAnswer(yard, reader())?.id).toBe('yard');
+    expect(currentAnswer(yard, reader({ standing: { greyford: 50 } }))?.id).toBe('yard-regular');
+    expect(currentAnswer(yard, reader({ standing: { greyford: 1000 } }))?.id).toBe('yard-friend');
+  });
+});
+
 describe('what a person remembers', () => {
   it('offers a topic that leads on only once it has been asked', () => {
     const offered = (asked: DialogReader['asked']): string[] =>
@@ -151,9 +192,12 @@ describe('what a person remembers', () => {
   });
 
   it('greets by how far the character has come', () => {
-    expect(greetingFor('quartermaster', reader())).toBe(DIALOG.quartermaster.greetings[0]?.says);
-    expect(greetingFor('quartermaster', reader({ level: 7 }))).toBe(
-      DIALOG.quartermaster.greetings.at(-1)?.says,
+    const { greetings } = DIALOG.quartermaster;
+    expect(greetingFor('quartermaster', reader())).toBe(greetings[0]?.says);
+    expect(greetingFor('quartermaster', reader({ level: 7 }))).toBe(greetings[2]?.says);
+    // And by how far the Company has come to count them (D3).
+    expect(greetingFor('quartermaster', reader({ level: 7, standing: { company: 750 } }))).toBe(
+      greetings.at(-1)?.says,
     );
   });
 });

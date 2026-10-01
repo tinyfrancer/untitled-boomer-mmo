@@ -59,8 +59,9 @@ same argument again (act three phase 13): the timber off the road south and the 
 forge become arrows here, which is `docs/architecture/making.md`'s to explain.
 
 **What is on the shelf is earned, and a locked row is still drawn** (`StockRequirement` in
-`data/shop.ts`, ruled on by `systems/ShopSystem.ts`). A stock row may name a character level or a
-finished quest, and until it is met the row is drawn dimmed with what it needs where its price would
+`data/shop.ts`, ruled on by `systems/ShopSystem.ts`). A stock row may name a character level, a
+finished quest or a rank with a faction (D3, the Company's cooked eel for a Company Contractor), and
+until it is met the row is drawn dimmed with what it needs where its price would
 sit ("Needs Level 5", "Needs A Feast of Crab", decision 99, since a quest's name alone read as a note
 rather than a need) — the same call the world map makes for a shut zone, and for the same reason: what is
 not on the shelf yet **is** the reason to come back, so hiding it tells the player nothing. It is
@@ -194,9 +195,11 @@ quartermaster's tone at level 7 is not his tone at level 1. The answers heard ar
 character for good (`CharacterState.asked`, by answer id), since hearing leaves nothing else behind,
 and a topic is drawn grey while the answer it would give has been heard. What the conversation is
 saying this visit is `TalkSession`'s, and forgotten when it ends: a fresh visit opens at the greeting.
-An answer carries `effects` as well as `requires`, a slot nothing fills yet: D2's rumours and D3's
-standing are each a member of `DialogEffect` and a case in `TalkSession`, which stops compiling the day
-the first is added. Everything the panel offers is derived by the same functions the session checks a
+An answer carries `effects` as well as `requires`, each a member of `DialogEffect` and a case in
+`TalkSession`, paid the first time the answer is heard and never again: D3's moves standing
+(`content.md`), D2's tells a rumour. A line may wait on a rank with a faction (`standing`), and on a
+topic **not** asked (`unasked`), which is how two topics become a choice: each waits on the other
+unasked, so the side taken first is the one kept, as the quartermaster's pans are. Everything the panel offers is derived by the same functions the session checks a
 request against, so a topic the panel drew from a stale model is refused rather than answered.
 `tests/systems/DialogSystem.test.ts` holds that everybody greets a new character in every class and
 has a topic for them, and that nothing a line waits on is something that does not exist.

@@ -40,15 +40,21 @@ describe('the gate', () => {
   it('puts a row with no requirement on the shelf from the first visit', () => {
     const ungated = nth(SHOP_STOCK.filter((row) => !row.requires));
 
-    expect(stockAccess(ungated, { level: 1, quests: NO_QUESTS })).toEqual({ kind: 'stocked' });
+    expect(stockAccess(ungated, { level: 1, quests: NO_QUESTS, standing: {} })).toEqual({
+      kind: 'stocked',
+    });
   });
 
   it('holds a level-gated row back until the level, then keeps it', () => {
     const { entry, requires } = gatedBy('level');
 
-    expect(isStocked(entry, { level: requires.level - 1, quests: NO_QUESTS })).toBe(false);
-    expect(isStocked(entry, { level: requires.level, quests: NO_QUESTS })).toBe(true);
-    expect(isStocked(entry, { level: requires.level + 3, quests: NO_QUESTS })).toBe(true);
+    expect(isStocked(entry, { level: requires.level - 1, quests: NO_QUESTS, standing: {} })).toBe(
+      false,
+    );
+    expect(isStocked(entry, { level: requires.level, quests: NO_QUESTS, standing: {} })).toBe(true);
+    expect(isStocked(entry, { level: requires.level + 3, quests: NO_QUESTS, standing: {} })).toBe(
+      true,
+    );
   });
 
   /**
@@ -60,17 +66,19 @@ describe('the gate', () => {
   it('opens a quest-gated row on the hand-in and not on the accept', () => {
     const { entry, requires } = gatedBy('quest');
 
-    expect(isStocked(entry, { level: 99, quests: NO_QUESTS })).toBe(false);
+    expect(isStocked(entry, { level: 99, quests: NO_QUESTS, standing: {} })).toBe(false);
     expect(
       isStocked(entry, {
         level: 1,
         quests: { [requires.questId]: { status: 'active', baseline: 0 } },
+        standing: {},
       }),
     ).toBe(false);
     expect(
       isStocked(entry, {
         level: 1,
         quests: { [requires.questId]: { status: 'done', baseline: 0 } },
+        standing: {},
       }),
     ).toBe(true);
   });
@@ -82,8 +90,16 @@ describe('the gate', () => {
    * there is.
    */
   it('says what is missing twice: short enough for the row, and out loud', () => {
-    const level = stockAccess(gatedBy('level').entry, { level: 1, quests: NO_QUESTS });
-    const quest = stockAccess(gatedBy('quest').entry, { level: 99, quests: NO_QUESTS });
+    const level = stockAccess(gatedBy('level').entry, {
+      level: 1,
+      quests: NO_QUESTS,
+      standing: {},
+    });
+    const quest = stockAccess(gatedBy('quest').entry, {
+      level: 99,
+      quests: NO_QUESTS,
+      standing: {},
+    });
     if (level.kind !== 'gated' || quest.kind !== 'gated') {
       throw new Error('both of these are meant to be shut at level 1 with nothing finished');
     }
@@ -99,7 +115,7 @@ describe('the gate', () => {
   // Gated rows are drawn rather than hidden: what is not on the shelf yet is
   // the whole reason to come back, and a player who cannot see it knows nothing.
   it('offers the whole table in its own order however little has been earned', () => {
-    const offers = shopOffers({ level: 1, quests: NO_QUESTS });
+    const offers = shopOffers({ level: 1, quests: NO_QUESTS, standing: {} });
 
     expect(offers.map((offer) => offer.entry.itemId)).toEqual(SHOP_STOCK.map((row) => row.itemId));
     expect(offers.some((offer) => offer.access.kind === 'gated')).toBe(true);

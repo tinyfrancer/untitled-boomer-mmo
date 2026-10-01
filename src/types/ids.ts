@@ -500,7 +500,33 @@ export type AchievementId = `${EnemyId}-slayer-${SlayerTier}`;
 // it load unchanged.
 export type SlayerRank = 'culler' | 'hunter' | 'slayer';
 
-export type TitleId = `${EnemyId}-${SlayerRank}`;
+export type TitleId = `${EnemyId}-${SlayerRank}` | FactionTitleId;
+
+// The factions a player earns standing with (D3, decision 133): the three with
+// standing before level 9. The Quiet Court and Karn Tholl are met once each and
+// join in Part G.
+export type FactionId = 'company' | 'keepers' | 'greyford';
+
+// A rank above where a stranger stands, each of which pays the title it is
+// named for, as a slayer rank does. Faction first, so the id says whose it is.
+export type FactionTitleId =
+  | 'company-hand'
+  | 'company-contractor'
+  | 'company-factor'
+  | 'keepers-guest'
+  | 'keepers-lightfriend'
+  | 'keepers-fenkin'
+  | 'greyford-regular'
+  | 'greyford-trader'
+  | 'greyford-friend';
+
+// Every rank, the stranger's and the Keepers' word for an enemy included.
+export type FactionRankId =
+  | FactionTitleId
+  | 'company-stranger'
+  | 'keepers-drainer'
+  | 'keepers-outsider'
+  | 'greyford-stranger';
 
 // A tip the spirit gives once per character (decision 98), in the order
 // `TIP_ORDER` checks them.

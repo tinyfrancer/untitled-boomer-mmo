@@ -102,6 +102,8 @@ import {
   ASK_TOPIC_REQUESTED_EVENT,
   ASKED_CHANGED_EVENT,
   CONVERSATION_CHANGED_EVENT,
+  STANDING_CHANGED_EVENT,
+  STANDING_RANK_EVENT,
 } from '../../src/ui/uiEvents';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -1024,6 +1026,36 @@ describe('the character sheet’s armour', () => {
     mount({ gear: NO_GEAR });
     expect(sheet()).toContain('Armour 0');
     expect(sheet()).not.toContain('stops');
+  });
+});
+
+/**
+ * Standing (D3) as a block on the character sheet: each faction's rank and
+ * the standing under it towards the next, kept current by the world, with a
+ * rank reached said on a toast.
+ */
+describe('the character sheet’s standing', () => {
+  const line = (factionId: string): string =>
+    parent.querySelector(`[data-sheet="character"] .hud-standing[data-faction="${factionId}"]`)
+      ?.textContent ?? '';
+
+  it('says where the character stands with each faction and how far the next rank is', () => {
+    mount({ standing: { company: 60, keepers: -80 } });
+    expect(line('company')).toBe('The Veymarch CompanyCompany Hand, 60 / 250 standing');
+    expect(line('keepers')).toBe('The KeepersDrainer, -80 / -50 standing');
+    expect(line('greyford')).toBe('GreyfordStranger, 0 / 50 standing');
+  });
+
+  it('redraws when the world moves it, and toasts a rank reached', () => {
+    mount();
+    events.emit(STANDING_CHANGED_EVENT, { greyford: 50 });
+    events.emit(STANDING_RANK_EVENT, {
+      factionId: 'greyford',
+      rankId: 'greyford-regular',
+      rose: true,
+    });
+    expect(line('greyford')).toBe('GreyfordGreyford Regular, 50 / 250 standing');
+    expect(parent.querySelector('.hud-toast')?.textContent).toContain('Rank: Greyford Regular');
   });
 });
 

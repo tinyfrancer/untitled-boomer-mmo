@@ -235,9 +235,10 @@ of gear has its HUD icon the day its `art/wardrobe.ts` row lands, and anything e
 `art/icons.ts`, which a test holds every item to.
 
 **State that can be derived is derived.** Quest progress counts the bag or a tally on read; buffs,
-quest markers, achievements, titles and mastery rungs are computed when asked. Only three tallies
-are stored — kills, zone visits and mastery XP — because a corpse, an arrival and a chopped tree
-leave nothing behind to count. Keep that split. **What an item is for is derived too**
+quest markers, achievements, titles, mastery rungs and faction ranks are computed when asked. Only
+four tallies are stored — kills, zone visits, mastery XP and faction standing — because a corpse, an
+arrival, a chopped tree and a deed (a contract paid, an answer given, decision 133) leave nothing
+behind to count. Keep that split. **What an item is for is derived too**
 (`systems/ItemUseSystem.ts`) from every table that takes items; a new kind of table that takes
 them — a counter, a stand, a trade — is taught to it in the same change, or every card it touches
 goes quiet about it. **So is what a skill's level buys** (`systems/SkillBookSystem.ts`, the skills

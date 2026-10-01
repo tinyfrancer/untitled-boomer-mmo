@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { FeatsSheet } from '../../src/hud/FeatsSheet';
 import type { KillCounts } from '../../src/systems/AchievementSystem';
+import type { Standing } from '../../src/systems/FactionSystem';
 import type { TitleId } from '../../src/types/ids';
 
-function sheet(kills: KillCounts, worn: TitleId | null = null) {
+function sheet(kills: KillCounts, worn: TitleId | null = null, standing: Standing = {}) {
   const asked: (TitleId | null)[] = [];
   const feats = new FeatsSheet((titleId) => asked.push(titleId));
-  feats.update(kills, worn);
+  feats.update(kills, standing, worn);
   const wearable = () =>
     [...feats.root.querySelectorAll<HTMLElement>('.hud-feat-title')].map(
       (row) => row.dataset.title,
@@ -58,5 +59,22 @@ describe('FeatsSheet', () => {
     const { root } = sheet({ rat: 3 });
     const tiers = [...root.querySelectorAll('.hud-row--tier')].map((row) => row.textContent);
     expect(tiers).toContain('Rat Culler3 / 25 slain');
+  });
+
+  // D3: a group per faction, its standing beside its name, each rank that pays
+  // a title counted towards in standing, and worn like a slayer rank once stood at.
+  it('draws each faction with its standing, and its ranks as titles', () => {
+    const { root, wearable } = sheet({}, null, { company: 60, keepers: -20 });
+    const company = root.querySelector<HTMLElement>('[data-faction="company"]');
+    expect(company?.textContent).toContain('The Veymarch Company60 standing');
+    expect(company?.textContent).toContain('Company Contractor60 / 250 standing');
+    expect(wearable()).toEqual(['company-hand']);
+    expect(root.querySelector('[data-faction="keepers"]')?.textContent).toContain('-20 standing');
+  });
+
+  it('asks to wear a faction rank when its row is tapped', () => {
+    const { root, asked } = sheet({}, null, { greyford: 50 });
+    root.querySelector<HTMLElement>('[data-title="greyford-regular"]')?.click();
+    expect(asked).toEqual(['greyford-regular']);
   });
 });

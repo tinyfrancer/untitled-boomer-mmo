@@ -24,10 +24,8 @@ export class ShopSession extends CounterSession {
     // What is on the shelf is settled here rather than trusted, for the same
     // reason a sale's count is: the panel asking was drawn from a copy of the
     // character, and only the character says whether the row has been earned.
-    const access = stockAccess(entry, {
-      level: this.ctx.character.state.level,
-      quests: this.ctx.character.state.quests,
-    });
+    const { level, quests, standing } = this.ctx.character.state;
+    const access = stockAccess(entry, { level, quests, standing });
     if (access.kind === 'gated') {
       this.ctx.notice(access.reason);
       return;

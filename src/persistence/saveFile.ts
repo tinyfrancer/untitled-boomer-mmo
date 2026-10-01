@@ -3,6 +3,7 @@ import { ABILITIES } from '../data/abilities';
 import { TITLES } from '../data/achievements';
 import { BOUNTIES } from '../data/bounties';
 import { CLASSES } from '../data/classes';
+import { FACTIONS } from '../data/factions';
 import { HOUSE_STANDS } from '../data/house';
 import { HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../data/looks';
 import { QUESTS } from '../data/quests';
@@ -281,6 +282,14 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
   kills: [recordOf(isCount), 'a count for each creature'],
   visits: [recordOf(isCount), 'a count for each zone'],
   mastery: [recordOf(isCount), 'an amount of XP for each node and recipe'],
+  standing: [
+    (value) =>
+      isRecord(value) &&
+      Object.entries(value).every(
+        ([factionId, held]) => Object.hasOwn(FACTIONS, factionId) && isNumber(held),
+      ),
+    `a number for each faction (${names(FACTIONS)})`,
+  ],
   activeTitleId: [orNull(keyOf(TITLES)), 'null, or a title the game has'],
   unlockedZones: [listOf(isString), 'a list of zones'],
   house: [

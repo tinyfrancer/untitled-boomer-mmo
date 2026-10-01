@@ -46,6 +46,12 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   }),
   // The house (F1): bare stands and an empty chest for everybody made before it.
   106: (state) => ({ ...state, house: emptyHouse() }),
+  // D2's step, to save version 108, reserved for it at wave 2's launch
+  // (decision 125); a pass-through on D3's branch so the chain has no gap,
+  // and replaced by D2's own when the two meet on the wave branch.
+  107: (state) => state,
+  // Factions (D3): nobody made before them stands anywhere with anybody.
+  108: (state) => ({ ...state, standing: {} }),
 };
 
 /**

@@ -76,7 +76,9 @@ first syllable, and it has no k, g or z.
   Meadowsweet Draught, Bogbean Cordial), or whose drink it is (Keeper's Draught). What a potion
   leaves a body feeling is said plainly (Quick Hands, Dulled Pain, Keeper's Watch, Fortune).
 - **Titles** are a rank word after what the rank is in (Rat Culler, Goblin Slayer). A faction's
-  titles are in its own words (D3).
+  titles are in its own words (D3): the Company's are its ledger's, after its name (Company Hand,
+  Company Factor); the Keepers' are plain words for what the fen thinks of somebody (Guest of the
+  Fen, Lightfriend, Fenkin); Greyford's are the yard's (Greyford Regular, Friend of the Yard).
 - **Zones** take "The" where a settler would say it (The Deep Cut, The Sunken Barrow) and not where
   the name is a proper name (Lampton, Greyford Outpost).
 
@@ -98,6 +100,16 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Big Gorb                    |             | A goblin tangle's Big One, not yet met              | `naming.md`   |
 | Blackwater Fen              |             | _In game_; the drowned low country's edge           | `places.md`   |
 | Candle Strand               |             | _In game_; the strand south of Lampton              | `places.md`   |
+| Company Contractor          |             | _In game_; the Company's second rank                | `factions.md` |
+| Company Factor              |             | _In game_; the Company's highest rank               | `factions.md` |
+| Company Hand                |             | _In game_; the Company's first rank                 | `factions.md` |
+| Drainer                     |             | _In game_; the Keepers' word for Company folk       | `factions.md` |
+| Fenkin                      |             | _In game_; the Keepers' highest rank before 9       | `factions.md` |
+| Friend of the Yard          |             | _In game_; Greyford's highest rank                  | `factions.md` |
+| Greyford Regular            |             | _In game_; Greyford's first rank                    | `factions.md` |
+| Greyford Trader             |             | _In game_; Greyford's second rank                   | `factions.md` |
+| Guest of the Fen            |             | _In game_; the Keepers' first rank                  | `factions.md` |
+| Lightfriend                 |             | _In game_; the Keepers' second rank                 | `factions.md` |
 | the Candles                 |             | _In game_; the sea-lights' stumps off Candle Strand | `places.md`   |
 | Cobb Harrow                 |             | Lampton's absent smith                              | `places.md`   |
 | the Cutthroat's Cellar      |             | _In game_; the vault under Redrag Camp              | `places.md`   |

@@ -13,6 +13,7 @@ import {
   recordKill,
   titleName,
 } from '../../src/systems/AchievementSystem';
+import { FACTION_TITLE_ORDER } from '../../src/data/factions';
 import type { EnemyId } from '../../src/types/ids';
 
 const ratCuller = ACHIEVEMENTS['rat-slayer-25'];
@@ -42,7 +43,10 @@ describe('the achievement grid', () => {
     for (const definition of allAchievements()) {
       expect(TITLES[definition.titleId].name).toBe(definition.name);
     }
-    expect(Object.keys(TITLES)).toHaveLength(enemyIds.length * SLAYER_TIERS.length);
+    // And a title for every faction rank above a stranger's (D3), and no more.
+    expect(Object.keys(TITLES)).toHaveLength(
+      enemyIds.length * SLAYER_TIERS.length + FACTION_TITLE_ORDER.length,
+    );
   });
 
   it('names every title after the creature it was earned on', () => {
@@ -145,17 +149,17 @@ describe('crossedAchievements', () => {
 
 describe('earnedTitles', () => {
   it('gives nothing until the first rank is reached', () => {
-    expect(earnedTitles({ rat: 24 })).toEqual([]);
+    expect(earnedTitles({ rat: 24 }, {})).toEqual([]);
   });
 
   it('gives each rank’s title as it is reached, keeping the ones below', () => {
-    expect(earnedTitles({ rat: 25 })).toEqual(['rat-culler']);
-    expect(earnedTitles({ rat: 60 })).toEqual(['rat-culler', 'rat-hunter']);
-    expect(earnedTitles({ rat: 100 })).toEqual(['rat-culler', 'rat-hunter', 'rat-slayer']);
+    expect(earnedTitles({ rat: 25 }, {})).toEqual(['rat-culler']);
+    expect(earnedTitles({ rat: 60 }, {})).toEqual(['rat-culler', 'rat-hunter']);
+    expect(earnedTitles({ rat: 100 }, {})).toEqual(['rat-culler', 'rat-hunter', 'rat-slayer']);
   });
 
   it('accumulates titles across creatures', () => {
-    expect(earnedTitles({ rat: 25, bandit: 250 })).toEqual([
+    expect(earnedTitles({ rat: 25, bandit: 250 }, {})).toEqual([
       'rat-culler',
       'bandit-culler',
       'bandit-hunter',
@@ -163,10 +167,20 @@ describe('earnedTitles', () => {
     ]);
   });
 
+  it('adds the faction ranks stood at after the slayer ranks (D3)', () => {
+    expect(earnedTitles({ rat: 25 }, { company: 260, keepers: -300 })).toEqual([
+      'rat-culler',
+      'company-hand',
+      'company-contractor',
+    ]);
+    expect(hasEarnedTitle({}, { greyford: 49 }, 'greyford-regular')).toBe(false);
+    expect(hasEarnedTitle({}, { greyford: 50 }, 'greyford-regular')).toBe(true);
+  });
+
   it('refuses a title the kills do not back', () => {
-    expect(hasEarnedTitle({ rat: 99 }, 'rat-slayer')).toBe(false);
-    expect(hasEarnedTitle({ rat: 99 }, 'rat-hunter')).toBe(true);
-    expect(hasEarnedTitle({ rat: 100 }, 'crab-culler')).toBe(false);
+    expect(hasEarnedTitle({ rat: 99 }, {}, 'rat-slayer')).toBe(false);
+    expect(hasEarnedTitle({ rat: 99 }, {}, 'rat-hunter')).toBe(true);
+    expect(hasEarnedTitle({ rat: 100 }, {}, 'crab-culler')).toBe(false);
   });
 });
 

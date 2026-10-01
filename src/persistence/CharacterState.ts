@@ -11,6 +11,7 @@ import type { MasteryXp } from '../systems/MasterySystem';
 import type { PotionTimers } from '../systems/PotionSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { DialogMemory } from '../systems/DialogSystem';
+import type { Standing } from '../systems/FactionSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
 import type {
@@ -34,7 +35,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 7;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 9;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -188,8 +189,16 @@ export interface CharacterState {
   // off. Which rung each pool stands on and what that rung pays is derived from
   // this on read (see MasterySystem).
   mastery: MasteryXp;
+  /**
+   * Standing with each faction (D3, decision 133), and the fourth tally stored
+   * for the reason the three above are: a deed leaves nothing behind to count
+   * it off. A contract paid is cleared off the board and an answer given is
+   * one line among many. Which rank it is, what that opens and which titles it
+   * pays are derived from this on read (see FactionSystem).
+   */
+  standing: Standing;
   // Which earned title is worn, if any. Only the choice is state — the right to
-  // wear it comes from kills.
+  // wear it comes from kills and standing.
   activeTitleId: TitleId | null;
   /**
    * Zones whose lock has been opened, which is the one thing about a locked
@@ -301,6 +310,7 @@ export function createNewCharacter(
     kills: {},
     visits: {},
     mastery: {},
+    standing: {},
     activeTitleId: null,
     unlockedZones: [],
     house: emptyHouse(),

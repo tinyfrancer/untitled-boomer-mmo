@@ -1,4 +1,5 @@
-import type { ClassId, EnemyId, ItemId, NpcId, QuestId, ZoneId } from '../types/ids';
+import type { StandingMove } from './factions';
+import type { ClassId, EnemyId, FactionRankId, ItemId, NpcId, QuestId, ZoneId } from '../types/ids';
 
 /**
  * What a quest asks for.
@@ -42,6 +43,11 @@ export interface QuestReward {
    * (`ownsHouse`), so the one row that says so is the whole of the grant.
    */
   house?: true;
+  /**
+   * Standing moved with each faction (D3), once, on handing it in: whose work
+   * it was, and anybody it was done against.
+   */
+  standing?: StandingMove;
 }
 
 export interface QuestDefinition {
@@ -63,6 +69,12 @@ export interface QuestDefinition {
    * is not offered yet is the reason to come back.
    */
   requires?: QuestId[];
+  /**
+   * A rank with a faction that has to be stood at before this is offered (D3):
+   * work a person keeps for somebody they know. Drawn locked like a chain link,
+   * naming the rank.
+   */
+  requiresRank?: FactionRankId;
   reward: QuestReward;
 }
 
@@ -83,6 +95,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       copper: 120,
       xp: 90,
       gear: { warrior: 'brown-helmet', wizard: 'brown-cloth-hat', ranger: 'brown-helmet' },
+      standing: { company: 10 },
     },
   },
   // The one errand off the chain, and the only quest in the game that asks for
@@ -95,7 +108,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
     description:
       'There is a new cut in the hills north of town. Walk up and see what they are pulling out of it — I will pay for the news.',
     objective: { kind: 'visit', zoneId: 'quarry' },
-    reward: { copper: 60, xp: 40 },
+    reward: { copper: 60, xp: 40, standing: { company: 10 } },
   },
   'crab-feast': {
     id: 'crab-feast',
@@ -109,6 +122,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       copper: 240,
       xp: 180,
       gear: { warrior: 'brown-chestplate', wizard: 'brown-robe', ranger: 'brown-chestplate' },
+      standing: { company: 10 },
     },
   },
   // Deliberately fewer bandits than a full armour set costs: a kill objective
@@ -122,7 +136,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       'The camp on the road has taken three carts of mine this month. Put twelve of them down and the road is worth using again.',
     objective: { kind: 'kill', enemyId: 'bandit', quantity: 12 },
     requires: ['crab-feast'],
-    reward: { copper: 200, xp: 150 },
+    reward: { copper: 200, xp: 150, standing: { company: 25 } },
   },
   // The capstone, and the only thing in the game that says out loud that the
   // hideout exists: the key is a 3% drop, so without this the door behind the
@@ -135,7 +149,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       'Hollis is the one giving the orders, and he keeps a locked door between himself and the road. Find the key on one of his men, then find him.',
     objective: { kind: 'kill', enemyId: 'bandit-chief', quantity: 1 },
     requires: ['bandit-trouble'],
-    reward: { copper: 400, xp: 350, keepsake: 'pells-cart-bell' },
+    reward: { copper: 400, xp: 350, keepsake: 'pells-cart-bell', standing: { company: 50 } },
   },
   /*
    * The Company's, and the way the house becomes the player's (F1,
@@ -152,7 +166,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       "The Surveyor's House has stood empty since the survey went west, and the Company lets it to whoever is useful. You have been. Bring me twenty logs for the roof and it is yours.",
     objective: { kind: 'collect', itemId: 'logs', quantity: 20 },
     requires: ['the-cutthroat'],
-    reward: { copper: 0, xp: 50, house: true },
+    reward: { copper: 0, xp: 50, house: true, standing: { company: 25 } },
   },
 
   /*
@@ -176,11 +190,13 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
     description:
       'Nothing comes up the road from town without the goblins going through it first. Put a dozen of them down and the carts can start coming this way again.',
     objective: { kind: 'kill', enemyId: 'goblin-scavenger', quantity: 12 },
-    reward: { copper: 300, xp: 450 },
+    reward: { copper: 300, xp: 450, standing: { greyford: 40 } },
   },
   // The errand off the chain, as the quarry road is off the first one, and the
   // one that asks for what the Deep Cut is about: a seam rather than a fight.
-  // Coal is behind mining 6, so it waits on the pick and not on the chain.
+  // Coal is behind mining 6, so it waits on the pick and not on the chain; and
+  // on being known in the yard (D3), since it is a trade the outfitter offers
+  // somebody worth trading with, which the road west's goblins earn.
   'cut-coal': {
     id: 'cut-coal',
     name: 'Coal from the Cut',
@@ -188,7 +204,8 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
     description:
       'The seams under the quarry burn hotter than anything we cut up here. Bring me ten coal and I will know the pick in your hands is worth trading with.',
     objective: { kind: 'collect', itemId: 'coal', quantity: 10 },
-    reward: { copper: 250, xp: 350 },
+    requiresRank: 'greyford-regular',
+    reward: { copper: 250, xp: 350, standing: { greyford: 25 } },
   },
   /*
    * The link that pays gear, for the reason the starter arc's collect quests
@@ -211,6 +228,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       copper: 250,
       xp: 400,
       gear: { warrior: 'studded-jerkin', wizard: 'fenweave-robe', ranger: 'studded-jerkin' },
+      standing: { greyford: 25 },
     },
   },
   // Held back by the outfitter's work rather than by anything of the fettler's
@@ -224,11 +242,13 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       'The raiders in the fen wear better cloth than anybody finds in a marsh, and none of it was theirs. Put ten of them down and bring me word of what they carry.',
     objective: { kind: 'kill', enemyId: 'fen-raider', quantity: 10 },
     requires: ['lurker-hides'],
-    reward: { copper: 400, xp: 650 },
+    reward: { copper: 400, xp: 650, standing: { greyford: 25 } },
   },
   // The capstone, and the barrow's equivalent of the cutthroat: the key is a 3%
   // drop off the raiders the quest before it sends you to, so this is what says
-  // out loud that the door at the bottom of the fen exists.
+  // out loud that the door at the bottom of the fen exists. The Keepers count
+  // the king laid as the mercy it is, his light being out, which earns back what
+  // the ten raiders before it cost with them (decision 133).
   'the-barrow-king': {
     id: 'the-barrow-king',
     name: 'The Barrow King',
@@ -237,7 +257,12 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       'Orlath was buried with more than anyone has ever dug up, and older work than any I know. One of those raiders carries the key to his barrow. Find it, then find him.',
     objective: { kind: 'kill', enemyId: 'barrow-king', quantity: 1 },
     requires: ['blackwater-raiders'],
-    reward: { copper: 700, xp: 1200, keepsake: 'orlaths-seal-cast' },
+    reward: {
+      copper: 700,
+      xp: 1200,
+      keepsake: 'orlaths-seal-cast',
+      standing: { greyford: 50, keepers: 50 },
+    },
   },
 };
 

@@ -1,4 +1,6 @@
 import type {
+  FactionId,
+  FactionRankId,
   AbilityId,
   BountyId,
   ItemId,
@@ -24,6 +26,7 @@ import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { DialogMemory } from '../systems/DialogSystem';
+import type { Standing } from '../systems/FactionSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
@@ -272,6 +275,13 @@ export const TITLE_CHANGED_EVENT = 'title-changed';
  * `XP_GAINED_EVENT`, whose gain carries the bank after.
  */
 export const RESTED_CHANGED_EVENT = 'rested-changed';
+/**
+ * Standing with the factions (D3), and the moment a rank is reached or fallen
+ * to: the pairing the kill counts make with an achievement, the totals for the
+ * sheets to redraw from and the crossing said out loud as it happens.
+ */
+export const STANDING_CHANGED_EVENT = 'standing-changed';
+export const STANDING_RANK_EVENT = 'standing-rank';
 
 // Dialog (D1). The HUD asks a topic of whoever it is talking to; the world
 // answers with what is being said now (CONVERSATION_CHANGED), which a newly
@@ -574,6 +584,8 @@ export interface UiEventMap {
   [CONVERSATION_CHANGED_EVENT]: [conversation: ConversationState];
   [ASKED_CHANGED_EVENT]: [asked: DialogMemory];
   [RESTED_CHANGED_EVENT]: [rested: number];
+  [STANDING_CHANGED_EVENT]: [standing: Standing];
+  [STANDING_RANK_EVENT]: [crossing: StandingRankCrossed];
   [SPIRIT_SAID_EVENT]: [said: SpiritSaid];
   [SPIRIT_BEAT_HEARD_EVENT]: [beatId: SpiritBeatId];
   [DRINK_POTION_REQUESTED_EVENT]: [itemId: ItemId];
@@ -583,6 +595,13 @@ export interface UiEventMap {
   [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
   [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+}
+
+/** A rank with a faction reached on the way up, or fallen to on the way down. */
+export interface StandingRankCrossed {
+  factionId: FactionId;
+  rankId: FactionRankId;
+  rose: boolean;
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */
