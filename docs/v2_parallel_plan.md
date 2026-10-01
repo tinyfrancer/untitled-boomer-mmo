@@ -6,10 +6,11 @@ is; this document says how its remaining phases are built by several agents at o
 session at a time, and holds a brief per phase. **From wave 1 each wave merges through its own branch, its numbers reserved at launch and its
 questions answered before it launches, by an orchestrator session woken every half hour (decision 125)**, so the user is asked nothing between a wave's question round and its review. **Landed:** C11 (wave 0), 2026-10-01, with the measurement below written into the plan's C11 entry
 (decision 124); wave 1 (D1 decision 126, E1 127, D4 128, E2 129, F1 130, save versions 103 to 107),
-folded onto `claude/v2-wave-1` by the orchestrator on 2026-10-01 and up as one PR to `main` for the
-user's review. **Landed:** G1 (decision 131), 2026-10-01, Part G written into the plan as phases with a brief
-per tier, zone and the carters. **Next:** wave 2 (D2, D3, D1b, E3, F2, F3) from `claude/v2-wave-2`, cut from `main` once wave
-1 has merged, its numbers reserved from 132. Update this line as phases start and land, the way
+folded onto `claude/v2-wave-1` by the orchestrator on 2026-10-01 and merged to `main` as one PR the
+same day. **Landed:** G1 (decision 131), 2026-10-01, Part G written into the plan as phases with a brief
+per tier, zone and the carters. **In flight:** wave 2 (D2, D3, D1b, E3, F2, F3) from `claude/v2-wave-2`, cut from `main` and
+launched 2026-10-01 at 21:28 UTC, its numbers reserved from 132 and its questions answered under
+each brief on that branch. Update this line as phases start and land, the way
 the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
