@@ -31,7 +31,7 @@ export function startFoodBuff(itemId: ItemId): FoodBuff | null {
  * HP healed over `deltaMs`, and the buff to carry into the next frame (null once
  * it's spent).
  *
- * Fractional on purpose, exactly like RegenSystem.regenTick: 15 HP over 10s is
+ * Fractional on purpose, exactly like RegenSystem.regenTick: 30 HP over 6s is
  * far less than a point per frame, so the caller accumulates and only rounds for
  * display. Rounding here would floor every tick to zero.
  */

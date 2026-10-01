@@ -53,8 +53,8 @@ describe('idleFoods', () => {
       { order: [], keep: ['cooked-crab'] },
     );
     expect(rows).toEqual([
-      { itemId: 'cooked-rat', count: 4, healAmount: 10, keep: false },
-      { itemId: 'cooked-crab', count: 2, healAmount: 25, keep: true },
+      { itemId: 'cooked-rat', count: 4, healAmount: 20, keep: false },
+      { itemId: 'cooked-crab', count: 2, healAmount: 40, keep: true },
     ]);
   });
 });

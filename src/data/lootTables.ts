@@ -54,7 +54,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
     // purpose: the shop sells tools only, so this table plus the two quest
     // rewards is the whole of a wizard's — and a warrior's — armor supply.
     entries: [
-      { itemId: 'cooked-fish', chance: 0.15 },
+      { itemId: 'cooked-fish', chance: 0.4 },
       { itemId: 'brown-chestplate', chance: 0.06 },
       { itemId: 'brown-helmet', chance: 0.06 },
       { itemId: 'brown-legs', chance: 0.06 },
@@ -98,7 +98,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'studded-quiver', chance: 0.05 },
       // Scavengers, so what they have eaten off is what they carry: the one
       // thing on the table nothing here made.
-      { itemId: 'cooked-fish', chance: 0.12 },
+      { itemId: 'cooked-fish', chance: 0.4 },
       arrows(3, 7),
     ],
     currency: { min: 18, max: 46, chance: 0.92 },
@@ -160,17 +160,21 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'goblin-maul', chance: 0.05 },
       { itemId: 'pickaxe', chance: 0.08 },
       // Rats in a mine, and a goblin with a fire.
-      { itemId: 'cooked-rat', chance: 0.12 },
+      { itemId: 'cooked-rat', chance: 0.5 },
       arrows(3, 7),
     ],
     currency: { min: 20, max: 50, chance: 0.92 },
   },
 
-  // A beast, so parts and nothing else. One entry, at a rate that makes a hide
-  // the reason to bother rather than a consolation: a lurker is a long fight.
+  // A beast, so parts and nothing else: the hide, at a rate that makes it the
+  // reason to bother rather than a consolation, since a lurker is a long fight,
+  // and whatever it had last eaten out of the pool it was lying in.
   'bog-lurker': {
     id: 'bog-lurker',
-    entries: [{ itemId: 'lurker-hide', chance: 0.55 }],
+    entries: [
+      { itemId: 'lurker-hide', chance: 0.55 },
+      { itemId: 'raw-eel', chance: 0.3 },
+    ],
   },
   /**
    * Where cloth comes from, and the whole reason a caster walks out here.
@@ -187,7 +191,7 @@ export const LOOT_TABLES: Record<LootTableId, LootTable> = {
       { itemId: 'fenweave-robe', chance: 0.04 },
       { itemId: 'fenweave-leggings', chance: 0.045 },
       // What they eat out of the pools they are standing in.
-      { itemId: 'raw-eel', chance: 0.18 },
+      { itemId: 'raw-eel', chance: 0.4 },
       // The way into the barrow, at the hideout key's own 3%: the rarest thing
       // on any table in the game, and meant to be a run of raiders rather than
       // an errand. It is on the zone *before* the door for the reason the

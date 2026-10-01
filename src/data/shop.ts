@@ -53,7 +53,7 @@ export const SHOP_STOCK: ShopStockEntry[] = [
   // Fuel and something to put over it, for a player who would rather not walk
   // to a tree or a pond first. One log is one fire.
   { itemId: 'logs', price: 9 },
-  { itemId: 'raw-fish', price: 12 },
+  { itemId: 'raw-fish', price: 6 },
   // Where a ranger's first arrows come from after the quiver it starts with
   // (decision 64), and ungated for the reason the tools are: a gate on arrows
   // would be a gate on the class. A copper and a fifth each against the one a
@@ -61,9 +61,9 @@ export const SHOP_STOCK: ShopStockEntry[] = [
   // what the starter arc pays in coin.
   { itemId: 'crude-arrows', price: 30, quantity: 25 },
   // Rations, once there is something to need them for.
-  { itemId: 'cooked-fish', price: 24, requires: { kind: 'level', level: 2 } },
+  { itemId: 'cooked-fish', price: 12, requires: { kind: 'level', level: 2 } },
   // The twenty the player carried in for the feast, sold back one at a time.
-  { itemId: 'cooked-crab', price: 36, requires: { kind: 'quest', questId: 'crab-feast' } },
+  { itemId: 'cooked-crab', price: 18, requires: { kind: 'quest', questId: 'crab-feast' } },
   /**
    * The deepest thing on the shelf, and the only row here that is not sold to be
    * used in town.
