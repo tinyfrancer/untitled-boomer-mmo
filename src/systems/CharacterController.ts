@@ -63,6 +63,7 @@ import {
 } from './AchievementSystem';
 import { bonusYieldChance, crossedMasteryTiers, masteryXp, recordMastery } from './MasterySystem';
 import { keepIdleFood, moveIdleFood, type IdleFoodMove } from './IdleFoodSystem';
+import { drinkPotion, fortuneYieldChance, spendPotionTime } from './PotionSystem';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
 import type { AchievementDefinition } from '../data/achievements';
@@ -559,6 +560,39 @@ export class CharacterController {
   /** What this target's pool pays: the chance of a second one off the action. */
   masteryChanceFor(targetId: MasteryTargetId): number {
     return bonusYieldChance(this.state.mastery, targetId);
+  }
+
+  /**
+   * The chance of a second one off the action as it will be rolled: what the
+   * pool pays, and Fortune on top while it lasts. Kept apart from
+   * `masteryChanceFor`, which is the pool's alone and what the skills book says.
+   */
+  secondOneChanceFor(targetId: MasteryTargetId): number {
+    return this.masteryChanceFor(targetId) + fortuneYieldChance(this.state.potions);
+  }
+
+  /**
+   * Drinks a potion out of the bag: its clock starts from full, and one is gone.
+   * Refuses, spending nothing, for anything that is not a potion or not there.
+   */
+  drinkPotion(itemId: ItemId): boolean {
+    if (this.itemCount(itemId) <= 0) return false;
+    const next = drinkPotion(this.state.potions, itemId);
+    if (!next) return false;
+    this.state.potions = next;
+    this.removeItem(itemId, 1);
+    return true;
+  }
+
+  /**
+   * Runs every potion's clock down by a stretch of game time, or of a night
+   * away: a potion works for the time it has left, and that time is spent
+   * whether anything used it or not. Quiet when nothing is running, since the
+   * world asks every frame.
+   */
+  spendPotionTime(elapsedMs: number): void {
+    if (Object.keys(this.state.potions).length === 0) return;
+    this.state.potions = spendPotionTime(this.state.potions, elapsedMs);
   }
 
   /** The three tallies a quest objective is read off. */

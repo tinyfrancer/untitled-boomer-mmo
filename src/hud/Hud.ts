@@ -74,6 +74,7 @@ import {
   COOK_REQUESTED_EVENT,
   CURRENCY_CHANGED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
+  DRINK_POTION_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   CHANNEL_ENDED_EVENT,
   CHANNEL_PROGRESS_EVENT,
@@ -125,7 +126,8 @@ import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { AbilityId, ItemId, SkillId, TitleId, ZoneId } from '../types/ids';
+import { POTION_EFFECT_IDS } from '../data/potions';
+import type { AbilityId, ItemId, PotionEffectId, SkillId, TitleId, ZoneId } from '../types/ids';
 
 /**
  * Which request each of the inventory panel's buttons is. Two are not simply
@@ -140,6 +142,7 @@ const ITEM_ACTION_EVENTS = {
   sell: SELL_ITEM_REQUESTED_EVENT,
   'sell-all': SELL_ITEM_REQUESTED_EVENT,
   'light-fire': LIGHT_FIRE_REQUESTED_EVENT,
+  drink: DRINK_POTION_REQUESTED_EVENT,
 } satisfies Record<ItemActionId, UiEventName>;
 
 export interface HudOptions {
@@ -220,6 +223,10 @@ interface HudModel {
   // Whether the minimap is up, for the layout and the options menu's switch.
   // Seeded from the save and kept current by the session.
   minimapOn: boolean;
+  // Which potions are running, for the idle panel's word on what they do to
+  // idle. Read off the buff row, which already carries them; the clocks
+  // themselves are the world's.
+  potionsRunning: PotionEffectId[];
 }
 
 /**
@@ -319,6 +326,7 @@ class Hud {
       idleFood: character.idleFood ?? { order: [], keep: [] },
       tipsOn: !(character.tips?.off ?? false),
       minimapOn: character.showMinimap ?? true,
+      potionsRunning: [],
     };
 
     injectHudStyles();
@@ -865,6 +873,7 @@ class Hud {
         idleFood: this.model.idleFood,
         stations: this.model.actions.nearStations,
         zoneId: this.model.zoneId,
+        potionsRunning: this.model.potionsRunning,
       }),
       this.model.afkActive,
     );
@@ -1068,6 +1077,13 @@ class Hud {
     listen(PLAYER_EFFECTS_CHANGED_EVENT, (effects) => {
       const hadRow = this.playerColumn.hasEffects();
       this.playerColumn.setEffects(effects);
+      // The idle panel says which potions are working for it, so it is drawn
+      // again when one starts or runs out rather than on every tick of a clock.
+      const running = POTION_EFFECT_IDS.filter((id) => effects.some((e) => e.effectId === id));
+      if (running.join() !== this.model.potionsRunning.join()) {
+        this.model.potionsRunning = running;
+        this.refreshIdle();
+      }
       // Whether the row exists at all is what decides how tall the column is,
       // and so where a sheet starts on a roomy screen. How many icons are in it
       // is not: they sit side by side.

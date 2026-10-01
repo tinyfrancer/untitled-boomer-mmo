@@ -25,6 +25,7 @@ import { REFORGE_STONE_ITEM_ID } from '../data/reforges';
 import { SKILLS } from '../data/skills';
 import { ZONES, type ZoneDefinition } from '../data/zones';
 import { batchSize } from './CraftingSystem';
+import { describePotionEffect, potionDuration } from './PotionSystem';
 import { formatCurrency } from './CurrencySystem';
 import { isQuestDone, type QuestLog } from './QuestSystem';
 import { eligibleReforges } from './ReforgeSystem';
@@ -126,6 +127,9 @@ function consuming(itemId: ItemId): string[] {
     lines.push('Idle eats this when hurt, in the order set on the Idle tab');
   }
   if (item.kind === 'ammunition') lines.push('Shot from a bow, out of a quiver');
+  if (item.kind === 'potion') {
+    lines.push(`Drink: ${describePotionEffect(item.effect)}, for ${potionDuration(item.effect)}`);
+  }
   if (itemId === FIRE_INPUT_ITEM_ID) lines.push('Lights a campfire, one a fire');
   return lines;
 }

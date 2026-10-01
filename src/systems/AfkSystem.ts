@@ -22,13 +22,22 @@ export const AFK_RESUME_FRACTION = 0.85;
 // Worth spending food on rather than waiting out regen.
 export const AFK_EAT_FRACTION = 0.7;
 
-export function afkXpReward(baseXp: number, isAfk: boolean): number {
+/**
+ * What a kill pays, awake or idle. The share idle keeps is `AFK_XP_MULTIPLIER`
+ * unless something lifts it, which only Keeper's Watch does
+ * (`idleXpMultiplier`), and never to a whole share.
+ */
+export function afkXpReward(
+  baseXp: number,
+  isAfk: boolean,
+  multiplier: number = AFK_XP_MULTIPLIER,
+): number {
   if (!isAfk) {
     return baseXp;
   }
   // Never rounds a reward away entirely: a kill that paid something awake has
   // to pay something asleep.
-  return Math.max(1, Math.round(baseXp * AFK_XP_MULTIPLIER));
+  return Math.max(1, Math.round(baseXp * multiplier));
 }
 
 export interface AfkCandidate {

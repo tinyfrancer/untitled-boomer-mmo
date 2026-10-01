@@ -1,4 +1,5 @@
 import { ITEMS } from '../data/items';
+import { POTION_EFFECTS } from '../data/potions';
 import type { AbilityId, EffectId, ItemIconShape, ItemId } from '../types/ids';
 import { frameKey, variantId } from './compile';
 import type { Recolour, SpriteDef } from './format';
@@ -42,7 +43,9 @@ import {
   ROUND_SHIELD,
   RUSTY_SWORD,
   SHORT_BOW,
+  SICKLE,
 } from './sprites/weapons';
+import { HERB_VARIANTS } from './sprites/herbs';
 import * as ITEM from './sprites/itemIcons';
 import * as ABILITY from './sprites/abilityIcons';
 import * as MARK from './sprites/markIcons';
@@ -105,6 +108,7 @@ const WIELDED_ICONS = new Map<Wielded, SpriteDef>([
   [FISHING_POLE, ITEM.FISHING_POLE],
   [SHORT_BOW, ITEM.SHORT_BOW],
   [LONGBOW, ITEM.LONGBOW],
+  [SICKLE, ITEM.SICKLE],
 ]);
 
 const CARRIED_ICONS = new Map<Carried | 'quiver', SpriteDef>([
@@ -159,6 +163,18 @@ const MATERIAL_ICONS: Readonly<Partial<Record<ItemId, IconRow>>> = {
   'willow-shafts': { art: ITEM.SHAFTS, recolour: { thatch: 'oilskin' } },
   'iron-arrowheads': { art: ITEM.ARROWHEADS, recolour: { tier: 'tierIron' } },
   'steel-arrowheads': { art: ITEM.ARROWHEADS, recolour: { tier: 'tierSteel' } },
+  // Each herb in the colours its patch is drawn in (`HERB_VARIANTS`), so the
+  // bundle in the bag is the clump on the ground.
+  samphire: { art: ITEM.HERB, recolour: HERB_VARIANTS.samphire },
+  meadowsweet: { art: ITEM.HERB },
+  'bog-myrtle': { art: ITEM.HERB, recolour: HERB_VARIANTS['bog-myrtle'] },
+  bogbean: { art: ITEM.HERB, recolour: HERB_VARIANTS.bogbean },
+  // A potion is the colour of what it does: green for the hands, gold for the
+  // pain, the keepers' teal for the watch, and violet for luck.
+  'samphire-tonic': { art: ITEM.POTION },
+  'meadowsweet-draught': { art: ITEM.POTION, recolour: { nature: 'yellow' } },
+  'keepers-draught': { art: ITEM.POTION, recolour: { nature: 'teal' } },
+  'bogbean-cordial': { art: ITEM.POTION, recolour: { nature: 'purple' } },
 };
 
 // What an item nobody drew is drawn as, by the shape its data names.
@@ -185,6 +201,9 @@ const BY_SHAPE: Readonly<Record<ItemIconShape, SpriteDef>> = {
   arrow: ITEM.ARROW,
   shaft: ITEM.SHAFTS,
   arrowhead: ITEM.ARROWHEADS,
+  sickle: ITEM.SICKLE,
+  herb: ITEM.HERB,
+  potion: ITEM.POTION,
 };
 
 /** What an item is drawn as, and dyed: gear off the wardrobe, the rest off its row. */
@@ -286,7 +305,8 @@ export function abilityIconKey(abilityId: AbilityId): string {
 
 /**
  * A buff's icon: what gave it. A shield is the spell that raised it, haste the
- * fury that brought it on, and a full stomach a roast.
+ * fury that brought it on, a full stomach a roast, and a potion's mark the
+ * potion.
  */
 export function effectIconKey(effectId: EffectId): string {
   switch (effectId) {
@@ -296,6 +316,11 @@ export function effectIconKey(effectId: EffectId): string {
       return abilityIconKey('battle-fury');
     case 'well-fed':
       return itemIconKey('cooked-rat');
+    case 'quick-hands':
+    case 'dulled-pain':
+    case 'keepers-watch':
+    case 'fortune':
+      return itemIconKey(POTION_EFFECTS[effectId].itemId);
   }
 }
 

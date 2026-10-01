@@ -1,10 +1,10 @@
-import { ITEMS, consumableFor, itemValue } from '../data/items';
+import { ITEMS, consumableFor, itemValue, potionEffectOf } from '../data/items';
 import { FIRE_INPUT_ITEM_ID } from '../data/recipes';
 import { canEquip } from './EquipSystem';
 import { isRecipeInput } from './CraftingSystem';
 import type { ClassId, ItemId } from '../types/ids';
 
-export type ItemActionId = 'equip' | 'eat' | 'light-fire' | 'cook' | 'sell' | 'sell-all';
+export type ItemActionId = 'equip' | 'eat' | 'light-fire' | 'cook' | 'sell' | 'sell-all' | 'drink';
 
 export interface ItemAction {
   id: ItemActionId;
@@ -42,6 +42,9 @@ export function actionsForItem(itemId: ItemId, context: ItemActionContext): Item
   }
   if (consumableFor(itemId)) {
     actions.push({ id: 'eat', label: 'Eat' });
+  }
+  if (potionEffectOf(itemId)) {
+    actions.push({ id: 'drink', label: 'Drink' });
   }
   if (itemId === FIRE_INPUT_ITEM_ID && !context.nearFire) {
     actions.push({ id: 'light-fire', label: 'Light Fire' });

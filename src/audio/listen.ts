@@ -114,5 +114,7 @@ function gatherCue(nodeId: keyof typeof RESOURCE_NODES): CueId {
       return 'mine';
     case 'ripple':
       return 'splash';
+    case 'herb':
+      return 'snip';
   }
 }

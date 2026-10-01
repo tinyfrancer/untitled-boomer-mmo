@@ -250,6 +250,25 @@ export const PICKAXE = swung(
   ),
 );
 
+/** A forager's: a crescent of blade on a short haft, for cutting stems. */
+export const SICKLE = swung(
+  forged(
+    `
+    ..xwv.
+    .x...v
+    x.....
+    x.....
+    .x....
+    ..xs..
+    ...q..
+    ...p..
+    ...f..
+    ...p..
+  `,
+    [3, 7],
+  ),
+);
+
 /** A goblin's: a pick head re-hafted as a club, heavy and lopsided. */
 export const MAUL = swung(
   forged(

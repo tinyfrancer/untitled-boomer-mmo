@@ -25,6 +25,7 @@ import {
   type GatherState,
 } from '../systems/GatherSystem';
 import { distance, withinRadius } from '../systems/MovementSystem';
+import { potionGatherSpeed } from '../systems/PotionSystem';
 import type { ItemId, RecipeId } from '../types/ids';
 import { CHANNEL_ENDED_EVENT, CHANNEL_PROGRESS_EVENT, CHANNEL_STARTED_EVENT } from '../ui/uiEvents';
 import { Campfire } from './Campfire';
@@ -89,7 +90,7 @@ export class GatherSession {
     // One bar, so a swing at a tree takes it off whatever was in the pan.
     this.cooking = null;
     this.node = node;
-    this.state = beginGather(node.definition, character.skillLevelOf(node.definition.skill));
+    this.state = this.swing(node.definition);
     this.ctx.events.emit(CHANNEL_STARTED_EVENT, node.definition.name);
   }
 
@@ -303,7 +304,7 @@ export class GatherSession {
     const result = rollCraft(
       recipe,
       character.skillLevelOf(recipe.skill),
-      character.masteryChanceFor(recipe.id),
+      character.secondOneChanceFor(recipe.id),
       this.ctx.rolls,
     );
     // A failure with nothing to show for it spends nothing: see `rollCraft`.
@@ -353,13 +354,24 @@ export class GatherSession {
     this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 
+  // One swing at a node, at the skill's speed and a Samphire Tonic's if one is
+  // running: read at each swing, so a potion drunk mid-run speeds the next one.
+  private swing(definition: ResourceNode['definition']): GatherState {
+    const { character } = this.ctx;
+    return beginGather(
+      definition,
+      character.skillLevelOf(definition.skill),
+      potionGatherSpeed(character.state.potions),
+    );
+  }
+
   private complete(node: ResourceNode): void {
     const { character } = this.ctx;
     const { definition } = node;
 
     const quantity = rollGatherQuantity(
       character.skillLevelOf(definition.skill),
-      character.masteryChanceFor(definition.id),
+      character.secondOneChanceFor(definition.id),
       this.ctx.rolls,
     );
     /**
@@ -394,7 +406,7 @@ export class GatherSession {
 
     // Auto-repeat: re-arm the channel so gathering runs unattended until
     // something interrupts it.
-    this.state = beginGather(definition, character.skillLevelOf(definition.skill));
+    this.state = this.swing(definition);
     this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 }

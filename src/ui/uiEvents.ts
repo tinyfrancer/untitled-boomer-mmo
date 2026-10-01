@@ -262,6 +262,9 @@ export const MASTERY_TIER_REACHED_EVENT = 'mastery-tier-reached';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
 export const TITLE_CHANGED_EVENT = 'title-changed';
+// A potion drunk from the bag (version 2 phase E2): its own request rather than
+// eating's, since a potion is drunk at full health and in the middle of a fight.
+export const DRINK_POTION_REQUESTED_EVENT = 'drink-potion-requested';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -514,6 +517,7 @@ export interface UiEventMap {
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
   [TITLE_CHANGED_EVENT]: [titleId: TitleId | null];
+  [DRINK_POTION_REQUESTED_EVENT]: [itemId: ItemId];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

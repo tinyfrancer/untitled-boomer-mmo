@@ -199,8 +199,11 @@ export class AfkCamp {
       skills: character.state.skills,
       quiver: character.state.quiver,
       reforges: character.state.reforges,
+      potions: character.state.potions,
       rng: this.ctx.rolls,
     });
+    // The night spent the potions' time whether anything used it or not.
+    character.spendPotionTime(report.elapsedMs);
     if (report.kills <= 0 && report.gathers <= 0 && report.crafts <= 0) {
       this.ctx.persistCharacter();
       // A bow with nothing to shoot is the one parked camp that earned nothing
