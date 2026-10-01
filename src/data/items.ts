@@ -5,6 +5,7 @@ import type {
   ItemIconShape,
   ItemId,
   OffhandShapeId,
+  PotionEffectId,
   SkillId,
   TierId,
   WeaponShapeId,
@@ -124,11 +125,38 @@ interface AmmunitionItemDefinition extends BaseItemDefinition {
   icon: ItemIcon;
 }
 
+/**
+ * A potion, and the fifth kind: drunk rather than eaten, for a mark that lasts
+ * minutes rather than a heal that lasts seconds (version 2 phase E2). Its own
+ * kind rather than food with a field, because nothing about it heals and idle's
+ * food order must not reach for one; what the mark does and how long it lasts
+ * are its effect's row in `data/potions.ts`.
+ */
+interface PotionItemDefinition extends BaseItemDefinition {
+  kind: 'potion';
+  effect: PotionEffectId;
+  icon: ItemIcon;
+}
+
+/**
+ * A keepsake, and the fifth kind: handed over by whoever gave a chain's last
+ * quest, and good for one thing, a stand in the house (F1). Its own kind rather
+ * than a material with no price, because a material is something to make into
+ * something and the dead-end sweep asks that of every one; a keepsake is
+ * nothing but itself, and the shelf never sells one.
+ */
+interface KeepsakeItemDefinition extends BaseItemDefinition {
+  kind: 'keepsake';
+  icon: ItemIcon;
+}
+
 export type ItemDefinition =
   | EquipmentItemDefinition
   | MaterialItemDefinition
   | ConsumableItemDefinition
-  | AmmunitionItemDefinition;
+  | AmmunitionItemDefinition
+  | PotionItemDefinition
+  | KeepsakeItemDefinition;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
   'rusty-sword': {
@@ -728,6 +756,21 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     attackPowerBonus: 0,
     toolFor: 'fishing',
     gatherSpeedBonus: 0.15,
+  },
+  /**
+   * Foraging's tool, sold beside the other three. A hand blade for cutting
+   * stems, and the weakest thing anyone can swing: it sits under the pole.
+   */
+  sickle: {
+    id: 'sickle',
+    name: 'Sickle',
+    value: 30,
+    weight: 2,
+    kind: 'equipment',
+    slot: 'weapon',
+    weaponShape: 'sickle',
+    attackPowerBonus: 0,
+    toolFor: 'foraging',
   },
   logs: {
     id: 'logs',
@@ -1330,6 +1373,86 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     icon: { shape: 'meat' },
   },
   /**
+   * Foraging's four, one a potion. Light, since a herb is a handful of stems,
+   * and each worth a little over the rung below, the way the woods and the ores
+   * are. The samphire is the strand's and the starter band's; the meadowsweet
+   * grows on the mill road's bank; the bog myrtle and the bogbean are the fen's,
+   * and the fenfolk's brewing is built on them (`docs/lore/peoples.md`).
+   */
+  samphire: {
+    id: 'samphire',
+    name: 'Samphire',
+    value: 2,
+    weight: 0.5,
+    kind: 'material',
+    icon: { shape: 'herb' },
+  },
+  meadowsweet: {
+    id: 'meadowsweet',
+    name: 'Meadowsweet',
+    value: 4,
+    weight: 0.5,
+    kind: 'material',
+    icon: { shape: 'herb' },
+  },
+  'bog-myrtle': {
+    id: 'bog-myrtle',
+    name: 'Bog Myrtle',
+    value: 6,
+    weight: 0.5,
+    kind: 'material',
+    icon: { shape: 'herb' },
+  },
+  bogbean: {
+    id: 'bogbean',
+    name: 'Bogbean',
+    value: 8,
+    weight: 0.5,
+    kind: 'material',
+    icon: { shape: 'herb' },
+  },
+  /**
+   * Brewing's four. Each sells for a little over the herbs behind it, so the
+   * still never makes anyone poor or rich; what a potion is worth is what it
+   * does, which is `data/potions.ts`.
+   */
+  'samphire-tonic': {
+    id: 'samphire-tonic',
+    name: 'Samphire Tonic',
+    value: 6,
+    weight: 0.5,
+    kind: 'potion',
+    effect: 'quick-hands',
+    icon: { shape: 'potion' },
+  },
+  'meadowsweet-draught': {
+    id: 'meadowsweet-draught',
+    name: 'Meadowsweet Draught',
+    value: 11,
+    weight: 0.5,
+    kind: 'potion',
+    effect: 'dulled-pain',
+    icon: { shape: 'potion' },
+  },
+  'keepers-draught': {
+    id: 'keepers-draught',
+    name: "Keeper's Draught",
+    value: 17,
+    weight: 0.5,
+    kind: 'potion',
+    effect: 'keepers-watch',
+    icon: { shape: 'potion' },
+  },
+  'bogbean-cordial': {
+    id: 'bogbean-cordial',
+    name: 'Bogbean Cordial',
+    value: 24,
+    weight: 0.5,
+    kind: 'potion',
+    effect: 'fortune',
+    icon: { shape: 'potion' },
+  },
+  /**
    * What a reforge costs, and the only thing in the game bought in one place to
    * be spent in another.
    *
@@ -1350,6 +1473,27 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'material',
     icon: { shape: 'ore' },
+  },
+  /*
+   * The keepsakes. Light, since a quest that asks for kills takes nothing in
+   * and a pack too full for one refuses the turn-in; and with no price, since
+   * the only thing either is for is a stand (`data/house.ts`).
+   */
+  // Off the first cart the Red Rags took, found among Hollis's things.
+  'pells-cart-bell': {
+    id: 'pells-cart-bell',
+    name: "Pell's Cart Bell",
+    weight: 1,
+    kind: 'keepsake',
+    icon: { shape: 'bell' },
+  },
+  // Pressed in wax off the seal on the barrow's door, years before it was opened.
+  'orlaths-seal-cast': {
+    id: 'orlaths-seal-cast',
+    name: "Cast of Orlath's Seal",
+    weight: 1,
+    kind: 'keepsake',
+    icon: { shape: 'seal' },
   },
 };
 
@@ -1538,6 +1682,12 @@ export function consumableFor(
     return null;
   }
   return { healAmount: item.healAmount, healDurationMs: item.healDurationMs };
+}
+
+// The mark a potion leaves, or null for anything that is not one.
+export function potionEffectOf(itemId: ItemId | null): PotionEffectId | null {
+  const item = itemId ? ITEMS[itemId] : undefined;
+  return item?.kind === 'potion' ? item.effect : null;
 }
 
 // Vendor sell price in copper, or null if the item can't be sold.

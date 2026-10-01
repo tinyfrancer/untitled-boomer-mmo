@@ -71,6 +71,10 @@ first syllable, and it has no k, g or z.
 - **Items** are a material or tier and the thing (Iron Helmet, Steel Arrows), or where or whom it
   came from and the thing (Fenweave Robe, Barrow Blade, Goblin Maul, Grave Lantern). A unique item may
   carry its maker's or its owner's name.
+- **Herbs** keep the plain country name a settler or a fenfolk gives the plant (Samphire,
+  Meadowsweet, Bog Myrtle, Bogbean), and **potions** are the herb and the drink (Samphire Tonic,
+  Meadowsweet Draught, Bogbean Cordial), or whose drink it is (Keeper's Draught). What a potion
+  leaves a body feeling is said plainly (Quick Hands, Dulled Pain, Keeper's Watch, Fortune).
 - **Titles** are a rank word after what the rank is in (Rat Culler, Goblin Slayer). A faction's
   titles are in its own words (D3).
 - **Zones** take "The" where a settler would say it (The Deep Cut, The Sunken Barrow) and not where
@@ -89,7 +93,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Name                        | Say it      | What                                                | Where         |
 | --------------------------- | ----------- | --------------------------------------------------- | ------------- |
 | Aldmark                     |             | The kingdom east, where the settlers come from      | `history.md`  |
-| Ambrose Tally               |             | The banker (_in game_ as the Banker)                | `places.md`   |
+| Ambrose Tally               |             | The banker (_in game_)                              | `places.md`   |
 | Bess Mallow                 |             | Keeps the Wet Boot                                  | `places.md`   |
 | Big Gorb                    |             | A goblin tangle's Big One, not yet met              | `naming.md`   |
 | Blackwater Fen              |             | _In game_; the drowned low country's edge           | `places.md`   |
@@ -108,10 +112,12 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | His Majesty                 |             | The rat in the Wet Boot's cellar                    | `places.md`   |
 | Hollis Crane                |             | Hollis the Cutthroat, _in game_                     | `factions.md` |
 | Ilvaeris                    | il-VAIR-iss | The Willow Warden's own name                        | `places.md`   |
-| Jory Stroud                 |             | The quartermaster (_in game_ as the Quartermaster)  | `places.md`   |
+| Jory Stroud                 |             | The quartermaster (_in game_)                       | `places.md`   |
 | Karn Tholl                  | KARN THOLL  | The dwarves' hold                                   | `peoples.md`  |
 | Karra Deepvein              |             | The dwarf scout in the Deep Cut                     | `places.md`   |
 | the Keepers                 |             | The fenfolk as a faction                            | `factions.md` |
+| Keeper's Draught            |             | _In game_; the fenfolk's watch-brew of bog myrtle   | `peoples.md`  |
+| Keeper's Watch              |             | _In game_; what the Keeper's Draught leaves         | `naming.md`   |
 | the kindling                |             | Binding a soul into a flame                         | `history.md`  |
 | the Lamp Stone              |             | _In game_; the waymarker in Lampton's crossroads    | `places.md`   |
 | Lampton                     |             | _In game_; the Company's town                       | `places.md`   |
@@ -119,22 +125,24 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Lorn                        | LORN        | Wick's name, the lampwright                         | `spirit.md`   |
 | Maren                       | MAR-en      | Keeper of the third light, a fenfolk elder          | `places.md`   |
 | Marhal                      | MAR-hal     | Veymar's capital, drowned                           | `history.md`  |
-| Marta Hale                  |             | The trainer (_in game_ as the Trainer)              | `places.md`   |
+| Marta Hale                  |             | The trainer (_in game_)                             | `places.md`   |
 | Merrath the Last            | MER-ath     | Veymar's last king, in the great light              | `history.md`  |
 | the New Cut                 |             | _In game_; the Company's quarry                     | `places.md`   |
 | Old Mill Road, the Old Mill |             | _In game_; the first charter's mill and its road    | `places.md`   |
 | the Old Shell               |             | A crab the size of a cart                           | `places.md`   |
-| Oona Rook                   |             | The outfitter (_in game_ as the Outfitter)          | `places.md`   |
+| Oona Rook                   |             | The outfitter (_in game_)                           | `places.md`   |
 | Orlath the Barrow King      | OR-lath     | _In game_; the gold-holder                          | `history.md`  |
 | Orlhal                      | ORL-hal     | Orlath's barrow, the Sunken Barrow                  | `history.md`  |
 | Pocket                      |             | The crow at Greyford                                | `peoples.md`  |
 | the Quiet Court             |             | The elves                                           | `peoples.md`  |
 | the Red Rags                |             | Hollis's gang                                       | `factions.md` |
 | Redrag Camp                 |             | _In game_; the Red Rags' camp in the waystation     | `places.md`   |
-| Silas Quill                 |             | The fettler (_in game_ as the Fettler)              | `places.md`   |
+| Silas Quill                 |             | The fettler (_in game_)                             | `places.md`   |
 | the Stillwood               |             | The elves' wood, west past Greyford                 | `peoples.md`  |
 | strays                      |             | Loose souls over the fen                            | `peoples.md`  |
 | the Sunken Barrow           |             | _In game_; Orlhal                                   | `places.md`   |
+| Tilda Pell                  |             | The shopkeeper (_in game_)                          | `places.md`   |
+| the Surveyor's House        |             | _In game_; the Company's house let to the player    | `places.md`   |
 | Tilda Pell                  |             | The shopkeeper (_in game_ as the Shopkeeper)        | `places.md`   |
 | Tirrow                      | TIRR-oh     | Leads the fen raiders                               | `places.md`   |
 | the Veymarch                | VAY-march   | The realm                                           | `history.md`  |

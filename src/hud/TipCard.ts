@@ -1,25 +1,35 @@
 import { describeItemName } from '../data/items';
 import { SECRETS } from '../data/secrets';
 import type { OfferedTip } from '../systems/TipSystem';
-import type { SecretId, TipId } from '../types/ids';
+import type { SecretId, SpiritBeatId, TipId } from '../types/ids';
 import type { TipCardRect } from '../ui/layout';
+import type { SpiritSaid } from '../ui/uiEvents';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { actionButton, el } from './dom';
 
 export interface TipCardHandlers {
   onHeard: (tipId: TipId) => void;
   onSilence: () => void;
+  onBeatHeard: (beatId: SpiritBeatId) => void;
 }
 
+/** What Wick has said and the card is showing: a tip, or a beat or a line of its own. */
+type Said = { kind: 'tip'; tip: OfferedTip } | { kind: 'line'; said: SpiritSaid };
+
+/** Whose name heads a line Wick says. */
+export const SPIRIT_NAME = 'Wick';
+
 /**
- * The spirit's tip, until the spirit is drawn in the world to give it (D4), and
+ * What Wick says (D4): a tip, a beat of its story or a line of its own, each
+ * when its light is tapped, under its name and edged in its light; and, unasked,
  * what it says on a secret found (decision 117).
  *
  * A card that waits for a tap rather than a toast that fades (decision 98): a
  * tip is heard once, and one that lands mid-fight would otherwise be gone
  * before it was read. It waits out a panel too, hidden while one is up and back
- * when it closes, so what the player opened is never under it. One tip at a
- * time, because the world offers one at a time; a newer offer replaces what is
+ * when it closes, so what the player opened is never under it, a counter
+ * included: a tap on Wick at a counter waits for the counter (D4). One thing at
+ * a time, since Wick says one at a time; what it says next replaces what is
  * shown. A find goes ahead of a tip rather than replacing it, since the tip is
  * still waiting to be heard, and is said whether or not tips are on: what was
  * found is the reward, not advice.
@@ -31,7 +41,7 @@ export class TipCard {
   private readonly cache: HTMLElement;
   private readonly silence: HTMLButtonElement;
   private readonly handlers: TipCardHandlers;
-  private tip: OfferedTip | null = null;
+  private said: Said | null = null;
   private finds: SecretId[] = [];
   private held = false;
 
@@ -43,7 +53,7 @@ export class TipCard {
     this.line = el('p', 'hud-tip__line');
     this.cache = el('p', 'hud-tip__cache');
     const heard = actionButton('Got it', 'tip-heard', () => this.answer('heard'));
-    this.silence = actionButton('No more tips', 'tips-off', () => this.answer('silence'));
+    this.silence = actionButton('Go quiet', 'tips-off', () => this.answer('silence'));
     const actions = el('div', 'hud-tip__actions');
     actions.append(heard, this.silence);
     this.root.append(this.heading, this.line, this.cache, actions);
@@ -57,7 +67,13 @@ export class TipCard {
   }
 
   offer(tip: OfferedTip): void {
-    this.tip = tip;
+    this.said = { kind: 'tip', tip };
+    this.draw();
+  }
+
+  /** A beat of Wick's story, or a line of its own: either replaces what it said last. */
+  say(said: SpiritSaid): void {
+    this.said = { kind: 'line', said };
     this.draw();
   }
 
@@ -67,9 +83,9 @@ export class TipCard {
     this.draw();
   }
 
-  /** Taken down without an answer: tips switched off from somewhere else. */
+  /** A tip taken down without an answer: tips switched off from somewhere else. */
   clear(): void {
-    this.tip = null;
+    if (this.said?.kind === 'tip') this.said = null;
     this.draw();
   }
 
@@ -81,7 +97,9 @@ export class TipCard {
 
   /** Which tip is showing, or null: for the smoke check and the tests. */
   get showing(): TipId | null {
-    return this.tip && !this.held && this.finds.length === 0 ? this.tip.tipId : null;
+    return this.said?.kind === 'tip' && !this.held && this.finds.length === 0
+      ? this.said.tip.tipId
+      : null;
   }
 
   /** Which find is showing, or null. */
@@ -95,11 +113,14 @@ export class TipCard {
       this.draw();
       return;
     }
-    const tip = this.tip;
-    if (!tip) return;
-    this.clear();
-    if (kind === 'heard') {
-      this.handlers.onHeard(tip.tipId);
+    const said = this.said;
+    if (!said) return;
+    this.said = null;
+    this.draw();
+    if (said.kind === 'line') {
+      if (said.said.beatId) this.handlers.onBeatHeard(said.said.beatId);
+    } else if (kind === 'heard') {
+      this.handlers.onHeard(said.tip.tipId);
     } else {
       this.handlers.onSilence();
     }
@@ -107,29 +128,36 @@ export class TipCard {
 
   private draw(): void {
     const find = this.finds[0];
+    const said = this.said;
+    const root = this.root.dataset;
+    delete root.find;
+    delete root.tip;
+    delete root.beat;
+    delete root.aside;
     if (find) {
       const secret = SECRETS[find];
       this.heading.textContent = secret.name;
       this.line.textContent = secret.line;
       this.cache.textContent = `Left there: ${cacheWords(secret.cache)}.`;
-      this.root.dataset.find = find;
-      delete this.root.dataset.tip;
+      root.find = find;
     } else {
-      this.heading.textContent = '';
-      this.line.textContent = this.tip?.text ?? '';
+      this.heading.textContent = SPIRIT_NAME;
       this.cache.textContent = '';
-      delete this.root.dataset.find;
-      if (this.tip) {
-        this.root.dataset.tip = this.tip.tipId;
+      if (said?.kind === 'tip') {
+        this.line.textContent = said.tip.text;
+        root.tip = said.tip.tipId;
+      } else if (said) {
+        this.line.textContent = said.said.text;
+        if (said.said.beatId) root.beat = said.said.beatId;
+        else root.aside = '';
       } else {
-        delete this.root.dataset.tip;
+        this.line.textContent = '';
       }
     }
-    this.heading.classList.toggle('hud-hidden', !find);
     this.cache.classList.toggle('hud-hidden', !find);
-    // A find is not a tip, so it is not where tips are switched off.
-    this.silence.classList.toggle('hud-hidden', Boolean(find));
-    this.root.classList.toggle('hud-hidden', (!find && this.tip === null) || this.held);
+    // Only a tip is advice, so only a tip is where Wick is told to go quiet.
+    this.silence.classList.toggle('hud-hidden', Boolean(find) || said?.kind !== 'tip');
+    this.root.classList.toggle('hud-hidden', (!find && said === null) || this.held);
   }
 }
 

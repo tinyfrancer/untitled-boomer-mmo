@@ -24,6 +24,10 @@ export const EFFECTS: Record<EffectId, EffectDefinition> = {
   'mana-shield': { id: 'mana-shield', name: 'Mana Shield', short: 'Shield', kind: 'buff' },
   haste: { id: 'haste', name: 'Battle Fury', short: 'Fury', kind: 'buff' },
   'well-fed': { id: 'well-fed', name: 'Well Fed', short: 'Fed', kind: 'buff' },
+  'quick-hands': { id: 'quick-hands', name: 'Quick Hands', short: 'Quick', kind: 'buff' },
+  'dulled-pain': { id: 'dulled-pain', name: 'Dulled Pain', short: 'Dulled', kind: 'buff' },
+  'keepers-watch': { id: 'keepers-watch', name: "Keeper's Watch", short: 'Watch', kind: 'buff' },
+  fortune: { id: 'fortune', name: 'Fortune', short: 'Luck', kind: 'buff' },
 };
 
 export const EFFECT_IDS = Object.keys(EFFECTS) as EffectId[];

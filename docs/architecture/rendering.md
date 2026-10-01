@@ -99,8 +99,8 @@ draws, in order: the haze; the baked ground, with whatever moves on it (water) d
 window; the floor of any room the player is in; what lies flat and moves (a fishing spot's rings);
 the contact shadows and the ring under the target; the telegraphs; **everything standing, sorted by
 where its feet are** — the player, the creatures, the townsfolk, the nodes, the signposts, the
-stations, the fire, the loot sacks, the buildings, and a room's furniture while the player is in
-it; then the moments; the lantern underground; a vignette darkening the corners; and last the
+stations, the fire, the loot sacks, Wick, the buildings, and a room's furniture while the player is
+in it; then the moments; the darkness round Wick underground; a vignette darkening the corners; and last the
 words, so a name at the edge of the screen reads as well as one in the middle. A building sorts on
 its front from outside and on its back wall from inside, since anyone in the room stands in front
 of the wall left standing.
@@ -132,10 +132,15 @@ always did.
 `open`, `marsh` or `underground` is a fact about the world — the fen is a marsh whatever draws it —
 and the ground's ramps in that setting's light (`art/palette.ts`) and the lantern underground are
 the view's answer, the same split `shape` makes for a creature. Required rather than defaulted, so a
-new zone says what it is instead of inheriting the beach's light. **Underground is lit by what the
-player carries** (`render2d/lantern.ts`): darkness stamped over the scene with a clear pool round
-the player, in dithered steps and never black, and a warm glow added in the pool, drawn over
-everything standing and under the words (`docs/architecture/art.md` has how it looks).
+new zone says what it is instead of inheriting the beach's light. **Underground is lit by Wick**
+(`render2d/lantern.ts`, D4): darkness stamped over the scene with a clear pool round the light at
+the player's shoulder, in dithered steps and never black, and Wick's blue-white glow added in the
+pool, drawn over everything standing and under the words (`docs/architecture/art.md` has how it
+looks). It was the player's lantern until D4, when the user made Wick the one light underground.
+
+**Wick is drawn standing, sorted by the ground under it, and up at the shoulder** (D4). It casts no
+shadow, being light, and is drawn as `wick` or, while it is lit (`spirit.lit`), `wick-calling`,
+played on the spirit kind's loop; its plate is not written, since the light is its own sign.
 
 ## What stands
 
@@ -265,7 +270,7 @@ the lower half of its crown, so a creature behind the crown is still the creatur
 spot as the patch of water round it (`lyingRect`). A corpse and a lapsed pile answer no box at all.
 
 **The kinds are asked in a priority, not a depth sort**: node → signpost → NPC → mob → station →
-building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
+fixture → spirit → building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
 within one kind does what is drawn in front win, the one whose feet are further down the screen.
 Every point is ground at worst: a flat view has no sky to miss into.
 
@@ -288,7 +293,27 @@ up. It **blinks through the last ten seconds of its minute**, read off the pile'
 than the view's, which is how it says it is going without a timer drawn over it (`docs/decisions.md`
 66).
 
+**Wick is below the creatures, the stations and the house's fixtures, and above the buildings**
+(D4, its seat moved at wave 1's fold). It floats at the player's shoulder, which is where a
+creature fighting them stands, so above the mobs it would eat the tap on the rat; it floats over
+the stand or the station the player walked up to as well, and what it has to say waits for a tap
+while they do not, which is what wave 1 found when D4 and F1 met (the house's held stand could not
+be tapped with Wick over it); above the buildings still, since a tap on a building's box only walks
+to its door and Wick at Lampton's start floats over the inn's; and it
+is picked by a box round the light where it is drawn (`lyingRect` at `SPIRIT_HEIGHT` over the ground
+under it) rather than one standing on the ground, which would be the player's shoulder, and never
+the player's own feet. There is one of it, so it is a pickable rather than a list.
+**A fixture is what stands in the house** (decision 130): a stand, the chest or the wall, picked
+only while the player is in the house's room, since from outside the roof is over all of it and the
+building answers. It sits above the building for that reason and below the station, which it never
+meets. A stand's box stands as tall as a trophy on it, the chest's as it is drawn, and the wall's is
+the face the plaques hang on, with the chest in front of its foot winning where the two meet. The
+view draws the stands and the chest with the room's furniture, a trophy's own icon on its stand off
+a sheet of the items' icons compiled the first time a zone with the house is built and kept for the
+session, and the plaques on the back wall sorted with it.
+
 `tests/render2d/picking.test.ts` holds the priority, the boxes, the building's answers and the pile,
+Wick tapped where it floats from every zone's start,
 and sweeps every creature in every zone across its whole wander disc, tapped from where a player
 stands to fight it with every counter, station and shopfront in the scene, since a creature is only
 ever _at_ its spawn on the frame the zone was built.

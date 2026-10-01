@@ -64,6 +64,11 @@ describe('MomentEar', () => {
     expect(new MomentEar().hear({ kind: 'loot-left', at: AT })).toEqual(['sack']);
   });
 
+  // A sound cannot poll Wick's glow, so the moment it starts is told (D4).
+  it('hears Wick start to glow as a chime', () => {
+    expect(new MomentEar().hear({ kind: 'spirit-calls', at: AT })).toEqual(['chime']);
+  });
+
   it('tells a death by whose it was', () => {
     const ear = new MomentEar();
     expect(ear.hear({ kind: 'death', on: 'mob', mob: MOB })).toEqual(['mob-death']);

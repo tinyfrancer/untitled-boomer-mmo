@@ -24,15 +24,19 @@ import {
   BED,
   BENCH,
   BENCH_SIDE,
+  CHEST,
   COUNTER,
   CRATES,
   HEARTH,
   HEARTH_EAST,
   HEARTH_LOW,
   HEARTH_WEST,
+  PLAQUE,
   SHELVES,
+  STAND,
 } from './sprites/fittings';
-import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
+import { CAMPFIRE, FLETCHING_BENCH, FORGE, STILL, TANNERY } from './sprites/stations';
+import { HERB } from './sprites/herbs';
 import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
 import { RICH_VEIN, SEAM, VEIN } from './sprites/veins';
 import { RIPPLE } from './sprites/water';
@@ -40,6 +44,7 @@ import { CRAB } from './sprites/crab';
 import { CRIT, FIREBALL, HIT, KNIFE, LEVEL_UP, LOOT_SACK } from './sprites/effects';
 import { LURKER } from './sprites/lurker';
 import { RAT } from './sprites/rat';
+import { WICK, WICK_CALLING } from './sprites/wick';
 import { SCATTER_SPRITES } from './sprites/scatter';
 import { FOE_SPRITES, TOWNSFOLK_SPRITES } from './cast';
 
@@ -85,10 +90,12 @@ export const SPRITES: readonly SpriteDef[] = [
   VEIN,
   SEAM,
   RICH_VEIN,
+  HERB,
   RIPPLE,
   FORGE,
   TANNERY,
   FLETCHING_BENCH,
+  STILL,
   CAMPFIRE,
   SHELVES,
   HEARTH,
@@ -100,8 +107,13 @@ export const SPRITES: readonly SpriteDef[] = [
   CRATES,
   BED,
   COUNTER,
+  STAND,
+  CHEST,
+  PLAQUE,
   CHIPS,
   SPLASH,
+  WICK,
+  WICK_CALLING,
 ];
 
 export { PLACEHOLDERS } from './sprites/placeholders';

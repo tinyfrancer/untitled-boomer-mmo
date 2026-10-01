@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hudMounted, mountHud, unmountHud } from '../../src/hud/Hud';
 import { TRAINING_FADE_AFTER_MS, TRAINING_FADE_MS } from '../../src/hud/TrainingBar';
 import { fillPercent } from '../../src/hud/dom';
+import { xpToNextLevel } from '../../src/systems/LevelingSystem';
 import { barFill } from '../../src/systems/math';
 import { skillXpToNextLevel } from '../../src/systems/SkillSystem';
 import { AwayReportModal } from '../../src/hud/AwayReportModal';
@@ -35,6 +36,7 @@ import { THEME } from '../../src/ui/theme';
 import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
 import { NPCS, ROLE_SERVICES, type CounterId, type NpcRoleId } from '../../src/data/npcs';
+import { DIALOG } from '../../src/data/dialog';
 import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -84,8 +86,12 @@ import {
   STATION_OPENED_EVENT,
   MASTERY_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
+  RESTED_CHANGED_EVENT,
+  XP_GAINED_EVENT,
   TIP_HEARD_EVENT,
   TIP_OFFERED_EVENT,
+  SPIRIT_SAID_EVENT,
+  SPIRIT_BEAT_HEARD_EVENT,
   SECRET_FOUND_EVENT,
   SECRETS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
@@ -93,6 +99,9 @@ import {
   CREATURES_CHANGED_EVENT,
   MINIMAP_SET_REQUESTED_EVENT,
   MINIMAP_STATE_CHANGED_EVENT,
+  ASK_TOPIC_REQUESTED_EVENT,
+  ASKED_CHANGED_EVENT,
+  CONVERSATION_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -141,6 +150,7 @@ const REPORT: OfflineAfkReport = {
   arrowsSpent: 0,
   outOfArrows: false,
   capped: false,
+  rested: 0,
 };
 
 let parent: HTMLElement;
@@ -482,7 +492,7 @@ describe("the spirit's tips", () => {
     expect(showing()).toBe(false);
   });
 
-  it('asks for tips off on No more tips, and goes', () => {
+  it('asks for tips off on Go quiet, and goes', () => {
     mount();
     events.emit(TIP_OFFERED_EVENT, TIP);
     answer('tips-off');
@@ -556,13 +566,55 @@ describe("the spirit's tips", () => {
     expect(showing()).toBe(false);
   });
 
+  // D4: Wick's name over all it says, a beat heard back on Got it, and a line
+  // of its own taken down with nothing kept.
+  it("says a beat under Wick's name, with no Go quiet, and hears it back", () => {
+    mount({ tips: { heard: [], off: true } });
+    events.emit(SPIRIT_SAID_EVENT, { beatId: 'candle-strand', text: "It's pulling." });
+    expect(showing()).toBe(true);
+    expect(card().dataset.beat).toBe('candle-strand');
+    expect(card().querySelector('.hud-tip__heading')?.textContent).toBe('Wick');
+    expect(card().querySelector('[data-action="tips-off"]')?.classList.contains('hud-hidden')).toBe(
+      true,
+    );
+    answer('tip-heard');
+    expect(sent(SPIRIT_BEAT_HEARD_EVENT)).toEqual([['candle-strand']]);
+    expect(showing()).toBe(false);
+  });
+
+  it('takes a line of its own down on Got it, and keeps nothing', () => {
+    mount();
+    events.emit(SPIRIT_SAID_EVENT, { beatId: null, text: "I'm a very good light." });
+    expect(card().dataset.aside).toBe('');
+    expect(card().textContent).toContain("I'm a very good light.");
+    answer('tip-heard');
+    expect(sent(SPIRIT_BEAT_HEARD_EVENT)).toEqual([]);
+    expect(sent(TIP_HEARD_EVENT)).toEqual([]);
+    expect(showing()).toBe(false);
+  });
+
+  it("puts Wick's name over a tip, with Go quiet beside Got it", () => {
+    mount();
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    expect(card().querySelector('.hud-tip__heading')?.textContent).toBe('Wick');
+    expect(card().querySelector('[data-action="tips-off"]')?.textContent).toBe('Go quiet');
+  });
+
+  it('waits out an open counter, as a tap on Wick at one does', async () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    await settle();
+    events.emit(SPIRIT_SAID_EVENT, { beatId: null, text: 'Later.' });
+    expect(showing()).toBe(false);
+  });
+
   it('puts the switch in Options, on what the save says', () => {
     mount({ tips: { heard: [], off: true } });
     menuItem('options');
     const button = parent.querySelector<HTMLButtonElement>('[data-action="toggle-tips"]');
-    expect(button?.textContent).toBe('Tips: Off');
+    expect(button?.textContent).toBe("Wick's Tips: Quiet");
     button?.click();
-    expect(button?.textContent).toBe('Tips: On');
+    expect(button?.textContent).toBe("Wick's Tips: On");
     expect(button?.getAttribute('aria-pressed')).toBe('true');
     expect(sent(TIPS_SET_REQUESTED_EVENT)).toEqual([[true]]);
   });
@@ -840,6 +892,37 @@ describe('the player column', () => {
     const label = column('.hud-player__xp .hud-bar__label');
     expect(label?.textContent).toContain('/');
     expect(column('.hud-player__xp-text')).toBeNull();
+  });
+
+  // Rested (phase E1): a paler stretch ahead of the fill, reaching as far as the
+  // bank carries the bar, and the bank on the bar's line in place of the share.
+  it('draws the rested bank as a paler segment ahead of the fill, and names it', () => {
+    mount({ xp: 50, rested: 25.6 });
+    const xpToNext = xpToNextLevel(1);
+    expect(widthOf('.hud-player__xp .hud-bar__fill')).toBe(fillPercent(barFill(50, xpToNext)));
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe(fillPercent(barFill(100, xpToNext)));
+    expect(column('.hud-player__xp .hud-bar__label')?.textContent).toBe(
+      `50 / ${xpToNext} XP, 25 rested`,
+    );
+  });
+
+  it('stops the segment at the end of the bar, and follows the bank as it moves', () => {
+    mount({ xp: 50, rested: 0 });
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe('0%');
+
+    events.emit(RESTED_CHANGED_EVENT, 5000);
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe('100%');
+
+    events.emit(XP_GAINED_EVENT, {
+      level: 1,
+      xp: 60,
+      xpToNext: xpToNextLevel(1),
+      leveledUp: false,
+      bonus: 5,
+      rested: 0,
+    });
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe('0%');
+    expect(column('.hud-player__xp .hud-bar__label')?.textContent).toContain('(30%)');
   });
 
   it('shows health with the rest of the character details, and drains it', () => {
@@ -1531,8 +1614,9 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
 
     const box = parent.querySelector('.hud-modal__box--talk');
     expect(box?.querySelector('.hud-modal__title')?.textContent).toBe(npc.name);
+    expect(box?.querySelector('.hud-talk__trade')?.textContent).toBe(npc.trade);
     expect(box?.querySelector('.hud-talk__greeting')?.textContent).toBe(
-      `\u201c${npc.greeting}\u201d`,
+      `\u201c${nth(DIALOG[npc.id].greetings).says}\u201d`,
     );
 
     const services = [...(box?.querySelectorAll<HTMLButtonElement>('.hud-talk__service') ?? [])];
@@ -1575,6 +1659,83 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     expect(emitted.at(-1)).toEqual({
       event: TURN_IN_QUEST_REQUESTED_EVENT,
       args: ['rat-bones'],
+    });
+  });
+
+  /**
+   * What a person will talk about is a button each, grey once heard; asking is
+   * a request the world answers, and the answer replaces the greeting under the
+   * question that drew it (D1).
+   */
+  describe('topics', () => {
+    const topics = (): HTMLButtonElement[] => [
+      ...parent.querySelectorAll<HTMLButtonElement>('.hud-talk__topic'),
+    ];
+    const topic = (id: string): HTMLButtonElement | undefined =>
+      topics().find((button) => button.dataset.topic === id);
+    const saying = (): string =>
+      parent.querySelector('.hud-modal__box--talk .hud-talk__greeting')?.textContent ?? '';
+
+    it('draws what they will talk about, between what they say and their counter', () => {
+      mount();
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      expect(topics().map((button) => button.dataset.topic)).toEqual(['lampton', 'rats', 'news']);
+      const body = parent.querySelector('.hud-modal__box--talk .hud-modal__body');
+      expect([...(body?.children ?? [])].map((child) => child.className)).toEqual([
+        'hud-talk__greeting',
+        'hud-talk__topics',
+        'hud-button hud-talk__service',
+        'hud-talk__quests',
+      ]);
+    });
+
+    it('asks the world when one is pressed, and draws the answer under the question', () => {
+      mount();
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      topic('lampton')?.click();
+      expect(emitted.at(-1)).toEqual({ event: ASK_TOPIC_REQUESTED_EVENT, args: ['lampton'] });
+
+      events.emit(CONVERSATION_CHANGED_EVENT, {
+        npcId: 'shopkeeper',
+        said: { topicId: 'lampton', answerId: 'lampton' },
+      });
+      events.emit(ASKED_CHANGED_EVENT, { shopkeeper: ['lampton'] });
+      expect(parent.querySelector('.hud-talk__asked')?.textContent).toBe('What is this place?');
+      expect(saying()).toContain('Lampton.');
+      expect(topic('lampton')?.dataset.asked).toBe('true');
+      expect(topic('rats')?.dataset.asked).toBeUndefined();
+      // And what it led on to.
+      expect(topic('smith')).toBeDefined();
+    });
+
+    it('greys what was asked on an earlier visit, from the save', () => {
+      mount({ asked: { shopkeeper: ['rats'] } });
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      expect(topic('rats')?.dataset.asked).toBe('true');
+    });
+
+    it('greets rather than repeat what somebody else last said', () => {
+      mount();
+      events.emit(CONVERSATION_CHANGED_EVENT, {
+        npcId: 'shopkeeper',
+        said: { topicId: 'lampton', answerId: 'lampton' },
+      });
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'banker');
+      expect(saying()).toBe(`\u201c${nth(DIALOG.banker.greetings).says}\u201d`);
+      expect(parent.querySelector('.hud-talk__asked')).toBeNull();
+    });
+
+    it('opens a topic a quest handed in has given something new to say', () => {
+      mount({ quests: { 'rat-bones': { status: 'done', baseline: 0 } } });
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      events.emit(ASKED_CHANGED_EVENT, { shopkeeper: ['carts'] });
+      expect(topic('carts')?.dataset.asked).toBe('true');
+
+      events.emit(QUEST_LOG_CHANGED_EVENT, {
+        'rat-bones': { status: 'done', baseline: 0 },
+        'the-cutthroat': { status: 'done', baseline: 0 },
+      });
+      expect(topic('carts')?.dataset.asked).toBeUndefined();
     });
   });
 
@@ -1806,7 +1967,9 @@ describe('every row that stands for an item opens its card', () => {
     ask('.hud-list-row[data-item="reforging-stone"]');
 
     expect(title()).toBe('Reforging Stone');
-    expect(uses()).toContain('Used in: reforging gear, at the Fettler (Greyford Outpost)');
+    expect(uses()).toContain(
+      'Used in: reforging gear, at Silas Quill the fettler (Greyford Outpost)',
+    );
     expect(emitted.some((e) => e.event === BUY_ITEM_REQUESTED_EVENT)).toBe(false);
   });
 
@@ -2057,6 +2220,11 @@ describe('the away report', () => {
     expect(modals()[0]?.textContent).toContain(
       'Stopped at the most a night pays: one Fishing level',
     );
+  });
+
+  it('says what a night banked as rested', () => {
+    mount({}, [{ kind: 'offline-afk', report: { ...REPORT, rested: 120 } }]);
+    expect(modals()[0]?.textContent).toContain('120 XP banked as rested');
   });
 
   it('shows nothing when the session was not parked', () => {

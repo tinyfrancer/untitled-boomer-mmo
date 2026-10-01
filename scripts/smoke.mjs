@@ -212,11 +212,23 @@ const stepFor = async (read, done, label, budgetMs = 60000) => {
 
 /**
  * Switches the spirit's tips off for the character just made, through the same
- * ask the card's No more tips sends. A tip waits for a tap, so one left up by
- * a section that is not about tips would sit over whatever the next one taps;
- * the tips section switches them back on for itself.
+ * ask the card's Go quiet sends, and hears Wick's waking, the one line it says
+ * unasked. A card waits for a tap, so one left up by a section that is not
+ * about Wick would sit over whatever the next one taps; the tips and spirit
+ * sections ask for what they want for themselves.
  */
-const quietTips = () => page.evaluate(() => window.events.emit('tips-set-requested', false));
+const quietTips = () =>
+  page.evaluate(() => {
+    window.events.emit('tips-set-requested', false);
+    window.events.emit('spirit-beat-heard', 'wake');
+  });
+
+/** Where Wick's light is on the screen: over the ground under it by the height it floats. */
+const wickOnScreen = () =>
+  page.evaluate(() => {
+    const { spirit } = window.world;
+    return window.view.worldToScreen(spirit.x, spirit.y - spirit.height);
+  });
 
 /** Drops the player back on the zone's spawn point with nothing selected. */
 const park = async () => {
@@ -466,6 +478,7 @@ const QUARTERMASTER = "window.world.npcs.find((n) => n.npcId === 'quartermaster'
 const GENERAL_STORE = "window.world.buildings.find((b) => b.definition.id === 'general-store')";
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const BENCH = "window.world.stations.find((s) => s.station === 'bench')";
+const STILL = "window.world.stations.find((s) => s.station === 'still')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 
 /**
@@ -1242,7 +1255,7 @@ async function feedback() {
   });
   check(
     'a real click on the shopkeeper talks first: a greeting, the Shop button and their work, clear of the tab bar',
-    talk.title === 'Shopkeeper' &&
+    talk.title === 'Tilda Pell' &&
       /^\u201c.+\u201d$/.test(talk.greeting) &&
       talk.services.length === 1 &&
       talk.services[0] === 'merchant' &&
@@ -2880,6 +2893,70 @@ async function playerColumn() {
   check('the XP progress is printed inside the XP bar', await insideItsBar('.hud-player__xp'));
   check('and the health readout inside the health bar', await insideItsBar('.hud-player__hp'));
 
+  // --- Rested (phase E1): idle banks it as it runs, and the XP bar shows how
+  // far it reaches as a paler segment ahead of the fill. Banked for real, by
+  // idle on the hand crank: a level 1 banks a whole point every five minutes or
+  // so, and where nothing is in reach idle only stands and banks. ---
+  await startIdle();
+  for (let minute = 0; minute < 8; minute += 1) await step(60, 1000);
+  await draw();
+  const rested = await page.evaluate(() => {
+    const bar = document.querySelector('.hud-player__xp');
+    const segment = bar?.querySelector('.hud-bar__rested');
+    const fill = bar?.querySelector('.hud-bar__fill');
+    const rect = (/** @type {Element | null | undefined} */ node) => {
+      if (!node) return null;
+      const { x, right, width } = node.getBoundingClientRect();
+      return { x, right, width };
+    };
+    return {
+      banked: Math.floor(window.world.character.state.rested),
+      label: bar?.querySelector('.hud-bar__label')?.textContent ?? '',
+      bar: rect(bar),
+      segment: rect(segment),
+      fill: rect(fill),
+    };
+  });
+  check(
+    'idle banks rested, drawn as a segment past the fill inside the XP bar, and named on it',
+    rested.banked > 0 &&
+      rested.label.endsWith(`${rested.banked} rested`) &&
+      rested.bar !== null &&
+      rested.segment !== null &&
+      rested.fill !== null &&
+      rested.segment.width > 0 &&
+      rested.segment.right > rested.fill.right &&
+      rested.segment.right <= rested.bar.right + 1,
+    JSON.stringify(rested),
+  );
+  // The widest line the bar carries before the cap, measured in the label's
+  // own font rather than set on the character: a level 8 one point short of 9,
+  // with a full bank.
+  const fits = await page.evaluate(() => {
+    const label = document.querySelector('.hud-player__xp .hud-bar__label');
+    if (!(label instanceof HTMLElement)) return null;
+    const style = getComputedStyle(label);
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context) return null;
+    context.font = `${style.fontSize} ${style.fontFamily}`;
+    const room = label.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return { width: context.measureText('7,899 / 7,900 XP, 3,950 rested').width, room };
+  });
+  check(
+    'the widest rested line still fits inside the XP bar',
+    fits !== null && fits.width <= fits.room,
+    JSON.stringify(fits),
+  );
+  await page.keyboard.down('w');
+  await step(2);
+  await page.keyboard.up('w');
+  // Spent back to nothing so a later section's XP reads as it always has.
+  await page.evaluate(() => {
+    window.world.character.state.rested = 0;
+    window.events.emit('rested-changed', 0);
+  });
+  await park();
+
   const hp = await box('.hud-player__hp');
   const xp = await box('.hud-player__xp');
   const column = await box('.hud-player');
@@ -3418,7 +3495,7 @@ async function skillsBook() {
   const index = await book();
   check(
     'the Skills tab opens the book on an index of every skill',
-    index.visible && index.page === '' && index.skills === 13,
+    index.visible && index.page === '' && index.skills === 15,
     `${index.skills} skill(s), page "${index.page}"`,
   );
   await tapTab('skills');
@@ -3449,7 +3526,7 @@ async function skillsBook() {
   await page.click('.hud-sheet[data-sheet="skills"] [data-action="skills-back"]');
   await page.waitForTimeout(80);
   const back = await book();
-  check('and Back goes to the index', back.page === '' && back.skills === 13, `"${back.page}"`);
+  check('and Back goes to the index', back.page === '' && back.skills === 15, `"${back.page}"`);
 
   await page.click('.hud-sheet[data-sheet="skills"] .hud-skill[data-skill="smithing"]');
   await page.waitForTimeout(150);
@@ -4578,9 +4655,11 @@ async function tips() {
     const mob = window.world.mobs[0];
     if (mob) window.world.setTarget(mob);
   });
-  // Back on, which waits a tip's gap rather than arriving with the tap.
+  // Back on, which waits a tip's gap rather than arriving with the tap. A tip
+  // waits in Wick (D4), so it is had by tapping the light once it glows.
   await page.evaluate(() => window.events.emit('tips-set-requested', true));
-  const offered = await stepFor(card, (seen) => seen.tip !== null, 'a tip offered', 90000);
+  await askWick('a tip waiting in Wick');
+  const offered = await stepFor(card, (seen) => seen.tip !== null, 'a tip offered', 10000);
   check(
     "a tip comes as a card with the spirit's line, and two buttons a thumb can take",
     offered.text.length > 20 && offered.smallest >= 44,
@@ -4631,12 +4710,13 @@ async function tips() {
   // Ten seconds of game time, well inside the gap.
   await step(250);
   const quiet = await card();
-  const next = await stepFor(card, (seen) => seen.tip !== null, 'the next tip', 90000);
+  await askWick('the next tip waiting in Wick');
+  const next = await stepFor(card, (seen) => seen.tip !== null, 'the next tip', 10000);
   await page.tap('.hud-tip [data-action="tips-off"]');
   await page.waitForTimeout(80);
   const silenced = await card();
   check(
-    'the next waits out a gap, and No more tips switches them off for good',
+    'the next waits out a gap, and Go quiet switches them off for good',
     quiet.tip === null && next.tip !== offered.tip && silenced.tip === null && silenced.off,
     `quiet ${quiet.tip}, then ${next.tip}, then card ${silenced.tip}, off ${silenced.off}`,
   );
@@ -4644,6 +4724,22 @@ async function tips() {
     window.world.character.removeItem('rat-meat', 1);
     window.events.emit('inventory-changed', { ...window.world.character.state.inventory });
   });
+}
+
+/**
+ * Waits for Wick to glow, then taps its light.
+ *
+ * @param {string} label
+ */
+async function askWick(label) {
+  await stepFor(
+    () => page.evaluate(() => window.world.spirit.calling),
+    (calling) => calling,
+    label,
+    90000,
+  );
+  await draw();
+  await clickAt(await wickOnScreen());
 }
 
 async function reset() {
@@ -5525,6 +5621,88 @@ async function fletchersBench() {
   );
 }
 
+async function still() {
+  // --- The still at Greyford, brewing's station (version 2 phase E2), and the
+  // potion it makes drunk out of the bag.
+  //
+  // The rules — two herbs a tonic, a clock on game time, what each potion does —
+  // are tests/systems/brewing.test.ts and tests/world/brewing.test.ts. What only
+  // a browser shows is the still drawn and picked by a real click, its panel
+  // headed for it, a real tap brewing, a real tap on Drink putting the potion's
+  // icon in the player column, and the still let go of with the zone. ---
+  await toGreyford();
+  await sweep();
+  const before = await canvases();
+
+  await page.evaluate(() => {
+    const w = window.world;
+    const still = w.stations.find((s) => s.station === 'still');
+    w.clearTarget();
+    w.character.state.inventory = { samphire: 2 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+    // Set rather than awarded, for the reason the forge section gives.
+    w.character.state.skills.brewing = { level: 9, xp: 0 };
+    w.teleport(still?.x ?? 0, (still?.y ?? 0) + 40);
+  });
+  await step(2);
+  await draw();
+  await clickAt(await screenAt(STILL));
+  await step(2);
+  const title = await page.evaluate(
+    () => document.querySelector('.hud-modal__box--station .hud-modal__title')?.textContent ?? '',
+  );
+  check('a real click on the still opens its list', title === 'Still', `"${title}"`);
+
+  await page.click('.hud-modal__box--station [data-recipe="samphire-tonic"]');
+  await step(16, 200);
+  const brewed = await page.evaluate(
+    () => window.world.character.state.inventory['samphire-tonic'] ?? 0,
+  );
+  check('a tap on a still row brews two samphire into a tonic', brewed === 1, `${brewed} tonic`);
+  await page.screenshot({ path: `${OUT}/23-still.png` });
+
+  await page.click('.hud-modal [data-action="close-station"]');
+  await step(2);
+  await tapTab('inventory');
+  await page.click('.hud-sheet[data-sheet="inventory"] .hud-item[data-item="samphire-tonic"]');
+  await page.click('.hud-sheet[data-sheet="inventory"] [data-item-action="drink"]');
+  await step(2);
+  const drunk = await page.evaluate(() => ({
+    left: window.world.character.state.inventory['samphire-tonic'] ?? 0,
+    icons: document.querySelectorAll('.hud-player .hud-effect').length,
+  }));
+  check(
+    'a real tap on Drink spends the tonic and puts its mark in the player column',
+    drunk.left === 0 && drunk.icons > 0,
+    `${drunk.left} left, ${drunk.icons} icon(s)`,
+  );
+  await tapTab('inventory');
+
+  // Out of the yard and back: the still is built with the zone, so it has to
+  // come down with it and go back up without a leak.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.character.state.inventory = {};
+    w.character.state.potions = {};
+    window.events.emit('inventory-changed', {});
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('old-mill-road', 'the road south out of Greyford');
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('greyford', 'the road north back into Greyford');
+  await sweep();
+  const after = await canvases();
+  check(
+    'a round trip out of Greyford lets go of everything the still was drawn with',
+    after <= before,
+    `${before} -> ${after} canvases`,
+  );
+}
+
 async function backRoom() {
   // --- The fettler's store at Greyford: the one door nobody sees from the
   // yard, since it is round the back, and the one secret that lies in a room
@@ -5605,6 +5783,420 @@ async function backRoom() {
   await draw();
 }
 
+async function dialog() {
+  // --- Dialog (D1): a person's topics are buttons in the conversation, a real
+  // click asks one and the answer replaces the greeting under the question,
+  // and the topic is grey when the player comes back, because the character
+  // remembers what was asked. The rules are tests/world/dialog.test.ts's; what
+  // needs a browser is the round trip through the panel and the walk away. ---
+  await standSouthOf(BANKER);
+  await clickAt(await screenAt(BANKER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'banker'),
+    'the tapped banker to talk',
+  );
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="vault"]');
+  await step(2);
+  const asked = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--talk');
+    const rect = box?.getBoundingClientRect();
+    const bar = document.querySelector('.hud-tabs')?.getBoundingClientRect();
+    return {
+      question: box?.querySelector('.hud-talk__asked')?.textContent ?? '',
+      answer: /** @type {HTMLElement | null} */ (box?.querySelector('.hud-talk__greeting'))?.dataset
+        .answer,
+      grey: /** @type {HTMLElement | null} */ (
+        box?.querySelector('.hud-talk__topic[data-topic="vault"]')
+      )?.dataset.asked,
+      remembered: window.world.character.state.asked.banker ?? [],
+      clear:
+        rect && bar ? rect.bottom <= bar.top && rect.left >= 0 && rect.right <= innerWidth : false,
+    };
+  });
+  check(
+    'a topic clicked is asked: the answer under the question, the button grey, the character remembering',
+    asked.question.length > 0 &&
+      asked.answer === 'vault' &&
+      asked.grey === 'true' &&
+      asked.remembered.includes('vault') &&
+      asked.clear,
+    JSON.stringify(asked),
+  );
+  await page.screenshot({ path: `${OUT}/9b-dialog.png` });
+
+  // Walked off and back: the conversation starts again at the greeting, and
+  // the topic is still grey.
+  await page.evaluate(`(() => {
+    const at = ${BANKER};
+    window.world.teleport(at.x, at.y + 400);
+  })()`);
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk') === null),
+    'the conversation to end on walking off',
+  );
+  await standSouthOf(BANKER);
+  await clickAt(await screenAt(BANKER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'banker'),
+    'the banker to talk again',
+  );
+  const back = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--talk');
+    return {
+      asked: box?.querySelector('.hud-talk__asked') !== null,
+      greeting: box?.querySelector('.hud-talk__greeting')?.textContent ?? '',
+      grey: /** @type {HTMLElement | null} */ (
+        box?.querySelector('.hud-talk__topic[data-topic="vault"]')
+      )?.dataset.asked,
+    };
+  });
+  check(
+    'back at the banker, a greeting again and the topic asked still grey',
+    !back.asked && /^\u201c.+\u201d$/.test(back.greeting) && back.grey === 'true',
+    JSON.stringify(back),
+  );
+  await page.evaluate(() => window.world.closeCounters());
+}
+
+async function spirit() {
+  // --- Wick (D4): drawn beside the player in the art's light, brighter while it
+  // has something to say, and a tap on it saying it on the card under its own
+  // name. Where it follows, which beat waits where, the tips through it and
+  // going quiet are tests/world/spirit.test.ts; what needs a browser is that the
+  // light is drawn where a thumb is told it is, a real tap on it, and that it
+  // comes along across a zone round trip and lets go of nothing. Greyford, where
+  // the section before left off and whose beat is waiting by now. ---
+  await toGreyford();
+  await park();
+  await sweep();
+  const before = await canvases();
+
+  /** How many blue-white pixels the canvas holds in a box round Wick's light. */
+  const light = () =>
+    page.evaluate(() => {
+      const canvas = [...document.querySelectorAll('canvas')].sort(
+        (a, b) => b.width * b.height - a.width * a.height,
+      )[0];
+      const context = canvas?.getContext('2d');
+      if (!canvas || !context) return { bright: 0, beside: false };
+      const box = canvas.getBoundingClientRect();
+      const scale = canvas.width / box.width;
+      const { spirit, player } = window.world;
+      const at = window.view.worldToScreen(spirit.x, spirit.y - spirit.height);
+      const feet = window.view.worldToScreen(player.x, player.y);
+      const x = Math.round((at.x - box.left) * scale);
+      const y = Math.round((at.y - box.top) * scale);
+      const { data } = context.getImageData(x - 10, y - 10, 20, 20);
+      let bright = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const [r = 0, , b = 0] = [data[i], data[i + 1], data[i + 2]];
+        if (b >= 200 && b > r + 10) bright += 1;
+      }
+      // Off the shoulder: beside the feet, and over them.
+      return { bright, beside: at.x < feet.x && at.y < feet.y };
+    });
+
+  await stepFor(
+    () => page.evaluate(() => window.world.spirit.calling),
+    (calling) => calling,
+    "Greyford's beat waiting in Wick",
+    30000,
+  );
+  await draw();
+  const calling = await light();
+  await page.screenshot({ path: `${OUT}/2c-wick-calling.png` });
+  await clickAt(await wickOnScreen());
+  const said = await page.evaluate(() => {
+    const root = /** @type {HTMLElement} */ (document.querySelector('.hud-tip'));
+    return {
+      shown: !root.classList.contains('hud-hidden'),
+      beat: root.dataset.beat ?? null,
+      heading: root.querySelector('.hud-tip__heading')?.textContent ?? '',
+      line: root.querySelector('.hud-tip__line')?.textContent ?? '',
+    };
+  });
+  check(
+    "Wick glows beside the player's shoulder, and a tap on it says its beat under its name",
+    calling.beside && calling.bright > 0 && said.shown && said.beat === 'greyford',
+    `${calling.bright} bright, beside ${calling.beside}; ${said.heading}: ${said.beat} "${said.line}"`,
+  );
+  await page.screenshot({ path: `${OUT}/2d-wick-says.png` });
+  await page.click('.hud-tip [data-action="tip-heard"]');
+  await step(150);
+  await draw();
+  const resting = await light();
+  const heard = await page.evaluate(() => ({
+    beats: window.world.character.state.beats,
+    calling: window.world.spirit.calling,
+  }));
+  check(
+    'Got it keeps the beat heard, and the light settles, smaller than it glowed',
+    heard.beats.includes('greyford') &&
+      !heard.calling &&
+      resting.bright > 0 &&
+      resting.bright < calling.bright,
+    `heard ${heard.beats.join(', ')}, ${calling.bright} -> ${resting.bright} bright`,
+  );
+
+  await clickAt(await wickOnScreen());
+  const aside = await page.evaluate(() => {
+    const root = /** @type {HTMLElement} */ (document.querySelector('.hud-tip'));
+    return root.dataset.aside === '' && !root.classList.contains('hud-hidden');
+  });
+  check('with nothing waiting, a tap gets a line of its own', aside);
+  await page.click('.hud-tip [data-action="tip-heard"]');
+  await draw();
+
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('old-mill-road', 'the road south out of Greyford');
+  const along = await page.evaluate(() => {
+    const { spirit, player } = window.world;
+    return Math.hypot(spirit.x - player.x, spirit.y - player.y);
+  });
+  await toGreyford();
+  await park();
+  await sweep();
+  const after = await canvases();
+  check(
+    'it comes along on a zone round trip, which lets go of every canvas it made',
+    along < 64 && before === after,
+    `${Math.round(along)} from the player on arrival; ${before} -> ${after} canvases`,
+  );
+}
+
+/** Back to town from wherever an earlier section left the player, by the roads. */
+async function toTown() {
+  if ((await zoneId()) === 'town') return;
+  if ((await zoneId()) === 'greyford') {
+    await page.evaluate(() => {
+      const w = window.world;
+      w.clearTarget();
+      w.closeCounters();
+      w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+    });
+    await stepUntilZone('old-mill-road', 'the road south out of Greyford');
+  }
+  if ((await zoneId()) === 'old-mill-road') {
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth - 33, w.worldHeight / 2);
+    });
+    await stepUntilZone('town', 'the road east into town');
+  }
+}
+
+async function house() {
+  // --- The house (F1): a building that is the player's once the quartermaster
+  // lets it, with stands, a chest and a wall of plaques in its room. The rules
+  // are `tests/world/house.test.ts`'s; what only a browser has is the walk in
+  // by two real taps, a tap on a stand picked from inside the room through the
+  // camera, the panel's rows doing what they say, the trophy drawn on its
+  // stand in the cutaway, and the view letting go of it all across a round
+  // trip out of town. ---
+  await toTown();
+  const home = await page.evaluate(() => {
+    const w = window.world;
+    const found = w.buildings.find((each) => each.definition.id === 'house');
+    const state = w.character.state;
+    state.quests = { ...state.quests, 'a-roof-in-lampton': { status: 'done', baseline: 0 } };
+    state.house = { stands: [null, null, null, null], chest: {} };
+    state.kills = { ...state.kills, rat: Math.max(state.kills.rat ?? 0, 50) };
+    state.inventory = { ...state.inventory, 'barrow-crown': 1, 'pells-cart-bell': 1, logs: 3 };
+    window.events.emit('inventory-changed', state.inventory);
+    window.events.emit('kills-changed', state.kills);
+    w.clearTarget();
+    w.closeCounters();
+    w.player.stopMoving();
+    return found
+      ? {
+          x: found.x,
+          y: found.y,
+          width: found.definition.body.width,
+          depth: found.definition.body.height,
+        }
+      : null;
+  });
+  if (!home) {
+    check('town has the house', false);
+    return;
+  }
+  await sweep();
+  const before = await canvases();
+
+  // In by its door, a tap on the house and a second from its doorstep.
+  await page.evaluate((at) => window.world.teleport(at.x, at.y + at.depth / 2 + 160), home);
+  await step(2);
+  await draw();
+  /** @param {{ x: number; y: number }} at */
+  const middle = (at) => window.view.worldToScreen(at.x, at.y);
+  await clickAt(await page.evaluate(middle, home));
+  await stepUntil(
+    () => page.evaluate(() => !window.world.player.hasMoveTarget()),
+    'the walk to the house door',
+    20000,
+  );
+  await draw();
+  await clickAt(await page.evaluate(middle, home));
+  const inside = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        x: window.world.player.x,
+        y: window.world.player.y,
+        walking: window.world.player.hasMoveTarget(),
+      })),
+    (spot) => !spot.walking,
+    'the walk into the house',
+    30000,
+  );
+  check(
+    'two taps walk into the house',
+    Math.abs(inside.x - home.x) < home.width / 2 && Math.abs(inside.y - home.y) < home.depth / 2,
+    `player at ${Math.round(inside.x)},${Math.round(inside.y)}`,
+  );
+
+  // A bare stand, tapped from inside: its panel offers what is in the bag.
+  /** @param {string} key */
+  const fixtureOnScreen = (key) =>
+    page.evaluate((wanted) => {
+      const f = window.world.fixtures.find(
+        (each) =>
+          (each.fixture.kind === 'stand' ? `stand-${each.fixture.stand}` : each.fixture.kind) ===
+          wanted,
+      );
+      if (!f) return null;
+      return wanted === 'wall'
+        ? window.view.worldToScreen(f.x, f.area.top - 40)
+        : window.view.worldToScreen(f.x, f.area.bottom - 16);
+    }, key);
+  await draw();
+  const stand = await fixtureOnScreen('stand-0');
+  if (!stand) {
+    check('the house has a first stand', false);
+    return;
+  }
+  await clickAt(stand);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="stand-0"]') !== null),
+    "the first stand's panel",
+    20000,
+  );
+  const offered = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-modal [data-display]')].map((row) =>
+      row.getAttribute('data-display'),
+    ),
+  );
+  check(
+    'a tap on a bare stand opens it, offering the trophies in the bag and nothing else',
+    offered.includes('barrow-crown') &&
+      offered.includes('pells-cart-bell') &&
+      !offered.includes('logs'),
+    offered.join(', '),
+  );
+  await page.click('.hud-modal [data-display="barrow-crown"]');
+  await step(2);
+  const set = await page.evaluate(() => ({
+    stand: window.world.character.state.house.stands[0],
+    bag: window.world.character.state.inventory['barrow-crown'] ?? 0,
+    panel: document.querySelector('.hud-modal[data-house]') !== null,
+  }));
+  check(
+    'a row sets the trophy on the stand, out of the bag, and the panel shuts',
+    set.stand === 'barrow-crown' && set.bag === 0 && !set.panel,
+    JSON.stringify(set),
+  );
+  await draw();
+  await page.screenshot({ path: `${OUT}/23-house.png` });
+
+  // A held stand hands its trophy back on a tap: displaying is not spending.
+  // Asked again where it is now, since the camera followed the walk to it.
+  const held = await fixtureOnScreen('stand-0');
+  if (held) await clickAt(held);
+  await stepUntil(
+    () => page.evaluate(() => window.world.character.state.house.stands[0] === null),
+    'the stand to hand the trophy back',
+    20000,
+  );
+  check(
+    'a tap on a held stand hands the trophy back to the bag',
+    (await page.evaluate(() => window.world.character.state.inventory['barrow-crown'] ?? 0)) === 1,
+  );
+
+  // The chest: the bank's two sides, at the chest's size.
+  const chest = await fixtureOnScreen('chest');
+  if (chest) await clickAt(chest);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="chest"]') !== null),
+    "the chest's panel",
+    20000,
+  );
+  await page.click('.hud-modal [data-chest-all="logs"]');
+  await step(2);
+  const kept = await page.evaluate(() => ({
+    chest: window.world.character.state.house.chest.logs ?? 0,
+    bag: window.world.character.state.inventory.logs ?? 0,
+    slots: document.querySelector('.hud-modal .hud-house__count')?.textContent,
+  }));
+  check(
+    'the chest stores a stack from the bag and says how many of its slots are used',
+    kept.chest === 3 && kept.bag === 0 && kept.slots === '1 / 8 slots',
+    JSON.stringify(kept),
+  );
+  await page.click('.hud-modal [data-action="close-house"]');
+  await step(2);
+
+  // The wall: one plaque a creature, read off the kills.
+  const wall = await fixtureOnScreen('wall');
+  if (wall) await clickAt(wall);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="wall"]') !== null),
+    "the wall's panel",
+    20000,
+  );
+  const hung = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-modal [data-plaque]')].map((row) => row.textContent),
+  );
+  check(
+    'the wall names a plaque for the rat',
+    hung.some((line) => line?.includes('Rat Hunter')),
+    hung.join(' | '),
+  );
+  // The plaques themselves, with the player stood back from the wall they hang on.
+  await page.click('.hud-modal [data-action="close-house"]');
+  await page.evaluate((at) => window.world.teleport(at.x + 48, at.y + 40), home);
+  await step(2);
+  await draw();
+  await page.screenshot({ path: `${OUT}/23b-house-wall.png` });
+
+  // Out of the house shuts what is open in it; and out of town and back lets
+  // go of everything the room was drawn with.
+  await park();
+  check(
+    'walking out of the house shuts its panel',
+    (await page.evaluate(() => document.querySelector('.hud-modal[data-house]') === null)) === true,
+  );
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth - 33, w.worldHeight / 2 + 64);
+  });
+  await stepUntil(async () => (await zoneId()) !== 'town', 'the road east out of town');
+  const away = await zoneId();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(33, w.worldHeight / 2);
+  });
+  await stepUntilZone('town', `the road back into town from ${away}`);
+  await sweep();
+  const after = await canvases();
+  check(
+    'a round trip out of town lets go of everything the house was drawn with',
+    after <= before,
+    `${before} -> ${after} canvases`,
+  );
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -5625,6 +6217,7 @@ const SECTIONS = [
   ['feedback', feedback],
   ['loot-piles', lootPiles],
   ['bank', bank],
+  ['dialog', dialog],
   ['trainer', trainer],
   ['bounty-board', bountyBoard],
   ['forge', forge],
@@ -5652,6 +6245,9 @@ const SECTIONS = [
   ['ranger', ranger],
   ['fletchers-bench', fletchersBench],
   ['back-room', backRoom],
+  ['spirit', spirit],
+  ['still', still],
+  ['house', house],
 ];
 
 const known = SECTIONS.map(([name]) => name);

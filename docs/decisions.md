@@ -3343,3 +3343,222 @@ G1, launched before this under the old rule, keeps its PR against `main` with de
 and no save version, merged after wave 1's PR so the decisions stay in order. Wave 2's numbers are
 reserved in its launch order: D2 132 (save version 108), D3 133 (109), D1b 134, E3 135, F2 136 and
 F3 137 (110). The orchestrator is the session that proposed decision 123, woken every half hour.
+
+## 126. A person is their name with their trade beside it, talks in topics written as data, and remembers what they were asked for good
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D1**
+
+D1 fills the talk panel A4 built (decision 92) with conversations. The user settled four forks at
+the start of wave 1, each on Claude's recommendation:
+
+- **The name alone over the head, the trade beside it on the card, the map and the talk panel.**
+  The six townsfolk take their lore names (`docs/lore/places.md`), and `NpcDefinition.trade` keeps
+  what they do somewhere a player looks, as pillar 1 asks; a line that names a person for an item
+  or a tip names them with it ("Silas Quill the fettler"). **Rejected:** "Tilda Pell, Shopkeeper" in
+  one line everywhere, the plate included.
+- **A person remembers for ever**: the answers heard are stored on the character
+  (`CharacterState.asked`, save version 103), and a topic is grey while the answer it would give
+  has been heard, until a quest or a level gives it a new one. **Rejected:** remembering per visit.
+- **The five people the lore places and the game lacks are D1b's**, run in wave 2, since a person
+  with no counter is a new kind of row and the crow a new shape. **Rejected:** all five in D1.
+- **An answer does nothing yet**, and the schema carries `requires` and `effects` from the start
+  for D2 and D3 to fill. **Rejected:** a flag or an item handed over by an answer in D1.
+
+Claude's, alongside them:
+
+- **A topic has answers, and the last whose conditions hold is said**, so newer news is written
+  later and a topic grows rather than being replaced; a greeting is chosen the same way, which is
+  how the quartermaster's tone at level 7 is not his tone at level 1 (`tone.md`'s rule 6). What is
+  remembered is the answer, not the topic, which is what lets a topic come back. **Rejected:** a
+  tree of nested replies, which a save cannot name a place in without a path.
+- **A topic leads on by `follows`**, another of the same person's asked first, and may wait on a
+  level, a class, a quest's state or a topic asked of somebody else. `requires` is a union so a
+  standing (D3) or a rumour heard (D2) is a member and a case in `DialogSystem.holds`; `effects` is
+  `never` until D2 or D3 adds a member, and `TalkSession.apply` stops compiling when one does.
+- **What is on offer is derived** by `DialogSystem` for the world and the panel alike, and the world
+  checks every request against it, so a topic drawn from a stale model is refused. What is being
+  said this visit is the session's and forgotten at the end of it: the next visit opens at the
+  greeting. The events carry ids, not words.
+- **Topics are drawn between what is said and the counter button**, the quests under both.
+
+## 127. Idle banks rested by time, open or closed, to half a level; XP earned by hand pays double while it lasts, and idle's own never spends it
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase E1**
+
+Decision 85 gave idle and active play each a reason the other lacks, and E1 is idle's gift to active
+play. The user settled seven forks: four asked by the brief, three met building it, each of those
+three on Claude's recommendation.
+
+- **Banked by idle with the game open and by a parked night**, both. **Rejected:** idle with the game
+  open only, which leaves a night away worth nothing to the player who comes back.
+- **Capped at half a level's worth**, the share a parked night's XP is held to (decision 15), so the
+  two move with the curve together. **Rejected:** a fixed number; a whole level.
+- **Character XP alone.** **Rejected:** skill XP as well.
+- **A paler segment ahead of the XP bar's fill.** **Rejected:** a tint on the bar while it spends.
+- **It doubles XP earned by hand while it lasts**, the bank paying the bonus. **Rejected:** half
+  again, which spreads the same total thinner; triple, a short burst.
+- **It fills in a night**, the eight hours a parked night counts, at the same rate open or closed.
+  **Rejected:** full in two hours, which wastes most of a night; full in a day.
+- **Contracts count as quests**: a kill made by hand, a quest and a contract handed in all spend it.
+  **Rejected:** kills and quests only.
+
+Claude's, building it:
+
+- **It banks by time, not by what idle earned**, so a night at the forge or a bow out of arrows
+  banks the same as a night of kills. Rested is the time away; what idle earned is its own reward.
+- **Idle's own XP never spends it**, awake or parked: a camp paid in rested as well would be idle
+  paying itself back. Rested rides `awardPlayedXp`, and idle's XP goes through `awardXp`, which
+  leaves the bank alone. The parked payout has an `awardIdleXp` of its own, since it runs on a boot
+  where idle is off and would otherwise be taken for a kill made by hand.
+- **The parked session counts what idle banked before the tab closed** (`AfkSession.restedMs`), since
+  a closed game is paid from when idle started; without it an evening watched and then left running
+  overnight banks twice. **Rejected:** banking only when idle stops, on the wall clock, which leaves
+  the bar still while idle runs and breaks the rule that the world's clocks are frame accumulators.
+- **The segment reaches as far as the bank carries the bar**, twice the bank while it doubles, so
+  its far end stays put while it is spent; the bar's line names the bank in place of the percentage.
+- **The skills book says nothing of it**, since it is character XP and the book is skills; the idle
+  panel says what idle banks, off the same constants.
+- **The pace bot plays unrested** and the bands did not move (rule 8 of the parallel plan).
+- Save version 103, a step from 102 that banks nothing and treats a night parked before it as
+  unbanked.
+
+## 128. Wick is drawn in the world and says what it has when tapped, on the card; quiet is the tips alone; underground its light is the only one; its waking is the one line said unasked
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D4**
+
+D4 draws the spirit (decision 87) and hands it A9's tips. The user settled six forks, four at the
+start of the wave and two met in the building, each on Claude's recommendation:
+
+- **Wick speaks on the card as it is**, under its name and edged in its light, and **the spirit in
+  the world glows and chimes when it has something to say**. **Rejected:** a bubble drawn in the
+  world by the renderer beside the spirit and laid out with the name plates, which moves with it
+  but is a second place the game talks in, and one a fight draws over.
+- **What Wick has to say waits for a tap on it**: a tip, or a beat of its story, glows until asked.
+  Two things come unasked: its waking, which is how a player learns the light can be tapped, and a
+  secret's line, which is the reward for the walk. **Rejected:** the card coming up on its own as
+  A9's did, with Wick glowing beside it, which leaves the light nothing to be tapped for; and a card
+  that waits a minute and then comes anyway, which is a toast with a delay.
+- **Go quiet silences the tips alone**: the story still comes, since it is the spirit being a
+  character rather than advice. It is `tips.off` as it was, renamed on the card and in Options.
+  **Rejected:** quiet silencing the beats too.
+- **Wick is the light underground**: the lantern's pool is centred on the spirit and glows its
+  blue-white. **Rejected:** a lantern carried beside a spirit, two lights where decision 59 keeps
+  one.
+- **A tap on Wick waits while a counter is open**: it is said, and the card holds until the counter
+  closes, as it holds for any overlay. **Rejected:** Wick untappable at a counter.
+- **The spirit is a sprite kind of its own** in the budget: 16×16, not outlined, one loop of four
+  frames at 200ms, its calling a second, brighter sprite rather than a second animation, so the
+  kind keeps one clock. **Rejected:** reusing the mark kind, which is light lying on the ground.
+
+Claude's, building it:
+
+- **Nine beats before Part G**, from `docs/lore/spirit.md`'s table: its waking first, wherever the
+  character is, then one a zone on arriving, and Orlath's once he is down. **Where a memory is a
+  thing, the secret it is says it**, and the zone's beat only leads up to it, so the five secrets
+  that already carried the stone, the cell, the coin, the ring and the door keep them. Which beat is
+  waiting is derived from the beats heard, the kills and the zone; only what was heard is stored
+  (`CharacterState.beats`, save version 103). **Rejected:** a beat on a secret found, which leaves a
+  player who never finds it without the rest of the story; beats held strictly in order, which a
+  missed one would stop for good.
+- **With nothing waiting, a tap gets a line of its own** about where it is, two a zone, taken in
+  turn and remembering nothing.
+- **It follows on a lag and never routes**: straight at a spot off the left shoulder through any
+  wall, a share of the gap a frame worked out from the frame's length, there at once past four
+  tiles. **Rejected:** a `Chase`, which it has no reason for, since nothing can stop a light.
+- **It is picked after the creatures and before the stations**, by a box round the light where it
+  floats, since at the shoulder is where a creature fighting the player stands. **Rejected:** above
+  the creatures, which would eat the tap on the rat.
+- **A tap on Wick takes nothing back**: it ends no camp, walk, gather or target, unlike every other
+  tap on the world.
+
+## 129. Potions: foraging and brewing at a still, four potions one kind each, their clocks kept on the character and honoured away
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase E2**
+
+E2 is decision 85's other half, potions brewed in active play that boost idle gains. The user settled
+the brief's four questions with wave 1's answers, and four more at the start of the phase, each on
+Claude's recommendation:
+
+- **Herbs come from a fourth gathering skill with nodes and a tool of its own**, foraging and the
+  sickle, sold at the shop like the other three; **potions are brewed at a new station, a still**,
+  drawn in this phase and placed at Greyford; **one potion a kind**: gathering speed, a fight, idle
+  XP, and luck on a roll; **herbs grow in the fen and on the mill road's bank, a low one on the
+  strand, and none in Lampton**. **Rejected:** herbs off existing nodes and drops; brewing at a
+  campfire, which would make the fire two skills' station; herbs everywhere.
+- **A potion works through a closed game for the time it has left.** Its clock is saved on the
+  character, and a night away pays Keeper's Watch and Quick Hands for those minutes, under the same
+  ceilings. **Rejected:** an open-game potion whose clock pauses when the game closes; one whose
+  clock runs on in real time and is wasted.
+- **Keeper's Watch lifts idle from half of active XP to three-quarters**, the away ceiling unchanged,
+  so idle stays behind active (decision 15). **Rejected:** idle matching active while it lasts; three
+  quarters and a higher ceiling.
+- **The fight potion takes the edge off hits**: armour, about one piece of the band's gear.
+  **Rejected:** more attack power; a heal over time that works in a fight, the one thing food cannot.
+- **The luck potion betters both rolls**: the second one off a gather or a job, and each drop.
+  **Rejected:** drops only; the second-one roll only.
+
+Claude's, building it:
+
+- **The ladder is one herb a band**: samphire at foraging 1 on Candle Strand, meadowsweet at 4 on the
+  mill road's banks, bog myrtle at 6 and bogbean at 8 in the fen; brewing makes one potion a herb at
+  1, 3, 5 and 7, and **the upper two each take a herb from the rung below**, so the strand and the
+  mill road are not retired the day the fen opens. A failed brew keeps the herbs. A patch is walked
+  through and cut out in three. The still stands in Greyford's yard below the ford, reachable from
+  the starter band without a fight above it.
+- **A potion is a fifth kind of item**, drunk at full health or in a fight, since it heals nothing.
+  **Quick Hands** takes a fifth off a gather for ten minutes; **Dulled Pain** adds five armour for
+  three, which the duels hold to winning none of the contract's losses; **Keeper's Watch** lasts
+  thirty; **Fortune** adds a tenth to the second-one chance and makes each drop a quarter likelier,
+  capped at certain, for ten. A second of a kind starts the clock again rather than stacking. Each
+  sells for a little over its herbs.
+- **The clocks live on `CharacterState.potions`** and run on game time; a parked session spends them
+  by the time it was away. The fight and luck potions do nothing offline, where a night is a rate.
+  The idle panel says which potions are running and whether each counts away. Save version 103.
+- **Named from the lore** (decision 114): the fenfolk's brewing, written into `peoples.md`, and the
+  herbs and the still into `places.md`.
+- **Found and left:** the steel tools' `gatherSpeedBonus` is never passed when a gather begins, so it
+  does nothing in play; queued as its own task rather than widening this phase.
+
+## 130. The house is the Surveyor's House, let by a quest for timber; trophies stand on stands and come back on a tap; the chest is eight kinds; the plaques hang themselves
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase F1**
+
+F1 puts the house in Lampton (decision 88). The brief's four forks were settled with wave 1's
+answers: **the house is granted by a quest from the quartermaster after the starter arc**, the
+Company's plot; **a stand hands its trophy back on a tap**, so displaying is not spending; **the
+chest is a fixed small store** and the bank is still the vault, F2 free to grow it; **no station**
+until F2's workbench. **Rejected:** a house standing empty with the player's name on it from the
+start, or bought for coin; displaying as spending; a second bank with slots to buy; stations now.
+
+Four more the user settled when they were met, each on Claude's recommendation:
+
+- **The quest asks for twenty logs** (A Roof in Lampton, after The Cutthroat), the roof wanting
+  mending before anybody lives under it, and pays the house and 50 XP. **Rejected:** a deed fee, the
+  first quest to cost coin and a new kind of objective; twelve goblins for the Company; the house for
+  the asking.
+- **The two capstone quests each hand over a keepsake**, a new item kind with no price, good for
+  nothing but a stand. **Rejected:** no keepsakes until Part G; a keepsake from the plot quest too.
+- **Four stands and a chest of eight kinds.** **Rejected:** six and twelve; three and six.
+- **The plaques hang themselves**: one a creature at the highest slayer rank earned, derived from the
+  kills. **Rejected:** hooks the player chooses plaques for, which would be one more stored choice.
+
+Claude's, building it:
+
+- **Whose the house is is derived**: it is the player's while the quest whose reward names the house
+  is done. Only what stands on the stands and what is in the chest is stored (`CharacterState.house`,
+  save version 103). **Rejected:** a flag set on turn-in, a second record of the same fact.
+- **The fixtures are data** (`data/house.ts`), not the renderer's furniture, because they are the
+  first things in a room anybody taps: the world walks up to them and the view draws them where the
+  world says. They are a new tappable kind, picked from inside the room only and ranked above the
+  building, and a `HouseSession` collaborator owns what is open. **Rejected:** the chest as a counter
+  with nobody behind it, which would give the counter table a row with no person; fixtures written
+  into Lampton's text, which would place the house twice.
+- **The walk to a fixture is aimed at where a body stands to use it**, half a tile off its wall
+  inside the room, after the first walk aimed at a corner stand went round the outside of the house:
+  A\* walks tile centres, and the nearest centre to that stand was outside the side wall.
+- **The house stands at the east end of the counters' row**, its door on the high street, and the
+  cottage behind it moved up a row. **Rejected:** south of the street, first in the general store's
+  lane and then by the pond, where it pushed the wizard's first level past the pace test's bound.
+- **The trophies are every boss drop and every keepsake**, read off the tables, and a trophy's card
+  says where it goes, before the house is the player's as well. The lore gained the Surveyor's House,
+  and where the two keepsakes come from.

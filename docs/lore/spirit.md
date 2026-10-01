@@ -1,7 +1,7 @@
 # The spirit
 
 The helper that floats beside the player and is a character in the story (decision 87), which A9's
-tips already speak for and D4 draws in the world. This is who it is. The player learns it in the
+tips spoke for first and D4 drew in the world. This is who it is. The player learns it in the
 order below, and not faster.
 
 ## What it is
@@ -53,21 +53,39 @@ pull is until late.
 
 ## How it remembers
 
-A piece at each new zone and each boss, as D4 promises. The table is the order; D4 writes the lines,
-and the ones in `places.md` show the voice.
+A piece at each new zone and each boss, as D4 promised. The table is the order. D4 wrote the lines
+(`src/data/spiritBeats.ts` and the secrets' lines in `src/data/secrets.ts`), and the ones in
+`places.md` show the voice.
 
-| Where                                 | What comes back                                                   |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| Lampton, the Lamp Stone               | The shape of a waymarker: it has seen one before                  |
-| Candle Strand                         | Fear of the sea, and the pull, unexplained                        |
-| The New Cut, the broken cell          | That it was in there, in the dark, for a long time                |
-| The Cutthroat's Cellar, Hollis's coin | A king's face, Merrath's, and fear of it                          |
-| Old Mill Road, the Willow Warden      | That it is kindled, and that an elf thinks that a terrible thing  |
-| Greyford, the lamp-warden's ring      | That it wore one: it was a lamp-warden, or a lamp-warden's child  |
-| Blackwater Fen, Maren                 | That the fenfolk put it in the hill                               |
-| The Deep Cut, the dwarves' door       | That the dwarves refused it something                             |
-| The Sunken Barrow, Orlath             | Its name, Lorn, and that it tended the kings' lanterns            |
-| Part G, a band at a time              | The king, the lantern, the night it lit it, and what it has to do |
+| Where                                 | What comes back                                                   | In the game (D4)                                          |
+| ------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
+| Lampton, the Lamp Stone               | The shape of a waymarker: it has seen one before                  | Its waking, then the Lamp Stone's line at the stone       |
+| Candle Strand                         | Fear of the sea, and the pull, unexplained                        | On arriving                                               |
+| The New Cut, the broken cell          | That it was in there, in the dark, for a long time                | A lead-up on arriving, then the Broken Cell's line        |
+| The Cutthroat's Cellar, Hollis's coin | A king's face, Merrath's, and fear of it                          | A lead-up on arriving, then the strongbox's line          |
+| Old Mill Road, the Willow Warden      | That it is kindled, and that an elf thinks that a terrible thing  | On arriving: her one word, from the willows               |
+| Greyford, the lamp-warden's ring      | That it wore one: it was a lamp-warden, or a lamp-warden's child  | A lead-up on arriving, then the back room's line          |
+| Blackwater Fen, Maren                 | That the fenfolk put it in the hill                               | On arriving, until Maren is in the game to say it herself |
+| The Deep Cut, the dwarves' door       | That the dwarves refused it something                             | A lead-up on arriving, then the sealed door's line        |
+| The Sunken Barrow, Orlath             | Its name, Lorn, and that it tended the kings' lanterns            | Once Orlath is down, in the barrow                        |
+| Part G, a band at a time              | The king, the lantern, the night it lit it, and what it has to do | Part G's                                                  |
+
+**Where a memory is a thing, the thing says it.** Five of the nine are found rather than arrived
+at: the stone, the cell, the coin, the ring and the door are secrets, and Wick's line on finding
+each is the memory. Its line on arriving in those zones only leads up to it, never says it first,
+so a player who never finds the thing has the zone's unease and not its answer.
+
+**Its waking comes first, wherever the player is**, and is the one line it says without being
+asked: "You were the nearest warm thing, so here I am. Don't take it personally. I'm Wick, and when
+I glow, tap me: I'll have something to say." Everything after waits for a tap, the light glowing until it gets one.
+
+**The Willow Warden and Maren are not in the game yet**, so their beats are Wick's alone: a word
+said at it from the willows that it cannot see the speaker of, and the knowledge, coming on it in
+the fen like a burn, that people like the lantern-keepers put it in the hill. When Maren is in the
+game she says it to its face ("We put you in the hill"), and Wick's line is then its answer.
+
+**When it has nothing to remember, it talks about where it is**: two lines a zone, taken in turn,
+which remember nothing and never run ahead of the table.
 
 ## How it speaks
 
@@ -82,7 +100,18 @@ and the ones in `places.md` show the voice.
   matters more than staying in the world (pillar 1). It never jokes about being in a game.
 
 A9's tips are already near enough its voice ("Hold a finger on anything... I'll tell you what I
-know."). D4 gives them its name and its light.
+know."). D4 gave them its name and its light: each waits in Wick until it is tapped.
+
+## While the player rests
+
+Wick does not sleep. Six hundred years in the dark left it with no wish to shut out anything ever
+again, and it is not sure it could. So when the player stops, idling at the edge of a rat run or
+putting the game down for the night, Wick keeps watch: it sits a little brighter at their shoulder,
+counts what goes by, and keeps the worst of the dark off them, and the player comes back to the
+road rested for it. This is rested XP (phase E1, `docs/v2_plan.md`): a bonus the time idle or away
+banks, spent on what the player then earns by hand. It is the one thing Wick can do for the warm body
+that holds it against the pull, and it is a little proud of it. When it says anything about it, it
+is short and pleased with itself: "You slept. I didn't. Off you go."
 
 ## The ending, and why
 

@@ -32,6 +32,18 @@ about them follows from that. They are grave, patient and proud, say little and 
 keep a bleak humour among themselves. They carry the barrows' keys. They have not forgotten what Lorn
 did, and they have not forgiven it.
 
+They **brew**, from what grows in the fen, and always have: a keeper sits up with a lantern all
+night, and what keeps them awake and their wits about them is a draught of **bog myrtle**, sweet and
+resinous, cut with a little of the strand's **samphire**. That is the **Keeper's Draught**, and they
+will not sell it; a settler who has one got it in trade off a holm, or brewed it badly themselves.
+**Bogbean**, bitter, from the shallows round the pools, is brewed into a cordial they drink before
+anything that needs luck, and they say it is the fen's own luck, lent. The lighter brews are older
+than Veymar's fall and nobody minds who makes them: a samphire tonic for working hands, and the
+meadowsweet that grows on banks all down the stream to the mill, for pain. They brew in **copper
+pot-stills** of their own make, small enough to go in a punt, and the Company's outpost at Greyford
+traded one off a holm when it was built (`places.md`); its people brew on it worse than the fenfolk
+do, and say so. Settlers call all of it potions, which the fenfolk find funny.
+
 Their young are angry. The salt pans cut them off from their dead and the Company will not listen,
 so the young strike the pans, the strand's fishers and anybody on the fen they do not know, which
 includes the player. Those are the **fen raiders**. Their elders do not approve, and do not stop

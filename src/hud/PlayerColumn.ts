@@ -4,6 +4,7 @@ import { el, fillPercent, place } from './dom';
 import { barFill } from '../systems/math';
 import { titleName } from '../systems/AchievementSystem';
 import { formatXpProgress } from '../systems/LevelingSystem';
+import { restedReach } from '../systems/RestedSystem';
 import { MAX_CHARACTER_LEVEL } from '../config/constants';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { Rect } from '../ui/layout';
@@ -53,6 +54,7 @@ export class PlayerColumn {
   private readonly mana: Gauge;
   private readonly quiver: Gauge;
   private readonly xp: Gauge;
+  private readonly rested: HTMLElement;
   private readonly training: TrainingBar;
   private readonly effects = new EffectBar();
 
@@ -71,6 +73,10 @@ export class PlayerColumn {
     this.mana = gauge('hud-player__mana hud-hidden', 'hud-bar__fill--mana');
     this.quiver = gauge('hud-player__quiver hud-hidden', 'hud-bar__fill--quiver');
     this.xp = gauge('hud-player__xp', '');
+    // Under the fill and the numbers, so the bar reads as it always did with a
+    // paler stretch ahead of where it has got to.
+    this.rested = el('div', 'hud-bar__rested');
+    this.xp.root.prepend(this.rested);
     this.training = new TrainingBar(options.onOpenSkill, options.onTrainingHidden);
 
     this.root.append(
@@ -103,13 +109,17 @@ export class PlayerColumn {
     this.hp.label.textContent = `${hp} / ${maxHp} hp`;
   }
 
-  setXp(level: number, xp: number, xpToNext: number): void {
+  setXp(level: number, xp: number, xpToNext: number, rested: number): void {
     this.levelText.textContent =
       level >= MAX_CHARACTER_LEVEL ? `Level ${level} (Max)` : `Level ${level}`;
     // At the level cap there is no next level to fill toward, and a full bar is
     // what that reads as.
     this.xp.fill.style.width = fillPercent(xpToNext > 0 ? barFill(xp, xpToNext) : 1);
-    this.xp.label.textContent = formatXpProgress(xp, xpToNext);
+    // The rested segment reaches as far as the bank will carry the bar, stopping
+    // at its end: what is left over carries on into the next level.
+    const reach = xpToNext > 0 ? restedReach(rested) : 0;
+    this.rested.style.width = fillPercent(reach > 0 ? barFill(xp + reach, xpToNext) : 0);
+    this.xp.label.textContent = formatXpProgress(xp, xpToNext, xpToNext > 0 ? rested : 0);
   }
 
   /** A class with no pool shows no bar at all, which is what its absence means. */

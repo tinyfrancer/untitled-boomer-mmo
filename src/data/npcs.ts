@@ -28,39 +28,39 @@ export type CounterId = 'talk' | NpcRoleId;
 export interface NpcDefinition {
   id: NpcId;
   /**
-   * What they are called, everywhere: the nameplate over their head, the marker
-   * on the zone map, and the title of the card that describes them. One string,
-   * because what a shopkeeper is called is a decision the whole game makes
-   * rather than each renderer's own.
+   * Who they are: the name the lore gives them (`docs/lore/places.md`), and
+   * the whole of what is written over their head. A nameplate is one line, and
+   * a person is somebody before they are a till.
    */
   name: string;
-  role: NpcRoleId;
   /**
-   * What they open a conversation with: one line, in their own voice. It names
-   * no place and no person yet: `docs/lore/` names them, and a greeting is the
-   * first thing D1's rewrite in that voice replaces.
+   * What they do, said beside their name wherever there is room for it: the
+   * card, the zone map and the talk panel (decision 92's shell, D1's answer).
+   * Pillar 1 wants it kept somewhere, since "Tilda Pell" alone says nothing
+   * about where to sell a crab.
    */
-  greeting: string;
+  trade: string;
+  role: NpcRoleId;
 }
 
 export const NPCS: Record<NpcId, NpcDefinition> = {
   shopkeeper: {
     id: 'shopkeeper',
-    name: 'Shopkeeper',
+    name: 'Tilda Pell',
+    trade: 'Shopkeeper',
     role: 'merchant',
-    greeting: "Come in, and mind the rats. They've been at the flour again.",
   },
   banker: {
     id: 'banker',
-    name: 'Banker',
+    name: 'Ambrose Tally',
+    trade: 'Banker',
     role: 'banker',
-    greeting: "Whatever you leave with me stays exactly where you left it. That's the whole job.",
   },
   trainer: {
     id: 'trainer',
-    name: 'Trainer',
+    name: 'Marta Hale',
+    trade: 'Trainer',
     role: 'trainer',
-    greeting: 'Talent is cheap. Knowing what to do with it costs a little more.',
   },
   // The fourth counter, and the one the plan called a board. A board would have
   // been a second kind of tappable furniture — a pick priority, a prop, a map
@@ -74,10 +74,9 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
   // wants both.
   quartermaster: {
     id: 'quartermaster',
-    name: 'Quartermaster',
+    name: 'Jory Stroud',
+    trade: 'Quartermaster',
     role: 'quartermaster',
-    greeting:
-      "Always more work than hands. Take something off the board; it goes back up the moment you're paid.",
   },
   /**
    * The fifth counter, out at Greyford, and the first that does not want money.
@@ -90,10 +89,9 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
    */
   outfitter: {
     id: 'outfitter',
-    name: 'Outfitter',
+    name: 'Oona Rook',
+    trade: 'Outfitter',
     role: 'outfitter',
-    greeting:
-      "Coin's no use to me out here. Bring me ore and timber and I'll see you properly kitted.",
   },
   /**
    * The sixth counter, and a person rather than a station for the reason the
@@ -115,15 +113,21 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
    */
   fettler: {
     id: 'fettler',
-    name: 'Fettler',
+    name: 'Silas Quill',
+    trade: 'Fettler',
     role: 'reforger',
-    greeting: "I don't make anything. I take what somebody else made and make it yours.",
   },
 };
 
-/** What an NPC is called, for the map's marker and for anyone examining them. */
+/** Who an NPC is, for the plate over their head and anywhere else a name stands alone. */
 export function npcName(npcId: NpcId): string {
   return NPCS[npcId].name;
+}
+
+/** Their name with their trade beside it, for the zone map's marker. */
+export function npcNameAndTrade(npcId: NpcId): string {
+  const { name, trade } = NPCS[npcId];
+  return `${name}, ${trade}`;
 }
 
 export function npcRole(npcId: NpcId): NpcRoleId {

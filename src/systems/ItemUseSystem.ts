@@ -1,4 +1,6 @@
+import { BUILDINGS } from '../data/buildings';
 import { CLASSES } from '../data/classes';
+import { HOUSE_BUILDING } from '../data/house';
 import {
   ARMOR_TYPE_CLASSES,
   ITEMS,
@@ -25,10 +27,12 @@ import { REFORGE_STONE_ITEM_ID } from '../data/reforges';
 import { SKILLS } from '../data/skills';
 import { ZONES, type ZoneDefinition } from '../data/zones';
 import { batchSize } from './CraftingSystem';
+import { describePotionEffect, potionDuration } from './PotionSystem';
 import { formatCurrency } from './CurrencySystem';
+import { isTrophy, ownsHouse } from './HouseSystem';
 import { isQuestDone, type QuestLog } from './QuestSystem';
 import { eligibleReforges } from './ReforgeSystem';
-import type { GearSlotId, ItemId } from '../types/ids';
+import type { BuildingId, GearSlotId, ItemId } from '../types/ids';
 
 /**
  * What an item is *for*, read off every table that names it.
@@ -60,6 +64,7 @@ export function itemUses(itemId: ItemId, context: ItemUseContext = {}): string[]
     ...stationWork(itemId),
     ...trades(itemId),
     ...wantedBy(itemId, context.quests ?? {}),
+    ...displayed(itemId, context.quests ?? {}),
   ];
   const value = itemValue(itemId);
   // Said outright rather than left to the price alone: for burnt food "nothing"
@@ -126,6 +131,9 @@ function consuming(itemId: ItemId): string[] {
     lines.push('Idle eats this when hurt, in the order set on the Idle tab');
   }
   if (item.kind === 'ammunition') lines.push('Shot from a bow, out of a quiver');
+  if (item.kind === 'potion') {
+    lines.push(`Drink: ${describePotionEffect(item.effect)}, for ${potionDuration(item.effect)}`);
+  }
   if (itemId === FIRE_INPUT_ITEM_ID) lines.push('Lights a campfire, one a fire');
   return lines;
 }
@@ -203,6 +211,25 @@ function wantedBy(itemId: ItemId, quests: QuestLog): string[] {
 }
 
 /**
+ * A trophy's one use beyond whatever else it is (F1): a stand at home. Said
+ * before the house is the player's as well, with who lets it, since a boss's
+ * drop sold for want of knowing is gone for good.
+ */
+function displayed(itemId: ItemId, quests: QuestLog): string[] {
+  if (!isTrophy(itemId)) return [];
+  const house = `${BUILDINGS[HOUSE_BUILDING].name}${inZone(zoneOfBuilding(HOUSE_BUILDING))}`;
+  return ownsHouse(quests)
+    ? [`Display at home, on a stand in ${house}`]
+    : [`Display at home, once ${npcPlace('quartermaster')} lets you ${house}`];
+}
+
+function zoneOfBuilding(buildingId: BuildingId): ZoneDefinition | undefined {
+  return Object.values(ZONES).find((zone) =>
+    zone.buildingSpawns.some((spawn) => spawn.buildingId === buildingId),
+  );
+}
+
+/**
  * Where more of it comes from, when that is a station or a counter — the
  * reverse of every line above, so a bar says it is smelted from ore the way the
  * ore says it is smelted into a bar. What drops it and where it grows are the
@@ -265,14 +292,15 @@ export function stationPlace(station: StationId): string {
 }
 
 // The same for a person, found by the role they work rather than by name, so
-// a counter moved to another zone takes every line that mentions it along.
+// a counter moved to another zone takes every line that mentions it along. Named
+// with their trade after it, since a name alone does not say what they deal in.
 export function npcPlace(role: NpcRoleId): string {
   const npc = Object.values(NPCS).find((candidate) => candidate.role === role);
   if (!npc) return `the ${role}`;
   const zone = Object.values(ZONES).find((candidate) =>
     candidate.npcSpawns.some((spawn) => spawn.npcId === npc.id),
   );
-  return `the ${npc.name}${inZone(zone)}`;
+  return `${npc.name} the ${npc.trade.toLowerCase()}${inZone(zone)}`;
 }
 
 function inZone(zone: ZoneDefinition | undefined): string {

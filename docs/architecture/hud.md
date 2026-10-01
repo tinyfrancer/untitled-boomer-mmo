@@ -15,8 +15,13 @@ of it. Char / Bag / Quests / Idle / Feats / Skills / Map / Log are `Sheet` subcl
 holds a single `openSheet`, not a visible flag per panel — while Menu and Options are actions
 that open no sheet. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close. A tap on a person puts up the **talk panel** (`hud/TalkModal.ts`)
-in the slot every counter uses: their greeting, a button for the counter they work, and their
-quests (`hud/talkQuests.ts`), which no counter draws any more. Every role counter's panel is its own
+in the slot every counter uses: their name with their trade beside it, what they are saying (their
+greeting, or their answer under the question that drew it), the topics they will talk about as a
+button each, grey once heard until they have something new to say (`economy.md`), a button for the
+counter they work, and their quests (`hud/talkQuests.ts`), which no counter draws any more. The
+topics are derived from the HUD's model by `DialogSystem` (level, class, quest log, and what has
+been asked, which is seeded from the save and kept current on `ASKED_CHANGED_EVENT`), and what is
+being said comes from the world on `CONVERSATION_CHANGED_EVENT`, ids rather than words. Every role counter's panel is its own
 list with a **Back** to the conversation put at the front of its head by `OverlayHost` rather than
 by the panel, which is why each modal hands the host its `head` (`economy.md`). The options menu
 also holds the one setting
@@ -95,6 +100,15 @@ is also why the trough is solid (over grass, a half-transparent empty end reads 
 Max HP is not on the wire — `player-hp-changed` carries the current value alone — so the ceiling is
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
+
+**The rested bank is a paler segment ahead of the XP fill** (decision 127, `afk.md`): the fill's violet
+at its lightest step, a third strength, drawn under the fill from the bar's start to as far as the
+bank carries the bar (`restedReach`), which is twice the bank while it doubles, so its far end stays
+put as it is spent and only the fill moves up to meet it. It stops at the bar's end, and what is
+left carries into the next level. While any is banked the line inside the bar names it ("96 / 200
+XP, 25 rested") in place of the percentage, which the bar already shows. The bank arrives on the XP
+gain (`CombatXpGain.rested`, since spending it is an XP gain) and, while idle fills it, on
+`rested-changed`, said when its whole number moves rather than every frame.
 
 **The column stands on a backing of the world's darkest ink** (decision 112), at three-quarters
 strength, because it is the one piece of top furniture with no panel: its words and bars are laid
@@ -419,11 +433,15 @@ since it is the reward rather than advice, with Got it alone to put it away. The
 many of the zone's secrets are found under the map, "Secrets 1 / 2", read off `secretsFound` in
 `systems/MapSystem.ts` and the `secrets-changed` list; where one lies is on no map.
 
-**A tip is a card that waits for a tap** (decision 98, `hud/TipCard.ts`). The world offers one at a
-time on `tip-offered`, carrying the spirit's line already written (`simulation.md`), and the card
-holds it until **Got it** (`tip-heard`) or **No more tips** (`tips-set-requested`, off); Options
-has the switch to bring them back, opened on what the save says. It **waits out anything covering
-the playfield**: any overlay, and a sheet on a phone, where the sheet is the screen. A roomy
+**What Wick says is a card that waits for a tap** (decisions 98 and D4's, `hud/TipCard.ts`), under
+its name, in its light. A tap on Wick in the world says what it has (`simulation.md`): a tip on
+`tip-offered`, carrying the line already written, which the card holds until **Got it**
+(`tip-heard`) or **Go quiet** (`tips-set-requested`, off); a beat of its story or a line of its own
+on `spirit-said`, with Got it alone, which answers a beat with `spirit-beat-heard` and a line of its
+own with nothing, since nothing about it is kept. Options has the switch to bring the tips back,
+**Wick's Tips: On** or **Quiet**, opened on what the save says. It **waits out anything covering
+the playfield**: any overlay, a counter included, so a tap on Wick at a counter is said when the
+counter closes, and a sheet on a phone, where the sheet is the screen. A roomy
 screen's sheet stands in its own column below the top row, clear of the card, and holding for it
 would hold every tip for as long as the character sheet was left open. Overlays come and go as
 children of the root, each closing itself, so `Hud` hears them through a `MutationObserver` on the
@@ -433,5 +451,6 @@ enough to read in, which is a landscape phone and anything roomier, the gap stop
 the minimap and the target frame stands further left, and under the whole top row on a portrait
 phone, where the corners all but meet. In the DOM it goes under the toast, which may
 print across it on a short screen and is the more urgent of the two, and under every sheet and
-overlay. Smoke switches tips off for every character it makes except in its own `tips` section, since
-a card nobody answers would sit over whatever the next section taps.
+overlay. Smoke switches tips off and hears Wick's waking for every character it makes, except in
+its own `tips` and `spirit` sections, since a card nobody answers would sit over whatever the next
+section taps.

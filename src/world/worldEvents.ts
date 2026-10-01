@@ -96,7 +96,13 @@ export type WorldEvent =
    * tapping a cell on the world map, and it was removed because a world you can
    * step across for nothing is a world with no distance in it.
    */
-  | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number };
+  | { kind: 'zone-exit'; to: ZoneId; edge: ZoneEdge; fraction: number }
+  /**
+   * Wick has something to say: it started to glow, or it spoke unasked. The
+   * glow is state the view draws from the spirit; this is the moment, which
+   * the chime is told about because a sound cannot poll.
+   */
+  | { kind: 'spirit-calls'; at: Point };
 
 /**
  * The HUD channel, as much of an emitter as ZoneWorld needs. `createEventBus`

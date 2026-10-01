@@ -7,6 +7,7 @@ import { ZONES } from '../../src/data/zones';
 import { nth } from '../nth';
 import { conColor, enemyDisplayName, scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { THEME } from '../../src/ui/theme';
+import { DULLED_PAIN_ARMOR } from '../../src/data/potions';
 
 describe('scaleEnemyStats', () => {
   it('returns the base stats at level 1', () => {
@@ -480,6 +481,65 @@ describe('difficulty curve', () => {
     Object.values(ENEMIES).forEach((enemy) => {
       expect(enemy.chaseSpeed).toBeLessThan(playerSpeed);
     });
+  });
+});
+
+/**
+ * The fight potion (version 2 phase E2) is held here rather than by the pace,
+ * which plays without it: a Meadowsweet Draught takes the edge off every hit
+ * and turns no fight the curve says is lost. Each pair below is a loss the
+ * contracts above hold, drunk or not, so the draught is a margin rather than a
+ * level.
+ */
+describe('a Meadowsweet Draught', () => {
+  const drunk = (combatant: Combatant): Combatant => ({
+    ...combatant,
+    armor: combatant.armor + DULLED_PAIN_ARMOR,
+  });
+  const chill = ENEMY_ABILITIES['grave-chill'];
+  const wail = ENEMY_ABILITIES['barrow-wail'];
+  const wight = enemyAt('barrow-wight', 8);
+  const LOSSES: [string, Combatant, Combatant][] = [
+    ['a fresh warrior and a level 3 rat', freshWarrior(), enemyAt('rat', 3)],
+    ['a fresh ranger and a level 3 rat', freshRanger(), enemyAt('rat', 3)],
+    ['a fresh warrior and a level 2 bandit', freshWarrior(), enemyAt('bandit', 2)],
+    ['a fresh warrior and a level 3 crab', freshWarrior(), enemyAt('crab', 3)],
+    ['standing in a Grave Chill', barrowWarrior(8), withAbility(wight, chill, 'lands')],
+    [
+      'a level 7 in the wights level 8 chamber',
+      barrowWarrior(7),
+      withAbility(wight, chill, 'dodged'),
+    ],
+    [
+      'two wights at once',
+      barrowWarrior(8),
+      { ...wight, hp: wight.hp * 2, cooldownMs: wight.cooldownMs / 2 },
+    ],
+    [
+      'standing in the Wail',
+      barrowWarrior(8),
+      withAbility(enemyAt('barrow-king', 8), wail, 'lands'),
+    ],
+    [
+      'a level 7 and the king',
+      barrowWarrior(7),
+      withAbility(enemyAt('barrow-king', 8), wail, 'dodged'),
+    ],
+  ];
+
+  it.each(LOSSES)('wins no fight the curve loses: %s', (_, player, enemy) => {
+    expect(duel(player, enemy)).toBe('enemy');
+    expect(duel(drunk(player), enemy)).toBe('enemy');
+  });
+
+  // Where the draught is brewed and drunk: the mill road and on, where a hit is
+  // big enough for a twentieth of it to be a point.
+  it('takes something off a hit, from the mill road to the barrow', () => {
+    for (const enemy of [enemyAt('goblin-scavenger', 5), enemyAt('fen-raider', 7), wight]) {
+      const sober = mitigatedDamage(enemy.attackPower, gearedWarrior(3).armor);
+      const draught = mitigatedDamage(enemy.attackPower, drunk(gearedWarrior(3)).armor);
+      expect(draught).toBeLessThan(sober);
+    }
   });
 });
 

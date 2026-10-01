@@ -9,6 +9,7 @@ import type {
   QuestId,
   RecipeId,
   SecretId,
+  SpiritBeatId,
   TipId,
   TitleId,
   ZoneId,
@@ -22,12 +23,15 @@ import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { DialogMemory } from '../systems/DialogSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
 import type { IdleFoodChoice, IdleFoodMove } from '../systems/IdleFoodSystem';
 import type { InspectPanel } from '../systems/InspectSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
+import type { HouseFixture } from '../data/house';
+import type { HouseState } from '../systems/HouseSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
 import type { OfferedTip } from '../systems/TipSystem';
@@ -191,10 +195,10 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 export const IDLE_FOOD_MOVE_REQUESTED_EVENT = 'idle-food-move-requested';
 export const IDLE_FOOD_KEEP_REQUESTED_EVENT = 'idle-food-keep-requested';
 export const IDLE_FOOD_CHANGED_EVENT = 'idle-food-changed';
-// The spirit's tips (decision 98). The world offers one at a time, carrying the
-// line already written, since what it says is read off the character; the card
+// The spirit's tips (decision 98). Wick says one at a time when tapped (D4),
+// carrying the line already written, since what it says is read off the character; the card
 // answers with the tip heard. On or off is asked for, saying which, from the
-// card's No more tips and from Options, and the answer is what the save holds.
+// card's Go quiet and from Options, and the answer is what the save holds.
 export const TIP_OFFERED_EVENT = 'tip-offered';
 export const TIP_HEARD_EVENT = 'tip-heard';
 // A secret found (decision 117): which, for the card that says so, once. And
@@ -262,6 +266,50 @@ export const MASTERY_TIER_REACHED_EVENT = 'mastery-tier-reached';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
 export const TITLE_CHANGED_EVENT = 'title-changed';
+/**
+ * The rested bank moved without any XP moving with it: idle banking it. Said
+ * when its whole number changes, not every frame; spending it rides on
+ * `XP_GAINED_EVENT`, whose gain carries the bank after.
+ */
+export const RESTED_CHANGED_EVENT = 'rested-changed';
+
+// Dialog (D1). The HUD asks a topic of whoever it is talking to; the world
+// answers with what is being said now (CONVERSATION_CHANGED), which a newly
+// opened conversation resets to the greeting, and with everything everybody
+// has been asked (ASKED_CHANGED) when that grows, which the topics' grey is
+// drawn from.
+export const ASK_TOPIC_REQUESTED_EVENT = 'ask-topic-requested';
+export const CONVERSATION_CHANGED_EVENT = 'conversation-changed';
+export const ASKED_CHANGED_EVENT = 'asked-changed';
+
+/**
+ * Payload for CONVERSATION_CHANGED_EVENT: who is talking and what they last
+ * answered, or null for nothing asked yet this visit. Ids rather than words,
+ * so the HUD reads the line off the table it was written in.
+ */
+export interface ConversationState {
+  npcId: NpcId;
+  said: { topicId: string; answerId: string } | null;
+}
+// Wick (D4). A tap on the light speaks: a beat of its story, or a line of its
+// own when nothing waits (a tip it speaks goes out as TIP_OFFERED_EVENT, as
+// before). The card answers a beat with it heard; a line of its own needs no
+// answer, since nothing about it is kept.
+export const SPIRIT_SAID_EVENT = 'spirit-said';
+export const SPIRIT_BEAT_HEARD_EVENT = 'spirit-beat-heard';
+// A potion drunk from the bag (version 2 phase E2): its own request rather than
+// eating's, since a potion is drunk at full health and in the middle of a fight.
+export const DRINK_POTION_REQUESTED_EVENT = 'drink-potion-requested';
+// The house (F1). A stand, the chest or the wall opened by walking up to it,
+// and shut by walking out of the house or by the panel's X, which the world
+// hears as already shut, the way a counter's is. What is on the stands and in
+// the chest comes with every change, a copy, as the bank's shelves do.
+export const HOUSE_OPENED_EVENT = 'house-opened';
+export const HOUSE_CLOSED_EVENT = 'house-closed';
+export const HOUSE_CHANGED_EVENT = 'house-changed';
+export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
+export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
+export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -366,7 +414,9 @@ export type ContextActionId =
   | 'work'
   | 'outfit'
   | 'reforge'
-  | 'take';
+  | 'take'
+  // Whatever a fixture in the house does when it is tapped (F1).
+  | 'use';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -433,6 +483,12 @@ export interface AchievementUnlock {
  * world announces state and the HUD asks for things — and a request whose
  * payload drifted from its handler fails in exactly the same silent way.
  */
+/** What Wick said when tapped: a beat of its story, or, with no beat, a line of its own. */
+export interface SpiritSaid {
+  beatId: SpiritBeatId | null;
+  text: string;
+}
+
 export interface UiEventMap {
   [TARGET_SELECTED_EVENT]: [target: TargetInfo];
   [TARGET_CLEARED_EVENT]: [];
@@ -514,6 +570,19 @@ export interface UiEventMap {
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
   [TITLE_CHANGED_EVENT]: [titleId: TitleId | null];
+  [ASK_TOPIC_REQUESTED_EVENT]: [topicId: string];
+  [CONVERSATION_CHANGED_EVENT]: [conversation: ConversationState];
+  [ASKED_CHANGED_EVENT]: [asked: DialogMemory];
+  [RESTED_CHANGED_EVENT]: [rested: number];
+  [SPIRIT_SAID_EVENT]: [said: SpiritSaid];
+  [SPIRIT_BEAT_HEARD_EVENT]: [beatId: SpiritBeatId];
+  [DRINK_POTION_REQUESTED_EVENT]: [itemId: ItemId];
+  [HOUSE_OPENED_EVENT]: [fixture: HouseFixture];
+  [HOUSE_CLOSED_EVENT]: [];
+  [HOUSE_CHANGED_EVENT]: [house: HouseState];
+  [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
+  [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

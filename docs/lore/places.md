@@ -4,8 +4,8 @@ Every zone as it stands: what it is, what it was, who is there, what it hides, w
 about it, and what Wick remembers there. Then the lands past level 8.
 
 The rebuilds (C5-C9) take a zone's name, its secrets and its rumours from here and add its people;
-a secret is found by walking up to it, and pays a line of Wick's and a cache (decision 117). D2's rumours start from the lines here, and D4 writes
-Wick's beats from the lines here. A zone's name changes in the game in the phase that rebuilds it.
+a secret is found by walking up to it, and pays a line of Wick's and a cache (decision 117). D2's rumours start from the lines here, and D4 wrote
+Wick's beats from the lines here (`spirit.md` says where each is said). A zone's name changes in the game in the phase that rebuilds it.
 Someone marked _not yet in the game_ is for a rebuild or for Part D to add.
 
 ## Lampton, levels 1-3
@@ -22,17 +22,33 @@ lamp-post and named the town for. People pin notices to it.
 **What it was.** A Veymari crossroads. The Lamp Stone is a waymarker, and under the town is a
 waystation's undercroft, which is where the rats come from.
 
+**The Surveyor's House.** Built in the Charter's second year for the Company's surveyor, who laid
+the four roads out from the Lamp Stone and then followed the west one; it has stood empty since the
+survey went on to Greyford. It is at the east end of the counters' row, past the Quartermaster's
+Post. The Company lets its houses to its own people and to whoever has been useful, and Jory Stroud
+does the letting. _In game_ (F1): let to the player once the Red Rags are broken, for the timber its
+roof wants, with stands for what they bring home, a chest, and a wall for their plaques.
+
 **People.**
 
 - **Tilda Pell**, the shopkeeper: warm and nosy, with three carts on the east road and a view on
   everybody. Her errands are the player's first work. Her mother bought eels off the fenfolk, and she
-  will not call them raiders.
+  will not call them raiders. She has kept the General Store for twenty-two of the town's
+  twenty-nine years, and has heard all about the player before they walk in. _In game_, talking
+  (D1).
+  will not call them raiders. The bell off the first of her carts the Red Rags took turned up among
+  Hollis's things, and she gives it to whoever put him down. _In game_ as Pell's Cart Bell.
 - **Ambrose Tally**, the banker: dry and exact, and trusted by everybody because he is interested in
-  nothing but the ledger.
+  nothing but the ledger. Hollis's old gold has crossed his counter twice this year, carried in by
+  people who would not say where they had it; he weighed it, wrote it down and sent it east. He
+  keeps Cobb Harrow's account, dormant, and knows why. _In game_, talking (D1).
 - **Marta Hale**, the trainer: has been a soldier, a hedge-wizard and a poacher, in that order, was
-  sacked from all three, and that is how she knows what to teach.
+  sacked from all three, and that is how she knows what to teach. She went into the fen once,
+  poaching eels, saw the lanterns on their posts with nobody tending them, and has not been back.
+  _In game_, talking (D1).
 - **Jory Stroud**, the quartermaster: the Company in Lampton, overworked, brusque and fair. He does
-  not care what is under the fen. He cares what is on the road.
+  not care what is under the fen. He cares what is on the road. He still orders iron for Cobb
+  Harrow, because the order is in the Company's book. _In game_, talking (D1).
 - **Bess Mallow**, who keeps the Wet Boot. _Not yet in the game._
 - **Cobb Harrow**, the smith, who went east to a wedding two years ago and has not come back. The
   contract board still orders for him.
@@ -61,9 +77,10 @@ waystation's undercroft, which is where the rats come from.
 _Rebuilt in C5 (decision 117)._
 
 **What it is.** The strand south of Lampton: sand, crabs and the Company's fishers, and a spit down
-the west side that is the only way to the fen road. Offshore stand **the Candles**, stumps of stone
-in a line out of the sea, which the settlers named for what they look like. There is no tide to
-speak of (decision 117): the sea is where it is.
+the west side that is the only way to the fen road. **Samphire** grows on the sand at the water's
+edge where the salt reaches it, and the fishers' children cut it to trade at Greyford for the still.
+Offshore stand **the Candles**, stumps of stone in a line out of the sea, which the settlers named
+for what they look like. There is no tide to speak of (decision 117): the sea is where it is.
 
 **What it was.** Veymar's sea-wall. The Candles are its sea-lights, drowned to the stump.
 
@@ -174,9 +191,10 @@ Please."
 _Rebuilt in C8 (decision 120)._
 
 **What it is.** The road west from Lampton, knots of goblins on it, the Old Mill standing empty
-over its millpond, the willows round the pond where the steel arrow's shafts are cut, and the timber
-stand in the south-east where the hardwood is. The stream that comes down past Greyford fills the
-pond. The road runs as far as the mill yard and gives out; the way on is north to Greyford.
+over its millpond, the willows round the pond where the steel arrow's shafts are cut,
+**meadowsweet** on the banks of the stream and the pond among them, and the timber stand in the
+south-east where the hardwood is. The stream that comes down past Greyford fills the pond. The road
+runs as far as the mill yard and gives out; the way on is north to Greyford.
 
 **What it was.** Veymar's road towards the Stillwood. The Old Mill is the first charter's, the
 millpond its dam over the elves' shrine, and the willows the elves planted round the shrine when
@@ -212,20 +230,26 @@ _Rebuilt in C8 (decision 120)._
 
 **What it is.** The Company's forward post at a ford of grey stones, where a stream comes down off
 the Greyhills' west end: a trading post, a longhouse with the fettler's store against its back, a
-tannery and a fletcher's bench by the water, cottages, and the only counters in the Veymarch that take
-no coin. The Old Mill Road reaches it from Lampton, and the New Cut is over the hill to the east. The
-stream runs on south into the Old Mill Road's millpond. The road crosses it at the ford, between the
-bridge's abutments, with two of its piers still standing in the water; over it the old road goes a
-little way west towards the Stillwood and is grown over.
+tannery and a fletcher's bench by the water, a fenfolk **still** of copper on the bank below the
+ford, traded off a holm when the post was built, cottages, and the only counters in the Veymarch
+that take no coin. The Old Mill Road reaches it from Lampton, and the New Cut is over the hill to the
+east. The stream runs on south into the Old Mill Road's millpond. The road crosses it at the ford,
+between the bridge's abutments, with two of its piers still standing in the water; over it the old
+road goes a little way west towards the Stillwood and is grown over.
 
 **What it was.** The ford's grey stones are dressed stone: the fallen piers of a Veymari bridge.
 
 **People.**
 
 - **Oona Rook**, the outfitter: trades steel tools for ore, coal and hardwood, and is the most
-  practical person west of Lampton.
+  practical person west of Lampton. She takes the ford's stones for what was always there, though she
+  has noticed they are dressed. _In game_, talking (D1).
 - **Silas Quill**, the fettler: reworks gear, and grave goods, and asks nothing. Charming, shameless,
-  and not quite a villain.
+  and not quite a villain. He wants very much to see what Orlath was buried in. _In game_, talking
+  (D1).
+  and not quite a villain. Years before anybody opened Orlhal he pressed its door's seal in wax, and
+  it is the one thing he has never sold; he parts with it to whoever puts Orlath down. _In game_ as
+  the Cast of Orlath's Seal.
 - **Pocket**, the crow on the longhouse roof. _Not yet in the game._
 
 **Secrets.**
@@ -251,11 +275,13 @@ _Rebuilt in C9 (decision 121)._
 
 **What it is.** Black water, reed and marsh south of the strand: eels in the deep pools, bog
 lurkers, the raiders, and lanterns on posts over the water, burning, which the Company's people never
-go near. The Company's salt pans are cut into the sand at its northern edge, two rows of four, and a
-drain runs straight down out of the marsh to feed them, with a crossing of stone over it where it
-cut the fenfolk's old channel. A mere in the west has a village under it, two of its chimneys still
-standing out of the water. At the bottom of the fen the water closes in on a causeway to Orlhal's
-door, its kerb of dressed stone above the water since the drains lowered it.
+go near. **Bog myrtle** grows on the higher marsh and **bogbean** in the shallows round the pools,
+the fenfolk's brewing herbs (`peoples.md`). The Company's salt pans are cut into the sand at its
+northern edge, two rows of four, and a drain runs straight down out of the marsh to feed them, with
+a crossing of stone over it where it cut the fenfolk's old channel. A mere in the west has a village
+under it, two of its chimneys still standing out of the water. At the bottom of the fen the water
+closes in on a causeway to Orlhal's door, its kerb of dressed stone above the water since the drains
+lowered it.
 
 **What it was.** Veymar's low country: farms and villages under a man's depth of water, their roofs
 still showing in places. Orlhal is at its southern edge.

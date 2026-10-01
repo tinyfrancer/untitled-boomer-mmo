@@ -1,3 +1,4 @@
+import { emptyHouse } from '../systems/HouseSystem';
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 
 // Each step upgrades a save from exactly `fromVersion` to `fromVersion + 1`.
@@ -10,6 +11,10 @@ import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 // steps are owed as they always were, when the *shape or meaning* of the save
 // changes, which is not the same thing as the game changing around it. The
 // version 1 chain, twenty-three steps of it, is in the history before C1.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 type MigrationStep = (state: Record<string, unknown>) => Record<string, unknown>;
 
 const MIGRATIONS: Record<number, MigrationStep> = {
@@ -17,6 +22,30 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   100: (state) => ({ ...state, showMinimap: true }),
   // Secrets (decision 117): nobody made before them has found one.
   101: (state) => ({ ...state, secrets: [] }),
+  // Dialog (D1): nobody made before it has asked anybody anything.
+  102: (state) => ({ ...state, asked: {} }),
+  // Rested (phase E1): an empty bank, and a session parked before it banked
+  // nothing with the game open, so the morning pays its whole night.
+  103: (state) => ({
+    ...state,
+    rested: 0,
+    afk: isRecord(state.afk) ? { ...state.afk, restedMs: 0 } : null,
+  }),
+  // Wick's beats (D4): nobody made before them has heard one.
+  104: (state) => ({ ...state, beats: [] }),
+  // Foraging, brewing and potions (version 2 phase E2): two skills nobody has
+  // trained, and nothing drunk.
+  105: (state) => ({
+    ...state,
+    skills: {
+      ...(state.skills as Record<string, unknown>),
+      foraging: { level: 1, xp: 0 },
+      brewing: { level: 1, xp: 0 },
+    },
+    potions: {},
+  }),
+  // The house (F1): bare stands and an empty chest for everybody made before it.
+  106: (state) => ({ ...state, house: emptyHouse() }),
 };
 
 /**

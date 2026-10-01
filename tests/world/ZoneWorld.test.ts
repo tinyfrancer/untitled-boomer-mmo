@@ -55,8 +55,9 @@ describe('ZoneWorld', () => {
     const camp = harness({ zoneId: 'bandit-camp' }).world;
 
     expect([...new Set(beach.mobs.map((mob) => mob.definition.id))]).toEqual(['crab']);
-    expect([...new Set(beach.nodes.map((node) => node.definition.id))]).toEqual([
+    expect([...new Set(beach.nodes.map((node) => node.definition.id))].sort()).toEqual([
       'ocean-fishing-spot',
+      'samphire',
     ]);
     expect(Math.min(...beach.mobs.map((mob) => mob.level))).toBe(1);
     expect(Math.max(...beach.mobs.map((mob) => mob.level))).toBe(3);

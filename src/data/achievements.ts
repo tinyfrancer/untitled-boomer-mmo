@@ -33,6 +33,11 @@ const TIER_KEYS: Record<SlayerTier, SlayerRank> = {
 
 export const SLAYER_TIERS: SlayerTier[] = [25, 50, 100];
 
+/** The rank word a tier earns, as an id: what a plaque on the house's wall is cast in. */
+export function slayerRankOf(threshold: SlayerTier): SlayerRank {
+  return TIER_KEYS[threshold];
+}
+
 const ENEMY_IDS = Object.keys(ENEMIES) as EnemyId[];
 
 function titleIdFor(enemyId: EnemyId, threshold: SlayerTier): TitleId {

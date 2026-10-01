@@ -510,3 +510,90 @@ export const CAMPFIRE: SpriteDef = {
   },
   animations: { loop: [CAMPFIRE_LOOP_0, CAMPFIRE_LOOP_1, CAMPFIRE_LOOP_2, CAMPFIRE_LOOP_3] },
 };
+
+const STILL_STILL = grid(`
+  ................................
+  ................................
+  ................................
+  ................................
+  ................................
+  ................................
+  ................................
+  ................................
+  ................................
+  ................................
+  ................................
+  ...............DDDDDD...........
+  ...........E.DBBBBBBBDD.........
+  .........EEDDBB......BBD........
+  ........EEDDDCC........BD.......
+  .......EEDDDCCCC........B.......
+  .......EDDDCCCBB........BD......
+  .......DDDCCCBBB.........B......
+  ........DCCCBBB......xxxxwwwww..
+  .........EDDDD.......zvvvvvvvw..
+  .......EEDDDDDCC.....zzyyxxwww..
+  ......EEDDDDDCCCC....PPPNNNNNN..
+  .....EEDDDDDCCCCCC...zzyyxxwww..
+  .....EDDDDDCCCCCCB...zzyyxxwww..
+  ....EDDDDDCCCCCCBBB..zzyyxxwww..
+  ....DDDDDCCCCCCBBBB..zzyyxxwww..
+  ....DBDDBCCBCCBBBBB..zzyyxxwww..
+  ....DDDCCCCCCBBBBBA..zzyyxxwww..
+  ....DDCCCCCCBBBBBAA..zzyyxxwww..
+  .....CCCCCCBBBBBAA...zzyyxxwww..
+  .....CCCCCBBBBBAAA...zzyyxxwww..
+  ......CCCBBBBBAAA....PPPNNNNNN..
+  .......CBBBBBAAA.....zzyyxxwww..
+  ...ooooooBBBAAnnnnnn.zzyyxxwww..
+  ...nmmmmmlmmmmmlmmmk.zzyyxxwww..
+  ...nmmmmmlmmmmmlmmmk.zzyyxxwww..
+  ...nlllllllllllllllk.zzyyxxwww..
+  ...nmmlmkkkkkkkmmmlk.zzyyxxwww..
+  ...nmmlmkhhhhhkmmmlDDDzyyxxwww..
+  ...nllllhhhhhhhllllC.zzyyxxwww..
+  ...nmmmmhhiiihhlmmmk.zzyyxxwww..
+  ...nmmmmhhijihhlmmmk.PPPNNNNNN..
+  ...nllllhhijihhllllk.zzyyxxwww..
+  ...nmmlmggijiggmmmlk.zzyyxxwww..
+  ...nkkkkkkkkkkkkkkkk.vvvvvvvvv..
+  ................................
+  ................................
+  ................................
+`);
+
+/**
+ * The still (version 2 phase E2): a fenfolk pot-still of beaten copper on a
+ * stone hearth with a fire in its mouth, its head's long neck running over to
+ * a tub of water where the worm cools, and a spout off the tub's foot.
+ */
+export const STILL: SpriteDef = {
+  id: 'still',
+  kind: 'prop',
+  width: 32,
+  height: 48,
+  legend: {
+    A: 'oreIron.0',
+    B: 'oreIron.1',
+    C: 'oreIron.2',
+    D: 'oreIron.3',
+    E: 'oreIron.4',
+    k: 'masonry.0',
+    l: 'masonry.1',
+    m: 'masonry.2',
+    n: 'masonry.3',
+    o: 'masonry.4',
+    v: 'wood.0',
+    w: 'wood.1',
+    x: 'wood.2',
+    y: 'wood.3',
+    z: 'wood.4',
+    g: 'fire.1',
+    h: 'fire.2',
+    i: 'fire.3',
+    j: 'fire.4',
+    N: 'metal.1',
+    P: 'metal.3',
+  },
+  animations: { still: [STILL_STILL] },
+};

@@ -9,7 +9,7 @@ describe('createEventBus', () => {
     bus.on('xp-gained', first);
     bus.on('xp-gained', second);
 
-    const gain = { level: 2, xp: 30, xpToNext: 100, leveledUp: true };
+    const gain = { level: 2, xp: 30, xpToNext: 100, leveledUp: true, bonus: 0, rested: 0 };
     bus.emit('xp-gained', gain);
 
     expect(first).toHaveBeenCalledWith(gain);

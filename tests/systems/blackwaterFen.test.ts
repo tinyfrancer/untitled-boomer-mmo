@@ -115,7 +115,10 @@ describe('what the fen is', () => {
     const aggro = RAIDER.aggroRadius ?? 0;
     expect(aggro).toBeGreaterThan(0);
 
-    for (const pool of ZONE.nodeSpawns) {
+    // The herbs are worked on the marsh rather than over a pool, and are not
+    // what the fight is guarding.
+    const pools = ZONE.nodeSpawns.filter((spawn) => spawn.nodeId === 'deep-fishing-spot');
+    for (const pool of pools) {
       const nearest = Math.min(
         ...raiders.map((raider) => Math.hypot(raider.x - pool.x, raider.y - pool.y)),
       );

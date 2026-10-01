@@ -3,8 +3,10 @@ import { ABILITIES } from '../data/abilities';
 import { TITLES } from '../data/achievements';
 import { BOUNTIES } from '../data/bounties';
 import { CLASSES } from '../data/classes';
+import { HOUSE_STANDS } from '../data/house';
 import { HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../data/looks';
 import { QUESTS } from '../data/quests';
+import { POTION_EFFECTS } from '../data/potions';
 import { REFORGES } from '../data/reforges';
 import { SKILLS } from '../data/skills';
 import { ZONES } from '../data/zones';
@@ -207,6 +209,7 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
     `a whole number from 1 to ${MAX_CHARACTER_LEVEL}`,
   ],
   xp: [isCount, 'a number, 0 or more'],
+  rested: [isCount, 'a number, 0 or more'],
   gear: [
     (value) =>
       isRecord(value) &&
@@ -247,6 +250,16 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
   ],
   showMinimap: [(value) => typeof value === 'boolean', 'true or false'],
   secrets: [listOf(isString), 'a list of secrets found'],
+  asked: [recordOf(listOf(isString)), 'a list of what was heard for each person'],
+  beats: [listOf(isString), "a list of Wick's beats heard"],
+  potions: [
+    (value) =>
+      isRecord(value) &&
+      Object.entries(value).every(
+        ([effectId, left]) => Object.hasOwn(POTION_EFFECTS, effectId) && isCount(left),
+      ),
+    `the time left on each potion drunk (${names(POTION_EFFECTS)})`,
+  ],
   quests: [
     (value) =>
       isRecord(value) &&
@@ -270,6 +283,15 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
   mastery: [recordOf(isCount), 'an amount of XP for each node and recipe'],
   activeTitleId: [orNull(keyOf(TITLES)), 'null, or a title the game has'],
   unlockedZones: [listOf(isString), 'a list of zones'],
+  house: [
+    (value) =>
+      isRecord(value) &&
+      Array.isArray(value.stands) &&
+      value.stands.length === HOUSE_STANDS &&
+      listOf(orNull(isString))(value.stands) &&
+      recordOf(isCount)(value.chest),
+    `an item or null for each of ${HOUSE_STANDS} stands, and a count for each item in the chest`,
+  ],
   createdAt: [isString, 'a date'],
   updatedAt: [isString, 'a date'],
 };
