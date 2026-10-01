@@ -75,7 +75,10 @@ table and are held by `tests/systems/ShopSystem.test.ts` rather than by comments
 hand-written — **every price sits above the item's own value**, so nothing here can be bought and
 sold straight back at a profit, and **stocked equipment has to be a tool**, which is what keeps the
 gear tier the world's job alone. The shop sells time back: everything on it can also be earned by
-playing, and the spread is what keeps playing the cheaper road. The merchant's inspect card names no
+playing, and the spread is what keeps playing the cheaper road. The rations are the cheapest it has
+been since C10 (decision 122): cooked fish at 12 and cooked crab at 18, a level's worth of meals
+costing under a third of the coin the level picks up, since eating is now the way past the wait
+between fights; raw fish at 6 keeps a fire the cheaper road. The merchant's inspect card names no
 stock at all — it is a pure function of an npc id and so cannot read the player, and half the shelf
 depends on one.
 

@@ -322,7 +322,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
   'mana-shield-2': {
     id: 'mana-shield-2',
     name: 'Mana Shield II',
-    description: 'Soaks the next 45 damage for 20 seconds.',
+    description: 'Soaks the next 70 damage for 20 seconds.',
     classId: 'wizard',
     training: { level: 6, cost: 1000 },
     rankOf: 'mana-shield',
@@ -332,7 +332,7 @@ export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
     castTimeMs: 0,
     skill: 'destruction',
     baseFailureChance: 0.1,
-    effect: { kind: 'absorb', amount: 45, durationMs: 20000 },
+    effect: { kind: 'absorb', amount: 70, durationMs: 20000 },
   },
   'mend-2': {
     id: 'mend-2',

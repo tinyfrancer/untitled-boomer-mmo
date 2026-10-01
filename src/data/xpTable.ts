@@ -1,12 +1,13 @@
-const XP_PER_LEVEL = 80;
+const XP_PER_LEVEL = 100;
 const SKILL_XP_COEFFICIENT = 24;
 
 // XP required to go from (level - 1) to level. Quadratic, so each level costs
-// visibly more than the last: the starter arc is tuned so that finishing both
-// quests and gearing up lands a character on level 3 and no further — see
-// tests/systems/progression.test.ts, which is what actually holds the pacing.
+// visibly more than the last, less a flat 200 so the first one is quick: level
+// n to n + 1 is asked to take n + 4 minutes of play, which is what each zone's
+// pay a minute put this at (decision 122). tests/world/pace.test.ts holds that
+// in minutes and tests/systems/progression.test.ts the arcs in kills and XP.
 export function xpToReachLevel(level: number): number {
-  return XP_PER_LEVEL * level * level;
+  return XP_PER_LEVEL * level * level - 200;
 }
 
 // Skills grow on a quadratic curve while combat stays linear, on purpose: a kill

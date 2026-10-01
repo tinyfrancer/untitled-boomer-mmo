@@ -1,6 +1,6 @@
 # Gathering and making
 
-Tools, recipes and stations, the tiers where the loops meet, cooking as a channel, and the rule that nothing leads nowhere.
+Tools, recipes and stations, the tiers where the loops meet, cooking as a channel, food as the answer to the wait between fights, and the rule that nothing leads nowhere.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
@@ -158,3 +158,17 @@ It re-arms itself on whatever is left in the bag the way the gather channel does
 twenty fish is one decision and not twenty. The duration is flat rather than shaved down by the
 cooking level the way `gatherDurationMs` is: that level already buys the burn chance down, and
 selling it speed as well would make the last levels worth about double the first.
+
+**Food is the answer to the wait between fights** (version 2 phase C10, decision 122). Regen waits
+five seconds out of a fight and then returns 2% a second, and before C10 that wait was half to
+three-quarters of a session. The user kept it and made food the way past it: **a meal heals about
+half of what a body at its band holds, over six seconds** — cooked rat 20, fish 30, crab 40, eel 70 —
+where the same foods healed 10 to 45 over ten and barely beat standing still. It is still out of a
+fight only, since `markInCombat` drops it, so a meal is eaten between pulls rather than in one.
+**Every band feeds itself or says where its food comes from**: rats and crabs drop meat raw for a
+fire, every humanoid carries a ration (bandits and goblin scavengers cooked fish, goblin miners cooked
+rat, raiders raw eel), the fen's lurkers give up the eel they were eating, and the barrow and the
+crawlers feed nobody, so a player carries the shelf's ration in. One log lights a fire anywhere, so
+what drops raw is cooked where it dropped. `tests/world/pace.test.ts` holds it: once there is food to
+carry, a level spends under a fifth of its time resting, and its rations cost under a third of the
+coin it picks up.

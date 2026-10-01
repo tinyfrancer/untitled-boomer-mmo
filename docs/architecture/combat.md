@@ -95,8 +95,8 @@ that is where the content reaches: the richest thing anyone can grind is the lev
 the ten it used to be was 30,720 XP over seven levels with nothing built for them. Max level is meant to
 be an achievement rather than an asymptote, so **content that reaches higher raises the cap** — and
 `tests/systems/progression.test.ts` is what holds the two together, asserting that the cap sits one
-level past the highest thing that spawns and that the climb from the end of the starter arc is
-another session or two of the best kill there is rather than another game.
+level past the highest thing that spawns, and `tests/world/pace.test.ts` that the climb from the end
+of the starter arc is a few arcs long in minutes of play rather than another game.
 
 It is what a zone _holds_ rather than a zone arriving that moves it, and the five zones since that
 rule was written are all worked examples of it. The quarry spawned nothing above level 3 and left
@@ -231,11 +231,27 @@ place `cutthroats-bandana`, `cutthroats-blade` and `stolen-staff` exist, and
 `tests/systems/uniqueLoot.test.ts` holds that over the data — uniqueness is nothing but every other
 table not naming them, which is exactly what stops being true the day someone pads one.
 
-**Pacing is held by a simulation, not by judgement** (`tests/systems/progression.test.ts`). It
-walks the arc the two quests push a player down — rat kills for the bones, fish cooked to open the
-crab recipe, crab kills and cooks for the feast, bandit kills for an armour set — and asserts it
-ends on level 3. Change `xpTable.ts`, a drop chance, a quest objective or the burn rate and this
-is the test that moves; retune until it passes rather than eyeballing the curve.
+**Pacing is held by a simulation, not by judgement**, and by two of them. `tests/systems/progression.test.ts`
+holds what the arcs are made of: it walks the arc the two quests push a player down — rat kills for
+the bones, fish cooked to open the crab recipe, crab kills and cooks for the feast, bandit kills for
+an armour set — and asserts it ends on level 3, and that the chain above rides a climb the fighting
+makes. **`tests/world/pace.test.ts` holds how long it takes, in minutes of play** (version 2 phase
+C10, decision 122): a bot (`tests/world/pace.ts`) plays every class through every level in the zone
+and kit meant for it, twice on seeded dice, and a level n to n + 1 has to take about **n + 4
+minutes** — five at the start, twelve at the cap's door, sixty-eight in all. Change `xpTable.ts`, a
+creature's XP, a drop chance, a food or a class's growth and one of the two moves; retune until both
+pass rather than eyeballing the curve.
+
+What the bot measured is why the numbers are what they are. Before C10 half to three-quarters of a
+session was standing still for regen, so **food is the answer to the wait** rather than a faster
+regen (the user's call, decision 122): `making.md` has the food. The curve is **100n² − 200**, fitted
+to what each zone pays a minute, and the mill road's goblins pay a quarter less than the curve's
+neighbours would suggest, because a knot of three dies with no walk between them. **Every class grows
+six health a level**: measured, a wizard or a ranger at 8 died in two or three blows from a raider or
+a wight, which no duel here can see, since a duel stands a ranged class still. They still start
+apart and wear different armour. **Mana Shield II soaks 70**, so a wizard's answer is its own kit as
+well as its body. The barrow still kills every class often in the bot's hands, its wights coming in
+groups through rooms; that is left to the Part C review.
 
 Auto-attack **range comes from the equipped weapon, not the class** (`weaponAttackRange` in
 `data/items.ts`): a weapon may name an `attackRange`, anything that doesn't is melee, and empty

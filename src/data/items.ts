@@ -1189,8 +1189,8 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Cooked Eel',
     value: 26,
     kind: 'consumable',
-    healAmount: 45,
-    healDurationMs: 10000,
+    healAmount: 70,
+    healDurationMs: 6000,
     icon: { shape: 'fish' },
   },
   'burnt-eel': {
@@ -1268,8 +1268,8 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Cooked Fish',
     value: 8,
     kind: 'consumable',
-    healAmount: 15,
-    healDurationMs: 10000,
+    healAmount: 30,
+    healDurationMs: 6000,
     icon: { shape: 'fish' },
   },
   'burnt-fish': {
@@ -1292,8 +1292,8 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Cooked Crab',
     value: 12,
     kind: 'consumable',
-    healAmount: 25,
-    healDurationMs: 10000,
+    healAmount: 40,
+    healDurationMs: 6000,
     icon: { shape: 'meat' },
   },
   'burnt-crab': {
@@ -1318,8 +1318,8 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     name: 'Cooked Rat',
     value: 6,
     kind: 'consumable',
-    healAmount: 10,
-    healDurationMs: 10000,
+    healAmount: 20,
+    healDurationMs: 6000,
     icon: { shape: 'meat' },
   },
   'burnt-rat': {

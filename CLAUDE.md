@@ -342,7 +342,9 @@ combat curve (a fresh level 1 beats a level 1 rat comfortably, sweats a 2, loses
 stood still and shooting included, and a warrior's bow losing), the
 progression test holds the starter arc to level 3, the upper band's chain to riding the climb rather
 than making it, the cap to one level past the richest spawn, and the arc's arrows to well under half
-its coin, `deadEnds.test.ts` holds that
+its coin, **the pace test holds each level to its number plus four minutes of play, every class**
+(`tests/world/pace.test.ts`, measured by a bot playing it in `tests/world/pace.ts`, decision 122, with
+food rather than regen the answer to the wait between fights), `deadEnds.test.ts` holds that
 nothing handed out leads nowhere, `uniqueLoot.test.ts` holds boss drops unique, and unattended play
 stays behind active play (half XP, no abilities, an offline cap).
 Change a stat, a table or a curve and retune until those pass rather than eyeballing it.
@@ -355,7 +357,7 @@ Change a stat, a table or a curve and retune until those pass rather than eyebal
 | The zone roster, exits, locks, the Greyford loop                                  | `docs/architecture/zones.md`      |
 | Walls, doorways, rooms, counters indoors, the cutaway                             | `docs/architecture/buildings.md`  |
 | Shop shelf, selling, bank, NPC roles, reforging, the full pack                    | `docs/architecture/economy.md`    |
-| Tools, recipes, stations, tiers, cooking, dead ends                               | `docs/architecture/making.md`     |
+| Tools, recipes, stations, tiers, cooking, food and the wait, dead ends            | `docs/architecture/making.md`     |
 | Loot rules, quests, bounties, stored tallies, mastery                             | `docs/architecture/content.md`    |
 | Abilities, levels, difficulty, the cap, crits, armour, bosses                     | `docs/architecture/combat.md`     |
 | Idle (the AFK camp), its panel and food order, offline progress                   | `docs/architecture/afk.md`        |
@@ -363,7 +365,7 @@ Change a stat, a table or a curve and retune until those pass rather than eyebal
 | The 2D view: camera, painter's order, words, picking, draw budget                 | `docs/architecture/rendering.md`  |
 | Pixel art: palette, light, outline, budget, sprites, places, edges, the HUD's art | `docs/architecture/art.md`        |
 | Sound: what it hears, cues, ambience, unlocking, mute and volume                  | `docs/architecture/audio.md`      |
-| Tests vs smoke, the dev handles, the hand crank, frame-rate bugs                  | `docs/architecture/testing.md`    |
+| Tests vs smoke, the pacer, the dev handles, the hand crank, frame-rate bugs       | `docs/architecture/testing.md`    |
 
 When a change moves one of those subsystems, the topic file is what gets corrected — and when it
 adds a rule a later change could break without a test noticing, that rule goes here too.

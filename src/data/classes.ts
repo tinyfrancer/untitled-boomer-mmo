@@ -23,6 +23,9 @@ export interface ClassStats {
   primaryStat: PrimaryStat;
   attackCooldownMs: number;
   // Added once per level gained past 1, so a class grows along its own axis.
+  // Health grows the same six for every class: a wizard or a ranger growing
+  // less died in two or three blows in the upper band (decision 122), and
+  // where a class starts and what it wears still set them apart.
   perLevel: LevelGrowth;
 }
 
@@ -77,7 +80,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       agility: 1,
       primaryStat: 'intellect',
       attackCooldownMs: 1400,
-      perLevel: { maxHp: 3, strength: 0, intellect: 2, agility: 0 },
+      perLevel: { maxHp: 6, strength: 0, intellect: 2, agility: 0 },
     },
     startingWeaponId: 'apprentice-staff',
   },
@@ -103,7 +106,7 @@ export const CLASSES: Record<ClassId, ClassDefinition> = {
       agility: 6,
       primaryStat: 'agility',
       attackCooldownMs: 1300,
-      perLevel: { maxHp: 4, strength: 0, intellect: 0, agility: 2 },
+      perLevel: { maxHp: 6, strength: 0, intellect: 0, agility: 2 },
     },
     startingWeaponId: 'shortbow',
     startingOffhandId: 'worn-quiver',

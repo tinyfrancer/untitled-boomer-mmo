@@ -202,8 +202,11 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     // A shade wider than a bandit's 180, which is what makes a knot of three a
     // question about where you stand rather than about who you hit first.
     aggroRadius: 200,
-    base: { maxHp: 24, attackPower: 4, xpReward: 16 },
-    perLevel: { maxHp: 16, attackPower: 3, xpReward: 11 },
+    // Paid under what its level would say, since a knot of three dies with no
+    // walk between them: what a level costs here is held in minutes of play
+    // with every other zone's (decision 122).
+    base: { maxHp: 24, attackPower: 4, xpReward: 12 },
+    perLevel: { maxHp: 16, attackPower: 3, xpReward: 8 },
     attackRange: 68,
     attackCooldownMs: 1500,
     respawnDelayMs: 11000,
