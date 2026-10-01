@@ -59,7 +59,7 @@ describe('migrateCharacterState', () => {
   it("has heard none of Wick's beats, made before it told any (D4)", () => {
     const before: Record<string, unknown> = {
       ...createNewCharacter('Aria', 'wizard'),
-      version: FIRST_VERSION_2_STATE + 2,
+      version: FIRST_VERSION_2_STATE + 4,
     };
     delete before.beats;
     const migrated = migrateCharacterState(before);

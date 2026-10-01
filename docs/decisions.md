@@ -3245,7 +3245,7 @@ order, which fixes an order nobody knows yet and breaks the chain if a phase sli
 before C11 merges, which risks a review amending a part with a session on it; more than five agents
 a wave, which the user's time does not support.
 
-## 124. Wick is drawn in the world and says what it has when tapped, on the card; quiet is the tips alone; underground its light is the only one; its waking is the one line said unasked
+## 128. Wick is drawn in the world and says what it has when tapped, on the card; quiet is the tips alone; underground its light is the only one; its waking is the one line said unasked
 
 **2026-10-01 · the user, asked by Claude, building the plan's phase D4**
 

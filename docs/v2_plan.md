@@ -77,7 +77,7 @@ on the shelf; the wizard and the ranger grow six health a level; no travel until
 **and D4** (Wick in the world: a light at the shoulder that glows and chimes when it has something
 to say and says it on the card when tapped, the tips waiting in it, nine beats of its story heard
 once, a line of its own otherwise, quiet the tips alone, and its light the one underground; save
-version 103; decision 124). **Next: C11**, the Part C review, and from here the phases are built
+version 105; decision 128). **Next: C11**, the Part C review, and from here the phases are built
 several at a time, by the rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.
 
@@ -680,7 +680,7 @@ decision 121).
   here, else the tip waiting at the desk, else a line of its own about the zone. Only its waking and
   a secret's line come unasked. **Nine beats** (`data/spiritBeats.ts`), its waking first and then one
   a zone on arriving and Orlath's once he is down, each heard once (`CharacterState.beats`, save
-  version 103); where a memory is a thing, its secret says it and the zone's beat leads up to it.
+  version 105); where a memory is a thing, its secret says it and the zone's beat leads up to it.
   **Go quiet** silences the tips alone. **Underground its light is the only one**, the lantern's pool
   centred on it in its blue-white. Picked after the creatures and before the stations; a tap on it
   takes nothing back, and waits out an open counter. Smoke gained a `spirit` section. Decision 124

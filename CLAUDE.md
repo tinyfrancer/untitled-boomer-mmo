@@ -249,7 +249,7 @@ what it says** (`systems/TipSystem.ts`): each tip is a rule over the character, 
 the fee, the price or the ceiling it names off the table or constant that holds it. What has been
 heard is stored (`CharacterState.tips`), since hearing leaves nothing else behind, and so is every
 secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every beat
-of Wick's story heard (`CharacterState.beats`, decision 124); which beat waits where is derived
+of Wick's story heard (`CharacterState.beats`, decision 128); which beat waits where is derived
 (`systems/SpiritSystem.ts`).
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole

@@ -18,7 +18,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // Secrets (decision 117): nobody made before them has found one.
   101: (state) => ({ ...state, secrets: [] }),
   // Wick's beats (D4): nobody made before them has heard one.
-  102: (state) => ({ ...state, beats: [] }),
+  104: (state) => ({ ...state, beats: [] }),
 };
 
 /**
