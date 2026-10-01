@@ -31,29 +31,30 @@ Everything below is scoped in `docs/v2_plan.md`; nothing is added here. Size is 
 the phases that have landed (an A-phase was 20-45, a rebuild 25-35, B8 70), and hours are agent
 hours from the cadence so far (next section), not the user's.
 
-| Phase                     | What it is                                                                                    | Needs first              | Size, hours         |
-| ------------------------- | --------------------------------------------------------------------------------------------- | ------------------------ | ------------------- |
-| **C11** Part C review     | Walk C1-C10 against the pillars; C10's three leftovers; **measure a zone's cost** for G1      | nothing                  | 10-20 files, 1-2h   |
-| **D1** Dialog             | Conversations as data in the talk panel, a person who remembers, every NPC rewritten          | nothing                  | 35-50 files, 2-3h   |
-| **D1b** The lore's people | Five people the lore places and the game lacks, each drawn, a role whose only counter is talk | D1, F1 for the inn's row | 20-30 files, 1.5-2h |
-| **D2** Whispers           | One journal of rumours (leads) and lore fragments (found), with counts                        | D1 for its source        | 25-35 files, 1.5-2h |
-| **D3** Factions           | Standing with each faction, moved by quests, kills, contracts and dialog; ranks open things   | D1 for dialog choices    | 30-45 files, 2-3h   |
-| **D4** The spirit         | Wick drawn in the world, following, tapped, told to go quiet; the beats; takes the tips       | nothing                  | 35-50 files, 2-3h   |
-| **D5** Part D review      |                                                                                               | D1-D4                    | 10-20 files, 1h     |
-| **E1** Rested             | Idle or away banks a bonus that speeds active XP, capped, on the XP bar                       | nothing                  | 15-25 files, 1-1.5h |
-| **E2** Potions            | A new making skill and where its herbs come from; potions that boost idle, some a fight       | nothing                  | 40-60 files, 3-4h   |
-| **E3** What idle uses     | Idle drinks what it is given; potions join the idle panel's order and Keep                    | E2                       | 15-20 files, 1h     |
-| **E4** Part E review      |                                                                                               | E1-E3                    | 10-20 files, 1h     |
-| **F1** The house          | A building in Lampton that is yours: stands, a wall, a chest                                  | nothing                  | 40-55 files, 2.5-3h |
-| **F2** A house that grows | Upgrades for coin: rooms, stands, a garden, a workbench; priced by simulation                 | F1                       | 25-35 files, 2h     |
-| **F3** Collection log     | Bestiary and log: slain, drops seen, lore found, trophies; an item says where it comes from   | D2 for the lore count    | 25-35 files, 1.5-2h |
-| **F4** Part F review      |                                                                                               | F1-F3                    | 10-20 files, 1h     |
-| **G1** The shape of 9-20  | Bands, zones, tiers, bosses, travel, written into the plan as phases; sized from C11          | C11                      | docs, 1-2h          |
-| **G2** Specialisations    | Two paths a class at 10, their abilities and ranks; the bar stays four                        | G1, a level-10 spawn     | 35-50 files, 2.5-3h |
-| **G3+** The bands         | One zone or one system a phase, to level 20                                                   | G1, the tiers            | per zone 25-40, 2h  |
-| Part G review             |                                                                                               | G3+                      | 1h                  |
-| **H1** The last pass      | The original list and every pillar once more                                                  | everything               | 1-2h                |
-| **H2** Archive            | The plan to `docs/archive/`, `CLAUDE.md` to the game as it stands                             | H1                       | docs, 1h            |
+| Phase                     | What it is                                                                                    | Needs first                | Size, hours         |
+| ------------------------- | --------------------------------------------------------------------------------------------- | -------------------------- | ------------------- |
+| **C11** Part C review     | Walk C1-C10 against the pillars; C10's three leftovers; **measure a zone's cost** for G1      | nothing                    | 10-20 files, 1-2h   |
+| **D1** Dialog             | Conversations as data in the talk panel, a person who remembers, every NPC rewritten          | nothing                    | 35-50 files, 2-3h   |
+| **D1b** The lore's people | Five people the lore places and the game lacks, each drawn, a role whose only counter is talk | D1, F1 for the inn's row   | 20-30 files, 1.5-2h |
+| **D2** Whispers           | One journal of rumours (leads) and lore fragments (found), with counts                        | D1 for its source          | 25-35 files, 1.5-2h |
+| **D3** Factions           | Standing with each faction, moved by quests, kills, contracts and dialog; ranks open things   | D1 for dialog choices      | 30-45 files, 2-3h   |
+| **D4** The spirit         | Wick drawn in the world, following, tapped, told to go quiet; the beats; takes the tips       | nothing                    | 35-50 files, 2-3h   |
+| **D5** Part D review      |                                                                                               | D1-D4                      | 10-20 files, 1h     |
+| **E1** Rested             | Idle or away banks a bonus that speeds active XP, capped, on the XP bar                       | nothing                    | 15-25 files, 1-1.5h |
+| **E2** Potions            | A new making skill and where its herbs come from; potions that boost idle, some a fight       | nothing                    | 40-60 files, 3-4h   |
+| **E3** What idle uses     | Idle drinks what it is given; potions join the idle panel's order and Keep                    | E2                         | 15-20 files, 1h     |
+| **E4** Part E review      |                                                                                               | E1-E3                      | 10-20 files, 1h     |
+| **F1** The house          | A building in Lampton that is yours: stands, a wall, a chest                                  | nothing                    | 40-55 files, 2.5-3h |
+| **F2** A house that grows | Upgrades for coin: rooms, stands, a garden, a workbench; priced by simulation                 | F1                         | 25-35 files, 2h     |
+| **F3** Collection log     | Bestiary and log: slain, drops seen, lore found, trophies; an item says where it comes from   | D2 for the lore count      | 25-35 files, 1.5-2h |
+| **F4** Part F review      |                                                                                               | F1-F3                      | 10-20 files, 1h     |
+| **G1** The shape of 9-20  | Bands, zones, tiers, bosses, travel, written into the plan as phases; sized from C11          | C11                        | docs, 1-2h          |
+| **G2** Specialisations    | Two paths a class at 10, their abilities and ranks; the bar stays four                        | G1, a level-10 spawn       | 35-50 files, 2.5-3h |
+| **G3, G8, G14** The tiers | A made tier a band: metal, leather, wood, food, tools and arrows; skills to 20                | G1; the band before        | 40-60 files, 2.5-3h |
+| **G4-G16** The bands      | Ten zones, a zone a phase (three pairs to one agent), and the carters (G13); G1 wrote them    | the band's tier, D1-D4, F1 | per zone 25-40, 2h  |
+| Part G review             |                                                                                               | G16                        | 1h                  |
+| **H1** The last pass      | The original list and every pillar once more                                                  | everything                 | 1-2h                |
+| **H2** Archive            | The plan to `docs/archive/`, `CLAUDE.md` to the game as it stands                             | H1                         | docs, 1h            |
 
 Two things outside the plan are left as well, neither a phase: `docs/upgrade_plan.md` (TypeScript 7,
 blocked on typescript-eslint; re-check its issue now and then), and a stale remote branch,
@@ -95,21 +96,23 @@ Every phase touches a handful of the same files. Most collisions are a line appe
 place and resolve mechanically on a rebase; three are not, and they are what the rules in the next
 section are for.
 
-| File                                                                             | Who touches it             | Kind                                                                                                    |
-| -------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `src/persistence/CharacterState.ts`, `migrations.ts`, `saveFile.ts`              | D1 D2 D3 D4 E1 E2 F1 F3 G2 | **Sequential**: the save version counts by one and the chain may have no gap                            |
-| `docs/decisions.md`                                                              | every phase                | **Sequential**: decision numbers                                                                        |
-| `docs/v2_plan.md` status line, `CLAUDE.md`                                       | every phase                | **Same lines**: prose, resolved by hand on every rebase                                                 |
-| `src/types/ids.ts`                                                               | every phase                | Append to a union                                                                                       |
-| `src/ui/uiEvents.ts`, `src/hud/Hud.ts`, `hud/styles.ts`, `tests/hud/Hud.test.ts` | every HUD phase            | Append                                                                                                  |
-| `src/ui/tabs.ts`, `art/icons.ts` marks                                           | D2, F3, maybe D3           | A seat behind Menu each: **decided below**, so two phases do not argue it                               |
-| `src/world/ZoneWorld.ts`                                                         | D1 D3 D4 E1 F1             | A collaborator built and ticked; a hook in `resolveKill` or the XP path                                 |
-| `scripts/smoke.mjs` (one file, 5,700 lines)                                      | every phase                | A section appended and a row in `SECTIONS`                                                              |
-| `src/data/townMap.ts` (Lampton's text)                                           | F1, D1b, E2                | **One owner**: F1 edits it; D1b names Bess on the inn's row once F1 has merged; E2 places nothing there |
-| `src/systems/ItemUseSystem.ts`                                                   | E2 E3 F1 F3                | A new kind of use each; append                                                                          |
-| `src/data/items.ts`, `recipes.ts`, `lootTables.ts`                               | E2, F1, G tiers            | Rows                                                                                                    |
-| `src/world/TalkSession.ts`, `hud/TalkModal.ts`, `data/dialog.ts`                 | D1, then D2 and D3         | D1 shapes it; D2 and D3 add rows, not shape                                                             |
-| `tests/world/pace.ts`, `pace.test.ts`                                            | E1, E2, G2, G3+            | The bot must play unrested and unpotioned, or the bands move                                            |
+| File                                                                             | Who touches it             | Kind                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/persistence/CharacterState.ts`, `migrations.ts`, `saveFile.ts`              | D1 D2 D3 D4 E1 E2 F1 F3 G2 | **Sequential**: the save version counts by one and the chain may have no gap                                                                                                                                                                                                                   |
+| `docs/decisions.md`                                                              | every phase                | **Sequential**: decision numbers                                                                                                                                                                                                                                                               |
+| `docs/v2_plan.md` status line, `CLAUDE.md`                                       | every phase                | **Same lines**: prose, resolved by hand on every rebase                                                                                                                                                                                                                                        |
+| `src/types/ids.ts`                                                               | every phase                | Append to a union                                                                                                                                                                                                                                                                              |
+| `src/ui/uiEvents.ts`, `src/hud/Hud.ts`, `hud/styles.ts`, `tests/hud/Hud.test.ts` | every HUD phase            | Append                                                                                                                                                                                                                                                                                         |
+| `src/ui/tabs.ts`, `art/icons.ts` marks                                           | D2, F3, maybe D3           | A seat behind Menu each: **decided below**, so two phases do not argue it                                                                                                                                                                                                                      |
+| `src/world/ZoneWorld.ts`                                                         | D1 D3 D4 E1 F1             | A collaborator built and ticked; a hook in `resolveKill` or the XP path                                                                                                                                                                                                                        |
+| `scripts/smoke.mjs` (one file, 5,700 lines)                                      | every phase                | A section appended and a row in `SECTIONS`                                                                                                                                                                                                                                                     |
+| `src/data/townMap.ts` (Lampton's text)                                           | F1, D1b, E2                | **One owner**: F1 edits it; D1b names Bess on the inn's row once F1 has merged; E2 places nothing there                                                                                                                                                                                        |
+| `src/systems/ItemUseSystem.ts`                                                   | E2 E3 F1 F3                | A new kind of use each; append                                                                                                                                                                                                                                                                 |
+| `src/data/items.ts`, `recipes.ts`, `lootTables.ts`                               | E2, F1, G tiers            | Rows                                                                                                                                                                                                                                                                                           |
+| `src/world/TalkSession.ts`, `hud/TalkModal.ts`, `data/dialog.ts`                 | D1, then D2 and D3         | D1 shapes it; D2 and D3 add rows, not shape                                                                                                                                                                                                                                                    |
+| `tests/world/pace.ts`, `pace.test.ts`                                            | E1, E2, G2, G3-G16         | The bot must play unrested and unpotioned, or the bands move                                                                                                                                                                                                                                   |
+| The old zones' texts a Part G mouth opens                                        | G4 G5 G7 G9 G15, D1b, E2   | **Append and re-cut the mouth only**: the fen (G4's west edge; D1b's Maren, E2's herbs), Greyford (G5's west and G9's north; D1b's Pocket), the Deep Cut (G7's door), the strand (G15's east; D1b's fisher). A zone phase re-cuts its mouth after the others have merged, or rebases onto them |
+| `src/data/zones.ts`, `ZoneId`                                                    | every Part G zone          | A row each and an exit on the neighbour's row; the mouths are fixed in the plan, so the rows never argue                                                                                                                                                                                       |
 
 ---
 
@@ -224,26 +227,30 @@ D1b 134, E3 135, F2 136 and F3 137 (110), in that launch order.
   its part has merged, one agent each. If the three parts finish within a day of each other, one
   agent walks all three as a single review and the user plays once; the plan then records three
   review entries from one PR, which the phase-size rule allows for with a reason.
-- **The tiers for 9-20** (`claude/v2-g-tiers`), once G1 has merged: the gear and making tiers each
-  band wears and works, as rows, wardrobe drawings, icons, recipes and drops, with nothing yet to
-  drop them. Built ahead of the zones so every zone agent finds its tier's ids and drawings in
-  `main`.
-- **The first band's zones**, once G1 and the tiers have merged, one agent a zone, each on the
-  brief G1 writes.
+- **G3, tier one** (`claude/v2-g3-tier-one`), once G1 has merged: the band 9-12's metal, leather,
+  wood and food as rows, wardrobe drawings, icons and recipes, with nothing yet dropping or yielding
+  them, and the skills to 20. Built ahead of the band's zones so every zone agent finds its tier's
+  ids and drawings in `main`.
+- **Band 9-12's zones**, once G3 and D1-D4 and F1 have merged: G4 (Lorhal), G5 then G6 (the
+  Stillwood and the Quiet Court, one agent) and G7 (Karn Tholl), three agents, each on the brief
+  below. G2 starts once G4 has merged.
 
 **The user is asked:** to play three reviews and say what feels wrong, and to judge the first new
 zones.
 
 ### Wave 4: the bands, in parallel
 
-- **G2 — Specialisations** (`claude/v2-g2-paths`), once a level-10 spawn exists in `main`, since
-  the cap is derived from the richest spawn and a path chosen at 10 needs a 10 to reach.
-- **The remaining zones**, one agent a zone, in the order G1 sets, each owning its own map file, its
-  `ZONES` row and the exit row on each neighbour, its creatures' `cast.ts` rows, its loot, its
-  secrets and its quests, and holding its own levels in the pace test. Two zones that share an edge
-  are given to the same agent or sequenced, since the exit and its mouth are written on both rows.
-- **Bosses, faction content, rumours and contracts** for each band go in the zone they live in
-  rather than as phases of their own, unless G1 says otherwise.
+- **G2 — Specialisations** (`claude/v2-g2-paths`), once G4 has merged, since the cap is derived
+  from the richest spawn and a path chosen at 10 needs a 10 to reach.
+- **Band 13-16**, once band 9-12 has merged and the user has judged it: G8 (tier two) first, then
+  G9 then G10 (the High Greyhills and the Ashen Hollow, one agent), G11 (the Drowned Halls, after
+  G7) and G12 (the Barrow Field, after G4), and G13 (the carters) beside them.
+- **Band 17-20**, the same way: G14 (tier three), then G15 then G16 (the Sea-Wall and Marhal, one
+  agent), which ends the game.
+- **Each zone owns** its own map file, its `ZONES` row and the exit row on each neighbour's with the
+  mouth G1 fixed, its creatures' `cast.ts` rows, its loot, its secrets and its quests, and holds its
+  own levels in the pace test. **Bosses, faction content, rumours and contracts** go in the zone they
+  live in, not in phases of their own.
 
 **The user is asked:** to judge zones as they come, a band at a time.
 
@@ -255,7 +262,8 @@ zones.
 
 ### The critical path
 
-C11 → G1 → the tiers → the first band → G2 → the rest of the bands → Part G review → H1 → H2. Parts D,
+C11 → G1 → G3 → band 9-12 (G4-G7) → G2 and G8 → band 13-16 (G9-G13) → G14 → band 17-20 (G15, G16) →
+Part G review → H1 → H2. Parts D,
 E and F run beside it and finish long before it. In agent hours that path is about twelve to
 fifteen of dependent work; the user's turnaround between each link is what sets the calendar.
 
@@ -651,11 +659,12 @@ trophies off achievements) with completion counts; the log of items collected; t
 
 ### G2 — Specialisations at 10 (`claude/v2-g2-paths`)
 
-**Read:** decisions 67, 84 and G1's; `docs/architecture/combat.md` whole; `docs/lore/peoples.md`'s
+**Read:** decisions 67, 84 and 125; `docs/architecture/combat.md` whole; `docs/lore/peoples.md`'s
 class origins; `src/data/abilities.ts`, `src/systems/AbilitySystem.ts`, `TrainerSystem.ts`,
 `tests/systems/EnemySystem.test.ts` (the duels), `tests/world/pace.ts`.
 
-**Ask the user first:** G1 named the paths; what is left is how one is chosen (the trainer at 10, a
+**Needs first:** G4 (Lorhal's 10s in `main`). G1 named the paths, two a class (`v2_plan.md`'s
+"The shape"). **Ask the user first:** what is left is how one is chosen (the trainer at 10, a
 question asked once, or a quest), whether it can be changed, and what a path's abilities replace on
 a bar that stays four (a rank in the slot of the one below, decision 67, is the shape).
 
@@ -666,25 +675,109 @@ lessons, the duels holding each path, the pace bot playing each path through its
 **Keep true:** the cap is derived from content and the pace holds every level, so this lands after a
 level-10 spawn exists. **Tests:** the duels and pace grow by six paths. **Docs:** `combat.md`.
 
-### The tiers for 9-20 (`claude/v2-g-tiers`)
+### G3, G8, G14 — The tiers (`claude/v2-g3-tier-one`, `claude/v2-g8-tier-two`, `claude/v2-g14-tier-three`)
 
-**Read:** G1's entries; `docs/architecture/making.md`, `art.md`'s wardrobe and icons;
-`src/art/wardrobe.ts`, `src/data/items.ts`, `recipes.ts`, `outfitter.ts`.
+One a band, each before its band's zones (decision 131). The plan's "The shape" table names every
+material, its ids and its recipe levels; the band's zone entries say where each is gathered.
 
-**Do:** every gear and making tier G1 named, as rows, wardrobe drawings and icons, the recipes and
-what makes them, with nothing yet dropping or yielding them; `deadEnds.test.ts` will object to a
-material nothing consumes, so a tier lands with its recipes whole. The zone agents add the drops and
-the nodes.
+**Read:** G1's entries and decision 131; `docs/architecture/making.md` whole (the tiers' webs, the
+fenhide rule, the arrow line, dead ends), `art.md`'s wardrobe and icons, `combat.md`'s armour;
+`src/art/wardrobe.ts`, `src/data/items.ts`, `recipes.ts`, `outfitter.ts`, `src/config/constants.ts`,
+`tests/systems/deadEnds.test.ts`, `deepCut.test.ts` and `greyfordTannery.test.ts` (how a tier is
+traced across zones), `tests/systems/EnemySystem.test.ts`.
 
-### A zone of Part G (one agent each, G1 writes the brief)
+**Ask the user first:** what a piece of the tier gives over the one below (a fixed step, or the
+step the band's creatures need, which the duels measure); whether the outfitter's barter takes the
+tier's materials; and for G8, whether the deep forge stands in Karn Tholl's gate hall alone or a
+second in Greyford's yard.
 
-The shape of a C5-C9 phase with new content: the zone's text in its own `*Map.ts`, its `ZONES` row
-and the exit on each neighbour's with the mouth G1 fixed, its creatures (`ENEMIES`, loot tables with
-the humanoid rule, `cast.ts` getups or a new shape drawn in the phase), its nodes and stations, its
-secrets (`places.md` first, then `secrets.ts`, `art/places.ts`, the zone text), its quests and
-contracts, its rumours and faction effects, and its levels held by `pace.test.ts` in the kit the
-tiers agent landed. The spawn, building, picking, way-home and secret sweeps are the gate, as they
-were for every rebuild.
+**Do:** every row in the band's line of the table: the raw materials as items with nothing yet
+yielding them, the intermediates, the plate, the leather, the tools, the arrows' halves and the
+arrows, the food and its burnt; the recipes at the levels named, at the stations that exist (G8 adds
+the deep forge as a station drawn in the phase, a `StationId`, a `art/places.ts` row and a
+`STATION_PERSISTS` answer); wardrobe drawings and icons for every piece; G3 raises
+`MAX_GATHER_SKILL_LEVEL` to 20. The zone phases add the nodes and the drops.
+
+**Keep true:** `deadEnds.test.ts` objects to a material nothing consumes, so a tier lands whole;
+every item has a wardrobe row or an icon; the leather stops short of the plate a smith of the same
+standing makes; nothing drops a tier piece yet, so the pace and the cap are unmoved. **Tests:** a
+`tests/systems/<tier>.test.ts` tracing each piece back to the band's zones by name, as
+`deepCut.test.ts` does; the duels with a geared character at the band's levels. **Docs:**
+`making.md`'s tiers, `art.md`.
+
+### A zone of Part G (G4-G7, G9-G12, G15, G16)
+
+One agent a zone, on a branch named for it: `claude/v2-g4-lorhal`, `claude/v2-g5-stillwood`,
+`claude/v2-g6-quiet-court`, `claude/v2-g7-karn-tholl`, `claude/v2-g9-high-greyhills`,
+`claude/v2-g10-ashen-hollow`, `claude/v2-g11-drowned-halls`, `claude/v2-g12-barrow-field`,
+`claude/v2-g15-sea-wall`, `claude/v2-g16-marhal`. **The same agent takes G5 then G6, G9 then G10,
+and G15 then G16**, since each pair shares an edge; the rest of a band runs beside them.
+
+**Needs first:** the band's tier in `main` (G3, G8 or G14); D1 (dialog), D2 (rumours), D3
+(standing), D4 (Wick's beats) and F1 (trophies), since a zone writes rows into each; and for a
+zone entered through another Part G zone, that zone (G6 after G5, G10 after G9, G11 after G7, G12
+after G4, G16 after G15).
+
+**Read:** the zone's entry in the plan's Part G and "The shape" above it; decisions 9, 11, 86,
+108, 113, 116, 117, 119-122 and 125; `docs/lore/places.md`'s entry for the zone, `spirit.md`'s
+beat for it, `factions.md` for its faction, `tone.md` and `naming.md`; `docs/architecture/zones.md`,
+`combat.md` (bosses, difficulty, pacing), `content.md` (loot rules, quests), `art.md` (cast, places,
+budget); the nearest rebuilt zone's map and its tests as the pattern (the fen for Lorhal and the
+Barrow Field, the mill road for the Stillwood and the Greyhills, the Deep Cut for Karn Tholl and the
+Drowned Halls, the barrow for the Ashen Hollow and Marhal, the strand for the Sea-Wall); and
+`tests/world/pace.ts`.
+
+**Ask the user first:** only what the zone's entry leaves open and is mechanics: a hub's counter
+(what it trades and what standing opens there); a boss's fight (what its ability is, and whether it
+is gated on gear as the chief is or on standing in a telegraph as Orlath is); and anything the
+sweeps force that changes the zone's shape. The words, names, rumours and secrets are the lore's,
+and not asked.
+
+**Do:** the shape of a C5-C9 phase with new content. The zone's text in its own `*Map.ts` at 45×32;
+its `ZONES` row with the setting, the exits and the mouths the plan fixed, and the exit row on the
+neighbour's, re-cutting the neighbour's mouth in a commit of its own (or laying the ground of a
+mouth the later neighbour will write, as G4 and G7 do); a key's lock (`requiresKey`) and the key
+where the plan says it comes from. Its creatures as `ENEMIES` rows priced against the curve (the fen
+raider's and the wight's "a zone above the last one" rule in `combat.md`), loot tables under the
+humanoid rule carrying the band's food, `cast.ts` getups or a new shape drawn in the phase; its
+nodes for the band's materials; its boss with `boss: true`, its unique piece (a wardrobe row and an
+icon) and its trophy in F1's kind; two secrets (`places.md` first, then `secrets.ts`,
+`art/places.ts`, the text); its quests and its contract, if the zone has a counter or a quest-giver;
+its rumours through D2, its standing through D3, its people's topics through D1 and Wick's beat
+through D4, all as rows. Name every new name in `naming.md`, and extend `places.md` where building
+the zone needed a fact it lacked.
+
+**Keep true:** the spawn, building, picking, way-home and secret sweeps are the gate, as they were
+for every rebuild; every level the zone covers is held by `pace.test.ts` in the band's tier, n + 4
+minutes; the cap moves by itself (`progression.test.ts` says the new number, and the zone writes it
+into `MAX_CHARACTER_LEVEL`); `uniqueLoot.test.ts` holds the boss's piece; `deadEnds.test.ts` holds
+every drop; the camp never picks the boss; nothing in a hub blocks a counter. **Tests:** a
+`tests/systems/<zone>.test.ts` for what the zone is for (knots, the depth dial, a king waking after
+the one before), a `tests/world/` case for its lock or its hub if it has one, and the sweeps by
+construction. **Docs:** `zones.md`'s paragraph for the zone and the world in brief, `combat.md` if
+a boss does something new, `making.md` for the nodes, `places.md` marking what is in. **Smoke:** the
+zone in the `zones` round trip with the canvas count flat; a section of its own only for something
+only a browser can show.
+
+### G13 — The carters (`claude/v2-g13-carters`)
+
+**Read:** decisions 25, 122 and 125; `docs/architecture/zones.md` ("Walking is the only way into a
+zone"), `economy.md` (counters, coin sinks), `content.md` (the zone visits tally);
+`src/world/ZoneWorld.ts`'s zone change, `GameContext`, `src/systems/ZoneAccessSystem.ts`,
+`tests/world/pace.ts`'s coin a level.
+
+**Ask the user first:** the price (flat a hop, by distance on the grid, or by the level of the hub
+travelled to); whether the house in Lampton is always a stop; whether a locked zone's hub counts
+before its key is spent.
+
+**Do:** a `'travel'` counter at each hub's row (the carter in Lampton and Greyford, a punt at
+Lorhal, the hold's lift at Karn Tholl, a guide at the Quiet Court, and the Sea-Wall's tower when
+G15 lands), a panel listing the hubs reached and their prices, reached derived from the zone visits
+tally, the journey a zone change that arrives at the hub's start.
+
+**Keep true:** walking is still the only way into a zone the first time; travel never opens a lock;
+the price is held by a test against what the pacer reports. **Tests:** `tests/world/travel.test.ts`.
+**Docs:** `zones.md`, `economy.md`, `hud.md`. **Smoke:** a `travel` section, the canvas count flat.
 
 ### D5, E4, F4 — the reviews
 

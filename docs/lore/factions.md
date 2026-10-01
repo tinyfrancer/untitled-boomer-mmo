@@ -25,7 +25,7 @@ Rags are broken and its roof mended (`places.md`; _in game_ since F1).
 
 ## The Keepers
 
-**Seat:** a holm hidden in Blackwater Fen (Part G). **Faces:** Maren, keeper of the third light, an
+**Seat:** Lorhal, a holm hidden in the deep fen west of Blackwater Fen (Part G). **Faces:** Maren, keeper of the third light, an
 elder; Tirrow, who leads the raiders.
 
 The fenfolk as a people. They want the lanterns kept, the barrows shut, and the Company off the fen,
@@ -49,7 +49,7 @@ Standing could open better trades, rarer reforges, and the back room.
 
 ## The Quiet Court
 
-**Seat:** the Stillwood, west past Greyford (Part G). **Face in levels 1-8:** the Willow Warden.
+**Seat:** the Quiet Court, at the heart of the Stillwood west past Greyford (Part G). **Face in levels 1-8:** the Willow Warden.
 
 The elves. They want every kindled soul to go on, the kindling ended for good, and nobody in the
 Stillwood. They disapprove of the fenfolk, who kindle their own dead however good the reason, and of
@@ -57,7 +57,7 @@ Wick. How they judge the player depends on Wick.
 
 ## Karn Tholl
 
-**Seat:** Karn Tholl, behind a door in the Deep Cut (Part G). **Face in levels 1-8:** Karra
+**Seat:** Karn Tholl's gate hall, behind the sealed door in the Deep Cut (Part G). **Face in levels 1-8:** Karra
 Deepvein, a scout.
 
 The dwarves. They want their drowned halls back, the goblins out of their workings, their debt paid,

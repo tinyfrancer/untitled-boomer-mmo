@@ -174,13 +174,19 @@ how the story is reached, but not what it is about.
   Deep Cut that the goblins will not dig past, and Orlath. The grey starts to show: the raiders have
   a reason, the fettler is a fence, and the Company is the one putting the lights out. At the bottom
   of the barrow, Wick hears its name.
-- **9-20, Part G.** The fenfolk's hidden holm, and what they did to Lorn; the Stillwood and Karn
-  Tholl opening their doors because they know what is coming; more barrows waking; the Candles off
-  the strand, and the drowned sea-wall past them out towards Marhal; and at the
-  top, Merrath the Last in the great light, and the answer to what Wick did.
+- **9-12, the doors open.** Lorhal, the fenfolk's holm, and what they did to Lorn; the Stillwood
+  and the Quiet Court, and Karn Tholl's gate, opening because their peoples know what is coming.
+- **13-16, the old dead and the old fire.** The High Greyhills' goblin tangle, the dragon under the
+  burnt hill, the drowned halls the dwarves lost, and the Barrow Field, where Veymar's older kings
+  wake one at a time as their lights fail. Wick remembers making the lantern, and whom for.
+- **17-20, the sea.** The drowned sea-wall out past the Candles, its last warden, and at its end
+  Marhal, held clear of the sea by the light that drowned everything else, with Merrath the Last in
+  it, and the answer to what Wick did. `places.md` has each zone, and `docs/v2_plan.md`'s Part G
+  their levels.
 
 **The ending, as intended.** The great light can only be put out from inside, by a soul in it
 willing to let go, and the one who lit it can go into it. Wick goes in and lets go, and every soul
 of Veymar goes on with it: the kings, the wardens, the fenfolk's dead, and Lorn. The player walks
-back up out of the sea on their own. `spirit.md` says why the bible wants it this way; whether the
-player can argue with it is Part G's to decide.
+back up out of the sea on their own. When the light goes out the sea comes back over Marhal behind
+them, and nothing in the Veymarch is kept again. `spirit.md` says why the bible wants it this way,
+and that the player may argue and the ending holds.
