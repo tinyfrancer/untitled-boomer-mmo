@@ -236,6 +236,7 @@ describe('describing an item', () => {
     expect(describeItem('rat-bones').uses).toContain('Quest: Bones for the Broth wants 10');
     expect(describeItem('rat-bones', done).uses).toEqual([
       'Used in: Bone Char, at the Forge (Lampton)',
+      'Dropped by: Rat (Lampton, The New Cut)',
       'Sells for 2c',
     ]);
   });

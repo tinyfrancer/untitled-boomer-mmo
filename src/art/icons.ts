@@ -342,6 +342,7 @@ export const MARKS = {
   swords: MARK.SWORDS,
   cog: MARK.COG,
   coin: MARK.COIN,
+  skull: MARK.SKULL,
 } as const;
 
 export type MarkId = keyof typeof MARKS;

@@ -86,6 +86,8 @@ import {
   BUY_ITEM_REQUESTED_EVENT,
   STATION_OPENED_EVENT,
   MASTERY_CHANGED_EVENT,
+  DROPS_SEEN_CHANGED_EVENT,
+  KILLS_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
   RESTED_CHANGED_EVENT,
   XP_GAINED_EVENT,
@@ -1894,6 +1896,62 @@ describe('the skills book', () => {
   });
 });
 
+describe('the collection log', () => {
+  const sheet = (): HTMLElement | null =>
+    parent.querySelector<HTMLElement>('.hud-sheet[data-sheet="collection"]');
+  const text = (): string => sheet()?.querySelector('.hud-sheet__body')?.textContent ?? '';
+  const count = (label: string): string | undefined =>
+    [...(sheet()?.querySelectorAll<HTMLElement>('.hud-collection-count') ?? [])].find(
+      (line) => line.firstElementChild?.textContent === label,
+    )?.lastElementChild?.textContent ?? undefined;
+
+  it('opens from the menu on its counts, its bestiary and its trophies', () => {
+    mount({ kills: { rat: 30 }, seen: { rat: ['rat-meat'] } });
+    menuItem('collection');
+    expect(openSheets()).toEqual(['collection']);
+    expect(sheet()?.dataset.page).toBe('index');
+    expect(count('Creatures slain')).toBe(`1 / ${Object.keys(ENEMIES).length}`);
+    expect(text()).toContain('Bestiary');
+    expect(text()).toContain('Trophies');
+    // Lore found is the Whispers journal's count, nothing heard yet out of all there is.
+    expect(count('Lore found')).toBe(`0 / ${Object.keys(LORE_FRAGMENTS).length}`);
+  });
+
+  it('opens a creature’s page of drops, and goes back to the index', () => {
+    mount({ kills: { rat: 30 }, seen: { rat: ['rat-meat'] } });
+    menuItem('collection');
+    sheet()?.querySelector<HTMLButtonElement>('[data-creature="rat"]')?.click();
+    expect(sheet()?.dataset.page).toBe('rat');
+    const meat = sheet()?.querySelector<HTMLElement>('[data-drop="rat-meat"]');
+    const bones = sheet()?.querySelector<HTMLElement>('[data-drop="rat-bones"]');
+    expect(meat?.textContent).toContain('Seen');
+    expect(bones?.classList.contains('is-unseen')).toBe(true);
+    sheet()?.querySelector<HTMLButtonElement>('[data-action="collection-back"]')?.click();
+    expect(sheet()?.dataset.page).toBe('index');
+  });
+
+  it('redraws off a drop seen, a kill and a pool', () => {
+    mount();
+    menuItem('collection');
+    events.emit(KILLS_CHANGED_EVENT, { rat: 1 });
+    events.emit(DROPS_SEEN_CHANGED_EVENT, { rat: ['rat-bones'] });
+    events.emit(MASTERY_CHANGED_EVENT, { tree: 10 });
+    expect(count('Creatures slain')).toMatch(/^1 \//);
+    expect(count('Drops seen')).toMatch(/^1 \//);
+    sheet()?.querySelector<HTMLButtonElement>('[data-collection="items"]')?.click();
+    expect(sheet()?.dataset.page).toBe('items');
+    expect(sheet()?.querySelector('[data-item="logs"]')?.classList.contains('is-unseen')).toBe(
+      false,
+    );
+  });
+
+  it('answers its key', () => {
+    mount();
+    press('b');
+    expect(openSheets()).toEqual(['collection']);
+  });
+});
+
 describe('the character sheet asks for what it cannot do itself', () => {
   it('opens a picker on an empty slot and asks to unequip a filled one', () => {
     mount();
@@ -2011,7 +2069,11 @@ describe('the bag says what an item is for', () => {
   it('answers rat meat away from any fire with what it cooks into', () => {
     select('rat-meat');
 
-    expect(strip()).toEqual(['Cook at a campfire → Cooked Rat', 'Sells for 3c']);
+    expect(strip()).toEqual([
+      'Cook at a campfire → Cooked Rat',
+      'Dropped by: Rat (Lampton, The New Cut)',
+      'Sells for 3c',
+    ]);
     expect(parent.querySelector('.hud-item-detail')?.textContent).not.toContain('nothing to do');
   });
 

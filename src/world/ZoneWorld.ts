@@ -533,6 +533,7 @@ export class ZoneWorld implements Targeting {
       isChanneling: () => this.gathering.isChanneling(),
       awardIdleXp: (amount) => this.awardIdleXp(amount),
       creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),
+      noteDropsSeen: (enemyId, itemIds) => this.combat.noteDropsSeen(enemyId, itemIds),
     });
     this.quests = new QuestDesk(this.ctx, {
       servingNpc: () => this.openCounter()?.npc ?? null,

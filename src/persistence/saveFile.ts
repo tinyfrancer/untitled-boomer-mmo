@@ -191,7 +191,7 @@ const names = (table: object): string => Object.keys(table).join(', ');
  *
  * Ids are checked against their tables wherever the game looks one up and would
  * break on one it cannot find: a class, a zone, an ability, a quest. **Item ids
- * are not**, and nor are the keys of the three tallies: the game already reads
+ * are not**, and nor are the keys of the four tallies: the game already reads
  * past an item that has been retired (`tests/staleIds.ts`), so an honest save
  * can hold one, and a kill counted against a creature that is gone counts
  * toward nothing.
@@ -299,6 +299,7 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
       ),
     `a number for each faction (${names(FACTIONS)})`,
   ],
+  seen: [recordOf(listOf(isString)), 'a list of the drops seen off each creature'],
   activeTitleId: [orNull(keyOf(TITLES)), 'null, or a title the game has'],
   unlockedZones: [listOf(isString), 'a list of zones'],
   house: [

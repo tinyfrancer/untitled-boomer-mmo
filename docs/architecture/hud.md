@@ -11,7 +11,7 @@ renderer-independent by construction: the same tree sat unchanged over both canv
 port, and nothing drawing the world knows it exists.
 
 `Hud.ts` owns the model and the subscriptions; everything else in `hud/` is a piece that draws part
-of it. Char / Bag / Quests / Idle / Feats / Skills / Whispers / Map / Log are `Sheet` subclasses and one is open at a time — `Hud`
+of it. Char / Bag / Quests / Idle / Feats / Skills / Whispers / Collection / Map / Log are `Sheet` subclasses and one is open at a time — `Hud`
 holds a single `openSheet`, not a visible flag per panel — while Menu and Options are actions
 that open no sheet. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close. A tap on a person puts up the **talk panel** (`hud/TalkModal.ts`)
@@ -403,12 +403,23 @@ a toast ("Rank: Company Hand"), and one fallen to a dim one. Both sheets redraw 
 `STANDING_CHANGED_EVENT`, which also redraws the open counter, since a rank opens a quest, a shelf
 row and a topic.
 
+**The collection log is a seat of its own behind Menu** (`CollectionSheet`, phase F3, decision
+137), the one the parallel plan reserved, with the skull for its mark and `b` for its key. It is the
+skills book's shape: an index and pages, Back always to the index, drawn only while showing since
+a kill moves it. The index is the counts (creatures slain, drops seen, slayer ranks, trophies, items
+collected, lore found, each "have / of"), then a row a creature, its slain and its drops seen, and a
+row a trophy saying where it is (at home, collected, or what it is off); a creature's row opens its
+page, where every drop on its table is an item row, greyed until seen, and Items collected opens the
+list of everything a drop, a node or a recipe hands over, each saying how it came or, greyed, how it
+would. Every item row opens the item's card. What it counts is `content.md`'s.
+
 **An item says what it is for, and every row that shows one can be asked** (decision 90). The
 uses are derived, never written per item (`systems/ItemUseSystem.ts`): every recipe that takes it
 (one line with the station's verb for a recipe of one input, one "Used in" line per station for
 the rest), the quests and contracts that collect it, what the outfitter and the fettler take it
-for, the door a key opens, what idle does with food, what it is made from, and what it sells
-for. A built station or a counter is named with the zone it stands in, read off the zone that
+for, the door a key opens, what idle does with food, what it is made from, where it comes from
+(the creatures that drop it, the nodes that yield it and the quest that hands it over, phase F3),
+and what it sells for. A built station or a counter is named with the zone it stands in, read off the zone that
 spawns it. Both the bag's strip and the card print the same lines, which is why a use is a
 sentence rather than a label and a value — the strip has no column for a label — and the card
 alone keeps the numbers (weight, bonuses) as label-and-value lines above them. The only thing

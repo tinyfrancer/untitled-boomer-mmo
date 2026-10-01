@@ -63,6 +63,9 @@ export const THEME = {
     // The skills book's: a fragment is a paragraph, and narrower it is a column
     // of three words a line.
     whispers: 300,
+    // The skills book's: a bestiary row is a creature's name beside its slain
+    // and its drops, and an item's row says how it came.
+    collection: 300,
   },
   /**
    * The paperdoll's scale: CSS pixels to the art pixel. The figure is the

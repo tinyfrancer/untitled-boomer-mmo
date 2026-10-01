@@ -5,6 +5,7 @@ import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
+import type { SeenDrops } from '../systems/CollectionSystem';
 import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
 import { emptyHouse, type HouseState } from '../systems/HouseSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
@@ -36,7 +37,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 9;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 10;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -205,6 +206,12 @@ export interface CharacterState {
    * pays are derived from this on read (see FactionSystem).
    */
   standing: Standing;
+  // Which items each creature has been seen to drop (F3), and the fifth tally
+  // stored for the reason the four above are: a drop seen leaves nothing
+  // behind, since the item is eaten, sold or smelted, and the same item off
+  // another creature says nothing about this one. The bestiary and the
+  // collection log read everything else off the tallies already kept.
+  seen: SeenDrops;
   // Which earned title is worn, if any. Only the choice is state — the right to
   // wear it comes from kills and standing.
   activeTitleId: TitleId | null;
@@ -320,6 +327,7 @@ export function createNewCharacter(
     visits: {},
     mastery: {},
     standing: {},
+    seen: {},
     activeTitleId: null,
     unlockedZones: [],
     house: emptyHouse(),

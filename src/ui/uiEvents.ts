@@ -26,6 +26,7 @@ import type { StationId } from '../data/recipes';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { SeenDrops } from '../systems/CollectionSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { DialogMemory } from '../systems/DialogSystem';
 import type { Standing } from '../systems/FactionSystem';
@@ -323,6 +324,9 @@ export const HOUSE_CHANGED_EVENT = 'house-changed';
 export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
 export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
 export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
+// The drops each creature has been seen to drop (F3), the whole record on
+// every change as the kill counts are, and only when a drop is new to it.
+export const DROPS_SEEN_CHANGED_EVENT = 'drops-seen-changed';
 
 // The Whispers journal (D2, decision 132): the whole of it when it grows, which
 // the sheet is drawn from, and the one thing just noted, for the toast that
@@ -605,6 +609,7 @@ export interface UiEventMap {
   [HOUSE_OPENED_EVENT]: [fixture: HouseFixture];
   [HOUSE_CLOSED_EVENT]: [];
   [HOUSE_CHANGED_EVENT]: [house: HouseState];
+  [DROPS_SEEN_CHANGED_EVENT]: [seen: SeenDrops];
   [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
   [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];

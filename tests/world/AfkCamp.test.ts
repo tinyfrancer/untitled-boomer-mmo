@@ -86,6 +86,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = [], stations: StationI
       credited.push({ enemyId, count });
       return [];
     },
+    noteDropsSeen: vi.fn(),
   };
   return {
     ...kit,

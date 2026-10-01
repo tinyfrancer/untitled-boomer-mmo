@@ -141,6 +141,17 @@ describe('migrateCharacterState', () => {
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
   });
 
+  it('has seen nothing drop, made before the collection log (F3)', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 9,
+    };
+    delete before.seen;
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.seen).toEqual({});
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
   it('drops saves from the future', () => {
     const future = {
       ...createNewCharacter('Aria', 'wizard'),

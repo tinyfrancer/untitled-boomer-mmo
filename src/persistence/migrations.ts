@@ -62,6 +62,8 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   }),
   // Factions (D3): nobody made before them stands anywhere with anybody.
   108: (state) => ({ ...state, standing: {} }),
+  // The collection log (F3): nobody made before it has seen anything drop.
+  109: (state) => ({ ...state, seen: {} }),
 };
 
 /**

@@ -64,6 +64,8 @@ export interface AfkCampDeps {
   awardIdleXp(amount: number): void;
   /** A kill either happened or it didn't, so an offline count is credited in full. */
   creditKill(enemyId: EnemyId, count: number): AchievementUnlock[];
+  /** What a night's kills dropped, kept or lost, for the collection log (F3). */
+  noteDropsSeen(enemyId: EnemyId, itemIds: readonly ItemId[]): void;
 }
 
 /** The offline camp's payout, for a host that has somewhere to put it. */
@@ -270,6 +272,13 @@ export class AfkCamp {
       character.awardMastery(report.masteryTargetId, report.skillXp);
     }
     const unlocks = report.enemyId ? this.deps.creditKill(report.enemyId, report.kills) : [];
+    if (report.enemyId) {
+      const fell = [...inventoryEntries(report.drops), ...inventoryEntries(report.missed)];
+      this.deps.noteDropsSeen(
+        report.enemyId,
+        fell.map(([itemId]) => itemId),
+      );
+    }
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
     this.ctx.persistCharacter();
