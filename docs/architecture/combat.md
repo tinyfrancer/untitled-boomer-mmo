@@ -246,12 +246,18 @@ What the bot measured is why the numbers are what they are. Before C10 half to t
 session was standing still for regen, so **food is the answer to the wait** rather than a faster
 regen (the user's call, decision 122): `making.md` has the food. The curve is **100n² − 200**, fitted
 to what each zone pays a minute, and the mill road's goblins pay a quarter less than the curve's
-neighbours would suggest, because a knot of three dies with no walk between them. **Every class grows
+neighbours would suggest, because a knot of three dies with no walk between them. A **level 1 rat pays
+2** (from 5) since a new character starts with food (decision 124) and no longer waits between them,
+which holds the first level to its five minutes. **Every class grows
 six health a level**: measured, a wizard or a ranger at 8 died in two or three blows from a raider or
 a wight, which no duel here can see, since a duel stands a ranged class still. They still start
 apart and wear different armour. **Mana Shield II soaks 70**, so a wizard's answer is its own kit as
-well as its body. The barrow still kills every class often in the bot's hands, its wights coming in
-groups through rooms; that is left to the Part C review.
+well as its body. **The barrow's wights come one at a time** (the Part C review, decision 124): they
+stand out of each other's notice, two to a crypt in its opposite corners and four down the gallery,
+and the king's chamber is his alone. In pairs, and with the king drawn into any fight beside him, the
+barrow killed every class once for every two or three wights it killed; now the warrior dies about
+six times in a level there and the ranger ten. The wizard still dies about once in two kills, to
+single wights, which is its own survival at 8 rather than the room it fights in.
 
 Auto-attack **range comes from the equipped weapon, not the class** (`weaponAttackRange` in
 `data/items.ts`): a weapon may name an `attackRange`, anything that doesn't is melee, and empty

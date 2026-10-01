@@ -3244,3 +3244,62 @@ line though none waits on another; numbering decisions and save versions ahead o
 order, which fixes an order nobody knows yet and breaks the chain if a phase slips; starting wave 1
 before C11 merges, which risks a review amending a part with a session on it; more than five agents
 a wave, which the user's time does not support.
+
+## 124. The Part C review: the barrow's wights come one at a time, a new character starts with food, and the Deep Cut stays the warrior's zone
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase C11**
+
+C11 walked C1-C10 against the pillars and the user's first list at a 390×844 phone and a 1280×800
+desktop, every zone from its start and four points across it, and through smoke's screenshots. Part
+C's promise held. C10 had left three things the bot found to this review, and the user settled each
+on Claude's recommendation:
+
+- **The barrow's wights are spread so they come one at a time.** The bot died in the barrow once for
+  every two or three wights it killed. Logged per death, most of those deaths were the king drawn
+  into a fight with one of the two wights stood in front of him, a ranged class backing into his
+  notice, and the rest were each crypt's pair coming together. Two now stand to a crypt in its
+  opposite corners and four down the gallery, each out of the next one's notice, two in the
+  antechamber, and the king's chamber is his alone; the sevens still stand above every eight. Deaths
+  in a level at 8 fell from 18.5 to 6 for the warrior, 24.5 to 10.5 for the ranger and 34 to 27.5
+  for the wizard, whose remaining deaths are to single wights. **Rejected:** rooms opened up so a
+  kite has somewhere to go, which re-lays the barrow for the ranged classes alone; leaving it a
+  wall for a level 8 to feel.
+- **A new character starts with sixteen cooked rats in the bag**, put in by the creation screen
+  (`createStartingCharacter`); a level 1 with nothing to eat rested for 66-83% of its first level.
+  **Rejected:** logs in the starting bag, which teaches cooking and leaves the first fights a wait
+  until the rats drop meat; the first quest paying food, which comes after the fights it would help;
+  leaving the start as it was.
+- **The Deep Cut stays the warrior's zone.** It takes the ranged classes 9-11 minutes at level 5
+  where the mill road takes 7-9, inside the band every level is held to, and a zone that suits one
+  class better is a reason to choose where to fight. **Rejected:** tuning it for the ranged classes.
+
+The user found nothing else to name from play, so the walk decided the rest.
+
+Claude's, alongside them:
+
+- **A level 1 rat pays 2 XP** where it paid 5, and the rat cull pays 25 XP where it paid 40. With
+  food in the bag the first level is fighting rather than standing still, and the ranger, which a rat
+  barely touches, took it in two and a half minutes against the five decision 122 asks; the rat's
+  pay is what moves only the first level, and the cull must still pay less than its kills
+  (`BountySystem.test.ts`). Sixteen rats rather than fewer is what brought the warrior's resting down
+  from most of the level to a third of it.
+- **The pace bot carries thirty crabs into the barrow**, not twenty. It had been dying its way back
+  to full health there, and with the wights singly it ate its twenty and rested a third of the
+  level; thirty costs about a sixth of the coin the level earns.
+- **`createNewCharacter` still starts empty.** The bag's food is the creation screen's, so every test
+  that builds a character from it still starts from an empty pack.
+- **Two names on one line keep a word's space between them** (`PLATE_GAP` in `render2d/plates.ts`).
+  The walk found Lampton writing "Cottage Rat (Lv 1)" on a desktop, a sign and a rat's plate end to
+  end a space apart; a plate that would stand closer than a space beside one already stood is lifted
+  as an overlapping one is.
+- **What a zone costs**, the number Part G is sized from, is written into the plan's C11 entry from
+  the commit record: about half an hour a zone rebuilt, and two to three times that for a zone of new
+  content, so an hour and a half to two hours, plus a phase for each gear and making tier. Parts D-F
+  are kept as planned, since wave 1 is already on them.
+- **Found and left:** the wizard at 8 still dies about once in two kills to single wights, and the bot
+  dies often outside the barrow too, in the mill road's knots and the camp most, which the pace test
+  allows (fewer deaths than kills); G1 and G2, which set the wizard's climb past 8, are where it is
+  looked at again.
+
+**Rejected:** a smoke section of its own for the walk; its script, which drops a character into each
+zone through the save, was scaffolding for the review, as A10's and B9's were.

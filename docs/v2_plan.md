@@ -73,9 +73,13 @@ village, the lantern still burning, the sealed door and the maker's mark, the la
 standing secret that loops; no scenery yet; decision 121), **and C10** (less grind: a level takes
 its number plus four minutes of play, measured by a bot playing every class through the zones; the
 curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
-on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122).
-**Next: C11**, the Part C review, and from here the phases are built several at a time, by the
-rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
+on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
+**and C11** (the Part C review: the barrow's wights one at a time and its king alone, a new
+character's bag with sixteen cooked rats in it, two names on one line a word's space apart, and a
+zone measured at about half an hour rebuilt and an hour and a half to two hours new; decision 124).
+From C11 the phases are built several at a time, by the rules and briefs in
+`docs/v2_parallel_plan.md` (decision 123). **Next: G1**, with wave 1 (D1, D4, E1, E2 and F1)
+already in flight. Update this line as each phase lands:
 which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
@@ -641,13 +645,57 @@ saved position stops meaning anything.
   **The wizard and the ranger grow six health a level**, as the warrior does, and Mana Shield II soaks
   70; measured, both had died in two or three blows in the upper band. **No travel**; G1 decides again.
   The barrow killing every class often in the bot's hands, the Deep Cut slow for the ranged classes
-  and a first level spent mostly resting are left to the review. About twenty files with its tests
-  and docs. Two of the three forks were the user's on Claude's recommendation and the third the
+  and a first level spent mostly resting were left to the review, which mended the first and the
+  last and kept the second (C11). About twenty files with its tests and docs. Two of the three forks were the user's on Claude's recommendation and the third the
   user's against it (decision 122).
-- **C11 — Part C review**, which **measures how long a zone took to build**, the number Part G is
-  sized from.
+- **C11 — Part C review. (Landed.)** Walked C1-C10 against the pillars and the user's first list
+  at a 390×844 phone and a 1280×800 desktop, every zone from its start and four points across it,
+  and through smoke's screenshots. Part C's promise held: ten zones three times the size, written as
+  text, a minimap, creatures that walk round things, fifteen secrets, the lore under all of it, and
+  a level its number plus four minutes. The user answered the three leftovers C10 named, and the
+  walk found one more:
+  - **The barrow's wights come one at a time.** Logged per death, most of the barrow's deaths were
+    the king drawn into a fight with one of the two wights in front of him, and the rest were the
+    crypts' pairs coming together. Now two stand to a crypt in its opposite corners, four down the
+    gallery and two in the antechamber, each out of the next one's notice, and the king's chamber is
+    his alone. The bot's deaths in a level at 8: warrior 18.5 to 6, ranger 24.5 to 10.5, wizard 34
+    to 27.5, the wizard's now to single wights, which is its own survival rather than the layout.
+    The barrow feeds nobody, so a level there is held on thirty crabs carried in, not twenty.
+  - **A new character starts with sixteen cooked rats**, put in by the creation screen, and a level
+    1 rat pays 2 XP where it paid 5, which holds the first level to its five minutes now that it is
+    fighting rather than standing still: resting fell from 66-83% of it to 0-32%. The rat cull pays
+    25 XP, under what its fifteen rats do.
+  - **The Deep Cut stays the warrior's zone**: at 5 it takes the ranged classes 9-11 minutes where
+    the mill road takes 7-9, inside the pace every class is held to.
+  - **Two names on one line keep a word's space between them**, since Lampton wrote "Cottage Rat
+    (Lv 1)" over a cottage with a rat beside it on a desktop.
 
-**Open questions for Part C**: none left. C10 answered how long a level takes (its number plus four
+  **What a zone costs to build**, the number Part G is sized from, read off the commit record as
+  the gap between one phase's Record commit and the next (the user's answers and the merge
+  included):
+
+  | Phase | Zones                        | Session time | What else it carried                      |
+  | ----- | ---------------------------- | ------------ | ----------------------------------------- |
+  | C5    | Lampton, Candle Strand       | ~75 min      | the secrets system and three secrets      |
+  | C6    | the New Cut, Redrag Camp     | ~42 min      | masonry, a ground of its own              |
+  | C7    | the Cellar, the Barrow       | ~80 min      | the mouth, two edges                      |
+  | C8    | Old Mill Road, Greyford      | ~95 min      | outdoor mouths, a secret in a room, smoke |
+  | C9    | Blackwater Fen, the Deep Cut | ~41 min      | two edges                                 |
+  | C10   | the grind                    | ~64 min      | the pacer                                 |
+
+  Ten zones in about five and a half agent hours: **about half an hour a zone rebuilt**. **A Part G
+  zone is new content and costs two to three times that**, about an hour and a half to two hours a
+  zone, since a rebuild reused every creature, node and recipe where a new zone draws its creatures,
+  writes their loot, quests and secrets and extends the lore; and each gear and making tier is a
+  phase of its own on top. The cadence above was one phase at a time with the user merging in
+  minutes, which working in parallel does not speed up: the user's answers and play are the
+  bottleneck, not the agents. Part D, E and F are kept as planned, and anything the review would
+  change there is proposed in its PR rather than made (decision 123's rule 6). Decision 124 has the
+  forks.
+
+**Open questions for Part C**: none left; the part has landed. C11 answered C10's three leftovers
+(the barrow's wights spread, food in the starting bag, the Deep Cut left the warrior's zone,
+decision 124). C10 answered how long a level takes (its number plus four
 minutes, every class) and whether travel comes back (not yet: the longest walk is half a minute, and
 G1 asks again, decision 122). C5 answered how secrets are found: by walking up to them. C6 answered what a rebuild
 may add (more of what the zone has) and when the lore's people arrive (Part D). C7 answered how a
@@ -719,7 +767,9 @@ trophy be displayed and still used?
 
 ## Part G — To level 20
 
-Sized at C11 from how long a zone actually took, not guessed now.
+Sized from how long a zone actually took (C11): about half an hour a zone rebuilt, and two to three
+times that for a zone of new content, so an hour and a half to two hours a zone, plus a phase for
+each gear and making tier.
 
 - **G1 — The shape of 9-20.** How many bands, zones, gear tiers, making tiers and bosses, written
   into this plan as phases, each level paced by `tests/world/pace.test.ts` as 1-9 is (decision 122),

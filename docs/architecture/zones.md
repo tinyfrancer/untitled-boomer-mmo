@@ -131,7 +131,9 @@ room and the storeroom off it, and a low passage from the storeroom's far corner
 guardroom to the strongbox. **The Sunken Barrow** is entered at five tiles of its north edge, and
 the fen's side of that edge at the same five since C9 rebuilt it: the stair, the antechamber, the gallery with the
 frieze along its north wall, the crypts at either end of it and the king's chamber off its middle,
-read north to south with every seven shallower than every eight. Both are rock with every room lined
+read north to south with every seven shallower than every eight. Its wights stand out of each
+other's notice, so they come one at a time, and the king's chamber holds him alone, since a wight
+fought in it drew him in (decision 124). Both are rock with every room lined
 in masonry, so the hill is packed up behind dressed stone, and both keep the start, which is where a
 death in a vault puts somebody, at the foot of the way in and clear of every creature's reach.
 
