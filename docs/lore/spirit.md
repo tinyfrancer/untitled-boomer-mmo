@@ -102,7 +102,7 @@ the Company keeps going and breaks what it does not see; and the one soul that c
 the one that can let go of all of it. The player climbs from nobody to the one who carried Wick down
 to Marhal, and walks back up alone, having earned it.
 
-**The player may argue, and the ending holds** (Part G, decision G1). At the foot of the great light
+**The player may argue, and the ending holds** (Part G, decision 125). At the foot of the great light
 the player is asked once: let Wick go, or ask it to stay. Wick goes either way, since staying would
 leave every soul of Veymar in the light and Wick knows it; what the choice changes is what it says
 last and the title the player walks out with. Let go, it thanks them: "You carried me all the way

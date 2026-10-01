@@ -4,10 +4,12 @@
 the same day (decision 123). `docs/v2_plan.md` is still the live plan and still says what each phase
 is; this document says how its remaining phases are built by several agents at once rather than one
 session at a time, and holds a brief per phase. **Landed:** C11 (wave 0), 2026-10-01, with the
-measurement below written into the plan's C11 entry (decision 124). **In flight:** wave 1 (D1, D4,
-E1, E2, F1), started 2026-10-01 before C11 merged at the user's word, its questions answered under
-each brief. **Next:** G1, the moment C11 merges. Update this line as phases start and land, the way
-the plan's status line is.
+measurement below written into the plan's C11 entry (decision 124); G1 (wave 2's first), 2026-10-01,
+Part G written into the plan as G2-G16 with a brief per tier, zone and the carters below (decision
+125). **In flight:** wave 1 (D1, D4, E1, E2, F1), started 2026-10-01 before C11 merged at the user's
+word, its questions answered under each brief. **Next:** G3 (tier one), the moment G1 merges, and
+band 9-12's zones once G3, D1-D4 and F1 have. Update this line as phases start and land, the way the
+plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc
@@ -628,7 +630,7 @@ trophies off achievements) with completion counts; the log of items collected; t
 
 ### G2 — Specialisations at 10 (`claude/v2-g2-paths`)
 
-**Read:** decisions 67, 84 and G1's; `docs/architecture/combat.md` whole; `docs/lore/peoples.md`'s
+**Read:** decisions 67, 84 and 125; `docs/architecture/combat.md` whole; `docs/lore/peoples.md`'s
 class origins; `src/data/abilities.ts`, `src/systems/AbilitySystem.ts`, `TrainerSystem.ts`,
 `tests/systems/EnemySystem.test.ts` (the duels), `tests/world/pace.ts`.
 
@@ -646,10 +648,10 @@ level-10 spawn exists. **Tests:** the duels and pace grow by six paths. **Docs:*
 
 ### G3, G8, G14 — The tiers (`claude/v2-g3-tier-one`, `claude/v2-g8-tier-two`, `claude/v2-g14-tier-three`)
 
-One a band, each before its band's zones (decision G1). The plan's "The shape" table names every
+One a band, each before its band's zones (decision 125). The plan's "The shape" table names every
 material, its ids and its recipe levels; the band's zone entries say where each is gathered.
 
-**Read:** G1's entries and decision; `docs/architecture/making.md` whole (the tiers' webs, the
+**Read:** G1's entries and decision 125; `docs/architecture/making.md` whole (the tiers' webs, the
 fenhide rule, the arrow line, dead ends), `art.md`'s wardrobe and icons, `combat.md`'s armour;
 `src/art/wardrobe.ts`, `src/data/items.ts`, `recipes.ts`, `outfitter.ts`, `src/config/constants.ts`,
 `tests/systems/deadEnds.test.ts`, `deepCut.test.ts` and `greyfordTannery.test.ts` (how a tier is
@@ -688,7 +690,7 @@ zone entered through another Part G zone, that zone (G6 after G5, G10 after G9, 
 after G4, G16 after G15).
 
 **Read:** the zone's entry in the plan's Part G and "The shape" above it; decisions 9, 11, 86,
-108, 113, 116, 117, 119-122 and G1's; `docs/lore/places.md`'s entry for the zone, `spirit.md`'s
+108, 113, 116, 117, 119-122 and 125; `docs/lore/places.md`'s entry for the zone, `spirit.md`'s
 beat for it, `factions.md` for its faction, `tone.md` and `naming.md`; `docs/architecture/zones.md`,
 `combat.md` (bosses, difficulty, pacing), `content.md` (loot rules, quests), `art.md` (cast, places,
 budget); the nearest rebuilt zone's map and its tests as the pattern (the fen for Lorhal and the
@@ -730,7 +732,7 @@ only a browser can show.
 
 ### G13 — The carters (`claude/v2-g13-carters`)
 
-**Read:** decisions 25, 122 and G1's; `docs/architecture/zones.md` ("Walking is the only way into a
+**Read:** decisions 25, 122 and 125; `docs/architecture/zones.md` ("Walking is the only way into a
 zone"), `economy.md` (counters, coin sinks), `content.md` (the zone visits tally);
 `src/world/ZoneWorld.ts`'s zone change, `GameContext`, `src/systems/ZoneAccessSystem.ts`,
 `tests/world/pace.ts`'s coin a level.

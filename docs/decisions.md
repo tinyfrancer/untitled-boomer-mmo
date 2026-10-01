@@ -3304,7 +3304,7 @@ Claude's, alongside them:
 **Rejected:** a smoke section of its own for the walk; its script, which drops a character into each
 zone through the save, was scaffolding for the review, as A10's and B9's were.
 
-## G1. Levels 9-20 are three bands of four, ten zones, a made tier a band, a boss a zone, paid travel between hubs, two paths a class, an ending the player may argue with, built a band at a time
+## 125. Levels 9-20 are three bands of four, ten zones, a made tier a band, a boss a zone, paid travel between hubs, two paths a class, an ending the player may argue with, built a band at a time
 
 **2026-10-01 · the user, asked by Claude, building the plan's phase G1**
 
@@ -3361,7 +3361,7 @@ Claude's, writing it:
   The Barrow Field is reached from Lorhal by the Keepers' causeway rather than out of the back of
   Orlhal, since the Keepers carry the barrows' keys (`factions.md`) and Orlath's chamber is his
   alone (decision 124). **Rejected:** a door through the king's chamber.
-- **Three new locks, each by decision 11's rule**, and two of their keys handed out by a quest rather
+- **Four new locks, each by decision 11's rule**, and two of their keys handed out by a quest rather
   than dropped (the Tholl Token from Karra Deepvein in the Deep Cut, the Keepers' Key in Lorhal): a
   quest in the zone the door is in is that rule kept, and a dwarf or a Keeper handing over a key is
   the point of meeting them.

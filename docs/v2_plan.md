@@ -76,10 +76,13 @@ curve 100n² − 200; food the answer to the wait, healing more, faster, droppin
 on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
 **and C11** (the Part C review: the barrow's wights one at a time and its king alone, a new
 character's bag with sixteen cooked rats in it, two names on one line a word's space apart, and a
-zone measured at about half an hour rebuilt and an hour and a half to two hours new; decision 124).
-From C11 the phases are built several at a time, by the rules and briefs in
-`docs/v2_parallel_plan.md` (decision 123). **Next: G1**, with wave 1 (D1, D4, E1, E2 and F1)
-already in flight. Update this line as each phase lands:
+zone measured at about half an hour rebuilt and an hour and a half to two hours new; decision 124),
+**and G1** (the shape of 9-20: three bands of four levels, ten zones each with its levels, mouths,
+creatures, boss and ids, a made tier a band with gathering and making to 20, paid travel between
+hubs, two paths a class, an ending the player may argue with, built a band at a time; Part G written
+as phases G2-G16; decision 125). From C11 the phases are built several at a time, by the rules and
+briefs in `docs/v2_parallel_plan.md` (decision 123). **Next: G3** (tier one), with wave 1 (D1, D4,
+E1, E2 and F1) in flight and wave 2's D and F phases starting as it merges. Update this line as each phase lands:
 which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
@@ -769,7 +772,7 @@ trophy be displayed and still used?
 
 Sized from how long a zone actually took (C11): about half an hour a zone rebuilt, and two to three
 times that for a zone of new content, so an hour and a half to two hours a zone, plus a phase for
-each gear and making tier. G1 wrote the rest of this part from the user's interview (decision G1,
+each gear and making tier. G1 wrote the rest of this part from the user's interview (decision 125,
 below): **three bands of four levels, ten new zones, a made tier a band, a boss a zone, paid
 travel between hubs, two paths a class at 10, an ending the player can argue with and cannot
 change, and the bands built one at a time**, each band's zones beside each other.
@@ -833,7 +836,7 @@ in its own commit, and the sweeps say what it costs:
 
 A zone that lands before its neighbour lays the ground of the mouth it will be entered from and
 writes no exit to an id that does not exist yet (`ZoneId` is a union, and an exit to nowhere is a
-signpost to nowhere); the later phase writes both exit rows. **Three doors are locked**, each by
+signpost to nowhere); the later phase writes both exit rows. **Four doors are locked**, each by
 the rule that a key belongs to the zone its door is in (decision 11): Karn Tholl by a **Tholl
 Token** (`tholl-token`) Karra Deepvein hands over for a quest in the Deep Cut at 10; the Barrow
 Field by the **Keepers' Key** (`keepers-key`) from a quest in Lorhal; the Ashen Hollow by an **Ashen
@@ -846,7 +849,7 @@ creatures round its edges: Lorhal (the Keepers), the Quiet Court (the elves) and
 hall (the dwarves). A hub's counters are its faction's (D3), its people talk in D1's schema, and
 its rumours lead into its band (D2).
 
-**One made tier a band** (decision G1): gathering and making go to **20**, as the character does
+**One made tier a band** (decision 125): gathering and making go to **20**, as the character does
 (`MAX_GATHER_SKILL_LEVEL` from 10, moved once by G3), and each band adds a metal, a leather, a wood
 and a food, so plate, cloth-class leather, arrows, tools and food each get a rung a band, and each
 tier's materials come from that band's zones, so a piece pulls the player across its band the way
@@ -870,29 +873,29 @@ leather tier stops short of the plate a smith of the same standing makes and tak
 stays the weapon (`making.md`); doubling three more times would break that, so each tier
 phase sets its rung against the band's bows and says so in its decision.
 
-**A boss a zone** (decision G1): a named creature at the zone's top level with `boss: true`, the
+**A boss a zone** (decision 125): a named creature at the zone's top level with `boss: true`, the
 camp never picking it, its table **one unique piece** (`uniqueLoot.test.ts`) a little better in one
 slot than the band's made tier or different from it, and **a trophy** for the house's stands, in
 F1's kind. The Barrow Field has three kings, each a boss with a piece and a trophy. The drops are
 named in each zone's entry.
 
-**Travel is paid, hub to hub** (decision G1, the question decision 122 left): a counter at each
+**Travel is paid, hub to hub** (decision 125, the question decision 122 left): a counter at each
 hub takes the player to any other hub they have walked to, for coin, as a G-phase of its own in band
 2 (G13), when the walk from the house to the Barrow Field passes two minutes. `zones.md`'s "walking
 is the only way into a zone" becomes "the only way into a zone the first time".
 
-**Two paths a class at 10** (decision G1), from `peoples.md`'s hooks: the **warrior** a
+**Two paths a class at 10** (decision 125), from `peoples.md`'s hooks: the **warrior** a
 **Bulwark**, who holds a line (shield, armour, a hold on what is hitting them), or a **Breaker**, who
 breaks one (both hands, the heavy blow); the **wizard** a **Firebrand**, fire with nobody in it, or
 a **Wardlight**, the warding light that edges towards the kindling; the **ranger** a **Fenstalker**,
 who hunts the fen's way (snares, a slow, patience), or a **Longbow**, who shoots Aldmark's (reach,
 the volley). G2 settles how one is chosen, whether it can be changed, and the abilities.
 
-**The ending** (decision G1): at the last beat in Marhal the player is asked once whether to let
+**The ending** (decision 125): at the last beat in Marhal the player is asked once whether to let
 Wick go or to ask it to stay. Wick answers each differently and goes either way; the choice moves
 only its last lines and a title (`spirit.md`).
 
-**The order** (decision G1): **a band at a time**. A band's tier lands first; its zones then run
+**The order** (decision 125): **a band at a time**. A band's tier lands first; its zones then run
 beside each other, one agent a zone, two that share an edge given to one agent in sequence; G2
 starts once Lorhal's 10s are in `main`, and the band's last zone closes it. The user judges a band's
 zones as they come and the next band's tier starts once they have.

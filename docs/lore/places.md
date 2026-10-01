@@ -361,7 +361,7 @@ name. Wick: "Lorn. Is that me?"
 
 ## Past level 8
 
-Part G built these as ten zones in three bands (decision G1); `docs/v2_plan.md`'s Part G has their
+Part G built these as ten zones in three bands (decision 125); `docs/v2_plan.md`'s Part G has their
 levels, exits and ids, and this is what each is. Each is _not yet in the game_ until its phase lands,
 and a phase adds what building the zone needed. Rumours are told at the band's hub, in Greyford or
 in Lampton, and lead into the band they are told in.

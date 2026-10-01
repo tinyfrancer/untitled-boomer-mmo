@@ -136,7 +136,7 @@ fen's **bog lurkers**, newts the size of dogs whose hides the wet cannot get thr
 ## Where each class comes from
 
 The three classes are three ways a nobody earns a living on a frontier. Part G's specialisations
-(decision 84) grow out of these, two a class, named in each class below (decision G1); G2 decides
+(decision 84) grow out of these, two a class, named in each class below (decision 125); G2 decides
 what each does.
 
 - **Warriors** are Aldmark's soldiers left over from its wars, the Company's militia and the
