@@ -4,6 +4,10 @@ import { NPCS } from '../../src/data/npcs';
 import { RECIPES, STATION_IDS, STATION_LABELS } from '../../src/data/recipes';
 import { formatCurrency } from '../../src/systems/CurrencySystem';
 import { itemUses } from '../../src/systems/ItemUseSystem';
+import { ENEMIES } from '../../src/data/enemies';
+import { LOOT_TABLES } from '../../src/data/lootTables';
+import { QUESTS } from '../../src/data/quests';
+import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import type { ItemId } from '../../src/types/ids';
 
 /**
@@ -28,7 +32,11 @@ const JUNK = /^Nothing uses it/;
 describe('what an item is for', () => {
   // The question the phase was written for.
   it('tells rat meat it is dinner, not junk', () => {
-    expect(itemUses('rat-meat')).toEqual(['Cook at a campfire → Cooked Rat', 'Sells for 3c']);
+    expect(itemUses('rat-meat')).toEqual([
+      'Cook at a campfire → Cooked Rat',
+      'Dropped by: Rat (Lampton, The New Cut)',
+      'Sells for 3c',
+    ]);
   });
 
   it('names the station a built recipe stands at, and the zone it stands in', () => {
@@ -96,6 +104,7 @@ describe('what an item is for', () => {
   it('says a key opens a door, and is spent there', () => {
     expect(itemUses('hideout-key')).toEqual([
       "Unlocks: The Cutthroat's Cellar, spent at its door",
+      "Dropped by: Bandit (Redrag Camp, The Cutthroat's Cellar)",
       'Cannot be sold',
     ]);
   });
@@ -171,5 +180,50 @@ describe('every card', () => {
         }
       }
     });
+  });
+});
+
+/**
+ * Where an item comes from (F3): what A2's card left to the collection log, read
+ * off the same tables the log counts.
+ */
+describe('where an item comes from', () => {
+  it('names every creature that drops it, with where each is found', () => {
+    expect(itemUses('crab-meat')).toContain('Dropped by: Crab (Candle Strand)');
+  });
+
+  it('names every node that yields it, with the zones it grows in', () => {
+    const line = itemUses('raw-fish').find((use) => use.startsWith('Gathered from: '));
+    expect(line).toBeDefined();
+    for (const node of Object.values(RESOURCE_NODES)) {
+      if (node.yieldItemId === 'raw-fish') expect(line).toContain(node.name);
+    }
+  });
+
+  it('names the quest that hands over a keepsake or a piece of gear', () => {
+    const keepsake = Object.values(QUESTS).find((quest) => quest.reward.keepsake);
+    expect(keepsake?.reward.keepsake).toBeDefined();
+    expect(itemUses(keepsake?.reward.keepsake as ItemId)).toContain(
+      `Quest reward: ${keepsake?.name}`,
+    );
+    expect(itemUses('brown-cloth-hat')).toContain(`Quest reward: ${QUESTS['rat-bones'].name}`);
+  });
+
+  // The rare drops are the chase, and a card that kept them quiet would hide it.
+  it('names a boss for every one of its drops, whatever the chance', () => {
+    for (const enemy of Object.values(ENEMIES)) {
+      if (!enemy.boss || !enemy.lootTableId) continue;
+      for (const entry of LOOT_TABLES[enemy.lootTableId].entries) {
+        const line = itemUses(entry.itemId).find((use) => use.startsWith('Dropped by: '));
+        expect(line, entry.itemId).toContain(enemy.name);
+      }
+    }
+  });
+
+  it('says nothing of where a thing comes from that only the shelf sells', () => {
+    const lines = itemUses('sickle').filter(
+      (use) => use.startsWith('Dropped by') || use.startsWith('Gathered from'),
+    );
+    expect(lines).toEqual([]);
   });
 });

@@ -51,6 +51,8 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // steps take these two places when they merge.
   107: (state) => state,
   108: (state) => state,
+  // The collection log (F3): nobody made before it has seen anything drop.
+  109: (state) => ({ ...state, seen: {} }),
 };
 
 /**

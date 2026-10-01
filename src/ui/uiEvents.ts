@@ -22,6 +22,7 @@ import type { StationId } from '../data/recipes';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { SeenDrops } from '../systems/CollectionSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { DialogMemory } from '../systems/DialogSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
@@ -310,6 +311,9 @@ export const HOUSE_CHANGED_EVENT = 'house-changed';
 export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
 export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
 export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
+// The drops each creature has been seen to drop (F3), the whole record on
+// every change as the kill counts are, and only when a drop is new to it.
+export const DROPS_SEEN_CHANGED_EVENT = 'drops-seen-changed';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -583,6 +587,7 @@ export interface UiEventMap {
   [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
   [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [DROPS_SEEN_CHANGED_EVENT]: [seen: SeenDrops];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

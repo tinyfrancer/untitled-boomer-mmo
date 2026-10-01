@@ -1,6 +1,7 @@
 import { ActionBar } from './ActionBar';
 import { CharacterSheet } from './CharacterSheet';
 import { CombatLogSheet } from './CombatLogSheet';
+import { CollectionSheet } from './CollectionSheet';
 import { FeatsSheet } from './FeatsSheet';
 import { IdleSheet } from './IdleSheet';
 import { ChannelBar } from './ChannelBar';
@@ -50,6 +51,7 @@ import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { SeenDrops } from '../systems/CollectionSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { DialogMemory } from '../systems/DialogSystem';
 import { hudLayout, tipCardRect } from '../ui/layout';
@@ -84,6 +86,7 @@ import {
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   QUIVER_CHANGED_EVENT,
+  DROPS_SEEN_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   HOUSE_OPENED_EVENT,
   HOUSE_CLOSED_EVENT,
@@ -208,6 +211,8 @@ interface HudModel {
   // can be opened before a single swing has been taken in this session, and a
   // pool filled last night has to be there when it is.
   mastery: MasteryXp;
+  /** What each creature has been seen to drop (F3), the collection log's tally. */
+  seen: SeenDrops;
   activeTitleId: TitleId | null;
   unlockedZones: ZoneId[];
   // What has been reworked at Greyford. Seeded from the save like the bag,
@@ -285,6 +290,7 @@ class Hud {
   private readonly inventorySheet: InventorySheet;
   private readonly questSheet: QuestSheet;
   private readonly featsSheet: FeatsSheet;
+  private readonly collectionSheet: CollectionSheet;
   private readonly combatLogSheet: CombatLogSheet;
   private readonly mapSheet: MapSheet;
   private readonly minimap: Minimap;
@@ -333,6 +339,7 @@ class Hud {
       bounty: character.bounty,
       kills: character.kills,
       mastery: character.mastery,
+      seen: character.seen ?? {},
       visits: character.visits,
       activeTitleId: character.activeTitleId,
       unlockedZones: character.unlockedZones,
@@ -459,6 +466,7 @@ class Hud {
     this.featsSheet = new FeatsSheet((titleId) =>
       this.events.emit(SET_TITLE_REQUESTED_EVENT, titleId),
     );
+    this.collectionSheet = new CollectionSheet();
     this.combatLogSheet = new CombatLogSheet();
     this.skillsSheet = new SkillsSheet();
     this.idleSheet = new IdleSheet({
@@ -476,6 +484,7 @@ class Hud {
       inventory: this.inventorySheet,
       quests: this.questSheet,
       feats: this.featsSheet,
+      collection: this.collectionSheet,
       log: this.combatLogSheet,
       map: this.mapSheet,
       skills: this.skillsSheet,
@@ -501,6 +510,7 @@ class Hud {
       this.inventorySheet.root,
       this.questSheet.root,
       this.featsSheet.root,
+      this.collectionSheet.root,
       this.combatLogSheet.root,
       this.mapSheet.root,
       this.skillsSheet.root,
@@ -528,6 +538,7 @@ class Hud {
     this.inventorySheet.setCurrency(this.model.currency);
     this.refreshEncumbrance();
     this.featsSheet.update(this.model.kills, this.model.activeTitleId);
+    this.refreshCollection();
     this.combatLogSheet.update(this.model.combatLog);
     this.refreshSkillsBook();
     this.refreshIdle();
@@ -897,6 +908,20 @@ class Hud {
     });
   }
 
+  /**
+   * The collection log, off the five things it counts from: the kills, the
+   * drops seen, the mastery pools, the quests and the house's stands.
+   */
+  private refreshCollection(): void {
+    this.collectionSheet.update({
+      kills: this.model.kills,
+      seen: this.model.seen,
+      mastery: this.model.mastery,
+      quests: this.model.quests,
+      house: this.model.house,
+    });
+  }
+
   /** The XP bar, its rested segment included, off the model. */
   private refreshXp(): void {
     const { level, xp, rested } = this.model;
@@ -1097,6 +1122,7 @@ class Hud {
     listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;
       this.featsSheet.update(kills, this.model.activeTitleId);
+      this.refreshCollection();
       // A corpse is progress on a kill objective, and the counter behind the
       // shopkeeper's row is the same one the feats sheet just redrew from.
       this.refreshQuests();
@@ -1108,6 +1134,11 @@ class Hud {
     listen(MASTERY_CHANGED_EVENT, (mastery) => {
       this.model.mastery = mastery;
       this.refreshSkillsBook();
+      this.refreshCollection();
+    });
+    listen(DROPS_SEEN_CHANGED_EVENT, (seen) => {
+      this.model.seen = seen;
+      this.refreshCollection();
     });
     // The rung rather than the XP, which is the pair the kill counts make with
     // an achievement: the totals redraw a sheet quietly, and crossing is the
@@ -1313,6 +1344,7 @@ class Hud {
     listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
       this.model.quests = quests;
       this.refreshQuests();
+      this.refreshCollection();
       // A quest handed in stops wanting whatever it asked for, and the bag's
       // strip says what wants an item.
       this.inventorySheet.refreshActions();
@@ -1339,6 +1371,7 @@ class Hud {
     listen(HOUSE_CHANGED_EVENT, (house) => {
       this.model.house = house;
       this.overlays.refreshOpen();
+      this.refreshCollection();
     });
   }
 }

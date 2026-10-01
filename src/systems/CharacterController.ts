@@ -64,6 +64,7 @@ import {
   recordKill,
   type AchievementProgress,
 } from './AchievementSystem';
+import { recordSeenDrops } from './CollectionSystem';
 import { bonusYieldChance, crossedMasteryTiers, masteryXp, recordMastery } from './MasterySystem';
 import { keepIdleFood, moveIdleFood, type IdleFoodMove } from './IdleFoodSystem';
 import { drinkPotion, fortuneYieldChance, spendPotionTime } from './PotionSystem';
@@ -904,6 +905,17 @@ export class CharacterController {
       }
     }
     return crossed;
+  }
+
+  /**
+   * Notes what a creature was seen to drop (F3), answering false when none of
+   * it was new. Every drop counts, kept or not: a drop left where it fell or
+   * lost to a full pack was still seen.
+   */
+  recordDropsSeen(enemyId: EnemyId, itemIds: readonly ItemId[]): boolean {
+    const before = this.state.seen;
+    this.state.seen = recordSeenDrops(before, enemyId, itemIds);
+    return this.state.seen !== before;
   }
 
   /** A tip heard once is heard for good: the card never comes back for it. */

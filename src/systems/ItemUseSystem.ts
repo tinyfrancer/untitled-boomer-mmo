@@ -1,5 +1,6 @@
 import { BUILDINGS } from '../data/buildings';
 import { CLASSES } from '../data/classes';
+import { ENEMIES } from '../data/enemies';
 import { HOUSE_BUILDING } from '../data/house';
 import {
   ARMOR_TYPE_CLASSES,
@@ -24,6 +25,7 @@ import {
   type StationId,
 } from '../data/recipes';
 import { REFORGE_STONE_ITEM_ID } from '../data/reforges';
+import { RESOURCE_NODES } from '../data/resourceNodes';
 import { SKILLS } from '../data/skills';
 import { ZONES, type ZoneDefinition } from '../data/zones';
 import { batchSize } from './CraftingSystem';
@@ -32,7 +34,8 @@ import { formatCurrency } from './CurrencySystem';
 import { isTrophy, ownsHouse } from './HouseSystem';
 import { isQuestDone, type QuestLog } from './QuestSystem';
 import { eligibleReforges } from './ReforgeSystem';
-import type { BuildingId, GearSlotId, ItemId } from '../types/ids';
+import { droppersOf, hauntOf } from './CollectionSystem';
+import type { BuildingId, GearSlotId, ItemId, ResourceNodeId, ZoneId } from '../types/ids';
 
 /**
  * What an item is *for*, read off every table that names it.
@@ -72,7 +75,7 @@ export function itemUses(itemId: ItemId, context: ItemUseContext = {}): string[]
   if (uses.length === 0) {
     uses.push(value === null ? 'Nothing uses it' : 'Nothing uses it; only worth selling');
   }
-  uses.push(...madeFrom(itemId));
+  uses.push(...madeFrom(itemId), ...comesFrom(itemId));
   uses.push(value === null ? 'Cannot be sold' : `Sells for ${formatCurrency(value)}`);
   return uses;
 }
@@ -232,8 +235,8 @@ function zoneOfBuilding(buildingId: BuildingId): ZoneDefinition | undefined {
 /**
  * Where more of it comes from, when that is a station or a counter — the
  * reverse of every line above, so a bar says it is smelted from ore the way the
- * ore says it is smelted into a bar. What drops it and where it grows are the
- * collection log's to say (the plan's phase F3), not what an item is for.
+ * ore says it is smelted into a bar. What drops it and where it grows are
+ * `comesFrom`'s, below.
  */
 function madeFrom(itemId: ItemId): string[] {
   const lines: string[] = [];
@@ -256,6 +259,45 @@ function madeFrom(itemId: ItemId): string[] {
     lines.push(`Made from: ${ingredients(offer.cost)}, traded at ${npcPlace('outfitter')}`);
   }
   return lines;
+}
+
+/**
+ * Where it comes from when nobody makes it (F3, which A2 left this to): the
+ * creatures that drop it, the nodes that yield it and the quests that hand it
+ * over, each with where it is found, read off the tables the collection log
+ * counts. A drop is named off the table whatever its chance, since a card that
+ * kept the rare ones quiet would be a card hiding the chase.
+ */
+function comesFrom(itemId: ItemId): string[] {
+  const lines: string[] = [];
+  const droppers = droppersOf(itemId);
+  if (droppers.length > 0) {
+    const names = droppers.map(
+      (enemyId) => `${ENEMIES[enemyId].name}${inZones(hauntOf(enemyId).zones)}`,
+    );
+    lines.push(`Dropped by: ${names.join(', ')}`);
+  }
+  const nodes = Object.values(RESOURCE_NODES).filter((node) => node.yieldItemId === itemId);
+  if (nodes.length > 0) {
+    const names = nodes.map((node) => `${node.name}${inZones(zonesWithNode(node.id))}`);
+    lines.push(`Gathered from: ${names.join(', ')}`);
+  }
+  for (const questId of QUEST_ORDER) {
+    const { reward, name } = QUESTS[questId];
+    const gear = Object.values(reward.gear ?? {});
+    if (reward.keepsake === itemId || gear.includes(itemId)) lines.push(`Quest reward: ${name}`);
+  }
+  return lines;
+}
+
+function zonesWithNode(nodeId: ResourceNodeId): ZoneId[] {
+  return (Object.keys(ZONES) as ZoneId[]).filter((zoneId) =>
+    ZONES[zoneId].nodeSpawns.some((spawn) => spawn.nodeId === nodeId),
+  );
+}
+
+function inZones(zoneIds: readonly ZoneId[]): string {
+  return zoneIds.length > 0 ? ` (${zoneIds.map((zoneId) => ZONES[zoneId].name).join(', ')})` : '';
 }
 
 // "15 Arrow Shafts", or the name alone for a recipe that makes one.

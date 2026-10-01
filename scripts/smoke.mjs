@@ -341,8 +341,8 @@ const columnHeightBesideTraining = () =>
 
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
 const BAR_TABS = ['character', 'inventory', 'quests', 'idle', 'menu'];
-/** How many the Menu opens: Map, Feats, Skills, Combat Log, Options. */
-const MENU_TAB_COUNT = 5;
+/** How many the Menu opens: Map, Feats, Collection, Skills, Combat Log, Options. */
+const MENU_TAB_COUNT = 6;
 
 /**
  * Opens a surface the way a thumb reaches it — off the bar when it is there,
@@ -6197,6 +6197,140 @@ async function house() {
   );
 }
 
+async function collection() {
+  // --- The collection log (F3). What it counts is derived and held in
+  // tests/systems/CollectionSystem.test.ts, and a kill noting its drops in
+  // tests/world/collection.test.ts; what needs a browser is the seat behind
+  // the menu, a real kill reaching the sheet over the HUD channel, a tap into a
+  // creature's page and Back out of it, a drop's card on a right click, and a
+  // long sheet stopping above the tab bar on a portrait phone. ---
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  const before = await page.evaluate(() => {
+    const state = window.world.character.state;
+    return { kills: state.kills, seen: state.seen };
+  });
+
+  // Rats until one drops something, through the funnel both kill paths end in;
+  // the dice are the game's own, so it is a handful rather than one.
+  const killed = await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.seen = {};
+    window.events.emit('drops-seen-changed', w.character.state.seen);
+    const rat = w.mobs.find((mob) => mob.definition.id === 'rat');
+    if (!rat) return { kills: 0, seen: [] };
+    let kills = 0;
+    while (!w.character.state.seen.rat && kills < 40) {
+      rat.takeDamage(rat.maxHp);
+      w.resolveKill(rat);
+      kills += 1;
+    }
+    return { kills, seen: w.character.state.seen.rat ?? [] };
+  });
+
+  const sheet = () =>
+    page.evaluate(() => {
+      const root = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="collection"]')
+      );
+      const body = /** @type {HTMLElement} */ (root.querySelector('.hud-sheet__body'));
+      const box = root.getBoundingClientRect();
+      const bar = /** @type {HTMLElement} */ (document.querySelector('.hud-tabs'));
+      /** @param {string} label */
+      const count = (label) =>
+        [...root.querySelectorAll('.hud-collection-count')].find(
+          (line) => line.firstElementChild?.textContent === label,
+        )?.lastElementChild?.textContent ?? '';
+      return {
+        visible: getComputedStyle(root).display !== 'none',
+        page: root.dataset.page ?? '',
+        title: root.querySelector('.hud-sheet__title')?.textContent ?? '',
+        drops: count('Drops seen'),
+        lore: count('Lore found'),
+        creatures: root.querySelectorAll('[data-creature]').length,
+        seenRows: [...root.querySelectorAll('[data-drop]:not(.is-unseen)')].map(
+          (row) => /** @type {HTMLElement} */ (row).dataset.drop,
+        ),
+        aboveBar: box.bottom <= bar.getBoundingClientRect().top + 0.5,
+        scrolls: body.scrollHeight > body.clientHeight,
+      };
+    });
+
+  await tapTab('collection');
+  const index = await sheet();
+  check(
+    'Collection opens from the menu on its counts and its bestiary',
+    index.visible && index.page === 'index' && index.title === 'Collection' && index.creatures > 0,
+    `page "${index.page}", ${index.creatures} creature(s)`,
+  );
+  check(
+    'and a real kill reached it: the drops it was seen to drop are counted',
+    killed.seen.length > 0 && index.drops.startsWith(`${killed.seen.length} /`),
+    `${killed.kills} kill(s), seen ${killed.seen.join(', ')}, "Drops seen ${index.drops}"`,
+  );
+  check(
+    'and lore, which D2 fills, draws an empty count without complaint',
+    /^\d+ \/ \d+$/.test(index.lore),
+    `"${index.lore}"`,
+  );
+  check(
+    'and the long index stops above the tab bar and scrolls inside itself',
+    index.aboveBar && index.scrolls,
+    `above the bar ${index.aboveBar}, scrolls ${index.scrolls}`,
+  );
+
+  await page.screenshot({ path: `${OUT}/collection.png` });
+
+  await page.click('.hud-sheet[data-sheet="collection"] [data-creature="rat"]');
+  await page.waitForTimeout(80);
+  const rat = await sheet();
+  check(
+    "a creature's row opens its page, its seen drops drawn and the rest greyed",
+    rat.page === 'rat' &&
+      rat.title === 'Rat' &&
+      killed.seen.every((itemId) => rat.seenRows.includes(itemId)),
+    `page "${rat.page}", seen rows ${rat.seenRows.join(', ')}`,
+  );
+  await page.screenshot({ path: `${OUT}/collection-rat.png` });
+
+  const [first] = killed.seen;
+  if (first) {
+    await page.click(`.hud-sheet[data-sheet="collection"] [data-drop="${first}"]`, {
+      button: 'right',
+    });
+    await page.waitForTimeout(80);
+    const card = await page.evaluate(() =>
+      [...document.querySelectorAll('.hud-modal__box--inspect')].map(
+        (box) => box.textContent ?? '',
+      ),
+    );
+    check(
+      "a drop's row opens its card, which says what drops it",
+      card.length === 1 && (card[0] ?? '').includes('Dropped by: Rat'),
+      `${card.length} card(s)`,
+    );
+    await page.click('[data-action="close-inspect"]');
+    await page.waitForTimeout(80);
+  }
+
+  await page.click('.hud-sheet[data-sheet="collection"] [data-action="collection-back"]');
+  await page.waitForTimeout(80);
+  const back = await sheet();
+  check('and Back goes to the index', back.page === 'index', `"${back.page}"`);
+  await tapTab('collection');
+
+  await page.evaluate((saved) => {
+    const w = window.world;
+    w.character.state.kills = saved.kills;
+    w.character.state.seen = saved.seen;
+    window.events.emit('kills-changed', saved.kills);
+    window.events.emit('drops-seen-changed', saved.seen);
+  }, before);
+  if (viewport) await page.setViewportSize(viewport);
+  await page.waitForTimeout(200);
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -6248,6 +6382,7 @@ const SECTIONS = [
   ['spirit', spirit],
   ['still', still],
   ['house', house],
+  ['collection', collection],
 ];
 
 const known = SECTIONS.map(([name]) => name);
