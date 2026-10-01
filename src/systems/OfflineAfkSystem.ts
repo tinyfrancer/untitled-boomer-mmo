@@ -139,6 +139,12 @@ export interface OfflineAfkReport {
    * panel says what the ceiling is, and this is how the report says it was met.
    */
   capped: boolean;
+  /**
+   * The rested XP the night banked, in whole points (phase E1). Not this
+   * function's to work out, since it is the time away rather than the work
+   * that banks it: it is zero here, and the camp that pays the night sets it.
+   */
+  rested: number;
 }
 
 const NOTHING: OfflineAfkReport = {
@@ -158,6 +164,7 @@ const NOTHING: OfflineAfkReport = {
   arrowsSpent: 0,
   outOfArrows: false,
   capped: false,
+  rested: 0,
 };
 
 /**

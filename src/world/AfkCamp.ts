@@ -14,12 +14,18 @@ import { logNotice } from '../systems/CombatLogSystem';
 import { canGather } from '../systems/GatherSystem';
 import { chooseIdleFood, type IdleFoodMove } from '../systems/IdleFoodSystem';
 import { inventoryEntries } from '../systems/InventorySystem';
-import { resolveOfflineAfk, type OfflineAfkReport } from '../systems/OfflineAfkSystem';
+import {
+  OFFLINE_KILL_INTERVAL_MS,
+  elapsedOfflineMs,
+  resolveOfflineAfk,
+  type OfflineAfkReport,
+} from '../systems/OfflineAfkSystem';
 import { distance, withinRadius, type Point } from '../systems/MovementSystem';
 import type { EnemyId, ItemId, SkillId } from '../types/ids';
 import {
   AFK_STATE_CHANGED_EVENT,
   IDLE_FOOD_CHANGED_EVENT,
+  RESTED_CHANGED_EVENT,
   type AchievementUnlock,
 } from '../ui/uiEvents';
 import type { Mob } from './Mob';
@@ -48,8 +54,8 @@ export interface AfkCampDeps {
    * which is the loop's "leave it alone".
    */
   isChanneling(): boolean;
-  /** The choke point the camp's own XP penalty is applied at. */
-  awardXp(reward: number): void;
+  /** XP a parked night earned, already halved, and never rested as well. */
+  awardIdleXp(amount: number): void;
   /** A kill either happened or it didn't, so an offline count is credited in full. */
   creditKill(enemyId: EnemyId, count: number): AchievementUnlock[];
 }
@@ -147,6 +153,7 @@ export class AfkCamp {
           startedAt: new Date().toISOString(),
           zoneId: this.ctx.zoneId,
           station: job.kind === 'craft' ? job.recipe.station : null,
+          restedMs: 0,
         }
       : null;
     this.ctx.persistCharacter();
@@ -189,7 +196,14 @@ export class AfkCamp {
     if (!session) return null;
     character.state.afk = null;
 
-    const report = resolveOfflineAfk(session, {
+    // Banked whatever the night earned, a bow out of arrows included: it is the
+    // time away that banks it, less what the game banked before it closed.
+    const elapsedMs = elapsedOfflineMs(session.startedAt, Date.now());
+    const restedBefore = character.state.rested;
+    character.bankRested(Math.max(0, elapsedMs - session.restedMs));
+    const rested = Math.floor(character.state.rested) - Math.floor(restedBefore);
+
+    const paid = resolveOfflineAfk(session, {
       now: Date.now(),
       classId: character.state.classId,
       characterLevel: character.state.level,
@@ -201,11 +215,15 @@ export class AfkCamp {
       reforges: character.state.reforges,
       rng: this.ctx.rolls,
     });
+    const report = { ...paid, rested };
     if (report.kills <= 0 && report.gathers <= 0 && report.crafts <= 0) {
       this.ctx.persistCharacter();
       // A bow with nothing to shoot is the one parked camp that earned nothing
-      // for a reason the player can do something about, so it is still news.
-      return report.outOfArrows ? { report, unlocks: [] } : null;
+      // for a reason the player can do something about, so it is still news,
+      // and so is a bank that filled while nothing else could. A reload in the
+      // middle of idle is not: under a minute away says nothing.
+      const news = report.outOfArrows || (rested > 0 && elapsedMs >= OFFLINE_KILL_INTERVAL_MS);
+      return news ? { report, unlocks: [] } : null;
     }
 
     // Spent before handed over, and in that order: a making camp works through
@@ -224,7 +242,7 @@ export class AfkCamp {
     // A gathering session earns no character XP at all, and awarding zero would
     // still float a "+0 XP" over the boot it was resolved on.
     if (report.xp > 0) {
-      this.deps.awardXp(report.xp);
+      this.deps.awardIdleXp(report.xp);
     }
     if (report.skill && report.skillXp > 0) {
       // Silent: this is resolved on the boot that finds the parked session, so
@@ -247,8 +265,9 @@ export class AfkCamp {
     return { report, unlocks };
   }
 
-  update(): void {
+  update(deltaMs: number): void {
     if (!this.active || !this.ctx.player.isAlive()) return;
+    this.bankRested(deltaMs);
 
     // Anything already chasing is answered before anything else, whichever kind
     // of camp this is: being hit breaks a gather channel, so a woodcutter that
@@ -259,6 +278,21 @@ export class AfkCamp {
       return;
     }
     this.fight();
+  }
+
+  /**
+   * Idle with the game open banks rested as it runs (phase E1), and the session
+   * on the save counts what it has banked, so the morning does not bank the
+   * same hours again if the tab closes on it.
+   */
+  private bankRested(deltaMs: number): void {
+    const { character } = this.ctx;
+    const session = character.state.afk;
+    if (!session) return;
+    session.restedMs += deltaMs;
+    if (character.bankRested(deltaMs)) {
+      this.ctx.events.emit(RESTED_CHANGED_EVENT, character.state.rested);
+    }
   }
 
   /**

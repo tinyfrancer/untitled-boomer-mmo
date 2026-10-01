@@ -54,6 +54,30 @@ describe('migrateCharacterState', () => {
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
   });
 
+  it('has banked no rested, made before there was any (phase E1)', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 2,
+      afk: { startedAt: '2026-10-01T08:00:00.000Z', zoneId: 'town', station: null },
+    };
+    delete before.rested;
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.rested).toBe(0);
+    // A night parked before it banked nothing with the game open, so the
+    // morning banks the whole of it.
+    expect(migrated?.afk?.restedMs).toBe(0);
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
+  it('leaves a save with no parked night without one', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 2,
+    };
+    delete before.rested;
+    expect(migrateCharacterState(before)?.afk).toBeNull();
+  });
+
   it('drops saves from the future', () => {
     const future = {
       ...createNewCharacter('Aria', 'wizard'),

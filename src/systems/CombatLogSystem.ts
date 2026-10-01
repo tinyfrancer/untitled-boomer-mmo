@@ -89,8 +89,12 @@ export function logHealed(abilityName: string, amount: number): CombatLogEntry {
   return { text: `${abilityName} restores ${amount} health.`, color: THEME.color.heal };
 }
 
-export function logXpGain(amount: number): CombatLogEntry {
-  return { text: `You gain ${amount} experience.`, color: THEME.color.levelUp };
+export function logXpGain(amount: number, rested = 0): CombatLogEntry {
+  const text =
+    rested > 0
+      ? `You gain ${amount + rested} experience (${rested} rested).`
+      : `You gain ${amount} experience.`;
+  return { text, color: THEME.color.levelUp };
 }
 
 export function logLevelUp(level: number): CombatLogEntry {

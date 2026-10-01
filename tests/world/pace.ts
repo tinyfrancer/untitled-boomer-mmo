@@ -135,6 +135,9 @@ function characterFor(run: PaceRun): CharacterState {
   state.gear = { ...state.gear, ...run.gear };
   state.learnedAbilities = learnedAt(run.classId, run.level);
   state.skills.cooking = { level: Math.min(10, run.cooking ?? run.level), xp: 0 };
+  // Unrested, and it never idles to bank any: the pace is a level's play by
+  // hand, and rested is a bonus on top of it rather than part of it (phase E1).
+  state.rested = 0;
   return state;
 }
 

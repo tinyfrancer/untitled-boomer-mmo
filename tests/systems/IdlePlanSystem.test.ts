@@ -226,7 +226,7 @@ describe('the panel and the payout', () => {
         state.level = 5;
       });
       const report = resolveOfflineAfk(
-        { startedAt: new Date(0).toISOString(), zoneId, station: null },
+        { startedAt: new Date(0).toISOString(), zoneId, station: null, restedMs: 0 },
         {
           now: 3_600_000,
           classId: input.classId,

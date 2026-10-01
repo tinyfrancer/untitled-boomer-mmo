@@ -262,6 +262,12 @@ export const MASTERY_TIER_REACHED_EVENT = 'mastery-tier-reached';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
 export const TITLE_CHANGED_EVENT = 'title-changed';
+/**
+ * The rested bank moved without any XP moving with it: idle banking it. Said
+ * when its whole number changes, not every frame; spending it rides on
+ * `XP_GAINED_EVENT`, whose gain carries the bank after.
+ */
+export const RESTED_CHANGED_EVENT = 'rested-changed';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -514,6 +520,7 @@ export interface UiEventMap {
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
   [TITLE_CHANGED_EVENT]: [titleId: TitleId | null];
+  [RESTED_CHANGED_EVENT]: [rested: number];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

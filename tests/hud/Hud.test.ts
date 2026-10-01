@@ -141,6 +141,7 @@ const REPORT: OfflineAfkReport = {
   arrowsSpent: 0,
   outOfArrows: false,
   capped: false,
+  rested: 0,
 };
 
 let parent: HTMLElement;
