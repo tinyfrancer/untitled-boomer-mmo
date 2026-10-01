@@ -1,12 +1,11 @@
 # Working the rest of version 2 in parallel
 
-**Status:** proposed on 2026-10-01 against `6497833`, the merge of C10, and **not yet decided**.
-`docs/v2_plan.md` is still the live plan and still says what each phase is; this document says how
-its remaining phases could be built by several agents at once rather than one session at a time,
-which is a real fork: the plan's "How this plan is worked" assumes one phase in flight. If the user
-takes it, the first agent to start records it as the next decision, amends that section of the plan
-to point here, and this document becomes the live account of who is building what. If not, nothing
-here is referenced from anywhere and it goes to `docs/archive/`.
+**Status:** live. Proposed on 2026-10-01 against `6497833`, the merge of C10, and taken by the user
+the same day (decision 123). `docs/v2_plan.md` is still the live plan and still says what each phase
+is; this document says how its remaining phases are built by several agents at once rather than one
+session at a time, and holds a brief per phase. **In flight:** C11 (wave 0), started 2026-10-01;
+wave 1's questions put to the user the same day, their answers under each brief. Update this line
+as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc
@@ -110,8 +109,7 @@ section are for.
 
 ## How a phase is worked in parallel
 
-The plan's "How this plan is worked" holds, with these on top. If the user takes this plan, they go
-into that section.
+The plan's "How this plan is worked" holds, with these on top, which it summarises (decision 123).
 
 1. **A branch per phase, named here**, cut from `origin/main` the day the phase starts:
    `claude/v2-c11-review`, `claude/v2-d1-dialog`, and so on down the briefs. One PR per phase, as
