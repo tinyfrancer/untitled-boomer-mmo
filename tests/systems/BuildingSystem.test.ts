@@ -19,6 +19,7 @@ import { findPath } from '../../src/systems/PathSystem';
 import {
   arrivalPoint,
   oppositeEdge,
+  sideOn,
   signpostPoint,
   zoneWorldSize,
 } from '../../src/systems/ZoneSystem';
@@ -197,7 +198,7 @@ describe('where the buildings stand', () => {
         ...zone.stationSpawns.map(({ x, y, station }) => ({ what: station, x, y })),
         ...zone.exits.map((exit) => ({
           what: `${exit.edge} signpost`,
-          ...signpostPoint(exit.edge, width, height),
+          ...signpostPoint(exit, width, height),
         })),
         { what: 'the start', ...zone.start },
       ];
@@ -220,16 +221,16 @@ describe('where the buildings stand', () => {
    * question of the tiles; this asks it of the things standing on them.
    */
   it('is clear of every band a traveller can arrive on', () => {
-    const fractions = [0.03, 0.25, 0.5, 0.75, 0.97];
+    const fractions = [0, 0.25, 0.5, 0.75, 1];
     for (const zone of zones) {
       for (const exit of zone.exits) {
         const destination = ZONES[exit.to];
         const { width, height } = zoneWorldSize(destination);
         const buildings = placed(destination);
-        const edge = oppositeEdge(exit.edge);
+        const side = sideOn(destination, oppositeEdge(exit.edge));
 
         for (const fraction of fractions) {
-          const point = arrivalPoint(edge, fraction, width, height, TILE_SIZE * 1.5);
+          const point = arrivalPoint(side, fraction, width, height, TILE_SIZE * 1.5);
           buildings.forEach((building) => {
             expect(
               overlaps(around(point.x, point.y, PLAYER_HALF_EXTENT), buildingRect(building)),

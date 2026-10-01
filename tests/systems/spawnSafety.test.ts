@@ -5,9 +5,8 @@ import { ZONES } from '../../src/data/zones';
 import { clampToWorld, isBlocked } from '../../src/systems/CollisionSystem';
 import { arriveRadius, distance } from '../../src/systems/MovementSystem';
 import { hasClearLine } from '../../src/systems/PathSystem';
-import { arrivalPoint, zoneWorldSize } from '../../src/systems/ZoneSystem';
+import { arrivalPoint, zoneWorldSize, type ExitSide } from '../../src/systems/ZoneSystem';
 import type { Point } from '../../src/systems/MovementSystem';
-import type { ZoneEdge } from '../../src/types/ids';
 import type { Mob } from '../../src/world/Mob';
 import { populateZone } from '../../src/world/zoneEntities';
 
@@ -108,12 +107,12 @@ describe('an arrival strip', () => {
       const { width, height } = sizeOf(zone.id);
       const threats = threatsIn(zone.id);
 
-      // A zone is arrived on the edges its own exits sit on: walking out
-      // through one and coming back lands on the same edge.
+      // A zone is arrived at by the mouths its own exits open: walking out
+      // through one and coming back lands in the same one.
       for (const exit of zone.exits) {
         for (const threat of threats) {
           expect(
-            gapToStrip(exit.edge, threat.at, width, height),
+            gapToStrip(exit, threat.at, width, height),
             `${zone.id}: arriving on the ${exit.edge} edge lands inside a ${threat.enemyId} (L${threat.level})`,
           ).toBeGreaterThan(threat.aggro);
         }
@@ -266,14 +265,20 @@ function walksHome(mob: Mob, from: Point, world: World, deltaMs: number): boolea
  * sat between two of those passed a check it should have failed — Blackwater Fen
  * shipped a level 5 raider 192 from its north strip against an aggro radius of
  * 210, and it passed because the nearest sampled arrival was 214 away. A strip
- * spans the whole edge, so the only thing that can hold a creature clear of it is
- * distance *across* the edge: the point on the strip nearest anything is always
- * the one directly opposite it. Measuring that is exact and cheaper than
- * sampling, which is what `deepCut.test.ts` had already worked out for one zone.
+ * is a line across its mouth, the whole edge or a few tiles of it (decision 119),
+ * so the exact answer is the distance to that segment, which is cheaper than
+ * sampling too.
  */
-function gapToStrip(edge: ZoneEdge, at: Point, width: number, height: number): number {
-  const anywhere = arrivalPoint(edge, 0.5, width, height, ARRIVAL_INSET);
-  return edge === 'east' || edge === 'west'
-    ? Math.abs(at.x - anywhere.x)
-    : Math.abs(at.y - anywhere.y);
+function gapToStrip(side: ExitSide, at: Point, width: number, height: number): number {
+  const a = arrivalPoint(side, 0, width, height, ARRIVAL_INSET);
+  const b = arrivalPoint(side, 1, width, height, ARRIVAL_INSET);
+  const lengthSq = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+  const t =
+    lengthSq === 0
+      ? 0
+      : Math.min(
+          1,
+          Math.max(0, ((at.x - a.x) * (b.x - a.x) + (at.y - a.y) * (b.y - a.y)) / lengthSq),
+        );
+  return gap(at, { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });
 }

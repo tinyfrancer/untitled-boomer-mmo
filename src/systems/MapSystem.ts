@@ -171,7 +171,7 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
     });
   }
   for (const exit of zone.exits) {
-    const point = signpostPoint(exit.edge, size.width, size.height);
+    const point = signpostPoint(exit, size.width, size.height);
     markers.push({
       kind: 'exit',
       ...toTile(point.x, point.y),

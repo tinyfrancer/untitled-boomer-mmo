@@ -16,6 +16,14 @@ import { SUNKEN_BARROW_LAYOUT } from './sunkenBarrowMap';
 export interface ZoneExit {
   edge: ZoneEdge;
   to: ZoneId;
+  /**
+   * The stretch of the edge that is open, its first and last tile counted from
+   * the edge's north or west end; the whole edge when unset. A vault is entered
+   * at a mouth a few tiles wide in a wall of rock rather than down a side open
+   * end to end, and an arrival lands across the mouth at the fraction of the
+   * other one it was crossed at (decision 119).
+   */
+  mouth?: readonly [first: number, last: number];
 }
 
 /**

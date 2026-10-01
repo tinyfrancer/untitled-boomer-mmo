@@ -76,6 +76,7 @@ import {
   findExit,
   oppositeEdge,
   resumePoint,
+  sideOn,
   zoneWorldSize,
 } from '../systems/ZoneSystem';
 import { saveService } from '../persistence';
@@ -525,7 +526,7 @@ export class ZoneWorld implements Targeting {
   private startPoint(entry: ZoneWorldOptions['entry']): Point {
     if (entry) {
       return arrivalPoint(
-        entry.edge,
+        sideOn(this.zone, entry.edge),
         entry.fraction,
         this.worldWidth,
         this.worldHeight,
@@ -921,7 +922,7 @@ export class ZoneWorld implements Targeting {
     this.changingZone = true;
     const entryEdge = oppositeEdge(exit.edge);
     const fraction = edgeFraction(
-      exit.edge,
+      exit,
       this.player.x,
       this.player.y,
       this.worldWidth,
@@ -939,7 +940,13 @@ export class ZoneWorld implements Targeting {
     const destination = zoneWorldSize(ZONES[exit.to]);
     this.character.recordLocation(
       exit.to,
-      arrivalPoint(entryEdge, fraction, destination.width, destination.height, ARRIVAL_INSET),
+      arrivalPoint(
+        sideOn(ZONES[exit.to], entryEdge),
+        fraction,
+        destination.width,
+        destination.height,
+        ARRIVAL_INSET,
+      ),
     );
     saveService.save(this.character.state);
     this.ctx.push({ kind: 'zone-exit', to: exit.to, edge: entryEdge, fraction });
