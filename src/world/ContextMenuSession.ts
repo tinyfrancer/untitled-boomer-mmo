@@ -4,6 +4,7 @@ import { SKILLS } from '../data/skills';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import {
   describeEnemy,
+  describeFixture,
   describeEnemyLoot,
   describeNode,
   describeNpc,
@@ -17,7 +18,9 @@ import type { Mob } from './Mob';
 import type { ResourceNode } from './ResourceNode';
 import type { WorldContext } from './WorldContext';
 import type { WorldTap } from './ZoneWorld';
-import type { WorldNpc, WorldSignpost, WorldStation } from './zoneEntities';
+import type { WorldFixture, WorldNpc, WorldSignpost, WorldStation } from './zoneEntities';
+import type { HouseFixture } from '../data/house';
+import { onStand, ownsHouse, type HouseState } from '../systems/HouseSystem';
 
 /** Everything a context menu can be about: a tap's subject, less the ground. */
 type Subject = Exclude<WorldTap, { kind: 'ground' }>;
@@ -29,6 +32,7 @@ const SUBJECT_ACTIONS = {
   signpost: 'travel',
   station: 'work',
   pile: 'take',
+  fixture: 'use',
 } as const satisfies Record<Exclude<Subject['kind'], 'npc'>, ContextActionId>;
 
 /** The line each role's counter is asked for by; what it says is `ROLE_SERVICES`. */
@@ -116,6 +120,8 @@ export class ContextMenuSession {
         return this.stationMenu(target.station);
       case 'pile':
         return this.pileMenu(target.pile);
+      case 'fixture':
+        return this.fixtureMenu(target.fixture);
     }
   }
 
@@ -208,6 +214,22 @@ export class ContextMenuSession {
     };
   }
 
+  /**
+   * Something in the house, its line named for what a tap on it will do: a
+   * bare stand is set, a held one handed back, the chest opened, the wall
+   * looked at.
+   */
+  private fixtureMenu(fixture: WorldFixture): ContextSubject {
+    const { house, kills, quests } = this.ctx.character.state;
+    const owned = ownsHouse(quests);
+    const details = describeFixture(fixture.fixture, { house, kills, owned });
+    return {
+      title: details.title,
+      actions: [action('use', fixtureVerb(fixture.fixture, house))],
+      details,
+    };
+  }
+
   private npcMenu(npc: WorldNpc): ContextSubject {
     const role = npcRole(npc.npcId);
     return {
@@ -215,6 +237,17 @@ export class ContextMenuSession {
       actions: [action('talk', 'Talk'), action(ROLE_ACTIONS[role], ROLE_SERVICES[role].label)],
       details: describeNpc(npc.npcId),
     };
+  }
+}
+
+function fixtureVerb(fixture: HouseFixture, house: HouseState): string {
+  switch (fixture.kind) {
+    case 'stand':
+      return onStand(house, fixture.stand) ? 'Take down' : 'Set out a trophy';
+    case 'chest':
+      return 'Open';
+    case 'wall':
+      return 'Look';
   }
 }
 

@@ -1440,6 +1440,16 @@ export function hudCss(): string {
   padding: 0;
   margin-left: auto;
 }
+/* The house's count (F1) stands beside its X rather than on a line of its own,
+   since the house has no purse to share a second line with. */
+.hud-house__count {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  margin-left: auto;
+}
+.hud-modal__head > .hud-house__count + .hud-modal__close {
+  margin-left: 0;
+}
 /* The way back to the conversation, at the front of every counter's head: the
    close button's size and look, and the title after it takes the slack, so the
    pair reads left to right and the purse and the X keep the right-hand end. */

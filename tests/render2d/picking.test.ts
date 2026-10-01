@@ -153,7 +153,7 @@ describe('pickTap in 2D', () => {
    * does not stop you shopping. One box on one spot, offered by every kind, so
    * that only the order can decide.
    */
-  it('asks node, signpost, NPC, mob, station, building, pile, then ground', () => {
+  it('asks node, signpost, NPC, mob, station, fixture, building, pile, then ground', () => {
     const { world } = harness();
     const spot = { x: 700, y: 700 };
     const door = { x: 0, y: 0 };
@@ -164,6 +164,7 @@ describe('pickTap in 2D', () => {
       npcs: [{ ...standing, npc: nth(world.npcs) }],
       mobs: [{ ...standing, mob: nth(world.mobs) }],
       stations: [{ ...standing, station: nth(world.stations) }],
+      fixtures: [{ ...standing, fixture: nth(world.fixtures) }],
       buildings: [
         {
           ...standing,
@@ -173,14 +174,32 @@ describe('pickTap in 2D', () => {
       ],
       piles: [{ ...standing, pile: new LootPile(spot, [{ itemId: 'rat-bones', quantity: 1 }]) }],
     };
-    const order = ['nodes', 'signposts', 'npcs', 'mobs', 'stations', 'buildings', 'piles'] as const;
+    const order = [
+      'nodes',
+      'signposts',
+      'npcs',
+      'mobs',
+      'stations',
+      'fixtures',
+      'buildings',
+      'piles',
+    ] as const;
     const answered = order.map((_, taken) => {
       const scene = { ...full };
       order.slice(0, taken).forEach((kind) => (scene[kind] = []));
       const tapped = pickTap(spot, scene);
       return tapped.kind === 'ground' && tapped.point === door ? 'building' : tapped.kind;
     });
-    expect(answered).toEqual(['node', 'signpost', 'npc', 'mob', 'station', 'building', 'pile']);
+    expect(answered).toEqual([
+      'node',
+      'signpost',
+      'npc',
+      'mob',
+      'station',
+      'fixture',
+      'building',
+      'pile',
+    ]);
   });
 
   it('takes from a loot pile tapped where it lies, and hands a lapsed one to the ground', () => {

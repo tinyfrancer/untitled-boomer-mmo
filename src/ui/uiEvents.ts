@@ -28,6 +28,8 @@ import type { CombatLogEntry } from '../systems/CombatLogSystem';
 import type { IdleFoodChoice, IdleFoodMove } from '../systems/IdleFoodSystem';
 import type { InspectPanel } from '../systems/InspectSystem';
 import type { Gear, Inventory } from '../systems/InventorySystem';
+import type { HouseFixture } from '../data/house';
+import type { HouseState } from '../systems/HouseSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
 import type { OfferedTip } from '../systems/TipSystem';
@@ -262,6 +264,16 @@ export const MASTERY_TIER_REACHED_EVENT = 'mastery-tier-reached';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
 export const TITLE_CHANGED_EVENT = 'title-changed';
+// The house (F1). A stand, the chest or the wall opened by walking up to it,
+// and shut by walking out of the house or by the panel's X, which the world
+// hears as already shut, the way a counter's is. What is on the stands and in
+// the chest comes with every change, a copy, as the bank's shelves do.
+export const HOUSE_OPENED_EVENT = 'house-opened';
+export const HOUSE_CLOSED_EVENT = 'house-closed';
+export const HOUSE_CHANGED_EVENT = 'house-changed';
+export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
+export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
+export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -366,7 +378,9 @@ export type ContextActionId =
   | 'work'
   | 'outfit'
   | 'reforge'
-  | 'take';
+  | 'take'
+  // Whatever a fixture in the house does when it is tapped (F1).
+  | 'use';
 
 export interface ContextAction {
   id: ContextActionId;
@@ -514,6 +528,12 @@ export interface UiEventMap {
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
   [TITLE_CHANGED_EVENT]: [titleId: TitleId | null];
+  [HOUSE_OPENED_EVENT]: [fixture: HouseFixture];
+  [HOUSE_CLOSED_EVENT]: [];
+  [HOUSE_CHANGED_EVENT]: [house: HouseState];
+  [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
+  [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

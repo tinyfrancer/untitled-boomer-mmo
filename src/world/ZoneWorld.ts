@@ -49,6 +49,10 @@ import {
   CONTEXT_ACTION_REQUESTED_EVENT,
   TIP_HEARD_EVENT,
   TIPS_SET_REQUESTED_EVENT,
+  HOUSE_CLOSED_EVENT,
+  DISPLAY_TROPHY_REQUESTED_EVENT,
+  CHEST_DEPOSIT_REQUESTED_EVENT,
+  CHEST_WITHDRAW_REQUESTED_EVENT,
   type AchievementUnlock,
   type ContextSubject,
 } from '../ui/uiEvents';
@@ -62,6 +66,7 @@ import { MINIMAP_REACH, tileOf, toTile } from '../systems/MapSystem';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
 import { NPC_INTERACT_RADIUS, worksCounter, type CounterId } from '../data/npcs';
 import { STATION_RADIUS } from '../data/recipes';
+import { FIXTURE_REACH } from '../data/house';
 import type { InteractionKind } from '../systems/InteractionSystem';
 import type { GatherState } from '../systems/GatherSystem';
 import type { CraftState } from '../systems/CraftingSystem';
@@ -85,6 +90,7 @@ import { Mob } from './Mob';
 import {
   populateZone,
   type WorldBuilding,
+  type WorldFixture,
   type WorldNpc,
   type WorldSignpost,
   type WorldSecret,
@@ -112,6 +118,7 @@ import { ShopSession } from './ShopSession';
 import { TalkSession } from './TalkSession';
 import { TipDesk } from './TipDesk';
 import { SecretFinder } from './SecretFinder';
+import { HouseSession } from './HouseSession';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
@@ -135,10 +142,13 @@ const ARRIVAL_INSET = TILE_SIZE * 1.5;
 // moment the player is further out than that radius, so ending the approach
 // exactly on it makes the first tick a coin toss.
 const GATHER_APPROACH_FRACTION = 0.9;
+// How near where a body stands to use a fixture the walk there has to end:
+// half a tile, which leaves every fixture in `FIXTURE_REACH` from it.
+const FIXTURE_ACCESS_RADIUS = TILE_SIZE / 2;
 
 // Re-exported so a view can ask what it is looking at without knowing which
 // module built it.
-export type { WorldBuilding, WorldNpc, WorldSignpost, WorldStation };
+export type { WorldBuilding, WorldFixture, WorldNpc, WorldSignpost, WorldStation };
 
 // The offline payout's shape, re-exported for the host that has somewhere to
 // put it.
@@ -157,6 +167,8 @@ export type WorldTap =
   | { kind: 'station'; station: WorldStation }
   | { kind: 'mob'; mob: Mob }
   | { kind: 'pile'; pile: LootPile }
+  /** A stand, the chest or the wall in the house (F1). */
+  | { kind: 'fixture'; fixture: WorldFixture }
   | { kind: 'ground'; point: Point };
 
 /**
@@ -239,6 +251,7 @@ export class ZoneWorld implements Targeting {
   readonly stations: WorldStation[];
   readonly buildings: WorldBuilding[];
   readonly secrets: WorldSecret[];
+  readonly fixtures: WorldFixture[];
   readonly signposts: WorldSignpost[];
   readonly collisionWorld: CollisionWorld;
   target: Mob | null = null;
@@ -256,6 +269,7 @@ export class ZoneWorld implements Targeting {
   private readonly contextMenu: ContextMenuSession;
   private readonly tips: TipDesk;
   private readonly secretFinder: SecretFinder;
+  private readonly house: HouseSession;
   private readonly loot: LootPiles;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -299,6 +313,7 @@ export class ZoneWorld implements Targeting {
     this.stations = entities.stations;
     this.buildings = entities.buildings;
     this.secrets = entities.secrets;
+    this.fixtures = entities.fixtures;
     this.signposts = entities.signposts;
     this.collisionWorld = entities.collisionWorld;
 
@@ -512,6 +527,9 @@ export class ZoneWorld implements Targeting {
       secrets: this.secrets,
       leavePile: (at, drops) => this.loot.leave(at, drops),
     });
+    this.house = new HouseSession(this.ctx, {
+      closeCounters: () => this.closeCounters(),
+    });
 
     this.subscribe();
     // The HUD may be carrying HP from before the world was rebuilt by a zone
@@ -583,6 +601,14 @@ export class ZoneWorld implements Targeting {
     listen(CONTEXT_ACTION_REQUESTED_EVENT, (actionId) => this.contextMenu.run(actionId));
     listen(TIP_HEARD_EVENT, (tipId) => this.tips.heard(tipId));
     listen(TIPS_SET_REQUESTED_EVENT, (on) => this.tips.set(on));
+    listen(HOUSE_CLOSED_EVENT, () => this.house.closedByUi());
+    listen(DISPLAY_TROPHY_REQUESTED_EVENT, (itemId) => this.house.display(itemId));
+    listen(CHEST_DEPOSIT_REQUESTED_EVENT, (itemId, quantity) =>
+      this.house.deposit(itemId, quantity),
+    );
+    listen(CHEST_WITHDRAW_REQUESTED_EVENT, (itemId, quantity) =>
+      this.house.withdraw(itemId, quantity),
+    );
   }
 
   /** Drops every subscription. The host calls this before building the next world. */
@@ -637,6 +663,7 @@ export class ZoneWorld implements Targeting {
     this.publishSecrets();
     this.tips.update();
     this.updateNpcRange();
+    this.house.updateRange();
     this.checkZoneExit();
     return this.ctx.drain();
   }
@@ -712,6 +739,9 @@ export class ZoneWorld implements Targeting {
         return;
       case 'pile':
         this.approachPile(target.pile);
+        return;
+      case 'fixture':
+        this.approachFixture(target.fixture);
         return;
       case 'ground':
         this.approach.walk(target.point);
@@ -846,6 +876,22 @@ export class ZoneWorld implements Targeting {
   }
 
   /**
+   * Walk up to a stand, the chest or the wall in the house and use it (F1):
+   * the station's shape, ending in `HouseSession` rather than a panel of its
+   * own, since what a stand does depends on whether something is on it.
+   */
+  approachFixture(fixture: WorldFixture): void {
+    const use = (): void => this.house.use(fixture);
+    if (withinRadius(this.player, fixture, FIXTURE_REACH)) {
+      use();
+      return;
+    }
+    // Aimed at where a body stands to use it rather than at the fixture, which
+    // stands against a wall the walk would otherwise go round the outside of.
+    this.approach.walkTo({ kind: 'house', radius: FIXTURE_ACCESS_RADIUS }, fixture.access, use);
+  }
+
+  /**
    * The living creatures within the minimap's reach of the player's tile, each
    * with its place in `mobs`. Measured in whole tiles, square rather than round,
    * because the minimap is a square.
@@ -977,9 +1023,13 @@ export class ZoneWorld implements Targeting {
     Object.values(this.counters).forEach((counter) => counter.updateRange());
   }
 
-  /** Everything that stops a session at once shuts all of them, never one. */
+  /**
+   * Everything that stops a session at once shuts all of them, never one, and
+   * whatever is open in the house with them: one thing is served at a time.
+   */
   closeCounters(): void {
     Object.values(this.counters).forEach((counter) => counter.close());
+    this.house.close();
   }
 
   handleReforgeRequested(itemId: ItemId): void {

@@ -191,6 +191,20 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
     shape: 'cottage',
     door: 'north',
   },
+  /**
+   * The house the Company lets to the player once they have earned it (F1,
+   * `data/house.ts`): a cottage's roof over a room a tile wider than a shop's,
+   * since what stands in it stands against three walls and somebody has to be
+   * able to walk between them. Its door faces south onto the lane to the pond,
+   * where it is seen and tapped from.
+   */
+  house: {
+    id: 'house',
+    name: "The Surveyor's House",
+    body: { width: TILE_SIZE * 4, height: BAY },
+    shape: 'cottage',
+    door: 'south',
+  },
 };
 
 /** A building where a zone put it. What everything below asks about. */

@@ -24,13 +24,16 @@ import {
   BED,
   BENCH,
   BENCH_SIDE,
+  CHEST,
   COUNTER,
   CRATES,
   HEARTH,
   HEARTH_EAST,
   HEARTH_LOW,
   HEARTH_WEST,
+  PLAQUE,
   SHELVES,
+  STAND,
 } from './sprites/fittings';
 import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
 import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
@@ -100,6 +103,9 @@ export const SPRITES: readonly SpriteDef[] = [
   CRATES,
   BED,
   COUNTER,
+  STAND,
+  CHEST,
+  PLAQUE,
   CHIPS,
   SPLASH,
 ];

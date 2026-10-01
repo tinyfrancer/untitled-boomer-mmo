@@ -1,3 +1,4 @@
+import { emptyHouse } from '../systems/HouseSystem';
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 
 // Each step upgrades a save from exactly `fromVersion` to `fromVersion + 1`.
@@ -17,6 +18,8 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   100: (state) => ({ ...state, showMinimap: true }),
   // Secrets (decision 117): nobody made before them has found one.
   101: (state) => ({ ...state, secrets: [] }),
+  // The house (F1): bare stands and an empty chest for everybody made before it.
+  102: (state) => ({ ...state, house: emptyHouse() }),
 };
 
 /**
