@@ -94,7 +94,8 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | --------------------------- | ----------- | --------------------------------------------------- | ------------- |
 | Aldmark                     |             | The kingdom east, where the settlers come from      | `history.md`  |
 | Ambrose Tally               |             | The banker (_in game_)                              | `places.md`   |
-| Bess Mallow                 |             | Keeps the Wet Boot                                  | `places.md`   |
+| Amos Keel                   |             | An old fisher on the strand (_in game_)             | `places.md`   |
+| Bess Mallow                 |             | Keeps the Wet Boot (_in game_)                      | `places.md`   |
 | Big Gorb                    |             | A goblin tangle's Big One, not yet met              | `naming.md`   |
 | Blackwater Fen              |             | _In game_; the drowned low country's edge           | `places.md`   |
 | Candle Strand               |             | _In game_; the strand south of Lampton              | `places.md`   |
@@ -123,7 +124,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Lampton                     |             | _In game_; the Company's town                       | `places.md`   |
 | lortir                      | LOR-teer    | The fenfolk's name for themselves                   | `peoples.md`  |
 | Lorn                        | LORN        | Wick's name, the lampwright                         | `spirit.md`   |
-| Maren                       | MAR-en      | Keeper of the third light, a fenfolk elder          | `places.md`   |
+| Maren                       | MAR-en      | Keeper of the third light, fenfolk (_in game_)      | `places.md`   |
 | Marhal                      | MAR-hal     | Veymar's capital, drowned                           | `history.md`  |
 | Marta Hale                  |             | The trainer (_in game_)                             | `places.md`   |
 | Merrath the Last            | MER-ath     | Veymar's last king, in the great light              | `history.md`  |
@@ -133,7 +134,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Oona Rook                   |             | The outfitter (_in game_)                           | `places.md`   |
 | Orlath the Barrow King      | OR-lath     | _In game_; the gold-holder                          | `history.md`  |
 | Orlhal                      | ORL-hal     | Orlath's barrow, the Sunken Barrow                  | `history.md`  |
-| Pocket                      |             | The crow at Greyford                                | `peoples.md`  |
+| Pocket                      |             | The crow at Greyford (_in game_)                    | `peoples.md`  |
 | the Quiet Court             |             | The elves                                           | `peoples.md`  |
 | the Red Rags                |             | Hollis's gang                                       | `factions.md` |
 | Redrag Camp                 |             | _In game_; the Red Rags' camp in the waystation     | `places.md`   |

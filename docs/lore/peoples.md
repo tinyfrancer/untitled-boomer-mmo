@@ -127,7 +127,7 @@ to them.
   Warden. (Old Mill Road)
 - **The light under the sea**, far out past the Candles on a dark night, is Merrath's great light
   seen from above. (Candle Strand, from the shore)
-- **Pocket**, the crow on the longhouse roof at Greyford, talks, is rude, and knows things it should
+- **Pocket**, the crow on the longhouse roof at Greyford, or the post by its door, talks, is rude, and knows things it should
   not. Nobody knows why it talks. It says it is not telling. (Greyford)
 - **Cave crawlers** are sea crabs gone pale in the dark, and there are no crabs in the Greyhills: they
   came up through the dwarves' drowned halls, which means those halls still reach the sea. (The Deep

@@ -184,6 +184,17 @@ events and the same panel slot — so walking off, one at a time, a zone change,
 shut it with no line written for it. It is not a role, because nobody's job is to talk; a person
 works one counter and has the conversation besides (`worksCounter`).
 
+**Somebody may work no counter at all** (version 2 phase D1b, decision 134): the lore's people, Bess
+at the Wet Boot, the old fisher on the strand, Pocket at Greyford and Maren in the fen, whose role is
+`'none'`. Their conversation is the whole of them: the talk panel draws no service button, the held
+finger offers Talk alone, and the card says they work no counter. It is a role rather than a nullable
+one so every table keyed by role still says what it means for them, and `CounterId` leaves it out, so
+no counter called none can be asked for; `roleCounter` says talking is what such a person works. Bess
+stands at `counterPoint` of the inn, named on its row like anybody who works in a room, with no
+counter drawn in front of her; the other three stand in the open, placed by a marker in their zone's
+text, and `spawnSafety.test.ts` holds where (out of every aggressive creature's reach, and clear of
+anything else a tap might mean).
+
 **What a person says is data, and they remember what they were asked** (`data/dialog.ts`,
 `systems/DialogSystem.ts`, version 2 phase D1). Each person has greetings and topics: a topic is a
 button with the player's words on it and one or more answers, the last whose `requires` hold being

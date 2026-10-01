@@ -49,7 +49,10 @@ roof wants, with stands for what they bring home, a chest, and a wall for their 
 - **Jory Stroud**, the quartermaster: the Company in Lampton, overworked, brusque and fair. He does
   not care what is under the fen. He cares what is on the road. He still orders iron for Cobb
   Harrow, because the order is in the Company's book. _In game_, talking (D1).
-- **Bess Mallow**, who keeps the Wet Boot. _Not yet in the game._
+- **Bess Mallow**, who keeps the Wet Boot: sharp, kind under it, and the one who put the player to
+  bed the night the carter brought them in with their purse cut, and saw a light in the room she had
+  not left them. She keeps a stool by the door for Cobb Harrow, who drank on it every night for
+  three years. _In game_, talking (D1b).
 - **Cobb Harrow**, the smith, who went east to a wedding two years ago and has not come back. The
   contract board still orders for him.
 
@@ -84,8 +87,10 @@ for what they look like. There is no tide to speak of (decision 117): the sea is
 
 **What it was.** Veymar's sea-wall. The Candles are its sea-lights, drowned to the stump.
 
-**People.** The Company's fishers, and among them an old one who will not fish past the Candles.
-_Not yet in the game._
+**People.** The Company's fishers, and among them an old one who will not fish past the Candles:
+**Amos Keel**, who has fished the strand twenty-eight years, saw the light under the water his first
+winter here, and has fished this side of the Candles since. The fenfolk cut his nets twice last year
+and left the fish in them, which he has never worked out. _In game_, talking on the spit (D1b).
 
 **Secrets.**
 
@@ -250,7 +255,8 @@ road goes a little way west towards the Stillwood and is grown over.
   and not quite a villain. Years before anybody opened Orlhal he pressed its door's seal in wax, and
   it is the one thing he has never sold; he parts with it to whoever puts Orlath down. _In game_ as
   the Cast of Orlath's Seal.
-- **Pocket**, the crow on the longhouse roof. _Not yet in the game._
+- **Pocket**, the crow on the longhouse roof, or on the post by its door, which is where anybody
+  who wants a word finds it. _In game_, talking, on the post (D1b).
 
 **Secrets.**
 
@@ -288,10 +294,12 @@ still showing in places. Orlhal is at its southern edge.
 
 **People.**
 
-- **Tirrow**, who leads the raiders: young, angry, and not wrong about the pans. _Not yet in the
-  game._
+- **Tirrow**, who leads the raiders: young, angry, and not wrong about the pans. Maren carried him
+  across the fen on her back as a child, and he will not talk to her now. A name in Maren's lines
+  (D1b) until Part G gives him a scene.
 - **Maren**, keeper of the third light: an elder, and the first of the fenfolk who will talk rather
-  than fight. _Not yet in the game._
+  than fight. The third light is her mother. Her grandmother lies under the second pan from the
+  east. _In game_, talking, on the mere's north shore (D1b).
 
 **Secrets.**
 
