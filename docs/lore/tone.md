@@ -49,8 +49,9 @@ Samples for the voice, not final lines: D1 writes the dialog and D4 the spirit.
 - The signpost to the Sunken Barrow, as it already is: "Locked, and what is buried in there was
   buried holding it. Come at eight."
 
-The six townsfolk's greetings are already in this voice, since A4 wrote them to be. D1 keeps their
-spirit and lets them name the places and people they could not.
+The six townsfolk's greetings were already in this voice, since A4 wrote them to be. D1 kept their
+spirit, let them name the places and people they could not, and wrote their topics (`data/dialog.ts`),
+where a greeting and an answer change as the player climbs (rule 6).
 
 ## Wrong
 
