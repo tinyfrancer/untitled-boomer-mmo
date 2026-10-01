@@ -30,6 +30,18 @@ export interface QuestReward {
    * supposed to come from, and turn the shopkeeper into the armourer.
    */
   gear?: Record<ClassId, ItemId>;
+  /**
+   * Something to keep (F1): what the giver hands over at the end of a chain,
+   * the same for every class, and good for nothing but a stand in the house.
+   * Only a chain's last quest names one.
+   */
+  keepsake?: ItemId;
+  /**
+   * The house in Lampton (F1). Not stored anywhere when it is paid: whether
+   * the house is somebody's is whether the quest that names it is done
+   * (`ownsHouse`), so the one row that says so is the whole of the grant.
+   */
+  house?: true;
 }
 
 export interface QuestDefinition {
@@ -123,7 +135,24 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       'Hollis is the one giving the orders, and he keeps a locked door between himself and the road. Find the key on one of his men, then find him.',
     objective: { kind: 'kill', enemyId: 'bandit-chief', quantity: 1 },
     requires: ['bandit-trouble'],
-    reward: { copper: 400, xp: 350 },
+    reward: { copper: 400, xp: 350, keepsake: 'pells-cart-bell' },
+  },
+  /*
+   * The Company's, and the way the house becomes the player's (F1,
+   * `data/house.ts`): held back by the starter arc's capstone, since the plot is
+   * let to whoever has been useful, and asking for timber rather than coin, since
+   * the roof wants mending before anybody lives under it. A gather errand a
+   * level 3 does in town, paying the house and a little XP and no coin.
+   */
+  'a-roof-in-lampton': {
+    id: 'a-roof-in-lampton',
+    name: 'A Roof in Lampton',
+    giverNpcId: 'quartermaster',
+    description:
+      "The Surveyor's House has stood empty since the survey went west, and the Company lets it to whoever is useful. You have been. Bring me twenty logs for the roof and it is yours.",
+    objective: { kind: 'collect', itemId: 'logs', quantity: 20 },
+    requires: ['the-cutthroat'],
+    reward: { copper: 0, xp: 50, house: true },
   },
 
   /*
@@ -208,7 +237,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       'Orlath was buried with more than anyone has ever dug up, and older work than any I know. One of those raiders carries the key to his barrow. Find it, then find him.',
     objective: { kind: 'kill', enemyId: 'barrow-king', quantity: 1 },
     requires: ['blackwater-raiders'],
-    reward: { copper: 700, xp: 1200 },
+    reward: { copper: 700, xp: 1200, keepsake: 'orlaths-seal-cast' },
   },
 };
 
@@ -218,6 +247,7 @@ export const QUEST_ORDER: QuestId[] = [
   'crab-feast',
   'bandit-trouble',
   'the-cutthroat',
+  'a-roof-in-lampton',
   'goblin-road',
   'cut-coal',
   'lurker-hides',

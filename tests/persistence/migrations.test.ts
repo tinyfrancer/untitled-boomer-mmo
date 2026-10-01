@@ -54,6 +54,17 @@ describe('migrateCharacterState', () => {
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
   });
 
+  it('has a house with bare stands and an empty chest, made before there was one (F1)', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 2,
+    };
+    delete before.house;
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.house).toEqual({ stands: [null, null, null, null], chest: {} });
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
   it('drops saves from the future', () => {
     const future = {
       ...createNewCharacter('Aria', 'wizard'),

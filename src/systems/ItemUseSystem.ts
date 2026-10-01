@@ -1,4 +1,6 @@
+import { BUILDINGS } from '../data/buildings';
 import { CLASSES } from '../data/classes';
+import { HOUSE_BUILDING } from '../data/house';
 import {
   ARMOR_TYPE_CLASSES,
   ITEMS,
@@ -26,9 +28,10 @@ import { SKILLS } from '../data/skills';
 import { ZONES, type ZoneDefinition } from '../data/zones';
 import { batchSize } from './CraftingSystem';
 import { formatCurrency } from './CurrencySystem';
+import { isTrophy, ownsHouse } from './HouseSystem';
 import { isQuestDone, type QuestLog } from './QuestSystem';
 import { eligibleReforges } from './ReforgeSystem';
-import type { GearSlotId, ItemId } from '../types/ids';
+import type { BuildingId, GearSlotId, ItemId } from '../types/ids';
 
 /**
  * What an item is *for*, read off every table that names it.
@@ -60,6 +63,7 @@ export function itemUses(itemId: ItemId, context: ItemUseContext = {}): string[]
     ...stationWork(itemId),
     ...trades(itemId),
     ...wantedBy(itemId, context.quests ?? {}),
+    ...displayed(itemId, context.quests ?? {}),
   ];
   const value = itemValue(itemId);
   // Said outright rather than left to the price alone: for burnt food "nothing"
@@ -200,6 +204,25 @@ function wantedBy(itemId: ItemId, quests: QuestLog): string[] {
     lines.push(`Contract: ${name} wants ${objective.quantity}`);
   }
   return lines;
+}
+
+/**
+ * A trophy's one use beyond whatever else it is (F1): a stand at home. Said
+ * before the house is the player's as well, with who lets it, since a boss's
+ * drop sold for want of knowing is gone for good.
+ */
+function displayed(itemId: ItemId, quests: QuestLog): string[] {
+  if (!isTrophy(itemId)) return [];
+  const house = `${BUILDINGS[HOUSE_BUILDING].name}${inZone(zoneOfBuilding(HOUSE_BUILDING))}`;
+  return ownsHouse(quests)
+    ? [`Display at home, on a stand in ${house}`]
+    : [`Display at home, once ${npcPlace('quartermaster')} lets you ${house}`];
+}
+
+function zoneOfBuilding(buildingId: BuildingId): ZoneDefinition | undefined {
+  return Object.values(ZONES).find((zone) =>
+    zone.buildingSpawns.some((spawn) => spawn.buildingId === buildingId),
+  );
 }
 
 /**

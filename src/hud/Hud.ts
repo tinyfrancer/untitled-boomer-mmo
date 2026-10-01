@@ -7,6 +7,7 @@ import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
 import { Minimap } from './Minimap';
+import { emptyHouse, type HouseState } from '../systems/HouseSystem';
 import { OverlayHost } from './OverlayHost';
 import type { OptionSettings } from './OptionsModal';
 import { PlayerColumn } from './PlayerColumn';
@@ -82,6 +83,9 @@ import {
   INVENTORY_CHANGED_EVENT,
   QUIVER_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
+  HOUSE_OPENED_EVENT,
+  HOUSE_CLOSED_EVENT,
+  HOUSE_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
   MASTERY_CHANGED_EVENT,
@@ -220,6 +224,9 @@ interface HudModel {
   // Whether the minimap is up, for the layout and the options menu's switch.
   // Seeded from the save and kept current by the session.
   minimapOn: boolean;
+  // What stands on the house's stands and is in its chest (F1). Seeded from
+  // the save like the bank, then kept current by the world.
+  house: HouseState;
 }
 
 /**
@@ -319,6 +326,7 @@ class Hud {
       idleFood: character.idleFood ?? { order: [], keep: [] },
       tipsOn: !(character.tips?.off ?? false),
       minimapOn: character.showMinimap ?? true,
+      house: character.house ?? emptyHouse(),
     };
 
     injectHudStyles();
@@ -355,6 +363,11 @@ class Hud {
         gear: this.model.gear,
         inventory: this.model.inventory,
         reforges: this.model.reforges,
+      }),
+      house: () => ({
+        house: this.model.house,
+        inventory: this.model.inventory,
+        kills: this.model.kills,
       }),
     });
     this.mapSheet = new MapSheet({
@@ -1245,6 +1258,14 @@ class Hud {
       this.featsSheet.update(this.model.kills, titleId);
       // A worn title costs the player column an extra line.
       this.applyLayout();
+    });
+    // The house (F1): whatever in it the world opened or shut, and what is on
+    // its stands and in its chest whenever that moves.
+    listen(HOUSE_OPENED_EVENT, (fixture) => this.overlays.openHouse(fixture));
+    listen(HOUSE_CLOSED_EVENT, () => this.overlays.closeHouse());
+    listen(HOUSE_CHANGED_EVENT, (house) => {
+      this.model.house = house;
+      this.overlays.refreshOpen();
     });
   }
 }

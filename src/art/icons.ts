@@ -159,6 +159,8 @@ const MATERIAL_ICONS: Readonly<Partial<Record<ItemId, IconRow>>> = {
   'willow-shafts': { art: ITEM.SHAFTS, recolour: { thatch: 'oilskin' } },
   'iron-arrowheads': { art: ITEM.ARROWHEADS, recolour: { tier: 'tierIron' } },
   'steel-arrowheads': { art: ITEM.ARROWHEADS, recolour: { tier: 'tierSteel' } },
+  'pells-cart-bell': { art: ITEM.BELL },
+  'orlaths-seal-cast': { art: ITEM.SEAL },
 };
 
 // What an item nobody drew is drawn as, by the shape its data names.
@@ -185,6 +187,8 @@ const BY_SHAPE: Readonly<Record<ItemIconShape, SpriteDef>> = {
   arrow: ITEM.ARROW,
   shaft: ITEM.SHAFTS,
   arrowhead: ITEM.ARROWHEADS,
+  bell: ITEM.BELL,
+  seal: ITEM.SEAL,
 };
 
 /** What an item is drawn as, and dyed: gear off the wardrobe, the rest off its row. */
@@ -239,7 +243,7 @@ function rowOf(itemId: ItemId): IconRow {
 const hasSwaps = (row: IconRow): boolean => Object.keys(row.recolour ?? {}).length > 0;
 
 /** The sprite an item's icon is: the drawing, or the variant of it dyed for this item. */
-function itemSprite(itemId: ItemId): string {
+export function itemSprite(itemId: ItemId): string {
   const row = rowOf(itemId);
   return hasSwaps(row) ? variantId(row.art.id, itemId) : row.art.id;
 }

@@ -17,6 +17,7 @@ import type { QuestPanelState } from './talkQuests';
 import { TalkModal } from './TalkModal';
 import { StationModal, type StationPanelState } from './StationModal';
 import { SlotPicker } from './SlotPicker';
+import { HouseModal, type HousePanelState } from './HouseModal';
 import {
   ABANDON_BOUNTY_REQUESTED_EVENT,
   ACCEPT_BOUNTY_REQUESTED_EVENT,
@@ -41,7 +42,12 @@ import {
   LEARN_ABILITY_REQUESTED_EVENT,
   CRAFT_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
+  HOUSE_CLOSED_EVENT,
+  DISPLAY_TROPHY_REQUESTED_EVENT,
+  CHEST_DEPOSIT_REQUESTED_EVENT,
+  CHEST_WITHDRAW_REQUESTED_EVENT,
 } from '../ui/uiEvents';
+import { fixtureKey, type HouseFixture } from '../data/house';
 import type { CounterId } from '../data/npcs';
 import type { StationId } from '../data/recipes';
 import type { InspectPanel } from '../systems/InspectSystem';
@@ -73,6 +79,8 @@ export interface OverlayPanelState {
   /** The log and its tallies, which anybody talked to may have work in. */
   quests: () => QuestPanelState;
   station: () => StationPanelState;
+  /** The stands, the chest, the bag and the kills, which is all the house draws (F1). */
+  house: () => HousePanelState;
 }
 
 /**
@@ -136,12 +144,14 @@ export class OverlayHost {
     (npcId: NpcId, onClosed: () => void) => CounterPanel
   >;
   private readonly stationState: () => StationPanelState;
+  private readonly houseState: () => HousePanelState;
   private viewportWidth = 0;
 
   private options: OptionsModal | null = null;
   private loadSave: LoadSaveModal | null = null;
   private counter: { id: CounterId; panel: CounterPanel } | null = null;
   private station: StationModal | null = null;
+  private house: HouseModal | null = null;
   private picker: SlotPicker | null = null;
   private awayReport: AwayReportModal | null = null;
   private menu: MenuOverlay | null = null;
@@ -152,6 +162,7 @@ export class OverlayHost {
     this.root = root;
     this.events = events;
     this.stationState = panels.station;
+    this.houseState = panels.house;
     const emit = events.emit.bind(events);
     // Every X asks rather than does: the world owns whether a counter is open,
     // and closes it with the same event it hears this on. Back asks the same
@@ -377,6 +388,7 @@ export class OverlayHost {
   layout(viewportWidth: number): void {
     this.viewportWidth = viewportWidth;
     this.counter?.panel.layout(viewportWidth);
+    this.house?.layout(viewportWidth);
   }
 
   /** Takes down that counter if it is the one up. */
@@ -400,6 +412,7 @@ export class OverlayHost {
   refreshOpen(): void {
     this.counter?.panel.refresh();
     this.refreshStation();
+    this.house?.update(this.houseState());
   }
 
   /**
@@ -443,6 +456,39 @@ export class OverlayHost {
   /** The bag moves under it with every bar made, so every tick may redraw it. */
   refreshStation(): void {
     this.station?.update(this.stationState());
+  }
+
+  /**
+   * Whatever in the house was walked up to (F1), opened by the world and shut
+   * by it, the way a counter is: the X asks rather than does. A second one
+   * replaces the first, since the world never has two open.
+   */
+  openHouse(fixture: HouseFixture): void {
+    if (this.house && fixtureKey(this.house.fixture) === fixtureKey(fixture)) {
+      this.house.update(this.houseState());
+      return;
+    }
+    this.house?.close();
+    const emit = this.events.emit.bind(this.events);
+    this.house = new HouseModal(
+      fixture,
+      {
+        onDisplay: (itemId) => emit(DISPLAY_TROPHY_REQUESTED_EVENT, itemId),
+        onDeposit: (itemId, quantity) => emit(CHEST_DEPOSIT_REQUESTED_EVENT, itemId, quantity),
+        onWithdraw: (itemId, quantity) => emit(CHEST_WITHDRAW_REQUESTED_EVENT, itemId, quantity),
+        onDismiss: () => emit(HOUSE_CLOSED_EVENT),
+      },
+      () => {
+        this.house = null;
+      },
+    );
+    this.house.layout(this.viewportWidth);
+    this.house.update(this.houseState());
+    this.root.append(this.house.root);
+  }
+
+  closeHouse(): void {
+    this.house?.close();
   }
 
   // The session queues these on the boot that resolved a parked camp. It had
@@ -498,6 +544,7 @@ export class OverlayHost {
       this.loadSave,
       this.counter,
       this.station,
+      this.house,
       this.picker,
       this.awayReport,
       this.menu,
@@ -511,6 +558,7 @@ export class OverlayHost {
     this.loadSave?.close();
     this.counter?.panel.close();
     this.station?.close();
+    this.house?.close();
     this.picker?.close();
     this.awayReport?.close();
     this.menu?.close();

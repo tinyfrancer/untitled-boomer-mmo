@@ -1,5 +1,8 @@
 import { QUESTS } from '../data/quests';
-import { logQuestAccepted, logQuestCompleted } from '../systems/CombatLogSystem';
+import { BUILDINGS } from '../data/buildings';
+import { HOUSE_BUILDING } from '../data/house';
+import { describeItemName } from '../data/items';
+import { logNotice, logQuestAccepted, logQuestCompleted } from '../systems/CombatLogSystem';
 import type { CombatXpGain } from '../systems/CharacterController';
 import type { QuestId, TitleId } from '../types/ids';
 import type { WorldNpc } from './zoneEntities';
@@ -65,6 +68,16 @@ export class QuestDesk {
       return;
     }
     this.ctx.log(logQuestCompleted(QUESTS[questId].name));
+    if (result.keepsake) {
+      this.ctx.notice(`${describeItemName(result.keepsake)} is yours to keep.`);
+    }
+    // The grant is the quest being done (`ownsHouse`), so all that is left to
+    // do is say so, in the log as well since a toast is gone in a moment.
+    if (QUESTS[questId].reward.house) {
+      const granted = `${BUILDINGS[HOUSE_BUILDING].name} is yours.`;
+      this.ctx.notice(granted);
+      this.ctx.log(logNotice(granted));
+    }
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
     this.announce();
