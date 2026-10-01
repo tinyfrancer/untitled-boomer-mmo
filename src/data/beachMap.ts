@@ -47,7 +47,7 @@ export const BEACH_LAYOUT = layoutZone(
     ::::::::::::a::::::::::::::::::::::::::::::::
     :::::::s::::::::::::::s::::::::::::::::::::::
     ::::~~~~~f~~~~~~f~~~~~~~f~~~~~~f~~~~~~f~~~~~~
-    ::::~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ::F:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::::~~~~~~~#~~~~~#~~~~~#~~~~~#~~~~~#~~~~~#~~~
     ::::_______n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::::________~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,6 +65,9 @@ export const BEACH_LAYOUT = layoutZone(
     f: { node: 'ocean-fishing-spot', on: 'water' },
     // At the nearest Candle's foot, at the end of the sea-wall's top.
     n: { secret: 'warden-niche', on: 'stone' },
+    // Amos, out on the spit where the sea-wall goes out, looking at the Candles
+    // he will not fish past (D1b).
+    F: { npc: 'fisher', on: 'sand' },
     // Samphire, on the sand at the water's edge where the salt reaches it: the
     // starter band's herb (version 2 phase E2).
     s: { node: 'samphire', on: 'sand' },

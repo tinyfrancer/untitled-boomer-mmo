@@ -78,6 +78,7 @@ export class QuestDesk {
       this.ctx.notice(granted);
       this.ctx.log(logNotice(granted));
     }
+    this.ctx.moveStanding(QUESTS[questId].reward.standing, { said: true });
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
     this.announce();

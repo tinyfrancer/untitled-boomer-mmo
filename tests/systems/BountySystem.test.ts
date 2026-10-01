@@ -24,6 +24,7 @@ const board = (overrides: Partial<BoardContext> = {}): BoardContext => ({
   inventory: {},
   kills: {},
   visits: {},
+  standing: {},
   level: 1,
   bounty: null,
   ...overrides,

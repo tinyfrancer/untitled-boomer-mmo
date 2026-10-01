@@ -170,8 +170,8 @@ and collision bodies are data (`EnemyDefinition.body`), never measured off anyth
 
 **The rules are `ZoneWorld`'s collaborators, one per subsystem** (`CombatDirector`,
 `GatherSession`, `AbilityCaster`, `AfkCamp`, the counter sessions, `QuestDesk`, `LootPiles`,
-`ContextMenuSession`, `TipDesk`, `SecretFinder`, `ApproachDriver`, `Spirit`). Each owns its state and reaches the zone through the shared
-`ContextMenuSession`, `TipDesk`, `SecretFinder`, `HouseSession`, `ApproachDriver`). Each owns its state and reaches the zone through the shared
+`ContextMenuSession`, `TipDesk`, `SecretFinder`, `HouseSession`, `ApproachDriver`, `Spirit`). Each
+owns its state and reaches the zone through the shared
 `WorldContext` and a small `Deps` interface of its own — never a reference to the world. A new rule
 belongs in the collaborator that owns the state it reads. What stays in `ZoneWorld` is the entities,
 the tick order, what is selected, the publishers that speak only on change, and the three things
@@ -207,7 +207,8 @@ character a tile, the grounds' characters shared by every zone, and a legend of 
 the start, creatures, nodes, stations, buildings and secrets (`data/secrets.ts`, decision 117: a
 row there and a drawing in `art/places.ts`, found by walking up to it and on no map). A marker stands in the middle of its tile, a
 building is a block of its letter exactly its footprint, whoever works in one is named on its row
-rather than placed, and a zone's size is its text's. **A secret may lie in a room**, written into its
+rather than placed, somebody who works nowhere is a marker of their own (decision 134), and a zone's
+size is its text's. **A secret may lie in a room**, written into its
 building's block, and is found only from inside that room (decision 120). Walking is the only way
 into a zone. **An exit is open along its mouth**, the whole shared edge unless its row names a
 narrower `mouth` (decision 119, a vault's way in, an edge with a stream across it, decision 120, or
@@ -235,33 +236,41 @@ of gear has its HUD icon the day its `art/wardrobe.ts` row lands, and anything e
 `art/icons.ts`, which a test holds every item to.
 
 **State that can be derived is derived.** Quest progress counts the bag or a tally on read; buffs,
-quest markers, achievements, titles and mastery rungs are computed when asked. Only three tallies
-are stored — kills, zone visits and mastery XP — because a corpse, an arrival and a chopped tree
-leave nothing behind to count. Keep that split. **What an item is for is derived too**
-(`systems/ItemUseSystem.ts`) from every table that takes items; a new kind of table that takes
+quest markers, achievements, titles, mastery rungs and faction ranks are computed when asked. Only
+five tallies are stored — kills, zone visits, mastery XP, faction standing and the drops seen off
+each creature — because a corpse, an arrival, a chopped tree, a deed (a contract paid, an answer
+given, decision 133) and a drop seen leave nothing behind to count; the collection log and the
+bestiary (`systems/CollectionSystem.ts`, decision 137) are everything read off them. Keep that split.
+**What an item is for is derived too** (`systems/ItemUseSystem.ts`) from every table that takes
+items, and where it comes from from every table that hands it over; a new kind of table that takes
 them — a counter, a stand, a trade — is taught to it in the same change, or every card it touches
 goes quiet about it. **So is what a skill's level buys** (`systems/SkillBookSystem.ts`, the skills
 book): it reads the functions the rolls call, so a new rate goes behind an exported function the
 book can read rather than inline in a roll, or the book goes on saying the old number. **So is what
 idle will do** (`systems/IdlePlanSystem.ts`, the idle panel): it reads `afkCampJob` and
 `offlineJob`, the function the payout branches on, so a new rule in the camp or the payout goes
-behind those, or the panel goes on promising the old night. **So is when a tip applies, and
-what it says** (`systems/TipSystem.ts`): each tip is a rule over the character, and its line reads
-the fee, the price or the ceiling it names off the table or constant that holds it. What has been
-heard is stored (`CharacterState.tips`), since hearing leaves nothing else behind, and so is every
-secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every answer
-a person has given (`CharacterState.asked`, decision 126), by which a topic is grey until it gains a
-new one. **What a person says is a row** (`data/dialog.ts`), its conditions a `requires` union read
-by `DialogSystem` for the world and the HUD alike, so a new kind of condition is a member and a case
-there; a new person is a conversation there as well as a row in `NPCS`.
-secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every beat
-of Wick's story heard (`CharacterState.beats`, decision 128); which beat waits where is derived
-(`systems/SpiritSystem.ts`).
-secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and the time left
-on each potion drunk (`CharacterState.potions`, decision 129), which a night away reads.
-secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and what stands
-on the house's stands and lies in its chest (`CharacterState.house`, decision 130); whose the house
-is, what is a trophy and which plaques hang are derived.
+behind those, or the panel goes on promising the old night; what a night drinks is
+`nightPotionSupply`, which the payout drinks out of and the panel names (decision 135). **So is
+when a tip applies, and what it says** (`systems/TipSystem.ts`): each tip is a rule over the
+character, and its line reads the fee, the price or the ceiling it names off the table or constant
+that holds it. **What leaves nothing behind to count is stored.** What has been heard is
+(`CharacterState.tips`), since hearing leaves nothing else; so is every secret found
+(`CharacterState.secrets`, decision 117); every answer a person has given (`CharacterState.asked`,
+decision 126), by which a topic is grey until it gains a new one; every beat of Wick's story heard
+(`CharacterState.beats`, decision 128), which beat waits where being derived
+(`systems/SpiritSystem.ts`); the time left on each potion drunk (`CharacterState.potions`, decision
+129), which a night away reads; what stands on the house's stands and lies in its chest, and which
+of its stages are built (`CharacterState.house`, decisions 130 and 136), since a room paid for
+leaves nothing but the coin gone, while whose the house is, what is a trophy, which plaques hang and
+what a stage puts on the lot are derived; and the Whispers journal (`CharacterState.whispers`,
+decision 132), the rumours heard and the lore found in the order they came, whether a rumour is
+followed being derived. A rumour is told as an `effects` member on an answer (`data/rumours.ts`),
+lore is found at a secret, off a boss or in an answer (`data/loreFragments.ts`), all of it noted
+through `WorldContext.noteWhisper`, and every lead names a secret or a creature that exists
+(`WhispersSystem.test.ts`). **What a person says is a row** (`data/dialog.ts`), its conditions a
+`requires` union read by `DialogSystem` for the world and the HUD alike, so a new kind of condition
+is a member and a case there; a new person is a conversation there as well as a row in `NPCS`, and
+somebody who works no counter has the role `'none'` (decision 134), not a missing one.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
@@ -311,8 +320,8 @@ drawn over the room the player is standing in**: another building is cut out of 
 not written there. **The words are laid out before any is written** (`render2d/plates.ts`): a plate
 that would be written over another is lifted straight up clear of it, and the player's and then the
 target's never move (decision 112). A tap is picked against boxes in a fixed **priority** (node,
-signpost, NPC, mob, spirit, station, building, loot pile, ground), not a depth sort. What a frame costs is a
-signpost, NPC, mob, station, fixture, building, loot pile, ground), not a depth sort. What a frame costs is a
+signpost, NPC, mob, station, fixture, spirit, building, loot pile, ground), not a depth sort. What a
+frame costs is a
 budget smoke asserts under an eight-times-throttled CPU (`SLOW_DRAW_BUDGET_MS`, 16ms since decision
 110); raising it is a decision about the game, not about the run that hit it.
 `docs/architecture/rendering.md` has the view.
@@ -332,10 +341,14 @@ may lay blocking ground over walkable ground, which is why rock shows its face i
 kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
 and **what stands in its room is `art/rooms.ts`** (decision 109): nothing in it blocks, so
 `tests/art/rooms.test.ts` is all that keeps the furniture and the
-counter out of where the game stands a body. **The house's stands, chest and wall are the one
-furniture tapped** (decision 130): where they stand is `data/house.ts`, since the world walks up to
-them, aimed at where a body stands rather than at the fixture, and `tests/world/house.test.ts` holds
-them clear and in reach as `rooms.test.ts` does the rest. **Who is drawn with what** is
+counter out of where the game stands a body. **The house's stands, chest, wall and plans are the one
+furniture tapped** (decisions 130 and 136): where they stand is `data/house.ts`, since the world walks
+up to them, aimed at where a body stands rather than at the fixture, and `tests/world/house.test.ts`
+holds them clear and in reach as `rooms.test.ts` does the rest. **The yard's beds and bench are
+placed off the house too, not in Lampton's spawns** (decision 136), which every table reads as where
+a herb grows wild and a bench stands for anybody, so the zone sweeps do not see them and
+`house.test.ts` sweeps them instead; a room shut until a stage is built has its doorway walled up
+until then. **Who is drawn with what** is
 `art/cast.ts`, anything not in it being its kind's placeholder, and **what each place is drawn as**
 is `art/places.ts`.
 **A creature built like a person is a getup on the figure in a build** (decision 108): a boss is

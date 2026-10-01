@@ -67,9 +67,10 @@ export class BountySession extends CounterSession {
       this.ctx.notice(result.reason);
       return;
     }
-    const { name } = bountyById(bountyId);
+    const { name, reward } = bountyById(bountyId);
     this.ctx.log(logBountyCompleted(name));
     this.ctx.log(logCoin(result.copper));
+    this.ctx.moveStanding(reward.standing, { said: true });
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
     this.publish();

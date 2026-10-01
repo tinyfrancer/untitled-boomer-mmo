@@ -6,12 +6,12 @@ is; this document says how its remaining phases are built by several agents at o
 session at a time, and holds a brief per phase. **From wave 1 each wave merges through its own branch, its numbers reserved at launch and its
 questions answered before it launches, by an orchestrator session woken every half hour (decision 125)**, so the user is asked nothing between a wave's question round and its review. **Landed:** C11 (wave 0), 2026-10-01, with the measurement below written into the plan's C11 entry
 (decision 124); wave 1 (D1 decision 126, E1 127, D4 128, E2 129, F1 130, save versions 103 to 107),
-folded onto `claude/v2-wave-1` by the orchestrator on 2026-10-01 and merged to `main` as one PR the
-same day. **Landed:** G1 (decision 131), 2026-10-01, Part G written into the plan as phases with a brief
-per tier, zone and the carters. **In flight:** wave 2 (D2, D3, D1b, E3, F2, F3) from `claude/v2-wave-2`, cut from `main` and
-launched 2026-10-01 at 21:28 UTC, its numbers reserved from 132 and its questions answered under
-each brief on that branch. Update this line as phases start and land, the way
-the plan's status line is.
+folded onto `claude/v2-wave-1` by the orchestrator and merged to `main` on 2026-10-01; G1 (decision
+131), merged after it. **Folded, up for review:** wave 2 (D2 decision 132 and save version 108, D3 133
+and 109, D1b 134, E3 135, F3 137 and 110, F2 136 and 111, F2's version numbered at the fold since it
+was reserved none and found it needed one), folded onto `claude/v2-wave-2` by the orchestrator on
+2026-10-01 and up as one PR to `main` for the user's review. **Next:** wave 3, launched once wave 2
+has merged. Update this line as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc
@@ -137,7 +137,10 @@ The plan's "How this plan is worked" holds, with these on top, which it summaris
    writes them into the launch prompt; the phase writes its decision and keys its migration step to
    them from the start and never renumbers. A phase that changes nothing about the save takes no
    version. The typecheck holds `saveFile.ts`'s `FIELDS` to every field, so a step cannot land
-   without its check.
+   without its check. A phase that finds mid-build that it needs a version it was not given
+   builds against the next number _after the wave's reservations_, says so in its PR, and the
+   orchestrator confirms it at the fold, so the reserved ones hold (wave 2's F2: reserved none, given
+   111 after F3's 110).
 4. **The Record commit is written last**, so the status line, `CLAUDE.md`, the decision and the
    architecture doc are written against the wave branch as it stands by then rather than as it was
    the morning the branch was cut. That is the order the phases already use; here it is a rule.
@@ -216,7 +219,8 @@ and save version 103, E1 127 and 104, D4 128 and 105, E2 129 and 106, F1 130 and
 **Numbers reserved** (decision 125): G1 131 and no save version, launched 2026-10-01 before the
 wave branch existed, so its PR stays against `main` and is merged after wave 1's; then, from
 `claude/v2-wave-2` cut from `main` once wave 1 has merged, D2 132 (save version 108), D3 133 (109),
-D1b 134, E3 135, F2 136 and F3 137 (110), in that launch order.
+D1b 134, E3 135, F2 136 and F3 137 (110), in that launch order. F2 found it needed a save step after
+all, for the stages built, and was given 111 at the fold, after F3's.
 
 **The user is asked:** G1's interview, which is the largest single ask in the whole of what is left
 (it writes the phases Part G is built as), in G1's own session since it launched before decision
@@ -364,6 +368,8 @@ for the one line it writes in Lampton's text).
 leads the raiders, talks at all before Part G or is met only in Maren's lines; and where Pocket
 perches, since a person stands on the ground and a crow on a roof is drawn over a building it does
 not block.
+
+**Answered (2026-10-01):** A person with no counter is a `'none'` role, Talk their only button and no service line, so every `Record<NpcRoleId>` gains a row and nothing becomes nullable. Tirrow is a name in Maren's lines until Part G gives him a scene; the raiders stay enemies. Pocket perches on a post by the longhouse door, drawn and tapped like a small person at ground level, and the lore's roof becomes the porch post. All three on Claude's recommendation.
 
 **Do:** five rows in `NPCS` with their topics in D1's schema: Bess Mallow named on the Wet Boot's
 row in Lampton's text; the old fisher on the strand; Pocket on Greyford's longhouse, a new shape
@@ -557,6 +563,8 @@ moved.
 2. Where a lore fragment is found: a secret, a boss, a line of dialog, or all three?
 3. Does the journal count toward anything beyond its own counts (F3's log reads it)?
 
+**Answered (2026-10-01):** Rumours only for what exists, the fifteen secrets, the caches and the two bosses, the rest held in the lore until Part G builds what they lead to (the user's, on Claude's recommendation). The user declined the round's second card, so these two are settled by Claude on its recommendation for the wave review to overturn: a fragment is found at a secret, off a boss or in a line of dialog, all three; and the journal keeps its own counts, which F3's log reads, and finding lore pays nothing else.
+
 **Do:** `data/rumours.ts` (a rumour: who tells it, the line, what it leads to) and
 `data/loreFragments.ts` (a fragment: a paragraph of `history.md`'s voice, where it is found);
 heard and found kept on the character (a save version at the merge); rumours delivered as
@@ -582,6 +590,8 @@ factions with standing before 9 (the Company, the Keepers, Greyford) with the Co
 met once each; and where standing shows, a block on the character sheet with ranks on Feats, or a
 seat of its own.
 
+**Answered (2026-10-01):** The user declined the round's card with the first two, so they are settled by Claude on its recommendation for the wave review to overturn: the Company and the Keepers are opposed on deeds rather than a seesaw, a raider killed or a salt pan worked costing the Keepers while it pays the Company and other deeds moving one alone; and the upper chain's ten raiders cost standing with the Keepers, which putting Orlath back to rest earns back. The user's, on Claude's recommendation: three factions have standing before 9, the Company, the Keepers and Greyford, the Court and Karn Tholl met once each and given standing in Part G; and standing shows as a block on the character sheet with the ranks earned on Feats, no seat of its own.
+
 **Do:** `data/factions.ts` and a `FactionId`; standing as a fourth stored tally on the character (a
 save version at the merge; `CLAUDE.md`'s "only three tallies are stored" gains one, with the reason:
 a deed leaves nothing behind); moved in `turnInQuest`, `resolveKill` (a raider down moves two
@@ -602,6 +612,8 @@ progression test if the chain's cost changes what a level 8 can buy. **Docs:** `
 **Ask the user first:** does a closed game drink (a potion's minutes against eight hours), or only
 idle with the game open? Does idle drink on a timer, when the last wears off, or once at the start?
 
+**Answered (2026-10-01):** A parked night drinks what Keep allows, a potion's minutes counted against the hours away as E2 already honours a clock; and idle drinks the next one when the last wears off, in the order set, never stacking, as it eats when hurt. Both on Claude's recommendation.
+
 **Do:** `IdleFoodSystem` becomes idle's consumables, food and potions in one order with Keep; the
 camp drinks as the user chose; the parked payout applies what a night could drink if it drinks; the
 panel orders them and says what the night will do with them, derived.
@@ -621,6 +633,8 @@ larger block the row switches to? Which upgrades: rooms, stands, a garden (E2's 
 the player's), a workbench (a station of the player's that persists)? Priced how far: a long goal
 should take most of the climb's coin, which the bot reports.
 
+**Answered (2026-10-01):** The house's block is its final footprint from the start and its rooms are shut until bought, one block and no re-layout of the town; the upgrades are all four in stages, more stands, a second room, a garden of E2's herbs as a node of the player's, and a workbench that persists; and the lot together costs about most of the coin the climb to 9 earns by the pace bot's count, the first stage cheap. All three on Claude's recommendation.
+
 **Do:** upgrades as rows with prices and what each opens, bought at home, kept on the character (a
 save version at the merge); the room's furniture and the kit read the stage; a garden node and a
 workbench station if chosen, each the thing it is everywhere else (a node spawns and regrows, a
@@ -638,6 +652,8 @@ pacer reports. **Tests:** `house.test.ts` grows; a pricing test. **Docs:** `buil
 **Ask the user first:** a seat of its own behind Menu, **Collection**, or the Feats sheet growing
 pages (Feats, Bestiary, Collection)? Drops seen is a new stored tally (a drop seen leaves nothing to
 count), so `CLAUDE.md`'s rule gains another: say so.
+
+**Answered (2026-10-01):** Collection, a seat of its own behind Menu, the one the collision table reserved; and drops seen become the fourth stored tally, since a drop seen leaves nothing behind to count, with `CLAUDE.md`'s rule gaining that line and its reason. Both on Claude's recommendation.
 
 **Do:** the bestiary per creature (slain off kills, drops seen off the new tally, lore off D2,
 trophies off achievements) with completion counts; the log of items collected; the item card learns

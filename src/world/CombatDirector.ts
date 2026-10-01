@@ -1,6 +1,7 @@
 import { describeItemName, isShield } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { titleName } from '../systems/AchievementSystem';
+import { killStanding } from '../systems/FactionSystem';
 import {
   logAbsorbed,
   logAchievement,
@@ -27,6 +28,7 @@ import {
   weaponSkillFor,
 } from '../systems/CombatSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
+import { fragmentsOf } from '../systems/WhispersSystem';
 import { rollLootTable, type LootDrop } from '../systems/LootSystem';
 import { fortuneDropMultiplier } from '../systems/PotionSystem';
 import { hasLineOfSight, type CollisionWorld } from '../systems/CollisionSystem';
@@ -36,6 +38,7 @@ import { abilityConnects, chooseEnemyAbility } from '../systems/EnemyAbilitySyst
 import type { EnemyId, ItemId } from '../types/ids';
 import {
   ACHIEVEMENT_UNLOCKED_EVENT,
+  DROPS_SEEN_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   TITLE_CHANGED_EVENT,
   type AchievementUnlock,
@@ -137,6 +140,14 @@ export class CombatDirector {
     const worn = character.state.activeTitleId;
     const crossed = character.recordKill(enemyId, count);
     this.ctx.events.emit(KILLS_CHANGED_EVENT, character.state.kills);
+    // What a creature carries of the history is found the first time it falls,
+    // by hand or by a camp: a boss's, so far (D2).
+    for (const fragmentId of fragmentsOf(enemyId)) {
+      this.ctx.noteWhisper({ kind: 'lore', fragmentId });
+    }
+    // A kill a faction minds moves its standing (D3), a camp's included, since
+    // a raider down while idle is as dead as one cut down by hand.
+    this.ctx.moveStanding(killStanding(enemyId), { count });
     if (crossed.length > 0) {
       this.ctx.persistCharacter();
     }
@@ -146,6 +157,18 @@ export class CombatDirector {
       titleId: definition.titleId,
       titleWorn: worn === null && character.state.activeTitleId === definition.titleId,
     }));
+  }
+
+  /**
+   * The collection log's tally (F3): what fell is seen whether or not it is
+   * kept, so this is told before the pack is asked. Saved only when something
+   * is new, since a hundredth rat bone says nothing the first did not.
+   */
+  noteDropsSeen(enemyId: EnemyId, itemIds: readonly ItemId[]): void {
+    const { character } = this.ctx;
+    if (!character.recordDropsSeen(enemyId, itemIds)) return;
+    this.ctx.events.emit(DROPS_SEEN_CHANGED_EVENT, character.state.seen);
+    this.ctx.persistCharacter();
   }
 
   announceUnlocks(unlocks: AchievementUnlock[]): void {
@@ -404,6 +427,11 @@ export class CombatDirector {
       lootTableId,
       this.ctx.rolls,
       fortuneDropMultiplier(character.state.potions),
+    );
+
+    this.noteDropsSeen(
+      mob.definition.id,
+      drops.map((drop) => drop.itemId),
     );
 
     // Asked once for the whole corpse: a camp cannot start or stop halfway

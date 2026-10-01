@@ -5,6 +5,7 @@ import {
   type AchievementDefinition,
 } from '../data/achievements';
 import type { EnemyId, TitleId } from '../types/ids';
+import { earnedFactionTitles, type Standing } from './FactionSystem';
 
 /**
  * How many of each creature this character has put down. Unlike a quest
@@ -47,15 +48,20 @@ function unlockedAchievements(kills: KillCounts): AchievementDefinition[] {
   return allAchievements().filter((definition) => isUnlocked(definition, kills));
 }
 
-/** Titles the character has the right to wear, in achievement order. */
-export function earnedTitles(kills: KillCounts): TitleId[] {
-  return unlockedAchievements(kills)
+/**
+ * Titles the character has the right to wear: the slayer ranks in achievement
+ * order, then the faction ranks stood at (D3). A faction title fallen below is
+ * no longer earned, which is the one way a title is lost.
+ */
+export function earnedTitles(kills: KillCounts, standing: Standing): TitleId[] {
+  const slayer = unlockedAchievements(kills)
     .map((definition) => definition.titleId)
     .filter((titleId): titleId is TitleId => titleId !== undefined);
+  return [...slayer, ...earnedFactionTitles(standing)];
 }
 
-export function hasEarnedTitle(kills: KillCounts, titleId: TitleId): boolean {
-  return earnedTitles(kills).includes(titleId);
+export function hasEarnedTitle(kills: KillCounts, standing: Standing, titleId: TitleId): boolean {
+  return earnedTitles(kills, standing).includes(titleId);
 }
 
 /** Pure reducer, in the shape the quest log's mutators use. */

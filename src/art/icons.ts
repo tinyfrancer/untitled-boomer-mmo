@@ -338,9 +338,11 @@ export const MARKS = {
   map: MARK.MAP,
   trophy: MARK.TROPHY,
   book: MARK.BOOK,
+  candle: MARK.CANDLE,
   swords: MARK.SWORDS,
   cog: MARK.COG,
   coin: MARK.COIN,
+  skull: MARK.SKULL,
 } as const;
 
 export type MarkId = keyof typeof MARKS;

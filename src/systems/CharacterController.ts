@@ -20,6 +20,7 @@ import { addSkillXp, skillLevel, skillXpToNextLevel } from './SkillSystem';
 import {
   addItemToInventory,
   equipItem,
+  inventoryEntries,
   removeItemFromInventory,
   unequipItem,
   type Gear,
@@ -28,7 +29,15 @@ import {
 import type { CharacterState } from '../persistence/CharacterState';
 import { weaponSkillFor } from './CombatSystem';
 import { bankSlotPrice, bankSlotsUsed, hasBankRoom } from './BankSystem';
-import { hasChestRoom, isTrophy, onStand, ownsHouse, withStand } from './HouseSystem';
+import {
+  hasChestRoom,
+  isTrophy,
+  nextUpgrade,
+  onStand,
+  ownsHouse,
+  standBuilt,
+  withStand,
+} from './HouseSystem';
 import { HOUSE_STANDS } from '../data/house';
 import {
   canCarry,
@@ -64,9 +73,17 @@ import {
   recordKill,
   type AchievementProgress,
 } from './AchievementSystem';
+import { recordSeenDrops } from './CollectionSystem';
 import { bonusYieldChance, crossedMasteryTiers, masteryXp, recordMastery } from './MasterySystem';
 import { keepIdleFood, moveIdleFood, type IdleFoodMove } from './IdleFoodSystem';
-import { drinkPotion, fortuneYieldChance, spendPotionTime } from './PotionSystem';
+import {
+  drinkPotion,
+  fortuneYieldChance,
+  spendPotionTime,
+  type PotionTimers,
+} from './PotionSystem';
+import { crossedRanks, moveStanding, type RankCrossing } from './FactionSystem';
+import type { StandingMove } from '../data/factions';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
 import type { AchievementDefinition } from '../data/achievements';
@@ -78,11 +95,14 @@ import type {
   CombatSkillId,
   EnemyId,
   GearSlotId,
+  HouseUpgradeId,
   ItemId,
+  LoreFragmentId,
   MasteryTargetId,
   NpcId,
   QuestId,
   ReforgeId,
+  RumourId,
   SecretId,
   SkillId,
   SpiritBeatId,
@@ -119,6 +139,10 @@ export type BankMove = { ok: false; reason: string } | { ok: true; moved: number
 
 /** A trophy set on a stand or handed back off one. */
 export type HouseMove = { ok: false; reason: string } | { ok: true; itemId: ItemId };
+
+/** A stage of the house built (F2), and what it cost. */
+export type HouseBuild =
+  { ok: false; reason: string } | { ok: true; upgrade: HouseUpgradeId; price: number };
 
 export type BankSlotPurchase =
   { ok: false; reason: string } | { ok: true; price: number; slots: number };
@@ -423,7 +447,7 @@ export class CharacterController {
     if (!ownsHouse(this.state.quests)) {
       return { ok: false, reason: 'The house is not yours yet.' };
     }
-    if (stand < 0 || stand >= HOUSE_STANDS) {
+    if (stand < 0 || stand >= HOUSE_STANDS || !standBuilt(this.state.house, stand)) {
       return { ok: false, reason: 'There is no such stand.' };
     }
     if (!isTrophy(itemId)) {
@@ -457,6 +481,30 @@ export class CharacterController {
     this.state.house = withStand(this.state.house, stand, null);
     this.state.updatedAt = new Date().toISOString();
     return { ok: true, itemId };
+  }
+
+  /**
+   * Builds the next stage of the house off the plans (F2), for its price.
+   * Refuses as a whole: a house not theirs yet, a stage that is not the next
+   * one, a lot already built out, or short of the coin.
+   */
+  buildUpgrade(upgrade: HouseUpgradeId): HouseBuild {
+    if (!ownsHouse(this.state.quests)) {
+      return { ok: false, reason: 'The house is not yours yet.' };
+    }
+    const next = nextUpgrade(this.state.house);
+    if (!next) {
+      return { ok: false, reason: 'Everything on the plans is built.' };
+    }
+    if (next.id !== upgrade) {
+      return { ok: false, reason: `${next.name} comes first.` };
+    }
+    if (!this.spendCurrency(next.price)) {
+      return { ok: false, reason: "You can't afford that." };
+    }
+    this.state.house = { ...this.state.house, built: [...this.state.house.built, upgrade] };
+    this.state.updatedAt = new Date().toISOString();
+    return { ok: true, upgrade, price: next.price };
   }
 
   /** Puts something from the bag in the house's chest: the bank's rule, at the chest's size. */
@@ -721,10 +769,25 @@ export class CharacterController {
     this.state.potions = spendPotionTime(this.state.potions, elapsedMs);
   }
 
-  /** The three tallies a quest objective is read off. */
+  /**
+   * What a parked night did with the potions (phase E3): the ones it drank off
+   * the bag, and every clock as the morning finds it. Refuses as a whole, taking
+   * nothing, if the bag no longer holds what the night drank.
+   */
+  settleNightPotions(drunk: Inventory, potions: PotionTimers): boolean {
+    const entries = inventoryEntries(drunk);
+    if (entries.some(([itemId, quantity]) => this.itemCount(itemId) < quantity)) return false;
+    for (const [itemId, quantity] of entries) {
+      this.removeItem(itemId, quantity);
+    }
+    this.state.potions = { ...potions };
+    return true;
+  }
+
+  /** The three tallies a quest objective is read off, and the standing a quest may wait on. */
   questCounters(): QuestCounters {
-    const { inventory, kills, visits } = this.state;
-    return { inventory, kills, visits };
+    const { inventory, kills, visits, standing } = this.state;
+    return { inventory, kills, visits, standing };
   }
 
   questProgress(questId: QuestId): QuestProgress {
@@ -733,7 +796,7 @@ export class CharacterController {
 
   acceptQuest(questId: QuestId): boolean {
     const definition = QUESTS[questId];
-    if (!canAccept(definition, this.state.quests)) {
+    if (!canAccept(definition, this.state.quests, this.state.standing)) {
       return false;
     }
     // The baseline is taken here and nowhere else: it is what the objective's
@@ -878,7 +941,30 @@ export class CharacterController {
   }
 
   earnedTitles(): TitleId[] {
-    return earnedTitles(this.state.kills);
+    return earnedTitles(this.state.kills, this.state.standing);
+  }
+
+  /**
+   * Moves standing with each faction a move names, `count` times over, and
+   * reports the ranks crossed either way (D3).
+   *
+   * A faction title fallen below comes off, since the right to wear it is
+   * gone; and a character wearing nothing puts on the best rank just reached,
+   * for the reason `recordKill` does.
+   */
+  moveStanding(move: StandingMove, count = 1): RankCrossing[] {
+    const before = this.state.standing;
+    this.state.standing = moveStanding(before, move, count);
+    const crossed = crossedRanks(before, this.state.standing);
+    const worn = this.state.activeTitleId;
+    if (worn !== null && !hasEarnedTitle(this.state.kills, this.state.standing, worn)) {
+      this.state.activeTitleId = null;
+    }
+    if (this.state.activeTitleId === null) {
+      const best = crossed.filter((crossing) => crossing.rose && crossing.rank.title).at(-1);
+      if (best) this.state.activeTitleId = best.rank.id as TitleId;
+    }
+    return crossed;
   }
 
   /**
@@ -906,6 +992,17 @@ export class CharacterController {
     return crossed;
   }
 
+  /**
+   * Notes what a creature was seen to drop (F3), answering false when none of
+   * it was new. Every drop counts, kept or not: a drop left where it fell or
+   * lost to a full pack was still seen.
+   */
+  recordDropsSeen(enemyId: EnemyId, itemIds: readonly ItemId[]): boolean {
+    const before = this.state.seen;
+    this.state.seen = recordSeenDrops(before, enemyId, itemIds);
+    return this.state.seen !== before;
+  }
+
   /** A tip heard once is heard for good: the card never comes back for it. */
   markTipHeard(tipId: TipId): void {
     if (this.state.tips.heard.includes(tipId)) return;
@@ -930,6 +1027,22 @@ export class CharacterController {
     return true;
   }
 
+  /** Notes a rumour in the journal, answering false for one already there. */
+  noteRumour(rumourId: RumourId): boolean {
+    const { whispers } = this.state;
+    if (whispers.rumours.includes(rumourId)) return false;
+    this.state.whispers = { ...whispers, rumours: [...whispers.rumours, rumourId] };
+    return true;
+  }
+
+  /** Notes a piece of lore in the journal, answering false for one already there. */
+  noteFragment(fragmentId: LoreFragmentId): boolean {
+    const { whispers } = this.state;
+    if (whispers.fragments.includes(fragmentId)) return false;
+    this.state.whispers = { ...whispers, fragments: [...whispers.fragments, fragmentId] };
+    return true;
+  }
+
   /** A beat of Wick's heard once is heard for good. */
   markBeatHeard(beatId: SpiritBeatId): void {
     if (this.state.beats.includes(beatId)) return;
@@ -945,7 +1058,7 @@ export class CharacterController {
   }
 
   setActiveTitle(titleId: TitleId | null): boolean {
-    if (titleId !== null && !hasEarnedTitle(this.state.kills, titleId)) {
+    if (titleId !== null && !hasEarnedTitle(this.state.kills, this.state.standing, titleId)) {
       return false;
     }
     this.state.activeTitleId = titleId;

@@ -14,6 +14,7 @@ import { RECIPES, type CraftingRecipe, type StationId } from '../../src/data/rec
 import type { Targeting } from '../../src/world/targeting';
 import { testContext } from './context';
 import { saveService } from '../../src/persistence';
+import { POTION_EFFECTS } from '../../src/data/potions';
 
 /**
  * The camp with no zone around it. `afk.test.ts` proves it fights and gives the
@@ -38,6 +39,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = [], stations: StationI
   const worked: ResourceNode[] = [];
   const crafted: CraftingRecipe[] = [];
   const eaten: ItemId[] = [];
+  const drunk: ItemId[] = [];
   const awarded: number[] = [];
   const credited: Array<{ enemyId: EnemyId; count: number }> = [];
   const targeting: Targeting = {
@@ -63,6 +65,10 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = [], stations: StationI
     stopGathering: vi.fn(),
     closeCounters: vi.fn(),
     eat: (itemId: ItemId) => eaten.push(itemId),
+    drink: (itemId: ItemId) => {
+      drunk.push(itemId);
+      kit.character.drinkPotion(itemId);
+    },
     // The world walks over and starts the channel; here that is just the record
     // of which node was chosen, plus the flag the loop reads back.
     gatherAt: (node: ResourceNode) => {
@@ -80,6 +86,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = [], stations: StationI
       credited.push({ enemyId, count });
       return [];
     },
+    noteDropsSeen: vi.fn(),
   };
   return {
     ...kit,
@@ -89,6 +96,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = [], stations: StationI
     worked,
     crafted,
     eaten,
+    drunk,
     awarded,
     credited,
     selected: () => target,
@@ -256,6 +264,72 @@ describe("idle's food", () => {
       [{ order: [], keep: ['cooked-rat'] }],
     ]);
     expect(saveService.load()?.idleFood.keep).toEqual(['cooked-rat']);
+  });
+});
+
+/**
+ * What it drinks (version 2 phase E3): the next potion once the last has worn
+ * off, in the player's order, never two at once and never one that does nothing
+ * for what it is doing.
+ */
+describe("idle's potions", () => {
+  it('drinks the first that works for the fight, and nothing while it lasts', () => {
+    const kit = camped();
+    kit.character.addItem('samphire-tonic', 1);
+    kit.character.addItem('keepers-draught', 2);
+    kit.camp.set(true);
+
+    kit.camp.update(16);
+    kit.camp.update(16);
+
+    expect(kit.drunk).toEqual(['keepers-draught']);
+    expect(kit.character.itemCount('keepers-draught')).toBe(1);
+  });
+
+  it('drinks the next when the last wears off', () => {
+    const kit = camped();
+    kit.character.addItem('keepers-draught', 2);
+    kit.camp.set(true);
+    kit.camp.update(16);
+
+    kit.character.spendPotionTime(POTION_EFFECTS['keepers-watch'].durationMs);
+    kit.camp.update(16);
+
+    expect(kit.drunk).toEqual(['keepers-draught', 'keepers-draught']);
+  });
+
+  it('waits out a potion drunk by hand, and passes over what is kept', () => {
+    const kit = camped();
+    kit.character.addItem('bogbean-cordial', 1);
+    kit.character.addItem('keepers-draught', 1);
+    kit.character.drinkPotion('bogbean-cordial');
+    kit.camp.keepFood('keepers-draught', true);
+    kit.camp.set(true);
+    kit.camp.update(16);
+    expect(kit.drunk).toEqual([]);
+
+    kit.character.spendPotionTime(POTION_EFFECTS.fortune.durationMs);
+    kit.camp.update(16);
+    expect(kit.drunk).toEqual([]);
+  });
+
+  it('takes what a parked night drank off the bag, and wakes to its clock', () => {
+    const { camp, state, character } = camped();
+    character.addItem('keepers-draught', 3);
+    const watch = POTION_EFFECTS['keepers-watch'].durationMs;
+    state.afk = {
+      startedAt: new Date(Date.now() - watch * 1.5).toISOString(),
+      zoneId: 'town',
+      station: null,
+      restedMs: 0,
+    };
+
+    const result = camp.resolveParked();
+
+    expect(result?.report.drunk).toEqual({ 'keepers-draught': 2 });
+    expect(character.itemCount('keepers-draught')).toBe(1);
+    expect(state.potions['keepers-watch']).toBeGreaterThan(0);
+    expect(state.potions['keepers-watch']).toBeLessThanOrEqual(watch / 2);
   });
 });
 

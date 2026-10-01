@@ -1,4 +1,9 @@
+import { HOUSE_STANDS } from '../data/house';
 import { emptyHouse } from '../systems/HouseSystem';
+import type { KillCounts } from '../systems/AchievementSystem';
+import type { DialogMemory } from '../systems/DialogSystem';
+import { whispersFromPast } from '../systems/WhispersSystem';
+import type { SecretId } from '../types/ids';
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 
 // Each step upgrades a save from exactly `fromVersion` to `fromVersion + 1`.
@@ -46,6 +51,35 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   }),
   // The house (F1): bare stands and an empty chest for everybody made before it.
   106: (state) => ({ ...state, house: emptyHouse() }),
+  // Whispers (D2): what was already asked, found and killed before the journal
+  // is written into it, so it agrees with the character's past.
+  107: (state) => ({
+    ...state,
+    whispers: whispersFromPast({
+      asked: (state.asked ?? {}) as DialogMemory,
+      secrets: (state.secrets ?? []) as SecretId[],
+      kills: (state.kills ?? {}) as KillCounts,
+    }),
+  }),
+  // Factions (D3): nobody made before them stands anywhere with anybody.
+  108: (state) => ({ ...state, standing: {} }),
+  // The collection log (F3): nobody made before it has seen anything drop.
+  109: (state) => ({ ...state, seen: {} }),
+  // The house that grows (F2): F1's four stands kept where they stood and
+  // bare ones for the drawing room's four, and nothing built yet. Numbered at
+  // wave 2's fold, after F3's: 108 to 110 were reserved before F2 needed one.
+  110: (state) => {
+    const house = isRecord(state.house) ? state.house : {};
+    const stands: unknown[] = Array.isArray(house.stands) ? house.stands : [];
+    return {
+      ...state,
+      house: {
+        ...house,
+        stands: Array.from({ length: HOUSE_STANDS }, (_, stand) => stands[stand] ?? null),
+        built: [],
+      },
+    };
+  },
 };
 
 /**

@@ -4,7 +4,9 @@ Every zone as it stands: what it is, what it was, who is there, what it hides, w
 about it, and what Wick remembers there. Then the lands past level 8.
 
 The rebuilds (C5-C9) take a zone's name, its secrets and its rumours from here and add its people;
-a secret is found by walking up to it, and pays a line of Wick's and a cache (decision 117). D2's rumours start from the lines here, and D4 wrote
+a secret is found by walking up to it, and pays a line of Wick's and a cache (decision 117). D2's rumours start from the lines here:
+those that lead to something the game has are marked _in game_ with who tells them, one a secret
+and one a boss, the rest held until what they lead to is built (decision 132). D4 wrote
 Wick's beats from the lines here (`spirit.md` says where each is said). A zone's name changes in the game in the phase that rebuilds it.
 Someone marked _not yet in the game_ is for a rebuild or for Part D to add.
 
@@ -29,6 +31,16 @@ Post. The Company lets its houses to its own people and to whoever has been usef
 does the letting. _In game_ (F1): let to the player once the Red Rags are broken, for the timber its
 roof wants, with stands for what they bring home, a chest, and a wall for their plaques.
 
+The surveyor drew the house before it was built, and built less of it than was drawn. **The plans**
+are still on the table by the bed where the surveyor left them, the lot as meant: a herb garden in the
+yard, a bench beside it, and the room behind the house fitted out. Only the room went up, **the
+Drawing Room**, where the four roads were drawn out from the Lamp Stone on a table the length of
+the south window; its door was nailed shut the week the survey went west, and the garden and the
+bench never got further than the paper. The plans are drawn in the surveyor's own hand, careful and
+small, with the herbs named in the margin: samphire off the strand and meadowsweet off the mill
+water, the two that would take in Lampton's soil. The fen's own herbs are not on them. _In game_
+(F2): built out by the player off the plans, a stage at a time and for most of a climb's coin.
+
 **People.**
 
 - **Tilda Pell**, the shopkeeper: warm and nosy, with three carts on the east road and a view on
@@ -45,11 +57,15 @@ roof wants, with stands for what they bring home, a chest, and a wall for their 
 - **Marta Hale**, the trainer: has been a soldier, a hedge-wizard and a poacher, in that order, was
   sacked from all three, and that is how she knows what to teach. She went into the fen once,
   poaching eels, saw the lanterns on their posts with nobody tending them, and has not been back.
-  _In game_, talking (D1).
+  She once walked out along the drowned wall to the nearest Candle for a bet, won it, and came
+  straight back. _In game_, talking (D1).
 - **Jory Stroud**, the quartermaster: the Company in Lampton, overworked, brusque and fair. He does
   not care what is under the fen. He cares what is on the road. He still orders iron for Cobb
   Harrow, because the order is in the Company's book. _In game_, talking (D1).
-- **Bess Mallow**, who keeps the Wet Boot. _Not yet in the game._
+- **Bess Mallow**, who keeps the Wet Boot: sharp, kind under it, and the one who put the player to
+  bed the night the carter brought them in with their purse cut, and saw a light in the room she had
+  not left them. She keeps a stool by the door for Cobb Harrow, who drank on it every night for
+  three years. _In game_, talking (D1b).
 - **Cobb Harrow**, the smith, who went east to a wedding two years ago and has not come back. The
   contract board still orders for him.
 
@@ -65,10 +81,12 @@ roof wants, with stands for what they bring home, a chest, and a wall for their 
 **Rumours.**
 
 - "Something in the Wet Boot's cellar is bigger than a rat. The regulars call it His Majesty." Leads
-  to the undercroft, and a rat the size of a dog.
+  to the undercroft, and a rat the size of a dog. _In game_ (D2), told by Tilda Pell, and leading to
+  the cellar's hatch until the undercroft opens.
 - "That stone was here before the town was. Dig round the foot of it if you don't believe me." Leads
-  to the waymarker's words.
-- "Cobb's coming back any day now." Leads to a letter at the bank saying he is not.
+  to the waymarker's words. _In game_ (D2), told by Tilda Pell.
+- "Cobb's coming back any day now." Leads to a letter at the bank saying he is not. _Held_ for the
+  letter.
 
 **Wick.** At the Lamp Stone, the first stir: "I know this shape. I don't know why I know this shape."
 
@@ -84,8 +102,10 @@ for what they look like. There is no tide to speak of (decision 117): the sea is
 
 **What it was.** Veymar's sea-wall. The Candles are its sea-lights, drowned to the stump.
 
-**People.** The Company's fishers, and among them an old one who will not fish past the Candles.
-_Not yet in the game._
+**People.** The Company's fishers, and among them an old one who will not fish past the Candles:
+**Amos Keel**, who has fished the strand twenty-eight years, saw the light under the water his first
+winter here, and has fished this side of the Candles since. The fenfolk cut his nets twice last year
+and left the fish in them, which he has never worked out. _In game_, talking on the spit (D1b).
 
 **Secrets.**
 
@@ -96,9 +116,11 @@ _Not yet in the game._
 **Rumours.**
 
 - "The old ones won't fish past the Candles after dark. There's a light down there, far out, under
-  the water." Leads to the light under the sea.
+  the water." Leads to the light under the sea. _Held_ for Part G.
 - "There's a crab the size of a cart comes up at the spring tide." Leads to the Old Shell, a rare
-  crab.
+  crab. _Held_ for the Old Shell.
+- "Off the end of the spit there's a way out to the nearest of the Candles, along the top of something
+  under the water." Leads to the warden's niche. _In game_ (D2), told by Marta Hale.
 
 **Wick.** It does not like the sea and cannot say why: "I don't like it out there. It's too big, and
 it's pulling."
@@ -128,7 +150,8 @@ game._
 **Rumours.**
 
 - "The blasting crew broke into a little stone room this spring, and sold what was in it to the
-  fettler at Greyford for beer money." Leads to the cell, and to the fettler's back room.
+  fettler at Greyford for beer money." Leads to the cell, and to the fettler's back room. _In game_
+  (D2), told by Tilda Pell, leading to the cell; the back room has a rumour of its own.
 
 **Wick.** At the cell, the dark and nothing else, and it will not go in: "I was in there. I don't
 want to be in there."
@@ -156,9 +179,12 @@ the eastern lights, with a warden's tomb under it.
 **Rumours.**
 
 - "Hollis pays his men in gold nobody's seen minted. There's a king's face on it, and it isn't ours."
-  Leads to the Cellar, and to Merrath's face.
+  Leads to the Cellar, and to Merrath's face. _In game_ (D2), told by Ambrose Tally, who weighed it,
+  leading to the strongbox.
 - "The Company lost a pay-cart on this road eight years ago, and a guard called Hollis with it."
-  Leads to who Hollis was.
+  Leads to who Hollis was. _In game_ (D2), told by Jory Stroud, leading to Hollis himself.
+- "Whatever they keep in the wall of the hall they sleep in, they don't keep in the Company's bank."
+  Leads to the lamp niche. _In game_ (D2), told by Jory Stroud.
 
 ## The Cutthroat's Cellar, level 4
 
@@ -217,9 +243,13 @@ Veymar drowned, in mourning.
 **Rumours.**
 
 - "The mill wheel turns on still nights, with no water in the race." Leads to the ledger, and the
-  Grey Winter.
+  Grey Winter. _Held_ for somebody who has seen it; the ledger is led to by the next.
+- "The first charter's village kept its books at the mill, and never sent them east." Leads to the
+  ledger. _In game_ (D2), told by Ambrose Tally, whom eleven years unaudited keep awake.
+- "On a still day there's carved stone under the millpond, off the south bank between two of the
+  willows." Leads to the shrine. _In game_ (D2), told by Oona Rook, who leaves it alone.
 - "There's a white stag on the road at dusk. Follow it if you're fool enough." Leads to the Willow
-  Warden, rarely.
+  Warden, rarely. _Held_ for the Willow Warden.
 
 **Wick.** The Warden looks at it and says one word, "Kindled," and will not speak while it is near.
 Wick: "What did she mean? What's kindled?"
@@ -250,7 +280,8 @@ road goes a little way west towards the Stillwood and is grown over.
   and not quite a villain. Years before anybody opened Orlhal he pressed its door's seal in wax, and
   it is the one thing he has never sold; he parts with it to whoever puts Orlath down. _In game_ as
   the Cast of Orlath's Seal.
-- **Pocket**, the crow on the longhouse roof. _Not yet in the game._
+- **Pocket**, the crow on the longhouse roof, or on the post by its door, which is where anybody
+  who wants a word finds it. _In game_, talking, on the post (D1b).
 
 **Secrets.**
 
@@ -263,8 +294,12 @@ road goes a little way west towards the Stillwood and is grown over.
 
 **Rumours.**
 
-- "The fettler buys anything old and never asks where it came from." Leads to the back room.
-- "The crow on the longhouse roof knows your name. Don't ask it how." Leads to Pocket.
+- "The fettler buys anything old and never asks where it came from." Leads to the back room. _In
+  game_ (D2), told by Oona Rook.
+- "The ford's stones are dressed square, and two of them stand up in the water like they used to
+  hold something up." Leads to the keystone. _In game_ (D2), told by Oona Rook.
+- "The crow on the longhouse roof knows your name. Don't ask it how." Leads to Pocket. _Held_ for
+  Pocket.
 
 **Wick.** Among the fettler's goods, a lamp-warden's ring, and Wick remembers wearing one: "That's
 mine. No. One like it. I had one like it."
@@ -288,10 +323,12 @@ still showing in places. Orlhal is at its southern edge.
 
 **People.**
 
-- **Tirrow**, who leads the raiders: young, angry, and not wrong about the pans. _Not yet in the
-  game._
+- **Tirrow**, who leads the raiders: young, angry, and not wrong about the pans. Maren carried him
+  across the fen on her back as a child, and he will not talk to her now. A name in Maren's lines
+  (D1b) until Part G gives him a scene.
 - **Maren**, keeper of the third light: an elder, and the first of the fenfolk who will talk rather
-  than fight. _Not yet in the game._
+  than fight. The third light is her mother. Her grandmother lies under the second pan from the
+  east. _In game_, talking, on the mere's north shore (D1b).
 
 **Secrets.**
 
@@ -306,9 +343,13 @@ still showing in places. Orlhal is at its southern edge.
 **Rumours.**
 
 - "There are lights in the fen that aren't lanterns, and they don't stay where you left them." Leads
-  to the strays, rarely.
+  to the strays, rarely. _Held_ for the strays.
 - "The raiders aren't after the salt. Ask one where his grandmother is." Leads to the Keepers' side
-  of it.
+  of it. _Held_ for Tirrow and Maren.
+- "Lights on posts out over the water, and nobody tending them." Leads to the lantern still burning.
+  _In game_ (D2), told by Marta Hale.
+- "The raiders throw good things into the mere in the west of the fen, off its south shore." Leads
+  to the drowned village. _In game_ (D2), told by Silas Quill, who cannot swim.
 
 **Wick.** Maren knows what Wick is before it speaks: "We put you in the hill." Wick: "Why would you do
 that?" She does not say.
@@ -347,9 +388,12 @@ bottom of them is the door.
 
 **Rumours.**
 
-- "The goblins stopped digging at one wall. Goblins don't stop digging." Leads to the door.
+- "The goblins stopped digging at one wall. Goblins don't stop digging." Leads to the door. _In
+  game_ (D2), told by Oona Rook.
+- "There's a sum cut into the rock down the Deep Cut, past where the goblins have been, with a name
+  on it." Leads to the maker's mark. _In game_ (D2), told by Jory Stroud, whose men found it.
 - "The crawlers down the Cut are sea crabs. Lick one if you don't believe me." Leads to the drowned
-  halls, and the sea.
+  halls, and the sea. _Held_ for Part G.
 
 **Wick.** At the door: "They said no. I remember them saying no. What did I ask them for?"
 
@@ -380,7 +424,9 @@ hundred years, with a little of himself left in his crown.
 **Rumours.**
 
 - "Orlath's lantern burned blue, once. The fenfolk say it went out this summer." Leads to the barrow,
-  and to what went out of it.
+  and to what went out of it. _In game_ (D2), told by Silas Quill, leading to Orlath.
+- "The old ones carved what they had on the barrow's walls. Look along the gallery." Leads to the
+  frieze. _In game_ (D2), told by Silas Quill.
 
 **Wick.** Orlath knows it: "Lorn. Have you come to tend me?" It is the first time Wick hears its
 name. Wick: "Lorn. Is that me?"

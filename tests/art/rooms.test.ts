@@ -13,6 +13,7 @@ import {
   roomFittings,
 } from '../../src/art/rooms';
 import { npcSprite } from '../../src/art/cast';
+import { npcRole } from '../../src/data/npcs';
 import { PLAYER_HALF_EXTENT } from '../../src/config/constants';
 import {
   BUILDINGS,
@@ -258,7 +259,8 @@ describe('what the 2D view draws in a room', () => {
       for (const spawn of zone.buildingSpawns) {
         const building = { x: spawn.x, y: spawn.y, definition: BUILDINGS[spawn.buildingId] };
         const worker = occupant(building, people);
-        if (!worker) continue;
+        // Somebody who works no counter has none drawn in front of them.
+        if (!worker || npcRole(worker.npcId) === 'none') continue;
         served += 1;
         const door = building.definition.door;
         const at = counterAt(worker, door);

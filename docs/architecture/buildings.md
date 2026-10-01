@@ -126,6 +126,25 @@ each in reach, and holds their ground clear of the middle of the room, of the wa
 other. What is open closes when the player walks out of the house, rather than at a distance, since
 everything in it is a few steps from everything else.
 
+**The house grows into a second building, not a second room inside the first** (decision 136). The
+Drawing Room stands against the back of the house, written into Lampton's text with it from the
+start, its door in its west wall onto the yard since the house is against its south wall. Every
+question the game asks of a room, from the cutaway to whose roof is drawn over it, is asked of a
+building, so a room behind a partition would have been the one place each of them had a second
+answer. **A room shut until a stage is built has its doorway walled up**: `doorPlug` is the gap
+filled in at the wall's thickness, a blocker in the collision world until the stage is bought, taken
+out of it then (`ZoneWorld.raise`); a walk ending inside it is refused with a line saying what opens
+it. From the street its north half is all that shows over the house's roof, which is where a tap on
+it lands, as the fettler's store shows over the longhouse. **The plans are a fourth kind of
+fixture**, on a table at the south end of the house's west wall, where the stages are bought; the
+drawing room's stands are fixtures in its own frame, two with the room and two more as the last
+stage, and the yard's beds and bench are placed off the house as the fixtures are and swept by
+`house.test.ts`, since the zone's sweeps read only its text. **A body walking out through a two-tile
+doorway from beside it lands on its leg** once a wall leaves it within half a pixel of it
+(`Player.landOnLeg`): the route runs a body's half-width off the wall's end, and a body sliding
+along the wall toward that with its other axis blocked closed a share of the gap each frame and
+stalled a hair inside the wall's end for good.
+
 **The view draws each fitting by its wall, and a counter** (decision 109, `docs/architecture/art.md`
 under Places): each fitting against its wall from the front, along its length on a side wall, and
 only as low as it stands against the south wall the cutaway takes away; and in front of whoever works

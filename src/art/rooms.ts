@@ -18,6 +18,7 @@ import {
   HEARTH_EAST,
   HEARTH_LOW,
   HEARTH_WEST,
+  PLANS,
   PLAQUE,
   SHELVES,
   STAND,
@@ -114,6 +115,9 @@ const ROOM_OVERRIDES: Partial<Record<BuildingId, readonly Fitting[]>> = {
   // The house's bed, against the one wall its stands and chest leave
   // (`data/house.ts`): somebody lives here, and the rest is theirs to fill.
   house: [{ kind: 'bed', against: 'left' }],
+  // The surveyor's long bench under the south window, the one wall its
+  // stands leave (F2, `data/house.ts`): the rest is the player's to fill.
+  'drawing-room': [{ kind: 'bench', against: 'right' }],
   store: [
     { kind: 'crates', against: 'left' },
     { kind: 'crates', against: 'right' },
@@ -272,6 +276,8 @@ export function fixtureSprite(fixture: HouseFixture): string | null {
       return CHEST.id;
     case 'wall':
       return null;
+    case 'plans':
+      return PLANS.id;
   }
 }
 

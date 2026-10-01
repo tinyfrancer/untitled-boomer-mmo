@@ -17,6 +17,9 @@ import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import { exhaustive, mapKeys } from '../types/exhaustive';
 import type { ClassId, GearSlotId, SkillId } from '../types/ids';
 import type { Look } from '../data/looks';
+import { FACTIONS, FACTION_ORDER } from '../data/factions';
+import { currentRank, nextRank, standingWith, type Standing } from '../systems/FactionSystem';
+import type { FactionId } from '../types/ids';
 
 const SLOT_ORDER = exhaustive<GearSlotId>()(['weapon', 'offhand', 'helmet', 'chest', 'pants']);
 export const SLOT_LABELS: Record<GearSlotId, string> = {
@@ -58,6 +61,9 @@ export interface CharacterSheetState {
   // Combat skill caps ride the character's level, so the sheet needs it to know
   // when one of those bars is full.
   level: number;
+  // Where the character stands with each faction (D3), drawn as a block under
+  // the skills: the rank, and how far to the next.
+  standing: Standing;
 }
 
 interface SlotRow {
@@ -80,6 +86,7 @@ export class CharacterSheet extends Sheet {
   private readonly statLines: HTMLElement[];
   private readonly slots: Record<GearSlotId, SlotRow>;
   private readonly skills: Record<SkillId, SkillRow>;
+  private readonly factions: Record<FactionId, HTMLElement>;
   private gear: Gear = NO_GEAR;
 
   constructor(
@@ -128,6 +135,18 @@ export class CharacterSheet extends Sheet {
       ...this.buildSkillBlock('Skills', SKILL_ORDER, onSkillClicked),
       ...this.buildSkillBlock('Combat Skills', COMBAT_SKILL_ORDER, onSkillClicked),
     };
+
+    this.body.append(sectionHeader('Standing'));
+    this.factions = mapKeys(FACTION_ORDER, (factionId) => {
+      const line = row({
+        className: 'hud-row hud-standing',
+        label: FACTIONS[factionId].name,
+        valueClass: 'hud-muted',
+      });
+      line.root.dataset.faction = factionId;
+      this.body.append(line.root);
+      return line.value;
+    });
   }
 
   private buildSkillBlock<K extends SkillId>(
@@ -181,6 +200,10 @@ export class CharacterSheet extends Sheet {
       const xpToNext = skillXpToNextLevel(skillId, skill.level, state.level);
       setSkillProgress(this.skills[skillId], skill.level, skill.xp, xpToNext);
     }
+
+    for (const factionId of FACTION_ORDER) {
+      this.factions[factionId].textContent = standingLine(state.standing, factionId);
+    }
   }
 
   /**
@@ -203,6 +226,17 @@ export class CharacterSheet extends Sheet {
   slotBounds(slot: GearSlotId): DOMRect {
     return this.slots[slot].button.getBoundingClientRect();
   }
+}
+
+/**
+ * A faction's rank and the standing under it, with how far the next rank is,
+ * since a number alone does not say what it is counting towards.
+ */
+function standingLine(standing: Standing, factionId: FactionId): string {
+  const value = standingWith(standing, factionId);
+  const next = nextRank(standing, factionId);
+  const counted = next ? `${value} / ${next.from} standing` : `${value} standing`;
+  return `${currentRank(standing, factionId).name}, ${counted}`;
 }
 
 /**

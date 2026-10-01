@@ -1,13 +1,18 @@
 import type {
+  FactionId,
+  FactionRankId,
   AbilityId,
   BountyId,
   ItemId,
   AchievementId,
   MasteryTargetId,
   GearSlotId,
+  HouseUpgradeId,
   NpcId,
   QuestId,
   RecipeId,
+  LoreFragmentId,
+  RumourId,
   SecretId,
   SpiritBeatId,
   TipId,
@@ -22,8 +27,10 @@ import type { StationId } from '../data/recipes';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { SeenDrops } from '../systems/CollectionSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { DialogMemory } from '../systems/DialogSystem';
+import type { Standing } from '../systems/FactionSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
@@ -35,6 +42,7 @@ import type { HouseState } from '../systems/HouseSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
 import type { OfferedTip } from '../systems/TipSystem';
+import type { WhispersState } from '../systems/WhispersSystem';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -272,6 +280,13 @@ export const TITLE_CHANGED_EVENT = 'title-changed';
  * `XP_GAINED_EVENT`, whose gain carries the bank after.
  */
 export const RESTED_CHANGED_EVENT = 'rested-changed';
+/**
+ * Standing with the factions (D3), and the moment a rank is reached or fallen
+ * to: the pairing the kill counts make with an achievement, the totals for the
+ * sheets to redraw from and the crossing said out loud as it happens.
+ */
+export const STANDING_CHANGED_EVENT = 'standing-changed';
+export const STANDING_RANK_EVENT = 'standing-rank';
 
 // Dialog (D1). The HUD asks a topic of whoever it is talking to; the world
 // answers with what is being said now (CONVERSATION_CHANGED), which a newly
@@ -310,6 +325,21 @@ export const HOUSE_CHANGED_EVENT = 'house-changed';
 export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
 export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
 export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
+// A stage of the house bought at the surveyor's plans (F2).
+export const BUILD_UPGRADE_REQUESTED_EVENT = 'build-upgrade-requested';
+// The drops each creature has been seen to drop (F3), the whole record on
+// every change as the kill counts are, and only when a drop is new to it.
+export const DROPS_SEEN_CHANGED_EVENT = 'drops-seen-changed';
+
+// The Whispers journal (D2, decision 132): the whole of it when it grows, which
+// the sheet is drawn from, and the one thing just noted, for the toast that
+// says so. Ids rather than words, so the HUD reads them off the tables.
+export const WHISPERS_CHANGED_EVENT = 'whispers-changed';
+export const WHISPER_NOTED_EVENT = 'whisper-noted';
+
+/** Payload for WHISPER_NOTED_EVENT: a rumour heard, or a piece of lore found. */
+export type WhisperNoted =
+  { kind: 'rumour'; rumourId: RumourId } | { kind: 'lore'; fragmentId: LoreFragmentId };
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -574,15 +604,28 @@ export interface UiEventMap {
   [CONVERSATION_CHANGED_EVENT]: [conversation: ConversationState];
   [ASKED_CHANGED_EVENT]: [asked: DialogMemory];
   [RESTED_CHANGED_EVENT]: [rested: number];
+  [STANDING_CHANGED_EVENT]: [standing: Standing];
+  [STANDING_RANK_EVENT]: [crossing: StandingRankCrossed];
   [SPIRIT_SAID_EVENT]: [said: SpiritSaid];
   [SPIRIT_BEAT_HEARD_EVENT]: [beatId: SpiritBeatId];
   [DRINK_POTION_REQUESTED_EVENT]: [itemId: ItemId];
   [HOUSE_OPENED_EVENT]: [fixture: HouseFixture];
   [HOUSE_CLOSED_EVENT]: [];
   [HOUSE_CHANGED_EVENT]: [house: HouseState];
+  [DROPS_SEEN_CHANGED_EVENT]: [seen: SeenDrops];
   [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
   [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [BUILD_UPGRADE_REQUESTED_EVENT]: [upgrade: HouseUpgradeId];
+  [WHISPERS_CHANGED_EVENT]: [whispers: WhispersState];
+  [WHISPER_NOTED_EVENT]: [noted: WhisperNoted];
+}
+
+/** A rank with a faction reached on the way up, or fallen to on the way down. */
+export interface StandingRankCrossed {
+  factionId: FactionId;
+  rankId: FactionRankId;
+  rose: boolean;
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

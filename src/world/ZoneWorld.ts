@@ -44,6 +44,7 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
   SECRETS_CHANGED_EVENT,
+  WHISPERS_CHANGED_EVENT,
   VISITS_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
@@ -56,6 +57,7 @@ import {
   DISPLAY_TROPHY_REQUESTED_EVENT,
   CHEST_DEPOSIT_REQUESTED_EVENT,
   CHEST_WITHDRAW_REQUESTED_EVENT,
+  BUILD_UPGRADE_REQUESTED_EVENT,
   type AchievementUnlock,
   type ContextSubject,
 } from '../ui/uiEvents';
@@ -93,6 +95,7 @@ import { saveService } from '../persistence';
 import { Player } from './Player';
 import { Mob } from './Mob';
 import {
+  houseEntities,
   populateZone,
   type WorldBuilding,
   type WorldFixture,
@@ -134,11 +137,13 @@ import type {
   BountyId,
   EnemyId,
   GearSlotId,
+  HouseUpgradeId,
   ItemId,
   RecipeId,
   ZoneEdge,
   ZoneId,
 } from '../types/ids';
+import type { Rect } from '../data/buildings';
 
 // Far enough inside the new zone that the player doesn't stand on the return
 // exit and bounce straight back.
@@ -280,6 +285,8 @@ export class ZoneWorld implements Targeting {
   /** Wick, following the player: drawn from here, and tapped through `tap`. */
   readonly spirit: Spirit;
   private readonly house: HouseSession;
+  /** The doorways walled up until a stage of the house opens them (F2). */
+  private readonly doorPlugs: Map<HouseUpgradeId, Rect[]>;
   private readonly loot: LootPiles;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -294,6 +301,7 @@ export class ZoneWorld implements Targeting {
   private readonly publishVisits: () => void;
   private readonly publishUnlockedZones: () => void;
   private readonly publishSecrets: () => void;
+  private readonly publishWhispers: () => void;
   private readonly publishPlayerTile: () => void;
   private readonly publishCreatures: () => void;
   /**
@@ -315,7 +323,12 @@ export class ZoneWorld implements Targeting {
     const size = zoneWorldSize(zone);
     this.worldWidth = size.width;
     this.worldHeight = size.height;
-    const entities = populateZone(zone, size, rng ?? Math.random);
+    const entities = populateZone(
+      zone,
+      size,
+      rng ?? Math.random,
+      character.state.house?.built ?? [],
+    );
     this.spawnPoint = entities.spawnPoint;
     this.mobs = entities.mobs;
     this.nodes = entities.nodes;
@@ -326,6 +339,7 @@ export class ZoneWorld implements Targeting {
     this.fixtures = entities.fixtures;
     this.signposts = entities.signposts;
     this.collisionWorld = entities.collisionWorld;
+    this.doorPlugs = entities.doorPlugs;
 
     const start = this.startPoint(entry);
     this.player = new Player(
@@ -435,6 +449,12 @@ export class ZoneWorld implements Targeting {
       (found) => found.join('|'),
       (found) => this.ctx.events.emit(SECRETS_CHANGED_EVENT, found),
     );
+    // The Whispers journal (D2), for its sheet; unseeded for the same reason.
+    this.publishWhispers = publishOnChange(
+      () => this.character.state.whispers,
+      ({ rumours, fragments }) => `${rumours.join('|')}/${fragments.join('|')}`,
+      (whispers) => this.ctx.events.emit(WHISPERS_CHANGED_EVENT, whispers),
+    );
     // Keyed to whole tiles so this speaks on a crossing rather than every
     // frame, but carrying the fractional position, so the dot sits where the
     // player is rather than snapping to the corner of a tile.
@@ -518,12 +538,14 @@ export class ZoneWorld implements Targeting {
       stopGathering: () => this.gathering.stop(),
       closeCounters: () => this.closeCounters(),
       eat: (itemId) => this.gathering.eat(itemId),
+      drink: (itemId) => this.drinkPotion(itemId),
       gatherAt: (node) => this.approachAndGather(node),
       stationsInReach: () => this.gathering.stationsInReach(),
       craft: (recipe) => this.gathering.craft(recipe),
       isChanneling: () => this.gathering.isChanneling(),
       awardIdleXp: (amount) => this.awardIdleXp(amount),
       creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),
+      noteDropsSeen: (enemyId, itemIds) => this.combat.noteDropsSeen(enemyId, itemIds),
     });
     this.quests = new QuestDesk(this.ctx, {
       servingNpc: () => this.openCounter()?.npc ?? null,
@@ -544,6 +566,8 @@ export class ZoneWorld implements Targeting {
     });
     this.house = new HouseSession(this.ctx, {
       closeCounters: () => this.closeCounters(),
+      raise: (upgrade) => this.raise(upgrade),
+      buildings: this.buildings,
     });
 
     this.subscribe();
@@ -627,6 +651,7 @@ export class ZoneWorld implements Targeting {
     listen(CHEST_WITHDRAW_REQUESTED_EVENT, (itemId, quantity) =>
       this.house.withdraw(itemId, quantity),
     );
+    listen(BUILD_UPGRADE_REQUESTED_EVENT, (upgrade) => this.house.build(upgrade));
   }
 
   /** Drops every subscription. The host calls this before building the next world. */
@@ -680,6 +705,7 @@ export class ZoneWorld implements Targeting {
     this.publishCreatures();
     this.secretFinder.update();
     this.publishSecrets();
+    this.publishWhispers();
     this.tips.update();
     this.spirit.update(deltaMs);
     this.updateNpcRange();
@@ -771,8 +797,29 @@ export class ZoneWorld implements Targeting {
         this.approachFixture(target.fixture);
         return;
       case 'ground':
+        if (this.house.refusesWalkTo(target.point)) return;
         this.approach.walk(target.point);
     }
+  }
+
+  /**
+   * Puts what a stage of the house builds into the zone the player is
+   * standing in (F2): the beds and bench added to the nodes and stations every
+   * collaborator already holds, the stands to the fixtures, and a shut room's
+   * doorway taken out of the collision world. Added rather than the zone
+   * rebuilt, so nothing already in it is rolled again.
+   */
+  private raise(upgrade: HouseUpgradeId): void {
+    const raised = houseEntities(this.buildings, upgrade);
+    this.fixtures.push(...raised.fixtures);
+    this.nodes.push(...raised.nodes);
+    this.stations.push(...raised.stations);
+    const plugs = this.doorPlugs.get(upgrade);
+    if (!plugs) return;
+    this.doorPlugs.delete(upgrade);
+    this.collisionWorld.blockers = this.collisionWorld.blockers.filter(
+      (blocker) => !plugs.includes(blocker as Rect),
+    );
   }
 
   /**

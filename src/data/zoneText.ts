@@ -29,7 +29,8 @@ import {
  * building is a block of its marker exactly the size of its footprint. The
  * people who work somewhere are not markers: they stand behind their counter,
  * which is `counterPoint` of the building the legend says they work in, so a
- * shopfront moved is a shopkeeper moved.
+ * shopfront moved is a shopkeeper moved. Somebody who works nowhere, out on the
+ * strand or the fen (D1b), is a marker like anything else that stands still.
  */
 
 /** The grounds, by the name a legend uses and the character every map writes them in. */
@@ -57,6 +58,7 @@ export type Marker =
   | { node: ResourceNodeId; on: GroundName }
   | { station: StationId; on: GroundName }
   | { secret: SecretId; on: GroundName }
+  | { npc: NpcId; on: GroundName }
   | { building: BuildingId; worker?: NpcId; on: GroundName };
 
 export type ZoneLegend = Readonly<Record<string, Marker>>;
@@ -198,6 +200,8 @@ export function layoutZone(name: string, text: string, legend: ZoneLegend): Zone
         layout.stationSpawns.push({ x: middle(x), y: middle(y), station: marker.station });
       } else if ('secret' in marker) {
         layout.secretSpawns.push({ x: middle(x), y: middle(y), secretId: marker.secret });
+      } else if ('npc' in marker) {
+        layout.npcSpawns.push({ x: middle(x), y: middle(y), npcId: marker.npc });
       } else {
         placeBuilding(marker, key, x, y);
       }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   OFFLINE_CAP_MS,
+  OFFLINE_KILL_INTERVAL_MS,
   elapsedOfflineMs,
   formatAwayDuration,
   offlineXpCeiling,
@@ -11,7 +12,8 @@ import { carryCapacity } from '../../src/systems/EncumbranceSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { gatherDurationMs } from '../../src/systems/GatherSystem';
 import { createInitialSkills, skillXpToNextLevel } from '../../src/systems/SkillSystem';
-import type { Gear } from '../../src/systems/InventorySystem';
+import type { Gear, Inventory } from '../../src/systems/InventorySystem';
+import { POTION_EFFECTS } from '../../src/data/potions';
 import { ENEMIES } from '../../src/data/enemies';
 import { RECIPES } from '../../src/data/recipes';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
@@ -630,5 +632,92 @@ describe('a parked ranger', () => {
     const dry = resolveOfflineAfk(sessionStartedAgo(HOUR_MS, 'bandit-camp'), ranger(30));
     expect(dry.drops['crude-arrows'] ?? 0).toBeGreaterThan(0);
     expect(dry.arrowsSpent).toBeGreaterThan(30);
+  });
+});
+
+// Version 2 phase E3: a parked night drinks what Keep allows, one at a time, a
+// potion's minutes counted against the hours away.
+describe('a night that drinks', () => {
+  const WATCH_MS = POTION_EFFECTS['keepers-watch'].durationMs;
+  const fighter = (inventory: Inventory, extra: Partial<Parameters<typeof context>[0]> = {}) =>
+    context({
+      characterLevel: 5,
+      capacity: carryCapacity(50),
+      inventory,
+      rng: () => 0.99,
+      ...extra,
+    });
+
+  it("drinks Keeper's Draughts in turn, and pays them", () => {
+    const away = sessionStartedAgo(HOUR_MS, 'old-mill-road');
+    const plain = resolveOfflineAfk(away, fighter({}));
+    const drank = resolveOfflineAfk(away, fighter({ 'keepers-draught': 9 }));
+    expect(drank.drunk).toEqual({ 'keepers-draught': HOUR_MS / WATCH_MS });
+    expect(drank.capped).toBe(false);
+    expect(drank.kills).toBe(plain.kills);
+    expect(drank.xp).toBe(Math.floor(plain.xp * 1.5));
+    expect(drank.potions).toEqual({});
+  });
+
+  it('leaves a kept potion alone, and one that does nothing for the job', () => {
+    const away = sessionStartedAgo(HOUR_MS, 'old-mill-road');
+    const plain = resolveOfflineAfk(away, fighter({}));
+    const kept = resolveOfflineAfk(
+      away,
+      fighter(
+        { 'keepers-draught': 2, 'samphire-tonic': 2, 'bogbean-cordial': 2 },
+        { idleFood: { order: [], keep: ['keepers-draught'] } },
+      ),
+    );
+    expect(kept.drunk).toEqual({});
+    expect(kept.xp).toBe(plain.xp);
+  });
+
+  // Half a level is the most a night pays, and the potions after it stay in the bag.
+  it('drinks nothing after the ceiling ends the night', () => {
+    const night = resolveOfflineAfk(
+      sessionStartedAgo(OFFLINE_CAP_MS, 'old-mill-road'),
+      fighter({ 'keepers-draught': 16 }),
+    );
+    expect(night.capped).toBe(true);
+    const drunk = night.drunk['keepers-draught'] ?? 0;
+    expect(drunk).toBeGreaterThan(0);
+    expect(drunk).toBeLessThan(16);
+    expect(drunk).toBe(Math.ceil((night.kills * OFFLINE_KILL_INTERVAL_MS) / WATCH_MS));
+  });
+
+  it('wakes to the clock of the last one drunk', () => {
+    const night = resolveOfflineAfk(
+      sessionStartedAgo(WATCH_MS * 1.5, 'old-mill-road'),
+      fighter({ 'keepers-draught': 2 }),
+    );
+    expect(night.drunk).toEqual({ 'keepers-draught': 2 });
+    expect(night.potions).toEqual({ 'keepers-watch': WATCH_MS / 2 });
+  });
+
+  // The clocks were read when the tab closed, twenty minutes after idle started,
+  // and what was running then runs out before the night drinks.
+  it('counts from when the tab closed, after what was running wears off', () => {
+    const away = { ...sessionStartedAgo(HOUR_MS, 'old-mill-road'), restedMs: 20 * 60_000 };
+    const night = resolveOfflineAfk(
+      away,
+      fighter({ 'keepers-draught': 5 }, { potions: { 'keepers-watch': 10 * 60_000 } }),
+    );
+    expect(night.drunk).toEqual({ 'keepers-draught': 1 });
+    expect(night.potions).toEqual({});
+  });
+
+  it('drinks Samphire Tonics for a night of foraging, and cuts more for them', () => {
+    const forager = context({
+      skills: { ...createInitialSkills(), foraging: { level: 9, xp: 0 } },
+      gear: { ...SWORD_IN_HAND, weapon: 'sickle' },
+      capacity: carryCapacity(50),
+    });
+    const away = sessionStartedAgo(15 * 60_000, 'beach');
+    const plain = resolveOfflineAfk(away, forager);
+    const quick = resolveOfflineAfk(away, { ...forager, inventory: { 'samphire-tonic': 3 } });
+    expect(plain.capped).toBe(false);
+    expect(quick.drunk).toEqual({ 'samphire-tonic': 2 });
+    expect(quick.gathers).toBeGreaterThan(plain.gathers);
   });
 });

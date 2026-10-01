@@ -3,6 +3,7 @@ import { describeItemName } from '../data/items';
 import { QUESTS, QUEST_ORDER, type QuestDefinition, type QuestObjective } from '../data/quests';
 import { ZONES } from '../data/zones';
 import type { KillCounts } from './AchievementSystem';
+import { hasRank, rankRequirement, type Standing } from './FactionSystem';
 import type { Inventory } from './InventorySystem';
 import type { NpcId, QuestId, ZoneId } from '../types/ids';
 
@@ -40,11 +41,15 @@ export interface QuestEntry {
 
 export type QuestLog = Partial<Record<QuestId, QuestEntry>>;
 
-/** Everything the three kinds of objective are counted off, and no more. */
+/**
+ * Everything the three kinds of objective are counted off, and the standing a
+ * quest may wait on (D3), which is the fourth tally and read the same way.
+ */
 export interface QuestCounters {
   inventory: Inventory;
   kills: KillCounts;
   visits: ZoneVisits;
+  standing: Standing;
 }
 
 export interface QuestProgress {
@@ -140,15 +145,35 @@ export function isQuestDone(log: QuestLog, questId: QuestId): boolean {
   return questStatus(log, questId) === 'done';
 }
 
-/** A chain link is finished business: accepting the prerequisite is not enough. */
-export function prerequisitesMet(definition: QuestDefinition, log: QuestLog): boolean {
-  return (definition.requires ?? []).every((questId) => isQuestDone(log, questId));
+/**
+ * A chain link is finished business: accepting the prerequisite is not enough.
+ * A rank the quest waits on (D3) has to be stood at as well.
+ */
+export function prerequisitesMet(
+  definition: QuestDefinition,
+  log: QuestLog,
+  standing: Standing,
+): boolean {
+  return (
+    (definition.requires ?? []).every((questId) => isQuestDone(log, questId)) &&
+    (!definition.requiresRank || hasRank(standing, definition.requiresRank))
+  );
 }
 
-/** The prerequisite a locked quest is waiting on, as its row says it, or null once it is open. */
-export function blockingRequirement(definition: QuestDefinition, log: QuestLog): string | null {
+/**
+ * What a locked quest is waiting on, as its row says it, or null once it is
+ * open: the chain first, since a rank is no use while the link before is not
+ * done.
+ */
+export function blockingRequirement(
+  definition: QuestDefinition,
+  log: QuestLog,
+  standing: Standing,
+): string | null {
   const waiting = (definition.requires ?? []).find((questId) => !isQuestDone(log, questId));
-  return waiting ? `Needs ${QUESTS[waiting].name}` : null;
+  if (waiting) return `Needs ${QUESTS[waiting].name}`;
+  const rank = definition.requiresRank;
+  return rank && !hasRank(standing, rank) ? rankRequirement(rank) : null;
 }
 
 export function questState(
@@ -161,7 +186,7 @@ export function questState(
     return 'done';
   }
   if (status !== 'active') {
-    return prerequisitesMet(definition, log) ? 'available' : 'locked';
+    return prerequisitesMet(definition, log, counters.standing) ? 'available' : 'locked';
   }
   return questProgress(definition, log, counters).met ? 'ready' : 'active';
 }
@@ -174,7 +199,7 @@ export function questsForNpc(npcId: NpcId, log: QuestLog, counters: QuestCounter
       definition,
       state: questState(definition, log, counters),
       progress: questProgress(definition, log, counters),
-      requirement: blockingRequirement(definition, log),
+      requirement: blockingRequirement(definition, log, counters.standing),
     }));
 }
 
@@ -236,8 +261,8 @@ export function activeQuests(log: QuestLog): QuestDefinition[] {
   );
 }
 
-export function canAccept(definition: QuestDefinition, log: QuestLog): boolean {
-  return log[definition.id] === undefined && prerequisitesMet(definition, log);
+export function canAccept(definition: QuestDefinition, log: QuestLog, standing: Standing): boolean {
+  return log[definition.id] === undefined && prerequisitesMet(definition, log, standing);
 }
 
 /** One-time only: a quest already turned in is never offered again. */

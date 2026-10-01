@@ -37,6 +37,7 @@ import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
 import { NPCS, ROLE_SERVICES, type CounterId, type NpcRoleId } from '../../src/data/npcs';
 import { DIALOG } from '../../src/data/dialog';
+import { greetingFor } from '../../src/systems/DialogSystem';
 import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -85,6 +86,8 @@ import {
   BUY_ITEM_REQUESTED_EVENT,
   STATION_OPENED_EVENT,
   MASTERY_CHANGED_EVENT,
+  DROPS_SEEN_CHANGED_EVENT,
+  KILLS_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
   RESTED_CHANGED_EVENT,
   XP_GAINED_EVENT,
@@ -94,6 +97,8 @@ import {
   SPIRIT_BEAT_HEARD_EVENT,
   SECRET_FOUND_EVENT,
   SECRETS_CHANGED_EVENT,
+  WHISPER_NOTED_EVENT,
+  WHISPERS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
   CREATURES_CHANGED_EVENT,
@@ -102,7 +107,11 @@ import {
   ASK_TOPIC_REQUESTED_EVENT,
   ASKED_CHANGED_EVENT,
   CONVERSATION_CHANGED_EVENT,
+  STANDING_CHANGED_EVENT,
+  STANDING_RANK_EVENT,
 } from '../../src/ui/uiEvents';
+import { RUMOURS } from '../../src/data/rumours';
+import { LORE_FRAGMENTS } from '../../src/data/loreFragments';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
@@ -151,6 +160,8 @@ const REPORT: OfflineAfkReport = {
   outOfArrows: false,
   capped: false,
   rested: 0,
+  drunk: {},
+  potions: {},
 };
 
 let parent: HTMLElement;
@@ -320,7 +331,7 @@ describe('the idle panel', () => {
     return found;
   };
   const foods = (): string[] =>
-    [...(panel()?.querySelectorAll<HTMLElement>('.hud-idle-food') ?? [])].map(
+    [...(panel()?.querySelectorAll<HTMLElement>('.hud-idle-food[data-food]') ?? [])].map(
       (row) => row.dataset.food ?? '',
     );
   const sent = (event: string) => emitted.filter((e) => e.event === event).map((e) => e.args);
@@ -413,6 +424,33 @@ describe('the idle panel', () => {
     });
     tab('idle').click();
     expect(foods()).toEqual(['cooked-crab', 'cooked-rat']);
+  });
+
+  // Version 2 phase E3: potions are rows the way food is, asked for by the same
+  // two requests, each saying what it does for the job or that it is passed over.
+  it('lists the potions in the order idle drinks them, and asks to move or keep one', () => {
+    mount({ inventory: { 'samphire-tonic': 1, 'keepers-draught': 2 } });
+    tab('idle').click();
+    const rows = [...(panel()?.querySelectorAll<HTMLElement>('[data-potion]') ?? [])];
+    expect(rows.map((row) => row.dataset.potion)).toEqual(['samphire-tonic', 'keepers-draught']);
+    expect(rows[0]?.textContent).toContain('passed over');
+    expect(rows[1]?.textContent).toContain('30 min');
+    expect(lines()).toContain(
+      "Drinks in turn, as each wears off: Keeper's Draught ×2, 60 minutes in all",
+    );
+
+    panel()
+      ?.querySelector<HTMLButtonElement>(
+        '[data-potion="keepers-draught"] [data-action="potion-earlier"]',
+      )
+      ?.click();
+    panel()
+      ?.querySelector<HTMLButtonElement>(
+        '[data-potion="keepers-draught"] [data-action="potion-keep"]',
+      )
+      ?.click();
+    expect(sent(IDLE_FOOD_MOVE_REQUESTED_EVENT)).toEqual([['keepers-draught', 'earlier']]);
+    expect(sent(IDLE_FOOD_KEEP_REQUESTED_EVENT)).toEqual([['keepers-draught', true]]);
   });
 });
 
@@ -1027,6 +1065,36 @@ describe('the character sheet’s armour', () => {
   });
 });
 
+/**
+ * Standing (D3) as a block on the character sheet: each faction's rank and
+ * the standing under it towards the next, kept current by the world, with a
+ * rank reached said on a toast.
+ */
+describe('the character sheet’s standing', () => {
+  const line = (factionId: string): string =>
+    parent.querySelector(`[data-sheet="character"] .hud-standing[data-faction="${factionId}"]`)
+      ?.textContent ?? '';
+
+  it('says where the character stands with each faction and how far the next rank is', () => {
+    mount({ standing: { company: 60, keepers: -80 } });
+    expect(line('company')).toBe('The Veymarch CompanyCompany Hand, 60 / 250 standing');
+    expect(line('keepers')).toBe('The KeepersDrainer, -80 / -50 standing');
+    expect(line('greyford')).toBe('GreyfordStranger, 0 / 50 standing');
+  });
+
+  it('redraws when the world moves it, and toasts a rank reached', () => {
+    mount();
+    events.emit(STANDING_CHANGED_EVENT, { greyford: 50 });
+    events.emit(STANDING_RANK_EVENT, {
+      factionId: 'greyford',
+      rankId: 'greyford-regular',
+      rose: true,
+    });
+    expect(line('greyford')).toBe('GreyfordGreyford Regular, 50 / 250 standing');
+    expect(parent.querySelector('.hud-toast')?.textContent).toContain('Rank: Greyford Regular');
+  });
+});
+
 describe('the buff row', () => {
   const icons = (): string[] =>
     [...parent.querySelectorAll<HTMLElement>('.hud-effect')].map(
@@ -1490,12 +1558,12 @@ describe('the bank', () => {
 });
 
 /** Whoever stands behind a role's counter, which the world names beside the role. */
-function personAt(role: NpcRoleId): NpcId {
+function personAt(role: Exclude<NpcRoleId, 'none'>): NpcId {
   return nth(Object.values(NPCS).filter((npc) => npc.role === role)).id;
 }
 
 describe('every counter is one panel, keyed by who stands behind it', () => {
-  const ROLES: NpcRoleId[] = [
+  const ROLES: Exclude<NpcRoleId, 'none'>[] = [
     'merchant',
     'banker',
     'trainer',
@@ -1615,11 +1683,22 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     const box = parent.querySelector('.hud-modal__box--talk');
     expect(box?.querySelector('.hud-modal__title')?.textContent).toBe(npc.name);
     expect(box?.querySelector('.hud-talk__trade')?.textContent).toBe(npc.trade);
-    expect(box?.querySelector('.hud-talk__greeting')?.textContent).toBe(
-      `\u201c${nth(DIALOG[npc.id].greetings).says}\u201d`,
-    );
+    // A new warrior's greeting, which for most is the first and for Pocket the one for a sword.
+    const greeting = greetingFor(npc.id, {
+      level: 1,
+      classId: 'warrior',
+      quests: {},
+      asked: {},
+      standing: {},
+    });
+    expect(box?.querySelector('.hud-talk__greeting')?.textContent).toBe(`\u201c${greeting}\u201d`);
 
     const services = [...(box?.querySelectorAll<HTMLButtonElement>('.hud-talk__service') ?? [])];
+    // Somebody who works no counter offers none: the conversation is all of it.
+    if (npc.role === 'none') {
+      expect(services).toEqual([]);
+      return;
+    }
     expect(services.map((button) => button.dataset.counter)).toEqual([npc.role]);
     expect(nth(services).textContent).toContain(ROLE_SERVICES[npc.role].label);
     expect(nth(services).textContent).toContain(ROLE_SERVICES[npc.role].blurb);
@@ -1641,6 +1720,7 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
       const theirs = QUEST_ORDER.filter((questId) => QUESTS[questId].giverNpcId === npc.id);
       expect(questRows()).toEqual(theirs);
 
+      if (npc.role === 'none') return;
       events.emit(COUNTER_OPENED_EVENT, npc.role, npc.id);
       expect(questRows()).toEqual([]);
     },
@@ -1679,7 +1759,12 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     it('draws what they will talk about, between what they say and their counter', () => {
       mount();
       events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
-      expect(topics().map((button) => button.dataset.topic)).toEqual(['lampton', 'rats', 'news']);
+      expect(topics().map((button) => button.dataset.topic)).toEqual([
+        'lampton',
+        'rats',
+        'quarry',
+        'news',
+      ]);
       const body = parent.querySelector('.hud-modal__box--talk .hud-modal__body');
       expect([...(body?.children ?? [])].map((child) => child.className)).toEqual([
         'hud-talk__greeting',
@@ -1811,6 +1896,62 @@ describe('the skills book', () => {
   });
 });
 
+describe('the collection log', () => {
+  const sheet = (): HTMLElement | null =>
+    parent.querySelector<HTMLElement>('.hud-sheet[data-sheet="collection"]');
+  const text = (): string => sheet()?.querySelector('.hud-sheet__body')?.textContent ?? '';
+  const count = (label: string): string | undefined =>
+    [...(sheet()?.querySelectorAll<HTMLElement>('.hud-collection-count') ?? [])].find(
+      (line) => line.firstElementChild?.textContent === label,
+    )?.lastElementChild?.textContent ?? undefined;
+
+  it('opens from the menu on its counts, its bestiary and its trophies', () => {
+    mount({ kills: { rat: 30 }, seen: { rat: ['rat-meat'] } });
+    menuItem('collection');
+    expect(openSheets()).toEqual(['collection']);
+    expect(sheet()?.dataset.page).toBe('index');
+    expect(count('Creatures slain')).toBe(`1 / ${Object.keys(ENEMIES).length}`);
+    expect(text()).toContain('Bestiary');
+    expect(text()).toContain('Trophies');
+    // Lore found is the Whispers journal's count, nothing heard yet out of all there is.
+    expect(count('Lore found')).toBe(`0 / ${Object.keys(LORE_FRAGMENTS).length}`);
+  });
+
+  it('opens a creature’s page of drops, and goes back to the index', () => {
+    mount({ kills: { rat: 30 }, seen: { rat: ['rat-meat'] } });
+    menuItem('collection');
+    sheet()?.querySelector<HTMLButtonElement>('[data-creature="rat"]')?.click();
+    expect(sheet()?.dataset.page).toBe('rat');
+    const meat = sheet()?.querySelector<HTMLElement>('[data-drop="rat-meat"]');
+    const bones = sheet()?.querySelector<HTMLElement>('[data-drop="rat-bones"]');
+    expect(meat?.textContent).toContain('Seen');
+    expect(bones?.classList.contains('is-unseen')).toBe(true);
+    sheet()?.querySelector<HTMLButtonElement>('[data-action="collection-back"]')?.click();
+    expect(sheet()?.dataset.page).toBe('index');
+  });
+
+  it('redraws off a drop seen, a kill and a pool', () => {
+    mount();
+    menuItem('collection');
+    events.emit(KILLS_CHANGED_EVENT, { rat: 1 });
+    events.emit(DROPS_SEEN_CHANGED_EVENT, { rat: ['rat-bones'] });
+    events.emit(MASTERY_CHANGED_EVENT, { tree: 10 });
+    expect(count('Creatures slain')).toMatch(/^1 \//);
+    expect(count('Drops seen')).toMatch(/^1 \//);
+    sheet()?.querySelector<HTMLButtonElement>('[data-collection="items"]')?.click();
+    expect(sheet()?.dataset.page).toBe('items');
+    expect(sheet()?.querySelector('[data-item="logs"]')?.classList.contains('is-unseen')).toBe(
+      false,
+    );
+  });
+
+  it('answers its key', () => {
+    mount();
+    press('b');
+    expect(openSheets()).toEqual(['collection']);
+  });
+});
+
 describe('the character sheet asks for what it cannot do itself', () => {
   it('opens a picker on an empty slot and asks to unequip a filled one', () => {
     mount();
@@ -1928,7 +2069,11 @@ describe('the bag says what an item is for', () => {
   it('answers rat meat away from any fire with what it cooks into', () => {
     select('rat-meat');
 
-    expect(strip()).toEqual(['Cook at a campfire → Cooked Rat', 'Sells for 3c']);
+    expect(strip()).toEqual([
+      'Cook at a campfire → Cooked Rat',
+      'Dropped by: Rat (Lampton, The New Cut)',
+      'Sells for 3c',
+    ]);
     expect(parent.querySelector('.hud-item-detail')?.textContent).not.toContain('nothing to do');
   });
 
@@ -2222,6 +2367,13 @@ describe('the away report', () => {
     );
   });
 
+  it('lists the potions a night drank', () => {
+    mount({}, [{ kind: 'offline-afk', report: { ...REPORT, drunk: { 'keepers-draught': 2 } } }]);
+    const text = modals()[0]?.textContent ?? '';
+    expect(text).toContain('Drank:');
+    expect(text).toContain("Keeper's Draught x2");
+  });
+
   it('says what a night banked as rested', () => {
     mount({}, [{ kind: 'offline-afk', report: { ...REPORT, rested: 120 } }]);
     expect(modals()[0]?.textContent).toContain('120 XP banked as rested');
@@ -2365,6 +2517,51 @@ describe('every overlay has the same lifecycle', () => {
  * rather than something it already holds: which zone is running and where the
  * player is standing are both the world's to know.
  */
+describe('the whispers journal', () => {
+  const sheet = (): HTMLElement | null =>
+    parent.querySelector<HTMLElement>('.hud-sheet[data-sheet="whispers"]');
+  const text = (): string => sheet()?.textContent ?? '';
+
+  it('lives behind Menu and counts what there is to find before anything is', () => {
+    mount();
+    menuItem('whispers');
+    expect(openSheets()).toEqual(['whispers']);
+    expect(text()).toContain('Rumours');
+    expect(text()).toContain(`0 / ${Object.keys(RUMOURS).length} heard, 0 followed`);
+    expect(text()).toContain(`0 / ${Object.keys(LORE_FRAGMENTS).length} found`);
+  });
+
+  it('draws a rumour with who told it, followed once its secret is found', () => {
+    mount({ whispers: { rumours: ['stone-older-than-town'], fragments: [] } });
+    menuItem('whispers');
+    const entry = (): HTMLElement | null | undefined =>
+      sheet()?.querySelector<HTMLElement>('[data-rumour="stone-older-than-town"]');
+    expect(entry()?.textContent).toContain('Tilda Pell, Shopkeeper · Not yet followed');
+    expect(entry()?.classList.contains('is-followed')).toBe(false);
+
+    events.emit(SECRETS_CHANGED_EVENT, ['lamp-stone']);
+    expect(entry()?.textContent).toContain('Followed');
+    expect(entry()?.classList.contains('is-followed')).toBe(true);
+    expect(text()).toContain('1 followed');
+  });
+
+  it('draws lore found under its title, newest first, from what the world says', () => {
+    mount();
+    events.emit(WHISPERS_CHANGED_EVENT, { rumours: [], fragments: ['waymarker', 'orlath'] });
+    menuItem('whispers');
+    const titles = [...(sheet()?.querySelectorAll('.hud-whisper__title') ?? [])].map(
+      (title) => title.textContent,
+    );
+    expect(titles).toEqual([LORE_FRAGMENTS.orlath.title, LORE_FRAGMENTS.waymarker.title]);
+  });
+
+  it('says what was just noted on the toast', () => {
+    mount();
+    events.emit(WHISPER_NOTED_EVENT, { kind: 'lore', fragmentId: 'orlath' });
+    expect(parent.textContent).toContain(`Lore: ${LORE_FRAGMENTS.orlath.title}`);
+  });
+});
+
 describe('the map', () => {
   const svg = (): SVGSVGElement | null => parent.querySelector('.hud-map__svg');
   const dot = (): SVGCircleElement | null => parent.querySelector('.hud-map__player');
@@ -2514,7 +2711,7 @@ describe('the map', () => {
     events.emit(ZONE_ENTERED_EVENT, 'town');
     expect(svg()).toBe(town);
 
-    events.emit(ZONE_ENTERED_EVENT, 'beach');
+    events.emit(ZONE_ENTERED_EVENT, 'quarry');
     expect(svg()).not.toBe(town);
     expect(markers('npc')).toBe(0);
   });

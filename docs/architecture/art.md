@@ -288,11 +288,15 @@ below it, laid over the shoulders, rather than hair laid over a bald head, since
 rather than sitting on it. A hood shades the face under it; a piece that covers the head is what a
 body lying where it fell shows of it (`covers`).
 
-**Who is drawn with what** is one file (`art/cast.ts`): the six who stand in a town, each a getup
-of a garment, a look and what they hold, told from one another at a glance the way their colours
-were in 3D (a merchant in ochre under an apron, a clerk in teal with a shaved head, an old soldier
-in iron plate with a sword, the quartermaster in a cap and studded leather with a shield, the
-outfitter in leather over linen, and the fettler sooted under an apron with a hammer); and a
+**Who is drawn with what** is one file (`art/cast.ts`): the people who stand still to be talked
+to, each a getup of a garment, a look and what they hold, told from one another at a glance the way
+their colours were in 3D (a merchant in ochre under an apron, a clerk in teal with a shaved head, an
+old soldier in iron plate with a sword, the quartermaster in a cap and studded leather with a shield,
+the outfitter in leather over linen, the fettler sooted under an apron with a hammer, and since D1b
+the innkeeper in blue under an apron, the fisher in oilskin and a cap with his pole, and the fenfolk
+keeper robed and hooded in fenweave with a lantern lit); Pocket, the crow, who is the one of them not
+built like a person and is a beast-kind sprite of its own, a bird on its post (`sprites/crow.ts`,
+decision 134), only its idle drawn since it never walks or fights; and a
 creature, anything not in it falling back on its kind's placeholder, a creature's kind read off its
 `shape` (`tests/art/cast.test.ts` holds every creature the game has drawn for real). The player is
 not there: they are what they chose and what they have on.

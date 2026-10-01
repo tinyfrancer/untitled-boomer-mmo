@@ -1,15 +1,21 @@
 import { SKILLS } from '../data/skills';
 import { describeItemName } from '../data/items';
 import { saveService } from '../persistence';
+import { LORE_FRAGMENTS } from '../data/loreFragments';
 import {
+  logLoreFound,
   logMasteryTier,
   logNotice,
+  logRumourHeard,
+  logRankCrossed,
   logSkillLevelUp,
   type CombatLogEntry,
 } from '../systems/CombatLogSystem';
 import type { CharacterController } from '../systems/CharacterController';
 import type { Point } from '../systems/MovementSystem';
 import { masteryTarget } from '../systems/MasterySystem';
+import { FACTIONS, type StandingMove } from '../data/factions';
+import { describeMove, isEmptyMove } from '../systems/FactionSystem';
 import type { ItemId, MasteryTargetId, SkillId, ZoneId } from '../types/ids';
 import {
   COMBAT_LOG_EVENT,
@@ -20,6 +26,11 @@ import {
   NOTICE_EVENT,
   QUIVER_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
+  WHISPER_NOTED_EVENT,
+  type WhisperNoted,
+  STANDING_CHANGED_EVENT,
+  STANDING_RANK_EVENT,
+  TITLE_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import type { Player } from './Player';
 import type { EventBus, FloatTone, WorldEvent } from './worldEvents';
@@ -177,6 +188,60 @@ export class WorldContext {
     });
     this.log(logMasteryTier(target.name, reached.name));
     this.persistCharacter();
+  }
+
+  /**
+   * Notes a rumour heard or a piece of lore found in the Whispers journal (D2),
+   * from whichever collaborator came by it — a conversation, a secret, a kill —
+   * and says so, once: something already noted is nothing new.
+   */
+  noteWhisper(noted: WhisperNoted): void {
+    const { character } = this;
+    if (noted.kind === 'rumour') {
+      if (!character.noteRumour(noted.rumourId)) return;
+      this.log(logRumourHeard());
+    } else {
+      if (!character.noteFragment(noted.fragmentId)) return;
+      this.log(logLoreFound(LORE_FRAGMENTS[noted.fragmentId].title));
+    }
+    this.events.emit(WHISPER_NOTED_EVENT, noted);
+    this.persistCharacter();
+  }
+
+  /**
+   * Moves standing with the factions (D3) for a deed done `count` times, and
+   * says what that crossed: a rank reached is a line in the log and a toast, a
+   * rank fallen to the same, muted. A move is itself a line only when `said`,
+   * which a quest, a contract and an answer are and a kill is not: one more
+   * bandit down is not news, and the sheet has the number.
+   *
+   * Persisted on a crossing, for the reason a mastery rung is.
+   */
+  moveStanding(
+    move: StandingMove | undefined,
+    options: { count?: number; said?: boolean } = {},
+  ): void {
+    if (!move || isEmptyMove(move)) return;
+    const { character } = this;
+    const worn = character.state.activeTitleId;
+    const crossed = character.moveStanding(move, options.count ?? 1);
+    this.events.emit(STANDING_CHANGED_EVENT, character.state.standing);
+    if (options.said) {
+      this.log(logNotice(`Standing: ${describeMove(move)}.`));
+    }
+    for (const crossing of crossed) {
+      const faction = FACTIONS[crossing.factionId].name;
+      this.log(logRankCrossed(crossing.rank.name, faction, crossing.rose));
+      this.events.emit(STANDING_RANK_EVENT, {
+        factionId: crossing.factionId,
+        rankId: crossing.rank.id,
+        rose: crossing.rose,
+      });
+    }
+    if (character.state.activeTitleId !== worn) {
+      this.events.emit(TITLE_CHANGED_EVENT, character.state.activeTitleId);
+    }
+    if (crossed.length > 0) this.persistCharacter();
   }
 
   /**

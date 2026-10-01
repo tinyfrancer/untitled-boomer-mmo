@@ -3633,3 +3633,326 @@ Claude's, writing it:
   out zone by zone, `spirit.md` has a beat a zone and its ending, `history.md`'s climb is by band,
   `factions.md` names the three seats, `peoples.md` has the paths and four stranger things, and
   `naming.md` every new name. The user was asked no story question (decision 114).
+
+## 132. Whispers: a rumour for every secret and boss and none for what is not built; lore at a secret, off a boss or in an answer; the journal stored in the order it came
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D2**
+
+D2 is decision 87's one journal of rumours and lore. The brief's three forks were settled before
+wave 2 launched:
+
+- **Rumours only for what exists** (the user's, on Claude's recommendation): one for each of the
+  fifteen secrets and one for each of the two bosses. The rest of `docs/lore/places.md`'s rumours
+  are held there, marked, until Part G or D1b builds what they lead to. **Rejected:** a rumour that
+  cannot yet be followed, as a promise, which the dead-end rule (decision 14) refuses.
+
+Two the user declined to settle, so taken on Claude's recommendation for the wave review to
+overturn:
+
+- **A fragment is found at a secret, off a boss or in a line of dialog**, all three: fifteen at the
+  secrets, Hollis's and Orlath's off them the first time each falls, and two in answers.
+  **Rejected:** any one of the three alone.
+- **The journal keeps its own counts and pays nothing else**; the collection log (F3) reads them.
+  **Rejected:** XP or coin for lore, which would put a second reward on a secret that already pays
+  its cache, and move the pace.
+
+Claude's, met building it and settled on its recommendation:
+
+- **Heard and found are stored, in the order they came** (`CharacterState.whispers`, save version
+  108), rather than derived on read from the answers heard, the secrets and the kills, each of which
+  could say whether. The journal draws newest first and none of those keep an order between them, and
+  a stored rumour stays told when an answer is rewritten. What it means is still derived: a rumour
+  is **followed** when its secret is found or its creature killed, and the counts are the tables'.
+  **Rejected:** deriving the whole journal and taking no save version.
+- **An older character's journal is filled from their past** by the step from 107: what they had
+  asked, found and killed, in the tables' order. **Rejected:** an empty journal for somebody who has
+  already found ten secrets.
+- **A rumour is told as an `effects` member on an answer** (D1's slot), and a fragment learned in
+  conversation the same way; the rumour's row names its teller, and a test holds that only that
+  person's answers carry it, as one holds every lead to a secret or a spawned creature. A rumour may
+  ride more than one of its teller's answers, so a topic whose later answer is the one heard still
+  tells it. **Rejected:** a rumour heard by talking to anybody at all, with no line to say it.
+- **The six townsfolk tell all seventeen**, since the lore's other tellers (the fisher, Pocket, Tirrow
+  and Maren) are D1b's people: six were already in their lines, and eleven topics were written for
+  the rest, each in the teller's voice. **Rejected:** waiting for D1b.
+- **A rumour never names where it leads**, followed or not; the journal says who told it and whether
+  it was followed, and the line says as much as its teller did. **Rejected:** the secret's name once
+  followed, and the zone beside every rumour, which is the walk done for the player.
+- **A boss's fragment is found by any kill credited**, a camp's as well as a hand's, since
+  `CombatDirector.creditKill` is where a kill is counted.
+- **The journal is Whispers behind Menu**, a candle its mark and J its key, and something noted is
+  said once on the toast and once in the log. The pace bot reads none of it, and nothing moved.
+
+## 133. Standing is a fourth stored tally, moved by kills, quests, contracts and answers; the Company and the Keepers are opposed on deeds; ranks in each faction's words pay titles and open a quest, a shelf row and lines
+
+**2026-10-01 · the user, asked by Claude, and Claude, building the plan's phase D3**
+
+D3 gives the factions of `docs/lore/factions.md` standing the player earns (decision 87). Wave 2's
+question round settled the brief's four forks before it launched. **Two were the user's**, each on
+Claude's recommendation: **three factions have standing before level 9**, the Veymarch Company, the
+Keepers and Greyford, the Quiet Court and Karn Tholl met once each and given standing in Part G; and
+**standing shows as a block on the character sheet with the ranks earned on Feats**, no seat of its
+own. **Rejected:** all five factions now, two of them with nothing to move them; a Standing tab behind
+Menu. **Two were settled by Claude on its recommendation, the user having declined the card, for the
+wave review to overturn**: **the Company and the Keepers are opposed on deeds rather than a seesaw**,
+a raider killed costing the Keepers while it pays the Company and other deeds moving one alone; and
+**the upper chain's ten raiders cost standing with the Keepers, which putting Orlath back to rest
+earns back**. **Rejected:** zero-sum standing, where any Company work costs the Keepers the same,
+which would make the starter arc a quarrel with people the player has not met; deeds that move only
+one faction ever, which leaves the lore's one real opposition with nothing in the game; the chain
+free with the Keepers.
+
+Claude's, building it, each a fork the brief did not foresee and so settled on the recommended
+option for the wave review to overturn:
+
+- **Standing is a number a faction, stored, held between −1000 and 1000**
+  (`CharacterState.standing`, save version 109), the fourth tally beside kills, visits and mastery,
+  since a contract paid is cleared off the board and an answer given leaves nothing to count.
+  `CLAUDE.md`'s rule now says four. Ranks, titles and everything a rank opens are derived.
+  **Rejected:** deriving standing from the other tallies, which a contract (nothing about a finished
+  one is stored) and an answer (heard, but which effect it paid is a rule that would have to be
+  replayed) cannot be; no floor or ceiling, which lets a night of raiders bury the Keepers past any
+  amends.
+- **Ranks at 50, 250 and 750, each above a stranger's a title, in the faction's own words**: Company
+  Hand, Contractor and Factor; the Keepers' Guest of the Fen, Lightfriend and Fenkin, with Drainer
+  below −50; Greyford Regular, Greyford Trader and Friend of the Yard. A title is a `TitleId` as a
+  slayer rank's is and worn the same way, put on when reached with nothing worn and **taken off when
+  fallen below**, the one way a title is ever lost. **Rejected:** only the top rank a title; a rank
+  without a title kept once earned, which makes a title a fact about the past rather than about where
+  the player stands.
+- **What moves it**: a kill a faction minds (bandits and their chief for the Company, a fen raider
+  +1 Company and −2 Keepers, a goblin on the road for Greyford, a barrow wight laid for the Keepers),
+  every quest once (the starter arc and the house for the Company, the upper chain for Greyford,
+  Orlath for Greyford and +50 Keepers), every contract every time (the board is the Company's; the
+  goblin cull Greyford's too), and an answer the first time it is heard. A camp's kills move it as
+  a hand's do, since the dead are as dead. Rats, crabs, lurkers, crawlers and miners move nothing.
+  **Rejected:** rats for the Company, which would make the first hour a rank; kills not moving
+  standing at all, which leaves "a raider down moves two factions" with nowhere to live.
+- **A kill is said only by the sheet; a quest, a contract and an answer are a line in the log; a rank
+  crossed is a toast and a line.** **Rejected:** a line a kill, which buries the log.
+- **A dialog choice is two topics each waiting on the other unasked** (a new `DialogRequirement`,
+  `unasked`, beside D3's `standing`), so the side taken first is the one kept: the quartermaster's
+  pans, "Then I'll help dig them out" (+15 Company, −15 Keepers) or "Maybe the fen was theirs first"
+  (−10 Company, +15 Keepers). An answer's effects are paid **the first time it is heard and never
+  again**, which moved `TalkSession`'s effects inside the first-heard check. **Rejected:** choices
+  both of which can be taken, which is not a choice; a flag on the character for the side taken,
+  which the answers heard already say.
+- **What a rank opens before 9**, through the `requires` slots already there: the outfitter's coal
+  waits on Greyford Regular (`QuestDefinition.requiresRank`), which the road west earns by itself (40
+  for the quest and 12 for its goblins); cooked eel goes on the shelf for a Company Contractor
+  (`StockRequirement` `standing`), the lazy half of the best heal as cooked fish is of the first; and
+  the quartermaster greets a Contractor and a Factor differently, the outfitter says where the player
+  stands with the yard, the fettler owns up to his back room's lantern to a Greyford Trader and the
+  shopkeeper speaks of the fen people to a Guest of the Fen. **Rejected:** iron arrows as the
+  Company's stock, which broke the rule that made arrows come off the bench and nowhere else
+  (`fletching.test.ts`); a new quest behind a rank, which is content for Part G's faction work;
+  gating contracts on a rank, which the board's rule (a level and never a story) refuses.
+- **D2's save step is a pass-through on this branch.** Decision 125 reserved save version 108 for D2
+  and 109 here, so the chain carries a `107` step that does nothing until D2's own replaces it on
+  the wave branch; without it every save between would be dropped on this branch alone.
+
+The pace is not moved: the bot does no quests or contracts and buys nothing, and the shelf row is a
+heal it never reaches for. The lore gained the ranks and what each faction calls them, the Keepers'
+word for the Company's people, the eel the Post salts for its carters, and the answers to the
+factions' open questions (`factions.md`, `naming.md`).
+
+## 134. The lore's people work no counter: a `'none'` role whose only counter is talk; four placed, Pocket drawn as a crow on a post, Tirrow a name in Maren's lines
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D1b**
+
+D1b brings in the people `docs/lore/places.md` placed and the game lacked, which D1 split off
+(decision 126). The user settled three forks in wave 2's question round, each on Claude's
+recommendation:
+
+- **A person with no counter is a `'none'` role**, Talk their only button and no service line, so
+  every `Record<NpcRoleId>` gains a row (`ROLE_SERVICES`, the held finger's `ROLE_ACTIONS`, the
+  card's case) and nothing becomes nullable. `CounterId` is `'talk'` and every role but `'none'`, so
+  no counter called none can be opened, and `roleCounter` says talking is the counter such a person
+  works. **Rejected:** a nullable role, which every place that reads one would have to remember.
+- **Tirrow is a name in Maren's lines** until Part G gives him a scene; the raiders stay enemies.
+  **Rejected:** Tirrow standing in the fen to be talked to before the story reaches him.
+- **Pocket perches on a post by the longhouse door**, drawn and tapped like a small person at ground
+  level; the lore's roof becomes the porch post (`peoples.md`, `places.md`). **Rejected:** a crow
+  on the roof, drawn over a building it does not block and picked through it.
+
+Claude's, alongside them, for the wave review to overturn:
+
+- **Four rows, not five.** Bess Mallow at the Wet Boot, an old fisher on the strand (named Amos
+  Keel, added to `naming.md`), Pocket at Greyford and Maren in the fen.
+- **Bess is named on the inn's row** and stands at `counterPoint` like anybody who works in a room,
+  but **no counter is drawn in front of somebody who works none**: the inn is two tiles wide and the
+  counter does not fit across it, and there is nothing to serve across one. A tap on the Wet Boot
+  from the street talks to her, as a tap on a shopfront does to its keeper.
+- **Somebody who works nowhere is a marker** in the zone's text (`{ npc }`), standing in the middle
+  of its tile like a creature or a node. **Rejected:** a building with nobody's counter in it for the
+  fisher and Maren, where the lore puts them in the open.
+- **Pocket is a beast-kind sprite, 32×32, its post drawn with it**, and only its idle drawn: it is
+  never anywhere else, and it neither walks nor fights. `npcSprite('crow')` is the bird, and the
+  cast test holds it to that kind rather than a person's. **Rejected:** a figure-sized person sprite
+  with a bird in it, which would have passed the person test by saying something untrue.
+- **Maren says what the fen's beat could only hint at** ("We put you in the hill") as an answer
+  when asked about the light, and will not say why. Wick's beat on arriving in the fen is left as
+  D4 wrote it, a lead-up she now answers. **Rejected:** moving the beat into her conversation, which
+  is D4's to reshape and would have left a player who never talks to her with nothing.
+- **Where they stand is held by a new sweep** (`spawnSafety.test.ts`, "somebody standing in the
+  open"): on ground a body stands on, talked to out of every aggressive creature's reach wherever it
+  has wandered, and clear of every creature's wander disc, node, station, secret and signpost, so a
+  tap on them is about them. The walk up to them is the existing counter sweep, which reaches every
+  person in every zone. The fisher moved off the samphire to the spit for it.
+- **Nothing about the save or the pace moves.** What is asked of them is kept where D1 keeps it.
+
+## 135. Idle drinks: potions join the idle order and Keep, one at a time, the next when the last wears off, and a parked night drinks what Keep allows
+
+**2026-10-01 · the user, asked by Claude in wave 2's question round, building the plan's phase E3**
+
+E3 is the rest of E2: idle drinks the potions it is given. The brief's two questions were answered
+before the wave launched, both on Claude's recommendation:
+
+- **A parked night drinks.** What Keep allows is drunk through a closed game, each potion's minutes
+  counted against the hours away, as E2 already counts a potion drunk before the tab closed.
+  **Rejected:** potions drunk only with the game open, which would leave the two brewed for idle
+  worth one half-hour of a night.
+- **Idle drinks the next one when the last wears off, in the order set, never stacking**, as it eats
+  when hurt. **Rejected:** a potion on a timer, which drinks over one still working; one drunk once
+  at the start, which leaves a night of draughts in the bag.
+
+Claude's, building it, each a fork the brief did not foresee and settled on the recommended option
+for the wave review to overturn:
+
+- **Food and potions share the one stored order and the one Keep** (`CharacterState.idleFood`, its
+  name kept so the save keeps its shape: no save version), but a food moves past food and a potion
+  past potions, since one is eaten when hurt and the other drunk when the last wears off, and the
+  panel lists them in two sections. **Rejected:** one list mixing the two, where moving a fish past
+  a draught means nothing; a second stored choice for potions, a save version for the same idea.
+- **A potion is fair game until kept**, as food always was, so the rule a character who never opens
+  the panel gets is still "everything idle can use". Nobody having chosen, **the two that work
+  through a closed game come first**. **Rejected:** potions kept until the player lets idle have
+  them, which would need a stored list of the other sign.
+- **Idle drinks only a potion that does something for what it is doing** (`IDLE_POTION_USE`): with
+  the game open, Quick Hands for a gather, Dulled Pain and Keeper's Watch for a fight (work at a node
+  or a bench already pays its full XP awake), Fortune for anything; with it closed, Keeper's Watch
+  for any night that earns and Quick Hands for a night of gathering. A potion that does nothing here
+  stays in the bag, and its row says it is passed over. **Rejected:** drinking strictly in the order
+  set, which spends a tonic on a fight by default.
+- **"Never stacking" is never two at once, whoever drank the first**: idle waits out a potion drunk
+  by hand before it drinks one of its own. **Rejected:** one a kind side by side, which is stacking
+  by another name.
+- **A night's potions are counted from when the tab closed**, not from when idle started: the clocks
+  were read at the close, and the time idle ran with the game open is the session's `restedMs`
+  (decision 127). E2 read them from the start and spent the whole session off them in the morning;
+  both now count from the close. What was running then runs out first, and the night drinks the next
+  as the last wears off, **only until it stops**: a night that met its ceiling at three hours drank
+  nothing after, and one too short to finish anything drank nothing. The morning wakes to the clock
+  of the last one drunk.
+- **The panel names what a night will drink off the list the payout drinks out of**
+  (`nightPotionSupply`), and `IdlePlanSystem.test.ts` sweeps every zone and job for the night's
+  draughts being the ones it named. The away report lists what was drunk under **Drank**, as a
+  making night's ore is under Used.
+- **The pace is not moved**: the pace bot never idles and plays unpotioned (rule 8).
+
+## 136. The house grows off the surveyor's plans in four stages, a garden, a bench, a room and its stands, for most of the climb's coin
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase F2**
+
+F2 grows the house F1 let (decision 130). The brief's three forks were settled with wave 2's
+answers, each on Claude's recommendation: **the lot's whole footprint is written into Lampton's text
+from the start and its rooms are shut until bought**, so a stage opens a door rather than re-laying
+the town; **the upgrades are all four, in stages**: more stands, a second room, a garden of E2's
+herbs as a node of the player's, and a workbench that persists; and **the lot together costs about
+most of the coin the climb to the cap picks up by the pace bot's count, the first stage cheap**.
+**Rejected:** a second, larger block the house's row switches to as it grows; any one or two of the
+four alone; prices judged rather than measured off the bot.
+
+Claude's, building it, for the wave review to overturn:
+
+- **The four are bought in one order at the surveyor's plans**, a fixture on a table against the
+  house's west wall: the Herb Garden (5s), the Workbench (12s), the Drawing Room (25s) and More
+  Stands (38s), 80s in all, which is two thirds of the 114 to 120s each class picks up from level 1
+  to the cap, and the garden less than the first level that drops coin picks up.
+  `tests/world/pace.test.ts` holds both against the bot's runs. **Rejected:** stages bought in any
+  order, which would want a price per order or make the cheap ones the only ones bought; buying from
+  the quartermaster, who lets the house but is not where its plans are; a bank-slot curve, which
+  prices one repeated thing rather than four different ones.
+- **The second room is a building of its own against the back of the house**, the Drawing Room,
+  with its door in its west wall onto the yard, rather than one building with a wall across it.
+  Everything the game asks of a room (the cutaway, being inside it, a counter's place, what is drawn
+  over it, the walk in) is asked of a building, and a partition would have been the first room that
+  is half a building. It is still one block of the lot written once: shut, its doorway is walled up
+  (`doorPlug`, a blocker the stage takes out of the collision world when it is bought), and a walk
+  into it is refused with a line saying what opens it. The cottage that stood behind the house moved
+  up the lane. **Rejected:** a partition inside the house; a second room with a door onto the street
+  between the house and the quartermaster's, where there is room for nothing deeper than a hut.
+- **The room comes with two stands and the last stage adds two more**, eight stands in all, the
+  save keeping a place for every stand from the start. **Rejected:** more stands in the house first,
+  where the bed and the plans have the only wall left; the chest grown instead, which F1 left open
+  and which stays eight kinds.
+- **The garden is two beds, samphire and meadowsweet**, the two herbs that grow outside the fen,
+  and **the workbench is a fletcher's bench**, the one station already called a bench, which
+  persists for a parked night as the one at Greyford does. Both are the thing they are everywhere
+  else: a bed is cut and regrows, the bench stands all night. **Rejected:** all four herbs, which
+  would put the fen's at the door of a character who has not been there; a still, which would make
+  the house brewing's second home before it is fletching's first.
+- **The beds and the bench are placed off the house in `data/house.ts`, not written into
+  Lampton's text**, as F1's fixtures are: a zone's spawns are where a herb grows wild and a bench
+  stands for anybody, which the skills book, the parked payout and E2's "no herbs in Lampton" all
+  read, and a garden one character paid for is neither. `tests/world/house.test.ts` sweeps them as
+  the zone sweeps do the rest. What follows from it, left for E4 or F4 since the idle files are
+  E3's in this wave: **the garden is worked by hand and by an awake camp, and a parked night with a
+  sickle in Lampton is paid for what the zone's own spawns offer**, which the garden is not one of.
+- **A stage is put into the zone the moment it is paid for** (`ZoneWorld.raise`): the beds and the
+  bench appended to the nodes and stations every collaborator already holds, the stands to the
+  fixtures, the doorway taken out of the collision world. **Rejected:** rebuilding the zone in place,
+  which rolls every creature again and rebuilds the view to buy a garden.
+- **The save keeps which stages are built** in the house record, `CharacterState.house.built`,
+  F1's four stands kept where they stood and four bare ones added. It needs a step of its own,
+  since F1's version is already in saves on `main`; it is keyed to the next version on this branch
+  and is the orchestrator's to number at the fold.
+- **A body walking out of a two-tile doorway from beside it no longer stalls a hair inside the
+  wall's end.** The route runs a body's half-width off the end of the wall, a body coming at it
+  from the side slides along the wall with its other axis blocked and closes a share of what is left
+  each frame, never arriving; walking from the plans to the garden found it. The player now lands
+  exactly on the leg it is walking once a wall has left it within half a pixel, which only a blocked
+  move asks, so the pace bot's runs are the same to the copper.
+
+The lore gained the plans, the Drawing Room and the yard.
+
+## 137. The collection log is a seat of its own behind Menu, and drops seen are the fourth stored tally; everything else in it is read off the four
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase F3**
+
+F3 is the collection log and bestiary (decision 88). The brief's two forks were settled with wave 2's
+answers, both on Claude's recommendation: **Collection is a seat of its own behind Menu**, the one
+the parallel plan's collision table reserved; and **drops seen are the fourth stored tally**, since a
+drop seen leaves nothing behind to count, `CLAUDE.md`'s "only three tallies" gaining that line and
+its reason. **Rejected:** the Feats sheet growing pages (Feats, Bestiary, Collection), which puts two
+lists that both run a row a creature under one title; deriving drops seen from the bag, which forgets
+whatever was eaten, sold or smelted.
+
+Claude's, building it, each the recommended option and the wave review's to overturn:
+
+- **A drop is seen when it falls, kept or not**: a drop left in a pile by a full pack, lost to a
+  camp's, or named in the away report as missed all count, since the player was told of each.
+  **Rejected:** only what reached the bag, which would make a full pack hide the bestiary. Coin is
+  not a drop here; a purse is what the creature had.
+- **The items collected are read off the tallies already kept, not a fifth**: an item dropped off
+  the drops seen, an item gathered off its node's mastery pool and an item made off its recipe's,
+  since a pool is only fed by a success. **Rejected:** an "items ever held" tally, a fifth stored
+  record of facts three of the four already hold. A recipe's failure and the shelf's own stock are
+  not in the list: nobody sets out to collect a burnt fish, and a tool bought is not found.
+- **A drop not yet seen is named, greyed**, not hidden behind question marks: the item's card names
+  every creature that drops it, so hiding the name on the bestiary would be a puzzle the card already
+  answers. **Rejected:** "???" until seen.
+- **A trophy is collected once seen off its boss or once its quest is handed in**, whatever has
+  become of it since, and the row says when it is at home. **Rejected:** collected only while held or
+  on a stand, which would uncollect a trophy sold.
+- **The card's "where it comes from" names every dropper whatever the chance**, with the zones it
+  lives in, every node with the zones it grows in, and the quest that hands an item over, which the
+  brief did not ask for and a keepsake's trophy row needed anyway. **Rejected:** leaving out drops
+  under some chance, which would hide the chase.
+- **Lore found is D2's**, building beside this phase: the log reads an empty count until its
+  fragments land, and a boss's lore on its bestiary page waits for the same. **Rejected:** a count of
+  the secrets found standing in for lore, which D2 may count differently.
+- **The mark is a skull and the key is `b`**, for bestiary; no other key was free that said it.
+- **Save version 110** (decision 125's reservation), its step keyed at 109. Until D2 and D3 merge
+  their steps at 107 and 108, this branch carries two that pass a save through unchanged, so its
+  chain has no gap; theirs replace them at the merge.

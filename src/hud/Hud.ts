@@ -1,13 +1,17 @@
 import { ActionBar } from './ActionBar';
 import { CharacterSheet } from './CharacterSheet';
 import { CombatLogSheet } from './CombatLogSheet';
+import { CollectionSheet } from './CollectionSheet';
 import { FeatsSheet } from './FeatsSheet';
+import { WhispersSheet } from './WhispersSheet';
 import { IdleSheet } from './IdleSheet';
 import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
 import { Minimap } from './Minimap';
 import { emptyHouse, type HouseState } from '../systems/HouseSystem';
+import { emptyWhispers, type WhispersState } from '../systems/WhispersSystem';
+import { LORE_FRAGMENTS } from '../data/loreFragments';
 import { OverlayHost } from './OverlayHost';
 import type { OptionSettings } from './OptionsModal';
 import { PlayerColumn } from './PlayerColumn';
@@ -24,6 +28,7 @@ import { bindHudKeys } from './keys';
 import { injectHudStyles } from './styles';
 import { describeItemName, quiverCapacity } from '../data/items';
 import { SKILLS } from '../data/skills';
+import { FACTION_RANKS } from '../data/factions';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { equippableFrom } from '../systems/EquipSystem';
@@ -50,8 +55,10 @@ import { knownAbilities } from '../systems/AbilitySystem';
 import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
+import type { SeenDrops } from '../systems/CollectionSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { DialogMemory } from '../systems/DialogSystem';
+import type { Standing } from '../systems/FactionSystem';
 import { hudLayout, tipCardRect } from '../ui/layout';
 import { THEME } from '../ui/theme';
 import type { TabId } from '../ui/tabs';
@@ -84,6 +91,7 @@ import {
   GEAR_CHANGED_EVENT,
   INVENTORY_CHANGED_EVENT,
   QUIVER_CHANGED_EVENT,
+  DROPS_SEEN_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
   HOUSE_OPENED_EVENT,
   HOUSE_CLOSED_EVENT,
@@ -107,6 +115,8 @@ import {
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TITLE_CHANGED_EVENT,
+  STANDING_CHANGED_EVENT,
+  STANDING_RANK_EVENT,
   RESTED_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
@@ -132,13 +142,23 @@ import {
   type ConversationState,
   SPIRIT_SAID_EVENT,
   SPIRIT_BEAT_HEARD_EVENT,
+  WHISPER_NOTED_EVENT,
+  WHISPERS_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
 import { POTION_EFFECT_IDS } from '../data/potions';
-import type { AbilityId, ItemId, PotionEffectId, SkillId, TitleId, ZoneId } from '../types/ids';
+import type {
+  AbilityId,
+  ItemId,
+  PotionEffectId,
+  SecretId,
+  SkillId,
+  TitleId,
+  ZoneId,
+} from '../types/ids';
 
 /**
  * Which request each of the inventory panel's buttons is. Two are not simply
@@ -208,6 +228,8 @@ interface HudModel {
   // can be opened before a single swing has been taken in this session, and a
   // pool filled last night has to be there when it is.
   mastery: MasteryXp;
+  /** What each creature has been seen to drop (F3), the collection log's tally. */
+  seen: SeenDrops;
   activeTitleId: TitleId | null;
   unlockedZones: ZoneId[];
   // What has been reworked at Greyford. Seeded from the save like the bag,
@@ -242,6 +264,10 @@ interface HudModel {
   // one conversation open, which the world resets each time one opens.
   asked: DialogMemory;
   conversation: ConversationState | null;
+  // Standing with each faction (D3): seeded from the save, since the sheets
+  // and a gated row are drawn before anything moves it, and kept current by
+  // the world.
+  standing: Standing;
   // Which potions are running, for the idle panel's word on what they do to
   // idle. Read off the buff row, which already carries them; the clocks
   // themselves are the world's.
@@ -249,6 +275,11 @@ interface HudModel {
   // What stands on the house's stands and is in its chest (F1). Seeded from
   // the save like the bank, then kept current by the world.
   house: HouseState;
+  // The Whispers journal (D2), and the secrets found, which whether a rumour
+  // has been followed is read off with the kills. Both seeded from the save
+  // and kept current by the world.
+  whispers: WhispersState;
+  secrets: SecretId[];
 }
 
 /**
@@ -285,6 +316,8 @@ class Hud {
   private readonly inventorySheet: InventorySheet;
   private readonly questSheet: QuestSheet;
   private readonly featsSheet: FeatsSheet;
+  private readonly whispersSheet = new WhispersSheet();
+  private readonly collectionSheet: CollectionSheet;
   private readonly combatLogSheet: CombatLogSheet;
   private readonly mapSheet: MapSheet;
   private readonly minimap: Minimap;
@@ -333,6 +366,7 @@ class Hud {
       bounty: character.bounty,
       kills: character.kills,
       mastery: character.mastery,
+      seen: character.seen ?? {},
       visits: character.visits,
       activeTitleId: character.activeTitleId,
       unlockedZones: character.unlockedZones,
@@ -353,6 +387,9 @@ class Hud {
       conversation: null,
       potionsRunning: [],
       house: character.house ?? emptyHouse(),
+      whispers: character.whispers ?? emptyWhispers(),
+      secrets: character.secrets ?? [],
+      standing: character.standing ?? {},
     };
 
     injectHudStyles();
@@ -363,6 +400,7 @@ class Hud {
         inventory: this.model.inventory,
         quests: this.model.quests,
         level: this.model.level,
+        standing: this.model.standing,
       }),
       banker: () => ({
         contents: this.model.bank,
@@ -391,6 +429,7 @@ class Hud {
           classId: this.classId,
           quests: this.model.quests,
           asked: this.model.asked,
+          standing: this.model.standing,
         },
         conversation: this.model.conversation,
       }),
@@ -404,6 +443,7 @@ class Hud {
         house: this.model.house,
         inventory: this.model.inventory,
         kills: this.model.kills,
+        currency: this.model.currency,
       }),
     });
     this.mapSheet = new MapSheet({
@@ -459,6 +499,7 @@ class Hud {
     this.featsSheet = new FeatsSheet((titleId) =>
       this.events.emit(SET_TITLE_REQUESTED_EVENT, titleId),
     );
+    this.collectionSheet = new CollectionSheet();
     this.combatLogSheet = new CombatLogSheet();
     this.skillsSheet = new SkillsSheet();
     this.idleSheet = new IdleSheet({
@@ -476,6 +517,8 @@ class Hud {
       inventory: this.inventorySheet,
       quests: this.questSheet,
       feats: this.featsSheet,
+      whispers: this.whispersSheet,
+      collection: this.collectionSheet,
       log: this.combatLogSheet,
       map: this.mapSheet,
       skills: this.skillsSheet,
@@ -501,6 +544,8 @@ class Hud {
       this.inventorySheet.root,
       this.questSheet.root,
       this.featsSheet.root,
+      this.whispersSheet.root,
+      this.collectionSheet.root,
       this.combatLogSheet.root,
       this.mapSheet.root,
       this.skillsSheet.root,
@@ -527,7 +572,9 @@ class Hud {
     this.inventorySheet.update(this.model.inventory);
     this.inventorySheet.setCurrency(this.model.currency);
     this.refreshEncumbrance();
-    this.featsSheet.update(this.model.kills, this.model.activeTitleId);
+    this.refreshWhispers();
+    this.featsSheet.update(this.model.kills, this.model.standing, this.model.activeTitleId);
+    this.refreshCollection();
     this.combatLogSheet.update(this.model.combatLog);
     this.refreshSkillsBook();
     this.refreshIdle();
@@ -830,10 +877,10 @@ class Hud {
     };
   }
 
-  /** The three tallies a quest objective may be counted off, as the model holds them. */
+  /** The three tallies a quest objective may be counted off, and the standing one may wait on. */
   private questCounters(): QuestCounters {
-    const { inventory, kills, visits } = this.model;
-    return { inventory, kills, visits };
+    const { inventory, kills, visits, standing } = this.model;
+    return { inventory, kills, visits, standing };
   }
 
   /**
@@ -882,6 +929,7 @@ class Hud {
       },
       skills: this.model.skills,
       level: this.model.level,
+      standing: this.model.standing,
     });
   }
 
@@ -889,11 +937,34 @@ class Hud {
    * The skills book, off the three things its pages read: the skills, the
    * level a combat skill's cap rides, and the mastery pools beside every row.
    */
+  private refreshWhispers(): void {
+    this.whispersSheet.update(this.model.whispers, {
+      secrets: this.model.secrets,
+      kills: this.model.kills,
+    });
+  }
+
   private refreshSkillsBook(): void {
     this.skillsSheet.update({
       skills: this.model.skills,
       level: this.model.level,
       mastery: this.model.mastery,
+    });
+  }
+
+  /**
+   * The collection log, off the six things it counts from: the kills, the
+   * drops seen, the mastery pools, the quests, the house's stands and the
+   * Whispers journal.
+   */
+  private refreshCollection(): void {
+    this.collectionSheet.update({
+      kills: this.model.kills,
+      seen: this.model.seen,
+      mastery: this.model.mastery,
+      quests: this.model.quests,
+      house: this.model.house,
+      whispers: this.model.whispers,
     });
   }
 
@@ -1096,7 +1167,9 @@ class Hud {
     );
     listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;
-      this.featsSheet.update(kills, this.model.activeTitleId);
+      this.refreshWhispers();
+      this.featsSheet.update(kills, this.model.standing, this.model.activeTitleId);
+      this.refreshCollection();
       // A corpse is progress on a kill objective, and the counter behind the
       // shopkeeper's row is the same one the feats sheet just redrew from.
       this.refreshQuests();
@@ -1108,6 +1181,11 @@ class Hud {
     listen(MASTERY_CHANGED_EVENT, (mastery) => {
       this.model.mastery = mastery;
       this.refreshSkillsBook();
+      this.refreshCollection();
+    });
+    listen(DROPS_SEEN_CHANGED_EVENT, (seen) => {
+      this.model.seen = seen;
+      this.refreshCollection();
     });
     // The rung rather than the XP, which is the pair the kill counts make with
     // an achievement: the totals redraw a sheet quietly, and crossing is the
@@ -1286,7 +1364,24 @@ class Hud {
       this.tipCard.say(said);
       this.holdTip();
     });
-    listen(SECRETS_CHANGED_EVENT, (found) => this.mapSheet.setSecretsFound(found));
+    listen(SECRETS_CHANGED_EVENT, (found) => {
+      this.mapSheet.setSecretsFound(found);
+      this.model.secrets = found;
+      this.refreshWhispers();
+    });
+    listen(WHISPERS_CHANGED_EVENT, (whispers) => {
+      this.model.whispers = whispers;
+      this.refreshWhispers();
+      this.refreshCollection();
+    });
+    listen(WHISPER_NOTED_EVENT, (noted) =>
+      this.toast.show(
+        noted.kind === 'rumour'
+          ? 'Whispers: a rumour noted'
+          : `Lore: ${LORE_FRAGMENTS[noted.fragmentId].title}`,
+        THEME.color.levelUp,
+      ),
+    );
     // The corner is the target frame's again while it is off, and the tip card
     // and a desktop's sheet move up with it.
     listen(MINIMAP_STATE_CHANGED_EVENT, (on) => {
@@ -1313,6 +1408,7 @@ class Hud {
     listen(QUEST_LOG_CHANGED_EVENT, (quests) => {
       this.model.quests = quests;
       this.refreshQuests();
+      this.refreshCollection();
       // A quest handed in stops wanting whatever it asked for, and the bag's
       // strip says what wants an item.
       this.inventorySheet.refreshActions();
@@ -1323,9 +1419,24 @@ class Hud {
     listen(TITLE_CHANGED_EVENT, (titleId) => {
       this.model.activeTitleId = titleId;
       this.playerColumn.setTitle(titleId);
-      this.featsSheet.update(this.model.kills, titleId);
+      this.featsSheet.update(this.model.kills, this.model.standing, titleId);
       // A worn title costs the player column an extra line.
       this.applyLayout();
+    });
+    listen(STANDING_CHANGED_EVENT, (standing) => {
+      this.model.standing = standing;
+      this.featsSheet.update(this.model.kills, standing, this.model.activeTitleId);
+      this.refreshCharacterSheet();
+      // A rank opens a quest, a shelf row and a topic, each drawn from the
+      // model by whichever panel is up.
+      this.refreshQuests();
+    });
+    listen(STANDING_RANK_EVENT, (crossing) => {
+      const rank = FACTION_RANKS[crossing.rankId];
+      this.toast.show(
+        `${crossing.rose ? 'Rank' : 'Fallen to'}: ${rank.name}`,
+        crossing.rose ? THEME.color.skillUp : THEME.color.dim,
+      );
     });
     listen(RESTED_CHANGED_EVENT, (rested) => {
       this.model.rested = rested;
@@ -1339,6 +1450,7 @@ class Hud {
     listen(HOUSE_CHANGED_EVENT, (house) => {
       this.model.house = house;
       this.overlays.refreshOpen();
+      this.refreshCollection();
     });
   }
 }

@@ -283,3 +283,21 @@ describe("setting idle's food from the panel", () => {
     expect(emissions(IDLE_FOOD_CHANGED_EVENT).at(-1)).toEqual([state.idleFood]);
   });
 });
+
+// Version 2 phase E3: in a real town, idle drinks through the world's own
+// drink, so the body wears the mark and the HUD hears the bag.
+describe('camping with potions', () => {
+  it("drinks a Keeper's Draught as it settles in, and the body wears it", () => {
+    const kit = harness();
+    kit.character.addItem('keepers-draught', 1);
+    const rat = kit.world.mobs.find((mob) => mob.level === 1 && mob.isAlive());
+    if (!rat) throw new Error('town has no live level 1 rat');
+    kit.world.teleport(rat.x - 60, rat.y);
+    kit.bus.emit(AFK_SET_REQUESTED_EVENT, true);
+
+    kit.tick(2);
+
+    expect(kit.character.itemCount('keepers-draught')).toBe(0);
+    expect(kit.state.potions['keepers-watch']).toBeGreaterThan(0);
+  });
+});

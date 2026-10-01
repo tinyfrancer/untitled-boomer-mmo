@@ -1,6 +1,6 @@
 # Content and progression
 
-What the data tables hold and the rules over them: loot, quests and objectives, bounties, the stored tallies, and mastery.
+What the data tables hold and the rules over them: loot, quests and objectives, bounties, the stored tallies, mastery, the Whispers journal and the collection log.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
@@ -262,3 +262,87 @@ a node or recipe added later gets its pool by construction. The skills book draw
 the node or recipe it belongs to, on that skill's page (`hud/SkillsSheet.ts`, decision 93), which is
 the only comparison a player makes — which tree to chop, never a tree against a bar. It had a page
 of its own until the book (decision 89).
+
+## The Whispers journal
+
+**The journal is stored for the reason the tips heard are: hearing leaves nothing behind** (`data/rumours.ts`,
+`data/loreFragments.ts`, `systems/WhispersSystem.ts`, decision 132). A rumour is told in
+conversation, as an `effects` member on the answer that says it (`data/dialog.ts`), and leads to a
+secret or a boss; a fragment of the history is found at a secret, off a boss the first time it
+falls, or in an answer. **Only what exists has a rumour**: one for each of the fifteen secrets and
+the two bosses, and `docs/lore/places.md` holds the rest until Part G builds what they lead to.
+`tests/systems/WhispersSystem.test.ts` is the dead-end rule's shape for it: every lead names a secret
+the game hides or a creature some zone spawns, every secret and boss has one, and every rumour and
+told fragment is carried by an answer of the person its row names and nobody else's.
+
+`CharacterState.whispers` keeps the ids heard and found **in the order they came**, which is what
+the journal draws and what none of the asked answers, the secrets or the kills keep between them; it
+also means rewriting an answer never un-tells a rumour. What it means is derived: whether a rumour
+has been **followed** is its secret found or its creature killed, and the counts are the tables'.
+Everything that notes one goes through `WorldContext.noteWhisper`, which refuses a repeat, logs it,
+says it once to the HUD and saves; the three places that call it are `TalkSession.apply`,
+`SecretFinder` and `CombatDirector.creditKill`, the last so a camp's kill finds a boss's fragment as
+a hand's does. The step from save version 107 fills the journal from what an older character had
+already asked, found and killed, in the tables' order, since theirs was never kept. Finding lore
+pays nothing else; the collection log (F3) reads the counts, and `fragmentsOf` for a creature's page.
+
+## Standing with the factions
+
+**Standing is the fourth stored tally, and it is stored for the reason the other three are**
+(`data/factions.ts`, `systems/FactionSystem.ts`, version 2 phase D3, decision 133): a deed leaves
+nothing behind to count it off. A contract paid is cleared off the board, and an answer given is one
+line among many, so `CharacterState.standing` holds a number per faction, held between −1000 and
+1000, and everything that comes off it derives on read: the rank stood at, how far the next is, which
+quests, shelf rows and lines it opens and which titles it pays. Absent is 0, a stranger.
+
+**Three factions have standing before level 9**: the Veymarch Company, the Keepers and Greyford
+(`FactionId`). The Quiet Court and Karn Tholl are met once each and join in Part G. Each climbs at 50,
+250 and 750, every rank above a stranger's paying the title it is named for in the faction's own
+words, as a slayer rank does; only the Keepers have a rank below it (Drainer, under −50), since only
+the Keepers are set against anything the game asks of a player.
+
+**Four deeds move it**, each a row rather than a rule: a kill (`KILL_STANDING`, credited in
+`CombatDirector.creditKill` beside the kill tally, so a camp's kills count and a night away's are paid
+as many times over), a quest handed in (`QuestReward.standing`, once), a contract paid
+(`BountyReward.standing`, every time, the board being the Company's) and an answer heard
+(`DialogEffect` `standing`, the first time only, so a grey topic asked again pays nothing). All four go
+through `WorldContext.moveStanding`, which emits the totals, says a quest's, a contract's or an
+answer's move in the log (a kill's is not news), and says a rank crossed either way with a toast and
+a line. **The Company and the Keepers are opposed on deeds rather than a seesaw**: a raider killed
+pays the Company and costs the Keepers, the pans' choice moves them apart, and every other deed moves
+one alone; `tests/systems/FactionSystem.test.ts` holds that no row moves the two the same way. The
+upper chain's ten raiders cost the Keepers twenty, and putting Orlath down earns more than that back.
+
+**A rank opens things through the same `requires` slots that already existed**: a quest's
+`requiresRank` (the outfitter's coal waits on Greyford Regular, which the road west earns by itself),
+a shelf row's `StockRequirement` `standing` (cooked eel for a Company Contractor) and a line's
+`DialogRequirement` `standing`. A locked row says what it Needs, the rank by name. With nothing worn, a
+rank reached puts its title on, as a slayer rank does; a faction title fallen below comes off, which
+is the one way a title is lost.
+
+**Drops seen are the fifth stored counter, and the collection log is everything read off the five**
+(version 2 phase F3, `docs/decisions.md` 137, `systems/CollectionSystem.ts`). A drop seen leaves
+nothing behind to count it off — the item is eaten, sold or smelted, and the same item off another
+creature says nothing about this one — so `CharacterState.seen` holds, per creature, the items it has
+been seen to drop, each once, in the order first seen. It is credited in `CombatDirector.grantLoot`
+before the pack is asked, so a drop left in a pile or lost to a camp's full pack still counts, and by
+the parked payout for what a night's kills dropped, kept or lost (`AfkCamp.resolveParked`). It is
+told to the HUD (`drops-seen-changed`) and saved only when something is new, since the hundredth rat
+bone says nothing the first did not.
+
+Everything the log shows is derived, and from the tallies already kept rather than from a sixth:
+slain and the slayer ranks off the kills, an item **gathered** off its node's mastery pool and an item
+**made** off its recipe's (a pool is only fed by a success, so a non-empty one means the thing came
+off the node or the bench), a trophy collected off its boss's drops seen or its quest handed in, and
+what is at home off the house's stands. The **bestiary** is a page a creature (`ENEMIES` order, the
+Feats sheet's): where it is found and at what levels (read off the zones' spawns), slain, ranks, and
+every drop on its table, seen or greyed. The **items collected** are everything a drop, a node's
+yield or a recipe's result hands over, the failures and the shelf's own stock left out. **Lore
+found** is the Whispers journal's: the fragments heard (`CharacterState.whispers`, phase D2) out of
+every one in `LORE_FRAGMENTS`, joined at wave 2's fold.
+
+**An item's card says where it comes from** (`comesFrom` in `systems/ItemUseSystem.ts`), which A2
+left to this phase: every creature whose table names it with the zones it lives in, whatever the
+chance, since a card that kept the rare drops quiet would hide the chase; every node that yields it
+with the zones it grows in; and the quest that hands it over. Off the same tables the log counts, so
+the card and the log cannot disagree about where a thing is found.

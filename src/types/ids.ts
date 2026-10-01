@@ -383,8 +383,14 @@ export type BuildingId =
   | 'trading-post'
   | 'longhouse'
   | 'store'
-  // The player's, once the Company lets it to them (F1).
-  | 'house';
+  // The player's, once the Company lets it to them (F1), and the room behind
+  // it that is shut until they build it out (F2).
+  | 'house'
+  | 'drawing-room';
+
+// A stage of the house's growing (F2, `data/house.ts`): bought in this order
+// at the surveyor's plans, each opening something on the lot.
+export type HouseUpgradeId = 'garden' | 'workbench' | 'room' | 'stands';
 
 // Which body a renderer draws a building with, and the same bargain
 // `CreatureShapeId` and `NodeShapeId` make: a new BUILDINGS row names a shape it
@@ -408,7 +414,20 @@ export type ZoneSetting = 'open' | 'marsh' | 'underground';
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.
-export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'fettler';
+export type NpcId =
+  | 'shopkeeper'
+  | 'banker'
+  | 'trainer'
+  | 'quartermaster'
+  | 'outfitter'
+  | 'fettler'
+  // The lore's people (D1b), who work no counter and only talk: the Wet Boot's
+  // keeper, an old fisher on the strand, the crow at Greyford and a keeper of
+  // the fen's lights.
+  | 'innkeeper'
+  | 'fisher'
+  | 'crow'
+  | 'keeper';
 
 export type QuestId =
   | 'rat-bones'
@@ -500,7 +519,33 @@ export type AchievementId = `${EnemyId}-slayer-${SlayerTier}`;
 // it load unchanged.
 export type SlayerRank = 'culler' | 'hunter' | 'slayer';
 
-export type TitleId = `${EnemyId}-${SlayerRank}`;
+export type TitleId = `${EnemyId}-${SlayerRank}` | FactionTitleId;
+
+// The factions a player earns standing with (D3, decision 133): the three with
+// standing before level 9. The Quiet Court and Karn Tholl are met once each and
+// join in Part G.
+export type FactionId = 'company' | 'keepers' | 'greyford';
+
+// A rank above where a stranger stands, each of which pays the title it is
+// named for, as a slayer rank does. Faction first, so the id says whose it is.
+export type FactionTitleId =
+  | 'company-hand'
+  | 'company-contractor'
+  | 'company-factor'
+  | 'keepers-guest'
+  | 'keepers-lightfriend'
+  | 'keepers-fenkin'
+  | 'greyford-regular'
+  | 'greyford-trader'
+  | 'greyford-friend';
+
+// Every rank, the stranger's and the Keepers' word for an enemy included.
+export type FactionRankId =
+  | FactionTitleId
+  | 'company-stranger'
+  | 'keepers-drainer'
+  | 'keepers-outsider'
+  | 'greyford-stranger';
 
 // A tip the spirit gives once per character (decision 98), in the order
 // `TIP_ORDER` checks them.
@@ -550,3 +595,49 @@ export type SpiritBeatId =
   | 'blackwater-fen'
   | 'the-deep-cut'
   | 'orlath';
+
+// A rumour somebody tells (D2, decision 132): a lead to a secret or a boss,
+// noted in the Whispers journal once heard. `data/rumours.ts` has who tells it
+// and what it leads to.
+export type RumourId =
+  | 'stone-older-than-town'
+  | 'his-majesty'
+  | 'walk-to-the-candle'
+  | 'blasting-crew'
+  | 'hall-wall'
+  | 'old-gold'
+  | 'pay-cart'
+  | 'walls-of-the-barrow'
+  | 'blue-lantern'
+  | 'coin-in-the-pond'
+  | 'mill-books'
+  | 'dressed-stones'
+  | 'fettler-buys'
+  | 'things-in-the-mere'
+  | 'lights-on-posts'
+  | 'goblins-stopped'
+  | 'sum-in-the-rock';
+
+// A piece of the realm's history the player can find (D2, decision 132): at a
+// secret, off a boss, or in somebody's answer. `data/loreFragments.ts` has
+// what each says and where it is found.
+export type LoreFragmentId =
+  | 'waymarker'
+  | 'undercroft'
+  | 'the-candles'
+  | 'cell-in-the-hill'
+  | 'waystation'
+  | 'kings-coin'
+  | 'hollis-crane'
+  | 'light-on-the-sea'
+  | 'orlath'
+  | 'the-elves-goodbye'
+  | 'grey-winter'
+  | 'the-bridge'
+  | 'wardens-ring'
+  | 'low-country'
+  | 'the-keepers'
+  | 'karn-tholl'
+  | 'a-reckoning'
+  | 'second-charter'
+  | 'salt-pans';

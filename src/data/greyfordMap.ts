@@ -40,7 +40,7 @@ export const GREYFORD_LAYOUT = layoutZone(
     ............~~~~...............SSS...........
     ............~~~~...V.PPP.......SrS......DD...
     ............~~~~.....PPP......LLLLLL....DD...
-    ..........%%~%~~%%...PPP......LLLLLL.........
+    ..........%%~%~~%%...PPP......LLLLLLK........
     ......====________===========================
     ...=======________=======@===================
     ......====____k___===========================
@@ -71,6 +71,13 @@ export const GREYFORD_LAYOUT = layoutZone(
     P: { building: 'trading-post', worker: 'outfitter', on: 'grass' },
     L: { building: 'longhouse', worker: 'fettler', on: 'grass' },
     S: { building: 'store', on: 'grass' },
+    /**
+     * Pocket, on its post against the longhouse's front corner, beside the road
+     * and a step along from the door (D1b): a person in every way the game
+     * means one, so it stands on the ground and is tapped there, rather than on
+     * the roof the lore first put it on, drawn over a building it would not block.
+     */
+    K: { npc: 'crow', on: 'grass' },
     C: { building: 'cottage', on: 'grass' },
     D: { building: 'cottage', on: 'grass' },
     /**

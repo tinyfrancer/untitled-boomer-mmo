@@ -5,12 +5,15 @@ import { STARTING_BANK_SLOTS } from '../systems/BankSystem';
 import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
+import type { SeenDrops } from '../systems/CollectionSystem';
 import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
 import { emptyHouse, type HouseState } from '../systems/HouseSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { PotionTimers } from '../systems/PotionSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
+import { emptyWhispers, type WhispersState } from '../systems/WhispersSystem';
 import type { DialogMemory } from '../systems/DialogSystem';
+import type { Standing } from '../systems/FactionSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
 import type {
@@ -34,7 +37,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 7;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 11;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -156,6 +159,13 @@ export interface CharacterState {
    */
   beats: SpiritBeatId[];
   /**
+   * The Whispers journal (D2, decision 132): the rumours heard and the lore
+   * found, each in the order it came. Stored because the journal's order is
+   * kept nowhere else, and so a line rewritten never un-tells a rumour; what
+   * has been followed is derived.
+   */
+  whispers: WhispersState;
+  /**
    * The potions drunk and still working, as the time each has left (version 2
    * phase E2). Stored because a potion lasts minutes and works on while the
    * game is closed for the time it has left, which the away payout reads.
@@ -188,8 +198,22 @@ export interface CharacterState {
   // off. Which rung each pool stands on and what that rung pays is derived from
   // this on read (see MasterySystem).
   mastery: MasteryXp;
+  /**
+   * Standing with each faction (D3, decision 133), and the fourth tally stored
+   * for the reason the three above are: a deed leaves nothing behind to count
+   * it off. A contract paid is cleared off the board and an answer given is
+   * one line among many. Which rank it is, what that opens and which titles it
+   * pays are derived from this on read (see FactionSystem).
+   */
+  standing: Standing;
+  // Which items each creature has been seen to drop (F3), and the fifth tally
+  // stored for the reason the four above are: a drop seen leaves nothing
+  // behind, since the item is eaten, sold or smelted, and the same item off
+  // another creature says nothing about this one. The bestiary and the
+  // collection log read everything else off the tallies already kept.
+  seen: SeenDrops;
   // Which earned title is worn, if any. Only the choice is state — the right to
-  // wear it comes from kills.
+  // wear it comes from kills and standing.
   activeTitleId: TitleId | null;
   /**
    * Zones whose lock has been opened, which is the one thing about a locked
@@ -201,10 +225,12 @@ export interface CharacterState {
    */
   unlockedZones: ZoneId[];
   /**
-   * What stands on each of the house's stands and what is in its chest (F1).
-   * Stored because both are choices: a trophy set on a stand has left the bag
-   * and is nowhere else, and so is what was put away. Whether the house is
-   * theirs at all is not stored, since it is whether its quest is done.
+   * What stands on each of the house's stands and what is in its chest (F1),
+   * and which stages of it are built (F2). Stored because each is a choice: a
+   * trophy set on a stand has left the bag and is nowhere else, so is what was
+   * put away, and a room paid for leaves nothing but the coin gone. Whether
+   * the house is theirs at all is not stored, since it is whether its quest is
+   * done.
    */
   house: HouseState;
   createdAt: string;
@@ -295,12 +321,15 @@ export function createNewCharacter(
     secrets: [],
     asked: {},
     beats: [],
+    whispers: emptyWhispers(),
     potions: {},
     quests: {},
     bounty: null,
     kills: {},
     visits: {},
     mastery: {},
+    standing: {},
+    seen: {},
     activeTitleId: null,
     unlockedZones: [],
     house: emptyHouse(),

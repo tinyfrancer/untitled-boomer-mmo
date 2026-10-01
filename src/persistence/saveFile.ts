@@ -3,11 +3,14 @@ import { ABILITIES } from '../data/abilities';
 import { TITLES } from '../data/achievements';
 import { BOUNTIES } from '../data/bounties';
 import { CLASSES } from '../data/classes';
-import { HOUSE_STANDS } from '../data/house';
+import { FACTIONS } from '../data/factions';
+import { HOUSE_STANDS, HOUSE_UPGRADES } from '../data/house';
 import { HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../data/looks';
+import { LORE_FRAGMENTS } from '../data/loreFragments';
 import { QUESTS } from '../data/quests';
 import { POTION_EFFECTS } from '../data/potions';
 import { REFORGES } from '../data/reforges';
+import { RUMOURS } from '../data/rumours';
 import { SKILLS } from '../data/skills';
 import { ZONES } from '../data/zones';
 import { NO_GEAR } from '../systems/InventorySystem';
@@ -188,7 +191,7 @@ const names = (table: object): string => Object.keys(table).join(', ');
  *
  * Ids are checked against their tables wherever the game looks one up and would
  * break on one it cannot find: a class, a zone, an ability, a quest. **Item ids
- * are not**, and nor are the keys of the three tallies: the game already reads
+ * are not**, and nor are the keys of the four tallies: the game already reads
  * past an item that has been retired (`tests/staleIds.ts`), so an honest save
  * can hold one, and a kill counted against a creature that is gone counts
  * toward nothing.
@@ -252,6 +255,13 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
   secrets: [listOf(isString), 'a list of secrets found'],
   asked: [recordOf(listOf(isString)), 'a list of what was heard for each person'],
   beats: [listOf(isString), "a list of Wick's beats heard"],
+  whispers: [
+    (value) =>
+      isRecord(value) &&
+      listOf(keyOf(RUMOURS))(value.rumours) &&
+      listOf(keyOf(LORE_FRAGMENTS))(value.fragments),
+    'a list of rumours the game has heard, and of lore it has found',
+  ],
   potions: [
     (value) =>
       isRecord(value) &&
@@ -281,6 +291,15 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
   kills: [recordOf(isCount), 'a count for each creature'],
   visits: [recordOf(isCount), 'a count for each zone'],
   mastery: [recordOf(isCount), 'an amount of XP for each node and recipe'],
+  standing: [
+    (value) =>
+      isRecord(value) &&
+      Object.entries(value).every(
+        ([factionId, held]) => Object.hasOwn(FACTIONS, factionId) && isNumber(held),
+      ),
+    `a number for each faction (${names(FACTIONS)})`,
+  ],
+  seen: [recordOf(listOf(isString)), 'a list of the drops seen off each creature'],
   activeTitleId: [orNull(keyOf(TITLES)), 'null, or a title the game has'],
   unlockedZones: [listOf(isString), 'a list of zones'],
   house: [
@@ -289,8 +308,9 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
       Array.isArray(value.stands) &&
       value.stands.length === HOUSE_STANDS &&
       listOf(orNull(isString))(value.stands) &&
-      recordOf(isCount)(value.chest),
-    `an item or null for each of ${HOUSE_STANDS} stands, and a count for each item in the chest`,
+      recordOf(isCount)(value.chest) &&
+      listOf(keyOf(HOUSE_UPGRADES))(value.built),
+    `an item or null for each of ${HOUSE_STANDS} stands, a count for each item in the chest, and a list of what is built (${names(HOUSE_UPGRADES)})`,
   ],
   createdAt: [isString, 'a date'],
   updatedAt: [isString, 'a date'],

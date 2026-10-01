@@ -341,8 +341,8 @@ const columnHeightBesideTraining = () =>
 
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
 const BAR_TABS = ['character', 'inventory', 'quests', 'idle', 'menu'];
-/** How many the Menu opens: Map, Feats, Skills, Combat Log, Options. */
-const MENU_TAB_COUNT = 5;
+/** How many the Menu opens: Map, Feats, Skills, Whispers, Collection, Combat Log, Options. */
+const MENU_TAB_COUNT = 7;
 
 /**
  * Opens a surface the way a thumb reaches it — off the bar when it is there,
@@ -547,7 +547,7 @@ const standSouthOf = async (what, back = 150) => {
  * Answers whom the conversation was with, since which person a ray reached is
  * the point of every section that calls this with three others standing close.
  *
- * @param {import('../src/data/npcs').NpcRoleId} role
+ * @param {import('../src/data/npcs').CounterId} role
  * @param {string} who
  * @returns {Promise<string | null>}
  */
@@ -2379,11 +2379,16 @@ async function interiors() {
   // `pickTap` is a priority and not a depth sort, so a wandering rat drawn over
   // a building is picked over it — and a person standing at a door is picked
   // over their own shop. Both are correct behaviour and neither is what this is about.
+  // Only a door in a north or south wall, since the checks below measure across
+  // it, and that leaves out the drawing room, shut until it is built (F2).
   const target = await page.evaluate(() => {
     const w = window.world;
     /** @type {{ x: number; y: number }[]} */
     const spots = [...w.mobs.filter((mob) => mob.isAlive()), ...w.npcs];
     return w.buildings
+      .filter(
+        (building) => building.definition.door === 'north' || building.definition.door === 'south',
+      )
       .map((building) => {
         const at = window.view.worldToScreen(building.x, building.y);
         const gaps = spots.map((thing) => {
@@ -3580,8 +3585,8 @@ async function idlePanel() {
       return {
         visible: getComputedStyle(sheet).display !== 'none',
         button: sheet.querySelector('.hud-idle__button')?.textContent ?? '',
-        foods: foods('.hud-idle-food'),
-        kept: foods('.hud-idle-food.is-kept'),
+        foods: foods('.hud-idle-food[data-food]'),
+        kept: foods('.hud-idle-food[data-food].is-kept'),
         smallest: Math.round(Math.min(...buttons.map((rect) => Math.min(rect.width, rect.height)))),
         inside: buttons.every(
           (rect) => rect.left >= box.left - 0.5 && rect.right <= box.right + 0.5,
@@ -3651,6 +3656,101 @@ async function idlePanel() {
     const w = window.world;
     w.character.removeItem('cooked-rat', 3);
     w.character.removeItem('cooked-crab', 2);
+    w.character.state.idleFood = { order: [], keep: [] };
+    window.events.emit('inventory-changed', { ...w.character.state.inventory });
+    window.events.emit('idle-food-changed', w.character.state.idleFood);
+  });
+  if (viewport) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(300);
+  }
+}
+
+async function idlePotions() {
+  // --- Potions on the idle panel (version 2 phase E3): rows moved and kept the
+  // way food's are, and idle drinking the first that works for its job once
+  // nothing is running. Which potion, when, and what a night drinks are
+  // tests/systems/IdleFoodSystem.test.ts and tests/world/AfkCamp.test.ts; what
+  // needs a browser is the rows as thumb targets on a portrait phone and a real
+  // tap going round the world and back before idle drinks in the order set. ---
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.character.state.potions = {};
+    w.character.state.idleFood = { order: [], keep: [] };
+    w.character.addItem('samphire-tonic', 1);
+    w.character.addItem('keepers-draught', 2);
+    window.events.emit('inventory-changed', { ...w.character.state.inventory });
+    window.events.emit('idle-food-changed', w.character.state.idleFood);
+  });
+
+  const panel = () =>
+    page.evaluate(() => {
+      const sheet = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="idle"]')
+      );
+      const box = sheet.getBoundingClientRect();
+      const rows = [...sheet.querySelectorAll('.hud-idle-food[data-potion]')].map(
+        (row) => /** @type {HTMLElement} */ (row),
+      );
+      const buttons = rows.flatMap((row) =>
+        [...row.querySelectorAll('button')].map((button) => button.getBoundingClientRect()),
+      );
+      return {
+        potions: rows.map((row) => row.dataset.potion),
+        subs: rows.map((row) => row.querySelector('.hud-list-row__sub')?.textContent ?? ''),
+        smallest: Math.round(Math.min(...buttons.map((rect) => Math.min(rect.width, rect.height)))),
+        inside: buttons.every(
+          (rect) => rect.left >= box.left - 0.5 && rect.right <= box.right + 0.5,
+        ),
+      };
+    });
+
+  await tapTab('idle');
+  const opened = await panel();
+  check(
+    'the idle panel lists the potions in the bag, a tonic passed over in a fight',
+    JSON.stringify(opened.potions) === JSON.stringify(['samphire-tonic', 'keepers-draught']) &&
+      (opened.subs[0] ?? '').includes('passed over'),
+    `${opened.potions.join(', ')}; "${opened.subs[0]}"`,
+  );
+  check(
+    'every potion button is a thumb target inside the panel',
+    opened.smallest >= 44 && opened.inside,
+    `smallest ${opened.smallest}px, inside ${opened.inside}`,
+  );
+  await page.screenshot({ path: `${OUT}/13c-idle-potions.png` });
+
+  await page.tap('.hud-idle-food[data-potion="keepers-draught"] [data-action="potion-earlier"]');
+  await page.waitForTimeout(80);
+  const moved = await panel();
+  await page.tap('.hud-sheet[data-sheet="idle"] [data-action="start-idle"]');
+  await step(3);
+  const drank = await page.evaluate(() => ({
+    left: window.world.character.state.inventory['keepers-draught'] ?? 0,
+    watching: (window.world.character.state.potions['keepers-watch'] ?? 0) > 0,
+    order: window.world.character.state.idleFood.order,
+  }));
+  check(
+    'a real tap moves a potion, and idle drinks the first that works for it',
+    JSON.stringify(moved.potions) === JSON.stringify(['keepers-draught', 'samphire-tonic']) &&
+      drank.left === 1 &&
+      drank.watching,
+    `${moved.potions.join(', ')}; ${drank.left} draught left, watching ${drank.watching}`,
+  );
+
+  await tapTab('idle');
+  await page.tap('.hud-sheet[data-sheet="idle"] [data-action="stop-idle"]');
+  await page.waitForTimeout(80);
+  await tapTab('idle');
+  await page.evaluate(() => {
+    const w = window.world;
+    w.character.removeItem('samphire-tonic', w.character.state.inventory['samphire-tonic'] ?? 0);
+    w.character.removeItem('keepers-draught', w.character.state.inventory['keepers-draught'] ?? 0);
+    w.character.state.potions = {};
     w.character.state.idleFood = { order: [], keep: [] };
     window.events.emit('inventory-changed', { ...w.character.state.inventory });
     window.events.emit('idle-food-changed', w.character.state.idleFood);
@@ -5858,6 +5958,101 @@ async function dialog() {
   await page.evaluate(() => window.world.closeCounters());
 }
 
+async function whispers() {
+  // --- Whispers (D2): a rumour told in a real conversation is in the journal
+  // behind Menu, under its count, drawn on a phone above the bar. Which answer
+  // tells what, lore at a secret and off a boss, and following are
+  // tests/world/whispers.test.ts's and tests/systems/WhispersSystem.test.ts's;
+  // what needs a browser is the round trip from the talk panel to the sheet. ---
+  await standSouthOf(TRAINER);
+  await clickAt(await screenAt(TRAINER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'trainer'),
+    'the tapped trainer to talk',
+  );
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="past"]');
+  await step(2);
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="fen"]');
+  await step(2);
+  await page.evaluate(() => window.world.closeCounters());
+  await step(2);
+  await tapTab('whispers');
+  const journal = await page.evaluate(() => {
+    const sheet = document.querySelector('.hud-sheet[data-sheet="whispers"]');
+    const rect = sheet?.getBoundingClientRect();
+    const bar = document.querySelector('.hud-tabs')?.getBoundingClientRect();
+    return {
+      open: sheet !== null && !sheet.classList.contains('hud-hidden'),
+      rumour: sheet?.querySelector('[data-rumour="lights-on-posts"]')?.textContent ?? '',
+      heading: sheet?.querySelector('.hud-section')?.textContent ?? '',
+      kept: window.world.character.state.whispers.rumours,
+      clear:
+        rect && bar ? rect.bottom <= bar.top && rect.left >= 0 && rect.right <= innerWidth : false,
+    };
+  });
+  check(
+    'a rumour told in conversation is in the Whispers journal, counted, above the bar',
+    journal.open &&
+      journal.rumour.includes('Marta Hale') &&
+      /^Rumours\s*1 \/ \d+ heard/.test(journal.heading) &&
+      journal.kept.includes('lights-on-posts') &&
+      journal.clear,
+    JSON.stringify(journal),
+  );
+  await page.screenshot({ path: `${OUT}/9c-whispers.png` });
+  await tapTab('whispers');
+}
+
+async function lorePeople() {
+  // --- The lore's people (D1b): somebody who works no counter, in a zone with
+  // none, tapped on the strand. The conversation is the whole of them: topics
+  // and an answer, and no button for a counter. What they say is
+  // tests/world/dialog.test.ts's; what needs a browser is that a tap on a
+  // person standing in the open reaches them and the panel has nothing to
+  // offer but talk. ---
+  await toTown();
+  await park();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.closeCounters();
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('beach', 'the strand road south out of town');
+
+  const FISHER = "window.world.npcs.find((n) => n.npcId === 'fisher')";
+  await standSouthOf(FISHER, 100);
+  await clickAt(await screenAt(FISHER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'fisher'),
+    'the tapped fisher to talk',
+  );
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="candles"]');
+  await step(2);
+  const talk = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--talk');
+    return {
+      name: box?.querySelector('.hud-modal__title')?.textContent ?? '',
+      services: box?.querySelectorAll('.hud-talk__service').length ?? -1,
+      answer: /** @type {HTMLElement | null} */ (box?.querySelector('.hud-talk__greeting'))?.dataset
+        .answer,
+      next: box?.querySelector('.hud-talk__topic[data-topic="past"]') !== null,
+    };
+  });
+  check(
+    'a person with no counter talks on the strand: an answer, the topic it leads to, and no counter offered',
+    talk.name.length > 0 && talk.services === 0 && talk.answer === 'candles' && talk.next,
+    JSON.stringify(talk),
+  );
+  await page.screenshot({ path: `${OUT}/9c-lore-people.png` });
+
+  await page.evaluate(() => {
+    const w = window.world;
+    w.closeCounters();
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('town', 'the strand road back north into town');
+}
+
 async function spirit() {
   // --- Wick (D4): drawn beside the player in the art's light, brighter while it
   // has something to say, and a tap on it saying it on the card under its own
@@ -6002,7 +6197,7 @@ async function house() {
     const found = w.buildings.find((each) => each.definition.id === 'house');
     const state = w.character.state;
     state.quests = { ...state.quests, 'a-roof-in-lampton': { status: 'done', baseline: 0 } };
-    state.house = { stands: [null, null, null, null], chest: {} };
+    state.house = { stands: Array.from({ length: 8 }, () => null), chest: {}, built: [] };
     state.kills = { ...state.kills, rat: Math.max(state.kills.rat ?? 0, 50) };
     state.inventory = { ...state.inventory, 'barrow-crown': 1, 'pells-cart-bell': 1, logs: 3 };
     window.events.emit('inventory-changed', state.inventory);
@@ -6197,6 +6392,367 @@ async function house() {
   );
 }
 
+async function factions() {
+  // --- Standing (D3): moved by a deed in the world, drawn as a block on the
+  // character sheet and as ranks on Feats, the rank reached worn when nothing
+  // was and taken off from its row. The rules are tested headlessly; what
+  // needs a browser is both sheets redrawing from the one event. ---
+  const standing = await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.standing = {};
+    w.character.state.activeTitleId = null;
+    // Past the slayer chain's last rank, so the only title these kills earn
+    // is the Company's.
+    w.character.state.kills = { ...w.character.state.kills, bandit: 100 };
+    w.creditKill('bandit', 60);
+    return w.character.state.standing;
+  });
+  await tapTab('character');
+  const block = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-sheet[data-sheet="character"] .hud-standing')].map(
+      (n) => n.textContent,
+    ),
+  );
+  check(
+    'a kill the Company minds moves its standing, and the sheet says the rank and the next',
+    standing.company === 60 &&
+      block.length === 3 &&
+      block[0] === 'The Veymarch CompanyCompany Hand, 60 / 250 standing',
+    block.join(' | '),
+  );
+  await page.screenshot({ path: `${OUT}/standing.png` });
+
+  const column = () =>
+    page.evaluate(() => ({
+      worn: window.world.character.state.activeTitleId,
+      line: document.querySelector('.hud-player__title')?.textContent ?? '',
+    }));
+  const reached = await column();
+  check(
+    'the rank reached is worn when nothing was, and the player column says so',
+    reached.worn === 'company-hand' && reached.line === 'Company Hand',
+    `${reached.worn}: "${reached.line}"`,
+  );
+  await tapTab('feats');
+  await page.click('.hud-sheet[data-sheet="feats"] [data-title="company-hand"]');
+  await page.waitForTimeout(200);
+  const off = await column();
+  check(
+    "Feats draws the faction's ranks, and its row takes the title off",
+    off.worn === null,
+    `${off.worn}`,
+  );
+  await page.screenshot({ path: `${OUT}/standing-feats.png` });
+  // Left open, the sheet sits over the strand the next section taps.
+  await tapTab('feats');
+}
+
+async function collection() {
+  // --- The collection log (F3). What it counts is derived and held in
+  // tests/systems/CollectionSystem.test.ts, and a kill noting its drops in
+  // tests/world/collection.test.ts; what needs a browser is the seat behind
+  // the menu, a real kill reaching the sheet over the HUD channel, a tap into a
+  // creature's page and Back out of it, a drop's card on a right click, and a
+  // long sheet stopping above the tab bar on a portrait phone. ---
+  const viewport = page.viewportSize();
+  await page.setViewportSize({ ...PHONE });
+  await page.waitForTimeout(300);
+  const before = await page.evaluate(() => {
+    const state = window.world.character.state;
+    return { kills: state.kills, seen: state.seen };
+  });
+
+  // Rats until one drops something, through the funnel both kill paths end in;
+  // the dice are the game's own, so it is a handful rather than one.
+  const killed = await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.seen = {};
+    window.events.emit('drops-seen-changed', w.character.state.seen);
+    const rat = w.mobs.find((mob) => mob.definition.id === 'rat');
+    if (!rat) return { kills: 0, seen: [] };
+    let kills = 0;
+    while (!w.character.state.seen.rat && kills < 40) {
+      rat.takeDamage(rat.maxHp);
+      w.resolveKill(rat);
+      kills += 1;
+    }
+    return { kills, seen: w.character.state.seen.rat ?? [] };
+  });
+
+  const sheet = () =>
+    page.evaluate(() => {
+      const root = /** @type {HTMLElement} */ (
+        document.querySelector('.hud-sheet[data-sheet="collection"]')
+      );
+      const body = /** @type {HTMLElement} */ (root.querySelector('.hud-sheet__body'));
+      const box = root.getBoundingClientRect();
+      const bar = /** @type {HTMLElement} */ (document.querySelector('.hud-tabs'));
+      /** @param {string} label */
+      const count = (label) =>
+        [...root.querySelectorAll('.hud-collection-count')].find(
+          (line) => line.firstElementChild?.textContent === label,
+        )?.lastElementChild?.textContent ?? '';
+      return {
+        visible: getComputedStyle(root).display !== 'none',
+        page: root.dataset.page ?? '',
+        title: root.querySelector('.hud-sheet__title')?.textContent ?? '',
+        drops: count('Drops seen'),
+        lore: count('Lore found'),
+        creatures: root.querySelectorAll('[data-creature]').length,
+        seenRows: [...root.querySelectorAll('[data-drop]:not(.is-unseen)')].map(
+          (row) => /** @type {HTMLElement} */ (row).dataset.drop,
+        ),
+        aboveBar: box.bottom <= bar.getBoundingClientRect().top + 0.5,
+        scrolls: body.scrollHeight > body.clientHeight,
+      };
+    });
+
+  await tapTab('collection');
+  const index = await sheet();
+  check(
+    'Collection opens from the menu on its counts and its bestiary',
+    index.visible && index.page === 'index' && index.title === 'Collection' && index.creatures > 0,
+    `page "${index.page}", ${index.creatures} creature(s)`,
+  );
+  check(
+    'and a real kill reached it: the drops it was seen to drop are counted',
+    killed.seen.length > 0 && index.drops.startsWith(`${killed.seen.length} /`),
+    `${killed.kills} kill(s), seen ${killed.seen.join(', ')}, "Drops seen ${index.drops}"`,
+  );
+  check(
+    "and lore found is the Whispers journal's count, out of every fragment there is",
+    /^\d+ \/ [1-9]\d*$/.test(index.lore),
+    `"${index.lore}"`,
+  );
+  check(
+    'and the long index stops above the tab bar and scrolls inside itself',
+    index.aboveBar && index.scrolls,
+    `above the bar ${index.aboveBar}, scrolls ${index.scrolls}`,
+  );
+
+  await page.screenshot({ path: `${OUT}/collection.png` });
+
+  await page.click('.hud-sheet[data-sheet="collection"] [data-creature="rat"]');
+  await page.waitForTimeout(80);
+  const rat = await sheet();
+  check(
+    "a creature's row opens its page, its seen drops drawn and the rest greyed",
+    rat.page === 'rat' &&
+      rat.title === 'Rat' &&
+      killed.seen.every((itemId) => rat.seenRows.includes(itemId)),
+    `page "${rat.page}", seen rows ${rat.seenRows.join(', ')}`,
+  );
+  await page.screenshot({ path: `${OUT}/collection-rat.png` });
+
+  const [first] = killed.seen;
+  if (first) {
+    await page.click(`.hud-sheet[data-sheet="collection"] [data-drop="${first}"]`, {
+      button: 'right',
+    });
+    await page.waitForTimeout(80);
+    const card = await page.evaluate(() =>
+      [...document.querySelectorAll('.hud-modal__box--inspect')].map(
+        (box) => box.textContent ?? '',
+      ),
+    );
+    check(
+      "a drop's row opens its card, which says what drops it",
+      card.length === 1 && (card[0] ?? '').includes('Dropped by: Rat'),
+      `${card.length} card(s)`,
+    );
+    await page.click('[data-action="close-inspect"]');
+    await page.waitForTimeout(80);
+  }
+
+  await page.click('.hud-sheet[data-sheet="collection"] [data-action="collection-back"]');
+  await page.waitForTimeout(80);
+  const back = await sheet();
+  check('and Back goes to the index', back.page === 'index', `"${back.page}"`);
+  await tapTab('collection');
+
+  await page.evaluate((saved) => {
+    const w = window.world;
+    w.character.state.kills = saved.kills;
+    w.character.state.seen = saved.seen;
+    window.events.emit('kills-changed', saved.kills);
+    window.events.emit('drops-seen-changed', saved.seen);
+  }, before);
+  if (viewport) await page.setViewportSize(viewport);
+  await page.waitForTimeout(200);
+}
+
+async function houseGrows() {
+  // --- The house that grows (F2): the plans read from inside the house, each
+  // stage bought off its row, the garden's beds and the bench standing in the
+  // yard the moment they are paid for, and the drawing room shut until it is
+  // built and walked into by two real taps after. The rules are
+  // `tests/world/house.test.ts`'s; what only a browser has is the panel's rows
+  // doing what they say, the new things drawn where the world put them, and
+  // the view letting go of them across a round trip out of town. ---
+  await toTown();
+  const lot = await page.evaluate(() => {
+    const w = window.world;
+    const state = w.character.state;
+    state.quests = { ...state.quests, 'a-roof-in-lampton': { status: 'done', baseline: 0 } };
+    state.house = { stands: Array.from({ length: 8 }, () => null), chest: {}, built: [] };
+    state.currency = 10000;
+    window.events.emit('currency-changed', state.currency);
+    w.clearTarget();
+    w.closeCounters();
+    w.player.stopMoving();
+    const house = w.buildings.find((each) => each.definition.id === 'house');
+    const room = w.buildings.find((each) => each.definition.id === 'drawing-room');
+    return house && room
+      ? {
+          house: { x: house.x, y: house.y },
+          room: { x: room.x, y: room.y, width: room.definition.body.width },
+          nodes: w.nodes.length,
+          stations: w.stations.length,
+        }
+      : null;
+  });
+  if (!lot) {
+    check('town has the house and its drawing room', false);
+    return;
+  }
+  // The plans, tapped from inside the house: four stages, the first to buy.
+  await page.evaluate((at) => window.world.teleport(at.x, at.y), lot.house);
+  await step(2);
+  await draw();
+  const plans = await page.evaluate(() => {
+    const f = window.world.fixtures.find((each) => each.fixture.kind === 'plans');
+    return f ? window.view.worldToScreen(f.x, f.area.bottom - 16) : null;
+  });
+  if (!plans) {
+    check('the house has its plans', false);
+    return;
+  }
+  await clickAt(plans);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="plans"]') !== null),
+    "the plans' panel",
+    20000,
+  );
+  const rows = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-modal [data-upgrade]')].map((row) =>
+      row.getAttribute('data-upgrade'),
+    ),
+  );
+  check(
+    'the plans list the four stages in the order they are built',
+    rows.join(',') === 'garden,workbench,room,stands',
+    rows.join(', '),
+  );
+
+  // Each row bought in turn, the next row the one that answers.
+  for (const stage of ['garden', 'workbench', 'room', 'stands']) {
+    await page.click(`.hud-modal [data-upgrade="${stage}"][data-action="build-upgrade"]`);
+    await step(2);
+  }
+  const built = await page.evaluate(
+    (at) => ({
+      built: window.world.character.state.house.built,
+      coin: window.world.character.state.currency,
+      beds: window.world.nodes.length - at.nodes,
+      benches: window.world.stations.length - at.stations,
+      count: document.querySelector('.hud-modal .hud-house__count')?.textContent,
+    }),
+    lot,
+  );
+  check(
+    'a row builds its stage for its price, the beds and the bench into the yard at once',
+    built.built.join(',') === 'garden,workbench,room,stands' &&
+      built.coin === 10000 - 8000 &&
+      built.beds === 2 &&
+      built.benches === 1 &&
+      built.count === '4 / 4 built',
+    JSON.stringify(built),
+  );
+  await page.click('.hud-modal [data-action="close-house"]');
+  await step(2);
+
+  // The yard, drawn: the beds and the bench west of the drawing room.
+  await page.evaluate((at) => window.world.teleport(at.x - 250, at.y + 280), lot.room);
+  await step(2);
+  await draw();
+  await page.screenshot({ path: `${OUT}/24-house-yard.png` });
+  // Counted with the lot built, so the round trip below compares like with like.
+  await sweep();
+  const before = await canvases();
+
+  // Into the drawing room by its west door, a tap on it and a second from its
+  // doorstep. On its north half: the house's roof stands up the screen over
+  // the rest of it, as the longhouse's does over the fettler's store.
+  /** @param {{ x: number; y: number }} at */
+  const middle = (at) => window.view.worldToScreen(at.x, at.y - 64);
+  await page.evaluate((at) => window.world.teleport(at.x - 192, at.y), lot.room);
+  await step(2);
+  await draw();
+  await clickAt(await page.evaluate(middle, lot.room));
+  await stepUntil(
+    () => page.evaluate(() => !window.world.player.hasMoveTarget()),
+    'the walk to the drawing room door',
+    20000,
+  );
+  await draw();
+  await clickAt(await page.evaluate(middle, lot.room));
+  const inside = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        x: window.world.player.x,
+        y: window.world.player.y,
+        walking: window.world.player.hasMoveTarget(),
+      })),
+    (spot) => !spot.walking,
+    'the walk into the drawing room',
+    30000,
+  );
+  check(
+    'two taps walk into the drawing room once it is built',
+    Math.abs(inside.x - lot.room.x) < lot.room.width / 2 && Math.abs(inside.y - lot.room.y) < 96,
+    `player at ${Math.round(inside.x)},${Math.round(inside.y)}`,
+  );
+  const stands = await page.evaluate(
+    () =>
+      window.world.fixtures.filter(
+        (each) => each.fixture.kind === 'stand' && each.house.definition.id === 'drawing-room',
+      ).length,
+  );
+  check('the drawing room stands its four stands', stands === 4, `${stands}`);
+  await draw();
+  await page.screenshot({ path: `${OUT}/24b-drawing-room.png` });
+
+  // Out of town and back: everything the lot was drawn with let go.
+  await park();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth - 33, w.worldHeight / 2 + 64);
+  });
+  await stepUntil(async () => (await zoneId()) !== 'town', 'the road east out of town');
+  const away = await zoneId();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(33, w.worldHeight / 2);
+  });
+  await stepUntilZone('town', `the road back into town from ${away}`);
+  await sweep();
+  const after = await canvases();
+  check(
+    'a round trip out of town lets go of everything the grown house was drawn with',
+    after <= before,
+    `${before} -> ${after} canvases`,
+  );
+  const kept = await page.evaluate(() => ({
+    beds: window.world.nodes.filter((node) => node.definition.skill === 'foraging').length,
+    benches: window.world.stations.filter((station) => station.station === 'bench').length,
+  }));
+  check(
+    'the lot comes back built when town is walked back into',
+    kept.beds === 2 && kept.benches === 1,
+    JSON.stringify(kept),
+  );
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -6218,6 +6774,7 @@ const SECTIONS = [
   ['loot-piles', lootPiles],
   ['bank', bank],
   ['dialog', dialog],
+  ['whispers', whispers],
   ['trainer', trainer],
   ['bounty-board', bountyBoard],
   ['forge', forge],
@@ -6248,6 +6805,11 @@ const SECTIONS = [
   ['spirit', spirit],
   ['still', still],
   ['house', house],
+  ['factions', factions],
+  ['lore-people', lorePeople],
+  ['idle-potions', idlePotions],
+  ['collection', collection],
+  ['house-grows', houseGrows],
 ];
 
 const known = SECTIONS.map(([name]) => name);

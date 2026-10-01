@@ -80,23 +80,41 @@ zone measured at about half an hour rebuilt and an hour and a half to two hours 
 From C11 the phases are built several at a time, by the rules and briefs in
 `docs/v2_parallel_plan.md` (decision 123), and from wave 1 each wave merges through its own branch
 with its numbers reserved at launch (decision 125). **and D1** (dialog: the townsfolk under their lore names with their trade beside them, topics as
-data with answers that lead on, and a person who remembers what was asked for good; decision 126). **and E1** (rested: idle banks it by time, open or closed, to half a level and full in a night;
-XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment ahead
-of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
-banked; save version 104; decision 127). **and D4** (Wick in the world: a light at the shoulder that glows and chimes when it has something
-to say and says it on the card when tapped, the tips waiting in it, nine beats of its story heard
-once, a line of its own otherwise, quiet the tips alone, and its light the one underground; save
-version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
-still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
-clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
-with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 was folded onto
-`claude/v2-wave-1` and merged to `main` as one PR on 2026-10-01. **and G1** (the shape of 9-20: three bands of four levels, ten zones each with its levels, mouths,
-creatures, boss and ids, a made tier a band with gathering and making to 20, paid travel between
-hubs, two paths a class, an ending the player may argue with, built a band at a time; Part G written
-as phases G2-G16; decision 131). **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
-`claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
-phase lands:
-which phase, and which is next.
+data with answers that lead on, and a person who remembers what was asked for good; save version
+103; decision 126), **E1** (rested: idle banks it by time, open or closed, to half a level and full in
+a night; XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment
+ahead of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
+banked; save version 104; decision 127), **D4** (Wick in the world: a light at the shoulder that
+glows and chimes when it has something to say and says it on the card when tapped, the tips waiting
+in it, nine beats of its story heard once, a line of its own otherwise, quiet the tips alone, and its
+light the one underground; save version 105; decision 128), **E2** (potions: foraging with a sickle
+on herb patches from the strand to the fen, brewing at a still in Greyford, four potions one kind
+each for gathering speed, a fight, idle XP and luck, their clocks kept on the character and honoured
+by a night away; save version 106; decision 129) **and F1** (the house: the Surveyor's House in
+Lampton, let by a quest from the quartermaster, with four stands, a chest and a wall of plaques;
+keepsakes from the capstone quests; save version 107; decision 130), which were **wave 1**, folded
+onto `claude/v2-wave-1` and merged to `main` on 2026-10-01; **and G1** (the shape of 9-20: three
+bands of four, ten zones, a made tier a band, a boss a zone, paid travel between hubs, two paths a
+class, an ending the player may argue with, built a band at a time; decision 131), merged after it.
+**Wave 2**, folded onto `claude/v2-wave-2` and up as one PR to `main` for the user's review: **D2**
+(Whispers: a journal behind Menu of the rumours the townsfolk tell, one for each secret and boss, and
+the lore found at a secret, off a boss or in an answer, kept in the order it came; save version 108;
+decision 132), **D3** (factions: standing with the Company, the Keepers and Greyford moved by kills,
+quests, contracts and answers, the Company and the Keepers opposed on deeds, ranks in each faction's
+words paying titles and opening a quest, a shelf row and lines, a block on the character sheet and
+the ranks on Feats; save version 109; decision 133), **D1b** (the lore's people: Bess at the Wet
+Boot, an old fisher on the strand, Pocket on a post at Greyford and Maren in the fen, each drawn and
+talking, a role whose only counter is talk; decision 134), **E3** (idle drinks: potions in the idle
+panel's order and Keep beside the food, drunk one at a time, the next when the last wears off and
+only for a job they help, a parked night drinking the same way from when the tab closed; decision
+135), **F3** (the collection log: Collection behind Menu, a bestiary page a creature with its drops
+greyed until seen, the trophies and the items collected, drops seen the fifth stored tally, its lore
+count the Whispers journal's, an item's card saying where it comes from; save version 110; decision 137) **and F2** (the house grows off the surveyor's plans in four stages for 80s, two thirds of the
+climb's coin: a garden of samphire and meadowsweet and a fletcher's bench in the yard, and the
+Drawing Room behind the house, walled up until it is built, with two stands and then two more; save
+version 111, numbered at the fold; decision 136). **Next: wave 3**, the three reviews (D5, E4, F4)
+and Part G's first content, launched once wave 2 has merged, by `docs/v2_parallel_plan.md`. Update
+this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -735,9 +753,16 @@ decision 121).
   every greeting rewritten and every topic written in the lore's voice. The five people the game
   lacks went to **D1b**. About thirty-five files with its tests and docs. All four forks were the
   user's (decision 126).
-- **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
-  creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
-  of what is found.
+- **D2 — Whispers of the Realm. (Landed.)** One journal, **Whispers**, behind
+  Menu: seventeen **rumours** (`data/rumours.ts`), one leading to each of the fifteen secrets and
+  the two bosses, told as effects on the six townsfolk's answers (eleven topics written for them),
+  with who told each and whether it has been followed; and nineteen **lore fragments**
+  (`data/loreFragments.ts`), pieces of the history found at the secrets, off the two bosses and in
+  two answers, with counts of both. Heard and found are kept in the order they came
+  (`CharacterState.whispers`, save version 108), filled for an older character from what they had
+  already asked, found and killed; followed is derived. The rumours the lore has for what is not
+  built yet are held in `places.md`. Finding lore pays nothing else. Smoke gained a `whispers`
+  section. Decision 132 has the forks.
 - **D3 — Factions and reputation.** Standing with each faction, moved by quests, kills, contracts and
   dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
 - **D4 — The spirit. (Landed.)** Wick drawn in the world, a sprite kind of its own (16×16, not
@@ -754,9 +779,9 @@ decision 121).
   has the forks.
 - **D5 — Part D review.**
 
-**Open questions for Part D**: can two factions be opposed, so that raising one lowers another?
-C2 answered which factions there are and what the spirit wants (`docs/lore/factions.md` and
-`spirit.md`, decision 114), and left D3 the mechanics.
+**Open questions for Part D**: none of D3's left. D3 answered whether two factions can be opposed
+(the Company and the Keepers, on deeds rather than as a seesaw, decision 133). C2 answered which
+factions there are and what the spirit wants (`docs/lore/factions.md` and `spirit.md`, decision 114).
 
 ---
 
@@ -773,6 +798,11 @@ Idle and active each get a reason (decision 85).
   XP, faster gathering. Some may help in a fight.
 - **E3 — What idle uses.** Idle drinks the potions it is given. Potions join the rows A7's idle
   panel orders and keeps, so the player sets when idle drinks them the way they set its food.
+  **Landed** (decision 135): potions are rows beside the food in the one stored order and Keep,
+  fair game until kept; idle drinks the first that works for its job once nothing is running, never
+  two at once; a parked night drinks the same way, counted from when the tab closed and only until
+  it stops, and the morning wakes to the last one's clock; the panel names what a night will drink
+  and the away report what it drank. No save version.
 - **E4 — Part E review.**
 
 **Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing
@@ -792,12 +822,28 @@ nodes and drops? Does rested XP come only from idle, or from being away too? (Bo
   where a body stands to use it. 51 files, past the guide, kept whole since the save, the room and
   the panel are one feature to play.
 - **F2 — A house that grows.** Upgrades bought with coin: more rooms, more stands, a garden, a
-  workbench. A long goal and a coin sink, priced by simulation like everything else.
+  workbench. A long goal and a coin sink, priced by simulation like everything else. _Landed (decision
+  136):_ four stages bought in one order at the surveyor's plans, a new fixture on the house's west
+  wall: the Herb Garden (two beds, samphire and meadowsweet, 5s), the Workbench (a fletcher's bench,
+  12s), the Drawing Room (25s) and More Stands (38s), 80s in all, held by the pace test at two thirds
+  of what each class picks up on the climb and the first stage under the first coin-dropping level's
+  take. The Drawing Room is a building of its own against the back of the house, written into
+  Lampton's text from the start, its doorway walled up until it is built; the beds and the bench are
+  placed off the house rather than in the zone's spawns, so they are no wild herb and nobody's bench,
+  and a parked night does not yet count the garden (E4 or F4's, the idle files being E3's). A stage
+  is in the zone the moment it is paid for. A walk out of a two-tile doorway from beside it no longer
+  stalls a hair inside the wall's end.
 - **F3 — Collection log and bestiary.** Creatures slain and the drops seen from each, lore found,
   trophies earned, each with completion counts; what is collected here is what the house displays.
   An item's card learns where the item comes from (what drops it, what node yields it), which A2
   left to this phase: A2's card says what a thing is for and what it is made from, not where it
-  grows.
+  grows. _Landed (decision 137):_ Collection, a seat of its own behind Menu with a skull for its
+  mark: the counts (creatures slain, drops seen, slayer ranks, trophies, items collected, lore
+  found), a page a creature with where it lives, its slain, its ranks and every drop on its table
+  greyed until seen, the trophies and where each is, and the items collected, each saying how it
+  came; drops seen the fourth stored tally (save version 110), counted as they fall, kept or not,
+  and everything else read off the tallies already kept; the card's "Dropped by", "Gathered from"
+  and "Quest reward" lines. Lore found reads empty until D2's fragments land.
 - **F4 — Part F review.**
 
 **Open questions for Part F**: does the house hold only trophies, or also working stations? Can a

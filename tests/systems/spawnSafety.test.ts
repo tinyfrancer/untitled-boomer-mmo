@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { TILE_SIZE } from '../../src/config/constants';
+import { PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/constants';
+import { BUILDINGS, isInside } from '../../src/data/buildings';
 import { ENEMIES } from '../../src/data/enemies';
+import { NPC_INTERACT_RADIUS, NPCS } from '../../src/data/npcs';
 import { ZONES } from '../../src/data/zones';
 import { clampToWorld, isBlocked } from '../../src/systems/CollisionSystem';
 import { arriveRadius, distance } from '../../src/systems/MovementSystem';
@@ -282,3 +284,80 @@ function gapToStrip(side: ExitSide, at: Point, width: number, height: number): n
         );
   return gap(at, { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });
 }
+
+/**
+ * Somebody who stands in the open rather than behind a counter (D1b): the old
+ * fisher, the crow and the fenfolk keeper. Nothing held where they stand until
+ * they did, since every person before them worked out of a room the building
+ * sweeps already kept clear.
+ */
+describe('somebody standing in the open', () => {
+  const inTheOpen = Object.values(ZONES).flatMap((zone) =>
+    zone.npcSpawns
+      .filter(
+        (person) =>
+          !zone.buildingSpawns.some((spawn) =>
+            isInside({ x: spawn.x, y: spawn.y, definition: BUILDINGS[spawn.buildingId] }, person),
+          ),
+      )
+      .map((person) => ({ zone, person, name: `${zone.id}: ${NPCS[person.npcId].name}` })),
+  );
+
+  it('is somebody: the strand, Greyford and the fen each have one', () => {
+    expect(inTheOpen.map(({ person }) => person.npcId).sort()).toEqual([
+      'crow',
+      'fisher',
+      'keeper',
+    ]);
+  });
+
+  it('stands where a body stands', () => {
+    for (const { zone, person, name } of inTheOpen) {
+      const { collisionWorld } = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      const half = PLAYER_HALF_EXTENT;
+      const box = { x: person.x, y: person.y, halfWidth: half, halfHeight: half };
+      expect(isBlocked(collisionWorld, box), name).toBe(false);
+    }
+  });
+
+  /**
+   * Talked to in peace: whoever stands at them to talk is out of every
+   * aggressive creature's reach, wherever it has wandered, since a conversation
+   * is a panel over the world and nobody reads one with a raider at their back.
+   */
+  it("is talked to out of every aggressive creature's reach", () => {
+    for (const { zone, person, name } of inTheOpen) {
+      for (const threat of threatsIn(zone.id)) {
+        expect(
+          gap(person, threat.at),
+          `${name} is talked to within reach of a ${threat.enemyId} (L${threat.level})`,
+        ).toBeGreaterThan(threat.aggro + threat.wander + NPC_INTERACT_RADIUS);
+      }
+    }
+  });
+
+  /**
+   * And tapped as themselves: no creature wanders within a tile of them, and
+   * nothing else tapped or walked up to stands within an interact radius, so a
+   * tap on them is never a question about pixels.
+   */
+  it('stands clear of every creature, node, station, secret and signpost', () => {
+    for (const { zone, person, name } of inTheOpen) {
+      for (const mob of zone.mobSpawns) {
+        expect(gap(person, mob), `${name} and a ${mob.enemyId}`).toBeGreaterThan(
+          ENEMIES[mob.enemyId].wander.radius + TILE_SIZE,
+        );
+      }
+      const { signposts } = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      const things = [
+        ...zone.nodeSpawns.map((spawn) => ({ at: spawn, what: spawn.nodeId })),
+        ...(zone.stationSpawns ?? []).map((spawn) => ({ at: spawn, what: spawn.station })),
+        ...(zone.secretSpawns ?? []).map((spawn) => ({ at: spawn, what: spawn.secretId })),
+        ...signposts.map((signpost) => ({ at: signpost, what: 'signpost' })),
+      ];
+      for (const { at, what } of things) {
+        expect(gap(person, at), `${name} and the ${what}`).toBeGreaterThan(NPC_INTERACT_RADIUS);
+      }
+    }
+  });
+});
