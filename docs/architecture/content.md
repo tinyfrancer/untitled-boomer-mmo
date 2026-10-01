@@ -1,6 +1,6 @@
 # Content and progression
 
-What the data tables hold and the rules over them: loot, quests and objectives, bounties, the stored tallies, and mastery.
+What the data tables hold and the rules over them: loot, quests and objectives, bounties, the stored tallies, mastery, and the Whispers journal.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
@@ -262,3 +262,26 @@ a node or recipe added later gets its pool by construction. The skills book draw
 the node or recipe it belongs to, on that skill's page (`hud/SkillsSheet.ts`, decision 93), which is
 the only comparison a player makes — which tree to chop, never a tree against a bar. It had a page
 of its own until the book (decision 89).
+
+## The Whispers journal
+
+**The journal is stored for the reason the tips heard are: hearing leaves nothing behind** (`data/rumours.ts`,
+`data/loreFragments.ts`, `systems/WhispersSystem.ts`, decision 132). A rumour is told in
+conversation, as an `effects` member on the answer that says it (`data/dialog.ts`), and leads to a
+secret or a boss; a fragment of the history is found at a secret, off a boss the first time it
+falls, or in an answer. **Only what exists has a rumour**: one for each of the fifteen secrets and
+the two bosses, and `docs/lore/places.md` holds the rest until Part G builds what they lead to.
+`tests/systems/WhispersSystem.test.ts` is the dead-end rule's shape for it: every lead names a secret
+the game hides or a creature some zone spawns, every secret and boss has one, and every rumour and
+told fragment is carried by an answer of the person its row names and nobody else's.
+
+`CharacterState.whispers` keeps the ids heard and found **in the order they came**, which is what
+the journal draws and what none of the asked answers, the secrets or the kills keep between them; it
+also means rewriting an answer never un-tells a rumour. What it means is derived: whether a rumour
+has been **followed** is its secret found or its creature killed, and the counts are the tables'.
+Everything that notes one goes through `WorldContext.noteWhisper`, which refuses a repeat, logs it,
+says it once to the HUD and saves; the three places that call it are `TalkSession.apply`,
+`SecretFinder` and `CombatDirector.creditKill`, the last so a camp's kill finds a boss's fragment as
+a hand's does. The step from save version 107 fills the journal from what an older character had
+already asked, found and killed, in the tables' order, since theirs was never kept. Finding lore
+pays nothing else; the collection log (F3) reads the counts, and `fragmentsOf` for a creature's page.
