@@ -34,7 +34,7 @@ through), `LootPiles` (what a full pack left on the ground, its minute, and taki
 `ContextMenuSession` (what a press held is about, and what was chosen from it), `TipDesk` (the
 spirit's tips: which to offer, and hearing the answer), `SecretFinder` (a secret walked up to, once,
 measured along the stretch walked each frame so a slow phone finds one it walked past, decision
-117), and `ApproachDriver`
+117, and one in a room only from inside it, decision 120), and `ApproachDriver`
 (all three click-to-move walks). Each owns its own state,
 is constructed by `ZoneWorld` and reaches the rest of the zone through two things and no others: the
 `WorldContext` they all share — the clock, the character, the player, both channels out of the

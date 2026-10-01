@@ -171,8 +171,12 @@ Please."
 
 ## Old Mill Road, levels 4-5
 
-**What it is.** The road west from Lampton, three knots of goblins on it, the Old Mill standing empty
-over its millpond, and the willows round the pond where the steel arrow's shafts are cut.
+_Rebuilt in C8 (decision 120)._
+
+**What it is.** The road west from Lampton, knots of goblins on it, the Old Mill standing empty
+over its millpond, the willows round the pond where the steel arrow's shafts are cut, and the timber
+stand in the south-east where the hardwood is. The stream that comes down past Greyford fills the
+pond. The road runs as far as the mill yard and gives out; the way on is north to Greyford.
 
 **What it was.** Veymar's road towards the Stillwood. The Old Mill is the first charter's, the
 millpond its dam over the elves' shrine, and the willows the elves planted round the shrine when
@@ -187,8 +191,10 @@ Veymar drowned, in mourning.
 
 **Secrets.**
 
-- The shrine under the millpond, seen through the water on a still day.
-- The first charter's ledger, in the mill, its last pages the Grey Winter.
+- The shrine under the millpond, seen through the water on a still day. _In game_, off the pond's
+  south bank between two of the willows, with the coin the village threw in round it.
+- The first charter's ledger, in the mill, its last pages the Grey Winter. _In game_, open on a desk
+  against the mill's west wall, with the mill's last takings in a box at its foot.
 
 **Rumours.**
 
@@ -202,10 +208,15 @@ Wick: "What did she mean? What's kindled?"
 
 ## Greyford Outpost, the upper band's hub
 
+_Rebuilt in C8 (decision 120)._
+
 **What it is.** The Company's forward post at a ford of grey stones, where a stream comes down off
-the Greyhills' west end: a trading post, a longhouse, a tannery and a fletcher's bench, and the only
-counters in the Veymarch that take no coin. The Old Mill Road reaches it from Lampton, and the New
-Cut is over the hill to the east. The stream and the ford are not drawn yet; its rebuild adds them.
+the Greyhills' west end: a trading post, a longhouse with the fettler's store against its back, a
+tannery and a fletcher's bench by the water, cottages, and the only counters in the Veymarch that take
+no coin. The Old Mill Road reaches it from Lampton, and the New Cut is over the hill to the east. The
+stream runs on south into the Old Mill Road's millpond. The road crosses it at the ford, between the
+bridge's abutments, with two of its piers still standing in the water; over it the old road goes a
+little way west towards the Stillwood and is grown over.
 
 **What it was.** The ford's grey stones are dressed stone: the fallen piers of a Veymari bridge.
 
@@ -220,8 +231,11 @@ Cut is over the hill to the east. The stream and the ford are not drawn yet; its
 **Secrets.**
 
 - The fettler's back room: grave goods waiting to be reworked, a lamp-warden's ring, and the cracked
-  lantern from the New Cut.
-- The bridge's carved keystone, lying in the ford.
+  lantern from the New Cut. _In game_, in the store behind the longhouse, whose door is round the
+  back, and Wick's beat for Greyford is said on finding it; a reforging stone of the fettler's is
+  among what is left there.
+- The bridge's carved keystone, lying in the ford. _In game_, carved face up by the downstream pier,
+  a lamp burning cut into it and a carter's coin beside it.
 
 **Rumours.**
 

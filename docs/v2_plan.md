@@ -63,9 +63,12 @@ Cut in two benches under its face and the camp in a ruined waystation of dressed
 its own; a secret in each; a rebuild adds more of what a zone has and leaves its people to Part D;
 decision 118), **and C7** (the Cutthroat's Cellar and the Sunken Barrow rebuilt at 45×32, rock with
 every room lined in masonry, each entered at a mouth five tiles across rather than down a whole side,
-an exit now open only along its mouth; the strongbox and the frieze; decision 119). **Next: C8**, Old
-Mill Road and Greyford rebuilt. Update this line as each phase lands: which phase, and which is
-next.
+an exit now open only along its mouth; the strongbox and the frieze; decision 119), **and C8** (Old Mill
+Road and Greyford rebuilt at 45×32, one stream from Greyford's ford into the millpond and the edge
+between them a mouth either side, the first outdoors; a secret may lie in a room, found from inside
+it; the shrine, the ledger, the keystone and the fettler's back room; decision 120). **Next: C9**,
+Blackwater Fen and the Deep Cut rebuilt. Update this line as each phase lands: which phase, and
+which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -566,6 +569,22 @@ saved position stops meaning anything.
   arrival strip measured as a segment. About thirty-five files with its tests and docs, and whole,
   since the mouth was made for the vaults and is tested by them. The fork was the user's (decision
   119).
+- **C8 — Old Mill Road and Greyford. (Landed.)** Both at 45×32. **One stream** comes down past
+  Greyford's yard, under the fallen bridge, and runs off its south edge into the mill road's
+  millpond, so the edge between them opens at **a mouth on either side**, the same stretch east of
+  the water: the first mouths outdoors. **Greyford** is the post at the ford: the counters fronting
+  the road from the New Cut, the tannery and the bench by the water, cottages, and the ford made of
+  the bridge's abutments, two piers still in the stream and its stones, the old road going on west a
+  little way and grown over. **The fettler's store** stands against the back of the longhouse with
+  its door round the back. **Old Mill Road** runs from Lampton to the mill yard and stops, the road
+  north the way on; the mill on the pond's bank, five knots of three goblins where there were three,
+  and the hardwood gathered into the timber stand. **A secret may lie in a room**, written into its
+  building's block and found from inside it alone, and all four of the lore's secrets went in: the
+  shrine under the millpond (a mark, the water's surface with a stone showing through), the first
+  charter's ledger in the mill, the bridge's keystone in the ford, and the fettler's back room, which
+  carries Wick's beat for Greyford. A new sweep holds every secret walked up to, and found the
+  strand's causeway one body wide; it is two. Smoke gained a `back-room` section. About thirty files
+  with its tests and docs. Both forks were the user's (decision 120).
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
   activity spots each, **the activities being more of what the zone already has** (decision 118).
   Spawns, nodes and stations re-placed; the progression test re-held. **Every creature, node,
@@ -573,8 +592,9 @@ saved position stops meaning anything.
   `art/places.ts`, the building kit, and an icon for anything it hands out), since Part B left
   nothing a placeholder and the tests hold every row to a drawing (decision 112). **The order**
   after C6 (decision 118): **C7** the two vaults, the Cutthroat's Cellar and the Sunken Barrow, the
-  same shape on purpose (landed); **C8** Old Mill Road and Greyford; **C9** Blackwater Fen and the Deep
-  Cut, whose shared edges with the Cut and the barrow may narrow to a mouth (decision 119).
+  same shape on purpose (landed); **C8** Old Mill Road and Greyford (landed); **C9** Blackwater Fen and
+  the Deep Cut, whose shared edges with the Cut and the barrow may narrow to a mouth (decision 119),
+  as the mill road's and Greyford's did round their stream (decision 120).
 - **C10 — Less grind.** Pillar 3's promise, "tune curves down before adding systems up", which no
   phase kept until the Part A review added this one (decision 99). The curves are tuned against the
   rebuilt zones, since their longer walks between kills are what moves the pace, and before Parts
@@ -589,7 +609,9 @@ And, since C5 left it to C10 (decision 117), does travel come back once the walk
 at what price? C5 answered how secrets are found: by walking up to them. C6 answered what a rebuild
 may add (more of what the zone has) and when the lore's people arrive (Part D). C7 answered how a
 vault is entered: at a mouth narrower than its edge, a door inside a zone left for the undercroft and
-Karn Tholl (decision 119).
+Karn Tholl (decision 119). C8 answered whether a mouth is only a vault's (no: an outdoor edge narrows
+round water that crosses it) and whether a secret may lie indoors (yes, found from inside the room,
+decision 120).
 
 ---
 

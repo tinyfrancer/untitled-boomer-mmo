@@ -381,7 +381,19 @@ wall, its top half over the wall's face, which is where a prop's foot puts it. C
 its lid thrown back against the wall, its red seal broken and gold glinting in it, a coin or two
 spilled; and the frieze along the barrow's gallery, the prop budget's 64 by 32, a panel of dressed
 stone with the coast cut in relief, six sea-lights standing out of the waves with their lamps inlaid
-in gold, a crack down through it and coin at its foot.
+in gold, a crack down through it and coin at its foot. C8 added four (decision 120): **the shrine
+under the millpond is a mark**, as a fishing spot's rings are, since it is the water's surface with
+a stone showing through rather than a thing lying on it, so it is not outlined, is drawn in the
+setting's `water` a step or two paler than the pond, and loops on the water's clock with a band of
+brighter water drifting down over the leaf cut in it; an outlined prop there read as a lid on the
+pond, and a small one as a crosshair. The first charter's ledger lies open on a writing desk against
+the mill's west wall, a cold candle on its corner and a box of takings at its foot; the bridge's
+keystone lies in the ford carved face up, a wedge with a flame on a dish cut into it, since a lamp
+cut as a lantern read at that size as a padlock; and the fettler's back room is a chest of grave
+goods with its lock broken, a ring on its lid, and a lantern beside it cracked down its pane. The
+two in rooms stand with the furniture, the ledger's desk kept clear of the wall it stands against.
+The ford is no drawing of its own: the bridge's abutments and piers are masonry and its crossing the
+stone floor, every pair of which already met somewhere.
 
 **A tree is a canopy of leaf clumps over a trunk** (`sprites/trees.ts`), at the prop budget's 64
 square: a crown two tiles across standing half again as tall as a person, since a tree a person
