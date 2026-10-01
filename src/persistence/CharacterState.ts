@@ -22,7 +22,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 2;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 3;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -40,6 +40,13 @@ export interface CharacterState {
   look: Look;
   level: number;
   xp: number;
+  /**
+   * The rested XP banked by idle and by nights away (decision 85, phase E1),
+   * and not yet spent: what XP earned by hand still has coming as a bonus.
+   * Stored because the time that banked it leaves nothing else behind. Fractional,
+   * since it banks a frame at a time; it is spent in whole points.
+   */
+  rested: number;
   gear: Gear;
   inventory: Inventory;
   /**
@@ -178,6 +185,12 @@ export interface AfkSession {
    * about a parked camp that could not be re-derived in the morning.
    */
   station: StationId | null;
+  /**
+   * How much of this session idle has already banked as rested with the game
+   * open. A closed game is paid from `startedAt`, so without this the hours
+   * watched before the tab closed would bank twice in the morning.
+   */
+  restedMs: number;
 }
 
 export function createNewCharacter(
@@ -194,6 +207,7 @@ export function createNewCharacter(
     look: { ...look },
     level: 1,
     xp: 0,
+    rested: 0,
     gear: {
       ...NO_GEAR,
       weapon: definition.startingWeaponId,

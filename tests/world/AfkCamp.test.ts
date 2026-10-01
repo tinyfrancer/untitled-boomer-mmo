@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMIES } from '../../src/data/enemies';
 import { AFK_ANCHOR_RADIUS, AFK_ENGAGE_RADIUS } from '../../src/systems/AfkSystem';
 import { OUT_OF_COMBAT_DELAY_MS } from '../../src/systems/RegenSystem';
+import { bankRested } from '../../src/systems/RestedSystem';
 import type { EnemyId, ItemId } from '../../src/types/ids';
 import { AFK_STATE_CHANGED_EVENT, IDLE_FOOD_CHANGED_EVENT } from '../../src/ui/uiEvents';
 import { AfkCamp } from '../../src/world/AfkCamp';
@@ -74,7 +75,7 @@ function camped(mobs: Mob[] = [], nodes: ResourceNode[] = [], stations: StationI
       gathering = true;
     },
     isChanneling: () => gathering,
-    awardXp: (reward: number) => awarded.push(reward),
+    awardIdleXp: (amount: number) => awarded.push(amount),
     creditKill: (enemyId: EnemyId, count: number) => {
       credited.push({ enemyId, count });
       return [];
@@ -136,7 +137,7 @@ describe('holding the camp', () => {
   it('does nothing at all until it is switched on', () => {
     const { camp, pursued } = camped([ratAt(10, 0)]);
 
-    camp.update();
+    camp.update(16);
 
     expect(pursued).toHaveLength(0);
   });
@@ -147,7 +148,7 @@ describe('holding the camp', () => {
     const { camp, pursued } = camped([far, near]);
     camp.set(true);
 
-    camp.update();
+    camp.update(16);
 
     expect(pursued).toEqual([near]);
   });
@@ -156,7 +157,7 @@ describe('holding the camp', () => {
     const { camp, pursued, targeting } = camped([ratAt(AFK_ENGAGE_RADIUS + 10, 0)]);
     camp.set(true);
 
-    camp.update();
+    camp.update(16);
 
     expect(pursued).toHaveLength(0);
     expect(targeting.stopPursuit).toHaveBeenCalled();
@@ -166,11 +167,11 @@ describe('holding the camp', () => {
     const dragged = ratAt(40, 0);
     const kit = camped([dragged]);
     kit.camp.set(true);
-    kit.camp.update();
+    kit.camp.update(16);
     expect(kit.selected()).toBe(dragged);
 
     dragged.setPosition(AFK_ANCHOR_RADIUS * 2, 0);
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.selected()).toBeNull();
   });
@@ -191,7 +192,7 @@ describe('holding the camp', () => {
       blockers: [],
     });
 
-    camp.update();
+    camp.update(16);
 
     expect(selected()).toBeNull();
     expect(eaten).toEqual(['cooked-fish']);
@@ -216,7 +217,7 @@ describe("idle's food", () => {
       worldHeight: 1000,
       blockers: [],
     });
-    kit.camp.update();
+    kit.camp.update(16);
   }
 
   it('eats in the order the player set, passing over what they kept', () => {
@@ -274,6 +275,7 @@ describe('a camp that was left running when the tab closed', () => {
       startedAt: new Date(Date.now() - 3600_000).toISOString(),
       zoneId: 'town',
       station: null,
+      restedMs: 0,
     };
 
     const result = camp.resolveParked();
@@ -298,6 +300,7 @@ describe('a camp that was left running when the tab closed', () => {
       startedAt: new Date(Date.now() - 3600_000).toISOString(),
       zoneId: 'town',
       station: 'forge',
+      restedMs: 0,
     };
 
     const result = camp.resolveParked();
@@ -319,6 +322,7 @@ describe('a camp that was left running when the tab closed', () => {
       startedAt: new Date(Date.now() - 3600_000).toISOString(),
       zoneId: 'town',
       station: null,
+      restedMs: 0,
     };
 
     const result = camp.resolveParked();
@@ -338,6 +342,7 @@ describe('a camp that was left running when the tab closed', () => {
       startedAt: new Date(Date.now() - 3600_000).toISOString(),
       zoneId: 'town',
       station: null,
+      restedMs: 0,
     };
 
     const result = camp.resolveParked();
@@ -347,12 +352,76 @@ describe('a camp that was left running when the tab closed', () => {
     expect(state.afk).toBeNull();
   });
 
+  it('banks the night as rested, and says so on the report', () => {
+    const { camp, state } = camped();
+    state.afk = {
+      startedAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+      restedMs: 0,
+    };
+
+    const result = camp.resolveParked();
+
+    expect(state.rested).toBeGreaterThan(0);
+    expect(result?.report.rested).toBe(Math.floor(state.rested));
+  });
+
+  it('does not bank again the hours idle banked before the tab closed', () => {
+    const { camp, state } = camped();
+    state.afk = {
+      startedAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+      restedMs: 3600_000,
+    };
+
+    camp.resolveParked();
+
+    // An hour's worth at most rather than two, give or take the milliseconds
+    // the test took.
+    expect(state.rested).toBeCloseTo(bankRested(0, state.level, 3600_000), 0);
+  });
+
+  it('reports a night that banked rested and earned nothing else', () => {
+    const { camp, character, state } = camped();
+    // A fishing pole where there is no water: a closed game earns nothing with it.
+    character.addItem('fishing-pole', 1);
+    character.equip('fishing-pole');
+    state.afk = {
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      zoneId: 'quarry',
+      station: null,
+      restedMs: 0,
+    };
+
+    const result = camp.resolveParked();
+
+    expect(result?.report.gathers).toBe(0);
+    expect(result?.report.rested).toBeGreaterThan(0);
+  });
+
+  it('says nothing of a reload in the middle of idle, under a minute away', () => {
+    const { camp, state } = camped();
+    state.level = 8;
+    state.afk = {
+      startedAt: new Date(Date.now() - 50_000).toISOString(),
+      zoneId: 'town',
+      station: null,
+      restedMs: 0,
+    };
+
+    expect(camp.resolveParked()).toBeNull();
+    expect(state.rested).toBeGreaterThan(0);
+  });
+
   it('cannot pay twice, however many times a load asks', () => {
     const { camp, state } = camped();
     state.afk = {
       startedAt: new Date(Date.now() - 3600_000).toISOString(),
       zoneId: 'town',
       station: null,
+      restedMs: 0,
     };
 
     camp.resolveParked();
@@ -390,7 +459,7 @@ describe('a gathering camp', () => {
     const kit = chopping([treeAt(200, 0), near]);
 
     kit.camp.set(true);
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.worked).toEqual([near]);
     expect(kit.selected()).toBeNull();
@@ -416,9 +485,9 @@ describe('a gathering camp', () => {
   it('leaves the channel to finish rather than restarting it every frame', () => {
     const kit = chopping([treeAt(40, 0)]);
     kit.camp.set(true);
-    kit.camp.update();
-    kit.camp.update();
-    kit.camp.update();
+    kit.camp.update(16);
+    kit.camp.update(16);
+    kit.camp.update(16);
 
     expect(kit.worked).toHaveLength(1);
   });
@@ -430,13 +499,13 @@ describe('a gathering camp', () => {
     const second = treeAt(120, 0);
     const kit = chopping([first, second]);
     kit.camp.set(true);
-    kit.camp.update();
+    kit.camp.update(16);
 
     kit.stopGathering();
     while (!first.consumeCharge()) {
       /* chop it out */
     }
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.worked).toEqual([first, second]);
   });
@@ -448,7 +517,7 @@ describe('a gathering camp', () => {
     while (!tree.consumeCharge()) {
       /* chop it out */
     }
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.worked).toEqual([]);
     expect(kit.selected()).toBeNull();
@@ -464,7 +533,7 @@ describe('a gathering camp', () => {
     const kit = chopping([treeAt(40, 0)], [rat]);
     kit.camp.set(true);
     rat.engage();
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.selected()).toBe(rat);
     expect(kit.worked).toEqual([]);
@@ -476,7 +545,7 @@ describe('a gathering camp', () => {
     const rat = ratAt(60, 0);
     const kit = chopping([], [rat]);
     kit.camp.set(true);
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.selected()).toBe(rat);
   });
@@ -492,9 +561,9 @@ describe('a gathering camp', () => {
     const kit = chopping([tree]);
     kit.character.addItem('logs', kit.character.carryCapacity());
     kit.camp.set(true);
-    kit.camp.update();
+    kit.camp.update(16);
     kit.stopGathering();
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.worked).toEqual([tree, tree]);
     // Once, at the toggle — the latch is what stops the frame after it saying
@@ -543,7 +612,7 @@ describe('a making camp', () => {
     const kit = smelting([ratAt(60, 0)]);
 
     kit.camp.set(true);
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.crafted).toEqual([TIN]);
     expect(kit.selected()).toBeNull();
@@ -561,9 +630,9 @@ describe('a making camp', () => {
   it('leaves the job running rather than restarting it every frame', () => {
     const kit = smelting();
     kit.camp.set(true);
-    kit.camp.update();
-    kit.camp.update();
-    kit.camp.update();
+    kit.camp.update(16);
+    kit.camp.update(16);
+    kit.camp.update(16);
 
     expect(kit.crafted).toHaveLength(1);
   });
@@ -577,7 +646,7 @@ describe('a making camp', () => {
     kit.camp.set(true);
     rat.engage();
 
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.crafted).toEqual([]);
     expect(kit.selected()).toBe(rat);
@@ -593,12 +662,12 @@ describe('a making camp', () => {
     kit.character.addItem('tin-ore', 1);
 
     kit.camp.set(true);
-    kit.camp.update();
+    kit.camp.update(16);
     expect(kit.crafted).toEqual([TIN]);
 
     kit.character.removeItem('tin-ore', 1);
     kit.stopGathering();
-    kit.camp.update();
+    kit.camp.update(16);
 
     expect(kit.worked).toHaveLength(1);
   });

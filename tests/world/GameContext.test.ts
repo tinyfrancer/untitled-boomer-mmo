@@ -254,6 +254,7 @@ describe('notifications for a HUD that is not listening yet', () => {
       startedAt: new Date(Date.now() - 3600_000).toISOString(),
       zoneId: 'town',
       station: null,
+      restedMs: 0,
     };
     return state;
   }

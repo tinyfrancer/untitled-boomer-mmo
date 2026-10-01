@@ -89,7 +89,7 @@ describe('reading a save back', () => {
   it('never carries a parked night in, since the same file can be loaded again and again', () => {
     const state: CharacterState = {
       ...played(),
-      afk: { startedAt: '2026-09-29T10:00:00.000Z', zoneId: 'town', station: null },
+      afk: { startedAt: '2026-09-29T10:00:00.000Z', zoneId: 'town', station: null, restedMs: 0 },
     };
     const result = readSave(writeSaveExport('file', state).text);
     expect(result.ok && result.character.afk).toBeNull();
@@ -154,6 +154,7 @@ describe('refusing what cannot be loaded', () => {
       [{ ...state, inventory: { logs: 'lots' } }, /inventory should be a count for each item/],
       [{ ...state, tips: { heard: [], off: 'no' } }, /tips should be a list of tips heard/],
       [{ ...state, secrets: 'all of them' }, /secrets should be a list of secrets found/],
+      [{ ...state, rested: -5 }, /rested should be a number, 0 or more/],
       [
         { ...state, look: { ...state.look, hairstyle: 'mohawk' } },
         /look should be a skin \(pale, fair, tan, deep\), a hair colour .* and a hairstyle \(cropped/,

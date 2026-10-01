@@ -497,7 +497,7 @@ export class ZoneWorld implements Targeting {
       stationsInReach: () => this.gathering.stationsInReach(),
       craft: (recipe) => this.gathering.craft(recipe),
       isChanneling: () => this.gathering.isChanneling(),
-      awardXp: (reward) => this.awardXp(reward),
+      awardIdleXp: (amount) => this.awardIdleXp(amount),
       creditKill: (enemyId, count) => this.combat.creditKill(enemyId, count),
     });
     this.quests = new QuestDesk(this.ctx, {
@@ -605,7 +605,7 @@ export class ZoneWorld implements Targeting {
     this.ctx.now += deltaMs;
 
     this.applyInputActions();
-    this.afk.update();
+    this.afk.update(deltaMs);
     this.approach.update(deltaMs);
     this.player.update(deltaMs, this.collisionWorld);
     const healed = this.player.takeHealPulse();
@@ -1186,11 +1186,24 @@ export class ZoneWorld implements Targeting {
     // The one choke point both the swing and the ability paths run through, so
     // it is the one place the AFK penalty has to be applied. A quest reward is
     // not one of them — handing a quest in is something the player did — so it
-    // comes in through publishXpGain instead.
-    const amount = afkXpReward(reward, this.afk.active);
-    const gain = this.character.awardXp(amount);
-    this.ctx.float(`+${amount} XP`, 'reward', 20);
-    this.ctx.log(logXpGain(amount));
+    // comes in through publishXpGain instead. A kill made by hand spends the
+    // rested bank; one idle made is halved and never rested as well.
+    if (this.afk.active) {
+      this.awardIdleXp(afkXpReward(reward, true));
+      return;
+    }
+    this.creditXp(reward, this.character.awardPlayedXp(reward));
+  }
+
+  // XP idle earned, awake or on a parked night, which is never rested as well:
+  // idle's XP is not the player's to double.
+  private awardIdleXp(amount: number): void {
+    this.creditXp(amount, this.character.awardXp(amount));
+  }
+
+  private creditXp(amount: number, gain: CombatXpGain): void {
+    this.ctx.float(`+${amount + gain.bonus} XP`, 'reward', 20);
+    this.ctx.log(logXpGain(amount, gain.bonus));
     this.publishXpGain(gain);
   }
 
