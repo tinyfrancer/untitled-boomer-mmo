@@ -4311,12 +4311,15 @@ async function lockedZone() {
   );
 
   // In through the map edge, which is the route the previous section proved for
-  // an open zone. The hideout is east of the camp.
+  // an open zone. The Cellar is east of the camp, and only the lane's end leads
+  // down to it: the exit's mouth (decision 119), whose middle this stands on.
   await page.evaluate(() => {
     const w = window.world;
-    w.teleport(w.worldWidth, w.worldHeight / 2);
+    const post = w.signposts.find((sign) => sign.exit.to === 'bandit-hideout');
+    const [first, last] = post?.exit.mouth ?? [0, 0];
+    w.teleport(w.worldWidth, ((first + last + 1) / 2) * (w.worldHeight / w.zone.map.length));
   });
-  await stepUntilZone('bandit-hideout', 'the walk into the hideout');
+  await stepUntilZone('bandit-hideout', "the walk into the Cutthroat's Cellar");
   await step(2);
   await draw();
   const inside = await page.evaluate(() => ({
@@ -4339,6 +4342,7 @@ async function lockedZone() {
     inside.mobs > 0 && inside.drawnMobs === inside.mobs,
     `${inside.drawnMobs}/${inside.mobs} bandits drawn`,
   );
+  await checkZoneDrawn("Cutthroat's Cellar");
   await page.screenshot({ path: `${OUT}/24-hideout.png` });
 
   // --- The named mob at the back of it. What he is and what he drops is
@@ -4458,8 +4462,13 @@ async function lockedZone() {
     w.player.restoreToFull();
   });
   await park();
-  await page.evaluate(() => window.world.teleport(0, window.world.worldHeight / 2));
-  await stepUntilZone('bandit-camp', 'the walk back out of the hideout');
+  await page.evaluate(() => {
+    const w = window.world;
+    const post = w.signposts.find((sign) => sign.exit.to === 'bandit-camp');
+    const [first, last] = post?.exit.mouth ?? [0, 0];
+    w.teleport(0, ((first + last + 1) / 2) * (w.worldHeight / w.zone.map.length));
+  });
+  await stepUntilZone('bandit-camp', "the walk back out of the Cutthroat's Cellar");
   await park();
 }
 
