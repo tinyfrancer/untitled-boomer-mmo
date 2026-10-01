@@ -3562,3 +3562,52 @@ Claude's, building it:
 - **The trophies are every boss drop and every keepsake**, read off the tables, and a trophy's card
   says where it goes, before the house is the player's as well. The lore gained the Surveyor's House,
   and where the two keepsakes come from.
+
+## 132. Whispers: a rumour for every secret and boss and none for what is not built; lore at a secret, off a boss or in an answer; the journal stored in the order it came
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D2**
+
+D2 is decision 87's one journal of rumours and lore. The brief's three forks were settled before
+wave 2 launched:
+
+- **Rumours only for what exists** (the user's, on Claude's recommendation): one for each of the
+  fifteen secrets and one for each of the two bosses. The rest of `docs/lore/places.md`'s rumours
+  are held there, marked, until Part G or D1b builds what they lead to. **Rejected:** a rumour that
+  cannot yet be followed, as a promise, which the dead-end rule (decision 14) refuses.
+
+Two the user declined to settle, so taken on Claude's recommendation for the wave review to
+overturn:
+
+- **A fragment is found at a secret, off a boss or in a line of dialog**, all three: fifteen at the
+  secrets, Hollis's and Orlath's off them the first time each falls, and two in answers.
+  **Rejected:** any one of the three alone.
+- **The journal keeps its own counts and pays nothing else**; the collection log (F3) reads them.
+  **Rejected:** XP or coin for lore, which would put a second reward on a secret that already pays
+  its cache, and move the pace.
+
+Claude's, met building it and settled on its recommendation:
+
+- **Heard and found are stored, in the order they came** (`CharacterState.whispers`, save version
+  108), rather than derived on read from the answers heard, the secrets and the kills, each of which
+  could say whether. The journal draws newest first and none of those keep an order between them, and
+  a stored rumour stays told when an answer is rewritten. What it means is still derived: a rumour
+  is **followed** when its secret is found or its creature killed, and the counts are the tables'.
+  **Rejected:** deriving the whole journal and taking no save version.
+- **An older character's journal is filled from their past** by the step from 107: what they had
+  asked, found and killed, in the tables' order. **Rejected:** an empty journal for somebody who has
+  already found ten secrets.
+- **A rumour is told as an `effects` member on an answer** (D1's slot), and a fragment learned in
+  conversation the same way; the rumour's row names its teller, and a test holds that only that
+  person's answers carry it, as one holds every lead to a secret or a spawned creature. A rumour may
+  ride more than one of its teller's answers, so a topic whose later answer is the one heard still
+  tells it. **Rejected:** a rumour heard by talking to anybody at all, with no line to say it.
+- **The six townsfolk tell all seventeen**, since the lore's other tellers (the fisher, Pocket, Tirrow
+  and Maren) are D1b's people: six were already in their lines, and eleven topics were written for
+  the rest, each in the teller's voice. **Rejected:** waiting for D1b.
+- **A rumour never names where it leads**, followed or not; the journal says who told it and whether
+  it was followed, and the line says as much as its teller did. **Rejected:** the secret's name once
+  followed, and the zone beside every rumour, which is the walk done for the player.
+- **A boss's fragment is found by any kill credited**, a camp's as well as a hand's, since
+  `CombatDirector.creditKill` is where a kill is counted.
+- **The journal is Whispers behind Menu**, a candle its mark and J its key, and something noted is
+  said once on the toast and once in the log. The pace bot reads none of it, and nothing moved.
