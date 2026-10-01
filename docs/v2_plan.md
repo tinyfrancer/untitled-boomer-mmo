@@ -735,8 +735,16 @@ decision 121).
 - **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
   creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
   of what is found.
-- **D3 — Factions and reputation.** Standing with each faction, moved by quests, kills, contracts and
-  dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
+- **D3 — Factions and reputation. (Landed.)** Standing with the Veymarch Company, the Keepers and
+  Greyford, the fourth stored tally (`CharacterState.standing`, save version 109), moved by a kill a
+  faction minds, every quest once, every contract every time and an answer the first time it is
+  heard, through `WorldContext.moveStanding`; ranks at 50, 250 and 750 in each faction's own words,
+  each a title, the Keepers' Drainer below. **The Company and the Keepers are opposed on deeds**: a
+  raider down pays one and costs the other, and the quartermaster's pans are a choice, two topics
+  each waiting on the other unasked. A rank opens the outfitter's coal, cooked eel on the shelf and
+  lines of dialog, and a locked row names it. A block on the character sheet and the ranks on
+  Feats; smoke gained a `factions` section. Two forks were the user's and two Claude's for the wave
+  review (decision 133).
 - **D4 — The spirit. (Landed.)** Wick drawn in the world, a sprite kind of its own (16×16, not
   outlined, one loop, a brighter sprite when it calls), following the player off the left shoulder
   on a lag that never routes and never blocks (`world/Spirit.ts`). It **glows and chimes when it has
@@ -751,9 +759,9 @@ decision 121).
   has the forks.
 - **D5 — Part D review.**
 
-**Open questions for Part D**: can two factions be opposed, so that raising one lowers another?
-C2 answered which factions there are and what the spirit wants (`docs/lore/factions.md` and
-`spirit.md`, decision 114), and left D3 the mechanics.
+**Open questions for Part D**: none of D3's left. D3 answered whether two factions can be opposed
+(the Company and the Keepers, on deeds rather than as a seesaw, decision 133). C2 answered which
+factions there are and what the spirit wants (`docs/lore/factions.md` and `spirit.md`, decision 114).
 
 ---
 
