@@ -90,8 +90,11 @@ version 105; decision 128). **and E2** (potions: foraging with a sickle on herb 
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
 clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
 with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
-`claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
-`claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
+`claude/v2-wave-1` and merged to `main`. **and F3** (the collection log: Collection behind Menu, a
+bestiary page a creature with its drops greyed until seen, the trophies and the items collected,
+drops seen the fourth stored tally, an item's card saying where it comes from; save version 110;
+decision 137), on `claude/v2-f3-collection` for wave 2. **Next: the rest of wave 2** (D2, D3, D1b,
+E3 and F2) on `claude/v2-wave-2`, with G1 in flight against `main`. Update this line as each
 phase lands:
 which phase, and which is next.
 
@@ -794,7 +797,13 @@ nodes and drops? Does rested XP come only from idle, or from being away too? (Bo
   trophies earned, each with completion counts; what is collected here is what the house displays.
   An item's card learns where the item comes from (what drops it, what node yields it), which A2
   left to this phase: A2's card says what a thing is for and what it is made from, not where it
-  grows.
+  grows. _Landed (decision 137):_ Collection, a seat of its own behind Menu with a skull for its
+  mark: the counts (creatures slain, drops seen, slayer ranks, trophies, items collected, lore
+  found), a page a creature with where it lives, its slain, its ranks and every drop on its table
+  greyed until seen, the trophies and where each is, and the items collected, each saying how it
+  came; drops seen the fourth stored tally (save version 110), counted as they fall, kept or not,
+  and everything else read off the tallies already kept; the card's "Dropped by", "Gathered from"
+  and "Quest reward" lines. Lore found reads empty until D2's fragments land.
 - **F4 — Part F review.**
 
 **Open questions for Part F**: does the house hold only trophies, or also working stations? Can a

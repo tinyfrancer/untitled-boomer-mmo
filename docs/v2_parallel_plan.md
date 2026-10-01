@@ -8,8 +8,9 @@ questions answered before it launches, by an orchestrator session woken every ha
 (decision 124); wave 1 (D1 decision 126, E1 127, D4 128, E2 129, F1 130, save versions 103 to 107),
 folded onto `claude/v2-wave-1` by the orchestrator on 2026-10-01 and up as one PR to `main` for the
 user's review. **In flight:** G1 (decision 131 reserved, its PR against `main`, merged after wave
-1's). **Next:** wave 2 (D2, D3, D1b, E3, F2, F3) from `claude/v2-wave-2`, cut from `main` once wave
-1 has merged, its numbers reserved from 132. Update this line as phases start and land, the way
+1's), and wave 2 (D2, D3, D1b, E3, F2, F3) on `claude/v2-wave-2`, cut from `main` once wave 1 had
+merged, its numbers reserved from 132; F3 (decision 137, save version 110) is built and its PR up
+against the wave branch. Update this line as phases start and land, the way
 the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
