@@ -2,12 +2,15 @@ import { ActionBar } from './ActionBar';
 import { CharacterSheet } from './CharacterSheet';
 import { CombatLogSheet } from './CombatLogSheet';
 import { FeatsSheet } from './FeatsSheet';
+import { WhispersSheet } from './WhispersSheet';
 import { IdleSheet } from './IdleSheet';
 import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
 import { Minimap } from './Minimap';
 import { emptyHouse, type HouseState } from '../systems/HouseSystem';
+import { emptyWhispers, type WhispersState } from '../systems/WhispersSystem';
+import { LORE_FRAGMENTS } from '../data/loreFragments';
 import { OverlayHost } from './OverlayHost';
 import type { OptionSettings } from './OptionsModal';
 import { PlayerColumn } from './PlayerColumn';
@@ -132,13 +135,23 @@ import {
   type ConversationState,
   SPIRIT_SAID_EVENT,
   SPIRIT_BEAT_HEARD_EVENT,
+  WHISPER_NOTED_EVENT,
+  WHISPERS_CHANGED_EVENT,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
 import { POTION_EFFECT_IDS } from '../data/potions';
-import type { AbilityId, ItemId, PotionEffectId, SkillId, TitleId, ZoneId } from '../types/ids';
+import type {
+  AbilityId,
+  ItemId,
+  PotionEffectId,
+  SecretId,
+  SkillId,
+  TitleId,
+  ZoneId,
+} from '../types/ids';
 
 /**
  * Which request each of the inventory panel's buttons is. Two are not simply
@@ -249,6 +262,11 @@ interface HudModel {
   // What stands on the house's stands and is in its chest (F1). Seeded from
   // the save like the bank, then kept current by the world.
   house: HouseState;
+  // The Whispers journal (D2), and the secrets found, which whether a rumour
+  // has been followed is read off with the kills. Both seeded from the save
+  // and kept current by the world.
+  whispers: WhispersState;
+  secrets: SecretId[];
 }
 
 /**
@@ -285,6 +303,7 @@ class Hud {
   private readonly inventorySheet: InventorySheet;
   private readonly questSheet: QuestSheet;
   private readonly featsSheet: FeatsSheet;
+  private readonly whispersSheet = new WhispersSheet();
   private readonly combatLogSheet: CombatLogSheet;
   private readonly mapSheet: MapSheet;
   private readonly minimap: Minimap;
@@ -353,6 +372,8 @@ class Hud {
       conversation: null,
       potionsRunning: [],
       house: character.house ?? emptyHouse(),
+      whispers: character.whispers ?? emptyWhispers(),
+      secrets: character.secrets ?? [],
     };
 
     injectHudStyles();
@@ -476,6 +497,7 @@ class Hud {
       inventory: this.inventorySheet,
       quests: this.questSheet,
       feats: this.featsSheet,
+      whispers: this.whispersSheet,
       log: this.combatLogSheet,
       map: this.mapSheet,
       skills: this.skillsSheet,
@@ -501,6 +523,7 @@ class Hud {
       this.inventorySheet.root,
       this.questSheet.root,
       this.featsSheet.root,
+      this.whispersSheet.root,
       this.combatLogSheet.root,
       this.mapSheet.root,
       this.skillsSheet.root,
@@ -528,6 +551,7 @@ class Hud {
     this.inventorySheet.setCurrency(this.model.currency);
     this.refreshEncumbrance();
     this.featsSheet.update(this.model.kills, this.model.activeTitleId);
+    this.refreshWhispers();
     this.combatLogSheet.update(this.model.combatLog);
     this.refreshSkillsBook();
     this.refreshIdle();
@@ -889,6 +913,13 @@ class Hud {
    * The skills book, off the three things its pages read: the skills, the
    * level a combat skill's cap rides, and the mastery pools beside every row.
    */
+  private refreshWhispers(): void {
+    this.whispersSheet.update(this.model.whispers, {
+      secrets: this.model.secrets,
+      kills: this.model.kills,
+    });
+  }
+
   private refreshSkillsBook(): void {
     this.skillsSheet.update({
       skills: this.model.skills,
@@ -1097,6 +1128,7 @@ class Hud {
     listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;
       this.featsSheet.update(kills, this.model.activeTitleId);
+      this.refreshWhispers();
       // A corpse is progress on a kill objective, and the counter behind the
       // shopkeeper's row is the same one the feats sheet just redrew from.
       this.refreshQuests();
@@ -1286,7 +1318,23 @@ class Hud {
       this.tipCard.say(said);
       this.holdTip();
     });
-    listen(SECRETS_CHANGED_EVENT, (found) => this.mapSheet.setSecretsFound(found));
+    listen(SECRETS_CHANGED_EVENT, (found) => {
+      this.mapSheet.setSecretsFound(found);
+      this.model.secrets = found;
+      this.refreshWhispers();
+    });
+    listen(WHISPERS_CHANGED_EVENT, (whispers) => {
+      this.model.whispers = whispers;
+      this.refreshWhispers();
+    });
+    listen(WHISPER_NOTED_EVENT, (noted) =>
+      this.toast.show(
+        noted.kind === 'rumour'
+          ? 'Whispers: a rumour noted'
+          : `Lore: ${LORE_FRAGMENTS[noted.fragmentId].title}`,
+        THEME.color.levelUp,
+      ),
+    );
     // The corner is the target frame's again while it is off, and the tip card
     // and a desktop's sheet move up with it.
     listen(MINIMAP_STATE_CHANGED_EVENT, (on) => {

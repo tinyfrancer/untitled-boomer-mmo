@@ -27,6 +27,7 @@ import {
   weaponSkillFor,
 } from '../systems/CombatSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
+import { fragmentsOf } from '../systems/WhispersSystem';
 import { rollLootTable, type LootDrop } from '../systems/LootSystem';
 import { fortuneDropMultiplier } from '../systems/PotionSystem';
 import { hasLineOfSight, type CollisionWorld } from '../systems/CollisionSystem';
@@ -137,6 +138,11 @@ export class CombatDirector {
     const worn = character.state.activeTitleId;
     const crossed = character.recordKill(enemyId, count);
     this.ctx.events.emit(KILLS_CHANGED_EVENT, character.state.kills);
+    // What a creature carries of the history is found the first time it falls,
+    // by hand or by a camp: a boss's, so far (D2).
+    for (const fragmentId of fragmentsOf(enemyId)) {
+      this.ctx.noteWhisper({ kind: 'lore', fragmentId });
+    }
     if (crossed.length > 0) {
       this.ctx.persistCharacter();
     }

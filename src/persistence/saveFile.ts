@@ -5,9 +5,11 @@ import { BOUNTIES } from '../data/bounties';
 import { CLASSES } from '../data/classes';
 import { HOUSE_STANDS } from '../data/house';
 import { HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../data/looks';
+import { LORE_FRAGMENTS } from '../data/loreFragments';
 import { QUESTS } from '../data/quests';
 import { POTION_EFFECTS } from '../data/potions';
 import { REFORGES } from '../data/reforges';
+import { RUMOURS } from '../data/rumours';
 import { SKILLS } from '../data/skills';
 import { ZONES } from '../data/zones';
 import { NO_GEAR } from '../systems/InventorySystem';
@@ -252,6 +254,13 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
   secrets: [listOf(isString), 'a list of secrets found'],
   asked: [recordOf(listOf(isString)), 'a list of what was heard for each person'],
   beats: [listOf(isString), "a list of Wick's beats heard"],
+  whispers: [
+    (value) =>
+      isRecord(value) &&
+      listOf(keyOf(RUMOURS))(value.rumours) &&
+      listOf(keyOf(LORE_FRAGMENTS))(value.fragments),
+    'a list of rumours the game has heard, and of lore it has found',
+  ],
   potions: [
     (value) =>
       isRecord(value) &&

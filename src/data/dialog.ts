@@ -1,5 +1,5 @@
 import type { QuestStatus } from '../systems/QuestSystem';
-import type { ClassId, NpcId, QuestId } from '../types/ids';
+import type { ClassId, LoreFragmentId, NpcId, QuestId, RumourId } from '../types/ids';
 
 /**
  * What has to be true for a line to be said: the character's level, their
@@ -16,12 +16,12 @@ export type DialogRequirement =
   | { kind: 'asked'; npcId: NpcId; topicId: string };
 
 /**
- * What hearing an answer does beyond being heard. Nothing yet (D1's answer):
- * D2 adds a rumour told and D3 a standing moved, each a member here and a case
- * in `TalkSession`, so the slot is on every answer from the start rather than
- * cut into them later.
+ * What hearing an answer does beyond being heard, each a member here and a
+ * case in `TalkSession`: a rumour told, noted in the Whispers journal, or a
+ * piece of the history learned (D2, decision 132). D3 adds a standing moved.
  */
-export type DialogEffect = never;
+export type DialogEffect =
+  { kind: 'rumour'; rumourId: RumourId } | { kind: 'lore'; fragmentId: LoreFragmentId };
 
 /** Something a person says, and when they say it. */
 export interface DialogLine {
@@ -73,6 +73,8 @@ const taken = (questId: QuestId): DialogRequirement => ({
   questId,
   status: 'active',
 });
+const rumour = (rumourId: RumourId): DialogEffect => ({ kind: 'rumour', rumourId });
+const lore = (fragmentId: LoreFragmentId): DialogEffect => ({ kind: 'lore', fragmentId });
 
 /**
  * Everybody's conversation, written in `docs/lore/tone.md`'s voice from their
@@ -99,6 +101,7 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'lampton',
             says: "Lampton. The Company's town, twenty-nine years old, and I've kept this store for twenty-two of them. Store, bank, the hall, the Post, the Wet Boot, and a smithy with nobody in it.",
+            effects: [lore('second-charter')],
           },
         ],
       },
@@ -110,6 +113,7 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'stone',
             says: "The stone at the crossroads, with the iron cage on top. The first carters took it for a lamp-post. It was here before the town was, mind. Dig round the foot of it if you don't believe me.",
+            effects: [rumour('stone-older-than-town')],
           },
         ],
       },
@@ -131,6 +135,7 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'rats',
             says: 'Up out of the cellar under the Wet Boot, mostly. The regulars say there is something down there bigger than a rat. They call it His Majesty.',
+            effects: [rumour('his-majesty')],
           },
         ],
       },
@@ -158,6 +163,17 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'raiders',
             says: 'Raiders, the Company calls them. My mother called them the fen people and bought her eels off them. Draw your own lines.',
+          },
+        ],
+      },
+      {
+        id: 'quarry',
+        ask: "What's happening at the New Cut?",
+        answers: [
+          {
+            id: 'quarry',
+            says: "The blasting crew broke into a little stone room behind the face this spring, and sold what was in it to the fettler at Greyford for beer money. Then they drank the money. The room's still there, if you want a look at nothing.",
+            effects: [rumour('blasting-crew')],
           },
         ],
       },
@@ -229,11 +245,25 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'gold',
             says: 'Twice this year. Old gold, heavier than ours, with a king on it I cannot put a name to. I weighed it, wrote it down and sent it east. Nobody comes by coin like that honestly.',
+            effects: [rumour('old-gold')],
           },
           {
             id: 'gold-hollis',
             says: 'The old gold. I am told you have seen where it came from. I would rather not know, and I have written down that I would rather not know.',
+            effects: [rumour('old-gold')],
             requires: [done('the-cutthroat')],
+          },
+        ],
+      },
+      {
+        id: 'mill',
+        ask: 'Who kept the Old Mill?',
+        requires: [level(3)],
+        answers: [
+          {
+            id: 'mill',
+            says: "The first charter's village, seventy years ago. They kept their books at the mill, and when they left they never sent them east. Eleven years of accounts, never audited. I think about it more than I should.",
+            effects: [rumour('mill-books')],
           },
         ],
       },
@@ -282,6 +312,19 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'fen',
             says: 'Once, poaching. Lights on posts out over the water, and nobody tending them that I ever saw. I came back with no eels, and I have not been since.',
+            effects: [rumour('lights-on-posts')],
+          },
+        ],
+      },
+      {
+        id: 'strand',
+        ask: 'Have you been out on the strand?',
+        follows: 'past',
+        answers: [
+          {
+            id: 'strand',
+            says: "Once, for a bet. Off the end of the spit there's a way out to the nearest of the Candles, along the top of something under the water. I won the bet. It was cold out there, colder than it had any right to be, and I came straight back.",
+            effects: [rumour('walk-to-the-candle')],
           },
         ],
       },
@@ -352,6 +395,49 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'pans',
             says: 'Salt pans, at the top of the fen. Salt pays for half this town. The fenfolk break them every month, and every month we dig them out again.',
+            effects: [lore('salt-pans')],
+          },
+        ],
+      },
+      {
+        id: 'hollis',
+        ask: 'Who is Hollis?',
+        follows: 'fen',
+        answers: [
+          {
+            id: 'hollis',
+            says: "Hollis Crane. A Company guard, once. Eight years ago he went off the east road with the pay-cart he was paid to guard, and he's been on that road since with a strip of our red round his arm. He's in a hole under the old ruin, and the Company wants him out of it.",
+            effects: [rumour('pay-cart')],
+          },
+          {
+            id: 'hollis-done',
+            says: "Hollis Crane. Was. The pay-cart's written off and so is he, and I've closed his file, which is the kindest thing anybody at the Company will ever do for him.",
+            requires: [done('the-cutthroat')],
+            effects: [rumour('pay-cart')],
+          },
+        ],
+      },
+      {
+        id: 'camp',
+        ask: 'Where do the Red Rags sleep?',
+        requires: [level(2)],
+        answers: [
+          {
+            id: 'camp',
+            says: "In the old ruin up the east road. There's a hall in its far corner where they bed down, and whatever they keep in that wall, they don't keep it in the Company's bank.",
+            effects: [rumour('hall-wall')],
+          },
+        ],
+      },
+      {
+        id: 'cut',
+        ask: "What's down the Deep Cut?",
+        requires: [level(5)],
+        answers: [
+          {
+            id: 'cut',
+            says: "Coal, iron, goblins and paperwork. One of my men came up saying there's a sum cut into the rock down there, past where the goblins have been, with somebody's name on it. The Company would like to know whom it owes, and would prefer not to.",
+            effects: [rumour('sum-in-the-rock')],
           },
         ],
       },
@@ -404,6 +490,18 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'ford',
             says: 'Nobody built it. The stones were here. Dressed square as a ledger, mind, and two of them standing up in the water like they used to hold something up.',
+            effects: [rumour('dressed-stones')],
+          },
+        ],
+      },
+      {
+        id: 'pond',
+        ask: "What's in the millpond?",
+        answers: [
+          {
+            id: 'pond',
+            says: "Fish, and the last village's coppers. They threw them in the year the winter wouldn't end. On a still day you can see stone down there off the south bank, between two of the willows. Carved. I leave it alone.",
+            effects: [rumour('coin-in-the-pond')],
           },
         ],
       },
@@ -423,12 +521,26 @@ export const DIALOG: Record<NpcId, Conversation> = {
         ],
       },
       {
+        id: 'deep',
+        ask: 'Where do the goblins dig?',
+        follows: 'goblins',
+        requires: [level(5)],
+        answers: [
+          {
+            id: 'deep',
+            says: "Down the Deep Cut, where the Company's shaft broke through. They stopped at one wall in the hall at the bottom, and won't go near it. Goblins don't stop digging. I'd want to know why before I went looking.",
+            effects: [rumour('goblins-stopped')],
+          },
+        ],
+      },
+      {
         id: 'fettler',
         ask: 'What about the fettler?',
         answers: [
           {
             id: 'fettler',
             says: "He buys anything old and never asks where it came from. That's all I'll say about him, and I'd thank you to notice I said it.",
+            effects: [rumour('fettler-buys')],
           },
         ],
       },
@@ -478,6 +590,18 @@ export const DIALOG: Record<NpcId, Conversation> = {
         ],
       },
       {
+        id: 'mere',
+        ask: 'What do the raiders do with what they take?',
+        follows: 'raiders',
+        answers: [
+          {
+            id: 'mere',
+            says: "Throw the best of it away. Bowls, coin, the odd ring, into the mere in the west of the fen, off the south shore. I'd fetch it out myself if I could swim, and if they'd let me.",
+            effects: [rumour('things-in-the-mere')],
+          },
+        ],
+      },
+      {
         id: 'orlath',
         ask: 'Who was Orlath?',
         answers: [
@@ -490,6 +614,30 @@ export const DIALOG: Record<NpcId, Conversation> = {
             id: 'orlath-seen',
             says: "You've seen him. I won't ask what he said. I will ask what he was wearing.",
             requires: [done('the-barrow-king')],
+          },
+        ],
+      },
+      {
+        id: 'lantern',
+        ask: 'Why is he awake?',
+        follows: 'orlath',
+        answers: [
+          {
+            id: 'lantern',
+            says: "His lantern burned blue, the fenfolk say, for longer than anybody's counted. It went out this summer, and he's been up and about since. I'd give a good deal to see what he's up and about in.",
+            effects: [rumour('blue-lantern')],
+          },
+        ],
+      },
+      {
+        id: 'walls',
+        ask: 'What else is down there?',
+        follows: 'orlath',
+        answers: [
+          {
+            id: 'walls',
+            says: "Pictures. The old ones carved what they had on the walls, and nobody looks at the walls with a king's gold on the floor. More fool them. Look along the gallery, if you go down.",
+            effects: [rumour('walls-of-the-barrow')],
           },
         ],
       },

@@ -8,6 +8,8 @@ import type {
   NpcId,
   QuestId,
   RecipeId,
+  LoreFragmentId,
+  RumourId,
   SecretId,
   SpiritBeatId,
   TipId,
@@ -35,6 +37,7 @@ import type { HouseState } from '../systems/HouseSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
 import type { OfferedTip } from '../systems/TipSystem';
+import type { WhispersState } from '../systems/WhispersSystem';
 
 export const TARGET_SELECTED_EVENT = 'target-selected';
 export const TARGET_CLEARED_EVENT = 'target-cleared';
@@ -311,6 +314,16 @@ export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
 export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
 export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
 
+// The Whispers journal (D2, decision 132): the whole of it when it grows, which
+// the sheet is drawn from, and the one thing just noted, for the toast that
+// says so. Ids rather than words, so the HUD reads them off the tables.
+export const WHISPERS_CHANGED_EVENT = 'whispers-changed';
+export const WHISPER_NOTED_EVENT = 'whisper-noted';
+
+/** Payload for WHISPER_NOTED_EVENT: a rumour heard, or a piece of lore found. */
+export type WhisperNoted =
+  { kind: 'rumour'; rumourId: RumourId } | { kind: 'lore'; fragmentId: LoreFragmentId };
+
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
 export interface TargetInfo {
@@ -583,6 +596,8 @@ export interface UiEventMap {
   [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
   [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [WHISPERS_CHANGED_EVENT]: [whispers: WhispersState];
+  [WHISPER_NOTED_EVENT]: [noted: WhisperNoted];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

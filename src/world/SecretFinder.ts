@@ -4,6 +4,7 @@ import { SECRET_REACH, SECRETS } from '../data/secrets';
 import { logCoin, logLoot, logSecretFound } from '../systems/CombatLogSystem';
 import { describeItemName } from '../data/items';
 import type { LootDrop } from '../systems/LootSystem';
+import { fragmentsFoundAt } from '../systems/WhispersSystem';
 import type { Point } from '../systems/MovementSystem';
 import { SECRET_FOUND_EVENT } from '../ui/uiEvents';
 import type { WorldContext } from './WorldContext';
@@ -72,6 +73,9 @@ export class SecretFinder {
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
     this.ctx.events.emit(SECRET_FOUND_EVENT, secret.secretId);
+    for (const fragmentId of fragmentsFoundAt({ kind: 'secret', secretId: secret.secretId })) {
+      this.ctx.noteWhisper({ kind: 'lore', fragmentId });
+    }
     this.deps.voice();
     this.ctx.persistCharacter();
   }

@@ -153,6 +153,15 @@ export function logSecretFound(secretName: string): CombatLogEntry {
   return { text: `Found: ${secretName}.`, color: THEME.color.levelUp };
 }
 
+/** A rumour noted in the Whispers journal (D2): the words are the conversation's, already on screen. */
+export function logRumourHeard(): CombatLogEntry {
+  return { text: 'A rumour, noted in Whispers.', color: THEME.color.levelUp };
+}
+
+export function logLoreFound(title: string): CombatLogEntry {
+  return { text: `Lore found: ${title}.`, color: THEME.color.levelUp };
+}
+
 export function logDeathToll(copper: number): CombatLogEntry {
   return { text: `Recovering costs you ${formatCurrency(copper)}.`, color: THEME.color.dim };
 }

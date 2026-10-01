@@ -550,3 +550,49 @@ export type SpiritBeatId =
   | 'blackwater-fen'
   | 'the-deep-cut'
   | 'orlath';
+
+// A rumour somebody tells (D2, decision 132): a lead to a secret or a boss,
+// noted in the Whispers journal once heard. `data/rumours.ts` has who tells it
+// and what it leads to.
+export type RumourId =
+  | 'stone-older-than-town'
+  | 'his-majesty'
+  | 'walk-to-the-candle'
+  | 'blasting-crew'
+  | 'hall-wall'
+  | 'old-gold'
+  | 'pay-cart'
+  | 'walls-of-the-barrow'
+  | 'blue-lantern'
+  | 'coin-in-the-pond'
+  | 'mill-books'
+  | 'dressed-stones'
+  | 'fettler-buys'
+  | 'things-in-the-mere'
+  | 'lights-on-posts'
+  | 'goblins-stopped'
+  | 'sum-in-the-rock';
+
+// A piece of the realm's history the player can find (D2, decision 132): at a
+// secret, off a boss, or in somebody's answer. `data/loreFragments.ts` has
+// what each says and where it is found.
+export type LoreFragmentId =
+  | 'waymarker'
+  | 'undercroft'
+  | 'the-candles'
+  | 'cell-in-the-hill'
+  | 'waystation'
+  | 'kings-coin'
+  | 'hollis-crane'
+  | 'light-on-the-sea'
+  | 'orlath'
+  | 'the-elves-goodbye'
+  | 'grey-winter'
+  | 'the-bridge'
+  | 'wardens-ring'
+  | 'low-country'
+  | 'the-keepers'
+  | 'karn-tholl'
+  | 'a-reckoning'
+  | 'second-charter'
+  | 'salt-pans';

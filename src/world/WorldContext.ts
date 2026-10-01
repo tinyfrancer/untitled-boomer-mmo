@@ -1,9 +1,12 @@
 import { SKILLS } from '../data/skills';
 import { describeItemName } from '../data/items';
 import { saveService } from '../persistence';
+import { LORE_FRAGMENTS } from '../data/loreFragments';
 import {
+  logLoreFound,
   logMasteryTier,
   logNotice,
+  logRumourHeard,
   logSkillLevelUp,
   type CombatLogEntry,
 } from '../systems/CombatLogSystem';
@@ -20,6 +23,8 @@ import {
   NOTICE_EVENT,
   QUIVER_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
+  WHISPER_NOTED_EVENT,
+  type WhisperNoted,
 } from '../ui/uiEvents';
 import type { Player } from './Player';
 import type { EventBus, FloatTone, WorldEvent } from './worldEvents';
@@ -176,6 +181,24 @@ export class WorldContext {
       rank: reached.rank,
     });
     this.log(logMasteryTier(target.name, reached.name));
+    this.persistCharacter();
+  }
+
+  /**
+   * Notes a rumour heard or a piece of lore found in the Whispers journal (D2),
+   * from whichever collaborator came by it — a conversation, a secret, a kill —
+   * and says so, once: something already noted is nothing new.
+   */
+  noteWhisper(noted: WhisperNoted): void {
+    const { character } = this;
+    if (noted.kind === 'rumour') {
+      if (!character.noteRumour(noted.rumourId)) return;
+      this.log(logRumourHeard());
+    } else {
+      if (!character.noteFragment(noted.fragmentId)) return;
+      this.log(logLoreFound(LORE_FRAGMENTS[noted.fragmentId].title));
+    }
+    this.events.emit(WHISPER_NOTED_EVENT, noted);
     this.persistCharacter();
   }
 
