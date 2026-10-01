@@ -97,8 +97,8 @@ describe('what each tip says', () => {
     const full = facts({ capacity: inventoryWeight(inventory) }, { inventory });
     const line = tipLine('pack-full', full);
     expect(line).toContain('a minute');
-    expect(line).toContain('Shopkeeper (Lampton)');
-    expect(line).toContain('Banker (Lampton)');
+    expect(line).toContain('Tilda Pell the shopkeeper (Lampton)');
+    expect(line).toContain('Ambrose Tally the banker (Lampton)');
     expect(tipLine('pack-full', { ...full, capacity: 1000 })).toBeNull();
   });
 
@@ -144,7 +144,7 @@ describe('what each tip says', () => {
 
   it('names the lesson a level opened, its price and who teaches it', () => {
     const line = tipLine('first-level', facts({}, { level: 2, learnedAbilities: [] }));
-    expect(line).toContain('Trainer (Lampton)');
+    expect(line).toContain('Marta Hale the trainer (Lampton)');
     expect(line).toContain(ABILITIES['battle-fury'].name);
     expect(line).toContain(formatCurrency(120));
     expect(tipLine('first-level', facts({}, { level: 1, learnedAbilities: [] }))).toBeNull();

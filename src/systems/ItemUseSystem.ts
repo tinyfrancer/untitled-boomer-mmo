@@ -265,14 +265,15 @@ export function stationPlace(station: StationId): string {
 }
 
 // The same for a person, found by the role they work rather than by name, so
-// a counter moved to another zone takes every line that mentions it along.
+// a counter moved to another zone takes every line that mentions it along. Named
+// with their trade after it, since a name alone does not say what they deal in.
 export function npcPlace(role: NpcRoleId): string {
   const npc = Object.values(NPCS).find((candidate) => candidate.role === role);
   if (!npc) return `the ${role}`;
   const zone = Object.values(ZONES).find((candidate) =>
     candidate.npcSpawns.some((spawn) => spawn.npcId === npc.id),
   );
-  return `the ${npc.name}${inZone(zone)}`;
+  return `${npc.name} the ${npc.trade.toLowerCase()}${inZone(zone)}`;
 }
 
 function inZone(zone: ZoneDefinition | undefined): string {

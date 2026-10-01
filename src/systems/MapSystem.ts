@@ -1,6 +1,6 @@
 import { TILE_SIZE } from '../config/constants';
 import { BUILDINGS } from '../data/buildings';
-import { npcName } from '../data/npcs';
+import { npcNameAndTrade } from '../data/npcs';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
 import { signpostPoint, zoneWorldSize } from './ZoneSystem';
@@ -165,7 +165,7 @@ export function zoneMap(zoneId: ZoneId): ZoneMap {
     markers.push({
       kind: 'npc',
       ...toTile(x, y),
-      label: npcName(npcId),
+      label: npcNameAndTrade(npcId),
       skill: null,
       edge: null,
     });

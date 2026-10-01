@@ -22,6 +22,7 @@ import type { Reforges } from '../systems/ReforgeSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { DialogMemory } from '../systems/DialogSystem';
 import type { ActiveEffect } from '../systems/EffectSystem';
 import type { CombatXpGain, SkillXpGain } from '../systems/CharacterController';
 import type { CombatLogEntry } from '../systems/CombatLogSystem';
@@ -262,6 +263,25 @@ export const MASTERY_TIER_REACHED_EVENT = 'mastery-tier-reached';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
 export const TITLE_CHANGED_EVENT = 'title-changed';
+
+// Dialog (D1). The HUD asks a topic of whoever it is talking to; the world
+// answers with what is being said now (CONVERSATION_CHANGED), which a newly
+// opened conversation resets to the greeting, and with everything everybody
+// has been asked (ASKED_CHANGED) when that grows, which the topics' grey is
+// drawn from.
+export const ASK_TOPIC_REQUESTED_EVENT = 'ask-topic-requested';
+export const CONVERSATION_CHANGED_EVENT = 'conversation-changed';
+export const ASKED_CHANGED_EVENT = 'asked-changed';
+
+/**
+ * Payload for CONVERSATION_CHANGED_EVENT: who is talking and what they last
+ * answered, or null for nothing asked yet this visit. Ids rather than words,
+ * so the HUD reads the line off the table it was written in.
+ */
+export interface ConversationState {
+  npcId: NpcId;
+  said: { topicId: string; answerId: string } | null;
+}
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -514,6 +534,9 @@ export interface UiEventMap {
   [ACHIEVEMENT_UNLOCKED_EVENT]: [unlock: AchievementUnlock];
   [SET_TITLE_REQUESTED_EVENT]: [titleId: TitleId | null];
   [TITLE_CHANGED_EVENT]: [titleId: TitleId | null];
+  [ASK_TOPIC_REQUESTED_EVENT]: [topicId: string];
+  [CONVERSATION_CHANGED_EVENT]: [conversation: ConversationState];
+  [ASKED_CHANGED_EVENT]: [asked: DialogMemory];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

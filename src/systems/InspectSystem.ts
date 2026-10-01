@@ -15,7 +15,7 @@ import {
 import { ABILITIES } from '../data/abilities';
 import { BOUNTIES, BOUNTY_ORDER } from '../data/bounties';
 import { LOOT_TABLES } from '../data/lootTables';
-import { npcName, npcRole } from '../data/npcs';
+import { NPCS, npcName, npcRole } from '../data/npcs';
 import { STATION_LABELS, STATION_SKILLS, type StationId } from '../data/recipes';
 import { SHOP_STOCK } from '../data/shop';
 import { SKILLS } from '../data/skills';
@@ -290,12 +290,15 @@ export function describeNpc(npcId: NpcId): InspectPanel {
 
 /** What standing at somebody's counter gets you, by the role behind it. */
 function describeCounter(npcId: NpcId): InspectPanel {
+  // Their name over their trade, the trade in their own word rather than the
+  // role's: the fettler reforges, but nobody in Greyford calls him a reforger.
   const title = npcName(npcId);
+  const subtitle = NPCS[npcId].trade;
   switch (npcRole(npcId)) {
     case 'reforger':
       return {
         title,
-        subtitle: 'Reforger',
+        subtitle,
         lines: [
           { label: 'Reworks', value: 'One piece of gear, once and for good' },
           { label: 'Moves', value: 'Power from one stat to another' },
@@ -310,7 +313,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'outfitter':
       return {
         title,
-        subtitle: 'Outfitter',
+        subtitle,
         lines: [
           { label: 'Trades', value: 'Tools, for the makings of them' },
           { label: 'Takes', value: 'Ore, timber and what comes off a kill' },
@@ -323,7 +326,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'banker':
       return {
         title,
-        subtitle: 'Banker',
+        subtitle,
         lines: [
           { label: 'Stores', value: 'Anything, at no weight' },
           { label: 'Slots', value: `${STARTING_BANK_SLOTS} to start, up to ${MAX_BANK_SLOTS}` },
@@ -334,7 +337,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'trainer':
       return {
         title,
-        subtitle: 'Trainer',
+        subtitle,
         lines: [
           { label: 'Teaches', value: 'The abilities your class did not start with' },
           { label: 'Asks', value: 'A level reached, and coin' },
@@ -345,7 +348,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'quartermaster':
       return {
         title,
-        subtitle: 'Quartermaster',
+        subtitle,
         lines: [
           { label: 'Posts', value: 'Standing work, taken one at a time' },
           { label: 'Asks', value: 'Creatures put down, or materials brought in' },
@@ -360,7 +363,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'merchant':
       return {
         title,
-        subtitle: 'Merchant',
+        subtitle,
         lines: [
           { label: 'Sells', value: 'Tools, food and supplies' },
           { label: 'Buys', value: 'Anything with a value' },

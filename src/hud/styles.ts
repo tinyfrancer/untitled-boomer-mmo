@@ -1360,6 +1360,46 @@ export function hudCss(): string {
   line-height: 1.4;
   color: ${THEME.color.text};
 }
+/* Who they are and, beside it, what they do: the name in the title's type and
+   the trade in the dense lines' (D1). Wraps under the name on a narrow box. */
+.hud-talk__who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 ${THEME.padding}px;
+  min-width: 0;
+}
+.hud-talk__trade {
+  font-family: ${SANS};
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+/* What the player asked, over the answer it drew: theirs, so not in italics. */
+.hud-talk__asked {
+  margin: 4px 0 0;
+  padding: 0 4px;
+  font-family: ${SANS};
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+/* What they will talk about, a button each, across the panel and left-aligned
+   since each is a sentence. Grey once heard, until it has something new. */
+.hud-talk__topics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: ${THEME.padding}px;
+}
+.hud-talk__topic {
+  width: 100%;
+  justify-content: flex-start;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  text-align: left;
+}
+.hud-talk__topic[data-asked] {
+  color: ${THEME.color.dim};
+}
 /* A counter of theirs: the word for it, and what it is for under it, said once
    here where the choice is made. A thumb's height, and across the panel. */
 .hud-talk__service {

@@ -69,10 +69,10 @@ describe('what an item is for', () => {
 
   it('reads the outfitter both ways, as the materials and as the tool', () => {
     expect(itemUses('coal')).toContain(
-      'Used in: Steel Pickaxe, Steel Axe, Steel Pole, traded at the Outfitter (Greyford Outpost)',
+      'Used in: Steel Pickaxe, Steel Axe, Steel Pole, traded at Oona Rook the outfitter (Greyford Outpost)',
     );
     expect(itemUses('steel-pole')).toContain(
-      'Made from: Iron Ore ×4, Coal ×3, Hardwood ×6, traded at the Outfitter (Greyford Outpost)',
+      'Made from: Iron Ore ×4, Coal ×3, Hardwood ×6, traded at Oona Rook the outfitter (Greyford Outpost)',
     );
   });
 
@@ -116,11 +116,11 @@ describe('what an item is for', () => {
   // The fettler's reason to exist: the second of anything is fuel.
   it('offers every piece of gear to the fettler, one way or the other', () => {
     expect(itemUses('brown-helmet')).toContain(
-      'Reforge it at the Fettler (Greyford Outpost), or melt a spare helmet to reforge another',
+      'Reforge it at Silas Quill the fettler (Greyford Outpost), or melt a spare helmet to reforge another',
     );
     // Nothing in a pole to move, so all it can be is somebody else's fuel.
     expect(itemUses('fishing-pole')).toContain(
-      'Melt a spare weapon to reforge another, at the Fettler (Greyford Outpost)',
+      'Melt a spare weapon to reforge another, at Silas Quill the fettler (Greyford Outpost)',
     );
   });
 
