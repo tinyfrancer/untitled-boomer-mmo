@@ -133,10 +133,45 @@ against alternatives:
   dry one first, the rest into the bag, and never refused, since the inputs were spent before it was
   handed over (decision 79).
 
+**Foraging and brewing are the potion line, and the first production vertical that makes no gear**
+(version 2 phase E2, decision 124). Foraging is a fourth gathering skill, with a tool of its
+own (the sickle, sold beside the other three for the same reason they are ungated) and a ladder of
+its own, one herb a band: samphire on the strand at 1, meadowsweet on the mill road's banks at 4, bog
+myrtle and bogbean in the fen at 6 and 8, and none in Lampton. A herb patch is walked through like a
+fishing spot and cut out in three like a tree. Brewing is a fifth making skill, at a still in
+Greyford's yard, one potion a herb at 1, 3, 5 and 7. Four things about it were decided against
+alternatives:
+
+- **A still rather than the fire.** A station maps to one skill (`STATION_SKILLS`), so brewing at
+  the campfire would have made the fire two skills' station; and the fire's whole menu is the bag,
+  where a potion of two herbs needs a panel. Greyford rather than the fen, because the outpost's
+  claim is that it trades in what other places produce, and because a level 1 forager with a pack of
+  samphire can reach it without walking through a level 7 raider.
+- **The upper two potions each take a herb from the rung below** — the tin vein's argument again:
+  the strand and the mill road would be retired the day the fen opened if nothing above them wanted
+  any. `tests/systems/brewing.test.ts` holds it.
+- **A failed brew keeps the herbs** (no `failureItemId`), as a bar does: the herbs were the walk.
+- **A potion is a fifth kind of item** (`kind: 'potion'`), not food with a field: it heals nothing,
+  so idle's food order must never reach for one, and a new kind is a compile error at every switch
+  over `kind`. It sells for a little over its herbs, so the still never makes anyone poor or rich.
+
+**What a potion does is `data/potions.ts`, and its clock is the character's** (`PotionSystem`). One
+kind each, and each answers a different half of the game: **Quick Hands** takes a fifth off a gather
+on top of the skill's speed and under the same floor; **Dulled Pain** adds five armour, one piece of
+the band's gear, held by the duels in `EnemySystem.test.ts` (drunk, it wins none of the contract's
+losses) and kept out of the pace bot; **Keeper's Watch** lifts what idle keeps of a kill from a half to
+three-quarters, still behind active play (decision 15); and **Fortune** adds a tenth to the chance
+of a second one off a gather or a job and makes each drop a quarter likelier, capped at certain. A
+second of a kind starts the clock again rather than stacking. The clocks live on `CharacterState`
+rather than on the body, where food's does, because they last minutes and work on through a closed
+game for the time they have left (`docs/architecture/afk.md`), so they outlive a zone, a reload and
+a night away. The skills book's mastery chance is the pool's alone; `secondOneChanceFor` is the roll,
+the pool and Fortune together.
+
 **A station is a place, and a built one is `Campfire`'s opposite half**: fixed, always there, and part
 of the zone (`ZoneDefinition.stationSpawns`), where a fire is placed by the player and burns out.
-There are three of them — the forge in town, and the tannery and the fletcher's bench in Greyford's
-yard — and which prop is drawn is keyed off the id in `actors.ts`, the same bargain `creatures.ts` makes about a `shape`: the
+There are four of them — the forge in town, and the tannery, the fletcher's bench and the still in
+Greyford's yard — and which prop is drawn is keyed off the id in `actors.ts`, the same bargain `creatures.ts` makes about a `shape`: the
 world says what stands there and the renderer says what that looks like. Two rules about a station
 were got wrong first and are worth not re-learning:
 

@@ -133,3 +133,16 @@ that counts" when the eight hours ran out, and says "Stopped at the most a night
 ceiling the panel named — half a level, or one level of the skill — when that is what ended it.
 `OfflineAfkReport.capped` is how it knows: set when the ceiling rather than the time, the bag or the
 arrows ended the night.
+
+**Two potions are brewed for idle, and work through a closed game for the time they have left**
+(version 2 phase E2, decision 124). Keeper's Watch lifts what idle keeps of a kill from
+`AFK_XP_MULTIPLIER`'s half to three-quarters (`idleXpMultiplier`, passed into `afkXpReward`), still
+behind active play (decision 15), and Quick Hands takes a fifth off a gather. Their clocks are kept on
+`CharacterState.potions` and run on game time; a parked session spends them by the time it was away,
+and **the payout reads them**: whatever a night finished inside the time a potion had left is paid at
+its rate (`offlineRate`, and the gathering branch's quicker swings first), and the rest at idle's own,
+under the same ceilings as ever. The fight and luck potions do nothing offline — a night is a rate,
+with no fight to armour and no roll to better — and `OFFLINE_POTIONS` is the list the panel reads to
+say so. **The idle panel says which potions are running and whether each counts away**, drawn again
+when one starts or runs out rather than on every tick of its clock. Which potions idle drinks itself,
+and in what order, is E3's.

@@ -433,6 +433,16 @@ catches the light, since ore nearly as dark as the rock it is in did not show as
 rich vein** is a bigger stone with the ore running through all of it. A worked-out vein is the same
 rock with pits where the ore came out.
 
+**A herb patch is a clump of leaves with flowering stems out of it** (`sprites/herbs.ts`, version 2
+phase E2), at the prop budget's 32 square: leaves heaped low, each a small ball lit from the
+top-left, and stems standing out of the heap with a head of flowers on each. **It is drawn once, in
+`nature` and `bone`, and recoloured into each herb** (`HERB_VARIANTS`, `herb@samphire`), as a vein is
+into its ore: samphire all green succulent tips, meadowsweet the drawing's own cream heads, bog
+myrtle a drab shrub with brown catkins, bogbean pale pink over the fen's water-green. **A herb in the
+bag is a bundle of the same stems tied with twine**, dyed by the same table, so the clump on the
+ground is the bundle in the pack. A cut patch is its stubble, for the reason a felled tree is its
+stump. It is walked through, so it blocks nothing, and its shadow is a small one.
+
 **A fishing spot is a mark**, a kind of its own (decision 109): rings spreading on the water where
 something touched it, a new one born as the outer breaks up, looping on the water's own clock (four
 frames of 250ms, as a water tile's). Light on water rather than a thing standing, so it is not
@@ -445,12 +455,15 @@ setting's `water`, lies centred on the spot under everything standing, and has n
 on a stump in front, looping as a few embers brighten and dim and a spark goes up; **the tannery** a
 vat of liquor with a hide laced to a frame behind it; **the fletcher's bench** a plank on splayed
 trestles with shafts laid on it, heads one way and fletching the other, and a strung bow stood
-behind. **The fire the player lights** is a ring of stones, two logs crossed, embers and a flame
+behind; **the still** (version 2 phase E2) a pot-still of beaten copper in `oreIron` on a stone
+hearth with a fire in its mouth, its head's neck running over to a tub of water where the worm cools.
+**A potion in the bag is a stoppered flask** whose liquid is dyed for what it does: green for the
+hands, gold for the pain, the keepers' teal for the watch, violet for luck. **The fire the player lights** is a ring of stones, two logs crossed, embers and a flame
 over them, looping, and stands on no shadow, since what it throws is light.
 
 **A stroke of the tool knocks something loose** (`sprites/chips.ts`): on each of a gather's two beats
 (`ui/gatherBeat.ts`, the frame the tool comes down on), chips of pale new wood off a trunk, flakes of
-pale stone off a rock (`chips@stone`), or drops off the water (`splash`, in the shared `spray` ramp,
+pale stone off a rock (`chips@stone`), leaves off a herb patch (`chips@leaf`), or drops off the water (`splash`, in the shared `spray` ramp,
 since a splash is light and the water it comes off is coloured by the setting), on the side of the
 node the player stands on and at the height the tool lands.
 
