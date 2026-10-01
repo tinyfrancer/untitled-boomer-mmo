@@ -6,11 +6,12 @@ is; this document says how its remaining phases are built by several agents at o
 session at a time, and holds a brief per phase. **From wave 1 each wave merges through its own branch, its numbers reserved at launch and its
 questions answered before it launches, by an orchestrator session woken every half hour (decision 125)**, so the user is asked nothing between a wave's question round and its review. **Landed:** C11 (wave 0), 2026-10-01, with the measurement below written into the plan's C11 entry
 (decision 124); wave 1 (D1 decision 126, E1 127, D4 128, E2 129, F1 130, save versions 103 to 107),
-folded onto `claude/v2-wave-1` by the orchestrator on 2026-10-01 and up as one PR to `main` for the
-user's review. **In flight:** G1 (decision 131 reserved, its PR against `main`, merged after wave
-1's). **Building:** wave 2 (D2, D3, D1b, E3, F2, F3) on `claude/v2-wave-2`, its numbers reserved from
-132; **D2 done** (decision 132, save version 108), its PR against the wave branch. Update this line as phases start and land, the way
-the plan's status line is.
+folded onto `claude/v2-wave-1` by the orchestrator and merged to `main` on 2026-10-01; G1 (decision
+131), merged after it. **Folded, up for review:** wave 2 (D2 decision 132 and save version 108, D3 133
+and 109, D1b 134, E3 135, F3 137 and 110, F2 136 and 111, F2's version numbered at the fold since it
+was reserved none and found it needed one), folded onto `claude/v2-wave-2` by the orchestrator on
+2026-10-01 and up as one PR to `main` for the user's review. **Next:** wave 3, launched once wave 2
+has merged. Update this line as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc
@@ -136,7 +137,10 @@ The plan's "How this plan is worked" holds, with these on top, which it summaris
    writes them into the launch prompt; the phase writes its decision and keys its migration step to
    them from the start and never renumbers. A phase that changes nothing about the save takes no
    version. The typecheck holds `saveFile.ts`'s `FIELDS` to every field, so a step cannot land
-   without its check.
+   without its check. A phase that finds mid-build that it needs a version it was not given
+   builds against the next number _after the wave's reservations_, says so in its PR, and the
+   orchestrator confirms it at the fold, so the reserved ones hold (wave 2's F2: reserved none, given
+   111 after F3's 110).
 4. **The Record commit is written last**, so the status line, `CLAUDE.md`, the decision and the
    architecture doc are written against the wave branch as it stands by then rather than as it was
    the morning the branch was cut. That is the order the phases already use; here it is a rule.
@@ -215,7 +219,8 @@ and save version 103, E1 127 and 104, D4 128 and 105, E2 129 and 106, F1 130 and
 **Numbers reserved** (decision 125): G1 131 and no save version, launched 2026-10-01 before the
 wave branch existed, so its PR stays against `main` and is merged after wave 1's; then, from
 `claude/v2-wave-2` cut from `main` once wave 1 has merged, D2 132 (save version 108), D3 133 (109),
-D1b 134, E3 135, F2 136 and F3 137 (110), in that launch order.
+D1b 134, E3 135, F2 136 and F3 137 (110), in that launch order. F2 found it needed a save step after
+all, for the stages built, and was given 111 at the fold, after F3's.
 
 **The user is asked:** G1's interview, which is the largest single ask in the whole of what is left
 (it writes the phases Part G is built as), in G1's own session since it launched before decision

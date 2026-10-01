@@ -6443,6 +6443,8 @@ async function factions() {
     `${off.worn}`,
   );
   await page.screenshot({ path: `${OUT}/standing-feats.png` });
+  // Left open, the sheet sits over the strand the next section taps.
+  await tapTab('feats');
 }
 
 async function collection() {
@@ -6518,8 +6520,8 @@ async function collection() {
     `${killed.kills} kill(s), seen ${killed.seen.join(', ')}, "Drops seen ${index.drops}"`,
   );
   check(
-    'and lore, which D2 fills, draws an empty count without complaint',
-    /^\d+ \/ \d+$/.test(index.lore),
+    "and lore found is the Whispers journal's count, out of every fragment there is",
+    /^\d+ \/ [1-9]\d*$/.test(index.lore),
     `"${index.lore}"`,
   );
   check(

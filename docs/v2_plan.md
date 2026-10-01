@@ -80,23 +80,41 @@ zone measured at about half an hour rebuilt and an hour and a half to two hours 
 From C11 the phases are built several at a time, by the rules and briefs in
 `docs/v2_parallel_plan.md` (decision 123), and from wave 1 each wave merges through its own branch
 with its numbers reserved at launch (decision 125). **and D1** (dialog: the townsfolk under their lore names with their trade beside them, topics as
-data with answers that lead on, and a person who remembers what was asked for good; decision 126). **and E1** (rested: idle banks it by time, open or closed, to half a level and full in a night;
-XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment ahead
-of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
-banked; save version 104; decision 127). **and D4** (Wick in the world: a light at the shoulder that glows and chimes when it has something
-to say and says it on the card when tapped, the tips waiting in it, nine beats of its story heard
-once, a line of its own otherwise, quiet the tips alone, and its light the one underground; save
-version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
-still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
-clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
-with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
-`claude/v2-wave-1` and up as one PR to `main`. **Wave 2** (D2, D3, D1b, E3, F2 and F3) is building
-on `claude/v2-wave-2`, with G1 in flight against `main`; **D2 is done there** (Whispers: a journal
-behind Menu of the rumours the townsfolk tell, one for each secret and boss, and the lore found at a
-secret, off a boss or in an answer, kept in the order it came; save version 108; decision 132), its
-PR against the wave branch for the orchestrator to fold in. Update this line as each
-phase lands:
-which phase, and which is next.
+data with answers that lead on, and a person who remembers what was asked for good; save version
+103; decision 126), **E1** (rested: idle banks it by time, open or closed, to half a level and full in
+a night; XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment
+ahead of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
+banked; save version 104; decision 127), **D4** (Wick in the world: a light at the shoulder that
+glows and chimes when it has something to say and says it on the card when tapped, the tips waiting
+in it, nine beats of its story heard once, a line of its own otherwise, quiet the tips alone, and its
+light the one underground; save version 105; decision 128), **E2** (potions: foraging with a sickle
+on herb patches from the strand to the fen, brewing at a still in Greyford, four potions one kind
+each for gathering speed, a fight, idle XP and luck, their clocks kept on the character and honoured
+by a night away; save version 106; decision 129) **and F1** (the house: the Surveyor's House in
+Lampton, let by a quest from the quartermaster, with four stands, a chest and a wall of plaques;
+keepsakes from the capstone quests; save version 107; decision 130), which were **wave 1**, folded
+onto `claude/v2-wave-1` and merged to `main` on 2026-10-01; **and G1** (the shape of 9-20: three
+bands of four, ten zones, a made tier a band, a boss a zone, paid travel between hubs, two paths a
+class, an ending the player may argue with, built a band at a time; decision 131), merged after it.
+**Wave 2**, folded onto `claude/v2-wave-2` and up as one PR to `main` for the user's review: **D2**
+(Whispers: a journal behind Menu of the rumours the townsfolk tell, one for each secret and boss, and
+the lore found at a secret, off a boss or in an answer, kept in the order it came; save version 108;
+decision 132), **D3** (factions: standing with the Company, the Keepers and Greyford moved by kills,
+quests, contracts and answers, the Company and the Keepers opposed on deeds, ranks in each faction's
+words paying titles and opening a quest, a shelf row and lines, a block on the character sheet and
+the ranks on Feats; save version 109; decision 133), **D1b** (the lore's people: Bess at the Wet
+Boot, an old fisher on the strand, Pocket on a post at Greyford and Maren in the fen, each drawn and
+talking, a role whose only counter is talk; decision 134), **E3** (idle drinks: potions in the idle
+panel's order and Keep beside the food, drunk one at a time, the next when the last wears off and
+only for a job they help, a parked night drinking the same way from when the tab closed; decision
+135), **F3** (the collection log: Collection behind Menu, a bestiary page a creature with its drops
+greyed until seen, the trophies and the items collected, drops seen the fifth stored tally, its lore
+count the Whispers journal's, an item's card saying where it comes from; save version 110; decision 137) **and F2** (the house grows off the surveyor's plans in four stages for 80s, two thirds of the
+climb's coin: a garden of samphire and meadowsweet and a fletcher's bench in the yard, and the
+Drawing Room behind the house, walled up until it is built, with two stands and then two more; save
+version 111, numbered at the fold; decision 136). **Next: wave 3**, the three reviews (D5, E4, F4)
+and Part G's first content, launched once wave 2 has merged, by `docs/v2_parallel_plan.md`. Update
+this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
