@@ -3850,6 +3850,72 @@ for the wave review to overturn:
   making night's ore is under Used.
 - **The pace is not moved**: the pace bot never idles and plays unpotioned (rule 8).
 
+## 136. The house grows off the surveyor's plans in four stages, a garden, a bench, a room and its stands, for most of the climb's coin
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase F2**
+
+F2 grows the house F1 let (decision 130). The brief's three forks were settled with wave 2's
+answers, each on Claude's recommendation: **the lot's whole footprint is written into Lampton's text
+from the start and its rooms are shut until bought**, so a stage opens a door rather than re-laying
+the town; **the upgrades are all four, in stages**: more stands, a second room, a garden of E2's
+herbs as a node of the player's, and a workbench that persists; and **the lot together costs about
+most of the coin the climb to the cap picks up by the pace bot's count, the first stage cheap**.
+**Rejected:** a second, larger block the house's row switches to as it grows; any one or two of the
+four alone; prices judged rather than measured off the bot.
+
+Claude's, building it, for the wave review to overturn:
+
+- **The four are bought in one order at the surveyor's plans**, a fixture on a table against the
+  house's west wall: the Herb Garden (5s), the Workbench (12s), the Drawing Room (25s) and More
+  Stands (38s), 80s in all, which is two thirds of the 114 to 120s each class picks up from level 1
+  to the cap, and the garden less than the first level that drops coin picks up.
+  `tests/world/pace.test.ts` holds both against the bot's runs. **Rejected:** stages bought in any
+  order, which would want a price per order or make the cheap ones the only ones bought; buying from
+  the quartermaster, who lets the house but is not where its plans are; a bank-slot curve, which
+  prices one repeated thing rather than four different ones.
+- **The second room is a building of its own against the back of the house**, the Drawing Room,
+  with its door in its west wall onto the yard, rather than one building with a wall across it.
+  Everything the game asks of a room (the cutaway, being inside it, a counter's place, what is drawn
+  over it, the walk in) is asked of a building, and a partition would have been the first room that
+  is half a building. It is still one block of the lot written once: shut, its doorway is walled up
+  (`doorPlug`, a blocker the stage takes out of the collision world when it is bought), and a walk
+  into it is refused with a line saying what opens it. The cottage that stood behind the house moved
+  up the lane. **Rejected:** a partition inside the house; a second room with a door onto the street
+  between the house and the quartermaster's, where there is room for nothing deeper than a hut.
+- **The room comes with two stands and the last stage adds two more**, eight stands in all, the
+  save keeping a place for every stand from the start. **Rejected:** more stands in the house first,
+  where the bed and the plans have the only wall left; the chest grown instead, which F1 left open
+  and which stays eight kinds.
+- **The garden is two beds, samphire and meadowsweet**, the two herbs that grow outside the fen,
+  and **the workbench is a fletcher's bench**, the one station already called a bench, which
+  persists for a parked night as the one at Greyford does. Both are the thing they are everywhere
+  else: a bed is cut and regrows, the bench stands all night. **Rejected:** all four herbs, which
+  would put the fen's at the door of a character who has not been there; a still, which would make
+  the house brewing's second home before it is fletching's first.
+- **The beds and the bench are placed off the house in `data/house.ts`, not written into
+  Lampton's text**, as F1's fixtures are: a zone's spawns are where a herb grows wild and a bench
+  stands for anybody, which the skills book, the parked payout and E2's "no herbs in Lampton" all
+  read, and a garden one character paid for is neither. `tests/world/house.test.ts` sweeps them as
+  the zone sweeps do the rest. What follows from it, left for E4 or F4 since the idle files are
+  E3's in this wave: **the garden is worked by hand and by an awake camp, and a parked night with a
+  sickle in Lampton is paid for what the zone's own spawns offer**, which the garden is not one of.
+- **A stage is put into the zone the moment it is paid for** (`ZoneWorld.raise`): the beds and the
+  bench appended to the nodes and stations every collaborator already holds, the stands to the
+  fixtures, the doorway taken out of the collision world. **Rejected:** rebuilding the zone in place,
+  which rolls every creature again and rebuilds the view to buy a garden.
+- **The save keeps which stages are built** in the house record, `CharacterState.house.built`,
+  F1's four stands kept where they stood and four bare ones added. It needs a step of its own,
+  since F1's version is already in saves on `main`; it is keyed to the next version on this branch
+  and is the orchestrator's to number at the fold.
+- **A body walking out of a two-tile doorway from beside it no longer stalls a hair inside the
+  wall's end.** The route runs a body's half-width off the end of the wall, a body coming at it
+  from the side slides along the wall with its other axis blocked and closes a share of what is left
+  each frame, never arriving; walking from the plans to the garden found it. The player now lands
+  exactly on the leg it is walking once a wall has left it within half a pixel, which only a blocked
+  move asks, so the pace bot's runs are the same to the copper.
+
+The lore gained the plans, the Drawing Room and the yard.
+
 ## 137. The collection log is a seat of its own behind Menu, and drops seen are the fourth stored tally; everything else in it is read off the four
 
 **2026-10-01 · the user, asked by Claude, building the plan's phase F3**

@@ -260,6 +260,8 @@ function fixtureVerb(fixture: HouseFixture, house: HouseState): string {
       return 'Open';
     case 'wall':
       return 'Look';
+    case 'plans':
+      return 'Read the plans';
   }
 }
 

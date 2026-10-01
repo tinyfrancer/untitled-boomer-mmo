@@ -804,7 +804,17 @@ nodes and drops? Does rested XP come only from idle, or from being away too? (Bo
   where a body stands to use it. 51 files, past the guide, kept whole since the save, the room and
   the panel are one feature to play.
 - **F2 — A house that grows.** Upgrades bought with coin: more rooms, more stands, a garden, a
-  workbench. A long goal and a coin sink, priced by simulation like everything else.
+  workbench. A long goal and a coin sink, priced by simulation like everything else. _Landed (decision
+  136):_ four stages bought in one order at the surveyor's plans, a new fixture on the house's west
+  wall: the Herb Garden (two beds, samphire and meadowsweet, 5s), the Workbench (a fletcher's bench,
+  12s), the Drawing Room (25s) and More Stands (38s), 80s in all, held by the pace test at two thirds
+  of what each class picks up on the climb and the first stage under the first coin-dropping level's
+  take. The Drawing Room is a building of its own against the back of the house, written into
+  Lampton's text from the start, its doorway walled up until it is built; the beds and the bench are
+  placed off the house rather than in the zone's spawns, so they are no wild herb and nobody's bench,
+  and a parked night does not yet count the garden (E4 or F4's, the idle files being E3's). A stage
+  is in the zone the moment it is paid for. A walk out of a two-tile doorway from beside it no longer
+  stalls a hair inside the wall's end.
 - **F3 — Collection log and bestiary.** Creatures slain and the drops seen from each, lore found,
   trophies earned, each with completion counts; what is collected here is what the house displays.
   An item's card learns where the item comes from (what drops it, what node yields it), which A2

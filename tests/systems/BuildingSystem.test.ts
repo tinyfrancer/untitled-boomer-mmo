@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { HOUSE_UPGRADE_ORDER } from '../../src/data/house';
 import { nth } from '../nth';
 import { PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/constants';
 import {
@@ -411,7 +412,9 @@ describe('every building can be walked into', () => {
     if (buildings.length === 0) return;
 
     it(`lets a player into every building in ${zone.id}`, () => {
-      const entities = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      // With the house built out (F2): a room shut until it is built is shut on
+      // purpose, and `tests/world/house.test.ts` holds it opening.
+      const entities = populateZone(zone, zoneWorldSize(zone), () => 0.5, HOUSE_UPGRADE_ORDER);
       const start = entities.spawnPoint;
 
       entities.buildings.forEach((building) => {

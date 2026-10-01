@@ -1,3 +1,4 @@
+import { HOUSE_STANDS } from '../data/house';
 import { emptyHouse } from '../systems/HouseSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { DialogMemory } from '../systems/DialogSystem';
@@ -64,6 +65,21 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   108: (state) => ({ ...state, standing: {} }),
   // The collection log (F3): nobody made before it has seen anything drop.
   109: (state) => ({ ...state, seen: {} }),
+  // The house that grows (F2): F1's four stands kept where they stood and
+  // bare ones for the drawing room's four, and nothing built yet. Numbered at
+  // wave 2's fold, after F3's: 108 to 110 were reserved before F2 needed one.
+  110: (state) => {
+    const house = isRecord(state.house) ? state.house : {};
+    const stands: unknown[] = Array.isArray(house.stands) ? house.stands : [];
+    return {
+      ...state,
+      house: {
+        ...house,
+        stands: Array.from({ length: HOUSE_STANDS }, (_, stand) => stands[stand] ?? null),
+        built: [],
+      },
+    };
+  },
 };
 
 /**

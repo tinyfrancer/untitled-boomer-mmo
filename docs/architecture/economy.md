@@ -117,10 +117,19 @@ spend it until the reforging stone went on the shelf above it — see reforging,
 **The house's chest is the bank's rule at a fixed size** (decision 130): weightless, a slot an item
 id however deep the stack, eight slots and nothing to rent, stored in `CharacterState.house` with
 what stands on the house's stands. It is a store beside the vault, not a second vault: the bank is
-where the depth goes, and F2 may grow the chest. Its panel is the bank's two sides with no shelf row,
+where the depth goes, and F2 left it eight kinds. Its panel is the bank's two sides with no shelf row,
 run by `HouseSession`, which saves on every move for the bank's reason. A stand holds one trophy (a
 boss's drop or a keepsake) out of the bag and hands it back on a tap, refused whole on a full pack,
 so displaying a trophy never spends it.
+
+**The house is the long coin sink** (decision 136): four stages bought in one order off the
+surveyor's plans, a garden, a bench, a room and its stands, 80s in all. They are priced off the pace
+bot rather than judged: the lot is about two thirds of what each class picks up from level 1 to the
+cap and the first stage less than the first level that drops coin picks up, both held in
+`tests/world/pace.test.ts` against the bot's own runs, so a retune of drops that moves the climb's
+coin fails there rather than leaving the house free or out of reach. A stage is refused whole, out
+of turn, unpaid for or before the house is let (`CharacterController.buildUpgrade`), and what it
+builds is in the zone the moment it is paid for.
 
 The counter is the shop's twin down to the shape: opened at `NPC_INTERACT_RADIUS`, shut by walking
 past `NPC_CLOSE_RADIUS`, a HUD overlay handed a _copy_ of the contents on `bank-changed`, and bare

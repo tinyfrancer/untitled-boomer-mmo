@@ -119,6 +119,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | the Cutthroat's Cellar         |             | _In game_; the vault under Redrag Camp              | `places.md`   |
 | the Deep Cut                   |             | _In game_; Karn Tholl's outer workings              | `places.md`   |
 | Drainer                        |             | _In game_; the Keepers' word for Company folk       | `factions.md` |
+| the Drawing Room               |             | _In game_; the room behind the Surveyor's House     | `places.md`   |
 | the Drowned Halls              |             | Karn Tholl's halls the sea took                     | `places.md`   |
 | the Drowning                   |             | The night Veymar went under the sea                 | `history.md`  |
 | Dunnrak                        | DUNN-rak    | A dwarven blade Snikk took from the armoury         | `places.md`   |

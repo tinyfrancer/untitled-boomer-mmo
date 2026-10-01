@@ -1,16 +1,31 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness } from './harness';
-import { PLAYER_HALF_EXTENT } from '../../src/config/constants';
-import { BUILDINGS, doorPoint, interiorRect, isInside, type Rect } from '../../src/data/buildings';
+import { PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/constants';
+import {
+  BUILDINGS,
+  buildingRect,
+  doorPoint,
+  interiorRect,
+  isInside,
+  type Rect,
+} from '../../src/data/buildings';
 import { ENEMIES } from '../../src/data/enemies';
 import {
   CHEST_SLOTS,
+  DRAWING_ROOM,
   FIXTURE_REACH,
   HOUSE_BUILDING,
   HOUSE_FIXTURES,
   HOUSE_STANDS,
+  HOUSE_UPGRADE_ORDER,
+  HOUSE_UPGRADES,
+  HOUSE_YARD,
   fixtureKey,
 } from '../../src/data/house';
+import { RESOURCE_NODES } from '../../src/data/resourceNodes';
+import { STATION_PERSISTS } from '../../src/data/recipes';
+import { recipesAt } from '../../src/systems/CraftingSystem';
+import { ENEMIES as ENEMY_TABLE } from '../../src/data/enemies';
 import { ITEMS } from '../../src/data/items';
 import { LOOT_TABLES } from '../../src/data/lootTables';
 import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
@@ -29,7 +44,13 @@ import { itemUses } from '../../src/systems/ItemUseSystem';
 import { findPath, standNear } from '../../src/systems/PathSystem';
 import { withinRadius } from '../../src/systems/MovementSystem';
 import { HOUSE_CLOSED_EVENT, HOUSE_OPENED_EVENT, NOTICE_EVENT } from '../../src/ui/uiEvents';
-import type { ItemId } from '../../src/types/ids';
+import type { HouseUpgradeId, ItemId } from '../../src/types/ids';
+import { CharacterController } from '../../src/systems/CharacterController';
+import { InputState } from '../../src/systems/InputState';
+import { ZoneWorld } from '../../src/world/ZoneWorld';
+import { populateZone } from '../../src/world/zoneEntities';
+import { zoneWorldSize } from '../../src/systems/ZoneSystem';
+import { recordingBus } from './harness';
 import type { WorldFixture } from '../../src/world/ZoneWorld';
 
 /**
@@ -69,6 +90,15 @@ function walkTo(kit: Kit, key: string): WorldFixture {
   kit.world.tap({ kind: 'fixture', fixture });
   kit.until(() => !kit.world.player.hasMoveTarget(), `the walk to the ${key}`);
   return fixture;
+}
+
+/** Builds stages off the plans, with the coin for them put in hand first. */
+function buildOut(kit: Kit, stages: readonly HouseUpgradeId[] = HOUSE_UPGRADE_ORDER): void {
+  kit.state.currency += stages.reduce((sum, id) => sum + HOUSE_UPGRADES[id].price, 0);
+  standInside(kit);
+  walkTo(kit, 'plans');
+  stages.forEach((id) => kit.bus.emit('build-upgrade-requested', id));
+  kit.world.closeCounters();
 }
 
 const opened = (kit: Kit): string[] =>
@@ -300,8 +330,11 @@ describe('the wall', () => {
 });
 
 describe('where the fixtures stand', () => {
-  const house = { x: 0, y: 0, definition: BUILDINGS[HOUSE_BUILDING] };
-  const room = interiorRect(house);
+  const rooms = [HOUSE_BUILDING, DRAWING_ROOM].map((id) => ({
+    id,
+    room: { x: 0, y: 0, definition: BUILDINGS[id] },
+    placements: HOUSE_FIXTURES.filter((placement) => placement.building === id),
+  }));
   const body = (at: { x: number; y: number }): Rect => ({
     left: at.x - PLAYER_HALF_EXTENT,
     right: at.x + PLAYER_HALF_EXTENT,
@@ -314,23 +347,28 @@ describe('where the fixtures stand', () => {
     a.top < b.bottom - 0.01 &&
     a.bottom > b.top + 0.01;
 
-  it('assumes a door to the south, which is the wall none of them stands against', () => {
-    expect(house.definition.door).toBe('south');
+  it('assumes the house’s door to the south and the drawing room’s to the west', () => {
+    expect(BUILDINGS[HOUSE_BUILDING].door).toBe('south');
+    expect(BUILDINGS[DRAWING_ROOM].door).toBe('west');
   });
 
-  it(`stands ${HOUSE_STANDS} stands, the chest and the wall, each inside the room`, () => {
+  it(`stands ${HOUSE_STANDS} stands, the chest, the wall and the plans, each inside its room`, () => {
     const kinds = HOUSE_FIXTURES.map((placement) => fixtureKey(placement.fixture));
     expect(kinds).toEqual([
       ...Array.from({ length: HOUSE_STANDS }, (_, stand) => `stand-${stand}`),
       'chest',
       'wall',
+      'plans',
     ]);
-    HOUSE_FIXTURES.forEach(({ fixture, rect }) => {
-      const key = fixtureKey(fixture);
-      expect(rect.left, key).toBeGreaterThanOrEqual(room.left);
-      expect(rect.right, key).toBeLessThanOrEqual(room.right);
-      expect(rect.top, key).toBeGreaterThanOrEqual(room.top);
-      expect(rect.bottom, key).toBeLessThanOrEqual(room.bottom);
+    rooms.forEach(({ room, placements }) => {
+      const inside = interiorRect(room);
+      placements.forEach(({ fixture, rect }) => {
+        const key = fixtureKey(fixture);
+        expect(rect.left, key).toBeGreaterThanOrEqual(inside.left);
+        expect(rect.right, key).toBeLessThanOrEqual(inside.right);
+        expect(rect.top, key).toBeGreaterThanOrEqual(inside.top);
+        expect(rect.bottom, key).toBeLessThanOrEqual(inside.bottom);
+      });
     });
   });
 
@@ -341,27 +379,28 @@ describe('where the fixtures stand', () => {
    * ground is the strip under the plaques, which the chest and the two back
    * stands stand on, so it is left out of the one test about overlapping.
    */
-  it('keeps the middle of the room and the way in clear, and stands nothing in anything else', () => {
-    const door = body(doorPoint(house));
-    const middle = body({ x: 0, y: 0 });
-    const lane: Rect = {
-      left: Math.min(door.left, middle.left),
-      right: Math.max(door.right, middle.right),
-      top: Math.min(door.top, middle.top),
-      bottom: Math.max(door.bottom, middle.bottom),
-    };
-    const things = [
-      ...HOUSE_FIXTURES.filter(({ fixture }) => fixture.kind !== 'wall').map(
-        ({ fixture, rect }) => ({ what: fixtureKey(fixture), rect }),
-      ),
-      ...fittingRects(house.definition).map(({ kind, rect }) => ({ what: kind, rect })),
-    ];
-    things.forEach(({ what, rect }) => {
-      expect(overlaps(rect, lane), `the ${what} is in the way in`).toBe(false);
-      things.forEach((other) => {
-        if (other === things.find((each) => each.what === what)) return;
-        if (other.what === what) return;
-        expect(overlaps(rect, other.rect), `the ${what} stands in the ${other.what}`).toBe(false);
+  it('keeps the middle of each room and the way in clear, and stands nothing in anything else', () => {
+    rooms.forEach(({ room, placements }) => {
+      const door = body(doorPoint(room));
+      const middle = body({ x: 0, y: 0 });
+      const lane: Rect = {
+        left: Math.min(door.left, middle.left),
+        right: Math.max(door.right, middle.right),
+        top: Math.min(door.top, middle.top),
+        bottom: Math.max(door.bottom, middle.bottom),
+      };
+      const things = [
+        ...placements
+          .filter(({ fixture }) => fixture.kind !== 'wall')
+          .map(({ fixture, rect }) => ({ what: fixtureKey(fixture), rect })),
+        ...fittingRects(room.definition).map(({ kind, rect }) => ({ what: kind, rect })),
+      ];
+      things.forEach(({ what, rect }) => {
+        expect(overlaps(rect, lane), `the ${what} is in the way in`).toBe(false);
+        things.forEach((other) => {
+          if (other.what === what) return;
+          expect(overlaps(rect, other.rect), `the ${what} stands in the ${other.what}`).toBe(false);
+        });
       });
     });
   });
@@ -369,17 +408,18 @@ describe('where the fixtures stand', () => {
   it('lets every fixture be walked up to from where Lampton puts a player, and used there', () => {
     const kit = harness();
     letHouse(kit);
-    const entities = kit.world;
+    buildOut(kit);
+    expect(kit.world.fixtures).toHaveLength(HOUSE_FIXTURES.length);
     for (const fixture of kit.world.fixtures) {
       const key = fixtureKey(fixture.fixture);
       kit.world.teleport(ZONES.town.start.x, ZONES.town.start.y);
       const goal = standNear(
-        entities.collisionWorld,
+        kit.world.collisionWorld,
         kit.world.player,
         fixture.access,
         PLAYER_HALF_EXTENT,
       );
-      const route = findPath(entities.collisionWorld, kit.world.player, goal, PLAYER_HALF_EXTENT);
+      const route = findPath(kit.world.collisionWorld, kit.world.player, goal, PLAYER_HALF_EXTENT);
       expect(route, `no way to the ${key}`).not.toBeNull();
       walkTo(kit, key);
       expect(isInside(fixture.house, kit.world.player), `${key}: walked to from outside`).toBe(
@@ -388,5 +428,200 @@ describe('where the fixtures stand', () => {
       expect(withinRadius(kit.world.player, fixture, FIXTURE_REACH), `${key}: in reach`).toBe(true);
       kit.world.closeCounters();
     }
+  });
+});
+
+describe('the plans (F2)', () => {
+  it('build the lot in four stages, the first cheap and each dearer than the last', () => {
+    expect(HOUSE_UPGRADE_ORDER).toEqual(['garden', 'workbench', 'room', 'stands']);
+    const prices = HOUSE_UPGRADE_ORDER.map((id) => HOUSE_UPGRADES[id].price);
+    prices.slice(1).forEach((price, index) => expect(price).toBeGreaterThan(prices[index] ?? 0));
+    const total = prices.reduce((sum, price) => sum + price, 0);
+    expect(prices[0] ?? 0).toBeLessThan(total / 10);
+  });
+
+  it('build nothing while the house is the Company’s', () => {
+    const kit = harness();
+    kit.state.currency = 100000;
+    standInside(kit);
+    walkTo(kit, 'plans');
+    expect(opened(kit)).toEqual([]);
+    expect(kit.character.buildUpgrade('garden').ok).toBe(false);
+    expect(kit.state.house.built).toEqual([]);
+  });
+
+  it('build the next stage for its price, and refuse one out of turn or unpaid for', () => {
+    const kit = harness();
+    letHouse(kit);
+    kit.state.currency = 0;
+    standInside(kit);
+    walkTo(kit, 'plans');
+    expect(opened(kit)).toEqual(['plans']);
+
+    kit.bus.emit('build-upgrade-requested', 'garden');
+    expect(kit.state.house.built).toEqual([]);
+    expect(notices(kit).at(-1)).toContain("can't afford");
+
+    kit.state.currency = 10000;
+    kit.bus.emit('build-upgrade-requested', 'room');
+    expect(kit.state.house.built).toEqual([]);
+    expect(notices(kit).at(-1)).toContain('comes first');
+
+    kit.bus.emit('build-upgrade-requested', 'garden');
+    expect(kit.state.house.built).toEqual(['garden']);
+    expect(kit.state.currency).toBe(10000 - HOUSE_UPGRADES.garden.price);
+    expect(notices(kit).at(-1)).toContain('is built');
+  });
+});
+
+describe('what the lot grows (F2)', () => {
+  it('plants the garden: a bed of samphire and one of meadowsweet, cut with a sickle', () => {
+    const kit = harness();
+    letHouse(kit);
+    const before = kit.world.nodes.length;
+    buildOut(kit, ['garden']);
+    const beds = kit.world.nodes.slice(before);
+    expect(beds.map((node) => node.definition.id)).toEqual(['samphire', 'meadowsweet']);
+    beds.forEach((bed) => expect(bed.definition).toBe(RESOURCE_NODES[bed.definition.id]));
+
+    kit.character.addItem('sickle', 1);
+    kit.world.handleEquipRequested('sickle');
+    const [samphire] = beds;
+    if (!samphire) throw new Error('no samphire bed');
+    // Walked to from the plans, where buying it left the player.
+    kit.world.tap({ kind: 'node', node: samphire });
+    for (let frame = 0; frame < 3000 && !(kit.state.inventory.samphire ?? 0); frame += 1) {
+      kit.tick(1, 16);
+    }
+    expect(kit.state.inventory.samphire ?? 0).toBeGreaterThan(0);
+  });
+
+  it('stands a fletcher’s bench in the yard, which is there all night', () => {
+    const kit = harness();
+    letHouse(kit);
+    const before = kit.world.stations.length;
+    buildOut(kit, ['garden', 'workbench']);
+    expect(kit.world.stations.slice(before).map((station) => station.station)).toEqual(['bench']);
+    expect(STATION_PERSISTS.bench).toBe(true);
+    expect(recipesAt('bench').length).toBeGreaterThan(0);
+  });
+
+  it('keeps the drawing room shut until it is built, and opens it when it is', () => {
+    const kit = harness();
+    letHouse(kit);
+    const room = kit.world.buildings.find((building) => building.definition.id === DRAWING_ROOM);
+    if (!room) throw new Error('Lampton has no drawing room');
+    const into = (): unknown =>
+      findPath(
+        kit.world.collisionWorld,
+        ZONES.town.start,
+        { x: room.x, y: room.y },
+        PLAYER_HALF_EXTENT,
+      );
+    expect(into()).toBeNull();
+
+    const door = doorPoint(room);
+    kit.world.teleport(door.x, door.y);
+    kit.world.tap({ kind: 'ground', point: { x: room.x, y: room.y } });
+    expect(kit.world.player.hasMoveTarget()).toBe(false);
+    expect(notices(kit).at(-1)).toContain('is shut until it is built');
+
+    buildOut(kit, ['garden', 'workbench', 'room']);
+    expect(into()).not.toBeNull();
+    const keys = kit.world.fixtures.map((fixture) => fixtureKey(fixture.fixture));
+    expect(keys).toContain('stand-4');
+    expect(keys).toContain('stand-5');
+    expect(keys).not.toContain('stand-6');
+
+    buildOut(kit, ['stands']);
+    expect(kit.world.fixtures.map((fixture) => fixtureKey(fixture.fixture))).toContain('stand-7');
+  });
+
+  it('sets nothing on a stand that is not built yet', () => {
+    const kit = harness();
+    letHouse(kit);
+    kit.state.inventory = { 'barrow-crown': 1 };
+    expect(kit.character.displayTrophy(6, 'barrow-crown').ok).toBe(false);
+    buildOut(kit);
+    expect(kit.character.displayTrophy(6, 'barrow-crown').ok).toBe(true);
+    expect(kit.state.house.stands[6]).toBe('barrow-crown');
+  });
+
+  it('puts the same on the lot when a built house is loaded as when it is built', () => {
+    const built = harness();
+    letHouse(built);
+    buildOut(built);
+
+    const character = new CharacterController(structuredClone(built.state));
+    const loaded = new ZoneWorld({
+      zone: ZONES.town,
+      character,
+      events: recordingBus([]),
+      input: new InputState(),
+      rng: () => 0.5,
+    });
+    const placed = (world: ZoneWorld): string[] => [
+      ...world.fixtures.map(
+        (fixture) => `${fixtureKey(fixture.fixture)}@${fixture.x},${fixture.y}`,
+      ),
+      ...world.nodes.map((node) => `${node.definition.id}@${node.x},${node.y}`),
+      ...world.stations.map((station) => `${station.station}@${station.x},${station.y}`),
+    ];
+    expect(new Set(placed(loaded))).toEqual(new Set(placed(built.world)));
+    expect(loaded.collisionWorld.blockers).toHaveLength(built.world.collisionWorld.blockers.length);
+    loaded.destroy();
+  });
+});
+
+/**
+ * The yard's beds and bench are placed off the house rather than written into
+ * Lampton's text (`data/house.ts`), so the sweeps that hold every spawn in a
+ * zone do not see them: this is those sweeps, asked of the lot built out.
+ */
+describe('the yard (F2)', () => {
+  const zone = ZONES.town;
+  const entities = populateZone(zone, zoneWorldSize(zone), () => 0.5, HOUSE_UPGRADE_ORDER);
+  const house = entities.buildings.find((building) => building.definition.id === HOUSE_BUILDING);
+  if (!house) throw new Error('Lampton has no house');
+  const yard = HOUSE_YARD.map((placement) => ({
+    what: 'node' in placement ? placement.node : placement.station,
+    x: house.x + placement.at.x,
+    y: house.y + placement.at.y,
+  }));
+
+  it('stands every bed and the bench clear of every building and every doorstep', () => {
+    yard.forEach(({ what, x, y }) => {
+      entities.buildings.forEach((building) => {
+        const rect = buildingRect(building);
+        const clear =
+          x < rect.left - TILE_SIZE / 2 ||
+          x > rect.right + TILE_SIZE / 2 ||
+          y < rect.top - TILE_SIZE / 2 ||
+          y > rect.bottom + TILE_SIZE / 2;
+        expect(clear, `the ${what} against the ${building.definition.id}`).toBe(true);
+        const door = doorPoint(building);
+        expect(
+          Math.hypot(door.x - x, door.y - y),
+          `the ${what} on the ${building.definition.id}'s doorstep`,
+        ).toBeGreaterThan(TILE_SIZE);
+      });
+    });
+  });
+
+  it('stands them out of every creature’s wander, so a tap on one is never a fight', () => {
+    yard.forEach(({ what, x, y }) => {
+      zone.mobSpawns.forEach((spawn) => {
+        const reach = ENEMY_TABLE[spawn.enemyId].wander.radius + TILE_SIZE;
+        expect(Math.hypot(spawn.x - x, spawn.y - y), `the ${what}`).toBeGreaterThan(reach);
+      });
+    });
+  });
+
+  it('lets a body walk up to each from where Lampton puts a player', () => {
+    yard.forEach(({ what, x, y }) => {
+      const goal = standNear(entities.collisionWorld, zone.start, { x, y }, PLAYER_HALF_EXTENT);
+      const route = findPath(entities.collisionWorld, zone.start, goal, PLAYER_HALF_EXTENT);
+      expect(route, `no way to the ${what}`).not.toBeNull();
+    });
   });
 });

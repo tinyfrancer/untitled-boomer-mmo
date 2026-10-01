@@ -7,6 +7,7 @@ import type {
   AchievementId,
   MasteryTargetId,
   GearSlotId,
+  HouseUpgradeId,
   NpcId,
   QuestId,
   RecipeId,
@@ -324,6 +325,8 @@ export const HOUSE_CHANGED_EVENT = 'house-changed';
 export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
 export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
 export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
+// A stage of the house bought at the surveyor's plans (F2).
+export const BUILD_UPGRADE_REQUESTED_EVENT = 'build-upgrade-requested';
 // The drops each creature has been seen to drop (F3), the whole record on
 // every change as the kill counts are, and only when a drop is new to it.
 export const DROPS_SEEN_CHANGED_EVENT = 'drops-seen-changed';
@@ -613,6 +616,7 @@ export interface UiEventMap {
   [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
   [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [BUILD_UPGRADE_REQUESTED_EVENT]: [upgrade: HouseUpgradeId];
   [WHISPERS_CHANGED_EVENT]: [whispers: WhispersState];
   [WHISPER_NOTED_EVENT]: [noted: WhisperNoted];
 }

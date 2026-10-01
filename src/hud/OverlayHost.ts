@@ -47,6 +47,7 @@ import {
   DISPLAY_TROPHY_REQUESTED_EVENT,
   CHEST_DEPOSIT_REQUESTED_EVENT,
   CHEST_WITHDRAW_REQUESTED_EVENT,
+  BUILD_UPGRADE_REQUESTED_EVENT,
 } from '../ui/uiEvents';
 import { fixtureKey, type HouseFixture } from '../data/house';
 import type { CounterId } from '../data/npcs';
@@ -82,7 +83,7 @@ export interface OverlayPanelState {
   /** What a conversation is drawn from: the work, what has been asked, and what was said. */
   talk: () => TalkPanelState;
   station: () => StationPanelState;
-  /** The stands, the chest, the bag and the kills, which is all the house draws (F1). */
+  /** The stands, the chest, the bag, the kills and the coin, which is all the house draws. */
   house: () => HousePanelState;
 }
 
@@ -480,6 +481,7 @@ export class OverlayHost {
         onDisplay: (itemId) => emit(DISPLAY_TROPHY_REQUESTED_EVENT, itemId),
         onDeposit: (itemId, quantity) => emit(CHEST_DEPOSIT_REQUESTED_EVENT, itemId, quantity),
         onWithdraw: (itemId, quantity) => emit(CHEST_WITHDRAW_REQUESTED_EVENT, itemId, quantity),
+        onBuild: (upgrade) => emit(BUILD_UPGRADE_REQUESTED_EVENT, upgrade),
         onDismiss: () => emit(HOUSE_CLOSED_EVENT),
       },
       () => {

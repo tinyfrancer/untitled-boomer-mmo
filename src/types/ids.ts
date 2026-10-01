@@ -383,8 +383,14 @@ export type BuildingId =
   | 'trading-post'
   | 'longhouse'
   | 'store'
-  // The player's, once the Company lets it to them (F1).
-  | 'house';
+  // The player's, once the Company lets it to them (F1), and the room behind
+  // it that is shut until they build it out (F2).
+  | 'house'
+  | 'drawing-room';
+
+// A stage of the house's growing (F2, `data/house.ts`): bought in this order
+// at the surveyor's plans, each opening something on the lot.
+export type HouseUpgradeId = 'garden' | 'workbench' | 'room' | 'stands';
 
 // Which body a renderer draws a building with, and the same bargain
 // `CreatureShapeId` and `NodeShapeId` make: a new BUILDINGS row names a shape it

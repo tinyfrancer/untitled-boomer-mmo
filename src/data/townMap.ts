@@ -33,14 +33,14 @@ export const TOWN_LAYOUT = layoutZone(
   `
     .....................===.....................
     .........c...........===.....................
-    ..b..................===..................b..
-    .....................=r=.....................
+    ..b..................===..............CC..b..
+    .....................=r=..............CC.....
     .....................===.....................
     ....CC..CC..=........===.......=...CC........
-    ....CC..CC..=..a.....===MMM..a.=...CC..CC....
-    ............=........===MMM....=.......CC....
-    ............=........===F......=.............
-    ............=........===.......=.............
+    ....CC..CC..=..a.....===MMM..a.=...CC........
+    ............=........===MMM....=.......DDDD..
+    ............=........===F......=.......DDDD..
+    ............=........===.......=.......DDDD..
     .........TTT=...BBB..===..SSS..=.......HHHH..
     ..b......TTT=...BBB..===..SSS..=..QQQ..HHHH..
     .........TTT=...BBB..===..SSS..=..QQQ..HHHH..
@@ -86,10 +86,15 @@ export const TOWN_LAYOUT = layoutZone(
     /**
      * The Surveyor's House (F1), at the east end of the counters' row with its
      * door on the high street like theirs, past the quartermaster who lets it.
-     * The cottage behind it stood a row lower until it did, and moved up to
-     * keep two tiles between its doorstep and the house's back wall.
      */
     H: { building: 'house', on: 'grass' },
+    /**
+     * The drawing room behind it (F2), the lot's whole footprint written from
+     * the start and the room shut until it is built: its door is in its west
+     * wall, onto the yard where the garden and the bench go (`data/house.ts`).
+     * The cottage that stood here went up the lane past the north road's rat.
+     */
+    D: { building: 'drawing-room', on: 'grass' },
     /**
      * Outside the smithy, off the corner of its open front rather than across
      * it: the front is two tiles and a body needs most of them, so a forge

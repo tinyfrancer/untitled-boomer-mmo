@@ -2379,11 +2379,16 @@ async function interiors() {
   // `pickTap` is a priority and not a depth sort, so a wandering rat drawn over
   // a building is picked over it — and a person standing at a door is picked
   // over their own shop. Both are correct behaviour and neither is what this is about.
+  // Only a door in a north or south wall, since the checks below measure across
+  // it, and that leaves out the drawing room, shut until it is built (F2).
   const target = await page.evaluate(() => {
     const w = window.world;
     /** @type {{ x: number; y: number }[]} */
     const spots = [...w.mobs.filter((mob) => mob.isAlive()), ...w.npcs];
     return w.buildings
+      .filter(
+        (building) => building.definition.door === 'north' || building.definition.door === 'south',
+      )
       .map((building) => {
         const at = window.view.worldToScreen(building.x, building.y);
         const gaps = spots.map((thing) => {
@@ -6192,7 +6197,7 @@ async function house() {
     const found = w.buildings.find((each) => each.definition.id === 'house');
     const state = w.character.state;
     state.quests = { ...state.quests, 'a-roof-in-lampton': { status: 'done', baseline: 0 } };
-    state.house = { stands: [null, null, null, null], chest: {} };
+    state.house = { stands: Array.from({ length: 8 }, () => null), chest: {}, built: [] };
     state.kills = { ...state.kills, rat: Math.max(state.kills.rat ?? 0, 50) };
     state.inventory = { ...state.inventory, 'barrow-crown': 1, 'pells-cart-bell': 1, logs: 3 };
     window.events.emit('inventory-changed', state.inventory);
@@ -6574,6 +6579,178 @@ async function collection() {
   await page.waitForTimeout(200);
 }
 
+async function houseGrows() {
+  // --- The house that grows (F2): the plans read from inside the house, each
+  // stage bought off its row, the garden's beds and the bench standing in the
+  // yard the moment they are paid for, and the drawing room shut until it is
+  // built and walked into by two real taps after. The rules are
+  // `tests/world/house.test.ts`'s; what only a browser has is the panel's rows
+  // doing what they say, the new things drawn where the world put them, and
+  // the view letting go of them across a round trip out of town. ---
+  await toTown();
+  const lot = await page.evaluate(() => {
+    const w = window.world;
+    const state = w.character.state;
+    state.quests = { ...state.quests, 'a-roof-in-lampton': { status: 'done', baseline: 0 } };
+    state.house = { stands: Array.from({ length: 8 }, () => null), chest: {}, built: [] };
+    state.currency = 10000;
+    window.events.emit('currency-changed', state.currency);
+    w.clearTarget();
+    w.closeCounters();
+    w.player.stopMoving();
+    const house = w.buildings.find((each) => each.definition.id === 'house');
+    const room = w.buildings.find((each) => each.definition.id === 'drawing-room');
+    return house && room
+      ? {
+          house: { x: house.x, y: house.y },
+          room: { x: room.x, y: room.y, width: room.definition.body.width },
+          nodes: w.nodes.length,
+          stations: w.stations.length,
+        }
+      : null;
+  });
+  if (!lot) {
+    check('town has the house and its drawing room', false);
+    return;
+  }
+  // The plans, tapped from inside the house: four stages, the first to buy.
+  await page.evaluate((at) => window.world.teleport(at.x, at.y), lot.house);
+  await step(2);
+  await draw();
+  const plans = await page.evaluate(() => {
+    const f = window.world.fixtures.find((each) => each.fixture.kind === 'plans');
+    return f ? window.view.worldToScreen(f.x, f.area.bottom - 16) : null;
+  });
+  if (!plans) {
+    check('the house has its plans', false);
+    return;
+  }
+  await clickAt(plans);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="plans"]') !== null),
+    "the plans' panel",
+    20000,
+  );
+  const rows = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-modal [data-upgrade]')].map((row) =>
+      row.getAttribute('data-upgrade'),
+    ),
+  );
+  check(
+    'the plans list the four stages in the order they are built',
+    rows.join(',') === 'garden,workbench,room,stands',
+    rows.join(', '),
+  );
+
+  // Each row bought in turn, the next row the one that answers.
+  for (const stage of ['garden', 'workbench', 'room', 'stands']) {
+    await page.click(`.hud-modal [data-upgrade="${stage}"][data-action="build-upgrade"]`);
+    await step(2);
+  }
+  const built = await page.evaluate(
+    (at) => ({
+      built: window.world.character.state.house.built,
+      coin: window.world.character.state.currency,
+      beds: window.world.nodes.length - at.nodes,
+      benches: window.world.stations.length - at.stations,
+      count: document.querySelector('.hud-modal .hud-house__count')?.textContent,
+    }),
+    lot,
+  );
+  check(
+    'a row builds its stage for its price, the beds and the bench into the yard at once',
+    built.built.join(',') === 'garden,workbench,room,stands' &&
+      built.coin === 10000 - 8000 &&
+      built.beds === 2 &&
+      built.benches === 1 &&
+      built.count === '4 / 4 built',
+    JSON.stringify(built),
+  );
+  await page.click('.hud-modal [data-action="close-house"]');
+  await step(2);
+
+  // The yard, drawn: the beds and the bench west of the drawing room.
+  await page.evaluate((at) => window.world.teleport(at.x - 250, at.y + 280), lot.room);
+  await step(2);
+  await draw();
+  await page.screenshot({ path: `${OUT}/24-house-yard.png` });
+  // Counted with the lot built, so the round trip below compares like with like.
+  await sweep();
+  const before = await canvases();
+
+  // Into the drawing room by its west door, a tap on it and a second from its
+  // doorstep. On its north half: the house's roof stands up the screen over
+  // the rest of it, as the longhouse's does over the fettler's store.
+  /** @param {{ x: number; y: number }} at */
+  const middle = (at) => window.view.worldToScreen(at.x, at.y - 64);
+  await page.evaluate((at) => window.world.teleport(at.x - 192, at.y), lot.room);
+  await step(2);
+  await draw();
+  await clickAt(await page.evaluate(middle, lot.room));
+  await stepUntil(
+    () => page.evaluate(() => !window.world.player.hasMoveTarget()),
+    'the walk to the drawing room door',
+    20000,
+  );
+  await draw();
+  await clickAt(await page.evaluate(middle, lot.room));
+  const inside = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        x: window.world.player.x,
+        y: window.world.player.y,
+        walking: window.world.player.hasMoveTarget(),
+      })),
+    (spot) => !spot.walking,
+    'the walk into the drawing room',
+    30000,
+  );
+  check(
+    'two taps walk into the drawing room once it is built',
+    Math.abs(inside.x - lot.room.x) < lot.room.width / 2 && Math.abs(inside.y - lot.room.y) < 96,
+    `player at ${Math.round(inside.x)},${Math.round(inside.y)}`,
+  );
+  const stands = await page.evaluate(
+    () =>
+      window.world.fixtures.filter(
+        (each) => each.fixture.kind === 'stand' && each.house.definition.id === 'drawing-room',
+      ).length,
+  );
+  check('the drawing room stands its four stands', stands === 4, `${stands}`);
+  await draw();
+  await page.screenshot({ path: `${OUT}/24b-drawing-room.png` });
+
+  // Out of town and back: everything the lot was drawn with let go.
+  await park();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth - 33, w.worldHeight / 2 + 64);
+  });
+  await stepUntil(async () => (await zoneId()) !== 'town', 'the road east out of town');
+  const away = await zoneId();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(33, w.worldHeight / 2);
+  });
+  await stepUntilZone('town', `the road back into town from ${away}`);
+  await sweep();
+  const after = await canvases();
+  check(
+    'a round trip out of town lets go of everything the grown house was drawn with',
+    after <= before,
+    `${before} -> ${after} canvases`,
+  );
+  const kept = await page.evaluate(() => ({
+    beds: window.world.nodes.filter((node) => node.definition.skill === 'foraging').length,
+    benches: window.world.stations.filter((station) => station.station === 'bench').length,
+  }));
+  check(
+    'the lot comes back built when town is walked back into',
+    kept.beds === 2 && kept.benches === 1,
+    JSON.stringify(kept),
+  );
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -6630,6 +6807,7 @@ const SECTIONS = [
   ['lore-people', lorePeople],
   ['idle-potions', idlePotions],
   ['collection', collection],
+  ['house-grows', houseGrows],
 ];
 
 const known = SECTIONS.map(([name]) => name);

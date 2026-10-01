@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { migrateCharacterState } from '../../src/persistence/migrations';
+import { emptyHouse } from '../../src/systems/HouseSystem';
 import {
   CHARACTER_STATE_VERSION,
   FIRST_VERSION_2_STATE,
@@ -109,7 +110,22 @@ describe('migrateCharacterState', () => {
     };
     delete before.house;
     const migrated = migrateCharacterState(before);
-    expect(migrated?.house).toEqual({ stands: [null, null, null, null], chest: {} });
+    expect(migrated?.house).toEqual(emptyHouse());
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
+  it('keeps what stood on the house’s four stands, and builds nothing, made before it grew (F2)', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 10,
+      house: { stands: ['barrow-crown', null, null, 'pells-cart-bell'], chest: { logs: 3 } },
+    };
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.house).toEqual({
+      stands: ['barrow-crown', null, null, 'pells-cart-bell', null, null, null, null],
+      chest: { logs: 3 },
+      built: [],
+    });
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
   });
 

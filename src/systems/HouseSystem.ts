@@ -1,10 +1,17 @@
 import { ACHIEVEMENT_ORDER, ACHIEVEMENTS, slayerRankOf } from '../data/achievements';
 import { ENEMIES } from '../data/enemies';
-import { CHEST_SLOTS, HOUSE_STANDS } from '../data/house';
+import {
+  CHEST_SLOTS,
+  HOUSE_STANDS,
+  HOUSE_UPGRADE_ORDER,
+  HOUSE_UPGRADES,
+  standUpgrade,
+  type HouseUpgrade,
+} from '../data/house';
 import { ITEMS } from '../data/items';
 import { LOOT_TABLES } from '../data/lootTables';
 import { QUESTS, QUEST_ORDER } from '../data/quests';
-import type { EnemyId, ItemId, QuestId, SlayerRank } from '../types/ids';
+import type { EnemyId, HouseUpgradeId, ItemId, QuestId, SlayerRank } from '../types/ids';
 import { hasBankRoom, bankSlotsUsed } from './BankSystem';
 import { isUnlocked, type KillCounts } from './AchievementSystem';
 import type { Inventory } from './InventorySystem';
@@ -14,21 +21,48 @@ import { isQuestDone, type QuestLog } from './QuestSystem';
  * The house's rules (F1): whose it is, what may stand on a stand, what hangs
  * on the wall, and what fits in the chest.
  *
- * Only two things about the house are stored (`CharacterState.house`): what
- * stands on each stand, and what is in the chest, since both are choices that
- * leave nothing else behind. Whose it is, what counts as a trophy and which
- * plaques hang are each read off a table on the way past.
+ * Three things about the house are stored (`CharacterState.house`): what
+ * stands on each stand, what is in the chest, and which stages of it have been
+ * built (F2), since each is a choice that leaves nothing else behind. Whose it
+ * is, what counts as a trophy, which plaques hang and what each stage puts on
+ * the lot are each read off a table on the way past.
  */
 
-/** What the character keeps at home: a trophy or nothing on each stand, and the chest. */
+/** What the character keeps at home: a trophy or nothing on each stand, the chest, and what is built. */
 export interface HouseState {
   stands: (ItemId | null)[];
   chest: Inventory;
+  /** The stages bought, in the order they were (F2). */
+  built: HouseUpgradeId[];
 }
 
-/** The house as a new character finds it: every stand bare and the chest empty. */
+/** The house as a new character finds it: every stand bare, the chest empty, nothing built. */
 export function emptyHouse(): HouseState {
-  return { stands: Array.from({ length: HOUSE_STANDS }, () => null), chest: {} };
+  return { stands: Array.from({ length: HOUSE_STANDS }, () => null), chest: {}, built: [] };
+}
+
+/** Whether a stage of the house is built. */
+export function isBuilt(house: HouseState, upgrade: HouseUpgradeId): boolean {
+  return house.built.includes(upgrade);
+}
+
+/** The next stage the plans offer, or null once the lot is built out. */
+export function nextUpgrade(house: HouseState): HouseUpgrade | null {
+  const next = HOUSE_UPGRADE_ORDER.find((id) => !isBuilt(house, id));
+  return next ? HOUSE_UPGRADES[next] : null;
+}
+
+/** Whether a stand is in the house yet: F1's four always, the drawing room's once built. */
+export function standBuilt(house: HouseState, stand: number): boolean {
+  const upgrade = standUpgrade(stand);
+  return upgrade === null || isBuilt(house, upgrade);
+}
+
+/** How many stands stand in the house as it is built. */
+export function standsBuilt(house: HouseState): number {
+  return Array.from({ length: HOUSE_STANDS }, (_, stand) => stand).filter((stand) =>
+    standBuilt(house, stand),
+  ).length;
 }
 
 /** The quest that lets the house, read off the table rather than named twice. */

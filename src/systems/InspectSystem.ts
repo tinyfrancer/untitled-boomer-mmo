@@ -28,8 +28,8 @@ import { itemUses, type ItemUseContext } from './ItemUseSystem';
 import { LOOT_PILE_LIFETIME_MS } from './LootSystem';
 import { scaleEnemyStats } from './EnemySystem';
 import { ENEMIES, type EnemyDefinition } from '../data/enemies';
-import { CHEST_SLOTS, type HouseFixture } from '../data/house';
-import { chestSlotsUsed, onStand, plaques, type HouseState } from './HouseSystem';
+import { CHEST_SLOTS, HOUSE_UPGRADE_ORDER, type HouseFixture } from '../data/house';
+import { chestSlotsUsed, nextUpgrade, onStand, plaques, type HouseState } from './HouseSystem';
 import type { KillCounts } from './AchievementSystem';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 import type { EnemyFamilyId, ItemId, NpcId, ZoneEdge } from '../types/ids';
@@ -514,9 +514,10 @@ function itemSubtitle(itemId: ItemId): string {
 }
 
 /**
- * A stand, the chest or the wall in the house (F1), described as it stands:
- * what is on the stand, how full the chest is, how many plaques hang. Settled
- * the moment the card opens, as every card is.
+ * A stand, the chest, the wall or the plans in the house (F1, F2), described
+ * as it stands: what is on the stand, how full the chest is, how many plaques
+ * hang, how much of the lot is built. Settled the moment the card opens, as
+ * every card is.
  */
 export function describeFixture(
   fixture: HouseFixture,
@@ -557,5 +558,23 @@ export function describeFixture(
         ],
         note: 'A plaque hangs for every creature you have a slayer rank against, at the highest.',
       };
+    case 'plans': {
+      const next = nextUpgrade(context.house);
+      return {
+        title: "The Surveyor's Plans",
+        subtitle,
+        lines: [
+          {
+            label: 'Built',
+            value: `${context.house.built.length} / ${HOUSE_UPGRADE_ORDER.length} stages`,
+          },
+          {
+            label: 'Next',
+            value: next ? `${next.name}, ${formatCurrency(next.price)}` : 'Nothing',
+          },
+        ],
+        note: 'The lot as it was drawn: a garden, a bench, a room behind, its stands, built in turn.',
+      };
+    }
   }
 }
