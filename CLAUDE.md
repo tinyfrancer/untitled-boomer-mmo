@@ -207,7 +207,8 @@ character a tile, the grounds' characters shared by every zone, and a legend of 
 the start, creatures, nodes, stations, buildings and secrets (`data/secrets.ts`, decision 117: a
 row there and a drawing in `art/places.ts`, found by walking up to it and on no map). A marker stands in the middle of its tile, a
 building is a block of its letter exactly its footprint, whoever works in one is named on its row
-rather than placed, and a zone's size is its text's. **A secret may lie in a room**, written into its
+rather than placed, somebody who works nowhere is a marker of their own (decision 134), and a zone's
+size is its text's. **A secret may lie in a room**, written into its
 building's block, and is found only from inside that room (decision 120). Walking is the only way
 into a zone. **An exit is open along its mouth**, the whole shared edge unless its row names a
 narrower `mouth` (decision 119, a vault's way in, an edge with a stream across it, decision 120, or
@@ -253,7 +254,8 @@ secret found (`CharacterState.secrets`, decision 117), which leaves nothing eith
 a person has given (`CharacterState.asked`, decision 126), by which a topic is grey until it gains a
 new one. **What a person says is a row** (`data/dialog.ts`), its conditions a `requires` union read
 by `DialogSystem` for the world and the HUD alike, so a new kind of condition is a member and a case
-there; a new person is a conversation there as well as a row in `NPCS`.
+there; a new person is a conversation there as well as a row in `NPCS`, and somebody who works no
+counter has the role `'none'` (decision 134), not a missing one.
 secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every beat
 of Wick's story heard (`CharacterState.beats`, decision 128); which beat waits where is derived
 (`systems/SpiritSystem.ts`).

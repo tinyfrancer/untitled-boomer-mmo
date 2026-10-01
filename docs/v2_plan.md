@@ -90,8 +90,10 @@ version 105; decision 128). **and E2** (potions: foraging with a sickle on herb 
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
 clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
 with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
-`claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
-`claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
+`claude/v2-wave-1` and up as one PR to `main`. **Wave 2** (D2, D3, D1b, E3, F2 and F3) is building
+from `claude/v2-wave-2`, with G1 in flight against `main`; **D1b** is up for the wave (the lore's
+people: Bess at the Wet Boot, an old fisher on the strand, Pocket on a post at Greyford and Maren in
+the fen, each drawn and talking, a role whose only counter is talk; decision 134). Update this line as each
 phase lands:
 which phase, and which is next.
 
@@ -732,6 +734,16 @@ decision 121).
   every greeting rewritten and every topic written in the lore's voice. The five people the game
   lacks went to **D1b**. About thirty-five files with its tests and docs. All four forks were the
   user's (decision 126).
+- **D1b — The lore's people. (Built, in wave 2.)** Four people the lore placed and the game lacked,
+  each a row in `NPCS` whose role is `'none'`: Talk their only button, no service line, Talk alone
+  on a held finger, and a card saying they work no counter. **Bess Mallow** at the Wet Boot, named
+  on the inn's row and standing at its hearth with no counter in front of her; **Amos Keel**, an
+  old fisher on the spit; **Pocket**, a crow drawn on a post by the longhouse door (a beast-kind
+  sprite with its post, only its idle); and **Maren**, keeper of the third light, on the mere's
+  north shore in fenweave with a lantern lit, who says to the light what Wick's fen beat leads up
+  to. Tirrow is a name in her lines until Part G. Somebody who works nowhere is a marker in the
+  zone's text, held by a new sweep in `spawnSafety.test.ts`; smoke gained `lore-people`. No save
+  version. About thirty-five files with its tests and docs. Three forks the user's, the rest Claude's (decision 134).
 - **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
   creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
   of what is found.
