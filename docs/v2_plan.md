@@ -112,8 +112,9 @@ greyed until seen, the trophies and the items collected, drops seen the fifth st
 count the Whispers journal's, an item's card saying where it comes from; save version 110; decision 137) **and F2** (the house grows off the surveyor's plans in four stages for 80s, two thirds of the
 climb's coin: a garden of samphire and meadowsweet and a fletcher's bench in the yard, and the
 Drawing Room behind the house, walled up until it is built, with two stands and then two more; save
-version 111, numbered at the fold; decision 136). **Next: wave 3**, the three reviews (D5, E4, F4)
-and Part G's first content, launched once wave 2 has merged, by `docs/v2_parallel_plan.md`. Update
+version 111, numbered at the fold; decision 136). **Building: wave 3** on `claude/v2-wave-3`, the
+review of Parts D, E and F as one agent and G3 first, then G4, G5/G6 and G7, then G2, by
+`docs/v2_parallel_plan.md`, its numbers reserved from 138. Update
 this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or

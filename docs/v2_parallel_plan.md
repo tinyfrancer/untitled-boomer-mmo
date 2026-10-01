@@ -10,8 +10,10 @@ folded onto `claude/v2-wave-1` by the orchestrator and merged to `main` on 2026-
 131), merged after it. **Folded, up for review:** wave 2 (D2 decision 132 and save version 108, D3 133
 and 109, D1b 134, E3 135, F3 137 and 110, F2 136 and 111, F2's version numbered at the fold since it
 was reserved none and found it needed one), folded onto `claude/v2-wave-2` by the orchestrator on
-2026-10-01 and up as one PR to `main` for the user's review. **Next:** wave 3, launched once wave 2
-has merged. Update this line as phases start and land, the way the plan's status line is.
+2026-10-01 and up as one PR to `main` for the user's review. **Building:** wave 3 on
+`claude/v2-wave-3`, cut from `main` at wave 2's merge (`fe1382f`), its numbers reserved from 138: the
+Part D, E and F review as one agent and G3 launched 2026-10-01; G4, G5/G6 and G7 once G3 is folded;
+G2 once G4 is. Update this line as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc
@@ -242,6 +244,15 @@ all, for the stages built, and was given 111 at the fold, after F3's.
 
 **The user is asked:** to play three reviews and say what feels wrong, and to judge the first new
 zones.
+
+**Numbers reserved** (decision 125, 2026-10-01): the review of Parts D, E and F as one agent
+(`claude/v2-d5-e4-f4-review`) 138, one PR with three plan entries; G3 139; G4 140; G5 141; G6 142;
+G7 143; G2 144 and save version 112, the one version the wave reserves. Folded in that order. **The
+wave launches in stages**, each from `claude/v2-wave-3` as it stands: the review and G3 at once; G4,
+G5/G6 and G7 once G3 is folded, so a zone agent finds its tier's ids and drawings under it; G2 once
+G4 is folded, so a level-10 spawn exists. **The user's standing word** (2026-10-01, asked in wave
+3's question round): the orchestrator folds each green phase PR and launches each stage without
+asking; the wave's PR to `main` waits for the user as always.
 
 ### Wave 4: the bands, in parallel
 
@@ -680,6 +691,12 @@ lessons, the duels holding each path, the pace bot playing each path through its
 **Keep true:** the cap is derived from content and the pace holds every level, so this lands after a
 level-10 spawn exists. **Tests:** the duels and pace grow by six paths. **Docs:** `combat.md`.
 
+**Answered (2026-10-01):** **the trainer at 10 offers the two paths as lessons**, and the choice is
+**changeable back at the trainer for coin**, so the trainer stays the one place abilities come from
+and a player can try both; the choice is kept on the character (save version 112, reserved); a
+path's abilities take a rank in the slot of the one below, decision 67's shape, on a bar that stays
+four. Launched from the wave branch once G4 is folded. On Claude's recommendation.
+
 ### G3, G8, G14 — The tiers (`claude/v2-g3-tier-one`, `claude/v2-g8-tier-two`, `claude/v2-g14-tier-three`)
 
 One a band, each before its band's zones (decision 131). The plan's "The shape" table names every
@@ -709,6 +726,14 @@ standing makes; nothing drops a tier piece yet, so the pace and the cap are unmo
 `tests/systems/<tier>.test.ts` tracing each piece back to the band's zones by name, as
 `deepCut.test.ts` does; the duels with a geared character at the band's levels. **Docs:**
 `making.md`'s tiers, `art.md`.
+
+**Answered for G3 (2026-10-01):** a piece of the tier gives **the step the duels need**: its
+numbers are set so a character geared in it beats the band's creatures at the band's levels the way
+`EnemySystem.test.ts` holds the curve now (a geared 11 beats an 11 comfortably, sweats a 12), not a
+fixed step per tier. **Greyford's outfitter does not take tier one's materials**: its barter stays
+the steel tier's loop, and each band's materials are spent at that band's hubs (Lorhal's Keepers,
+the Quiet Court, Karn Tholl's gate hall), so a tier pulls the player across its own band. G8's forge
+question waits for G8. Both on Claude's recommendation.
 
 ### A zone of Part G (G4-G7, G9-G12, G15, G16)
 
@@ -764,6 +789,19 @@ a boss does something new, `making.md` for the nodes, `places.md` marking what i
 zone in the `zones` round trip with the canvas count flat; a section of its own only for something
 only a browser can show.
 
+**Answered for band 9-12 (2026-10-01, G4-G7):** **the bosses**: Snikk the Delver alone is gated on
+gear as the chief is, asking for coldiron plate the player has mined in the workings and made by
+then; Essa the Unlit's dark, Old Thornhide's charge and the Many-Lit's flare are telegraphs to step
+out of as Orlath's is, each a new enemy ability on the shape that exists. **The hubs are factions**:
+G6 adds the Quiet Court and G7 adds Karn Tholl as rows in D3's table, a `FactionId` each with three
+ranks named from the lore (`factions.md`, written in the phase), moved by the zone's kills, quests
+and answers, so five factions in all and each hub's shelf and lines open by standing as Greyford's
+do. **The shelves**: Lorhal's Keepers sell fenweave at Guest of the Fen and the fen bows at
+Lightfriend; the Quiet Court sells E2's brewed potions and the band's herbs for coin, its shelf
+opening by its rank; Karn Tholl's smith sells coldiron tools (the pickaxe and the axe) for coin by
+his rank, until G8's deep forge gives him more. Nothing in the band barters in the tier's materials
+(G3's answer). Every one on Claude's recommendation.
+
 ### G13 — The carters (`claude/v2-g13-carters`)
 
 **Read:** decisions 25, 122 and 125; `docs/architecture/zones.md` ("Walking is the only way into a
@@ -790,6 +828,14 @@ As A10 and B9: walk the part against the pillars and the user's original list at
 and a desktop through smoke's screenshots; ask the user what feels wrong after playing it; mend in
 place what is small; amend the part's entries, and propose rather than apply anything touching a
 part another agent is on (rule 6). If all three run as one, one PR records three entries and says why.
+
+**Answered (2026-10-01):** all three parts merged within a day of each other, so one agent walks
+them as one review on `claude/v2-d5-e4-f4-review`, one PR against the wave branch recording three
+entries, decision 138 holding each part's forks. The user has not played the parts yet: the agent
+walks them against the pillars and the original list first, mends what is small, opens its PR as a
+draft saying what it found and what it would have the user play for, subscribes to the PR's
+activity, and takes the user's play notes from the PR's comments when they come, mending and marking
+ready then. On Claude's recommendation.
 
 ### H1 and H2
 
