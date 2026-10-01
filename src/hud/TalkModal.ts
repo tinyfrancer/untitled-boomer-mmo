@@ -1,7 +1,7 @@
 import { Overlay } from './Overlay';
 import { el } from './dom';
 import { talkQuests, type QuestHandlers, type QuestPanelState } from './talkQuests';
-import { NPCS, ROLE_SERVICES, type NpcRoleId } from '../data/npcs';
+import { NPCS, ROLE_SERVICES, type CounterId, type NpcRoleId } from '../data/npcs';
 import {
   findAnswer,
   greetingFor,
@@ -16,7 +16,7 @@ export interface TalkHandlers extends QuestHandlers {
   /** A topic asked of them; the world answers it. */
   onAsk: (topicId: string) => void;
   /** A counter of theirs, asked for across the conversation. */
-  onServe: (role: NpcRoleId) => void;
+  onServe: (counter: CounterId) => void;
   /** The X: the world owns whether the conversation is open, so this asks. */
   onDismiss: () => void;
 }
@@ -74,11 +74,9 @@ export class TalkModal extends Overlay {
 
   update(state: TalkPanelState): void {
     const { role } = NPCS[this.npcId];
-    this.body.replaceChildren(
-      ...this.saying(state),
-      this.topics(state.dialog),
-      this.serviceButton(role),
-    );
+    this.body.replaceChildren(...this.saying(state), this.topics(state.dialog));
+    // Somebody who works no counter has none to offer: talking is the whole of it.
+    if (role !== 'none') this.body.append(this.serviceButton(role));
     const work = talkQuests(this.npcId, state.quests, this.handlers);
     if (work) this.body.append(work);
   }
@@ -119,7 +117,7 @@ export class TalkModal extends Overlay {
     return button;
   }
 
-  private serviceButton(role: NpcRoleId): HTMLElement {
+  private serviceButton(role: Exclude<NpcRoleId, 'none'>): HTMLElement {
     const { label, blurb } = ROLE_SERVICES[role];
     const button = el('button', 'hud-button hud-talk__service');
     button.type = 'button';

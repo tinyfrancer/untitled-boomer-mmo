@@ -11,7 +11,16 @@ import type { NpcId } from '../types/ids';
  * a person in a town is assumed to be selling something.
  */
 export type NpcRoleId =
-  'merchant' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'reforger';
+  | 'merchant'
+  | 'banker'
+  | 'trainer'
+  | 'quartermaster'
+  | 'outfitter'
+  | 'reforger'
+  // Somebody who works no counter: talking is all there is across from them
+  // (D1b's answer). A role of its own rather than a nullable one, so every table
+  // keyed by role still says what it means here.
+  | 'none';
 
 /**
  * What can be open across from a person: the conversation everybody has, or the
@@ -23,7 +32,7 @@ export type NpcRoleId =
  * panel slot. What it is not is a role: nobody's job is to talk, which is why it
  * is its own member here rather than a seventh `NpcRoleId`.
  */
-export type CounterId = 'talk' | NpcRoleId;
+export type CounterId = 'talk' | Exclude<NpcRoleId, 'none'>;
 
 export interface NpcDefinition {
   id: NpcId;
@@ -117,6 +126,39 @@ export const NPCS: Record<NpcId, NpcDefinition> = {
     trade: 'Fettler',
     role: 'reforger',
   },
+  /*
+   * The lore's people (D1b, `docs/lore/places.md`): somebody the realm has and
+   * the game lacked, each with nothing to sell and something to say. Bess keeps
+   * the inn the player wakes in and stands behind its bar like any counter; the
+   * other three stand in the open, placed in their zone's text.
+   */
+  innkeeper: {
+    id: 'innkeeper',
+    name: 'Bess Mallow',
+    trade: 'Innkeeper',
+    role: 'none',
+  },
+  fisher: {
+    id: 'fisher',
+    name: 'Amos Keel',
+    trade: 'Fisher',
+    role: 'none',
+  },
+  // Not a person, and on the same rows as one: it stands still, is tapped and
+  // talks back, which is all a row here has ever meant.
+  crow: {
+    id: 'crow',
+    name: 'Pocket',
+    trade: 'Crow',
+    role: 'none',
+  },
+  // A fenfolk has one name and is known by the light they keep (`naming.md`).
+  keeper: {
+    id: 'keeper',
+    name: 'Maren',
+    trade: 'Keeper of the third light',
+    role: 'none',
+  },
 };
 
 /** Who an NPC is, for the plate over their head and anywhere else a name stands alone. */
@@ -139,6 +181,11 @@ export function worksCounter(npcId: NpcId, counter: CounterId): boolean {
   return counter === 'talk' || npcRole(npcId) === counter;
 }
 
+/** The counter a role works: its own, or for somebody who works none, talking to them. */
+export function roleCounter(role: NpcRoleId): CounterId {
+  return role === 'none' ? 'talk' : role;
+}
+
 /**
  * What each role's counter is called, on the button that opens it from a
  * conversation and the line that opens it from a held finger, and what it is
@@ -155,6 +202,9 @@ export const ROLE_SERVICES: Record<NpcRoleId, { label: string; blurb: string }> 
   // Not Trade either: what happens here is work done to something you already
   // own, and nothing changes hands but a stone.
   reforger: { label: 'Reforge', blurb: "Move a piece of gear's power between stats" },
+  // Never drawn as a button, since the conversation it would open is the one
+  // already open; it is the held finger's one line and the card's word.
+  none: { label: 'Talk', blurb: 'Nothing to sell, and something to say' },
 };
 
 /**

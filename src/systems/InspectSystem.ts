@@ -392,6 +392,15 @@ function describeCounter(npcId: NpcId): InspectPanel {
         ],
         note: 'The rest of the shelf arrives with the levels you gain and the work you finish.',
       };
+    case 'none':
+      return {
+        title,
+        subtitle,
+        lines: [{ label: 'Works', value: 'No counter' }],
+        // Said because a person in this game has always been a till, and the
+        // first one who is not would otherwise read as one that is broken.
+        note: 'Nothing to sell. Talk, and see what they know.',
+      };
   }
 }
 

@@ -15,10 +15,19 @@ import { GOBLIN_EARS } from './sprites/hair';
 import { APRON_DOWN, APRON_RIGHT, APRON_UP, CORDED, ROBE, TUNIC } from './sprites/people';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { CRAB } from './sprites/crab';
+import { CROW } from './sprites/crow';
 import { FIREBALL, KNIFE } from './sprites/effects';
 import { LURKER } from './sprites/lurker';
 import { RAT } from './sprites/rat';
-import { BEARDED_AXE, DAGGER, GAFF, MAUL, ROUND_SHIELD, RUSTY_SWORD } from './sprites/weapons';
+import {
+  BEARDED_AXE,
+  DAGGER,
+  GAFF,
+  LANTERN,
+  MAUL,
+  ROUND_SHIELD,
+  RUSTY_SWORD,
+} from './sprites/weapons';
 import { offhandAs, wieldedAs, wornAs } from './wardrobe';
 
 /**
@@ -58,12 +67,16 @@ const APRON = {
   right: [{ grid: APRON_RIGHT, x: 19, y: 23 }],
 };
 
+/** Everybody who stands still to be talked to and is built like a person: all but Pocket. */
+type Townsperson = Exclude<NpcId, 'crow'>;
+
 /**
- * The six who stand in a town, each told from the others at a glance: two of
- * them stand in one yard at Greyford, and three either side of one crossroads
- * in town.
+ * The people who stand still to be talked to, each told from the others at a
+ * glance: two of them stand in one yard at Greyford, and four either side of
+ * one crossroads in town. Pocket is the one who is not a person, and is drawn
+ * as the bird it is (`sprites/crow.ts`).
  */
-const TOWNSFOLK: Readonly<Record<NpcId, Getup>> = {
+const TOWNSFOLK: Readonly<Record<Townsperson, Getup>> = {
   // A grey-haired merchant in ochre under a leather apron.
   shopkeeper: townsperson(
     'ochre',
@@ -110,12 +123,48 @@ const TOWNSFOLK: Readonly<Record<NpcId, Getup>> = {
       weapon: { art: MAUL, blade: 'metal' },
     },
   ),
+  // The Wet Boot's keeper, long red hair and an apron over blue, the one
+  // apron in town that is not a shopkeeper's.
+  innkeeper: townsperson(
+    'blue',
+    { skin: 'fair', hair: 'red', hairstyle: 'long' },
+    {
+      extra: APRON,
+    },
+  ),
+  // An old fisher in oilskin and a cap against the spray, grey-bearded, with
+  // the pole he has fished this strand with for twenty-eight years.
+  fisher: townsperson(
+    'oilskin',
+    { skin: 'tan', hair: 'grey', hairstyle: 'bearded' },
+    {
+      helmet: { piece: CAP, ramp: 'oilskin' },
+      legs: { piece: BREECHES, ramp: 'linen' },
+      weapon: wieldedAs('fishing-pole'),
+    },
+  ),
+  // A fenfolk elder in the cloth her people weave, robed to the ankle and
+  // hooded, carrying a lantern lit: the one person in the game who does.
+  keeper: {
+    ...townsperson(
+      'tierFenweave',
+      { skin: 'tan', hair: 'grey', hairstyle: 'long' },
+      {
+        helmet: wornAs('fenweave-hood'),
+        chest: wornAs('fenweave-robe'),
+        offhand: { art: LANTERN, ramp: 'metal', glow: 'fire' },
+      },
+    ),
+    garment: CORDED(ROBE),
+    robed: true,
+  },
 };
 
-/** Every townsperson as a sprite, for the sheet the game compiles at boot. */
-export const TOWNSFOLK_SPRITES: readonly SpriteDef[] = Object.entries(TOWNSFOLK).map(
-  ([npcId, getup]) => standingSprite(npcId, getup),
-);
+/** Every townsperson as a sprite, and Pocket, for the sheet the game compiles at boot. */
+export const TOWNSFOLK_SPRITES: readonly SpriteDef[] = [
+  ...Object.entries(TOWNSFOLK).map(([npcId, getup]) => standingSprite(npcId, getup)),
+  CROW,
+];
 
 /**
  * The creatures built like people, each on the figure in what it wears and
@@ -246,9 +295,9 @@ const CREATURE_SPRITES: Readonly<Partial<Record<EnemyId, string>>> = {
   ...Object.fromEntries(Object.keys(FOES).map((enemyId) => [enemyId, enemyId])),
 };
 
-/** A person who stands behind a counter. */
+/** A person who stands still to be talked to: their own figure, or Pocket's bird. */
 export function npcSprite(npcId: NpcId): string {
-  return npcId;
+  return npcId === 'crow' ? CROW.id : npcId;
 }
 
 /** A creature, falling back on the kind of body its shape says it has. */

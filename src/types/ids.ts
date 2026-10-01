@@ -408,7 +408,20 @@ export type ZoneSetting = 'open' | 'marsh' | 'underground';
 // Who stands still in a town and is worth walking up to. What each one *does*
 // is `NpcRoleId` in data/npcs.ts rather than a guess off the id, which is what
 // stopped every NPC in the game opening a shop when tapped.
-export type NpcId = 'shopkeeper' | 'banker' | 'trainer' | 'quartermaster' | 'outfitter' | 'fettler';
+export type NpcId =
+  | 'shopkeeper'
+  | 'banker'
+  | 'trainer'
+  | 'quartermaster'
+  | 'outfitter'
+  | 'fettler'
+  // The lore's people (D1b), who work no counter and only talk: the Wet Boot's
+  // keeper, an old fisher on the strand, the crow at Greyford and a keeper of
+  // the fen's lights.
+  | 'innkeeper'
+  | 'fisher'
+  | 'crow'
+  | 'keeper';
 
 export type QuestId =
   | 'rat-bones'

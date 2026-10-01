@@ -37,6 +37,7 @@ import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
 import { NPCS, ROLE_SERVICES, type CounterId, type NpcRoleId } from '../../src/data/npcs';
 import { DIALOG } from '../../src/data/dialog';
+import { greetingFor } from '../../src/systems/DialogSystem';
 import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -1526,12 +1527,12 @@ describe('the bank', () => {
 });
 
 /** Whoever stands behind a role's counter, which the world names beside the role. */
-function personAt(role: NpcRoleId): NpcId {
+function personAt(role: Exclude<NpcRoleId, 'none'>): NpcId {
   return nth(Object.values(NPCS).filter((npc) => npc.role === role)).id;
 }
 
 describe('every counter is one panel, keyed by who stands behind it', () => {
-  const ROLES: NpcRoleId[] = [
+  const ROLES: Exclude<NpcRoleId, 'none'>[] = [
     'merchant',
     'banker',
     'trainer',
@@ -1651,11 +1652,22 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     const box = parent.querySelector('.hud-modal__box--talk');
     expect(box?.querySelector('.hud-modal__title')?.textContent).toBe(npc.name);
     expect(box?.querySelector('.hud-talk__trade')?.textContent).toBe(npc.trade);
-    expect(box?.querySelector('.hud-talk__greeting')?.textContent).toBe(
-      `\u201c${nth(DIALOG[npc.id].greetings).says}\u201d`,
-    );
+    // A new warrior's greeting, which for most is the first and for Pocket the one for a sword.
+    const greeting = greetingFor(npc.id, {
+      level: 1,
+      classId: 'warrior',
+      quests: {},
+      asked: {},
+      standing: {},
+    });
+    expect(box?.querySelector('.hud-talk__greeting')?.textContent).toBe(`\u201c${greeting}\u201d`);
 
     const services = [...(box?.querySelectorAll<HTMLButtonElement>('.hud-talk__service') ?? [])];
+    // Somebody who works no counter offers none: the conversation is all of it.
+    if (npc.role === 'none') {
+      expect(services).toEqual([]);
+      return;
+    }
     expect(services.map((button) => button.dataset.counter)).toEqual([npc.role]);
     expect(nth(services).textContent).toContain(ROLE_SERVICES[npc.role].label);
     expect(nth(services).textContent).toContain(ROLE_SERVICES[npc.role].blurb);
@@ -1677,6 +1689,7 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
       const theirs = QUEST_ORDER.filter((questId) => QUESTS[questId].giverNpcId === npc.id);
       expect(questRows()).toEqual(theirs);
 
+      if (npc.role === 'none') return;
       events.emit(COUNTER_OPENED_EVENT, npc.role, npc.id);
       expect(questRows()).toEqual([]);
     },
@@ -2600,7 +2613,7 @@ describe('the map', () => {
     events.emit(ZONE_ENTERED_EVENT, 'town');
     expect(svg()).toBe(town);
 
-    events.emit(ZONE_ENTERED_EVENT, 'beach');
+    events.emit(ZONE_ENTERED_EVENT, 'quarry');
     expect(svg()).not.toBe(town);
     expect(markers('npc')).toBe(0);
   });

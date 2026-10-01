@@ -9,6 +9,7 @@ import {
 } from '../art/rooms';
 import { TILE_SIZE } from '../config/constants';
 import { buildingRect, doorPoint, isInside } from '../data/buildings';
+import { npcRole } from '../data/npcs';
 import type { Point } from '../systems/MovementSystem';
 import type { WorldBuilding, WorldNpc, WorldTap } from '../world/ZoneWorld';
 import type { Pickable2D, PickRect } from './picking';
@@ -101,9 +102,12 @@ export class BuildingSprite implements Pickable2D {
       const anchor = fittingAnchor(fitting.rect);
       return { sprite: fittingSprite(fitting), x: building.x + anchor.x, y: building.y + anchor.y };
     });
-    this.furniture = counter
-      ? [...fittings, { sprite: COUNTER_SPRITE, ...counterAt(counter, building.definition.door) }]
-      : fittings;
+    // Nobody is served across a counter by somebody who works none (D1b): the
+    // Wet Boot's keeper stands at her hearth with nothing between her and the room.
+    this.furniture =
+      counter && npcRole(counter.npcId) !== 'none'
+        ? [...fittings, { sprite: COUNTER_SPRITE, ...counterAt(counter, building.definition.door) }]
+        : fittings;
   }
 
   /** Whether the player is in the room, and whether they are on its doorstep. */

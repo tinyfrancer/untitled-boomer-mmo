@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { harness, npcNamed } from './harness';
+import { DIALOG } from '../../src/data/dialog';
 import { NPC_CLOSE_RADIUS } from '../../src/data/npcs';
 import { saveService } from '../../src/persistence';
 import {
@@ -122,5 +123,42 @@ describe('asking a person something', () => {
     talkTo(kit, 'banker');
     kit.bus.emit(ASK_TOPIC_REQUESTED_EVENT, 'cobb');
     expect(kit.state.asked.banker).toEqual(['cobb']);
+  });
+});
+
+/**
+ * The lore's people (D1b): somebody with no counter, in a zone with none,
+ * talked to the way anybody is and offering nothing else.
+ */
+describe('somebody who works no counter', () => {
+  it.each([
+    ['beach', 'fisher'],
+    ['greyford', 'crow'],
+    ['blackwater-fen', 'keeper'],
+    ['town', 'innkeeper'],
+  ] as const)('in %s, %s talks and answers, and opens nothing else', (zoneId, npcId) => {
+    const kit = harness({ zoneId, level: 5 });
+    talkTo(kit, npcId);
+    expect(kit.world.counterNpc('talk')?.npcId).toBe(npcId);
+
+    const topic = DIALOG[npcId].topics.find((candidate) => !candidate.follows);
+    if (!topic) throw new Error(`${npcId} has nothing to be asked first`);
+    kit.bus.emit(ASK_TOPIC_REQUESTED_EVENT, topic.id);
+    expect(kit.state.asked[npcId]).toEqual([topic.answers[0]?.id]);
+
+    for (const counter of ['merchant', 'banker', 'trainer', 'quartermaster'] as const) {
+      kit.bus.emit(COUNTER_REQUESTED_EVENT, counter);
+      expect(kit.world.openCounter()?.id).toBe('talk');
+    }
+  });
+
+  // What the fen's beat could only hint at, said to the light's face (`spirit.md`).
+  it("has the keeper of the third light know what is at the player's shoulder", () => {
+    const kit = harness({ zoneId: 'blackwater-fen', level: 5 });
+    talkTo(kit, 'keeper');
+    kit.bus.emit(ASK_TOPIC_REQUESTED_EVENT, 'wick');
+    expect(lastConversation(kit)).toEqual([
+      { npcId: 'keeper', said: { topicId: 'wick', answerId: 'wick' } },
+    ]);
   });
 });

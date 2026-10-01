@@ -3755,3 +3755,48 @@ The pace is not moved: the bot does no quests or contracts and buys nothing, and
 heal it never reaches for. The lore gained the ranks and what each faction calls them, the Keepers'
 word for the Company's people, the eel the Post salts for its carters, and the answers to the
 factions' open questions (`factions.md`, `naming.md`).
+
+## 134. The lore's people work no counter: a `'none'` role whose only counter is talk; four placed, Pocket drawn as a crow on a post, Tirrow a name in Maren's lines
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D1b**
+
+D1b brings in the people `docs/lore/places.md` placed and the game lacked, which D1 split off
+(decision 126). The user settled three forks in wave 2's question round, each on Claude's
+recommendation:
+
+- **A person with no counter is a `'none'` role**, Talk their only button and no service line, so
+  every `Record<NpcRoleId>` gains a row (`ROLE_SERVICES`, the held finger's `ROLE_ACTIONS`, the
+  card's case) and nothing becomes nullable. `CounterId` is `'talk'` and every role but `'none'`, so
+  no counter called none can be opened, and `roleCounter` says talking is the counter such a person
+  works. **Rejected:** a nullable role, which every place that reads one would have to remember.
+- **Tirrow is a name in Maren's lines** until Part G gives him a scene; the raiders stay enemies.
+  **Rejected:** Tirrow standing in the fen to be talked to before the story reaches him.
+- **Pocket perches on a post by the longhouse door**, drawn and tapped like a small person at ground
+  level; the lore's roof becomes the porch post (`peoples.md`, `places.md`). **Rejected:** a crow
+  on the roof, drawn over a building it does not block and picked through it.
+
+Claude's, alongside them, for the wave review to overturn:
+
+- **Four rows, not five.** Bess Mallow at the Wet Boot, an old fisher on the strand (named Amos
+  Keel, added to `naming.md`), Pocket at Greyford and Maren in the fen.
+- **Bess is named on the inn's row** and stands at `counterPoint` like anybody who works in a room,
+  but **no counter is drawn in front of somebody who works none**: the inn is two tiles wide and the
+  counter does not fit across it, and there is nothing to serve across one. A tap on the Wet Boot
+  from the street talks to her, as a tap on a shopfront does to its keeper.
+- **Somebody who works nowhere is a marker** in the zone's text (`{ npc }`), standing in the middle
+  of its tile like a creature or a node. **Rejected:** a building with nobody's counter in it for the
+  fisher and Maren, where the lore puts them in the open.
+- **Pocket is a beast-kind sprite, 32×32, its post drawn with it**, and only its idle drawn: it is
+  never anywhere else, and it neither walks nor fights. `npcSprite('crow')` is the bird, and the
+  cast test holds it to that kind rather than a person's. **Rejected:** a figure-sized person sprite
+  with a bird in it, which would have passed the person test by saying something untrue.
+- **Maren says what the fen's beat could only hint at** ("We put you in the hill") as an answer
+  when asked about the light, and will not say why. Wick's beat on arriving in the fen is left as
+  D4 wrote it, a lead-up she now answers. **Rejected:** moving the beat into her conversation, which
+  is D4's to reshape and would have left a player who never talks to her with nothing.
+- **Where they stand is held by a new sweep** (`spawnSafety.test.ts`, "somebody standing in the
+  open"): on ground a body stands on, talked to out of every aggressive creature's reach wherever it
+  has wandered, and clear of every creature's wander disc, node, station, secret and signpost, so a
+  tap on them is about them. The walk up to them is the existing counter sweep, which reaches every
+  person in every zone. The fisher moved off the samphire to the spit for it.
+- **Nothing about the save or the pace moves.** What is asked of them is kept where D1 keeps it.
