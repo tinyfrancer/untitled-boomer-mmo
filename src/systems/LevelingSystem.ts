@@ -44,11 +44,18 @@ export function xpToNextLevel(level: number): number {
   return xpToReachLevel(level + 1);
 }
 
-// The XP bar's detail line. xpToNext of 0 means the cap is reached.
-export function formatXpProgress(xp: number, xpToNext: number): string {
+// The XP bar's detail line. xpToNext of 0 means the cap is reached. With a
+// rested bank the percentage gives way to it, since the bar shows how far along
+// it is and nothing but the line can say how much is banked.
+export function formatXpProgress(xp: number, xpToNext: number, rested = 0): string {
   if (xpToNext <= 0) {
     return 'Max level';
   }
+  const progress = `${xp.toLocaleString()} / ${xpToNext.toLocaleString()} XP`;
+  const banked = Math.floor(rested);
+  if (banked > 0) {
+    return `${progress}, ${banked.toLocaleString()} rested`;
+  }
   const pct = Math.floor((xp / xpToNext) * 100);
-  return `${xp.toLocaleString()} / ${xpToNext.toLocaleString()} XP (${pct}%)`;
+  return `${progress} (${pct}%)`;
 }

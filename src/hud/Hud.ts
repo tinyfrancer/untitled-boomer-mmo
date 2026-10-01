@@ -101,6 +101,7 @@ import {
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TITLE_CHANGED_EVENT,
+  RESTED_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
   VISITS_CHANGED_EVENT,
@@ -165,6 +166,8 @@ export interface HudOptions {
 interface HudModel {
   level: number;
   xp: number;
+  /** The rested bank, for the XP bar's paler segment and the idle panel. */
+  rested: number;
   hp: number;
   mana: number;
   maxMana: number;
@@ -290,6 +293,7 @@ class Hud {
     this.model = {
       level: character.level,
       xp: character.xp,
+      rested: character.rested ?? 0,
       hp: stats.maxHp,
       mana: stats.maxMana,
       maxMana: stats.maxMana,
@@ -468,7 +472,7 @@ class Hud {
     // character sheet.
     this.narrow = hudLayout(this.root.clientWidth, this.root.clientHeight).narrow;
     this.playerColumn.setTitle(this.model.activeTitleId);
-    this.playerColumn.setXp(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
+    this.refreshXp();
     this.playerColumn.setMana(this.model.mana, this.model.maxMana);
     this.refreshQuiver();
     this.refreshHealth();
@@ -847,6 +851,12 @@ class Hud {
     });
   }
 
+  /** The XP bar, its rested segment included, off the model. */
+  private refreshXp(): void {
+    const { level, xp, rested } = this.model;
+    this.playerColumn.setXp(level, xp, xpToNextLevel(level), rested);
+  }
+
   /**
    * The idle panel, off everything its plan reads: what is in hand and in the
    * bag, the skills and level that open nodes and recipes, the stations in
@@ -865,6 +875,7 @@ class Hud {
         idleFood: this.model.idleFood,
         stations: this.model.actions.nearStations,
         zoneId: this.model.zoneId,
+        rested: this.model.rested,
       }),
       this.model.afkActive,
     );
@@ -942,7 +953,11 @@ class Hud {
     listen(XP_GAINED_EVENT, (gain) => {
       this.model.level = gain.level;
       this.model.xp = gain.xp;
-      this.playerColumn.setXp(gain.level, gain.xp, gain.xpToNext);
+      this.model.rested = gain.rested;
+      this.refreshXp();
+      // Only when the bank moved: the panel says what is banked, and a hit's
+      // XP with nothing banked changes nothing it says.
+      if (gain.bonus > 0) this.refreshIdle();
     });
     listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
@@ -1245,6 +1260,11 @@ class Hud {
       this.featsSheet.update(this.model.kills, titleId);
       // A worn title costs the player column an extra line.
       this.applyLayout();
+    });
+    listen(RESTED_CHANGED_EVENT, (rested) => {
+      this.model.rested = rested;
+      this.refreshXp();
+      this.refreshIdle();
     });
   }
 }

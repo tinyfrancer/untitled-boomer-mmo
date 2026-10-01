@@ -41,6 +41,11 @@ export class AwayReportModal extends Overlay {
     if (report.capped) {
       lines.push(awayCeilingReached(report.skill));
     }
+    // The other thing a night is for (phase E1): what the time banked for the
+    // XP the player earns by hand, in the idle panel's word for it.
+    if (report.rested > 0) {
+      lines.push(`${report.rested} XP banked as rested`);
+    }
     // Which pool the night filled, named because it is the one thing a session
     // earns that the sheet behind this report does not say out loud: a skill XP
     // total is on the character sheet either way, where a pool that moved is
