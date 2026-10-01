@@ -6,11 +6,23 @@ import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
+import { emptyHouse, type HouseState } from '../systems/HouseSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { PotionTimers } from '../systems/PotionSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
+import type { DialogMemory } from '../systems/DialogSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
-import type { AbilityId, ClassId, ItemId, SecretId, TipId, TitleId, ZoneId } from '../types/ids';
+import type {
+  AbilityId,
+  ClassId,
+  ItemId,
+  SecretId,
+  SpiritBeatId,
+  TipId,
+  TitleId,
+  ZoneId,
+} from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
 /**
@@ -22,7 +34,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 2;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 7;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -48,6 +60,13 @@ export interface CharacterState {
   look: Look;
   level: number;
   xp: number;
+  /**
+   * The rested XP banked by idle and by nights away (decision 85, phase E1),
+   * and not yet spent: what XP earned by hand still has coming as a bonus.
+   * Stored because the time that banked it leaves nothing else behind. Fractional,
+   * since it banks a frame at a time; it is spent in whole points.
+   */
+  rested: number;
   gear: Gear;
   inventory: Inventory;
   /**
@@ -124,6 +143,24 @@ export interface CharacterState {
    * behind, since the cache is spent and the thing itself is still there.
    */
   secrets: SecretId[];
+  /**
+   * What each person has told this character, as the answers heard (D1). Kept
+   * for good, since a person remembers what they were asked, and stored for
+   * the reason the tips heard are: hearing leaves nothing else behind.
+   */
+  asked: DialogMemory;
+  /**
+   * The beats of Wick's story this character has heard (D4), in the order
+   * heard. Stored for the reason the tips heard are: what it remembered aloud
+   * leaves nothing else behind.
+   */
+  beats: SpiritBeatId[];
+  /**
+   * The potions drunk and still working, as the time each has left (version 2
+   * phase E2). Stored because a potion lasts minutes and works on while the
+   * game is closed for the time it has left, which the away payout reads.
+   */
+  potions: PotionTimers;
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -163,6 +200,13 @@ export interface CharacterState {
    * read the answer off. Every other zone is open and is never named here.
    */
   unlockedZones: ZoneId[];
+  /**
+   * What stands on each of the house's stands and what is in its chest (F1).
+   * Stored because both are choices: a trophy set on a stand has left the bag
+   * and is nowhere else, and so is what was put away. Whether the house is
+   * theirs at all is not stored, since it is whether its quest is done.
+   */
+  house: HouseState;
   createdAt: string;
   updatedAt: string;
 }
@@ -186,6 +230,12 @@ export interface AfkSession {
    * about a parked camp that could not be re-derived in the morning.
    */
   station: StationId | null;
+  /**
+   * How much of this session idle has already banked as rested with the game
+   * open. A closed game is paid from `startedAt`, so without this the hours
+   * watched before the tab closed would bank twice in the morning.
+   */
+  restedMs: number;
 }
 
 /**
@@ -217,6 +267,7 @@ export function createNewCharacter(
     look: { ...look },
     level: 1,
     xp: 0,
+    rested: 0,
     gear: {
       ...NO_GEAR,
       weapon: definition.startingWeaponId,
@@ -242,6 +293,9 @@ export function createNewCharacter(
     tips: { heard: [], off: false },
     showMinimap: true,
     secrets: [],
+    asked: {},
+    beats: [],
+    potions: {},
     quests: {},
     bounty: null,
     kills: {},
@@ -249,6 +303,7 @@ export function createNewCharacter(
     mastery: {},
     activeTitleId: null,
     unlockedZones: [],
+    house: emptyHouse(),
     createdAt: now,
     updatedAt: now,
   };

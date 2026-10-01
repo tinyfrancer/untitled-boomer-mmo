@@ -113,6 +113,14 @@ after the death fee, and the reason the pack stays small and awkward while the d
 shelves. It _caps_ at `MAX_BANK_SLOTS`, which is what left the endgame with a purse and nowhere to
 spend it until the reforging stone went on the shelf above it — see reforging, below.
 
+**The house's chest is the bank's rule at a fixed size** (decision 130): weightless, a slot an item
+id however deep the stack, eight slots and nothing to rent, stored in `CharacterState.house` with
+what stands on the house's stands. It is a store beside the vault, not a second vault: the bank is
+where the depth goes, and F2 may grow the chest. Its panel is the bank's two sides with no shelf row,
+run by `HouseSession`, which saves on every move for the bank's reason. A stand holds one trophy (a
+boss's drop or a keepsake) out of the bag and hands it back on a tap, refused whole on a full pack,
+so displaying a trophy never spends it.
+
 The counter is the shop's twin down to the shape: opened at `NPC_INTERACT_RADIUS`, shut by walking
 past `NPC_CLOSE_RADIUS`, a HUD overlay handed a _copy_ of the contents on `bank-changed`, and bare
 item ids and counts coming back — so a panel in an HTML overlay never holds the vault, and a count
@@ -161,20 +169,42 @@ it:
   quests (`content.md`), so the outfitter and the fettler show theirs with no panel told.
 - **Whatever panel is up is a function of the HUD's model**, so any model change redraws it.
   `tests/hud/Hud.test.ts` asks that of every role, since a hand-kept list of refreshes is exactly what
-  a new panel gets left out of. A seventh role is now a row in `NPCS` with a greeting, a session, a
-  panel factory, a walk name and a line in `ROLE_SERVICES` — each of which is a compile error until
+  a new panel gets left out of. A seventh role is now a row in `NPCS` with a trade, a conversation in
+  `DIALOG`, a session, a panel factory, a walk name and a line in `ROLE_SERVICES` — each of which is a compile error until
   it exists.
 
 **A tap on a person talks first** (`world/TalkSession.ts`, `hud/TalkModal.ts`; version 2 phase A4,
 `docs/decisions.md` 92). The tap used to open the counter behind them, which left a person nothing to
-be but a till. Now it walks up and opens a conversation: their name, their one-line greeting
-(`NpcDefinition.greeting`), a button for the counter they work with a line under it saying what it
+be but a till. Now it walks up and opens a conversation: their name, their greeting, the topics
+they will talk about (below), a button for the counter they work with a line under it saying what it
 is for (`ROLE_SERVICES`), and the work they have going. That is the shell Part D's dialog fills.
 Talking is a counter rather than a new kind of thing, and that is the whole of why it was cheap: a
 `CounterId` of `'talk'` beside the six roles, a session with nothing added to the base, the same
 events and the same panel slot — so walking off, one at a time, a zone change, a death and a camp all
 shut it with no line written for it. It is not a role, because nobody's job is to talk; a person
 works one counter and has the conversation besides (`worksCounter`).
+
+**What a person says is data, and they remember what they were asked** (`data/dialog.ts`,
+`systems/DialogSystem.ts`, version 2 phase D1). Each person has greetings and topics: a topic is a
+button with the player's words on it and one or more answers, the last whose `requires` hold being
+the one said, so a quest handed in or a level reached gives an old topic something new to say. A topic
+may `follow` another of the same person's, which is how an answer leads on, and may wait on a level,
+a class, a quest's state or a topic asked of somebody else; a greeting is chosen the same way, so the
+quartermaster's tone at level 7 is not his tone at level 1. The answers heard are stored on the
+character for good (`CharacterState.asked`, by answer id), since hearing leaves nothing else behind,
+and a topic is drawn grey while the answer it would give has been heard. What the conversation is
+saying this visit is `TalkSession`'s, and forgotten when it ends: a fresh visit opens at the greeting.
+An answer carries `effects` as well as `requires`, a slot nothing fills yet: D2's rumours and D3's
+standing are each a member of `DialogEffect` and a case in `TalkSession`, which stops compiling the day
+the first is added. Everything the panel offers is derived by the same functions the session checks a
+request against, so a topic the panel drew from a stale model is refused rather than answered.
+`tests/systems/DialogSystem.test.ts` holds that everybody greets a new character in every class and
+has a topic for them, and that nothing a line waits on is something that does not exist.
+
+**A person is their name, and their trade is said beside it** (`NpcDefinition.trade`): the name alone
+over their head, since a plate is one line, and the trade beside it on their card, the zone map and
+the talk panel, and after it wherever an item's card or a tip names them ("Silas Quill the fettler
+(Greyford Outpost)"). The six took their lore names in D1.
 
 Moving between the two is a request that names only the counter (`COUNTER_REQUESTED_EVENT`): the
 talk panel's button asks for the role's, and a **Back** at the front of every role counter's head

@@ -11,7 +11,8 @@ export type InteractionKind =
   | 'reforge'
   | 'station'
   | 'signpost'
-  | 'loot';
+  | 'loot'
+  | 'house';
 
 /** Something the player tapped and is walking toward to act on. */
 export interface PendingInteraction {

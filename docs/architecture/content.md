@@ -27,6 +27,15 @@ idea: the trophy always drops because a fight that long has to be worth somethin
 it is cloth so it fits every class, while the weapons behind it are the chase — one per class, a
 bow among them since act three phase 12, so the run is worth making whoever you rolled.
 
+**Luck is a multiplier on a table's chances, never a row of its own** (`rollLootTable`'s `luck`,
+version 2 phase E2). Fortune, the bogbean potion, makes each entry a quarter likelier while it lasts,
+capped at certain, and leaves the coin alone, since a purse is what the creature had rather than what
+it dropped. It is the one thing that moves a table's odds, and it moves them on the roll rather than
+in `LOOT_TABLES`, so `uniqueLoot.test.ts` and the rarities this file argues for still read off the
+table as written. The same potion adds a tenth to the second-one roll mastery pays
+(`secondOneChanceFor`), which is the roll rather than the pool: the skills book still says what the
+pool pays.
+
 **Every humanoid that is not a boss carries a handful of arrows** (`arrows()` in
 `data/lootTables.ts`; `docs/decisions.md` 64, 75), at even odds and more of them the higher the band,
 since so is what a creature there takes to kill. A table entry may name a `quantity` range for this,
@@ -69,6 +78,13 @@ ore is no better, since the plate tier is traceable to both veins and a rat prec
 else in the game hands out either rock. The **goblin maul** on it is the first weapon upgrade in the
 game that comes off something repeatable; everything above a brown axe until then was one boss behind
 a 3% key.
+
+**A chain's last quest may hand over a keepsake** (decision 130), the fifth kind of item: no price,
+the same for every class, weighed with any gear the quest pays so a full pack refuses both, and good
+for nothing but a stand in the house. **One quest lets the house** (`reward.house`), and nothing is
+stored when it pays: the house is the player's while that quest is done (`ownsHouse`). The trophies a
+stand takes are every boss drop and every keepsake, read off the tables; the plaques on the house's
+wall are read off the kills, one a creature at its highest slayer rank.
 
 **Quest progress is derived, not tracked** (`systems/QuestSystem.ts`). `CharacterState.quests` holds
 a status per quest and one number beside it; how far along an objective is gets counted on read.

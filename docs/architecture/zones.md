@@ -97,7 +97,10 @@ laid along, and it is two now.
 **The rebuilt zones are 45×32** (decision 86), and a rebuild keeps what the old zone was for while
 giving it room: side paths, a few places to do things, a secret or two. **Lampton** keeps its four
 counters fronting the high street, starts a new player at the inn's door rather than on the
-crossroads, and stands the Lamp Stone in the crossroads where everybody passes it. **Candle
+crossroads, and stands the Lamp Stone in the crossroads where everybody passes it. The Surveyor's House (decision 130) stands at the east end of the counters' row, its door on the high street, and the cottage
+behind it moved up a row to keep two tiles between its doorstep and the house: it was tried south of
+the street first, in a counter's lane and then by the pond, where it moved the wizard's first level
+past the pace test's bound. **Candle
 Strand** keeps the spit and the southern strand the fen road needs, and the sea stops two rows short
 of the south edge for the arrival strip, the bill the fen road charged it first. What an old test
 assumed about the old town's geometry was moved into the test itself, or read by name.

@@ -9,11 +9,11 @@ import type { GatherSkillId, ItemId, RecipeId } from '../types/ids';
  * keeps "go somewhere and do something" the shape of the game rather than
  * letting crafting become a panel opened from the bag anywhere.
  */
-export type StationId = 'fire' | 'forge' | 'tannery' | 'bench';
+export type StationId = 'fire' | 'forge' | 'tannery' | 'bench' | 'still';
 
 // Every station there is, for the callers that have to ask about all of them
 // rather than about one — which is a camp reading what is in reach.
-export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge', 'tannery', 'bench']);
+export const STATION_IDS = exhaustive<StationId>()(['fire', 'forge', 'tannery', 'bench', 'still']);
 
 /** What a station is called, wherever one has to be named to the player. */
 export const STATION_LABELS: Record<StationId, string> = {
@@ -21,6 +21,7 @@ export const STATION_LABELS: Record<StationId, string> = {
   forge: 'Forge',
   tannery: 'Tannery',
   bench: "Fletcher's Bench",
+  still: 'Still',
 };
 
 /**
@@ -35,6 +36,7 @@ export const STATION_ACTION_LABELS: Record<StationId, string> = {
   forge: 'Smith',
   tannery: 'Tan',
   bench: 'Fletch',
+  still: 'Brew',
 };
 
 /**
@@ -51,6 +53,7 @@ export const STATION_SKILLS: Record<StationId, GatherSkillId> = {
   forge: 'smithing',
   tannery: 'leatherworking',
   bench: 'fletching',
+  still: 'brewing',
 };
 
 /**
@@ -71,6 +74,9 @@ export const STATION_PERSISTS: Record<StationId, boolean> = {
   tannery: true,
   // Beside the vat, and for the same reason: a bench is part of the yard.
   bench: true,
+  // The fenfolk's copper still in Greyford's yard: a brew left on it overnight
+  // has been brewing all night.
+  still: true,
 };
 
 export interface RecipeInput {
@@ -614,6 +620,68 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     requiredLevel: 8,
     xpReward: 80,
     durationMs: 3000,
+  },
+
+  /**
+   * Brewing's four, at the still (version 2 phase E2), one a herb and a level
+   * apart: the strand's tonic at 1, the mill road's draught at 3, and the fen's
+   * two at 5 and 7.
+   *
+   * Two of a potion's own herb, and the upper two a herb from the rung below as
+   * well — the tin vein's argument made again: the samphire would be retired
+   * the day the fen opened if nothing above it wanted any. A failed brew spends
+   * nothing, as a bar does, since the herbs were the walk and the walk is the
+   * work.
+   */
+  'samphire-tonic': {
+    id: 'samphire-tonic',
+    name: 'Samphire Tonic',
+    skill: 'brewing',
+    station: 'still',
+    inputs: [{ itemId: 'samphire', quantity: 2 }],
+    outputItemId: 'samphire-tonic',
+    requiredLevel: 1,
+    xpReward: 20,
+    durationMs: 2600,
+  },
+  'meadowsweet-draught': {
+    id: 'meadowsweet-draught',
+    name: 'Meadowsweet Draught',
+    skill: 'brewing',
+    station: 'still',
+    inputs: [{ itemId: 'meadowsweet', quantity: 2 }],
+    outputItemId: 'meadowsweet-draught',
+    requiredLevel: 3,
+    xpReward: 34,
+    durationMs: 2800,
+  },
+  'keepers-draught': {
+    id: 'keepers-draught',
+    name: "Keeper's Draught",
+    skill: 'brewing',
+    station: 'still',
+    inputs: [
+      { itemId: 'bog-myrtle', quantity: 2 },
+      { itemId: 'samphire', quantity: 1 },
+    ],
+    outputItemId: 'keepers-draught',
+    requiredLevel: 5,
+    xpReward: 52,
+    durationMs: 3000,
+  },
+  'bogbean-cordial': {
+    id: 'bogbean-cordial',
+    name: 'Bogbean Cordial',
+    skill: 'brewing',
+    station: 'still',
+    inputs: [
+      { itemId: 'bogbean', quantity: 2 },
+      { itemId: 'meadowsweet', quantity: 1 },
+    ],
+    outputItemId: 'bogbean-cordial',
+    requiredLevel: 7,
+    xpReward: 66,
+    durationMs: 3200,
   },
 };
 

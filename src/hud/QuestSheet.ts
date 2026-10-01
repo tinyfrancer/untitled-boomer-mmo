@@ -1,3 +1,5 @@
+import { BUILDINGS } from '../data/buildings';
+import { HOUSE_BUILDING } from '../data/house';
 import { Sheet } from './Sheet';
 import { el, emptyLine, sectionHeader, tag } from './dom';
 import { bountyById, bountyProgress, type ActiveBounty } from '../systems/BountySystem';
@@ -110,11 +112,19 @@ export class QuestSheet extends Sheet {
     return block;
   }
 
-  // Most quests pay coin and XP alone, so the gear clause is written only when
-  // there is a piece to name rather than left as an empty tail.
+  // Most quests pay coin and XP alone, so the gear, the keepsake and the house
+  // are written only when there is one to name rather than left as an empty
+  // tail, and no coin is left out rather than written as nothing.
   private describeReward(reward: QuestReward): string {
+    const parts = [
+      ...(reward.copper > 0 ? [formatCurrency(reward.copper)] : []),
+      `${reward.xp} XP`,
+    ];
     const gear = reward.gear?.[this.classId];
-    const paid = `${formatCurrency(reward.copper)}, ${reward.xp} XP`;
-    return gear ? `${paid} and ${describeItemName(gear)}` : paid;
+    if (gear) parts.push(describeItemName(gear));
+    if (reward.keepsake) parts.push(`${describeItemName(reward.keepsake)} to keep`);
+    if (reward.house) parts.push(BUILDINGS[HOUSE_BUILDING].name);
+    const last = parts.pop();
+    return parts.length > 0 ? `${parts.join(', ')} and ${last}` : (last ?? '');
   }
 }

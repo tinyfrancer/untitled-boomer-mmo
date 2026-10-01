@@ -191,6 +191,14 @@ export function hudCss(): string {
   width: 0;
   ${barFill(THEME.bars.xp)}
 }
+/* How far the rested bank carries the XP bar (phase E1): paler than the fill and
+   ahead of it, its far end where the bank runs out. */
+.hud-bar__rested {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: ${cssRgba(rampStep(THEME.bars.xp.ramp, 4), 0.35)};
+}
 .hud-bar__fill--mana {
   ${barFill(THEME.bars.mana)}
 }
@@ -567,6 +575,10 @@ export function hudCss(): string {
   margin: 0 0 ${THEME.padding / 2}px;
   ${pixelType(1)}
   color: ${THEME.color.levelUp};
+}
+/* Wick's own name over what it says, in its light (D4). */
+.hud-tip:not([data-find]) .hud-tip__heading {
+  color: ${THEME.color.skillUp};
 }
 .hud-tip__cache {
   margin: 0 0 ${THEME.padding}px;
@@ -1360,6 +1372,46 @@ export function hudCss(): string {
   line-height: 1.4;
   color: ${THEME.color.text};
 }
+/* Who they are and, beside it, what they do: the name in the title's type and
+   the trade in the dense lines' (D1). Wraps under the name on a narrow box. */
+.hud-talk__who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 ${THEME.padding}px;
+  min-width: 0;
+}
+.hud-talk__trade {
+  font-family: ${SANS};
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+/* What the player asked, over the answer it drew: theirs, so not in italics. */
+.hud-talk__asked {
+  margin: 4px 0 0;
+  padding: 0 4px;
+  font-family: ${SANS};
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+/* What they will talk about, a button each, across the panel and left-aligned
+   since each is a sentence. Grey once heard, until it has something new. */
+.hud-talk__topics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: ${THEME.padding}px;
+}
+.hud-talk__topic {
+  width: 100%;
+  justify-content: flex-start;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  text-align: left;
+}
+.hud-talk__topic[data-asked] {
+  color: ${THEME.color.dim};
+}
 /* A counter of theirs: the word for it, and what it is for under it, said once
    here where the choice is made. A thumb's height, and across the panel. */
 .hud-talk__service {
@@ -1439,6 +1491,16 @@ export function hudCss(): string {
   width: 28px;
   padding: 0;
   margin-left: auto;
+}
+/* The house's count (F1) stands beside its X rather than on a line of its own,
+   since the house has no purse to share a second line with. */
+.hud-house__count {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+  margin-left: auto;
+}
+.hud-modal__head > .hud-house__count + .hud-modal__close {
+  margin-left: 0;
 }
 /* The way back to the conversation, at the front of every counter's head: the
    close button's size and look, and the title after it takes the slack, so the

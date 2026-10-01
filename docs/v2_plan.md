@@ -76,13 +76,26 @@ curve 100n² − 200; food the answer to the wait, healing more, faster, droppin
 on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
 **and C11** (the Part C review: the barrow's wights one at a time and its king alone, a new
 character's bag with sixteen cooked rats in it, two names on one line a word's space apart, and a
-zone measured at about half an hour rebuilt and an hour and a half to two hours new; decision 124),
-**and G1** (the shape of 9-20: three bands of four levels, ten zones each with its levels, mouths,
+zone measured at about half an hour rebuilt and an hour and a half to two hours new; decision 124).
+From C11 the phases are built several at a time, by the rules and briefs in
+`docs/v2_parallel_plan.md` (decision 123), and from wave 1 each wave merges through its own branch
+with its numbers reserved at launch (decision 125). **and D1** (dialog: the townsfolk under their lore names with their trade beside them, topics as
+data with answers that lead on, and a person who remembers what was asked for good; decision 126). **and E1** (rested: idle banks it by time, open or closed, to half a level and full in a night;
+XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment ahead
+of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
+banked; save version 104; decision 127). **and D4** (Wick in the world: a light at the shoulder that glows and chimes when it has something
+to say and says it on the card when tapped, the tips waiting in it, nine beats of its story heard
+once, a line of its own otherwise, quiet the tips alone, and its light the one underground; save
+version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
+still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
+clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 was folded onto
+`claude/v2-wave-1` and merged to `main` as one PR on 2026-10-01. **and G1** (the shape of 9-20: three bands of four levels, ten zones each with its levels, mouths,
 creatures, boss and ids, a made tier a band with gathering and making to 20, paid travel between
 hubs, two paths a class, an ending the player may argue with, built a band at a time; Part G written
-as phases G2-G16; decision 125). From C11 the phases are built several at a time, by the rules and
-briefs in `docs/v2_parallel_plan.md` (decision 123). **Next: G3** (tier one), with wave 1 (D1, D4,
-E1, E2 and F1) in flight and wave 2's D and F phases starting as it merges. Update this line as each phase lands:
+as phases G2-G16; decision 131). **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
+`claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
+phase lands:
 which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
@@ -713,17 +726,32 @@ decision 121).
 
 ## Part D — People and the realm
 
-- **D1 — Dialog.** NPC conversations as data, in the talk panel A4 built: topics, answers that
-  lead to more, and an NPC who remembers what you have asked (state for `TalkSession`). A writing
-  pass over every existing NPC in the lore's voice, their greetings first.
+- **D1 — Dialog. (Landed.)** Conversations as data (`data/dialog.ts`), in the talk panel A4 built:
+  greetings and topics, each topic a button whose answer is the last whose conditions hold, leading
+  on to more by `follows`, and waiting on a level, a class, a quest or a topic asked elsewhere; the
+  answers heard kept on the character for good, a topic grey until it has something new (save
+  version 103). `requires` and `effects` are on every line, `effects` empty for D2 and D3. The six
+  townsfolk under their lore names, the trade beside the name on the card, the map and the panel,
+  every greeting rewritten and every topic written in the lore's voice. The five people the game
+  lacks went to **D1b**. About thirty-five files with its tests and docs. All four forks were the
+  user's (decision 126).
 - **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
   creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
   of what is found.
 - **D3 — Factions and reputation.** Standing with each faction, moved by quests, kills, contracts and
   dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
-- **D4 — The spirit.** The helper drawn in the world: it follows you, glows or chimes when it has a
-  tip, speaks in a bubble when tapped, can be told to go quiet, and has **a name and a story** that
-  surfaces at new zones and bosses. It takes over A9's tips.
+- **D4 — The spirit. (Landed.)** Wick drawn in the world, a sprite kind of its own (16×16, not
+  outlined, one loop, a brighter sprite when it calls), following the player off the left shoulder
+  on a lag that never routes and never blocks (`world/Spirit.ts`). It **glows and chimes when it has
+  something to say and says it on the card when tapped**, under its name: a beat of its story waiting
+  here, else the tip waiting at the desk, else a line of its own about the zone. Only its waking and
+  a secret's line come unasked. **Nine beats** (`data/spiritBeats.ts`), its waking first and then one
+  a zone on arriving and Orlath's once he is down, each heard once (`CharacterState.beats`, save
+  version 105); where a memory is a thing, its secret says it and the zone's beat leads up to it.
+  **Go quiet** silences the tips alone. **Underground its light is the only one**, the lantern's pool
+  centred on it in its blue-white. Picked after the creatures and before the stations; a tap on it
+  takes nothing back, and waits out an open counter. Smoke gained a `spirit` section. Decision 124
+  has the forks.
 - **D5 — Part D review.**
 
 **Open questions for Part D**: can two factions be opposed, so that raising one lowers another?
@@ -737,7 +765,9 @@ C2 answered which factions there are and what the spirit wants (`docs/lore/facti
 Idle and active each get a reason (decision 85).
 
 - **E1 — Rested.** Time spent idle or away banks a rested bonus that speeds up active XP, capped,
-  and shown on the XP bar.
+  and shown on the XP bar. **Landed** (decision 127): banked by idle, open or closed, by time, to
+  half a level and full in eight hours; doubles XP earned by hand (kills, quests, contracts) while
+  it lasts; idle's own XP never spends it; the pace bot plays unrested.
 - **E2 — Potions.** A way to make them (a new making skill, and where its herbs come from, are this
   phase's questions), and potions brewed in active play that **boost idle gains** for a while: more
   XP, faster gathering. Some may help in a fight.
@@ -746,14 +776,21 @@ Idle and active each get a reason (decision 85).
 - **E4 — Part E review.**
 
 **Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing
-nodes and drops? Does rested XP come only from idle, or from being away too?
+nodes and drops? Does rested XP come only from idle, or from being away too? (Both, E1 answered.)
 
 ---
 
 ## Part F — Home and collections
 
 - **F1 — The house.** A building in town that is yours: walk in, set trophies on stands and a wall
-  (boss drops, quest keepsakes, achievement plaques), keep things in a chest.
+  (boss drops, quest keepsakes, achievement plaques), keep things in a chest. _Landed (decision
+  124):_ the Surveyor's House at the east end of Lampton's counters' row, let by the quartermaster's
+  A Roof in Lampton (twenty logs, after The Cutthroat); four stands that take a boss's drop or a
+  keepsake and hand it back on a tap; a chest of eight kinds, the bank's rule; a wall of plaques, one
+  a creature at its highest rank, derived; a keepsake from each capstone quest; no station. The
+  fixtures are a new tappable kind, picked from inside the room, and the walk to one is aimed at
+  where a body stands to use it. 51 files, past the guide, kept whole since the save, the room and
+  the panel are one feature to play.
 - **F2 — A house that grows.** Upgrades bought with coin: more rooms, more stands, a garden, a
   workbench. A long goal and a coin sink, priced by simulation like everything else.
 - **F3 — Collection log and bestiary.** Creatures slain and the drops seen from each, lore found,
@@ -772,7 +809,7 @@ trophy be displayed and still used?
 
 Sized from how long a zone actually took (C11): about half an hour a zone rebuilt, and two to three
 times that for a zone of new content, so an hour and a half to two hours a zone, plus a phase for
-each gear and making tier. G1 wrote the rest of this part from the user's interview (decision 125,
+each gear and making tier. G1 wrote the rest of this part from the user's interview (decision 131,
 below): **three bands of four levels, ten new zones, a made tier a band, a boss a zone, paid
 travel between hubs, two paths a class at 10, an ending the player can argue with and cannot
 change, and the bands built one at a time**, each band's zones beside each other.
@@ -849,7 +886,7 @@ creatures round its edges: Lorhal (the Keepers), the Quiet Court (the elves) and
 hall (the dwarves). A hub's counters are its faction's (D3), its people talk in D1's schema, and
 its rumours lead into its band (D2).
 
-**One made tier a band** (decision 125): gathering and making go to **20**, as the character does
+**One made tier a band** (decision 131): gathering and making go to **20**, as the character does
 (`MAX_GATHER_SKILL_LEVEL` from 10, moved once by G3), and each band adds a metal, a leather, a wood
 and a food, so plate, cloth-class leather, arrows, tools and food each get a rung a band, and each
 tier's materials come from that band's zones, so a piece pulls the player across its band the way
@@ -873,29 +910,29 @@ leather tier stops short of the plate a smith of the same standing makes and tak
 stays the weapon (`making.md`); doubling three more times would break that, so each tier
 phase sets its rung against the band's bows and says so in its decision.
 
-**A boss a zone** (decision 125): a named creature at the zone's top level with `boss: true`, the
+**A boss a zone** (decision 131): a named creature at the zone's top level with `boss: true`, the
 camp never picking it, its table **one unique piece** (`uniqueLoot.test.ts`) a little better in one
 slot than the band's made tier or different from it, and **a trophy** for the house's stands, in
 F1's kind. The Barrow Field has three kings, each a boss with a piece and a trophy. The drops are
 named in each zone's entry.
 
-**Travel is paid, hub to hub** (decision 125, the question decision 122 left): a counter at each
+**Travel is paid, hub to hub** (decision 131, the question decision 122 left): a counter at each
 hub takes the player to any other hub they have walked to, for coin, as a G-phase of its own in band
 2 (G13), when the walk from the house to the Barrow Field passes two minutes. `zones.md`'s "walking
 is the only way into a zone" becomes "the only way into a zone the first time".
 
-**Two paths a class at 10** (decision 125), from `peoples.md`'s hooks: the **warrior** a
+**Two paths a class at 10** (decision 131), from `peoples.md`'s hooks: the **warrior** a
 **Bulwark**, who holds a line (shield, armour, a hold on what is hitting them), or a **Breaker**, who
 breaks one (both hands, the heavy blow); the **wizard** a **Firebrand**, fire with nobody in it, or
 a **Wardlight**, the warding light that edges towards the kindling; the **ranger** a **Fenstalker**,
 who hunts the fen's way (snares, a slow, patience), or a **Longbow**, who shoots Aldmark's (reach,
 the volley). G2 settles how one is chosen, whether it can be changed, and the abilities.
 
-**The ending** (decision 125): at the last beat in Marhal the player is asked once whether to let
+**The ending** (decision 131): at the last beat in Marhal the player is asked once whether to let
 Wick go or to ask it to stay. Wick answers each differently and goes either way; the choice moves
 only its last lines and a title (`spirit.md`).
 
-**The order** (decision 125): **a band at a time**. A band's tier lands first; its zones then run
+**The order** (decision 131): **a band at a time**. A band's tier lands first; its zones then run
 beside each other, one agent a zone, two that share an edge given to one agent in sequence; G2
 starts once Lorhal's 10s are in `main`, and the band's last zone closes it. The user judges a band's
 zones as they come and the next band's tier starts once they have.

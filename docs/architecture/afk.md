@@ -133,3 +133,41 @@ that counts" when the eight hours ran out, and says "Stopped at the most a night
 ceiling the panel named — half a level, or one level of the skill — when that is what ended it.
 `OfflineAfkReport.capped` is how it knows: set when the ceiling rather than the time, the bag or the
 arrows ended the night.
+
+**Idle banks rested, and active play spends it** (decisions 85 and 124, `systems/RestedSystem.ts`).
+It is the half of decision 85 that gives idle a reason active play does not have: idle earns half
+the XP and never an ability, and what it hands back is a bonus on the XP the player then earns by
+hand. **It banks by time, not by what idle earned**, so a night at a bench or a bow out of arrows
+banks the same as a night of kills: with the game open a frame at a time from `AfkCamp.update`, and
+with it closed for the hours the parked payout counts, both at the rate that fills the bank in
+those eight hours (`RESTED_FILL_MS`). **The bank holds half a level** (`restedCap`), the share a
+night's XP is held to and for the same reason, so it moves with the curve; nothing banks at the top
+level. **While any is banked, XP earned by hand pays double** (`RESTED_XP_MULTIPLIER`) and the bank
+pays the difference in whole points: a kill made by hand, a quest or a contract handed in, through
+`CharacterController.awardPlayedXp`. **Idle's own XP never spends it**: the camp's halved kills and
+the parked night's XP go through `awardXp`, which leaves the bank alone, since a camp paid in rested
+as well would be idle paying itself back. That is why `ZoneWorld.awardXp` branches on idle before
+anything is awarded, and why the parked payout has an `awardIdleXp` of its own: it runs on a boot
+where idle is not on, and would otherwise be taken for a kill made by hand.
+
+**The parked session counts what idle banked before the tab closed** (`AfkSession.restedMs`). A
+closed game is paid from `startedAt`, which is when idle started rather than when the tab closed,
+so without it an evening watched and then left running overnight would bank the evening twice. A
+reload in the middle of idle banks the seconds it missed and says nothing: under a minute away is
+not news, but a night that banked rested and earned nothing else is, and the away report says what
+the night banked. The idle panel says what idle banks, how much is banked against the cap, and what
+it is worth, off the same constants (`IdlePlanSystem`'s rested lines), and the XP bar shows it
+(`hud.md`). **The pace bot plays unrested** (`tests/world/pace.ts`): a level's pace is play by hand,
+and rested is on top of it.
+**Two potions are brewed for idle, and work through a closed game for the time they have left**
+(version 2 phase E2, decision 129). Keeper's Watch lifts what idle keeps of a kill from
+`AFK_XP_MULTIPLIER`'s half to three-quarters (`idleXpMultiplier`, passed into `afkXpReward`), still
+behind active play (decision 15), and Quick Hands takes a fifth off a gather. Their clocks are kept on
+`CharacterState.potions` and run on game time; a parked session spends them by the time it was away,
+and **the payout reads them**: whatever a night finished inside the time a potion had left is paid at
+its rate (`offlineRate`, and the gathering branch's quicker swings first), and the rest at idle's own,
+under the same ceilings as ever. The fight and luck potions do nothing offline — a night is a rate,
+with no fight to armour and no roll to better — and `OFFLINE_POTIONS` is the list the panel reads to
+say so. **The idle panel says which potions are running and whether each counts away**, drawn again
+when one starts or runs out rather than on every tick of its clock. Which potions idle drinks itself,
+and in what order, is E3's.

@@ -22,7 +22,16 @@ export const TILE_PIXELS = 32;
 export const ART_PIXEL = TILE_SIZE / TILE_PIXELS;
 
 export type SpriteKind =
-  'tile' | 'scatter' | 'mark' | 'person' | 'beast' | 'prop' | 'effect' | 'icon' | 'frame';
+  | 'tile'
+  | 'scatter'
+  | 'mark'
+  | 'person'
+  | 'beast'
+  | 'prop'
+  | 'effect'
+  | 'icon'
+  | 'frame'
+  | 'spirit';
 
 export const SPRITE_KINDS: readonly SpriteKind[] = [
   'tile',
@@ -34,6 +43,7 @@ export const SPRITE_KINDS: readonly SpriteKind[] = [
   'effect',
   'icon',
   'frame',
+  'spirit',
 ];
 
 export type AnimationId =
@@ -222,5 +232,18 @@ export const BUDGET: Readonly<Record<SpriteKind, KindBudget>> = {
     opaque: false,
     required: ['still'],
     animations: { still: STILL },
+  },
+  // Wick (D4): a light about the size of a fist, floating at the player's
+  // shoulder. Light, so not outlined, as an effect is not; but it never goes
+  // out, so it loops where an effect plays once, and it has one facing, since
+  // a light has no face. That it has something to say is a second, brighter
+  // sprite rather than a second animation, so the kind keeps one clock (the
+  // user's answer, D4).
+  spirit: {
+    sizes: [[16, 16]],
+    outlined: false,
+    opaque: false,
+    required: ['loop'],
+    animations: { loop: looping(4, 200, 'one') },
   },
 };

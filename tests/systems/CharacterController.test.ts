@@ -628,3 +628,61 @@ describe('CharacterController banking', () => {
     expect(character.state.currency).toBe(10000);
   });
 });
+
+/**
+ * Rested (phase E1): the bank pays on XP the player earned by hand, a kill or a
+ * turn-in, and never on what idle earned, which is halved and not doubled back.
+ */
+describe('rested', () => {
+  it('doubles XP earned by hand while the bank lasts, and spends it', () => {
+    const character = makeController();
+    character.state.rested = 25.5;
+
+    const gain = character.awardPlayedXp(20);
+
+    expect(gain).toMatchObject({ xp: 40, bonus: 20, rested: 5.5 });
+    expect(character.state.xp).toBe(40);
+  });
+
+  it('leaves the bank alone for XP idle earned', () => {
+    const character = makeController();
+    character.state.rested = 25;
+
+    const gain = character.awardXp(20);
+
+    expect(gain).toMatchObject({ xp: 20, bonus: 0, rested: 25 });
+  });
+
+  it('pays on a quest handed in', () => {
+    const character = makeController();
+    character.state.rested = 1000;
+    character.acceptQuest('quarry-road');
+    character.recordVisit('quarry');
+
+    const result = character.turnInQuest('quarry-road');
+
+    const reward = QUESTS['quarry-road'].reward.xp;
+    expect(result.ok && result.xp.bonus).toBe(reward);
+    expect(character.state.rested).toBe(1000 - reward);
+  });
+
+  it('pays on a contract handed in, which is a quest off the board', () => {
+    const character = makeController();
+    character.state.rested = 1000;
+    character.addItem('logs', 15);
+    expect(character.acceptBounty('timber-order')).toBe(true);
+
+    const result = character.turnInBounty('timber-order');
+
+    expect(result.ok && result.xp.bonus).toBe(30);
+    expect(character.state.rested).toBe(970);
+  });
+
+  it('banks idle time, and says only when the whole number moved', () => {
+    const character = makeController();
+
+    expect(character.bankRested(1)).toBe(false);
+    expect(character.bankRested(3_600_000)).toBe(true);
+    expect(character.state.rested).toBeGreaterThan(1);
+  });
+});

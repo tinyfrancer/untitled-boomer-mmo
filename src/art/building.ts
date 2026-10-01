@@ -75,6 +75,7 @@ export const BUILDING_SIGNS: Readonly<Record<BuildingId, SignId | null>> = {
   'trading-post': 'scales',
   longhouse: null,
   store: null,
+  house: null,
 };
 
 /** How far down the front wall a sign's bracket is fixed, under the beam. */

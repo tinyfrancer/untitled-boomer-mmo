@@ -6,6 +6,8 @@ import { afkCampJob } from '../../src/systems/AfkSystem';
 import { idlePlan, type IdlePlanInput } from '../../src/systems/IdlePlanSystem';
 import { resolveOfflineAfk, offlineXpCeiling } from '../../src/systems/OfflineAfkSystem';
 import { skillXpToNextLevel } from '../../src/systems/SkillSystem';
+import { RESTED_FILL_MS, restedCap } from '../../src/systems/RestedSystem';
+import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import type { StationId } from '../../src/data/recipes';
 import type { ClassId, ZoneId } from '../../src/types/ids';
 
@@ -33,6 +35,7 @@ function standing(
     idleFood: state.idleFood,
     stations: options.stations ?? [],
     zoneId,
+    rested: state.rested,
   };
 }
 
@@ -226,7 +229,7 @@ describe('the panel and the payout', () => {
         state.level = 5;
       });
       const report = resolveOfflineAfk(
-        { startedAt: new Date(0).toISOString(), zoneId, station: null },
+        { startedAt: new Date(0).toISOString(), zoneId, station: null, restedMs: 0 },
         {
           now: 3_600_000,
           classId: input.classId,
@@ -252,5 +255,38 @@ describe('the panel and the payout', () => {
     const input = standing('town', holding('fishing-pole'));
     expect(afkCampJob(input).kind).toBe('gather');
     expect(idlePlan(input).job[0]).toBe('Fish near where you start: Fishing Spot');
+  });
+});
+
+describe('what idle banks as rested', () => {
+  it('says how fast it banks, what is banked against the cap, and what it is worth', () => {
+    const plan = idlePlan({ ...standing('town'), rested: 40.7 });
+    const cap = Math.floor(restedCap(1));
+    expect(plan.rested).toEqual([
+      `Banks while idle runs, open or closed: full in ${RESTED_FILL_MS / 3_600_000} hours`,
+      `40 of ${cap} XP banked`,
+      'Doubles the XP you earn by hand until it is spent',
+      "Idle's own XP never spends it",
+    ]);
+  });
+
+  it('says when the bank is full', () => {
+    const cap = Math.floor(restedCap(3));
+    const plan = idlePlan({
+      ...standing('town', (state) => {
+        state.level = 3;
+      }),
+      rested: cap,
+    });
+    expect(plan.rested[1]).toBe(`Full: ${cap} XP banked`);
+  });
+
+  it('promises nothing at the top level, where nothing banks', () => {
+    const plan = idlePlan(
+      standing('town', (state) => {
+        state.level = MAX_CHARACTER_LEVEL;
+      }),
+    );
+    expect(plan.rested).toEqual(['Nothing banks at the top level']);
   });
 });

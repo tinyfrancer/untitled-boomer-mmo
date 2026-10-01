@@ -238,4 +238,75 @@ export const RESOURCE_NODES: Record<ResourceNodeId, ResourceNodeDefinition> = {
     respawnDelayMs: 26000,
     interactRadius: 88,
   },
+  /**
+   * Foraging's four (version 2 phase E2): a patch of something growing, cut
+   * with a sickle and walked through rather than round, like a fishing spot.
+   * The ladder is the one every gathering skill climbs — the starter band's at
+   * 1, the mill road's at 4, the fen's at 6 and 8 — and a patch is cut out in
+   * three and grows back, the way a tree does.
+   *
+   * The samphire is the strand's, and the only herb a level 1-3 character can
+   * reach without a fight above their band. The meadowsweet grows along the
+   * mill road's water, and the two fen herbs are the fenfolk's own.
+   */
+  samphire: {
+    id: 'samphire',
+    name: 'Samphire',
+    body: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
+    shape: 'herb',
+    blocks: null,
+    skill: 'foraging',
+    requiredLevel: 1,
+    yieldItemId: 'samphire',
+    xpReward: 10,
+    baseGatherMs: 2600,
+    charges: 3,
+    respawnDelayMs: 15000,
+    interactRadius: 88,
+  },
+  meadowsweet: {
+    id: 'meadowsweet',
+    name: 'Meadowsweet',
+    body: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
+    shape: 'herb',
+    blocks: null,
+    skill: 'foraging',
+    requiredLevel: 4,
+    yieldItemId: 'meadowsweet',
+    xpReward: 18,
+    baseGatherMs: 3000,
+    charges: 3,
+    respawnDelayMs: 18000,
+    interactRadius: 88,
+  },
+  'bog-myrtle': {
+    id: 'bog-myrtle',
+    name: 'Bog Myrtle',
+    body: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
+    shape: 'herb',
+    blocks: null,
+    skill: 'foraging',
+    requiredLevel: 6,
+    yieldItemId: 'bog-myrtle',
+    xpReward: 26,
+    baseGatherMs: 3400,
+    charges: 3,
+    respawnDelayMs: 20000,
+    interactRadius: 88,
+  },
+  bogbean: {
+    id: 'bogbean',
+    name: 'Bogbean',
+    body: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
+    shape: 'herb',
+    blocks: null,
+    skill: 'foraging',
+    requiredLevel: 8,
+    yieldItemId: 'bogbean',
+    xpReward: 32,
+    baseGatherMs: 3800,
+    charges: 3,
+    respawnDelayMs: 22000,
+    interactRadius: 88,
+  },
 };

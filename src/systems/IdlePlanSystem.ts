@@ -4,7 +4,8 @@ import { RESOURCE_NODES, type ResourceNodeDefinition } from '../data/resourceNod
 import { STATION_LABELS, type CraftingRecipe, type StationId } from '../data/recipes';
 import { SKILLS } from '../data/skills';
 import { ZONES } from '../data/zones';
-import type { ClassId, SkillId, ZoneId } from '../types/ids';
+import { EFFECTS } from '../data/effects';
+import type { ClassId, PotionEffectId, SkillId, ZoneId } from '../types/ids';
 import {
   AFK_EAT_FRACTION,
   AFK_RESUME_FRACTION,
@@ -18,12 +19,14 @@ import { hasInputs } from './CraftingSystem';
 import { canCarry, carryCapacity, inventoryWeight } from './EncumbranceSystem';
 import { canGather, gatherDurationMs } from './GatherSystem';
 import { idleFoods, type IdleFoodChoice, type IdleFoodRow } from './IdleFoodSystem';
+import { describePotionEffect } from './PotionSystem';
 import type { Gear, Inventory } from './InventorySystem';
 import { ingredients, recipeOutput } from './ItemUseSystem';
 import {
   OFFLINE_CAP_MS,
   OFFLINE_KILL_INTERVAL_MS,
   OFFLINE_MAX_LEVEL_FRACTION,
+  OFFLINE_POTIONS,
   OFFLINE_RATE_MULTIPLIER,
   offlineAmmo,
   offlineJob,
@@ -33,6 +36,7 @@ import {
 import { arrowsCarried, loadedArrow, type Quiver } from './QuiverSystem';
 import type { Reforges } from './ReforgeSystem';
 import { scaleEnemyStats } from './EnemySystem';
+import { RESTED_FILL_MS, RESTED_XP_MULTIPLIER, restedCap } from './RestedSystem';
 import { skillLevel, skillXpToNextLevel, type Skills } from './SkillSystem';
 import { computeEffectiveStats } from './StatsSystem';
 
@@ -57,6 +61,10 @@ export interface IdlePlanInput {
   /** The stations the player is standing at, which is half of what the job is. */
   stations: StationId[];
   zoneId: ZoneId;
+  /** The rested bank as it stands, which idle fills (phase E1). */
+  rested: number;
+  /** The potions running (version 2 phase E2); absent is none. */
+  potionsRunning?: readonly PotionEffectId[];
 }
 
 export interface IdlePlan {
@@ -70,8 +78,12 @@ export interface IdlePlan {
   food: IdleFoodRow[];
   /** What a bow in hand spends; empty for anything else. */
   arrows: string[];
+  /** What each potion running does for idle, open and closed; empty with none. */
+  potions: string[];
   /** What a closed game pays. */
   away: string[];
+  /** What idle banks as rested, open or closed, and what that is worth. */
+  rested: string[];
   /** A pack with no room left, the one thing here said in the warning colour. */
   warning: string | null;
 }
@@ -98,7 +110,9 @@ export function idlePlan(input: IdlePlanInput): IdlePlan {
     foodRule: foodRule(food),
     food,
     arrows: fights ? arrowLines(input) : [],
+    potions: (input.potionsRunning ?? []).map(potionLine),
     away: awayLines(input, job),
+    rested: restedLines(input),
     warning: packFull(input, job, nodes)
       ? 'Your pack is full: nothing idle finds will be kept'
       : null,
@@ -164,6 +178,18 @@ function foodRule(food: IdleFoodRow[]): string {
   if (food.length === 0) return 'No food in the bag: idle rests instead';
   if (food.every((row) => row.keep)) return 'All of it kept: idle rests instead';
   return `Eaten top first, out of a fight and below ${percent(AFK_EAT_FRACTION)} health`;
+}
+
+/**
+ * What one running potion does for idle. Only the two brewed for it count with
+ * the game closed (`OfflineAfkSystem`), and the panel says which, since
+ * drinking Fortune before a night away would otherwise look like a plan.
+ */
+function potionLine(effectId: PotionEffectId): string {
+  const away = OFFLINE_POTIONS.includes(effectId)
+    ? 'away too, for the time it has left'
+    : 'with the game open only';
+  return `${EFFECTS[effectId].name}: ${describePotionEffect(effectId)}, ${away}`;
 }
 
 function arrowLines(input: IdlePlanInput): string[] {
@@ -235,6 +261,20 @@ function awayJobLines(input: IdlePlanInput, away: OfflineJob): string[] {
   return lines;
 }
 
+// What idle banks, read off the constants the bank fills and spends by, so a
+// retune of either moves these words with it.
+function restedLines(input: IdlePlanInput): string[] {
+  const cap = Math.floor(restedCap(input.level));
+  if (cap <= 0) return ['Nothing banks at the top level'];
+  const banked = Math.min(cap, Math.floor(input.rested));
+  return [
+    `Banks while idle runs, open or closed: full in ${RESTED_FILL_MS / 3_600_000} hours`,
+    banked >= cap ? `Full: ${cap} XP banked` : `${banked} of ${cap} XP banked`,
+    `${capitalise(times(RESTED_XP_MULTIPLIER))} the XP you earn by hand until it is spent`,
+    "Idle's own XP never spends it",
+  ];
+}
+
 function skillCeiling(input: IdlePlanInput, skill: SkillId): string {
   const perLevel = skillXpToNextLevel(skill, skillLevel(input.skills, skill), input.level);
   if (perLevel <= 0) return `No XP: ${SKILLS[skill].name} is at its most`;
@@ -297,6 +337,12 @@ function levelShare(fraction: number): string {
   if (fraction === 0.5) return 'half a level';
   if (fraction === 0.25) return 'a quarter of a level';
   return `${percent(fraction)} of a level`;
+}
+
+function times(multiplier: number): string {
+  if (multiplier === 2) return 'doubles';
+  if (multiplier === 3) return 'triples';
+  return `${percent(multiplier)} of`;
 }
 
 function percent(fraction: number): string {

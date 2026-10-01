@@ -19,7 +19,8 @@ import {
   STRONGBOX,
   WARDEN_NICHE,
 } from './sprites/secrets';
-import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
+import { HERB } from './sprites/herbs';
+import { CAMPFIRE, FLETCHING_BENCH, FORGE, STILL, TANNERY } from './sprites/stations';
 import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
 import { RICH_VEIN, SEAM, VEIN } from './sprites/veins';
 import { RIPPLE } from './sprites/water';
@@ -43,12 +44,17 @@ const NODE_SPRITES: Readonly<Partial<Record<ResourceNodeId, string>>> = {
   'iron-vein': variantId(VEIN.id, 'iron'),
   'coal-vein': variantId(SEAM.id, 'coal'),
   'rich-iron-vein': variantId(RICH_VEIN.id, 'iron'),
+  samphire: variantId(HERB.id, 'samphire'),
+  meadowsweet: HERB.id,
+  'bog-myrtle': variantId(HERB.id, 'bog-myrtle'),
+  bogbean: variantId(HERB.id, 'bogbean'),
 };
 
 const SHAPE_SPRITES: Readonly<Record<NodeShapeId, string>> = {
   tree: TREE.id,
   vein: VEIN.id,
   ripple: RIPPLE.id,
+  herb: HERB.id,
 };
 
 /** A node, falling back on the drawing of its shape. */
@@ -62,17 +68,19 @@ const STATION_SPRITES: Readonly<Record<StationId, string>> = {
   forge: FORGE.id,
   tannery: TANNERY.id,
   bench: FLETCHING_BENCH.id,
+  still: STILL.id,
 };
 
 export function stationSprite(station: StationId): string {
   return STATION_SPRITES[station];
 }
 
-/** What a stroke of the tool knocks loose off each shape of node: chips, flakes of stone, a splash. */
+/** What a stroke of the tool knocks loose off each shape of node: chips, flakes of stone, a splash, leaves. */
 const STROKE_SPRITES: Readonly<Record<NodeShapeId, string>> = {
   tree: CHIPS.id,
   vein: variantId(CHIPS.id, 'stone'),
   ripple: SPLASH.id,
+  herb: variantId(CHIPS.id, 'leaf'),
 };
 
 export function strokeSprite(shape: NodeShapeId): string {

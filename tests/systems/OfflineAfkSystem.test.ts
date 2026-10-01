@@ -26,7 +26,7 @@ function sessionStartedAgo(
   zoneId: AfkSession['zoneId'] = 'town',
   station: AfkSession['station'] = null,
 ): AfkSession {
-  return { startedAt: new Date(NOW - ms).toISOString(), zoneId, station };
+  return { startedAt: new Date(NOW - ms).toISOString(), zoneId, station, restedMs: 0 };
 }
 
 // A fighter by default: what is in the weapon slot is what decides whether a

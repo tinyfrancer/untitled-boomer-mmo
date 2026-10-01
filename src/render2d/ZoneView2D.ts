@@ -4,13 +4,17 @@ import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { ART_PIXEL } from '../art/budget';
 import { variantId } from '../art/compile';
 import { nodeSprite, secretSprite, stationSprite, strokeSprite } from '../art/places';
+import { ICON_SPRITES, itemSprite } from '../art/icons';
+import { TROPHY_LIFT, fittingAnchor, fixtureSprite, plaqueAt, plaqueSprite } from '../art/rooms';
 import { CRIT, HIT, LEVEL_UP, LOOT_SACK } from '../art/sprites/effects';
 import { SIGNPOST } from '../art/sprites/props';
+import { WICK, WICK_CALLING } from '../art/sprites/wick';
 import { TEXT_HEIGHT, textWidth } from '../art/font';
 import { TILE_SIZE } from '../config/constants';
 import { ABILITIES } from '../data/abilities';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
-import { buildingRect, occupant } from '../data/buildings';
+import { buildingRect, interiorRect, occupant } from '../data/buildings';
+import { HOUSE_BUILDING } from '../data/house';
 import { npcName } from '../data/npcs';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { titleName } from '../systems/AchievementSystem';
@@ -18,6 +22,7 @@ import { bountyMarker } from '../systems/BountySystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import { barFill } from '../systems/math';
 import { npcMarker, strongerMarker } from '../systems/QuestSystem';
+import { onStand, ownsHouse, plaques } from '../systems/HouseSystem';
 import { GatherBeat } from '../ui/gatherBeat';
 import { FLOAT_TONE_COLORS, QUEST_MARKER_STYLE, THEME } from '../ui/theme';
 import type { ZoneView } from '../host/zoneView';
@@ -25,14 +30,15 @@ import type { Point } from '../systems/MovementSystem';
 import type { DrawnCounts, PlayerFigure } from '../types/debugView';
 import type { NodeShapeId, ResourceNodeId, ZoneSetting } from '../types/ids';
 import type { Mob } from '../world/Mob';
+import { SPIRIT_HEIGHT } from '../world/Spirit';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
-import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
+import type { WorldBuilding, WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import { Motion, deathPose, frameIndex, playMs, type Pose } from './animation';
 import { BuildingSprite } from './buildings';
 import { Camera2D } from './camera';
 import { CanvasPool } from './canvases';
 import { Effects2D, Telegraphs } from './effects';
-import { LANTERN, Lantern } from './lantern';
+import { Lantern } from './lantern';
 import { pickScene, pickTap, type PickRect } from './picking';
 import { boxesOverlap, stackPlates, stackableBox, type Box } from './plates';
 import { SpriteSheet } from './sheet';
@@ -79,7 +85,12 @@ const SHADOW_ALPHA = 0.35;
  * tree's under its crown, a stump's under what is left. A ripple lies on the
  * water and stands on nothing.
  */
-const NODE_SHADOW: Readonly<Record<NodeShapeId, number>> = { tree: 34, vein: 26, ripple: 0 };
+const NODE_SHADOW: Readonly<Record<NodeShapeId, number>> = {
+  tree: 34,
+  vein: 26,
+  ripple: 0,
+  herb: 22,
+};
 const STUMP_SHADOW = 16;
 const STATION_SHADOW = 24;
 
@@ -97,7 +108,12 @@ const CROWN_ACROSS = 0.7;
  * far toward the player from its middle, in simulation units: the side struck
  * is the side they stand on.
  */
-const STROKE_HEIGHT: Readonly<Record<NodeShapeId, number>> = { tree: 10, vein: 8, ripple: 0 };
+const STROKE_HEIGHT: Readonly<Record<NodeShapeId, number>> = {
+  tree: 10,
+  vein: 8,
+  ripple: 0,
+  herb: 6,
+};
 const STROKE_TOWARD = 10;
 /** Where in its frame what a stroke knocks loose starts: four pixels over the foot. */
 const STROKE_FROM = 4;
@@ -186,6 +202,10 @@ export class ZoneView2D implements ZoneView {
   // made: compiled again when that changes, and kept across zones, since a
   // person looks the same in every light (only the ground's ramps differ).
   private figure: { wearing: string; sheet: SpriteSheet } | null = null;
+  // The items' icons, for a trophy standing on a stand in the house (F1):
+  // compiled the first time a zone with the house in it is built and kept for
+  // the session, since an icon is drawn the same in every light.
+  private icons: SpriteSheet | null = null;
   private world: ZoneWorld | null = null;
   private setting: ZoneSetting = 'open';
   private ground: BakedGround | null = null;
@@ -197,7 +217,7 @@ export class ZoneView2D implements ZoneView {
   // first seen, which is what its disc fills from.
   private telegraphs: Telegraphs | null = null;
   private windUps = new Map<Mob, { landsAt: number; seenAt: number }>();
-  // Underground only: the light the player carries.
+  // Underground only: the darkness round Wick, the one light there is.
   private lantern: Lantern | null = null;
   // The view's own and the screen's size, made again when the screen changes shape.
   private vignette: HTMLCanvasElement | null = null;
@@ -254,6 +274,9 @@ export class ZoneView2D implements ZoneView {
       ),
     );
     this.text = new TextCache(this.pool);
+    if (!this.icons && world.fixtures.length > 0) {
+      this.icons = new SpriteSheet(this.pool, 'open', ICON_SPRITES);
+    }
     this.buildings = world.buildings.map(
       (building) =>
         new BuildingSprite(building, occupant(building, world.npcs), (picture) =>
@@ -299,6 +322,8 @@ export class ZoneView2D implements ZoneView {
     this.vignette = null;
     this.pool.release(this.figure?.sheet.canvas ?? null);
     this.figure = null;
+    this.pool.release(this.icons?.canvas ?? null);
+    this.icons = null;
     for (const sheet of this.sheets.values()) this.pool.release(sheet.canvas);
     this.sheets.clear();
     this.sheet = null;
@@ -633,8 +658,24 @@ export class ZoneView2D implements ZoneView {
     // A fire stands on no shadow: what it throws is light.
     const campfire = world.campfire;
     if (campfire) standing.push(prop(campfire.x, campfire.y, stationSprite('fire'), 'loop'));
+    // Nor does Wick, which is all light: sorted by the ground under it like
+    // anything else, and drawn up at the player's shoulder, brighter while it
+    // has something to say.
+    const spirit = world.spirit;
+    const wick = spirit.lit ? WICK_CALLING.id : WICK.id;
+    const wickPose: Pose = {
+      animation: 'loop',
+      facing: null,
+      index: frameIndex(sheet.def(wick), 'loop', now),
+    };
+    standing.push({
+      baseY: spirit.y,
+      draw: () => {
+        const p = at(spirit.x, spirit.y - SPIRIT_HEIGHT);
+        sheet.draw(context, wick, wickPose, p.x, p.y + Math.floor(WICK.height / 2));
+      },
+    });
 
-    const player = world.player;
     const room = this.room();
     for (const building of this.buildings) {
       const behind = this.hidesPlayer(building.outsideRect(), building.baseY);
@@ -648,6 +689,7 @@ export class ZoneView2D implements ZoneView {
       for (const thing of building.furniture) {
         standing.push(prop(thing.x, thing.y, thing.sprite, moving(thing.sprite)));
       }
+      standing.push(...this.houseStanding(world, building.building, prop));
     }
 
     standing.sort((a, b) => a.baseY - b.baseY);
@@ -655,20 +697,68 @@ export class ZoneView2D implements ZoneView {
 
     this.effects.draw(context, camera, sheet, this.text, now);
     if (this.lantern) {
-      const flame = at(player.x, player.y);
-      this.lantern.draw(
-        context,
-        flame.x,
-        flame.y - LANTERN.height,
-        this.canvas.width,
-        this.canvas.height,
-      );
+      const light = at(spirit.x, spirit.y - SPIRIT_HEIGHT);
+      this.lantern.draw(context, light.x, light.y, this.canvas.width, this.canvas.height);
     }
     // Over the world and under the words, so a name at the edge of the screen
     // reads as well as one in the middle, underground as well.
     if (this.vignette) context.drawImage(this.vignette, 0, 0);
     this.drawWords(world, sheet, figure, room);
     this.text.endFrame();
+  }
+
+  /**
+   * What stands in the house while the player is in it (F1): its stands and
+   * chest where `data/house.ts` puts them, a trophy's own icon on each stand
+   * that holds one, and a plaque on the back wall for every slayer rank
+   * earned, once the house is the player's.
+   */
+  private houseStanding(
+    world: ZoneWorld,
+    house: WorldBuilding,
+    prop: (x: number, y: number, sprite: string, animation: 'still') => Standing,
+  ): Standing[] {
+    const sheet = this.sheet;
+    const icons = this.icons;
+    if (!sheet || house.definition.id !== HOUSE_BUILDING) return [];
+    const { state } = world.character;
+    const owned = ownsHouse(state.quests);
+    const context = this.context;
+    const at = (x: number, y: number): Point => this.camera.toCanvas(x, y);
+    const still: Pose = { animation: 'still', facing: null, index: 0 };
+    const out: Standing[] = [];
+    for (const fixture of world.fixtures) {
+      if (fixture.house !== house) continue;
+      const sprite = fixtureSprite(fixture.fixture);
+      if (!sprite) continue;
+      const foot = fittingAnchor(fixture.area);
+      out.push(prop(foot.x, foot.y, sprite, 'still'));
+      if (fixture.fixture.kind !== 'stand' || !icons) continue;
+      const trophy = onStand(state.house, fixture.fixture.stand);
+      if (!trophy) continue;
+      // A hair in front of the stand's own foot, so it is drawn over the board.
+      out.push({
+        baseY: foot.y + 0.01,
+        draw: () => {
+          const p = at(foot.x, foot.y);
+          icons.draw(context, itemSprite(trophy), still, p.x, p.y - TROPHY_LIFT);
+        },
+      });
+    }
+    if (!owned) return out;
+    const wall = interiorRect(house).top;
+    plaques(state.kills).forEach((plaque, index) => {
+      const spot = plaqueAt(index, wall);
+      const sprite = plaqueSprite(plaque.rank);
+      out.push({
+        baseY: wall,
+        draw: () => {
+          const p = at(house.x + spot.x, spot.y);
+          sheet.draw(context, sprite, still, p.x, p.y);
+        },
+      });
+    });
+    return out;
   }
 
   /**

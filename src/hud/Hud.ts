@@ -7,6 +7,7 @@ import { ChannelBar } from './ChannelBar';
 import { InventorySheet } from './InventorySheet';
 import { MapSheet } from './MapSheet';
 import { Minimap } from './Minimap';
+import { emptyHouse, type HouseState } from '../systems/HouseSystem';
 import { OverlayHost } from './OverlayHost';
 import type { OptionSettings } from './OptionsModal';
 import { PlayerColumn } from './PlayerColumn';
@@ -50,6 +51,7 @@ import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { DialogMemory } from '../systems/DialogSystem';
 import { hudLayout, tipCardRect } from '../ui/layout';
 import { THEME } from '../ui/theme';
 import type { TabId } from '../ui/tabs';
@@ -74,6 +76,7 @@ import {
   COOK_REQUESTED_EVENT,
   CURRENCY_CHANGED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
+  DRINK_POTION_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   CHANNEL_ENDED_EVENT,
   CHANNEL_PROGRESS_EVENT,
@@ -82,6 +85,9 @@ import {
   INVENTORY_CHANGED_EVENT,
   QUIVER_CHANGED_EVENT,
   KILLS_CHANGED_EVENT,
+  HOUSE_OPENED_EVENT,
+  HOUSE_CLOSED_EVENT,
+  HOUSE_CHANGED_EVENT,
   LEVEL_UP_EVENT,
   LIGHT_FIRE_REQUESTED_EVENT,
   MASTERY_CHANGED_EVENT,
@@ -101,6 +107,7 @@ import {
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TITLE_CHANGED_EVENT,
+  RESTED_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
   VISITS_CHANGED_EVENT,
@@ -120,12 +127,18 @@ import {
   SECRETS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
+  ASKED_CHANGED_EVENT,
+  CONVERSATION_CHANGED_EVENT,
+  type ConversationState,
+  SPIRIT_SAID_EVENT,
+  SPIRIT_BEAT_HEARD_EVENT,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
 import { createSubscriptions, type Subscriptions } from '../world/eventBus';
 import type { EventBus } from '../world/worldEvents';
-import type { AbilityId, ItemId, SkillId, TitleId, ZoneId } from '../types/ids';
+import { POTION_EFFECT_IDS } from '../data/potions';
+import type { AbilityId, ItemId, PotionEffectId, SkillId, TitleId, ZoneId } from '../types/ids';
 
 /**
  * Which request each of the inventory panel's buttons is. Two are not simply
@@ -140,6 +153,7 @@ const ITEM_ACTION_EVENTS = {
   sell: SELL_ITEM_REQUESTED_EVENT,
   'sell-all': SELL_ITEM_REQUESTED_EVENT,
   'light-fire': LIGHT_FIRE_REQUESTED_EVENT,
+  drink: DRINK_POTION_REQUESTED_EVENT,
 } satisfies Record<ItemActionId, UiEventName>;
 
 export interface HudOptions {
@@ -165,6 +179,8 @@ export interface HudOptions {
 interface HudModel {
   level: number;
   xp: number;
+  /** The rested bank, for the XP bar's paler segment and the idle panel. */
+  rested: number;
   hp: number;
   mana: number;
   maxMana: number;
@@ -220,6 +236,19 @@ interface HudModel {
   // Whether the minimap is up, for the layout and the options menu's switch.
   // Seeded from the save and kept current by the session.
   minimapOn: boolean;
+  // What everybody has been asked, which a topic's grey is drawn from: seeded
+  // from the save, since a conversation can be opened before anything is asked
+  // this session, and kept current by the world. And what is being said in the
+  // one conversation open, which the world resets each time one opens.
+  asked: DialogMemory;
+  conversation: ConversationState | null;
+  // Which potions are running, for the idle panel's word on what they do to
+  // idle. Read off the buff row, which already carries them; the clocks
+  // themselves are the world's.
+  potionsRunning: PotionEffectId[];
+  // What stands on the house's stands and is in its chest (F1). Seeded from
+  // the save like the bank, then kept current by the world.
+  house: HouseState;
 }
 
 /**
@@ -290,6 +319,7 @@ class Hud {
     this.model = {
       level: character.level,
       xp: character.xp,
+      rested: character.rested ?? 0,
       hp: stats.maxHp,
       mana: stats.maxMana,
       maxMana: stats.maxMana,
@@ -319,6 +349,10 @@ class Hud {
       idleFood: character.idleFood ?? { order: [], keep: [] },
       tipsOn: !(character.tips?.off ?? false),
       minimapOn: character.showMinimap ?? true,
+      asked: character.asked ?? {},
+      conversation: null,
+      potionsRunning: [],
+      house: character.house ?? emptyHouse(),
     };
 
     injectHudStyles();
@@ -350,11 +384,26 @@ class Hud {
         currency: this.model.currency,
       }),
       quests: () => ({ ...this.questCounters(), quests: this.model.quests }),
+      talk: () => ({
+        quests: { ...this.questCounters(), quests: this.model.quests },
+        dialog: {
+          level: this.model.level,
+          classId: this.classId,
+          quests: this.model.quests,
+          asked: this.model.asked,
+        },
+        conversation: this.model.conversation,
+      }),
       station: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
       reforger: () => ({
         gear: this.model.gear,
         inventory: this.model.inventory,
         reforges: this.model.reforges,
+      }),
+      house: () => ({
+        house: this.model.house,
+        inventory: this.model.inventory,
+        kills: this.model.kills,
       }),
     });
     this.mapSheet = new MapSheet({
@@ -381,6 +430,7 @@ class Hud {
     this.tipCard = new TipCard({
       onHeard: (tipId) => this.events.emit(TIP_HEARD_EVENT, tipId),
       onSilence: () => this.events.emit(TIPS_SET_REQUESTED_EVENT, false),
+      onBeatHeard: (beatId) => this.events.emit(SPIRIT_BEAT_HEARD_EVENT, beatId),
     });
 
     this.characterSheet = new CharacterSheet(
@@ -468,7 +518,7 @@ class Hud {
     // character sheet.
     this.narrow = hudLayout(this.root.clientWidth, this.root.clientHeight).narrow;
     this.playerColumn.setTitle(this.model.activeTitleId);
-    this.playerColumn.setXp(this.model.level, this.model.xp, xpToNextLevel(this.model.level));
+    this.refreshXp();
     this.playerColumn.setMana(this.model.mana, this.model.maxMana);
     this.refreshQuiver();
     this.refreshHealth();
@@ -847,6 +897,12 @@ class Hud {
     });
   }
 
+  /** The XP bar, its rested segment included, off the model. */
+  private refreshXp(): void {
+    const { level, xp, rested } = this.model;
+    this.playerColumn.setXp(level, xp, xpToNextLevel(level), rested);
+  }
+
   /**
    * The idle panel, off everything its plan reads: what is in hand and in the
    * bag, the skills and level that open nodes and recipes, the stations in
@@ -865,6 +921,8 @@ class Hud {
         idleFood: this.model.idleFood,
         stations: this.model.actions.nearStations,
         zoneId: this.model.zoneId,
+        rested: this.model.rested,
+        potionsRunning: this.model.potionsRunning,
       }),
       this.model.afkActive,
     );
@@ -942,7 +1000,11 @@ class Hud {
     listen(XP_GAINED_EVENT, (gain) => {
       this.model.level = gain.level;
       this.model.xp = gain.xp;
-      this.playerColumn.setXp(gain.level, gain.xp, gain.xpToNext);
+      this.model.rested = gain.rested;
+      this.refreshXp();
+      // Only when the bank moved: the panel says what is banked, and a hit's
+      // XP with nothing banked changes nothing it says.
+      if (gain.bonus > 0) this.refreshIdle();
     });
     listen(LEVEL_UP_EVENT, (level) => {
       this.model.level = level;
@@ -1068,6 +1130,13 @@ class Hud {
     listen(PLAYER_EFFECTS_CHANGED_EVENT, (effects) => {
       const hadRow = this.playerColumn.hasEffects();
       this.playerColumn.setEffects(effects);
+      // The idle panel says which potions are working for it, so it is drawn
+      // again when one starts or runs out rather than on every tick of a clock.
+      const running = POTION_EFFECT_IDS.filter((id) => effects.some((e) => e.effectId === id));
+      if (running.join() !== this.model.potionsRunning.join()) {
+        this.model.potionsRunning = running;
+        this.refreshIdle();
+      }
       // Whether the row exists at all is what decides how tall the column is,
       // and so where a sheet starts on a roomy screen. How many icons are in it
       // is not: they sit side by side.
@@ -1174,6 +1243,14 @@ class Hud {
     });
 
     listen(STATION_OPENED_EVENT, (stationId) => this.overlays.openStation(stationId));
+    listen(CONVERSATION_CHANGED_EVENT, (conversation) => {
+      this.model.conversation = conversation;
+      this.overlays.refreshOpen();
+    });
+    listen(ASKED_CHANGED_EVENT, (asked) => {
+      this.model.asked = asked;
+      this.overlays.refreshOpen();
+    });
     // A lesson lands on the bar and in the panel that sold it, in that order:
     // the bar is what the player pressed the row to get.
     listen(LEARNED_ABILITIES_CHANGED_EVENT, (abilityIds) => {
@@ -1203,6 +1280,10 @@ class Hud {
     });
     listen(SECRET_FOUND_EVENT, (secretId) => {
       this.tipCard.found(secretId);
+      this.holdTip();
+    });
+    listen(SPIRIT_SAID_EVENT, (said) => {
+      this.tipCard.say(said);
       this.holdTip();
     });
     listen(SECRETS_CHANGED_EVENT, (found) => this.mapSheet.setSecretsFound(found));
@@ -1245,6 +1326,19 @@ class Hud {
       this.featsSheet.update(this.model.kills, titleId);
       // A worn title costs the player column an extra line.
       this.applyLayout();
+    });
+    listen(RESTED_CHANGED_EVENT, (rested) => {
+      this.model.rested = rested;
+      this.refreshXp();
+      this.refreshIdle();
+    });
+    // The house (F1): whatever in it the world opened or shut, and what is on
+    // its stands and in its chest whenever that moves.
+    listen(HOUSE_OPENED_EVENT, (fixture) => this.overlays.openHouse(fixture));
+    listen(HOUSE_CLOSED_EVENT, () => this.overlays.closeHouse());
+    listen(HOUSE_CHANGED_EVENT, (house) => {
+      this.model.house = house;
+      this.overlays.refreshOpen();
     });
   }
 }

@@ -28,8 +28,8 @@ redrawn in 2D pixel art, with bigger zones, people and lore, a house, and a cap 
 next — and its "Starting cold" section. Its parts each end in a review phase that amends the plan,
 so read it as it stands, not as it was. **From C11 its phases are built several at a time**, each
 by its own session from the brief and the rules in `docs/v2_parallel_plan.md` (decision 123): read
-your phase's brief there before anything else, and take the decision number and the save version at
-the merge, not at the branch. Finished plans go to `docs/archive/`. Anything big enough to
+your phase's brief there before anything else, build on the wave's branch with the decision number
+and save version your launch reserved, and never renumber (decision 125). Finished plans go to `docs/archive/`. Anything big enough to
 phase gets a new plan doc rather than being started against this file alone.
 
 **The world's lore is `docs/lore/`** (decision 114): the realm, its history, peoples, factions and
@@ -170,7 +170,8 @@ and collision bodies are data (`EnemyDefinition.body`), never measured off anyth
 
 **The rules are `ZoneWorld`'s collaborators, one per subsystem** (`CombatDirector`,
 `GatherSession`, `AbilityCaster`, `AfkCamp`, the counter sessions, `QuestDesk`, `LootPiles`,
-`ContextMenuSession`, `TipDesk`, `SecretFinder`, `ApproachDriver`). Each owns its state and reaches the zone through the shared
+`ContextMenuSession`, `TipDesk`, `SecretFinder`, `ApproachDriver`, `Spirit`). Each owns its state and reaches the zone through the shared
+`ContextMenuSession`, `TipDesk`, `SecretFinder`, `HouseSession`, `ApproachDriver`). Each owns its state and reaches the zone through the shared
 `WorldContext` and a small `Deps` interface of its own — never a reference to the world. A new rule
 belongs in the collaborator that owns the state it reads. What stays in `ZoneWorld` is the entities,
 the tick order, what is selected, the publishers that speak only on change, and the three things
@@ -248,7 +249,19 @@ behind those, or the panel goes on promising the old night. **So is when a tip a
 what it says** (`systems/TipSystem.ts`): each tip is a rule over the character, and its line reads
 the fee, the price or the ceiling it names off the table or constant that holds it. What has been
 heard is stored (`CharacterState.tips`), since hearing leaves nothing else behind, and so is every
-secret found (`CharacterState.secrets`, decision 117), which leaves nothing either.
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every answer
+a person has given (`CharacterState.asked`, decision 126), by which a topic is grey until it gains a
+new one. **What a person says is a row** (`data/dialog.ts`), its conditions a `requires` union read
+by `DialogSystem` for the world and the HUD alike, so a new kind of condition is a member and a case
+there; a new person is a conversation there as well as a row in `NPCS`.
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every beat
+of Wick's story heard (`CharacterState.beats`, decision 128); which beat waits where is derived
+(`systems/SpiritSystem.ts`).
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and the time left
+on each potion drunk (`CharacterState.potions`, decision 129), which a night away reads.
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and what stands
+on the house's stands and lies in its chest (`CharacterState.house`, decision 130); whose the house
+is, what is a trophy and which plaques hang are derived.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
@@ -298,7 +311,8 @@ drawn over the room the player is standing in**: another building is cut out of 
 not written there. **The words are laid out before any is written** (`render2d/plates.ts`): a plate
 that would be written over another is lifted straight up clear of it, and the player's and then the
 target's never move (decision 112). A tap is picked against boxes in a fixed **priority** (node,
-signpost, NPC, mob, station, building, loot pile, ground), not a depth sort. What a frame costs is a
+signpost, NPC, mob, spirit, station, building, loot pile, ground), not a depth sort. What a frame costs is a
+signpost, NPC, mob, station, fixture, building, loot pile, ground), not a depth sort. What a frame costs is a
 budget smoke asserts under an eight-times-throttled CPU (`SLOW_DRAW_BUDGET_MS`, 16ms since decision
 110); raising it is a decision about the game, not about the run that hit it.
 `docs/architecture/rendering.md` has the view.
@@ -318,7 +332,10 @@ may lay blocking ground over walkable ground, which is why rock shows its face i
 kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts the collision's,
 and **what stands in its room is `art/rooms.ts`** (decision 109): nothing in it blocks, so
 `tests/art/rooms.test.ts` is all that keeps the furniture and the
-counter out of where the game stands a body. **Who is drawn with what** is
+counter out of where the game stands a body. **The house's stands, chest and wall are the one
+furniture tapped** (decision 130): where they stand is `data/house.ts`, since the world walks up to
+them, aimed at where a body stands rather than at the fixture, and `tests/world/house.test.ts` holds
+them clear and in reach as `rooms.test.ts` does the rest. **Who is drawn with what** is
 `art/cast.ts`, anything not in it being its kind's placeholder, and **what each place is drawn as**
 is `art/places.ts`.
 **A creature built like a person is a getup on the figure in a build** (decision 108): a boss is
@@ -349,7 +366,10 @@ its coin, **the pace test holds each level to its number plus four minutes of pl
 (`tests/world/pace.test.ts`, measured by a bot playing it in `tests/world/pace.ts`, decision 122, with
 food rather than regen the answer to the wait between fights), `deadEnds.test.ts` holds that
 nothing handed out leads nowhere, `uniqueLoot.test.ts` holds boss drops unique, and unattended play
-stays behind active play (half XP, no abilities, an offline cap).
+stays behind active play (half XP, no abilities, an offline cap). **Rested rides the player's XP,
+never idle's** (`systems/RestedSystem.ts`, decision 127): a kill made by hand, a quest or a contract
+spends it through `awardPlayedXp`, and idle's halved XP goes through `awardXp`, which leaves it
+alone, or idle pays itself back; the pace bot plays unrested.
 Change a stat, a table or a curve and retune until those pass rather than eyeballing it.
 
 ## Where the reasoning lives

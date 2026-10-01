@@ -12,10 +12,11 @@ import {
   toolSkill,
   weaponAttackRange,
 } from '../data/items';
+import { describePotionEffect, potionDuration } from './PotionSystem';
 import { ABILITIES } from '../data/abilities';
 import { BOUNTIES, BOUNTY_ORDER } from '../data/bounties';
 import { LOOT_TABLES } from '../data/lootTables';
-import { npcName, npcRole } from '../data/npcs';
+import { NPCS, npcName, npcRole } from '../data/npcs';
 import { STATION_LABELS, STATION_SKILLS, type StationId } from '../data/recipes';
 import { SHOP_STOCK } from '../data/shop';
 import { SKILLS } from '../data/skills';
@@ -26,7 +27,10 @@ import { formatCurrency } from './CurrencySystem';
 import { itemUses, type ItemUseContext } from './ItemUseSystem';
 import { LOOT_PILE_LIFETIME_MS } from './LootSystem';
 import { scaleEnemyStats } from './EnemySystem';
-import type { EnemyDefinition } from '../data/enemies';
+import { ENEMIES, type EnemyDefinition } from '../data/enemies';
+import { CHEST_SLOTS, type HouseFixture } from '../data/house';
+import { chestSlotsUsed, onStand, plaques, type HouseState } from './HouseSystem';
+import type { KillCounts } from './AchievementSystem';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 import type { EnemyFamilyId, ItemId, NpcId, ZoneEdge } from '../types/ids';
 
@@ -255,6 +259,10 @@ const STATION_CARDS: Record<StationId, StationCard> = {
     ],
     note: 'Heads are cut at the forge. A failed job keeps the wood.',
   },
+  still: {
+    lines: [{ label: 'Brews', value: 'Herbs into potions' }],
+    note: 'A fenfolk still. A failed brew costs the time and keeps the herbs.',
+  },
 };
 
 /** Where a signpost points, and what is over there. */
@@ -265,6 +273,16 @@ export function describeSignpost(exit: ZoneExit): InspectPanel {
     subtitle: `${EDGE_LABELS[exit.edge]} edge`,
     lines: [{ label: 'Leads to', value: zone.name }],
     note: zone.description,
+  };
+}
+
+/** Wick, asked about with a held finger: what it is, as far as anybody can see. */
+export function describeSpirit(): InspectPanel {
+  return {
+    title: 'Wick',
+    subtitle: 'The light at your shoulder',
+    lines: [],
+    note: 'It goes where you go, and glows when it has something to say. Tap it to hear it.',
   };
 }
 
@@ -290,12 +308,15 @@ export function describeNpc(npcId: NpcId): InspectPanel {
 
 /** What standing at somebody's counter gets you, by the role behind it. */
 function describeCounter(npcId: NpcId): InspectPanel {
+  // Their name over their trade, the trade in their own word rather than the
+  // role's: the fettler reforges, but nobody in Greyford calls him a reforger.
   const title = npcName(npcId);
+  const subtitle = NPCS[npcId].trade;
   switch (npcRole(npcId)) {
     case 'reforger':
       return {
         title,
-        subtitle: 'Reforger',
+        subtitle,
         lines: [
           { label: 'Reworks', value: 'One piece of gear, once and for good' },
           { label: 'Moves', value: 'Power from one stat to another' },
@@ -310,7 +331,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'outfitter':
       return {
         title,
-        subtitle: 'Outfitter',
+        subtitle,
         lines: [
           { label: 'Trades', value: 'Tools, for the makings of them' },
           { label: 'Takes', value: 'Ore, timber and what comes off a kill' },
@@ -323,7 +344,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'banker':
       return {
         title,
-        subtitle: 'Banker',
+        subtitle,
         lines: [
           { label: 'Stores', value: 'Anything, at no weight' },
           { label: 'Slots', value: `${STARTING_BANK_SLOTS} to start, up to ${MAX_BANK_SLOTS}` },
@@ -334,7 +355,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'trainer':
       return {
         title,
-        subtitle: 'Trainer',
+        subtitle,
         lines: [
           { label: 'Teaches', value: 'The abilities your class did not start with' },
           { label: 'Asks', value: 'A level reached, and coin' },
@@ -345,7 +366,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'quartermaster':
       return {
         title,
-        subtitle: 'Quartermaster',
+        subtitle,
         lines: [
           { label: 'Posts', value: 'Standing work, taken one at a time' },
           { label: 'Asks', value: 'Creatures put down, or materials brought in' },
@@ -360,7 +381,7 @@ function describeCounter(npcId: NpcId): InspectPanel {
     case 'merchant':
       return {
         title,
-        subtitle: 'Merchant',
+        subtitle,
         lines: [
           { label: 'Sells', value: 'Tools, food and supplies' },
           { label: 'Buys', value: 'Anything with a value' },
@@ -447,6 +468,10 @@ export function describeItem(itemId: ItemId, context: ItemUseContext = {}): Insp
   if (item.kind === 'ammunition') {
     lines.push({ label: 'Attack', value: `+${arrowDamage(itemId)} a shot` });
   }
+  if (item.kind === 'potion') {
+    lines.push({ label: 'Does', value: describePotionEffect(item.effect) });
+    lines.push({ label: 'Lasts', value: potionDuration(item.effect) });
+  }
 
   lines.push({ label: 'Weight', value: String(itemWeight(itemId)) });
 
@@ -468,6 +493,8 @@ function itemSubtitle(itemId: ItemId): string {
   if (item.kind === 'consumable') return 'Food';
   if (item.kind === 'material') return 'Material';
   if (item.kind === 'ammunition') return 'Arrows';
+  if (item.kind === 'potion') return 'Potion';
+  if (item.kind === 'keepsake') return 'Keepsake';
   if (item.slot === 'weapon') {
     if (isBow(itemId)) return 'Bow';
     return toolSkill(itemId) ? 'Tool' : 'Weapon';
@@ -475,4 +502,51 @@ function itemSubtitle(itemId: ItemId): string {
   if (quiverCapacity(itemId)) return 'Quiver';
   const armor = armorTypeOf(itemId);
   return armor ? `${ARMOR_TYPE_LABELS[armor]} armour` : 'Armour';
+}
+
+/**
+ * A stand, the chest or the wall in the house (F1), described as it stands:
+ * what is on the stand, how full the chest is, how many plaques hang. Settled
+ * the moment the card opens, as every card is.
+ */
+export function describeFixture(
+  fixture: HouseFixture,
+  context: { house: HouseState; kills: KillCounts; owned: boolean },
+): InspectPanel {
+  const subtitle = context.owned ? 'In your house' : 'Not yours yet';
+  switch (fixture.kind) {
+    case 'stand': {
+      const held = onStand(context.house, fixture.stand);
+      return {
+        title: 'Stand',
+        subtitle,
+        lines: [{ label: 'Holds', value: held ? describeItemName(held) : 'Nothing' }],
+        note: "A boss's drop or a keepsake stands here, and a tap hands it back.",
+      };
+    }
+    case 'chest':
+      return {
+        title: 'Chest',
+        subtitle,
+        lines: [
+          {
+            label: 'Holds',
+            value: `${chestSlotsUsed(context.house.chest)} / ${CHEST_SLOTS} kinds of thing`,
+          },
+        ],
+        note: 'It weighs nothing to keep things here: a slot an item, however many.',
+      };
+    case 'wall':
+      return {
+        title: 'Wall of Plaques',
+        subtitle,
+        lines: [
+          {
+            label: 'Plaques',
+            value: `${plaques(context.kills).length} / ${Object.keys(ENEMIES).length}`,
+          },
+        ],
+        note: 'A plaque hangs for every creature you have a slayer rank against, at the highest.',
+      };
+  }
 }
