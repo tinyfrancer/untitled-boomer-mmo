@@ -3245,7 +3245,7 @@ order, which fixes an order nobody knows yet and breaks the chain if a phase sli
 before C11 merges, which risks a review amending a part with a session on it; more than five agents
 a wave, which the user's time does not support.
 
-## 124. Potions: foraging and brewing at a still, four potions one kind each, their clocks kept on the character and honoured away
+## 129. Potions: foraging and brewing at a still, four potions one kind each, their clocks kept on the character and honoured away
 
 **2026-10-01 · the user, asked by Claude, building the plan's phase E2**
 

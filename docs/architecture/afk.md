@@ -135,7 +135,7 @@ ceiling the panel named — half a level, or one level of the skill — when tha
 arrows ended the night.
 
 **Two potions are brewed for idle, and work through a closed game for the time they have left**
-(version 2 phase E2, decision 124). Keeper's Watch lifts what idle keeps of a kill from
+(version 2 phase E2, decision 129). Keeper's Watch lifts what idle keeps of a kill from
 `AFK_XP_MULTIPLIER`'s half to three-quarters (`idleXpMultiplier`, passed into `afkXpReward`), still
 behind active play (decision 15), and Quick Hands takes a fifth off a gather. Their clocks are kept on
 `CharacterState.potions` and run on game time; a parked session spends them by the time it was away,

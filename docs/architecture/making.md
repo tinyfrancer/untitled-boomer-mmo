@@ -134,7 +134,7 @@ against alternatives:
   handed over (decision 79).
 
 **Foraging and brewing are the potion line, and the first production vertical that makes no gear**
-(version 2 phase E2, decision 124). Foraging is a fourth gathering skill, with a tool of its
+(version 2 phase E2, decision 129). Foraging is a fourth gathering skill, with a tool of its
 own (the sickle, sold beside the other three for the same reason they are ungated) and a ladder of
 its own, one herb a band: samphire on the strand at 1, meadowsweet on the mill road's banks at 4, bog
 myrtle and bogbean in the fen at 6 and 8, and none in Lampton. A herb patch is walked through like a

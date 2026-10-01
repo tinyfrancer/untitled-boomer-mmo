@@ -76,7 +76,7 @@ curve 100n² − 200; food the answer to the wait, healing more, faster, droppin
 on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
 **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
-clocks kept on the character and honoured by a night away; save version 103; decision 124).
+clocks kept on the character and honoured by a night away; save version 106; decision 129).
 **Next: C11**, the Part C review, and from here the phases are built several at a time, by the
 rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.
@@ -690,7 +690,7 @@ Idle and active each get a reason (decision 85).
 
 - **E1 — Rested.** Time spent idle or away banks a rested bonus that speeds up active XP, capped,
   and shown on the XP bar.
-- **E2 — Potions.** _Landed (decision 124): foraging, brewing at a still in Greyford, four potions._
+- **E2 — Potions.** _Landed (decision 129): foraging, brewing at a still in Greyford, four potions._
   A way to make them (a new making skill, and where its herbs come from, are this
   phase's questions), and potions brewed in active play that **boost idle gains** for a while: more
   XP, faster gathering. Some may help in a fight.

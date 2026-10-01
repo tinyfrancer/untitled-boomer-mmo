@@ -19,7 +19,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   101: (state) => ({ ...state, secrets: [] }),
   // Foraging, brewing and potions (version 2 phase E2): two skills nobody has
   // trained, and nothing drunk.
-  102: (state) => ({
+  105: (state) => ({
     ...state,
     skills: {
       ...(state.skills as Record<string, unknown>),
