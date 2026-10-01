@@ -3380,3 +3380,44 @@ Claude's, alongside them:
   said this visit is the session's and forgotten at the end of it: the next visit opens at the
   greeting. The events carry ids, not words.
 - **Topics are drawn between what is said and the counter button**, the quests under both.
+
+## 127. Idle banks rested by time, open or closed, to half a level; XP earned by hand pays double while it lasts, and idle's own never spends it
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase E1**
+
+Decision 85 gave idle and active play each a reason the other lacks, and E1 is idle's gift to active
+play. The user settled seven forks: four asked by the brief, three met building it, each of those
+three on Claude's recommendation.
+
+- **Banked by idle with the game open and by a parked night**, both. **Rejected:** idle with the game
+  open only, which leaves a night away worth nothing to the player who comes back.
+- **Capped at half a level's worth**, the share a parked night's XP is held to (decision 15), so the
+  two move with the curve together. **Rejected:** a fixed number; a whole level.
+- **Character XP alone.** **Rejected:** skill XP as well.
+- **A paler segment ahead of the XP bar's fill.** **Rejected:** a tint on the bar while it spends.
+- **It doubles XP earned by hand while it lasts**, the bank paying the bonus. **Rejected:** half
+  again, which spreads the same total thinner; triple, a short burst.
+- **It fills in a night**, the eight hours a parked night counts, at the same rate open or closed.
+  **Rejected:** full in two hours, which wastes most of a night; full in a day.
+- **Contracts count as quests**: a kill made by hand, a quest and a contract handed in all spend it.
+  **Rejected:** kills and quests only.
+
+Claude's, building it:
+
+- **It banks by time, not by what idle earned**, so a night at the forge or a bow out of arrows
+  banks the same as a night of kills. Rested is the time away; what idle earned is its own reward.
+- **Idle's own XP never spends it**, awake or parked: a camp paid in rested as well would be idle
+  paying itself back. Rested rides `awardPlayedXp`, and idle's XP goes through `awardXp`, which
+  leaves the bank alone. The parked payout has an `awardIdleXp` of its own, since it runs on a boot
+  where idle is off and would otherwise be taken for a kill made by hand.
+- **The parked session counts what idle banked before the tab closed** (`AfkSession.restedMs`), since
+  a closed game is paid from when idle started; without it an evening watched and then left running
+  overnight banks twice. **Rejected:** banking only when idle stops, on the wall clock, which leaves
+  the bar still while idle runs and breaks the rule that the world's clocks are frame accumulators.
+- **The segment reaches as far as the bank carries the bar**, twice the bank while it doubles, so
+  its far end stays put while it is spent; the bar's line names the bank in place of the percentage.
+- **The skills book says nothing of it**, since it is character XP and the book is skills; the idle
+  panel says what idle banks, off the same constants.
+- **The pace bot plays unrested** and the bands did not move (rule 8 of the parallel plan).
+- Save version 103, a step from 102 that banks nothing and treats a night parked before it as
+  unbanked.

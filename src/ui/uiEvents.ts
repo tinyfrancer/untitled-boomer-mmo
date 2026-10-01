@@ -263,6 +263,12 @@ export const MASTERY_TIER_REACHED_EVENT = 'mastery-tier-reached';
 export const ACHIEVEMENT_UNLOCKED_EVENT = 'achievement-unlocked';
 export const SET_TITLE_REQUESTED_EVENT = 'set-title-requested';
 export const TITLE_CHANGED_EVENT = 'title-changed';
+/**
+ * The rested bank moved without any XP moving with it: idle banking it. Said
+ * when its whole number changes, not every frame; spending it rides on
+ * `XP_GAINED_EVENT`, whose gain carries the bank after.
+ */
+export const RESTED_CHANGED_EVENT = 'rested-changed';
 
 // Dialog (D1). The HUD asks a topic of whoever it is talking to; the world
 // answers with what is being said now (CONVERSATION_CHANGED), which a newly
@@ -537,6 +543,7 @@ export interface UiEventMap {
   [ASK_TOPIC_REQUESTED_EVENT]: [topicId: string];
   [CONVERSATION_CHANGED_EVENT]: [conversation: ConversationState];
   [ASKED_CHANGED_EVENT]: [asked: DialogMemory];
+  [RESTED_CHANGED_EVENT]: [rested: number];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

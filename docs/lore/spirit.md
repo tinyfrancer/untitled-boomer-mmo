@@ -84,6 +84,17 @@ and the ones in `places.md` show the voice.
 A9's tips are already near enough its voice ("Hold a finger on anything... I'll tell you what I
 know."). D4 gives them its name and its light.
 
+## While the player rests
+
+Wick does not sleep. Six hundred years in the dark left it with no wish to shut out anything ever
+again, and it is not sure it could. So when the player stops, idling at the edge of a rat run or
+putting the game down for the night, Wick keeps watch: it sits a little brighter at their shoulder,
+counts what goes by, and keeps the worst of the dark off them, and the player comes back to the
+road rested for it. This is rested XP (phase E1, `docs/v2_plan.md`): a bonus the time idle or away
+banks, spent on what the player then earns by hand. It is the one thing Wick can do for the warm body
+that holds it against the pull, and it is a little proud of it. When it says anything about it, it
+is short and pleased with itself: "You slept. I didn't. Off you go."
+
 ## The ending, and why
 
 As intended (`history.md`): Wick goes into the great light and lets go, and every soul of Veymar

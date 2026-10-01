@@ -207,6 +207,7 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
     `a whole number from 1 to ${MAX_CHARACTER_LEVEL}`,
   ],
   xp: [isCount, 'a number, 0 or more'],
+  rested: [isCount, 'a number, 0 or more'],
   gear: [
     (value) =>
       isRecord(value) &&

@@ -740,7 +740,9 @@ C2 answered which factions there are and what the spirit wants (`docs/lore/facti
 Idle and active each get a reason (decision 85).
 
 - **E1 — Rested.** Time spent idle or away banks a rested bonus that speeds up active XP, capped,
-  and shown on the XP bar.
+  and shown on the XP bar. **Landed** (decision 127): banked by idle, open or closed, by time, to
+  half a level and full in eight hours; doubles XP earned by hand (kills, quests, contracts) while
+  it lasts; idle's own XP never spends it; the pace bot plays unrested.
 - **E2 — Potions.** A way to make them (a new making skill, and where its herbs come from, are this
   phase's questions), and potions brewed in active play that **boost idle gains** for a while: more
   XP, faster gathering. Some may help in a fight.
@@ -749,7 +751,7 @@ Idle and active each get a reason (decision 85).
 - **E4 — Part E review.**
 
 **Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing
-nodes and drops? Does rested XP come only from idle, or from being away too?
+nodes and drops? Does rested XP come only from idle, or from being away too? (Both, E1 answered.)
 
 ---
 

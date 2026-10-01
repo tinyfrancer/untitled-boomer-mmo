@@ -353,7 +353,10 @@ its coin, **the pace test holds each level to its number plus four minutes of pl
 (`tests/world/pace.test.ts`, measured by a bot playing it in `tests/world/pace.ts`, decision 122, with
 food rather than regen the answer to the wait between fights), `deadEnds.test.ts` holds that
 nothing handed out leads nowhere, `uniqueLoot.test.ts` holds boss drops unique, and unattended play
-stays behind active play (half XP, no abilities, an offline cap).
+stays behind active play (half XP, no abilities, an offline cap). **Rested rides the player's XP,
+never idle's** (`systems/RestedSystem.ts`, decision 127): a kill made by hand, a quest or a contract
+spends it through `awardPlayedXp`, and idle's halved XP goes through `awardXp`, which leaves it
+alone, or idle pays itself back; the pace bot plays unrested.
 Change a stat, a table or a curve and retune until those pass rather than eyeballing it.
 
 ## Where the reasoning lives

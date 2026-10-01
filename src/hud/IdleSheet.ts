@@ -98,6 +98,7 @@ export class IdleSheet extends Sheet {
       view.push(sectionHeader('Arrows'), ...lines(plan.arrows));
     }
     view.push(sectionHeader('Away', 'with the game closed'), ...lines(plan.away));
+    view.push(sectionHeader('Rested', 'for XP earned by hand'), ...lines(plan.rested));
     return view;
   }
 

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hudMounted, mountHud, unmountHud } from '../../src/hud/Hud';
 import { TRAINING_FADE_AFTER_MS, TRAINING_FADE_MS } from '../../src/hud/TrainingBar';
 import { fillPercent } from '../../src/hud/dom';
+import { xpToNextLevel } from '../../src/systems/LevelingSystem';
 import { barFill } from '../../src/systems/math';
 import { skillXpToNextLevel } from '../../src/systems/SkillSystem';
 import { AwayReportModal } from '../../src/hud/AwayReportModal';
@@ -85,6 +86,8 @@ import {
   STATION_OPENED_EVENT,
   MASTERY_CHANGED_EVENT,
   SKILL_XP_GAINED_EVENT,
+  RESTED_CHANGED_EVENT,
+  XP_GAINED_EVENT,
   TIP_HEARD_EVENT,
   TIP_OFFERED_EVENT,
   SECRET_FOUND_EVENT,
@@ -145,6 +148,7 @@ const REPORT: OfflineAfkReport = {
   arrowsSpent: 0,
   outOfArrows: false,
   capped: false,
+  rested: 0,
 };
 
 let parent: HTMLElement;
@@ -844,6 +848,37 @@ describe('the player column', () => {
     const label = column('.hud-player__xp .hud-bar__label');
     expect(label?.textContent).toContain('/');
     expect(column('.hud-player__xp-text')).toBeNull();
+  });
+
+  // Rested (phase E1): a paler stretch ahead of the fill, reaching as far as the
+  // bank carries the bar, and the bank on the bar's line in place of the share.
+  it('draws the rested bank as a paler segment ahead of the fill, and names it', () => {
+    mount({ xp: 50, rested: 25.6 });
+    const xpToNext = xpToNextLevel(1);
+    expect(widthOf('.hud-player__xp .hud-bar__fill')).toBe(fillPercent(barFill(50, xpToNext)));
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe(fillPercent(barFill(100, xpToNext)));
+    expect(column('.hud-player__xp .hud-bar__label')?.textContent).toBe(
+      `50 / ${xpToNext} XP, 25 rested`,
+    );
+  });
+
+  it('stops the segment at the end of the bar, and follows the bank as it moves', () => {
+    mount({ xp: 50, rested: 0 });
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe('0%');
+
+    events.emit(RESTED_CHANGED_EVENT, 5000);
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe('100%');
+
+    events.emit(XP_GAINED_EVENT, {
+      level: 1,
+      xp: 60,
+      xpToNext: xpToNextLevel(1),
+      leveledUp: false,
+      bonus: 5,
+      rested: 0,
+    });
+    expect(widthOf('.hud-player__xp .hud-bar__rested')).toBe('0%');
+    expect(column('.hud-player__xp .hud-bar__label')?.textContent).toContain('(30%)');
   });
 
   it('shows health with the rest of the character details, and drains it', () => {
@@ -2141,6 +2176,11 @@ describe('the away report', () => {
     expect(modals()[0]?.textContent).toContain(
       'Stopped at the most a night pays: one Fishing level',
     );
+  });
+
+  it('says what a night banked as rested', () => {
+    mount({}, [{ kind: 'offline-afk', report: { ...REPORT, rested: 120 } }]);
+    expect(modals()[0]?.textContent).toContain('120 XP banked as rested');
   });
 
   it('shows nothing when the session was not parked', () => {

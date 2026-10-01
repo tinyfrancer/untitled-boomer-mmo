@@ -1,4 +1,5 @@
 import { addXp, xpToNextLevel } from './LevelingSystem';
+import { bankRested, spendRested } from './RestedSystem';
 import { abilityById } from './AbilitySystem';
 import { trainingAccess } from './TrainerSystem';
 import { canEquip, type EquipCheck } from './EquipSystem';
@@ -91,6 +92,10 @@ export interface CombatXpGain {
   xp: number;
   xpToNext: number;
   leveledUp: boolean;
+  /** What the rested bank added to this award, which idle's own XP never spends. */
+  bonus: number;
+  /** The rested bank after it, for the paler segment on the XP bar. */
+  rested: number;
 }
 
 export interface SkillXpGain {
@@ -507,8 +512,12 @@ export class CharacterController {
     return { ok: true };
   }
 
-  awardXp(amount: number): CombatXpGain {
-    const result = addXp({ level: this.state.level, xp: this.state.xp }, amount);
+  /**
+   * XP the character earned unattended, which leaves the rested bank alone: a
+   * camp's halved XP is never rested as well, or idle would pay itself back.
+   */
+  awardXp(amount: number, bonus = 0): CombatXpGain {
+    const result = addXp({ level: this.state.level, xp: this.state.xp }, amount + bonus);
     this.state.level = result.state.level;
     this.state.xp = result.state.xp;
     return {
@@ -516,7 +525,29 @@ export class CharacterController {
       xp: result.state.xp,
       xpToNext: xpToNextLevel(result.state.level),
       leveledUp: result.leveledUp,
+      bonus,
+      rested: this.state.rested,
     };
+  }
+
+  /**
+   * XP the player earned by hand, a kill or a turn-in, which the rested bank
+   * pays on top of while it lasts (phase E1).
+   */
+  awardPlayedXp(amount: number): CombatXpGain {
+    const spent = spendRested(amount, this.state.rested, this.state.level);
+    this.state.rested = spent.rested;
+    return this.awardXp(amount, spent.bonus);
+  }
+
+  /**
+   * Banks this long idle as rested, and says whether the whole number moved,
+   * which is all the XP bar draws: a frame's sliver is not worth a redraw.
+   */
+  bankRested(ms: number): boolean {
+    const before = Math.floor(this.state.rested);
+    this.state.rested = bankRested(this.state.rested, this.state.level, ms);
+    return Math.floor(this.state.rested) !== before;
   }
 
   awardSkillXp(skillId: SkillId, amount: number): SkillXpGain {
@@ -623,7 +654,7 @@ export class CharacterController {
       questId,
       rewardItemId,
       copper: definition.reward.copper,
-      xp: this.awardXp(definition.reward.xp),
+      xp: this.awardPlayedXp(definition.reward.xp),
     };
   }
 
@@ -702,7 +733,7 @@ export class CharacterController {
       ok: true,
       bountyId,
       copper: definition.reward.copper,
-      xp: this.awardXp(definition.reward.xp),
+      xp: this.awardPlayedXp(definition.reward.xp),
     };
   }
 
