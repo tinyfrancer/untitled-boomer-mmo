@@ -46,6 +46,11 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   }),
   // The house (F1): bare stands and an empty chest for everybody made before it.
   106: (state) => ({ ...state, house: emptyHouse() }),
+  // Held for D2 and D3, building beside F3 with save versions 108 and 109
+  // reserved (decision 125), so this branch's chain has no gap; their own
+  // steps take these two places when they merge.
+  107: (state) => state,
+  108: (state) => state,
 };
 
 /**
