@@ -50,6 +50,7 @@ import {
   CONTEXT_ACTION_REQUESTED_EVENT,
   TIP_HEARD_EVENT,
   TIPS_SET_REQUESTED_EVENT,
+  SPIRIT_BEAT_HEARD_EVENT,
   type AchievementUnlock,
   type ContextSubject,
 } from '../ui/uiEvents';
@@ -113,6 +114,7 @@ import { ShopSession } from './ShopSession';
 import { TalkSession } from './TalkSession';
 import { TipDesk } from './TipDesk';
 import { SecretFinder } from './SecretFinder';
+import { Spirit } from './Spirit';
 import { WorldContext } from './WorldContext';
 import { publishOnChange } from './publishOnChange';
 import type { Targeting } from './targeting';
@@ -158,6 +160,8 @@ export type WorldTap =
   | { kind: 'station'; station: WorldStation }
   | { kind: 'mob'; mob: Mob }
   | { kind: 'pile'; pile: LootPile }
+  /** Wick, the light at the player's shoulder: a tap asks it what it has to say. */
+  | { kind: 'spirit' }
   | { kind: 'ground'; point: Point };
 
 /**
@@ -257,6 +261,8 @@ export class ZoneWorld implements Targeting {
   private readonly contextMenu: ContextMenuSession;
   private readonly tips: TipDesk;
   private readonly secretFinder: SecretFinder;
+  /** Wick, following the player: drawn from here, and tapped through `tap`. */
+  readonly spirit: Spirit;
   private readonly loot: LootPiles;
   private readonly input: InputState;
   private readonly subscriptions: Subscriptions;
@@ -509,9 +515,14 @@ export class ZoneWorld implements Targeting {
       perform: (subject) => this.tap(subject),
     });
     this.tips = new TipDesk(this.ctx, { isIdle: () => this.afk.active });
+    this.spirit = new Spirit(this.ctx, {
+      tipWaiting: () => this.tips.waiting !== null,
+      sayTip: () => this.tips.say(),
+    });
     this.secretFinder = new SecretFinder(this.ctx, {
       secrets: this.secrets,
       leavePile: (at, drops) => this.loot.leave(at, drops),
+      voice: () => this.spirit.voice(),
     });
 
     this.subscribe();
@@ -585,6 +596,7 @@ export class ZoneWorld implements Targeting {
     listen(TIP_HEARD_EVENT, (tipId) => this.tips.heard(tipId));
     listen(TIPS_SET_REQUESTED_EVENT, (on) => this.tips.set(on));
     listen(ASK_TOPIC_REQUESTED_EVENT, (topicId) => counters.talk.ask(topicId));
+    listen(SPIRIT_BEAT_HEARD_EVENT, (beatId) => this.spirit.heard(beatId));
   }
 
   /** Drops every subscription. The host calls this before building the next world. */
@@ -638,6 +650,7 @@ export class ZoneWorld implements Targeting {
     this.secretFinder.update();
     this.publishSecrets();
     this.tips.update();
+    this.spirit.update(deltaMs);
     this.updateNpcRange();
     this.checkZoneExit();
     return this.ctx.drain();
@@ -678,6 +691,13 @@ export class ZoneWorld implements Targeting {
 
   /** What the view calls when the player touches the world. */
   tap(target: WorldTap): void {
+    // Asking Wick something is not taking the controls back: the camp, the
+    // walk, the gather and the target are all as they were, and an open
+    // counter stays open while the card waits for it to close.
+    if (target.kind === 'spirit') {
+      this.spirit.tap();
+      return;
+    }
     // Touching the world is taking the controls back.
     this.afk.set(false);
 

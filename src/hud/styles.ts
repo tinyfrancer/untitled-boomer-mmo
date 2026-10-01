@@ -576,6 +576,10 @@ export function hudCss(): string {
   ${pixelType(1)}
   color: ${THEME.color.levelUp};
 }
+/* Wick's own name over what it says, in its light (D4). */
+.hud-tip:not([data-find]) .hud-tip__heading {
+  color: ${THEME.color.skillUp};
+}
 .hud-tip__cache {
   margin: 0 0 ${THEME.padding}px;
   font-size: ${THEME.font.xs}px;

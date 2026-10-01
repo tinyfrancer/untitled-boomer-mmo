@@ -812,6 +812,26 @@ const PLACEHOLDER_FRAME: SpriteDef = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// A spirit: a purple dot, pulsing.
+// ---------------------------------------------------------------------------
+
+const dot = (radius: number): Grid =>
+  Array.from({ length: 16 }, (_, y) =>
+    Array.from({ length: 16 }, (__, x) =>
+      Math.hypot(x + 0.5 - 8, y + 0.5 - 8) < radius ? 'a' : '.',
+    ).join(''),
+  );
+
+const PLACEHOLDER_SPIRIT: SpriteDef = {
+  id: 'placeholder-spirit',
+  kind: 'spirit',
+  width: 16,
+  height: 16,
+  legend: { a: 'purple.3' },
+  animations: { loop: [3, 4, 5, 4].map(dot) },
+};
+
 /** The stand-in for each kind, which is also what the budget is held against in full. */
 export const PLACEHOLDERS: Readonly<Record<SpriteKind, SpriteDef>> = {
   tile: PLACEHOLDER_TILE,
@@ -823,4 +843,5 @@ export const PLACEHOLDERS: Readonly<Record<SpriteKind, SpriteDef>> = {
   effect: PLACEHOLDER_EFFECT,
   icon: PLACEHOLDER_ICON,
   frame: PLACEHOLDER_FRAME,
+  spirit: PLACEHOLDER_SPIRIT,
 };

@@ -30,6 +30,8 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     rested: 0,
     afk: isRecord(state.afk) ? { ...state.afk, restedMs: 0 } : null,
   }),
+  // Wick's beats (D4): nobody made before them has heard one.
+  104: (state) => ({ ...state, beats: [] }),
 };
 
 /**

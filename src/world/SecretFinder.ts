@@ -18,6 +18,8 @@ export interface SecretFinderDeps {
   secrets: readonly WorldSecret[];
   /** Where a cache the pack could not take is left, as a kill's is. */
   leavePile: (at: Point, drops: LootDrop[]) => void;
+  /** Wick says what it is, unasked: a find is the reward, not advice. */
+  voice: () => void;
 }
 
 /**
@@ -70,6 +72,7 @@ export class SecretFinder {
     this.ctx.publishInventory();
     this.ctx.publishCurrency();
     this.ctx.events.emit(SECRET_FOUND_EVENT, secret.secretId);
+    this.deps.voice();
     this.ctx.persistCharacter();
   }
 }

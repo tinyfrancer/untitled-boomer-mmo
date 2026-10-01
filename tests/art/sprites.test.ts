@@ -38,7 +38,7 @@ function writtenFrames(def: SpriteDef): Grid[] {
 }
 
 // What a kind that is drawn the same wherever it goes may not reach for.
-const ACTOR_KINDS = new Set(['person', 'beast', 'effect', 'icon', 'frame']);
+const ACTOR_KINDS = new Set(['person', 'beast', 'effect', 'icon', 'frame', 'spirit']);
 
 // The world's, the lookbook's, and the HUD's frames and icons (decision 111).
 const HELD = [...SPRITES, ...OUTFITS, ...HUD_SPRITES];

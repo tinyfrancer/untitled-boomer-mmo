@@ -433,11 +433,15 @@ since it is the reward rather than advice, with Got it alone to put it away. The
 many of the zone's secrets are found under the map, "Secrets 1 / 2", read off `secretsFound` in
 `systems/MapSystem.ts` and the `secrets-changed` list; where one lies is on no map.
 
-**A tip is a card that waits for a tap** (decision 98, `hud/TipCard.ts`). The world offers one at a
-time on `tip-offered`, carrying the spirit's line already written (`simulation.md`), and the card
-holds it until **Got it** (`tip-heard`) or **No more tips** (`tips-set-requested`, off); Options
-has the switch to bring them back, opened on what the save says. It **waits out anything covering
-the playfield**: any overlay, and a sheet on a phone, where the sheet is the screen. A roomy
+**What Wick says is a card that waits for a tap** (decisions 98 and D4's, `hud/TipCard.ts`), under
+its name, in its light. A tap on Wick in the world says what it has (`simulation.md`): a tip on
+`tip-offered`, carrying the line already written, which the card holds until **Got it**
+(`tip-heard`) or **Go quiet** (`tips-set-requested`, off); a beat of its story or a line of its own
+on `spirit-said`, with Got it alone, which answers a beat with `spirit-beat-heard` and a line of its
+own with nothing, since nothing about it is kept. Options has the switch to bring the tips back,
+**Wick's Tips: On** or **Quiet**, opened on what the save says. It **waits out anything covering
+the playfield**: any overlay, a counter included, so a tap on Wick at a counter is said when the
+counter closes, and a sheet on a phone, where the sheet is the screen. A roomy
 screen's sheet stands in its own column below the top row, clear of the card, and holding for it
 would hold every tip for as long as the character sheet was left open. Overlays come and go as
 children of the root, each closing itself, so `Hud` hears them through a `MutationObserver` on the
@@ -447,5 +451,6 @@ enough to read in, which is a landscape phone and anything roomier, the gap stop
 the minimap and the target frame stands further left, and under the whole top row on a portrait
 phone, where the corners all but meet. In the DOM it goes under the toast, which may
 print across it on a short screen and is the more urgent of the two, and under every sheet and
-overlay. Smoke switches tips off for every character it makes except in its own `tips` section, since
-a card nobody answers would sit over whatever the next section taps.
+overlay. Smoke switches tips off and hears Wick's waking for every character it makes, except in
+its own `tips` and `spirit` sections, since a card nobody answers would sit over whatever the next
+section taps.

@@ -32,7 +32,8 @@ knowing before you add to it:
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
 through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `TalkSession` (the conversation: what was asked this visit, and asking, D1) and the counter sessions beside it (`ShopSession`, `BankSession`, `TrainerSession`, `BountySession` and the rest, `economy.md`), `QuestDesk`,
 `ContextMenuSession` (what a press held is about, and what was chosen from it), `TipDesk` (the
-spirit's tips: which to offer, and hearing the answer), `SecretFinder` (a secret walked up to, once,
+spirit's tips: which is waiting, saying it, and hearing the answer), `Spirit` (Wick, following the
+player and saying what it has when tapped, D4), `SecretFinder` (a secret walked up to, once,
 measured along the stretch walked each frame so a slow phone finds one it walked past, decision
 117, and one in a room only from inside it, decision 120), and `ApproachDriver`
 (all three click-to-move walks). Each owns its own state,
@@ -376,11 +377,34 @@ then what is in the bag, then what the player is doing, then how to ask about an
 last — each a rule over the character that answers its line or nothing. A line is written from the
 tables the way the item card and the skills book are (the fee, the trainer's lesson and price, the
 station and its zone, idle's share and ceiling), so a retune cannot leave a tip saying the old
-number. `world/TipDesk.ts` asks once a second, offers one tip at a time on `tip-offered`, and
-offers nothing more until it is heard; it keeps quiet for the first eight seconds of a world and
+number. `world/TipDesk.ts` asks once a second which tip is waiting, and since D4 keeps it there
+until Wick is tapped, saying it on `tip-offered` and nothing else until it is heard; one that stops
+applying before it is asked for stops waiting, and a second tap says the same one again. It keeps
+quiet for the first eight seconds of a world and
 forty seconds after a tip, which is what makes a character from before tips hear them one at a time
 rather than as a queue. What was heard, and whether tips are off, is `CharacterState.tips` (save
 version 26), set through the controller. What is on offer and the clock are the zone's, and start
 again in the next one; the HUD outlives the world, so an answer is taken for any tip, not only the
 one this world offered. A death leaves nothing in the save to derive a tip from, so `ZoneWorld`
 tells the desk what getting up cost, and the desk holds it until that tip is heard.
+
+**Wick is a collaborator like the rest, and a light rather than a body** (D4, `world/Spirit.ts`).
+It follows the player to a spot off their left shoulder on a lag, closing a share of the gap worked
+out from the frame's length (`1 - e^(-Δ/220ms)`), so a cheap phone's 160ms frame leaves it where
+ten fast frames do; past four tiles it is there at once, which is a zone walk, a respawn or a
+teleport. **It never routes and never blocks**: it goes straight at where it should be through any
+wall, has no body in `collisionWorld`, and is no `Chase`, since there is nothing it could be stopped
+by. It floats `SPIRIT_HEIGHT` over the ground it stands on, which is what it is sorted and picked
+by. **What it says when tapped is, in order, a beat of its story waiting here, the tip waiting at the
+desk, or a line of its own about the zone**, taken in turn from `SPIRIT_ASIDES`. A beat waits for a
+tap like a tip, except Wick's waking, said unasked once a world has opened (it is how a player
+learns the light can be tapped). Which beat is waiting is derived (`dueBeat` in
+`systems/SpiritSystem.ts`) from the beats heard, the kills and the zone the character is in: the
+waking first, wherever they are, then each beat in `data/spiritBeats.ts` in its own zone, on arrival
+or once its boss is down. Only what was heard is stored (`CharacterState.beats`), for the tips'
+reason. **It glows while it has something to say**, `calling` being a beat or a tip waiting, and
+stays `lit` a moment after it speaks; the moment it starts to glow, and a secret found, push
+`{ kind: 'spirit-calls' }`, since the chime is a sound and a sound cannot poll. **Quiet is
+`tips.off`**, and silences the tips alone: the story still comes. A tap on Wick is the one tap that
+does not take the controls back: it ends no camp, walk, gather or target, and a counter open stays
+open while the card waits for it to close.

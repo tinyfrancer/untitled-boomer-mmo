@@ -3421,3 +3421,52 @@ Claude's, building it:
 - **The pace bot plays unrested** and the bands did not move (rule 8 of the parallel plan).
 - Save version 103, a step from 102 that banks nothing and treats a night parked before it as
   unbanked.
+
+## 128. Wick is drawn in the world and says what it has when tapped, on the card; quiet is the tips alone; underground its light is the only one; its waking is the one line said unasked
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D4**
+
+D4 draws the spirit (decision 87) and hands it A9's tips. The user settled six forks, four at the
+start of the wave and two met in the building, each on Claude's recommendation:
+
+- **Wick speaks on the card as it is**, under its name and edged in its light, and **the spirit in
+  the world glows and chimes when it has something to say**. **Rejected:** a bubble drawn in the
+  world by the renderer beside the spirit and laid out with the name plates, which moves with it
+  but is a second place the game talks in, and one a fight draws over.
+- **What Wick has to say waits for a tap on it**: a tip, or a beat of its story, glows until asked.
+  Two things come unasked: its waking, which is how a player learns the light can be tapped, and a
+  secret's line, which is the reward for the walk. **Rejected:** the card coming up on its own as
+  A9's did, with Wick glowing beside it, which leaves the light nothing to be tapped for; and a card
+  that waits a minute and then comes anyway, which is a toast with a delay.
+- **Go quiet silences the tips alone**: the story still comes, since it is the spirit being a
+  character rather than advice. It is `tips.off` as it was, renamed on the card and in Options.
+  **Rejected:** quiet silencing the beats too.
+- **Wick is the light underground**: the lantern's pool is centred on the spirit and glows its
+  blue-white. **Rejected:** a lantern carried beside a spirit, two lights where decision 59 keeps
+  one.
+- **A tap on Wick waits while a counter is open**: it is said, and the card holds until the counter
+  closes, as it holds for any overlay. **Rejected:** Wick untappable at a counter.
+- **The spirit is a sprite kind of its own** in the budget: 16×16, not outlined, one loop of four
+  frames at 200ms, its calling a second, brighter sprite rather than a second animation, so the
+  kind keeps one clock. **Rejected:** reusing the mark kind, which is light lying on the ground.
+
+Claude's, building it:
+
+- **Nine beats before Part G**, from `docs/lore/spirit.md`'s table: its waking first, wherever the
+  character is, then one a zone on arriving, and Orlath's once he is down. **Where a memory is a
+  thing, the secret it is says it**, and the zone's beat only leads up to it, so the five secrets
+  that already carried the stone, the cell, the coin, the ring and the door keep them. Which beat is
+  waiting is derived from the beats heard, the kills and the zone; only what was heard is stored
+  (`CharacterState.beats`, save version 103). **Rejected:** a beat on a secret found, which leaves a
+  player who never finds it without the rest of the story; beats held strictly in order, which a
+  missed one would stop for good.
+- **With nothing waiting, a tap gets a line of its own** about where it is, two a zone, taken in
+  turn and remembering nothing.
+- **It follows on a lag and never routes**: straight at a spot off the left shoulder through any
+  wall, a share of the gap a frame worked out from the frame's length, there at once past four
+  tiles. **Rejected:** a `Chase`, which it has no reason for, since nothing can stop a light.
+- **It is picked after the creatures and before the stations**, by a box round the light where it
+  floats, since at the shoulder is where a creature fighting the player stands. **Rejected:** above
+  the creatures, which would eat the tap on the rat.
+- **A tap on Wick takes nothing back**: it ends no camp, walk, gather or target, unlike every other
+  tap on the world.

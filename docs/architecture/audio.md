@@ -24,7 +24,10 @@ was the board reading the world's mobs, which would have made sound the one thin
 that holds a reference to the zone (`docs/decisions.md` 61). A loot pile is the second case: the
 sack is drawn from `world.lootPiles`, and `LootPiles.leave` pushes `{ kind: 'loot-left' }` for the
 ear, which hears it as a low thump — the sound of a full pack, which is worth hearing mid-fight
-because the notice that says so is easy to miss.
+because the notice that says so is easy to miss. Wick is the third (D4): its glow is state the view
+draws from `spirit.lit`, and `Spirit` pushes `{ kind: 'spirit-calls' }` the moment it starts to glow
+and when it says a secret unasked, which the ear hears as a `chime`, a small glass bell, soft
+because it says something is waiting rather than that anything happened.
 
 **A shot is heard as the string, not as a swing.** The world says `shot` rather than `swing` for an
 arrow loosed, and the ear hears it as `twang` — a plucked note and the hiss of the shaft, shorter than

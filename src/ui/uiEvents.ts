@@ -9,6 +9,7 @@ import type {
   QuestId,
   RecipeId,
   SecretId,
+  SpiritBeatId,
   TipId,
   TitleId,
   ZoneId,
@@ -192,10 +193,10 @@ export const AFK_STATE_CHANGED_EVENT = 'afk-state-changed';
 export const IDLE_FOOD_MOVE_REQUESTED_EVENT = 'idle-food-move-requested';
 export const IDLE_FOOD_KEEP_REQUESTED_EVENT = 'idle-food-keep-requested';
 export const IDLE_FOOD_CHANGED_EVENT = 'idle-food-changed';
-// The spirit's tips (decision 98). The world offers one at a time, carrying the
-// line already written, since what it says is read off the character; the card
+// The spirit's tips (decision 98). Wick says one at a time when tapped (D4),
+// carrying the line already written, since what it says is read off the character; the card
 // answers with the tip heard. On or off is asked for, saying which, from the
-// card's No more tips and from Options, and the answer is what the save holds.
+// card's Go quiet and from Options, and the answer is what the save holds.
 export const TIP_OFFERED_EVENT = 'tip-offered';
 export const TIP_HEARD_EVENT = 'tip-heard';
 // A secret found (decision 117): which, for the card that says so, once. And
@@ -288,6 +289,12 @@ export interface ConversationState {
   npcId: NpcId;
   said: { topicId: string; answerId: string } | null;
 }
+// Wick (D4). A tap on the light speaks: a beat of its story, or a line of its
+// own when nothing waits (a tip it speaks goes out as TIP_OFFERED_EVENT, as
+// before). The card answers a beat with it heard; a line of its own needs no
+// answer, since nothing about it is kept.
+export const SPIRIT_SAID_EVENT = 'spirit-said';
+export const SPIRIT_BEAT_HEARD_EVENT = 'spirit-beat-heard';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -459,6 +466,12 @@ export interface AchievementUnlock {
  * world announces state and the HUD asks for things — and a request whose
  * payload drifted from its handler fails in exactly the same silent way.
  */
+/** What Wick said when tapped: a beat of its story, or, with no beat, a line of its own. */
+export interface SpiritSaid {
+  beatId: SpiritBeatId | null;
+  text: string;
+}
+
 export interface UiEventMap {
   [TARGET_SELECTED_EVENT]: [target: TargetInfo];
   [TARGET_CLEARED_EVENT]: [];
@@ -544,6 +557,8 @@ export interface UiEventMap {
   [CONVERSATION_CHANGED_EVENT]: [conversation: ConversationState];
   [ASKED_CHANGED_EVENT]: [asked: DialogMemory];
   [RESTED_CHANGED_EVENT]: [rested: number];
+  [SPIRIT_SAID_EVENT]: [said: SpiritSaid];
+  [SPIRIT_BEAT_HEARD_EVENT]: [beatId: SpiritBeatId];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

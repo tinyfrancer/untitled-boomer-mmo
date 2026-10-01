@@ -170,7 +170,7 @@ and collision bodies are data (`EnemyDefinition.body`), never measured off anyth
 
 **The rules are `ZoneWorld`'s collaborators, one per subsystem** (`CombatDirector`,
 `GatherSession`, `AbilityCaster`, `AfkCamp`, the counter sessions, `QuestDesk`, `LootPiles`,
-`ContextMenuSession`, `TipDesk`, `SecretFinder`, `ApproachDriver`). Each owns its state and reaches the zone through the shared
+`ContextMenuSession`, `TipDesk`, `SecretFinder`, `ApproachDriver`, `Spirit`). Each owns its state and reaches the zone through the shared
 `WorldContext` and a small `Deps` interface of its own — never a reference to the world. A new rule
 belongs in the collaborator that owns the state it reads. What stays in `ZoneWorld` is the entities,
 the tick order, what is selected, the publishers that speak only on change, and the three things
@@ -253,6 +253,9 @@ a person has given (`CharacterState.asked`, decision 126), by which a topic is g
 new one. **What a person says is a row** (`data/dialog.ts`), its conditions a `requires` union read
 by `DialogSystem` for the world and the HUD alike, so a new kind of condition is a member and a case
 there; a new person is a conversation there as well as a row in `NPCS`.
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every beat
+of Wick's story heard (`CharacterState.beats`, decision 128); which beat waits where is derived
+(`systems/SpiritSystem.ts`).
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can
@@ -302,7 +305,7 @@ drawn over the room the player is standing in**: another building is cut out of 
 not written there. **The words are laid out before any is written** (`render2d/plates.ts`): a plate
 that would be written over another is lifted straight up clear of it, and the player's and then the
 target's never move (decision 112). A tap is picked against boxes in a fixed **priority** (node,
-signpost, NPC, mob, station, building, loot pile, ground), not a depth sort. What a frame costs is a
+signpost, NPC, mob, spirit, station, building, loot pile, ground), not a depth sort. What a frame costs is a
 budget smoke asserts under an eight-times-throttled CPU (`SLOW_DRAW_BUDGET_MS`, 16ms since decision
 110); raising it is a decision about the game, not about the run that hit it.
 `docs/architecture/rendering.md` has the view.

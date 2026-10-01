@@ -6,6 +6,7 @@ import { variantId } from '../art/compile';
 import { nodeSprite, secretSprite, stationSprite, strokeSprite } from '../art/places';
 import { CRIT, HIT, LEVEL_UP, LOOT_SACK } from '../art/sprites/effects';
 import { SIGNPOST } from '../art/sprites/props';
+import { WICK, WICK_CALLING } from '../art/sprites/wick';
 import { TEXT_HEIGHT, textWidth } from '../art/font';
 import { TILE_SIZE } from '../config/constants';
 import { ABILITIES } from '../data/abilities';
@@ -25,6 +26,7 @@ import type { Point } from '../systems/MovementSystem';
 import type { DrawnCounts, PlayerFigure } from '../types/debugView';
 import type { NodeShapeId, ResourceNodeId, ZoneSetting } from '../types/ids';
 import type { Mob } from '../world/Mob';
+import { SPIRIT_HEIGHT } from '../world/Spirit';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
 import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import { Motion, deathPose, frameIndex, playMs, type Pose } from './animation';
@@ -32,7 +34,7 @@ import { BuildingSprite } from './buildings';
 import { Camera2D } from './camera';
 import { CanvasPool } from './canvases';
 import { Effects2D, Telegraphs } from './effects';
-import { LANTERN, Lantern } from './lantern';
+import { Lantern } from './lantern';
 import { pickScene, pickTap, type PickRect } from './picking';
 import { boxesOverlap, stackPlates, stackableBox, type Box } from './plates';
 import { SpriteSheet } from './sheet';
@@ -197,7 +199,7 @@ export class ZoneView2D implements ZoneView {
   // first seen, which is what its disc fills from.
   private telegraphs: Telegraphs | null = null;
   private windUps = new Map<Mob, { landsAt: number; seenAt: number }>();
-  // Underground only: the light the player carries.
+  // Underground only: the darkness round Wick, the one light there is.
   private lantern: Lantern | null = null;
   // The view's own and the screen's size, made again when the screen changes shape.
   private vignette: HTMLCanvasElement | null = null;
@@ -633,8 +635,24 @@ export class ZoneView2D implements ZoneView {
     // A fire stands on no shadow: what it throws is light.
     const campfire = world.campfire;
     if (campfire) standing.push(prop(campfire.x, campfire.y, stationSprite('fire'), 'loop'));
+    // Nor does Wick, which is all light: sorted by the ground under it like
+    // anything else, and drawn up at the player's shoulder, brighter while it
+    // has something to say.
+    const spirit = world.spirit;
+    const wick = spirit.lit ? WICK_CALLING.id : WICK.id;
+    const wickPose: Pose = {
+      animation: 'loop',
+      facing: null,
+      index: frameIndex(sheet.def(wick), 'loop', now),
+    };
+    standing.push({
+      baseY: spirit.y,
+      draw: () => {
+        const p = at(spirit.x, spirit.y - SPIRIT_HEIGHT);
+        sheet.draw(context, wick, wickPose, p.x, p.y + Math.floor(WICK.height / 2));
+      },
+    });
 
-    const player = world.player;
     const room = this.room();
     for (const building of this.buildings) {
       const behind = this.hidesPlayer(building.outsideRect(), building.baseY);
@@ -655,14 +673,8 @@ export class ZoneView2D implements ZoneView {
 
     this.effects.draw(context, camera, sheet, this.text, now);
     if (this.lantern) {
-      const flame = at(player.x, player.y);
-      this.lantern.draw(
-        context,
-        flame.x,
-        flame.y - LANTERN.height,
-        this.canvas.width,
-        this.canvas.height,
-      );
+      const light = at(spirit.x, spirit.y - SPIRIT_HEIGHT);
+      this.lantern.draw(context, light.x, light.y, this.canvas.width, this.canvas.height);
     }
     // Over the world and under the words, so a name at the edge of the screen
     // reads as well as one in the middle, underground as well.

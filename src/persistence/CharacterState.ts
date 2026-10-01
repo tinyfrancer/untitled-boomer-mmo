@@ -11,7 +11,16 @@ import type { Reforges } from '../systems/ReforgeSystem';
 import type { DialogMemory } from '../systems/DialogSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
-import type { AbilityId, ClassId, ItemId, SecretId, TipId, TitleId, ZoneId } from '../types/ids';
+import type {
+  AbilityId,
+  ClassId,
+  ItemId,
+  SecretId,
+  SpiritBeatId,
+  TipId,
+  TitleId,
+  ZoneId,
+} from '../types/ids';
 import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
 
 /**
@@ -23,7 +32,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 4;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 5;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -138,6 +147,12 @@ export interface CharacterState {
    * the reason the tips heard are: hearing leaves nothing else behind.
    */
   asked: DialogMemory;
+  /**
+   * The beats of Wick's story this character has heard (D4), in the order
+   * heard. Stored for the reason the tips heard are: what it remembered aloud
+   * leaves nothing else behind.
+   */
+  beats: SpiritBeatId[];
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -264,6 +279,7 @@ export function createNewCharacter(
     showMinimap: true,
     secrets: [],
     asked: {},
+    beats: [],
     quests: {},
     bounty: null,
     kills: {},

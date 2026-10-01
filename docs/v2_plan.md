@@ -724,9 +724,18 @@ decision 121).
   of what is found.
 - **D3 — Factions and reputation.** Standing with each faction, moved by quests, kills, contracts and
   dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
-- **D4 — The spirit.** The helper drawn in the world: it follows you, glows or chimes when it has a
-  tip, speaks in a bubble when tapped, can be told to go quiet, and has **a name and a story** that
-  surfaces at new zones and bosses. It takes over A9's tips.
+- **D4 — The spirit. (Landed.)** Wick drawn in the world, a sprite kind of its own (16×16, not
+  outlined, one loop, a brighter sprite when it calls), following the player off the left shoulder
+  on a lag that never routes and never blocks (`world/Spirit.ts`). It **glows and chimes when it has
+  something to say and says it on the card when tapped**, under its name: a beat of its story waiting
+  here, else the tip waiting at the desk, else a line of its own about the zone. Only its waking and
+  a secret's line come unasked. **Nine beats** (`data/spiritBeats.ts`), its waking first and then one
+  a zone on arriving and Orlath's once he is down, each heard once (`CharacterState.beats`, save
+  version 105); where a memory is a thing, its secret says it and the zone's beat leads up to it.
+  **Go quiet** silences the tips alone. **Underground its light is the only one**, the lantern's pool
+  centred on it in its blue-white. Picked after the creatures and before the stations; a tap on it
+  takes nothing back, and waits out an open counter. Smoke gained a `spirit` section. Decision 124
+  has the forks.
 - **D5 — Part D review.**
 
 **Open questions for Part D**: can two factions be opposed, so that raising one lowers another?

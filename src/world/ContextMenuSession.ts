@@ -9,6 +9,7 @@ import {
   describeNpc,
   describePile,
   describeSignpost,
+  describeSpirit,
   describeStation,
 } from '../systems/InspectSystem';
 import type { ContextAction, ContextActionId, ContextSubject } from '../ui/uiEvents';
@@ -29,6 +30,7 @@ const SUBJECT_ACTIONS = {
   signpost: 'travel',
   station: 'work',
   pile: 'take',
+  spirit: 'talk',
 } as const satisfies Record<Exclude<Subject['kind'], 'npc'>, ContextActionId>;
 
 /** The line each role's counter is asked for by; what it says is `ROLE_SERVICES`. */
@@ -116,6 +118,12 @@ export class ContextMenuSession {
         return this.stationMenu(target.station);
       case 'pile':
         return this.pileMenu(target.pile);
+      case 'spirit':
+        return {
+          title: 'Wick',
+          actions: [action('talk', 'Listen')],
+          details: describeSpirit(),
+        };
     }
   }
 

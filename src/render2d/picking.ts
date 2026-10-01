@@ -6,6 +6,7 @@ import type { Point } from '../systems/MovementSystem';
 import type { LootPile } from '../world/LootPile';
 import type { Mob } from '../world/Mob';
 import type { ResourceNode } from '../world/ResourceNode';
+import { SPIRIT_HEIGHT } from '../world/Spirit';
 import type {
   WorldBuilding,
   WorldNpc,
@@ -19,7 +20,7 @@ import type {
  * What a tap is on (`docs/architecture/rendering.md` has why each rule is what
  * it is): a tap is picked against boxes the game chooses, not against the
  * pixels drawn, and the kinds are asked in a **priority** — node, signpost,
- * NPC, mob, station, building, loot pile, ground — rather than a depth sort,
+ * NPC, mob, spirit, station, building, loot pile, ground — rather than a depth sort,
  * so a rat in front of the shopkeeper does not stop you shopping. A box is a
  * rectangle on the ground's plane, standing up the screen from where a thing's
  * feet are, and within one kind the one drawn in front wins.
@@ -86,6 +87,8 @@ export interface PickScene2D {
   readonly signposts: readonly (Pickable2D & { readonly signpost: WorldSignpost })[];
   readonly npcs: readonly (Pickable2D & { readonly npc: WorldNpc })[];
   readonly mobs: readonly (Pickable2D & { readonly mob: Mob })[];
+  /** Wick, the one of its kind, under anything a fight or a counter is asked of. */
+  readonly spirit: Pickable2D;
   readonly stations: readonly (Pickable2D & { readonly station: WorldStation })[];
   readonly buildings: readonly (Pickable2D & {
     readonly building: WorldBuilding;
@@ -124,6 +127,7 @@ export function pickTap(point: Point, scene: PickScene2D): WorldTap {
   if (npc) return { kind: 'npc', npc: npc.npc };
   const mob = frontmost(point, scene.mobs);
   if (mob) return { kind: 'mob', mob: mob.mob };
+  if (frontmost(point, [scene.spirit])) return { kind: 'spirit' };
   const station = frontmost(point, scene.stations);
   if (station) return { kind: 'station', station: station.station };
   // A building answers as whoever works in it, or the ground at its door: see
@@ -141,7 +145,9 @@ export function pickTap(point: Point, scene: PickScene2D): WorldTap {
  * (`heightOf`, in art pixels), and never smaller than a thumb. A node is the
  * exception, picked by its body: a tree a tile and a half tall rather than the
  * whole of its crown, so a creature behind the crown is still the creature,
- * and a fishing spot lying flat on the water.
+ * and a fishing spot lying flat on the water. Wick is the other, picked by a
+ * box round the light where it floats rather than one standing on the ground
+ * under it, which would be the player's shoulder.
  */
 export function pickScene(
   world: ZoneWorld,
@@ -188,6 +194,13 @@ export function pickScene(
             )
           : null,
     })),
+    spirit: {
+      baseY: world.spirit.y,
+      pickRect: () => {
+        const { x, y } = world.spirit;
+        return lyingRect(x, y - SPIRIT_HEIGHT, TILE_SIZE / 2, TILE_SIZE / 2);
+      },
+    },
     stations: world.stations.map((station) => ({
       station,
       baseY: station.y,

@@ -268,6 +268,16 @@ export function describeSignpost(exit: ZoneExit): InspectPanel {
   };
 }
 
+/** Wick, asked about with a held finger: what it is, as far as anybody can see. */
+export function describeSpirit(): InspectPanel {
+  return {
+    title: 'Wick',
+    subtitle: 'The light at your shoulder',
+    lines: [],
+    note: 'It goes where you go, and glows when it has something to say. Tap it to hear it.',
+  };
+}
+
 /**
  * Who an NPC is and what standing at them gets you.
  *

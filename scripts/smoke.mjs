@@ -212,11 +212,23 @@ const stepFor = async (read, done, label, budgetMs = 60000) => {
 
 /**
  * Switches the spirit's tips off for the character just made, through the same
- * ask the card's No more tips sends. A tip waits for a tap, so one left up by
- * a section that is not about tips would sit over whatever the next one taps;
- * the tips section switches them back on for itself.
+ * ask the card's Go quiet sends, and hears Wick's waking, the one line it says
+ * unasked. A card waits for a tap, so one left up by a section that is not
+ * about Wick would sit over whatever the next one taps; the tips and spirit
+ * sections ask for what they want for themselves.
  */
-const quietTips = () => page.evaluate(() => window.events.emit('tips-set-requested', false));
+const quietTips = () =>
+  page.evaluate(() => {
+    window.events.emit('tips-set-requested', false);
+    window.events.emit('spirit-beat-heard', 'wake');
+  });
+
+/** Where Wick's light is on the screen: over the ground under it by the height it floats. */
+const wickOnScreen = () =>
+  page.evaluate(() => {
+    const { spirit } = window.world;
+    return window.view.worldToScreen(spirit.x, spirit.y - spirit.height);
+  });
 
 /** Drops the player back on the zone's spawn point with nothing selected. */
 const park = async () => {
@@ -4642,9 +4654,11 @@ async function tips() {
     const mob = window.world.mobs[0];
     if (mob) window.world.setTarget(mob);
   });
-  // Back on, which waits a tip's gap rather than arriving with the tap.
+  // Back on, which waits a tip's gap rather than arriving with the tap. A tip
+  // waits in Wick (D4), so it is had by tapping the light once it glows.
   await page.evaluate(() => window.events.emit('tips-set-requested', true));
-  const offered = await stepFor(card, (seen) => seen.tip !== null, 'a tip offered', 90000);
+  await askWick('a tip waiting in Wick');
+  const offered = await stepFor(card, (seen) => seen.tip !== null, 'a tip offered', 10000);
   check(
     "a tip comes as a card with the spirit's line, and two buttons a thumb can take",
     offered.text.length > 20 && offered.smallest >= 44,
@@ -4695,12 +4709,13 @@ async function tips() {
   // Ten seconds of game time, well inside the gap.
   await step(250);
   const quiet = await card();
-  const next = await stepFor(card, (seen) => seen.tip !== null, 'the next tip', 90000);
+  await askWick('the next tip waiting in Wick');
+  const next = await stepFor(card, (seen) => seen.tip !== null, 'the next tip', 10000);
   await page.tap('.hud-tip [data-action="tips-off"]');
   await page.waitForTimeout(80);
   const silenced = await card();
   check(
-    'the next waits out a gap, and No more tips switches them off for good',
+    'the next waits out a gap, and Go quiet switches them off for good',
     quiet.tip === null && next.tip !== offered.tip && silenced.tip === null && silenced.off,
     `quiet ${quiet.tip}, then ${next.tip}, then card ${silenced.tip}, off ${silenced.off}`,
   );
@@ -4708,6 +4723,22 @@ async function tips() {
     window.world.character.removeItem('rat-meat', 1);
     window.events.emit('inventory-changed', { ...window.world.character.state.inventory });
   });
+}
+
+/**
+ * Waits for Wick to glow, then taps its light.
+ *
+ * @param {string} label
+ */
+async function askWick(label) {
+  await stepFor(
+    () => page.evaluate(() => window.world.spirit.calling),
+    (calling) => calling,
+    label,
+    90000,
+  );
+  await draw();
+  await clickAt(await wickOnScreen());
 }
 
 async function reset() {
@@ -5744,6 +5775,115 @@ async function dialog() {
   await page.evaluate(() => window.world.closeCounters());
 }
 
+async function spirit() {
+  // --- Wick (D4): drawn beside the player in the art's light, brighter while it
+  // has something to say, and a tap on it saying it on the card under its own
+  // name. Where it follows, which beat waits where, the tips through it and
+  // going quiet are tests/world/spirit.test.ts; what needs a browser is that the
+  // light is drawn where a thumb is told it is, a real tap on it, and that it
+  // comes along across a zone round trip and lets go of nothing. Greyford, where
+  // the section before left off and whose beat is waiting by now. ---
+  await toGreyford();
+  await park();
+  await sweep();
+  const before = await canvases();
+
+  /** How many blue-white pixels the canvas holds in a box round Wick's light. */
+  const light = () =>
+    page.evaluate(() => {
+      const canvas = [...document.querySelectorAll('canvas')].sort(
+        (a, b) => b.width * b.height - a.width * a.height,
+      )[0];
+      const context = canvas?.getContext('2d');
+      if (!canvas || !context) return { bright: 0, beside: false };
+      const box = canvas.getBoundingClientRect();
+      const scale = canvas.width / box.width;
+      const { spirit, player } = window.world;
+      const at = window.view.worldToScreen(spirit.x, spirit.y - spirit.height);
+      const feet = window.view.worldToScreen(player.x, player.y);
+      const x = Math.round((at.x - box.left) * scale);
+      const y = Math.round((at.y - box.top) * scale);
+      const { data } = context.getImageData(x - 10, y - 10, 20, 20);
+      let bright = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const [r = 0, , b = 0] = [data[i], data[i + 1], data[i + 2]];
+        if (b >= 200 && b > r + 10) bright += 1;
+      }
+      // Off the shoulder: beside the feet, and over them.
+      return { bright, beside: at.x < feet.x && at.y < feet.y };
+    });
+
+  await stepFor(
+    () => page.evaluate(() => window.world.spirit.calling),
+    (calling) => calling,
+    "Greyford's beat waiting in Wick",
+    30000,
+  );
+  await draw();
+  const calling = await light();
+  await page.screenshot({ path: `${OUT}/2c-wick-calling.png` });
+  await clickAt(await wickOnScreen());
+  const said = await page.evaluate(() => {
+    const root = /** @type {HTMLElement} */ (document.querySelector('.hud-tip'));
+    return {
+      shown: !root.classList.contains('hud-hidden'),
+      beat: root.dataset.beat ?? null,
+      heading: root.querySelector('.hud-tip__heading')?.textContent ?? '',
+      line: root.querySelector('.hud-tip__line')?.textContent ?? '',
+    };
+  });
+  check(
+    "Wick glows beside the player's shoulder, and a tap on it says its beat under its name",
+    calling.beside && calling.bright > 0 && said.shown && said.beat === 'greyford',
+    `${calling.bright} bright, beside ${calling.beside}; ${said.heading}: ${said.beat} "${said.line}"`,
+  );
+  await page.screenshot({ path: `${OUT}/2d-wick-says.png` });
+  await page.click('.hud-tip [data-action="tip-heard"]');
+  await step(150);
+  await draw();
+  const resting = await light();
+  const heard = await page.evaluate(() => ({
+    beats: window.world.character.state.beats,
+    calling: window.world.spirit.calling,
+  }));
+  check(
+    'Got it keeps the beat heard, and the light settles, smaller than it glowed',
+    heard.beats.includes('greyford') &&
+      !heard.calling &&
+      resting.bright > 0 &&
+      resting.bright < calling.bright,
+    `heard ${heard.beats.join(', ')}, ${calling.bright} -> ${resting.bright} bright`,
+  );
+
+  await clickAt(await wickOnScreen());
+  const aside = await page.evaluate(() => {
+    const root = /** @type {HTMLElement} */ (document.querySelector('.hud-tip'));
+    return root.dataset.aside === '' && !root.classList.contains('hud-hidden');
+  });
+  check('with nothing waiting, a tap gets a line of its own', aside);
+  await page.click('.hud-tip [data-action="tip-heard"]');
+  await draw();
+
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('old-mill-road', 'the road south out of Greyford');
+  const along = await page.evaluate(() => {
+    const { spirit, player } = window.world;
+    return Math.hypot(spirit.x - player.x, spirit.y - player.y);
+  });
+  await toGreyford();
+  await park();
+  await sweep();
+  const after = await canvases();
+  check(
+    'it comes along on a zone round trip, which lets go of every canvas it made',
+    along < 64 && before === after,
+    `${Math.round(along)} from the player on arrival; ${before} -> ${after} canvases`,
+  );
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -5792,6 +5932,7 @@ const SECTIONS = [
   ['ranger', ranger],
   ['fletchers-bench', fletchersBench],
   ['back-room', backRoom],
+  ['spirit', spirit],
 ];
 
 const known = SECTIONS.map(([name]) => name);
