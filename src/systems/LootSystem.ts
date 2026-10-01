@@ -21,11 +21,20 @@ export interface LootResult {
   copper: number;
 }
 
-export function rollLootTable(tableId: LootTableId, rng: () => number = Math.random): LootResult {
+/**
+ * One corpse's worth of the table. `luck` multiplies each entry's chance, capped
+ * at certain, which is what Fortune does while it lasts; the coin is left alone,
+ * since a purse is what the creature had rather than what it dropped.
+ */
+export function rollLootTable(
+  tableId: LootTableId,
+  rng: () => number = Math.random,
+  luck = 1,
+): LootResult {
   const table = LOOT_TABLES[tableId];
   const drops: LootDrop[] = [];
   for (const entry of table.entries) {
-    if (rng() < entry.chance) {
+    if (rng() < Math.min(1, entry.chance * luck)) {
       // Only a handful rolls again for how many, so a table of single drops
       // throws exactly the dice it always did.
       const quantity = entry.quantity

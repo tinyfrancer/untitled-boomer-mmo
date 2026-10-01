@@ -7,6 +7,7 @@ import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { PotionTimers } from '../systems/PotionSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
@@ -22,7 +23,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 2;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 3;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -116,6 +117,12 @@ export interface CharacterState {
    * behind, since the cache is spent and the thing itself is still there.
    */
   secrets: SecretId[];
+  /**
+   * The potions drunk and still working, as the time each has left (version 2
+   * phase E2). Stored because a potion lasts minutes and works on while the
+   * game is closed for the time it has left, which the away payout reads.
+   */
+  potions: PotionTimers;
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -219,6 +226,7 @@ export function createNewCharacter(
     tips: { heard: [], off: false },
     showMinimap: true,
     secrets: [],
+    potions: {},
     quests: {},
     bounty: null,
     kills: {},

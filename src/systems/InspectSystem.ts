@@ -12,6 +12,7 @@ import {
   toolSkill,
   weaponAttackRange,
 } from '../data/items';
+import { describePotionEffect, potionDuration } from './PotionSystem';
 import { ABILITIES } from '../data/abilities';
 import { BOUNTIES, BOUNTY_ORDER } from '../data/bounties';
 import { LOOT_TABLES } from '../data/lootTables';
@@ -255,6 +256,10 @@ const STATION_CARDS: Record<StationId, StationCard> = {
     ],
     note: 'Heads are cut at the forge. A failed job keeps the wood.',
   },
+  still: {
+    lines: [{ label: 'Brews', value: 'Herbs into potions' }],
+    note: 'A fenfolk still. A failed brew costs the time and keeps the herbs.',
+  },
 };
 
 /** Where a signpost points, and what is over there. */
@@ -447,6 +452,10 @@ export function describeItem(itemId: ItemId, context: ItemUseContext = {}): Insp
   if (item.kind === 'ammunition') {
     lines.push({ label: 'Attack', value: `+${arrowDamage(itemId)} a shot` });
   }
+  if (item.kind === 'potion') {
+    lines.push({ label: 'Does', value: describePotionEffect(item.effect) });
+    lines.push({ label: 'Lasts', value: potionDuration(item.effect) });
+  }
 
   lines.push({ label: 'Weight', value: String(itemWeight(itemId)) });
 
@@ -468,6 +477,7 @@ function itemSubtitle(itemId: ItemId): string {
   if (item.kind === 'consumable') return 'Food';
   if (item.kind === 'material') return 'Material';
   if (item.kind === 'ammunition') return 'Arrows';
+  if (item.kind === 'potion') return 'Potion';
   if (item.slot === 'weapon') {
     if (isBow(itemId)) return 'Bow';
     return toolSkill(itemId) ? 'Tool' : 'Weapon';

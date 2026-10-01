@@ -22,6 +22,7 @@ export type CueId =
   | 'chop'
   | 'mine'
   | 'splash'
+  | 'snip'
   | 'level-up'
   | 'coin'
   | 'achievement'
@@ -148,6 +149,11 @@ export const CUES: Record<CueId, Cue> = {
   },
   splash: {
     voices: [{ wave: 'noise', from: 1500, to: 600, ms: 190, gain: 0.16, filter: 'highpass' }],
+    spacingMs: 100,
+  },
+  // A sickle through stems: a short bright rasp, lighter than an axe in wood.
+  snip: {
+    voices: [{ wave: 'noise', from: 4200, to: 2600, ms: 60, gain: 0.14, filter: 'bandpass' }],
     spacingMs: 100,
   },
   'level-up': {

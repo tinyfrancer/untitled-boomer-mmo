@@ -17,6 +17,17 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   100: (state) => ({ ...state, showMinimap: true }),
   // Secrets (decision 117): nobody made before them has found one.
   101: (state) => ({ ...state, secrets: [] }),
+  // Foraging, brewing and potions (version 2 phase E2): two skills nobody has
+  // trained, and nothing drunk.
+  102: (state) => ({
+    ...state,
+    skills: {
+      ...(state.skills as Record<string, unknown>),
+      foraging: { level: 1, xp: 0 },
+      brewing: { level: 1, xp: 0 },
+    },
+    potions: {},
+  }),
 };
 
 /**

@@ -44,7 +44,10 @@ describe('collectEffects', () => {
       'mana-shield': { remainingMs: 1000, durationMs: 20000 },
     });
 
-    expect(effects.map((effect) => effect.effectId)).toEqual(EFFECT_IDS);
+    const named = ['well-fed', 'haste', 'mana-shield'];
+    expect(effects.map((effect) => effect.effectId)).toEqual(
+      EFFECT_IDS.filter((id) => named.includes(id)),
+    );
   });
 
   it('is empty when nothing is up', () => {

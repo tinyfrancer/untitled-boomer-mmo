@@ -32,7 +32,8 @@ import {
   HEARTH_WEST,
   SHELVES,
 } from './sprites/fittings';
-import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
+import { CAMPFIRE, FLETCHING_BENCH, FORGE, STILL, TANNERY } from './sprites/stations';
+import { HERB } from './sprites/herbs';
 import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
 import { RICH_VEIN, SEAM, VEIN } from './sprites/veins';
 import { RIPPLE } from './sprites/water';
@@ -85,10 +86,12 @@ export const SPRITES: readonly SpriteDef[] = [
   VEIN,
   SEAM,
   RICH_VEIN,
+  HERB,
   RIPPLE,
   FORGE,
   TANNERY,
   FLETCHING_BENCH,
+  STILL,
   CAMPFIRE,
   SHELVES,
   HEARTH,

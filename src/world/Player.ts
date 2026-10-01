@@ -4,6 +4,7 @@ import { OUT_OF_COMBAT_DELAY_MS, manaRegenTick, regenTick } from '../systems/Reg
 import { absorbDamage, tickBuff, type Haste, type ManaShield } from '../systems/AbilitySystem';
 import { foodTick, startFoodBuff, type FoodBuff } from '../systems/FoodSystem';
 import { collectEffects, type ActiveEffect } from '../systems/EffectSystem';
+import { potionArmor, potionEffects, type PotionTimers } from '../systems/PotionSystem';
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { clamp } from '../systems/math';
 import { stepToward, type MovementStep, type Point } from '../systems/MovementSystem';
@@ -66,6 +67,12 @@ export class Player {
   private manaShield: ManaShield | null = null;
   private haste: Haste | null = null;
   private foodBuff: FoodBuff | null = null;
+  /**
+   * The potions running, as the character holds them: told by the world each
+   * frame, since the clocks are the character's to keep (they outlive a zone),
+   * and read here only for the armour one adds and the icons.
+   */
+  private potions: PotionTimers = {};
   private healPulse: HealPulseState = createHealPulse();
   private pendingHealPulse = 0;
 
@@ -211,7 +218,17 @@ export class Player {
     // rather than waiting for the view to rebuild the figure. Armour is the
     // same: a shield taken off has to stop stopping things this frame.
     this.attackRange = stats.attackRange;
-    this.armor = stats.armor;
+    this.armor = stats.armor + potionArmor(this.potions);
+  }
+
+  /**
+   * What the character has drunk. Re-derives the stats only when a potion's
+   * armour came or went, since this is asked every frame.
+   */
+  setPotions(potions: PotionTimers): void {
+    const before = potionArmor(this.potions);
+    this.potions = potions;
+    if (potionArmor(potions) !== before) this.applyStats();
   }
 
   /** Returns how much a mana shield soaked, for the caller to show. */
@@ -272,14 +289,17 @@ export class Player {
    *
    * The three buffs stay private and the list is built off them rather than
    * held beside them, so a buff that expires cannot be left in a second copy
-   * nobody remembered to clear.
+   * nobody remembered to clear. The potions follow, off the character's clocks.
    */
   activeEffects(): ActiveEffect[] {
-    return collectEffects({
-      'mana-shield': this.manaShield,
-      haste: this.haste,
-      'well-fed': this.foodBuff,
-    });
+    return [
+      ...collectEffects({
+        'mana-shield': this.manaShield,
+        haste: this.haste,
+        'well-fed': this.foodBuff,
+      }),
+      ...potionEffects(this.potions),
+    ];
   }
 
   // What the cooldown check should actually use — Battle Fury shortens it while

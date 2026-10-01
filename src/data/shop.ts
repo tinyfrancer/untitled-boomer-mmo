@@ -50,6 +50,8 @@ export const SHOP_STOCK: ShopStockEntry[] = [
   { itemId: 'felling-axe', price: 60 },
   { itemId: 'fishing-pole', price: 60 },
   { itemId: 'pickaxe', price: 60 },
+  // Foraging's (version 2 phase E2), beside the other three and for their reason.
+  { itemId: 'sickle', price: 60 },
   // Fuel and something to put over it, for a player who would rather not walk
   // to a tree or a pond first. One log is one fire.
   { itemId: 'logs', price: 9 },

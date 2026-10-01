@@ -162,7 +162,20 @@ export type ItemId =
   // What a reforge is paid for with. Bought in town and spent at Greyford,
   // which is how the coin sink sits at one end of the loop and the work at the
   // other without the outpost starting to want money.
-  | 'reforging-stone';
+  | 'reforging-stone'
+  // Foraging's four herbs and brewing's four potions (version 2 phase E2): the
+  // samphire on the strand, the meadowsweet on the mill road's bank, and the
+  // bog myrtle and bogbean in the fen, brewed at Greyford's still the way the
+  // fenfolk brew them. The sickle is what they are cut with.
+  | 'sickle'
+  | 'samphire'
+  | 'meadowsweet'
+  | 'bog-myrtle'
+  | 'bogbean'
+  | 'samphire-tonic'
+  | 'meadowsweet-draught'
+  | 'keepers-draught'
+  | 'bogbean-cordial';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -194,7 +207,11 @@ export type RecipeId =
   | 'iron-arrowheads'
   | 'steel-arrowheads'
   | 'iron-arrows'
-  | 'steel-arrows';
+  | 'steel-arrows'
+  | 'samphire-tonic'
+  | 'meadowsweet-draught'
+  | 'keepers-draught'
+  | 'bogbean-cordial';
 
 export type EnemyId =
   | 'rat'
@@ -235,7 +252,7 @@ export type LootTableId =
   | 'barrow-wight'
   | 'barrow-king';
 
-export type WeaponShapeId = 'sword' | 'staff' | 'axe' | 'pole' | 'pick' | 'bow';
+export type WeaponShapeId = 'sword' | 'staff' | 'axe' | 'pole' | 'pick' | 'bow' | 'sickle';
 
 // What fills the hand that is not holding the weapon. Its own union rather than
 // a slice of WeaponShapeId: nothing here is swung, and the two hands are drawn
@@ -266,10 +283,20 @@ export type ItemIconShape =
   | 'key'
   | 'arrow'
   | 'shaft'
-  | 'arrowhead';
+  | 'arrowhead'
+  | 'herb'
+  | 'potion';
 
 export type GatherSkillId =
-  'fishing' | 'woodcutting' | 'mining' | 'cooking' | 'smithing' | 'leatherworking' | 'fletching';
+  | 'fishing'
+  | 'woodcutting'
+  | 'mining'
+  | 'cooking'
+  | 'smithing'
+  | 'leatherworking'
+  | 'fletching'
+  | 'foraging'
+  | 'brewing';
 
 // Skills that level by fighting rather than by gathering. Their cap rides the
 // character's level (see combatSkillCap), so they can't be ground ahead of it.
@@ -288,7 +315,11 @@ export type ResourceNodeId =
   | 'tin-vein'
   | 'iron-vein'
   | 'coal-vein'
-  | 'rich-iron-vein';
+  | 'rich-iron-vein'
+  | 'samphire'
+  | 'meadowsweet'
+  | 'bog-myrtle'
+  | 'bogbean';
 
 /**
  * Which body a renderer draws a node with, and the same bargain `CreatureShapeId`
@@ -297,7 +328,7 @@ export type ResourceNodeId =
  * purpose — the two fishing spots are one set of ripples and the two ore veins
  * one rock, which is what stops a third of either costing a builder.
  */
-export type NodeShapeId = 'tree' | 'ripple' | 'vein';
+export type NodeShapeId = 'tree' | 'ripple' | 'vein' | 'herb';
 
 /**
  * Something a mastery pool can be kept for: one thing worked, or one thing made.
@@ -439,7 +470,13 @@ export type EnemyAbilityId = 'cleave' | 'throw-knife' | 'grave-chill' | 'barrow-
 // What the player is carrying right now, as opposed to what applied it: eating
 // is not an ability and two abilities could one day leave the same mark, so
 // this is its own union rather than a slice of AbilityId.
-export type EffectId = 'mana-shield' | 'haste' | 'well-fed';
+export type EffectId = 'mana-shield' | 'haste' | 'well-fed' | PotionEffectId;
+
+// What a potion leaves the player carrying, one kind a potion: faster
+// gathering, harder to hurt, idle earning more, and luck on a roll. Its own
+// slice of EffectId because these are the marks whose clocks are kept on the
+// character rather than on the body, so they outlive a zone and a closed game.
+export type PotionEffectId = 'quick-hands' | 'dulled-pain' | 'keepers-watch' | 'fortune';
 
 // How many of a creature a slayer achievement asks for. Built into the ids
 // below rather than listed separately, so the compiler knows the full grid and

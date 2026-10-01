@@ -23,6 +23,7 @@ import {
   DEPOSIT_ITEM_REQUESTED_EVENT,
   WITHDRAW_ITEM_REQUESTED_EVENT,
   EAT_ITEM_REQUESTED_EVENT,
+  DRINK_POTION_REQUESTED_EVENT,
   EQUIP_ITEM_REQUESTED_EVENT,
   GEAR_CHANGED_EVENT,
   LEVEL_UP_EVENT,
@@ -52,7 +53,9 @@ import {
   type AchievementUnlock,
   type ContextSubject,
 } from '../ui/uiEvents';
+import { describeItemName } from '../data/items';
 import { afkXpReward } from '../systems/AfkSystem';
+import { idleXpMultiplier, isPotionActive } from '../systems/PotionSystem';
 import { logDeathToll, logLevelUp, logNotice, logXpGain } from '../systems/CombatLogSystem';
 import { deathToll } from '../systems/DeathSystem';
 import { conColor } from '../systems/EnemySystem';
@@ -549,6 +552,7 @@ export class ZoneWorld implements Targeting {
     listen(EQUIP_ITEM_REQUESTED_EVENT, (itemId) => this.handleEquipRequested(itemId));
     listen(UNEQUIP_SLOT_REQUESTED_EVENT, (slot) => this.handleUnequipRequested(slot));
     listen(EAT_ITEM_REQUESTED_EVENT, (itemId) => this.gathering.eat(itemId));
+    listen(DRINK_POTION_REQUESTED_EVENT, (itemId) => this.drinkPotion(itemId));
     listen(COOK_REQUESTED_EVENT, (itemId) => this.gathering.cook(itemId));
     listen(LIGHT_FIRE_REQUESTED_EVENT, () => this.gathering.lightFire());
     const { counters } = this;
@@ -607,6 +611,7 @@ export class ZoneWorld implements Targeting {
     this.applyInputActions();
     this.afk.update();
     this.approach.update(deltaMs);
+    this.tickPotions(deltaMs);
     this.player.update(deltaMs, this.collisionWorld);
     const healed = this.player.takeHealPulse();
     if (healed > 0) {
@@ -1182,12 +1187,33 @@ export class ZoneWorld implements Targeting {
   // Rewards
   // ---------------------------------------------------------------------------
 
+  /**
+   * A potion out of the bag, at full health or in a fight: unlike food it heals
+   * nothing, so neither is a reason to refuse it.
+   */
+  drinkPotion(itemId: ItemId): void {
+    if (!this.character.drinkPotion(itemId)) return;
+    this.player.setPotions(this.character.state.potions);
+    this.ctx.notice(`You drink the ${describeItemName(itemId)}.`);
+    this.ctx.publishInventory();
+  }
+
+  // Every potion's clock runs on game time, and the body is told what is left.
+  private tickPotions(deltaMs: number): void {
+    this.character.spendPotionTime(deltaMs);
+    this.player.setPotions(this.character.state.potions);
+  }
+
   private awardXp(reward: number): void {
     // The one choke point both the swing and the ability paths run through, so
     // it is the one place the AFK penalty has to be applied. A quest reward is
     // not one of them — handing a quest in is something the player did — so it
     // comes in through publishXpGain instead.
-    const amount = afkXpReward(reward, this.afk.active);
+    const amount = afkXpReward(
+      reward,
+      this.afk.active,
+      idleXpMultiplier(isPotionActive(this.character.state.potions, 'keepers-watch')),
+    );
     const gain = this.character.awardXp(amount);
     this.ctx.float(`+${amount} XP`, 'reward', 20);
     this.ctx.log(logXpGain(amount));

@@ -28,6 +28,7 @@ import {
 } from '../systems/CombatSystem';
 import { formatCurrency } from '../systems/CurrencySystem';
 import { rollLootTable, type LootDrop } from '../systems/LootSystem';
+import { fortuneDropMultiplier } from '../systems/PotionSystem';
 import { hasLineOfSight, type CollisionWorld } from '../systems/CollisionSystem';
 import { distance, type Point } from '../systems/MovementSystem';
 import { ENEMY_ABILITIES, type EnemyAbilityDefinition } from '../data/enemyAbilities';
@@ -399,7 +400,11 @@ export class CombatDirector {
     const { lootTableId } = mob;
     if (!lootTableId) return;
     const { character } = this.ctx;
-    const { drops, copper } = rollLootTable(lootTableId, this.ctx.rolls);
+    const { drops, copper } = rollLootTable(
+      lootTableId,
+      this.ctx.rolls,
+      fortuneDropMultiplier(character.state.potions),
+    );
 
     // Asked once for the whole corpse: a camp cannot start or stop halfway
     // through the table.

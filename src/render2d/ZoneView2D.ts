@@ -79,7 +79,12 @@ const SHADOW_ALPHA = 0.35;
  * tree's under its crown, a stump's under what is left. A ripple lies on the
  * water and stands on nothing.
  */
-const NODE_SHADOW: Readonly<Record<NodeShapeId, number>> = { tree: 34, vein: 26, ripple: 0 };
+const NODE_SHADOW: Readonly<Record<NodeShapeId, number>> = {
+  tree: 34,
+  vein: 26,
+  ripple: 0,
+  herb: 22,
+};
 const STUMP_SHADOW = 16;
 const STATION_SHADOW = 24;
 
@@ -97,7 +102,12 @@ const CROWN_ACROSS = 0.7;
  * far toward the player from its middle, in simulation units: the side struck
  * is the side they stand on.
  */
-const STROKE_HEIGHT: Readonly<Record<NodeShapeId, number>> = { tree: 10, vein: 8, ripple: 0 };
+const STROKE_HEIGHT: Readonly<Record<NodeShapeId, number>> = {
+  tree: 10,
+  vein: 8,
+  ripple: 0,
+  herb: 6,
+};
 const STROKE_TOWARD = 10;
 /** Where in its frame what a stroke knocks loose starts: four pixels over the foot. */
 const STROKE_FROM = 4;

@@ -51,7 +51,8 @@ export function canGather(node: ResourceNodeDefinition, skills: Skills, gear: Ge
 }
 
 /**
- * How long one swing takes: the base, shaved by the skill and again by the tool.
+ * How long one swing takes: the base, shaved by the skill and again by whatever
+ * else is speeding it, a tool or a potion.
  *
  * Floored at `MIN_GATHER_FRACTION` of the base rather than left to run down to
  * nothing, because the two terms are bought separately and a capped skill
@@ -61,9 +62,9 @@ export function canGather(node: ResourceNodeDefinition, skills: Skills, gear: Ge
 export function gatherDurationMs(
   node: ResourceNodeDefinition,
   level: number,
-  toolSpeedBonus = 0,
+  speedBonus = 0,
 ): number {
-  const speedup = 1 - gatherSpeedBonus(level) - Math.max(0, toolSpeedBonus);
+  const speedup = 1 - gatherSpeedBonus(level) - Math.max(0, speedBonus);
   return Math.round(node.baseGatherMs * Math.max(MIN_GATHER_FRACTION, speedup));
 }
 
@@ -80,12 +81,12 @@ export function skillYieldChance(level: number): number {
 export function beginGather(
   node: ResourceNodeDefinition,
   level: number,
-  toolSpeedBonus = 0,
+  speedBonus = 0,
 ): GatherState {
   return {
     node,
     elapsedMs: 0,
-    durationMs: gatherDurationMs(node, level, toolSpeedBonus),
+    durationMs: gatherDurationMs(node, level, speedBonus),
     maxRange: node.interactRadius,
   };
 }
