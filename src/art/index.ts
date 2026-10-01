@@ -40,6 +40,7 @@ import { CRAB } from './sprites/crab';
 import { CRIT, FIREBALL, HIT, KNIFE, LEVEL_UP, LOOT_SACK } from './sprites/effects';
 import { LURKER } from './sprites/lurker';
 import { RAT } from './sprites/rat';
+import { WICK, WICK_CALLING } from './sprites/wick';
 import { SCATTER_SPRITES } from './sprites/scatter';
 import { FOE_SPRITES, TOWNSFOLK_SPRITES } from './cast';
 
@@ -102,6 +103,8 @@ export const SPRITES: readonly SpriteDef[] = [
   COUNTER,
   CHIPS,
   SPLASH,
+  WICK,
+  WICK_CALLING,
 ];
 
 export { PLACEHOLDERS } from './sprites/placeholders';
