@@ -18,7 +18,7 @@ describe('zoneAccess', () => {
 
     expect(access.kind).toBe('locked');
     expect(access.kind !== 'open' && access.keyItemId).toBe('hideout-key');
-    expect(access.kind !== 'open' && access.reason).toContain('Hideout Key');
+    expect(access.kind !== 'open' && access.reason).toContain('Cellar Key');
   });
 
   /**

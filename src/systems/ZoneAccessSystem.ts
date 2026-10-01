@@ -25,7 +25,7 @@ export interface ZoneAccessContext {
  * A zone's name with the article taken off the front of it, because both
  * sentences below put one there themselves.
  *
- * Half the table is named without one ("Bandit Hideout", "Blackwater Fen") and
+ * Half the table is named without one ("Redrag Camp", "Blackwater Fen") and
  * half with ("The Deep Cut", "The Sunken Barrow"), and the two reasons here read
  * as "the {name}" and "The {name} is locked" — so the second half came out as
  * "You unlock the The Sunken Barrow". Stripping it here rather than renaming the

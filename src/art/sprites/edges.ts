@@ -296,6 +296,35 @@ const MASONRY_UNDER_GRASS: EdgeStyle = {
 };
 
 /**
+ * A vault's wall where the hill is packed up behind it (decision 119): rock
+ * ragged over the back of the dressed stone, and the stone's courses darkened a
+ * row where the rock lies on them. Both block, so neither shows a face.
+ */
+const MASONRY_UNDER_ROCK: EdgeStyle = {
+  reach: 3,
+  wander: 2,
+  span: 8,
+  grain: 0.3,
+  rounding: 4,
+  lower: {
+    north: ['lower.1', 'lower.2'],
+    south: ['lower.1'],
+    west: ['lower.1'],
+    east: ['lower.1'],
+  },
+  upper: { north: 'upper.0', south: 'upper.1', east: 'upper.1', west: 'upper.0' },
+};
+
+/**
+ * A wall standing in the water that came in after it (decision 119): the
+ * masonry's face over its foot in the water, as rock stands in it.
+ */
+const MASONRY_UNDER_WATER: EdgeStyle = {
+  ...MASONRY_UNDER_STONE,
+  upper: { north: 'upper.0', south: 'upper.1', east: 'upper.1', west: 'upper.1' },
+};
+
+/**
  * The waystation's paving where the east road runs onto it (decision 118): the
  * road's dirt a hair higher, trodden over the edge of the slabs, as grass lies
  * over a road.
@@ -330,4 +359,6 @@ export const EDGES: readonly { lower: number; upper: number; style: EdgeStyle }[
   { lower: MASONRY_TILE, upper: STONE_TILE, style: MASONRY_UNDER_STONE },
   { lower: MASONRY_TILE, upper: GRASS_TILE, style: MASONRY_UNDER_GRASS },
   { lower: STONE_TILE, upper: PATH_TILE, style: STONE_UNDER_PATH },
+  { lower: MASONRY_TILE, upper: WALL_TILE, style: MASONRY_UNDER_ROCK },
+  { lower: MASONRY_TILE, upper: WATER_TILE, style: MASONRY_UNDER_WATER },
 ];

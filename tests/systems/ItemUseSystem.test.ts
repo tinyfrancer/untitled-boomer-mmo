@@ -95,7 +95,7 @@ describe('what an item is for', () => {
 
   it('says a key opens a door, and is spent there', () => {
     expect(itemUses('hideout-key')).toEqual([
-      'Unlocks: Bandit Hideout, spent at its door',
+      "Unlocks: The Cutthroat's Cellar, spent at its door",
       'Cannot be sold',
     ]);
   });

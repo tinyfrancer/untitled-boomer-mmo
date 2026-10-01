@@ -117,7 +117,11 @@ modules. An event carrying more than two or three values should pass one object 
 `{kind: 'zone-exit', to, edge, fraction}` and stops the world; the `GameContext` acts on it,
 because tearing this world down is its job too. It is the only handover there is: travelling from the
 world map was a second one under its own event, and both it and that event are gone. HP rides across,
-so crossing a line is never a free heal. A frame
+so crossing a line is never a free heal. The next world lands the player across the mouth of its
+own exit on that edge, at that fraction (`sideOn`, decision 119): only an exit's mouth leaves, the
+edge either side of it being the world's end, and the fraction runs over where a body's centre can
+cross a mouth, half a body in from either side, so two mouths need not be the same width and an
+arrival never stands in the wall beside one. A frame
 that changed zone hands its events back with `zoneChanged: true`; they belong to a world that no
 longer exists, so a view rebuilds instead of drawing them.
 
@@ -149,6 +153,8 @@ its spawn on the frame the zone was built — the same argument `tests/render2d/
 about tapping one. An arrival strip is held to the weaker rule of not landing anyone _already_ inside an
 aggro radius, because walking through a door is a choice and something wandering over to meet you on
 the far side is the zone working. What that refuses is a trap: no frame in which to walk back out.
+A strip is the line across its exit's mouth an arrival-inset in, measured to as a segment, so a
+vault entered at a mouth five tiles across (decision 119) asks only those five tiles to be clear.
 
 Expect a new zone to cost a spawn or two moved. A 300-unit disc around the start is not a small
 claim on a 25x19 grid, and the mill road's knots had to move as whole knots to keep being knots.

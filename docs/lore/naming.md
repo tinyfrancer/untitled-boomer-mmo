@@ -96,7 +96,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Candle Strand               |             | _In game_; the strand south of Lampton              | `places.md`   |
 | the Candles                 |             | _In game_; the sea-lights' stumps off Candle Strand | `places.md`   |
 | Cobb Harrow                 |             | Lampton's absent smith                              | `places.md`   |
-| the Cutthroat's Cellar      |             | The bandit hideout (_in game_ as Bandit Hideout)    | `places.md`   |
+| the Cutthroat's Cellar      |             | _In game_; the vault under Redrag Camp              | `places.md`   |
 | the Deep Cut                |             | _In game_; Karn Tholl's outer workings              | `places.md`   |
 | the Drowning                |             | The night Veymar went under the sea                 | `history.md`  |
 | Essmar                      | ESS-mar     | The fenfolk's name for the fen                      | `naming.md`   |

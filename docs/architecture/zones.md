@@ -12,10 +12,10 @@ v1: single-player only; ten zones (Lampton, the town, with leveled rats, a shop,
 trainer, Candle Strand, a beach with crabs and ocean fishing, the two of them rebuilt at version 2's
 45×32 in C5, the New Cut, a quarry cut into the hills north of town with tin and iron to mine,
 Redrag Camp, the bandits' camp in a ruined waystation on the east road, those two rebuilt in C6,
-the bandit hideout behind a locked
-door, the Old Mill Road west of town where the goblins are, Blackwater Fen south of the beach
-where the eels and the cloth are, the Deep Cut under the quarry where the coal is, the Sunken
-Barrow under the bottom of the fen where the dead are, and Greyford Outpost between the road west and
+the Cutthroat's Cellar, the vault under the waystation behind a locked door, the Old Mill Road west
+of town where the goblins are, Blackwater Fen south of the beach where the eels and the cloth are,
+the Deep Cut under the quarry where the coal is, the Sunken Barrow under the bottom of the fen
+where the dead are, the two vaults rebuilt in C7, and Greyford Outpost between the road west and
 the quarry, where a counter trades in materials rather than coin, a tannery works what the fen
 drops, a fletcher's bench turns timber and bars into arrows, and a fettler reworks gear into what you
 would rather it was);
@@ -27,9 +27,9 @@ the barrow king, plus repeatable contracts off the quartermaster's board that pa
 doing anyway; slayer achievements and the
 titles they grant; an AFK camping mode that also pays out offline; click/tap-to-move with a
 mobile-first HUD; and local save/load with versioned migrations. Five of the ten zones are level
-1-3 starter content — what separates those is what they drop, not how hard they are, and the hideout
+1-3 starter content — what separates those is what they drop, not how hard they are, and the Cellar
 is gated by a rare key rather than by a level. Five things sit above that band. The named mob at the
-back of the hideout is level 4, carries loot that comes off a single creature, and is the fight the
+back of the Cellar is level 4, carries loot that comes off a single creature, and is the fight the
 starter content is the run-up to. The **Old Mill Road** is the band itself: the
 first zone that is harder rather than merely different, level 4-5, reached by walking west out of
 town with no key and no gate, because the starter band ended by walking and the one above it should
@@ -40,7 +40,7 @@ where a caster finally gets armour of their own. **The Deep Cut** is the third, 
 by walking north out of the quarry, and it is the one of the three that is about a skill rather than
 a fight: the coal and the rich iron down there are what the steel tier is made of, and what holds
 anybody back from them is the pick in their hands rather than anything standing in the way. The
-**Sunken Barrow** is the capstone and the top of the game, level 7-8: it is the hideout's shape one
+**Sunken Barrow** is the capstone and the top of the game, level 7-8: it is the Cellar's shape one
 band up — a rare key off the zone in front of it, a map cut out of solid rock, a passage, and a named
 thing at the back — reached by walking off the bottom of the fen, where the raiders that carry the key
 already are. What it pays is the off hand nothing has filled since the starter band, and the second
@@ -84,8 +84,8 @@ on neither map and never named over, found by walking up to it (`world/SecretFin
 is a marker in its zone's text like anything else placed, and its row says which zone it is in,
 which a test holds against where the text put it. Finding one is kept on the character, pays a line
 of Wick's on the tips' card and a cache, and the zone map counts the zone's own under it. Lampton
-hides two, and Candle Strand, the New Cut and Redrag Camp one each; a rebuild adds its zone's from
-`docs/lore/places.md`, each drawn in the phase that adds it.
+hides two, and Candle Strand, the New Cut, Redrag Camp, the Cellar and the barrow one each; a
+rebuild adds its zone's from `docs/lore/places.md`, each drawn in the phase that adds it.
 
 **The rebuilt zones are 45×32** (decision 86), and a rebuild keeps what the old zone was for while
 giving it room: side paths, a few places to do things, a secret or two. **Lampton** keeps its four
@@ -110,6 +110,24 @@ either arrival strip and a wander disc round the start. **Nothing a rebuild adds
 thing to do** (decision 118): more veins and more creatures of the kinds the zone had, and room, so
 what each zone yields stays what C10 tunes against.
 
+**The two vaults are entered at a mouth** (decision 119). An exit's row may name a `mouth`, the
+first and last tile of its edge that are open, and only that stretch leaves; an arrival lands across
+the mouth of the exit back at the fraction of the other it was crossed at, both measured over where a
+body's centre can cross, half a body in from either side, so a crossing hard against one side of a
+wide mouth lands hard against the same side of a narrow one and never in its wall. A row with no
+mouth is open end to end, as every outdoor edge still is. Before this, an underground zone joined by
+an edge had to keep that whole side open, which at 45×32 is a hall thirty-two tiles long down one
+wall of a vault. **The Cutthroat's Cellar** is entered at five rows of its west edge, the stair
+down from a walled lane out of the gap in Redrag Camp's east wall, which is the camp's mouth: the
+guardroom left clear, the spine east to the warden's tomb with Hollis in front of the bier, the bunk
+room and the storeroom off it, and a low passage from the storeroom's far corner back under the
+guardroom to the strongbox. **The Sunken Barrow** is entered at five tiles of its north edge, the
+fen's south edge staying whole until C9 rebuilds it: the stair, the antechamber, the gallery with the
+frieze along its north wall, the crypts at either end of it and the king's chamber off its middle,
+read north to south with every seven shallower than every eight. Both are rock with every room lined
+in masonry, so the hill is packed up behind dressed stone, and both keep the start, which is where a
+death in a vault puts somebody, at the foot of the way in and clear of every creature's reach.
+
 The quarry is what that claim looks like when it is cashed: a map file, a row and one
 exit each way, and it appeared on the world map, in the zone map and in the offline camp with
 nothing else written down. Two things a `ZONES` row still cannot promise on its own, both held
@@ -127,12 +145,12 @@ key is ever spent, so "consumed once, open for good" is one rule rather than two
 (`blockedAtEdge`) so the refusal is one toast rather than one a frame. What the key opened is stored
 on `CharacterState.unlockedZones` and is the one thing here that could not be derived — the key is
 gone afterwards, so an empty pack means either "never found one" or "already been", and the world
-map draws those two cells very differently. Two zones are locked — the bandit hideout and the Sunken
-Barrow, which are the bottom and the top of the game and are deliberately the same shape — and both
-maps (`data/banditHideoutMap.ts`, `data/sunkenBarrowMap.ts`) are the inverse of every other one,
-solid `WALL_TILE` with rooms painted back out of it, which is why `tests/systems/ZoneSystem.test.ts`
-checks that an arrival _anywhere_ along an exit edge lands on walkable ground rather than only where
-the signpost stands. **A key belongs to the zone the door is in**: the hideout's drops on the bandits
+map draws those two cells very differently. Two zones are locked — the Cutthroat's Cellar and the
+Sunken Barrow, which are the bottom and the top of the game and are deliberately the same shape — and
+both maps (`data/banditHideoutMap.ts`, `data/sunkenBarrowMap.ts`) are the inverse of every other one,
+solid rock with rooms cut back out of it, which is why `tests/systems/ZoneSystem.test.ts` checks that
+an arrival _anywhere_ across a mouth lands on walkable ground rather than only where the signpost
+stands. **A key belongs to the zone the door is in**: the Cellar's drops on the bandits
 outside its own door and the barrow's on the fen raiders whose marsh it is at the bottom of, so the
 grind and the lock are one place rather than two. And the sentence a refusal is written in puts an
 article in front of the zone's name, so `zoneAccess` strips the one half the table already carries —
@@ -147,9 +165,10 @@ the quarry's face left a ledge along its west one. **Expect a zone that ties two
 charge both of them**, which is the same bill a spoke charges once.
 
 **An exit reserves a strip of its own edge, and that is a claim on the town's layout made from
-another zone.** A traveller materialises anywhere along the arriving edge — at whatever fraction of it
-they crossed the other zone's edge at — so opening a road makes a lane of the receiving zone
-unbuildable along its whole length, not just where the signpost stands. The mill road is what taught
+another zone.** A traveller materialises anywhere across the arriving mouth — at whatever fraction of
+it they crossed the other zone's mouth at — so opening a road makes a lane of the receiving zone
+unbuildable along the whole of its mouth, which is its whole edge unless the row names a narrower
+one, not just where the signpost stands. The mill road is what taught
 this: town had a smithy built across its west edge from back when nothing was over there, and adding
 the road west put arrivals inside it. The smithy and its forge moved up into the north-west block, a
 cottage moved across town to make room, and one rat moved a notch east — none of which is visible in
@@ -164,8 +183,9 @@ the _second row up_ that had to be clear rather than the edge itself. The ocean 
 short and runs off the east edge instead, leaving a sand spit down the west side and a strand along
 the south. Nothing about the east edge being water matters, because an edge no exit leads to is one
 nobody arrives on and `ZoneSystem.test.ts` does not ask about it. The rule to carry forward: **an
-exit needs its whole shared edge walkable on both sides, one arrival-inset in**, so a zone whose
-border is water or rock is a zone that has to be re-cut before it can have a neighbour there.
+exit needs its mouth walkable on both sides, one arrival-inset in**, so a zone whose border is water
+or rock is a zone that has to be re-cut before it can have a neighbour there — or, since decision
+119, opened at a mouth only as wide as the way through it.
 
 The quarry paid the same bill in rock the moment the Deep Cut opened, which is what makes it a rule
 rather than a story about the beach: the face ran across the whole north edge and its comment said

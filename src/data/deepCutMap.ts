@@ -11,11 +11,12 @@ import { layoutZone } from './zoneText';
  * hits, and a map of narrow passages is a map where geometry decides the
  * fight.
  *
- * The gallery spans the full width of the south edge, for the reason the
- * hideout's west wall is not a doorway: an arrival keeps the fraction of the
- * edge it was crossed at, so a mouth only as wide as the road up would drop
- * most travellers inside the rock. The two workings each overlap the hall, so
- * the whole map is one connected space.
+ * The gallery spans the full width of the south edge because its exit names no
+ * mouth, so the whole edge is one: an arrival lands anywhere along it, at the
+ * fraction of the New Cut's shelf it was crossed at. A vault is entered at a
+ * mouth a few tiles across instead (decision 119), which this zone's rebuild may
+ * take. The two workings each overlap the hall, so the whole map is one
+ * connected space.
  */
 export const DEEP_CUT_LAYOUT = layoutZone(
   'deep-cut',

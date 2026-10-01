@@ -61,8 +61,11 @@ and a cache, counted under the zone map, three of them; no tide, and no travel u
 decision 117), **and C6** (the New Cut and Redrag Camp rebuilt at 45×32 under their own names, the
 Cut in two benches under its face and the camp in a ruined waystation of dressed stone, a ground of
 its own; a secret in each; a rebuild adds more of what a zone has and leaves its people to Part D;
-decision 118). **Next: C7**, the two vaults rebuilt. Update this line as each phase lands: which
-phase, and which is next.
+decision 118), **and C7** (the Cutthroat's Cellar and the Sunken Barrow rebuilt at 45×32, rock with
+every room lined in masonry, each entered at a mouth five tiles across rather than down a whole side,
+an exit now open only along its mouth; the strongbox and the frieze; decision 119). **Next: C8**, Old
+Mill Road and Greyford rebuilt. Update this line as each phase lands: which phase, and which is
+next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -547,6 +550,22 @@ saved position stops meaning anything.
   and **the lamp niche** in the hall's back wall are the secrets. A rebuild adds more of what its
   zone has rather than a new kind of thing to do, and the people the lore names come in Part D.
   All three forks were the user's (decision 118).
+- **C7 — The Cutthroat's Cellar and the Sunken Barrow. (Landed.)** Both at 45×32, **rock with every
+  room lined in masonry**, which needed two edges, masonry under rock and under water. **An exit is
+  open only along its mouth** (`ZoneExit.mouth`), the first and last tile of its edge a row names, and
+  an arrival lands across the mouth of the exit back at the fraction of the other it was crossed at,
+  both measured over where a body's centre can cross; a row with no mouth is open end to end. Each
+  vault is entered at a mouth five tiles across, and **Redrag Camp's side narrowed to a walled lane**
+  out of the gap in its east wall; the fen's waits for C9. **The Cutthroat's Cellar** takes its name
+  and its key the Cellar Key: a stair down into the guardroom, the spine east to the warden's tomb with
+  Hollis before the bier, the bunk room and the storeroom off it. **The Sunken Barrow** is read north
+  to south: stair, antechamber, the gallery, the crypts at its ends and the king's chamber off its
+  middle. **The strongbox** at the end of a low passage under the Cellar's guardroom carries Wick's
+  beat for the Cellar, and **the frieze of the sea-lights** is along the gallery. The sweeps ask the
+  mouth: ground across it and on the edge, three tiles wide, a way back on the opposite edge, and an
+  arrival strip measured as a segment. About thirty-five files with its tests and docs, and whole,
+  since the mouth was made for the vaults and is tested by them. The fork was the user's (decision
+  119).
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
   activity spots each, **the activities being more of what the zone already has** (decision 118).
   Spawns, nodes and stations re-placed; the progression test re-held. **Every creature, node,
@@ -554,7 +573,8 @@ saved position stops meaning anything.
   `art/places.ts`, the building kit, and an icon for anything it hands out), since Part B left
   nothing a placeholder and the tests hold every row to a drawing (decision 112). **The order**
   after C6 (decision 118): **C7** the two vaults, the Cutthroat's Cellar and the Sunken Barrow, the
-  same shape on purpose; **C8** Old Mill Road and Greyford; **C9** Blackwater Fen and the Deep Cut.
+  same shape on purpose (landed); **C8** Old Mill Road and Greyford; **C9** Blackwater Fen and the Deep
+  Cut, whose shared edges with the Cut and the barrow may narrow to a mouth (decision 119).
 - **C10 — Less grind.** Pillar 3's promise, "tune curves down before adding systems up", which no
   phase kept until the Part A review added this one (decision 99). The curves are tuned against the
   rebuilt zones, since their longer walks between kills are what moves the pace, and before Parts
@@ -566,11 +586,10 @@ saved position stops meaning anything.
 
 **Open questions for Part C**: how many minutes should a level take, early and near the cap (C10)?
 And, since C5 left it to C10 (decision 117), does travel come back once the walks are measured, and
-at what price? For C7 (decision 118): a vault is joined by an edge, and an arrival lands at the
-fraction of the edge it was crossed at, so each keeps a whole side open end to end; does an exit into
-a vault become a door somewhere in it, or an arrival at a mouth narrower than its edge, or stay as it
-is? C5 answered how secrets are found: by walking up to them. C6 answered what a rebuild may add
-(more of what the zone has) and when the lore's people arrive (Part D).
+at what price? C5 answered how secrets are found: by walking up to them. C6 answered what a rebuild
+may add (more of what the zone has) and when the lore's people arrive (Part D). C7 answered how a
+vault is entered: at a mouth narrower than its edge, a door inside a zone left for the undercroft and
+Karn Tholl (decision 119).
 
 ---
 

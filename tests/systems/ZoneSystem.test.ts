@@ -9,6 +9,7 @@ import {
   findExit,
   oppositeEdge,
   resumePoint,
+  sideOn,
   signpostPoint,
   zoneWorldSize,
 } from '../../src/systems/ZoneSystem';
@@ -72,38 +73,106 @@ describe('oppositeEdge', () => {
 });
 
 describe('edgeFraction', () => {
+  // Where a centre can cross a whole edge: half a body in from either end.
+  const near = PLAYER_HALF_EXTENT;
+
   it('measures along x for horizontal edges and y for vertical ones', () => {
-    expect(edgeFraction('south', 400, WORLD_H, WORLD_W, WORLD_H)).toBeCloseTo(0.25);
-    expect(edgeFraction('north', 1200, 0, WORLD_W, WORLD_H)).toBeCloseTo(0.75);
-    expect(edgeFraction('east', WORLD_W, 304, WORLD_W, WORLD_H)).toBeCloseTo(0.25);
+    expect(edgeFraction({ edge: 'south' }, WORLD_W / 2, WORLD_H, WORLD_W, WORLD_H)).toBeCloseTo(
+      0.5,
+    );
+    expect(edgeFraction({ edge: 'north' }, WORLD_W - near, 0, WORLD_W, WORLD_H)).toBeCloseTo(1);
+    expect(edgeFraction({ edge: 'east' }, WORLD_W, near, WORLD_W, WORLD_H)).toBeCloseTo(0);
+    expect(edgeFraction({ edge: 'west' }, 0, WORLD_H / 2, WORLD_W, WORLD_H)).toBeCloseTo(0.5);
+  });
+
+  it('runs over where a centre can cross, so either end of the edge is 0 and 1', () => {
+    expect(edgeFraction({ edge: 'south' }, near, WORLD_H, WORLD_W, WORLD_H)).toBe(0);
+    expect(edgeFraction({ edge: 'south' }, WORLD_W - near, WORLD_H, WORLD_W, WORLD_H)).toBe(1);
   });
 
   it('clamps to 0..1 even if the position overshoots the world', () => {
-    expect(edgeFraction('south', -50, WORLD_H, WORLD_W, WORLD_H)).toBe(0);
-    expect(edgeFraction('south', WORLD_W + 50, WORLD_H, WORLD_W, WORLD_H)).toBe(1);
+    expect(edgeFraction({ edge: 'south' }, -50, WORLD_H, WORLD_W, WORLD_H)).toBe(0);
+    expect(edgeFraction({ edge: 'south' }, WORLD_W + 50, WORLD_H, WORLD_W, WORLD_H)).toBe(1);
   });
 });
 
 describe('arrivalPoint', () => {
   it('places the player inset from the entry edge at the carried fraction', () => {
-    expect(arrivalPoint('north', 0.25, WORLD_W, WORLD_H, 96)).toEqual({ x: 400, y: 96 });
-    expect(arrivalPoint('south', 0.5, WORLD_W, WORLD_H, 96)).toEqual({
+    expect(arrivalPoint({ edge: 'north' }, 0.5, WORLD_W, WORLD_H, 96)).toEqual({ x: 800, y: 96 });
+    expect(arrivalPoint({ edge: 'south' }, 0.5, WORLD_W, WORLD_H, 96)).toEqual({
       x: 800,
       y: WORLD_H - 96,
     });
-    expect(arrivalPoint('west', 0.5, WORLD_W, WORLD_H, 96)).toEqual({ x: 96, y: 608 });
-    expect(arrivalPoint('east', 0.5, WORLD_W, WORLD_H, 96)).toEqual({
+    expect(arrivalPoint({ edge: 'west' }, 0.5, WORLD_W, WORLD_H, 96)).toEqual({ x: 96, y: 608 });
+    expect(arrivalPoint({ edge: 'east' }, 0.5, WORLD_W, WORLD_H, 96)).toEqual({
       x: WORLD_W - 96,
       y: 608,
     });
+  });
+
+  it('lands either end of an edge half a body in, where the bounds would hold the body', () => {
+    expect(arrivalPoint({ edge: 'north' }, 0, WORLD_W, WORLD_H, 96).x).toBe(PLAYER_HALF_EXTENT);
+    expect(arrivalPoint({ edge: 'north' }, 1, WORLD_W, WORLD_H, 96).x).toBe(
+      WORLD_W - PLAYER_HALF_EXTENT,
+    );
   });
 
   it('round-trips with findExit: an arrival never stands on the return exit', () => {
     const margin = 38;
     const inset = 96;
     const back: ZoneExit[] = [{ edge: 'north', to: 'town' }];
-    const arrive = arrivalPoint('north', 0.5, WORLD_W, WORLD_H, inset);
+    const arrive = arrivalPoint({ edge: 'north' }, 0.5, WORLD_W, WORLD_H, inset);
     expect(findExit(back, arrive.x, arrive.y, WORLD_W, WORLD_H, margin)).toBeNull();
+  });
+});
+
+/**
+ * A mouth is the stretch of an edge an exit is open along (decision 119): a
+ * vault's way in, a few tiles wide in a wall of rock, rather than a side open
+ * end to end.
+ */
+describe('a mouth', () => {
+  // Rows 10 to 13 of the west edge, a centre crossing it half a tile in from
+  // either side of them.
+  const mouth: ZoneExit = { edge: 'west', to: 'town', mouth: [10, 13] };
+  const side = 10.5 * TILE_SIZE;
+  const middle = 12 * TILE_SIZE;
+  const far = 13.5 * TILE_SIZE;
+
+  it('is the only part of its edge that leaves', () => {
+    expect(findExit([mouth], 0, middle, WORLD_W, WORLD_H, MARGIN)).toBe(mouth);
+    expect(findExit([mouth], 0, 9.5 * TILE_SIZE, WORLD_W, WORLD_H, MARGIN)).toBeNull();
+    expect(findExit([mouth], 0, 14.5 * TILE_SIZE, WORLD_W, WORLD_H, MARGIN)).toBeNull();
+  });
+
+  it('measures a crossing across itself rather than across the edge', () => {
+    expect(edgeFraction(mouth, 0, side, WORLD_W, WORLD_H)).toBe(0);
+    expect(edgeFraction(mouth, 0, middle, WORLD_W, WORLD_H)).toBeCloseTo(0.5);
+    expect(edgeFraction(mouth, 0, far, WORLD_W, WORLD_H)).toBe(1);
+  });
+
+  it('lands an arrival across itself, a body clear of the rock either side', () => {
+    expect(arrivalPoint(mouth, 0, WORLD_W, WORLD_H, 96)).toEqual({ x: 96, y: side });
+    expect(arrivalPoint(mouth, 0.5, WORLD_W, WORLD_H, 96)).toEqual({ x: 96, y: middle });
+    expect(arrivalPoint(mouth, 1, WORLD_W, WORLD_H, 96)).toEqual({ x: 96, y: far });
+  });
+
+  it('stands its signpost by its own middle', () => {
+    expect(signpostPoint(mouth, WORLD_W, WORLD_H)).toEqual({
+      x: SIGNPOST_INSET,
+      y: middle + SIGNPOST_SIDE_OFFSET,
+    });
+  });
+
+  it('carries a crossing hard against one side of a whole edge to the same side of itself', () => {
+    const crossed = edgeFraction({ edge: 'east' }, WORLD_W, PLAYER_HALF_EXTENT, WORLD_W, WORLD_H);
+    expect(arrivalPoint(mouth, crossed, WORLD_W, WORLD_H, 96).y).toBe(side);
+  });
+
+  it('is the side of a zone an arrival on its edge comes in by', () => {
+    const zone = { exits: [{ edge: 'north', to: 'town' } as const, mouth] };
+    expect(sideOn(zone, 'west')).toBe(mouth);
+    expect(sideOn(zone, 'south')).toEqual({ edge: 'south' });
   });
 });
 
@@ -244,27 +313,27 @@ describe('ZONES data integrity', () => {
 
 describe('signpostPoint', () => {
   it('stands near its edge midpoint, nudged sideways off the arrival spot', () => {
-    expect(signpostPoint('south', WORLD_W, WORLD_H)).toEqual({
+    expect(signpostPoint({ edge: 'south' }, WORLD_W, WORLD_H)).toEqual({
       x: WORLD_W / 2 + SIGNPOST_SIDE_OFFSET,
       y: WORLD_H - SIGNPOST_INSET,
     });
-    expect(signpostPoint('north', WORLD_W, WORLD_H)).toEqual({
+    expect(signpostPoint({ edge: 'north' }, WORLD_W, WORLD_H)).toEqual({
       x: WORLD_W / 2 + SIGNPOST_SIDE_OFFSET,
       y: SIGNPOST_INSET,
     });
-    expect(signpostPoint('west', WORLD_W, WORLD_H)).toEqual({
+    expect(signpostPoint({ edge: 'west' }, WORLD_W, WORLD_H)).toEqual({
       x: SIGNPOST_INSET,
       y: WORLD_H / 2 + SIGNPOST_SIDE_OFFSET,
     });
-    expect(signpostPoint('east', WORLD_W, WORLD_H)).toEqual({
+    expect(signpostPoint({ edge: 'east' }, WORLD_W, WORLD_H)).toEqual({
       x: WORLD_W - SIGNPOST_INSET,
       y: WORLD_H / 2 + SIGNPOST_SIDE_OFFSET,
     });
   });
 
   it('sits clear of the arrival point but within tapping-then-walking reach', () => {
-    const arrive = arrivalPoint('south', 0.5, WORLD_W, WORLD_H, 96);
-    const post = signpostPoint('south', WORLD_W, WORLD_H);
+    const arrive = arrivalPoint({ edge: 'south' }, 0.5, WORLD_W, WORLD_H, 96);
+    const post = signpostPoint({ edge: 'south' }, WORLD_W, WORLD_H);
     const gap = Math.hypot(arrive.x - post.x, arrive.y - post.y);
     expect(gap).toBeGreaterThan(30);
     expect(gap).toBeLessThan(SIGNPOST_INTERACT_RADIUS);
@@ -275,7 +344,7 @@ describe('signpostPoint', () => {
       zone.exits.forEach((exit) => {
         const worldW = nth(zone.map, 0).length * TILE_SIZE;
         const worldH = zone.map.length * TILE_SIZE;
-        const point = signpostPoint(exit.edge, worldW, worldH);
+        const point = signpostPoint(exit, worldW, worldH);
         const row = nth(zone.map, Math.floor(point.y / TILE_SIZE));
         const tile = nth(row, Math.floor(point.x / TILE_SIZE));
         expect(BLOCKING_TILES).not.toContain(tile);
@@ -297,33 +366,75 @@ describe('signpostPoint', () => {
  */
 describe('arriving through an exit', () => {
   /**
-   * The range a crossing can actually report. `edgeFraction` clamps to 0..1,
-   * but the world-bounds clamp holds the player's centre `PLAYER_HALF_EXTENT`
-   * from the edge before that — so a real fraction never reaches either end,
-   * and probing 0 or 1 would ask about a point off the grid entirely.
+   * The range a crossing can report runs over where a centre can cross, so 0
+   * and 1 are the two ends of it, each half a body clear of whatever stands
+   * either side of the mouth.
    */
-  const reach = PLAYER_HALF_EXTENT / (WORLD_H > WORLD_W ? WORLD_H : WORLD_W);
-  const FRACTIONS = [reach, 0.05, 0.25, 0.5, 0.75, 0.95, 1 - reach];
+  const FRACTIONS = [0, 0.05, 0.25, 0.5, 0.75, 0.95, 1];
 
-  it('lands on walkable ground wherever along the edge it was crossed', () => {
+  it('lands on walkable ground wherever along the mouth it was crossed', () => {
     // Walked the way `leaveZone` does it: every exit in the table, arriving in
-    // the zone it names on the opposite edge. An edge no exit leads to is one
-    // nobody ever arrives on, so it is not asked about.
+    // the zone it names by its exit on the opposite edge. An edge no exit leads
+    // to is one nobody ever arrives on, so it is not asked about.
     for (const zone of Object.values(ZONES)) {
       for (const exit of zone.exits) {
         const destination = ZONES[exit.to];
         const worldW = nth(destination.map, 0).length * TILE_SIZE;
         const worldH = destination.map.length * TILE_SIZE;
-        const edge = oppositeEdge(exit.edge);
+        const side = sideOn(destination, oppositeEdge(exit.edge));
 
         for (const fraction of FRACTIONS) {
-          const point = arrivalPoint(edge, fraction, worldW, worldH, TILE_SIZE * 1.5);
+          const point = arrivalPoint(side, fraction, worldW, worldH, TILE_SIZE * 1.5);
           const row = nth(destination.map, Math.floor(point.y / TILE_SIZE));
           const tile = nth(row, Math.floor(point.x / TILE_SIZE));
           expect(
             BLOCKING_TILES,
-            `${zone.id} -> ${exit.to}, arriving on its ${edge} edge at ${fraction}`,
+            `${zone.id} -> ${exit.to}, arriving on its ${side.edge} edge at ${fraction}`,
           ).not.toContain(tile);
+        }
+      }
+    }
+  });
+
+  /** A road goes both ways, and arrives by the exit back. */
+  it('comes in by an exit leading back, on the opposite edge', () => {
+    for (const zone of Object.values(ZONES)) {
+      for (const exit of zone.exits) {
+        const back = ZONES[exit.to].exits.find((other) => other.to === zone.id);
+        expect(back?.edge, `${zone.id} -> ${exit.to} has no way back`).toBe(
+          oppositeEdge(exit.edge),
+        );
+      }
+    }
+  });
+
+  /**
+   * A mouth is walked out of, so every tile of it on the edge itself is ground,
+   * and it is wide enough that a body turns round in it (decision 119): the
+   * corridor rule the hideout's first draft taught, two tiles and more.
+   */
+  it('opens every mouth on ground, inside its edge and wider than a corridor', () => {
+    for (const zone of Object.values(ZONES)) {
+      const cols = nth(zone.map, 0).length;
+      const rows = zone.map.length;
+      for (const exit of zone.exits) {
+        if (!exit.mouth) continue;
+        const [first, last] = exit.mouth;
+        const length = exit.edge === 'north' || exit.edge === 'south' ? cols : rows;
+        expect(first, `${zone.id}'s ${exit.edge} mouth`).toBeGreaterThanOrEqual(0);
+        expect(last, `${zone.id}'s ${exit.edge} mouth`).toBeLessThan(length);
+        expect(last - first + 1, `${zone.id}'s ${exit.edge} mouth`).toBeGreaterThanOrEqual(3);
+        for (let along = first; along <= last; along++) {
+          const [col, row] = {
+            north: [along, 0],
+            south: [along, rows - 1],
+            west: [0, along],
+            east: [cols - 1, along],
+          }[exit.edge];
+          expect(
+            BLOCKING_TILES,
+            `${zone.id}: the ${exit.edge} mouth is shut at tile ${along}`,
+          ).not.toContain(nth(nth(zone.map, row), col));
         }
       }
     }

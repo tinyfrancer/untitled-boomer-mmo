@@ -113,7 +113,7 @@ export function populateZone(
 
   // One tappable signpost per exit — the mobile way out of a zone.
   const signposts = zone.exits.map((exit) => {
-    const point = signpostPoint(exit.edge, size.width, size.height);
+    const point = signpostPoint(exit, size.width, size.height);
     return { x: point.x, y: point.y, exit, label: ZONES[exit.to].name };
   });
 

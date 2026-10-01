@@ -46,11 +46,11 @@ beforeEach(() => {
 });
 
 describe('the barrow', () => {
-  it('builds nine dead things, one of them the king', () => {
+  it('builds eleven dead things, one of them the king', () => {
     const kit = barrow();
     const king = kingIn(kit);
 
-    expect(kit.world.mobs).toHaveLength(9);
+    expect(kit.world.mobs).toHaveLength(11);
     expect(kit.world.mobs.filter((mob) => mob.definition.id === KING)).toHaveLength(1);
     expect(king.level).toBe(8);
     expect(king.maxHp).toBeGreaterThan(
@@ -59,10 +59,10 @@ describe('the barrow', () => {
   });
 
   /**
-   * Arriving is not walking into anything. The mouth runs the whole north edge
-   * because a traveller lands anywhere along it, and the respawn is the middle of
-   * the map — so both have to be outside everything's reach, which is the
-   * difference between a zone that is hard and one that is a wasted key.
+   * Arriving is not walking into anything. A traveller lands anywhere across the
+   * mouth at the head of the stair (decision 119), and the respawn is the foot of
+   * it — so both have to be outside everything's reach, which is the difference
+   * between a zone that is hard and one that is a wasted key.
    */
   it('leaves the mouth and the respawn clear of everything in it', () => {
     const kit = barrow();
@@ -76,7 +76,7 @@ describe('the barrow', () => {
       ).toBeGreaterThan(reach);
     });
 
-    // Nothing wanders into the mouth either, which is the band the road arrives
+    // Nothing wanders into the stair either, which is the band the road arrives
     // on rather than a point: stepped for a while so a drifting wight is caught.
     kit.tick(200);
     kit.world.mobs.forEach((mob) => {

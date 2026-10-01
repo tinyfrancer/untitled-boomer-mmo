@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { harness, type Harness } from './harness';
-import { EXIT_MARGIN } from '../../src/config/constants';
+import { EXIT_MARGIN, TILE_SIZE } from '../../src/config/constants';
 import {
   INVENTORY_CHANGED_EVENT,
   NOTICE_EVENT,
@@ -19,9 +19,13 @@ import type { WorldSignpost } from '../../src/world/zoneEntities';
 
 const HIDEOUT = 'bandit-hideout';
 
-/** Standing against the bandit camp's east edge, which is the way in. */
+/**
+ * Standing against the bandit camp's east edge at the middle of the lane out of
+ * the yard, which is the mouth of the way in (decision 119).
+ */
 function leanOnTheEastEdge(kit: Harness): void {
-  kit.world.teleport(kit.world.worldWidth - EXIT_MARGIN / 2, kit.world.worldHeight / 2);
+  const [first, last] = hideoutSignpost(kit).exit.mouth ?? [0, 0];
+  kit.world.teleport(kit.world.worldWidth - EXIT_MARGIN / 2, ((first + last + 1) / 2) * TILE_SIZE);
 }
 
 function hideoutSignpost(kit: Harness): WorldSignpost {
@@ -42,8 +46,22 @@ describe('walking into a locked zone', () => {
     expect(kit.tick(1)).toEqual([]);
     expect(kit.world.changingZone).toBe(false);
     expect(kit.emissions(NOTICE_EVENT).at(-1)).toEqual([
-      'The Bandit Hideout is locked. You need a Hideout Key.',
+      "The Cutthroat's Cellar is locked. You need a Cellar Key.",
     ]);
+  });
+
+  // The rest of the east edge is grass outside the waystation's wall, and
+  // leaning on it is leaning on the end of the world: no door, so no refusal.
+  it('is only the way in at the lane, its mouth', () => {
+    const kit = camp();
+    kit.character.addItem('hideout-key', 1);
+    kit.world.teleport(kit.world.worldWidth - EXIT_MARGIN / 2, 5.5 * TILE_SIZE);
+
+    kit.tick(5);
+
+    expect(kit.world.changingZone).toBe(false);
+    expect(kit.emissions(NOTICE_EVENT)).toEqual([]);
+    expect(kit.character.itemCount('hideout-key')).toBe(1);
   });
 
   /**

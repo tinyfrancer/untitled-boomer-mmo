@@ -136,7 +136,7 @@ describe('Camera2D', () => {
    * with no way to reach it.
    */
   describe('the south signpost stays clear of the tab bar', () => {
-    const post = signpostPoint('south', WORLD.width, WORLD.height);
+    const post = signpostPoint({ edge: 'south' }, WORLD.width, WORLD.height);
 
     // Where the camera is pinned hardest against the map's foot: a traveller
     // just arrived from the strand, on the strip an arrival keeps.

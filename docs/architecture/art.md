@@ -376,7 +376,12 @@ free (decision 118): the broken cell a slab of dressed stone in the New Cut's fa
 lantern niche, a line of letters cut over it and the blast's crack through it, its chips on the
 floor; and the lamp niche a sooted arch in the wall of Redrag Camp's hall, the iron the lamp hung
 from, and a strip of Company red tucked into it. Each is drawn on the floor tile in front of the
-wall, its top half over the wall's face, which is where a prop's foot puts it.
+wall, its top half over the wall's face, which is where a prop's foot puts it. C7 added the vaults'
+(decision 119): the Company strongbox at the end of the Cellar's low passage, iron-bound oak with
+its lid thrown back against the wall, its red seal broken and gold glinting in it, a coin or two
+spilled; and the frieze along the barrow's gallery, the prop budget's 64 by 32, a panel of dressed
+stone with the coast cut in relief, six sea-lights standing out of the waves with their lamps inlaid
+in gold, a crack down through it and coin at its foot.
 
 **A tree is a canopy of leaf clumps over a trunk** (`sprites/trees.ts`), at the prop budget's 64
 square: a crown two tiles across standing half again as tall as a person, since a tree a person
@@ -482,7 +487,11 @@ a wall is as dark as the hill in whatever light it stands in and the zone map dr
 edges are rock's rule made square: little wander, corners barely rounded, since somebody laid it
 straight, and the grass at its foot grainier than the paving. Redrag Camp's road running onto the
 waystation's paving added the one edge a road had never met, `STONE_UNDER_PATH`, the dirt trodden
-over the edge of the slabs.
+over the edge of the slabs. The vaults (decision 119) are rock with every room lined in masonry, and
+added the two edges that needed: `MASONRY_UNDER_ROCK`, the hill packed ragged against the back of the
+dressed stone and darkening a row of it, neither showing a face since both block; and
+`MASONRY_UNDER_WATER`, a wall's face over its foot in the water come into the barrow, as rock stands
+in it.
 
 ## Scatter
 

@@ -2,7 +2,15 @@ import type { SpriteDef } from './format';
 import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
-import { BROKEN_CELL, CELLAR_HATCH, LAMP_NICHE, LAMP_STONE, WARDEN_NICHE } from './sprites/secrets';
+import {
+  BROKEN_CELL,
+  CELLAR_HATCH,
+  LAMP_NICHE,
+  LAMP_STONE,
+  SEA_LIGHT_FRIEZE,
+  STRONGBOX,
+  WARDEN_NICHE,
+} from './sprites/secrets';
 import { CHIPS, SPLASH } from './sprites/chips';
 import {
   BED,
@@ -53,6 +61,8 @@ export const SPRITES: readonly SpriteDef[] = [
   WARDEN_NICHE,
   BROKEN_CELL,
   LAMP_NICHE,
+  STRONGBOX,
+  SEA_LIGHT_FRIEZE,
   TREE,
   HARDWOOD,
   WILLOW,
