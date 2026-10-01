@@ -28,8 +28,8 @@ redrawn in 2D pixel art, with bigger zones, people and lore, a house, and a cap 
 next — and its "Starting cold" section. Its parts each end in a review phase that amends the plan,
 so read it as it stands, not as it was. **From C11 its phases are built several at a time**, each
 by its own session from the brief and the rules in `docs/v2_parallel_plan.md` (decision 123): read
-your phase's brief there before anything else, and take the decision number and the save version at
-the merge, not at the branch. Finished plans go to `docs/archive/`. Anything big enough to
+your phase's brief there before anything else, build on the wave's branch with the decision number
+and save version your launch reserved, and never renumber (decision 125). Finished plans go to `docs/archive/`. Anything big enough to
 phase gets a new plan doc rather than being started against this file alone.
 
 **The world's lore is `docs/lore/`** (decision 114): the realm, its history, peoples, factions and
