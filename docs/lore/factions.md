@@ -19,8 +19,9 @@ order and builds well, and it does not know what it is breaking; told, most of i
 believe it, and a few believe it and do not care. The contract board is the Company's: rats, raiders,
 timber and ore.
 
-Standing could open better contracts, Company stock, a Company title, and a plot in Lampton to build
-a house on (F1).
+Standing could open better contracts, Company stock and a Company title. The Company already lets
+its empty houses to whoever is useful: the Surveyor's House in Lampton is the player's once the Red
+Rags are broken and its roof mended (`places.md`; _in game_ since F1).
 
 ## The Keepers
 

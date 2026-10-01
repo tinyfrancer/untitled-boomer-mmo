@@ -135,6 +135,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | the Stillwood               |             | The elves' wood, west past Greyford                 | `peoples.md`  |
 | strays                      |             | Loose souls over the fen                            | `peoples.md`  |
 | the Sunken Barrow           |             | _In game_; Orlhal                                   | `places.md`   |
+| the Surveyor's House        |             | _In game_; the Company's house let to the player    | `places.md`   |
 | Tilda Pell                  |             | The shopkeeper (_in game_ as the Shopkeeper)        | `places.md`   |
 | Tirrow                      | TIRR-oh     | Leads the fen raiders                               | `places.md`   |
 | the Veymarch                | VAY-march   | The realm                                           | `history.md`  |

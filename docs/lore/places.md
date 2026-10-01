@@ -22,11 +22,19 @@ lamp-post and named the town for. People pin notices to it.
 **What it was.** A Veymari crossroads. The Lamp Stone is a waymarker, and under the town is a
 waystation's undercroft, which is where the rats come from.
 
+**The Surveyor's House.** Built in the Charter's second year for the Company's surveyor, who laid
+the four roads out from the Lamp Stone and then followed the west one; it has stood empty since the
+survey went on to Greyford. It is at the east end of the counters' row, past the Quartermaster's
+Post. The Company lets its houses to its own people and to whoever has been useful, and Jory Stroud
+does the letting. _In game_ (F1): let to the player once the Red Rags are broken, for the timber its
+roof wants, with stands for what they bring home, a chest, and a wall for their plaques.
+
 **People.**
 
 - **Tilda Pell**, the shopkeeper: warm and nosy, with three carts on the east road and a view on
   everybody. Her errands are the player's first work. Her mother bought eels off the fenfolk, and she
-  will not call them raiders.
+  will not call them raiders. The bell off the first of her carts the Red Rags took turned up among
+  Hollis's things, and she gives it to whoever put him down. _In game_ as Pell's Cart Bell.
 - **Ambrose Tally**, the banker: dry and exact, and trusted by everybody because he is interested in
   nothing but the ledger.
 - **Marta Hale**, the trainer: has been a soldier, a hedge-wizard and a poacher, in that order, was
@@ -225,7 +233,9 @@ little way west towards the Stillwood and is grown over.
 - **Oona Rook**, the outfitter: trades steel tools for ore, coal and hardwood, and is the most
   practical person west of Lampton.
 - **Silas Quill**, the fettler: reworks gear, and grave goods, and asks nothing. Charming, shameless,
-  and not quite a villain.
+  and not quite a villain. Years before anybody opened Orlhal he pressed its door's seal in wax, and
+  it is the one thing he has never sold; he parts with it to whoever puts Orlath down. _In game_ as
+  the Cast of Orlath's Seal.
 - **Pocket**, the crow on the longhouse roof. _Not yet in the game._
 
 **Secrets.**
