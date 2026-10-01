@@ -5375,6 +5375,27 @@ async function ranger() {
   );
 }
 
+/**
+ * Into Greyford from wherever the player is, the way a player gets there: west
+ * out of Lampton onto the mill road, and north off it inside its mouth.
+ */
+async function toGreyford() {
+  if ((await zoneId()) === 'greyford') return;
+  if ((await zoneId()) !== 'old-mill-road') {
+    await park();
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(33, w.worldHeight / 2);
+    });
+    await stepUntilZone('old-mill-road', 'the west road out of town');
+  }
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('greyford', 'the road north into Greyford');
+}
+
 async function fletchersBench() {
   // --- The fletcher's bench, the third station built into a zone and the only
   // one in a zone nothing above visits.
@@ -5385,21 +5406,7 @@ async function fletchersBench() {
   // how many a row makes, a real tap running the channel, and the bench let go
   // of when the zone comes down. Walked to, since walking is the
   // only way into a zone: west to the mill road and north into Greyford. ---
-  if ((await zoneId()) !== 'greyford') {
-    if ((await zoneId()) !== 'old-mill-road') {
-      await park();
-      await page.evaluate(() => {
-        const w = window.world;
-        w.teleport(33, w.worldHeight / 2);
-      });
-      await stepUntilZone('old-mill-road', 'the west road out of town');
-    }
-    await page.evaluate(() => {
-      const w = window.world;
-      w.teleport(w.worldWidth / 2, 33);
-    });
-    await stepUntilZone('greyford', 'the road north into Greyford');
-  }
+  await toGreyford();
   await sweep();
   const before = await canvases();
 
@@ -5467,6 +5474,86 @@ async function fletchersBench() {
   );
 }
 
+async function backRoom() {
+  // --- The fettler's store at Greyford: the one door nobody sees from the
+  // yard, since it is round the back, and the one secret that lies in a room
+  // (decision 120). A tap on the store walks round to its door and a second
+  // goes in, where the back room is found and said on the card. What only a
+  // browser has is the pick on a building whose front is behind another's roof,
+  // the walk round, and the room cut away round the find. ---
+  await toGreyford();
+  const store = await page.evaluate(() => {
+    const w = window.world;
+    const found = w.buildings.find((each) => each.definition.id === 'store');
+    w.character.state.secrets = w.character.state.secrets.filter((id) => id !== 'back-room');
+    w.clearTarget();
+    w.closeCounters();
+    w.player.stopMoving();
+    return found
+      ? {
+          x: found.x,
+          y: found.y,
+          width: found.definition.body.width,
+          depth: found.definition.body.height,
+        }
+      : null;
+  });
+  if (!store) {
+    check('Greyford has a store behind the longhouse', false);
+    return;
+  }
+  await page.evaluate((at) => window.world.teleport(at.x, at.y + 300), store);
+  await step(2);
+  await draw();
+
+  // Its roof over the longhouse's, which is the store's alone: the longhouse
+  // in front stands taller than the store is deep, so its roof is drawn over
+  // the whole of the store's footprint, and a tap there is the fettler's.
+  /** @param {{ x: number; y: number; depth: number }} at */
+  const back = (at) => window.view.worldToScreen(at.x, at.y - at.depth / 2 - 60);
+  await clickAt(await page.evaluate(back, store));
+  const round = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        y: window.world.player.y,
+        walking: window.world.player.hasMoveTarget(),
+      })),
+    (spot) => !spot.walking,
+    'the walk round the longhouse to the store door',
+    30000,
+  );
+  check(
+    'a tap on the store walks round the back to its door',
+    round.y < store.y - store.depth / 2,
+    `player at y ${Math.round(round.y)}, back wall at ${store.y - store.depth / 2}`,
+  );
+
+  await draw();
+  await clickAt(await page.evaluate(back, store));
+  const card = await stepFor(
+    () =>
+      page.evaluate(() => {
+        const found = document.querySelector('.hud-tip[data-find]');
+        return found && !found.classList.contains('hud-hidden')
+          ? found.getAttribute('data-find')
+          : null;
+      }),
+    (value) => value !== null,
+    'the walk into the store to find the back room',
+    30000,
+  );
+  check(
+    'and a second tap goes in, where the back room is found',
+    card === 'back-room' &&
+      (await page.evaluate(() => window.world.character.state.secrets.includes('back-room'))),
+    `${card}`,
+  );
+  await draw();
+  await page.screenshot({ path: `${OUT}/22b-back-room.png` });
+  await page.click('.hud-tip [data-action="tip-heard"]');
+  await draw();
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -5513,6 +5600,7 @@ const SECTIONS = [
   ['throttled', throttled],
   ['ranger', ranger],
   ['fletchers-bench', fletchersBench],
+  ['back-room', backRoom],
 ];
 
 const known = SECTIONS.map(([name]) => name);
