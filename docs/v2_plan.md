@@ -73,9 +73,12 @@ village, the lantern still burning, the sealed door and the maker's mark, the la
 standing secret that loops; no scenery yet; decision 121), **and C10** (less grind: a level takes
 its number plus four minutes of play, measured by a bot playing every class through the zones; the
 curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
-on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122).
-**Next: C11**, the Part C review, and from here the phases are built several at a time, by the
-rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
+on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
+**and D4** (Wick in the world: a light at the shoulder that glows and chimes when it has something
+to say and says it on the card when tapped, the tips waiting in it, nine beats of its story heard
+once, a line of its own otherwise, quiet the tips alone, and its light the one underground; save
+version 103; decision 124). **Next: C11**, the Part C review, and from here the phases are built
+several at a time, by the rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
@@ -670,9 +673,18 @@ decision 121).
   of what is found.
 - **D3 — Factions and reputation.** Standing with each faction, moved by quests, kills, contracts and
   dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
-- **D4 — The spirit.** The helper drawn in the world: it follows you, glows or chimes when it has a
-  tip, speaks in a bubble when tapped, can be told to go quiet, and has **a name and a story** that
-  surfaces at new zones and bosses. It takes over A9's tips.
+- **D4 — The spirit. (Landed.)** Wick drawn in the world, a sprite kind of its own (16×16, not
+  outlined, one loop, a brighter sprite when it calls), following the player off the left shoulder
+  on a lag that never routes and never blocks (`world/Spirit.ts`). It **glows and chimes when it has
+  something to say and says it on the card when tapped**, under its name: a beat of its story waiting
+  here, else the tip waiting at the desk, else a line of its own about the zone. Only its waking and
+  a secret's line come unasked. **Nine beats** (`data/spiritBeats.ts`), its waking first and then one
+  a zone on arriving and Orlath's once he is down, each heard once (`CharacterState.beats`, save
+  version 103); where a memory is a thing, its secret says it and the zone's beat leads up to it.
+  **Go quiet** silences the tips alone. **Underground its light is the only one**, the lantern's pool
+  centred on it in its blue-white. Picked after the creatures and before the stations; a tap on it
+  takes nothing back, and waits out an open counter. Smoke gained a `spirit` section. Decision 124
+  has the forks.
 - **D5 — Part D review.**
 
 **Open questions for Part D**: can two factions be opposed, so that raising one lowers another?
