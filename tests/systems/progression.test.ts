@@ -18,11 +18,12 @@ import { xpToReachLevel } from '../../src/data/xpTable';
 import { ZONES } from '../../src/data/zones';
 import type { EnemyId, ItemId, LootTableId, QuestId } from '../../src/types/ids';
 
-// The pacing contract, simulated rather than played: a character who does the
+// The shape of the climb, simulated rather than played: a character who does the
 // starter arc's quests and gears up should arrive at level 3 and stop there, and
 // the upper band's chain should ride the climb from there rather than make it.
-// The duel tests hold how hard a fight is; this holds how long the whole thing
-// takes, which is the number the XP curve is actually tuned to.
+// The duel tests hold how hard a fight is and `tests/world/pace.test.ts` how
+// long each level and arc takes in minutes of play (decision 122); this holds
+// what the arcs are made of, in kills, drops and XP.
 //
 // Everything below is expected-value arithmetic. Drop chances and burn rates
 // are averages, not rolls, so the test is deterministic and a change to any
@@ -140,21 +141,6 @@ const spawnsOf = (enemyId: EnemyId): MobSpawnPoint[] =>
 /** The level a character is at with this much XP from level 1. */
 const levelAt = (xp: number): number => levelAfter(xp).level;
 
-/**
- * The best kill anyone can actually grind. A boss is one key-gated fight at the
- * back of a locked zone, so counting a climb in chiefs would flatter it — the
- * same reason the offline camp leaves them off the list it picks a quarry from.
- */
-function richestRepeatableKillXp(): number {
-  return everySpawn()
-    .filter((spawn) => ENEMIES[spawn.enemyId].boss !== true)
-    .reduce(
-      (best, spawn) =>
-        Math.max(best, scaleEnemyStats(ENEMIES[spawn.enemyId], spawn.level).xpReward),
-      0,
-    );
-}
-
 /** The highest level the world actually puts in front of anyone. */
 const highestSpawnLevel = (): number =>
   everySpawn().reduce((highest, spawn) => Math.max(highest, spawn.level), 0);
@@ -201,15 +187,6 @@ describe('the starter arc', () => {
     perZone.forEach((zoneXp) => {
       expect(zoneXp / arcXp(arc)).toBeLessThan(0.75);
     });
-  });
-
-  // ~45-60 minutes was the target. A kill is a fight plus the walk to the next
-  // one plus waiting on a respawn; 30s is the conservative end of that, so this
-  // brackets the arc at roughly 40-90 minutes of play.
-  it('is a session long rather than an evening long', () => {
-    const kills = arc.ratKills + arc.crabKills + arc.banditKills;
-    expect(kills).toBeGreaterThan(60);
-    expect(kills).toBeLessThan(180);
   });
 
   it('needs the cooking skill levelled before the crab quest is possible at all', () => {
@@ -283,7 +260,9 @@ describe("the ranger's arc", () => {
 // The cap is a claim about the content rather than about the curve: it says the
 // game has something for every level it offers. What follows is what makes that
 // claim checkable, and every line of it failed at the level 10 cap this
-// replaced — 30,720 XP and six levels past the hardest fight in the world.
+// replaced — 30,720 XP and six levels past the hardest fight in the world. How
+// long the climb to it takes, and that it is more than the arc and a few arcs
+// at most, is `tests/world/pace.test.ts`'s to say in minutes.
 describe('the level cap', () => {
   const arc = intendedArc();
 
@@ -294,31 +273,6 @@ describe('the level cap', () => {
 
   it('is past the end of the starter arc rather than reached by it', () => {
     expect(levelAfter(arcXp(arc)).level).toBeLessThan(MAX_CHARACTER_LEVEL);
-  });
-
-  /**
-   * Max level should be an achievement, not an asymptote. The climb from where
-   * the two quests leave off is measured in the best thing there is to kill and
-   * held against the arc that got you there: more than the arc, so the cap is
-   * earned past the quests rather than fallen into, and a small multiple of it,
-   * so it is another session or two rather than another game.
-   *
-   * At the old cap it was ~950 bandits against an arc of 71 — thirteen times
-   * everything the player had done so far, for six levels with nothing in them.
-   */
-  it('is a session or two past the quests rather than an evening a level', () => {
-    // Every quest the table has, not only the arc's: the ones past it are paid on
-    // the climb too, and counting them is the direction that can only shorten it.
-    const pastTheArc = QUEST_ORDER.filter((questId) => !arc.quests.includes(questId)).reduce(
-      (xp, questId) => xp + QUESTS[questId].reward.xp,
-      0,
-    );
-    const remaining = xpToCap() - arcXp(arc) - pastTheArc;
-    const kills = Math.ceil(remaining / richestRepeatableKillXp());
-    const arcKills = arc.ratKills + arc.crabKills + arc.banditKills;
-
-    expect(kills).toBeGreaterThan(arcKills * 0.5);
-    expect(kills).toBeLessThan(arcKills * 3);
   });
 });
 
