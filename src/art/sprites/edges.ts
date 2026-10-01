@@ -340,6 +340,34 @@ const STONE_UNDER_PATH: EdgeStyle = {
 };
 
 /**
+ * The barrow's kerb where the fen's mud lies up against it (decision 121): the
+ * wall's face over its foot in the reeds, the marsh's edge ragged where it
+ * meets the dressed stone, as the grass is at a ruin's foot.
+ */
+const MASONRY_UNDER_MARSH: EdgeStyle = {
+  ...MASONRY_UNDER_STONE,
+  wander: 1.5,
+  span: 8,
+  grain: 0.3,
+  upper: { north: 'upper.0', south: 'upper.1', east: 'upper.1', west: 'upper.3' },
+};
+
+/**
+ * The threshold of the barrow's door, where the fen's mud has washed over the
+ * slabs: the sand's rule over the sea-wall, the mud a hair higher and shading
+ * the stone a row under it.
+ */
+const STONE_UNDER_MARSH: EdgeStyle = {
+  reach: 4,
+  wander: 2.5,
+  span: 10,
+  grain: 0.3,
+  rounding: 6,
+  lower: { north: ['lower.1'], west: ['lower.1'], east: [], south: [] },
+  upper: { south: 'upper.1', east: 'upper.1', north: 'upper.3', west: 'upper.3' },
+};
+
+/**
  * Every pair of grounds with an edge drawn between them, lower first: the one
  * reached into. Every pair that meets in a zone is a row (held by a test).
  */
@@ -361,4 +389,6 @@ export const EDGES: readonly { lower: number; upper: number; style: EdgeStyle }[
   { lower: STONE_TILE, upper: PATH_TILE, style: STONE_UNDER_PATH },
   { lower: MASONRY_TILE, upper: WALL_TILE, style: MASONRY_UNDER_ROCK },
   { lower: MASONRY_TILE, upper: WATER_TILE, style: MASONRY_UNDER_WATER },
+  { lower: MASONRY_TILE, upper: MARSH_TILE, style: MASONRY_UNDER_MARSH },
+  { lower: STONE_TILE, upper: MARSH_TILE, style: STONE_UNDER_MARSH },
 ];
