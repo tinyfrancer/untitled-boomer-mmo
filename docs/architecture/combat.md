@@ -240,7 +240,9 @@ C10, decision 122): a bot (`tests/world/pace.ts`) plays every class through ever
 and kit meant for it, twice on seeded dice, and a level n to n + 1 has to take about **n + 4
 minutes** — five at the start, twelve at the cap's door, sixty-eight in all. Change `xpTable.ts`, a
 creature's XP, a drop chance, a food or a class's growth and one of the two moves; retune until both
-pass rather than eyeballing the curve.
+pass rather than eyeballing the curve. **The bot plays unrested** and never idles (decision 124,
+`afk.md`): rested is a bonus on top of a level's play by hand, not part of what the pace holds, so a
+player who comes back rested climbs faster than the bands say and nothing moves them.
 
 What the bot measured is why the numbers are what they are. Before C10 half to three-quarters of a
 session was standing still for regen, so **food is the answer to the wait** rather than a faster
