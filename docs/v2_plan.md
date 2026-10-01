@@ -89,7 +89,10 @@ once, a line of its own otherwise, quiet the tips alone, and its light the one u
 version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
 clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
-with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). **and E3** (idle drinks: potions in the idle panel's
+order and Keep beside the food, drunk one at a time the next when the last wears off and only for a
+job they help, a parked night drinking the same way from when the tab closed; no save version;
+decision 135). Wave 1 is folded onto
 `claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
 `claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
 phase lands:
@@ -770,6 +773,11 @@ Idle and active each get a reason (decision 85).
   XP, faster gathering. Some may help in a fight.
 - **E3 — What idle uses.** Idle drinks the potions it is given. Potions join the rows A7's idle
   panel orders and keeps, so the player sets when idle drinks them the way they set its food.
+  **Landed** (decision 135): potions are rows beside the food in the one stored order and Keep,
+  fair game until kept; idle drinks the first that works for its job once nothing is running, never
+  two at once; a parked night drinks the same way, counted from when the tab closed and only until
+  it stops, and the morning wakes to the last one's clock; the panel names what a night will drink
+  and the away report what it drank. No save version.
 - **E4 — Part E review.**
 
 **Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing
