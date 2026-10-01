@@ -18,7 +18,7 @@ the Deep Cut under the quarry where the coal is, the Sunken Barrow under the bot
 where the dead are, the two vaults rebuilt in C7, and Greyford Outpost between the road west and
 the quarry, where a counter trades in materials rather than coin, a tannery works what the fen
 drops, a fletcher's bench turns timber and bars into arrows, and a fettler reworks gear into what you
-would rather it was);
+would rather it was, the road west and Greyford rebuilt in C8);
 character creation, leveling, gear,
 two-way combat with death and respawn; three gathering skills and four making ones; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
@@ -83,9 +83,16 @@ wants a particular person or creature names it rather than taking the first.
 on neither map and never named over, found by walking up to it (`world/SecretFinder.ts`). A secret
 is a marker in its zone's text like anything else placed, and its row says which zone it is in,
 which a test holds against where the text put it. Finding one is kept on the character, pays a line
-of Wick's on the tips' card and a cache, and the zone map counts the zone's own under it. Lampton
-hides two, and Candle Strand, the New Cut, Redrag Camp, the Cellar and the barrow one each; a
-rebuild adds its zone's from `docs/lore/places.md`, each drawn in the phase that adds it.
+of Wick's on the tips' card and a cache, and the zone map counts the zone's own under it. Lampton,
+the Old Mill Road and Greyford hide two each, and Candle Strand, the New Cut, Redrag Camp, the Cellar
+and the barrow one each; a rebuild adds its zone's from `docs/lore/places.md`, each drawn in the
+phase that adds it. **A secret may lie in a room** (decision 120): written into its building's block
+where it lies, which still reads as the whole footprint, and found from inside that room and nowhere
+else, since a wall is a quarter of a tile and the reach would otherwise find it from the room in
+front or the lane behind. The mill's ledger and the fettler's back room are the two.
+`tests/world/secrets.test.ts` holds every secret walked up to from its zone's start, into its room
+for one in a room; it found the strand's causeway one tile wide, exactly a body, which no route is
+laid along, and it is two now.
 
 **The rebuilt zones are 45×32** (decision 86), and a rebuild keeps what the old zone was for while
 giving it room: side paths, a few places to do things, a secret or two. **Lampton** keeps its four
@@ -128,6 +135,23 @@ read north to south with every seven shallower than every eight. Both are rock w
 in masonry, so the hill is packed up behind dressed stone, and both keep the start, which is where a
 death in a vault puts somebody, at the foot of the way in and clear of every creature's reach.
 
+**One stream runs from Greyford's ford into the mill road's millpond** (decision 120), so the edge
+between the two has water across its west end on both sides, and **each side of it is a mouth**, the
+same stretch east of the stream: the first mouths outdoors. The ground west of the stream at that
+edge does not leave, on either side, as Redrag Camp's east edge does not outside its lane. **Greyford**
+is the Company's post at the ford: the road from the New Cut along the east edge's middle rows and the
+length of the yard to the ford, the road south leaving it halfway, the trading post and the fettler's
+longhouse fronting it from the north as Lampton's counters do, the fettler's store against the back of
+the longhouse with its door round the back, the tannery and the bench at the yard's west end by the
+water, and cottages. The ford is the fallen bridge, its abutments and two piers in masonry and the
+crossing its stones; over it the old road goes a little way west and is grown over. **The Old Mill
+Road** keeps the road from Lampton on the high street's rows as far as the mill yard, where it stops,
+so no road runs off an edge with no exit; the road north to Greyford is the way on. The millpond is
+in the north-west with the mill on its bank and the willows round it, five knots of three goblins
+climb westward from either side of the road to the pond, and the hardwood stands in the south-east
+as the timber stand. Every knot is held out of reach of both arrival strips, and the willows of every
+knot's.
+
 The quarry is what that claim looks like when it is cashed: a map file, a row and one
 exit each way, and it appeared on the world map, in the zone map and in the offline camp with
 nothing else written down. Two things a `ZONES` row still cannot promise on its own, both held
@@ -162,7 +186,9 @@ sits at `-1,-1`, joined south to the Old Mill Road and east to the quarry, so to
 outpost and the quarry make a circuit — the first two spokes in the game tied to each other. What it
 cost was the two edges it joins: the millpond came two rows south off the mill road's north edge, and
 the quarry's face left a ledge along its west one. **Expect a zone that ties two others together to
-charge both of them**, which is the same bill a spoke charges once.
+charge both of them**, which is the same bill a spoke charges once. The rebuild charged the mill
+road's edge again from the other side: the stream through Greyford's ford is the one that fills the
+millpond, so that edge opens at a mouth east of it on both sides (decision 120).
 
 **An exit reserves a strip of its own edge, and that is a claim on the town's layout made from
 another zone.** A traveller materialises anywhere across the arriving mouth — at whatever fraction of

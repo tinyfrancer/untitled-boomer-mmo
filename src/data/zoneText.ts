@@ -207,7 +207,9 @@ export function layoutZone(name: string, text: string, legend: ZoneLegend): Zone
   /**
    * A building is the block of its marker at this corner, which has to be a
    * filled rectangle exactly its footprint: a block the wrong size is a
-   * building drawn one size and walked into as another.
+   * building drawn one size and walked into as another. A secret may lie in
+   * its room, written into the block where it lies and left for the reading
+   * to place, since every tile's middle is inside the walls.
    */
   function placeBuilding(
     marker: Extract<Marker, { building: BuildingId }>,
@@ -220,6 +222,8 @@ export function layoutZone(name: string, text: string, legend: ZoneLegend): Zone
     const down = definition.body.height / TILE_SIZE;
     for (let y = top; y < top + down; y += 1) {
       for (let x = left; x < left + across; x += 1) {
+        const inside = legend[rows[y]?.[x] ?? ''];
+        if (inside && 'secret' in inside) continue;
         if (rows[y]?.[x] !== key || claimed[y]?.[x]) {
           fail(`${marker.building} at ${left},${top} is not a ${across}×${down} block of '${key}'`);
         }

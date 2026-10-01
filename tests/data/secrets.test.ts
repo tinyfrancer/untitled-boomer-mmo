@@ -43,4 +43,21 @@ describe('the secrets', () => {
       { x: TILE_SIZE * 2.5, y: TILE_SIZE * 0.5, secretId: 'cellar-hatch' },
     ]);
   });
+
+  /**
+   * A secret may lie in a room (decision 120): written into its building's
+   * block where it lies, and the block still read as the building's whole
+   * footprint, since every tile's middle is inside the walls.
+   */
+  it('may lie in a room, written into its building’s block', () => {
+    const { buildingSpawns, secretSpawns } = layoutZone('yard', '@SSS\n.ShS', {
+      '@': { start: true, on: 'grass' },
+      S: { building: 'store', on: 'grass' },
+      h: { secret: 'back-room', on: 'grass' },
+    });
+    expect(buildingSpawns).toEqual([{ x: TILE_SIZE * 2.5, y: TILE_SIZE, buildingId: 'store' }]);
+    expect(secretSpawns).toEqual([
+      { x: TILE_SIZE * 2.5, y: TILE_SIZE * 1.5, secretId: 'back-room' },
+    ]);
+  });
 });

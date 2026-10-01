@@ -3,10 +3,14 @@ import type { NodeShapeId, ResourceNodeId, SecretId } from '../types/ids';
 import { variantId } from './compile';
 import { CHIPS, SPLASH } from './sprites/chips';
 import {
+  BACK_ROOM,
+  BRIDGE_KEYSTONE,
   BROKEN_CELL,
   CELLAR_HATCH,
+  CHARTER_LEDGER,
   LAMP_NICHE,
   LAMP_STONE,
+  POND_SHRINE,
   SEA_LIGHT_FRIEZE,
   STRONGBOX,
   WARDEN_NICHE,
@@ -74,7 +78,8 @@ export function strokeSprite(shape: NodeShapeId): string {
 /**
  * What each secret is drawn as (decision 117), and whether it lies flat in the
  * ground, drawn with the ground under everything standing on it, or stands up
- * out of it and is sorted by its foot like a station.
+ * out of it and is sorted by its foot like a station. One under water is a
+ * mark, looping on the water's clock as a fishing spot's rings do.
  */
 const SECRET_SPRITES: Readonly<Record<SecretId, { sprite: string; flat: boolean }>> = {
   'lamp-stone': { sprite: LAMP_STONE.id, flat: false },
@@ -84,6 +89,10 @@ const SECRET_SPRITES: Readonly<Record<SecretId, { sprite: string; flat: boolean 
   'lamp-niche': { sprite: LAMP_NICHE.id, flat: false },
   strongbox: { sprite: STRONGBOX.id, flat: false },
   'sea-light-frieze': { sprite: SEA_LIGHT_FRIEZE.id, flat: false },
+  'pond-shrine': { sprite: POND_SHRINE.id, flat: true },
+  'charter-ledger': { sprite: CHARTER_LEDGER.id, flat: false },
+  'bridge-keystone': { sprite: BRIDGE_KEYSTONE.id, flat: true },
+  'back-room': { sprite: BACK_ROOM.id, flat: false },
 };
 
 export function secretSprite(secretId: SecretId): { sprite: string; flat: boolean } {

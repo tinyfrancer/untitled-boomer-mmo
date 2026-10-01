@@ -115,12 +115,13 @@ what he meant to be. He sleeps in it, under the sea.
 ## The first charter
 
 Seventy years ago the Crown of Aldmark tried the west for the first time. A village grew up round a
-mill on the west road, and the settlers dammed a stream to make the millpond. The stream's head was a
-shrine the elves had kept since the Drowning, where they had said goodbye to Veymar. One elf who had
-never left, the one the settlers came to call the Willow Warden, asked them to break the dam. They
-did not. That winter did not end: the pond froze in summer, the wheel turned backwards on still
-nights, and every child in the village dreamed the same dream. After eleven years they left. Aldmark
-calls it the Grey Winter, and blames goblins and a hard frost.
+mill on the west road, and the settlers dammed a stream to make the millpond. Where the stream came
+down off the hills and pooled was a shrine the elves had kept since the Drowning, where they had said
+goodbye to Veymar, and the pond went over it. One elf who had never left, the one the settlers came
+to call the Willow Warden, asked them to break the dam. They did not. That winter did not end: the
+pond froze in summer, the wheel turned backwards on still nights, and every child in the village
+dreamed the same dream. After eleven years they left. Aldmark calls it the Grey Winter, and blames
+goblins and a hard frost.
 
 ## The second charter
 

@@ -177,6 +177,20 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
     shape: 'cottage',
     door: 'south',
   },
+  /**
+   * The fettler's back room, against the back of the longhouse with its door
+   * round the back, where what is bought and not asked about waits to be
+   * reworked (`docs/lore/places.md`). Its door faces away from the camera, as
+   * the inn's does, so it is never seen from the yard: a tap on it walks round
+   * to the doorstep, and a second goes in.
+   */
+  store: {
+    id: 'store',
+    name: 'Store',
+    body: { width: BAY, height: HUT },
+    shape: 'cottage',
+    door: 'north',
+  },
 };
 
 /** A building where a zone put it. What everything below asks about. */

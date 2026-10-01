@@ -95,7 +95,7 @@ describe('the road west', () => {
 
 /**
  * The knots, which are the zone's entire design and the one thing about it that
- * a spawn list can lose without anything else noticing. Spread these nine
+ * a spawn list can lose without anything else noticing. Spread these fifteen
  * goblins evenly across the road and every other test here still passes, while
  * the zone quietly becomes the bandit camp with bigger numbers.
  */
@@ -116,8 +116,11 @@ describe('the goblins stand in threes', () => {
    */
   const AGGRO_REACH = (GOBLIN.aggroRadius ?? 0) + GOBLIN.wander.radius;
 
-  it('spawns nine of them and nothing else', () => {
-    expect(ZONE.mobSpawns).toHaveLength(9);
+  /** Five knots since the rebuild at 45×32 (decision 120), where there were three. */
+  const KNOTS = 5;
+
+  it('spawns three to a knot and nothing else', () => {
+    expect(ZONE.mobSpawns).toHaveLength(KNOTS * 3);
     ZONE.mobSpawns.forEach((spawn) => {
       expect(spawn.enemyId).toBe('goblin-scavenger');
     });
@@ -132,8 +135,8 @@ describe('the goblins stand in threes', () => {
     });
   });
 
-  // Three knots rather than one crowd: a single heap of nine is not a zone, it
-  // is one fight nobody wins and a long walk past it. Grouped by the same
+  // Knots rather than one crowd: a single heap of fifteen is not a zone, it is
+  // one fight nobody wins and a long walk past it. Grouped by the same
   // single-link rule a player discovers by walking into it, so two knots close
   // enough to chain would come back here as one knot of six.
   it('keeps the knots apart from one another', () => {
@@ -146,7 +149,7 @@ describe('the goblins stand in threes', () => {
       else knots.push([spawn]);
     });
 
-    expect(knots).toHaveLength(3);
+    expect(knots).toHaveLength(KNOTS);
     knots.forEach((knot) => expect(knot).toHaveLength(3));
 
     // And no two of them within reach of one another, so taking one knot on is

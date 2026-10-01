@@ -82,6 +82,18 @@ the floor with "Training Hall" written over it. Any other building whose picture
 be written in it is left off. It is a rule of the view rather than a rule of layout, so a zone laid
 out close, as town is and Part C's may be, needs nothing moved for it.
 
+**A door may face away from the camera, and the fettler's store at Greyford does it on purpose**
+(decision 120). It stands against the back of the longhouse with its door in its north wall, as the
+inn's is, so from the yard it is a roof showing over the longhouse's and no door at all: a wall is
+52 art pixels tall, so the longhouse's roof is drawn over the whole of the store's footprint, and
+only the store's own roof above it is the store's to pick. A tap there walks round to the doorstep
+behind it, and a second goes in. **A secret may lie in a room** (decision 120), written into its
+building's block in the zone's text, and is found only by somebody inside that room
+(`WorldSecret.room`): a wall is a quarter of a tile and the reach a tile and a quarter, so without
+it the back room would be found from the longhouse in front of it. What it is drawn as stands with
+the room's furniture, sorted by its foot, and is hidden under the roof like the rest of the room
+until somebody is in it.
+
 **A room has a floor and a few things standing against its walls, and none of them block**
 (`art/rooms.ts`, decision 109, moved out of the 3D view in B6). What is in a room is
 keyed by the building's shape the way its colours are — shelves in a hall, a bench in a workshop, a

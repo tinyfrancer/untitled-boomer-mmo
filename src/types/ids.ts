@@ -341,10 +341,11 @@ export type BuildingId =
   // no door worth walking to: it is scenery, which is a thing a zone can have
   // now that a zone can have buildings at all.
   | 'mill'
-  // Greyford's two: the counter that trades in materials, and the long hall
-  // beside it that is scenery.
+  // Greyford's three: the counter that trades in materials, the long hall the
+  // fettler works in, and the fettler's store behind it.
   | 'trading-post'
-  | 'longhouse';
+  | 'longhouse'
+  | 'store';
 
 // Which body a renderer draws a building with, and the same bargain
 // `CreatureShapeId` and `NodeShapeId` make: a new BUILDINGS row names a shape it
@@ -479,4 +480,8 @@ export type SecretId =
   | 'broken-cell'
   | 'lamp-niche'
   | 'strongbox'
-  | 'sea-light-frieze';
+  | 'sea-light-frieze'
+  | 'pond-shrine'
+  | 'charter-ledger'
+  | 'bridge-keystone'
+  | 'back-room';

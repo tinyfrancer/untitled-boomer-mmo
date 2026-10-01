@@ -3015,3 +3015,69 @@ Claude's, building it:
 - **Smoke walks into the Cellar and out again by each side's mouth**, and holds everything in it
   drawn, the strongbox included. No section walks to the barrow, as none did before; its frieze is
   compiled at boot in every run and held by the art tests.
+
+## 120. One stream runs from Greyford's ford into the mill road's millpond, and the edge between them opens at a mouth; a secret may lie in a room and is found from inside it; Old Mill Road and Greyford rebuilt at 45×32
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase C8**
+
+C8 is the fourth of the rebuilds, the upper band's road west and its hub. The user settled two forks
+at the start, each on Claude's recommendation:
+
+- **The stream Greyford fords is the stream the mill dams.** It comes down off the Greyhills past the
+  outpost, under the fallen bridge, and runs off Greyford's south edge into the Old Mill Road's
+  millpond, so the edge between the two zones has water across its west end on both sides. Each side
+  of it is a mouth, the same stretch east of the stream (`[6, 44]`), the first mouths outdoors
+  (decision 119), and an arrival lands where it was crossed. The ground west of the stream on either
+  side of that edge does not leave, as Redrag Camp's east edge already does not outside its lane.
+  **Rejected:** a stream inside Greyford, coming off its north edge and leaving by its west, which
+  touches no shared edge but leaves the millpond fed by nothing and the ford's water and the mill's
+  two different waters.
+- **All four of the lore's secrets go in**, two a zone, and two of them lie in a room. **A secret may
+  lie in a room**: written into its building's block where it lies, the block still read as the
+  whole footprint since every tile's middle is inside the walls, and **found from inside that room
+  and nowhere else**, since a wall is a quarter of a tile and the reach would otherwise find it from
+  the room in front or the lane behind. **Rejected:** the two outdoors only, the shrine and the
+  keystone, leaving the ledger and the fettler's back room, and with it Wick's beat for Greyford, to
+  Part D.
+
+Claude's, building it:
+
+- **Greyford** is the Company's post at the ford: the road from the New Cut along the east edge's
+  middle rows and the length of the yard to the ford, the road south to the mill road leaving it
+  halfway, the trading post and the fettler's longhouse fronting it from the north as Lampton's
+  counters do, the tannery and the fletcher's bench at the yard's west end by the water, and
+  cottages for the outpost's people. **The ford is the fallen bridge**: its abutments either side,
+  two piers still standing in the stream, and the crossing its stones, dressed stone and masonry
+  built only from edges the game already had. Over it the old road goes a little way west and is
+  grown over, towards the Stillwood. Nothing spawns here still.
+- **The fettler's store** is a new building, three tiles by two, against the back of the longhouse
+  with **its door round the back**, facing away from the camera as the inn's does, so it is never
+  seen from the yard. A tap on its roof, where it shows over the longhouse's, walks round to the
+  doorstep, and a second goes in. Crates stand either side of its floor and the back room's chest and
+  lantern in the middle. **Rejected:** the back room as the far end of the longhouse, which is one
+  room the fettler stands in the middle of.
+- **Old Mill Road** keeps the road from Lampton on the high street's rows, running as far as the mill
+  yard and stopping, with the road north to Greyford the way on, so no road runs off an edge with no
+  exit. The millpond is in the north-west, filled by the stream, the mill on its bank with its back
+  to the water, and willows round it. **Five knots of three** where there were three, the level 4
+  three met first either side of the road and the level 5 two at the far end by the pond and south of
+  the mill; the hardwood gathered into **the timber stand** in the south-east, with a few trees in the
+  corners. Every knot is out of reach of the north mouth's arrivals as well as the east edge's, and
+  the start is on the road near Lampton.
+- **The four secrets**, each drawn: the shrine under the millpond, a slab cut with a leaf, seen
+  through the water from the bank between two willows, **a mark** rather than a prop since it is the
+  water's surface with the stone showing through, unoutlined and moving on the water's clock; the
+  first charter's ledger, open on a writing desk against the mill's west wall, a cold candle on its
+  corner; the bridge's keystone lying carved face up in the ford by the pier it fell from, a lamp
+  burning cut into it; and the fettler's back room, a chest of grave goods with a ring on its lid
+  beside a cracked lantern with nothing in it, which carries Wick's beat for Greyford. The back room
+  leaves a reforging stone with its coin, the fettler's own stock.
+- **A sweep found the strand's causeway one tile wide**, exactly a body, which the pathfinder never
+  routes along: the warden's niche could be walked to only in a straight line from the spit's end,
+  and a tap on it from up the strand went nowhere. The causeway is two tiles wide now, and a new sweep
+  holds that **every secret can be walked up to** from where its zone puts a player, into its room
+  for one that lies in a room.
+- **The lore moved with it**: the shrine was the stream's head in `history.md`, which one stream
+  through the ford cannot be, so it is where the stream pooled below the hills. Smoke gained a
+  `back-room` section: a tap on the store's roof walks round to its door, a second goes in, and the
+  back room is found.

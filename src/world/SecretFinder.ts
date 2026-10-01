@@ -1,4 +1,5 @@
 import { TILE_SIZE } from '../config/constants';
+import { isInside } from '../data/buildings';
 import { SECRET_REACH, SECRETS } from '../data/secrets';
 import { logCoin, logLoot, logSecretFound } from '../systems/CombatLogSystem';
 import { describeItemName } from '../data/items';
@@ -43,7 +44,9 @@ export class SecretFinder {
     this.last = here;
     for (const secret of this.deps.secrets) {
       if (character.state.secrets.includes(secret.secretId)) continue;
-      if (gapToStretch(secret, from, here) > SECRET_REACH) continue;
+      const nearest = nearestOnStretch(secret, from, here);
+      if (Math.hypot(secret.x - nearest.x, secret.y - nearest.y) > SECRET_REACH) continue;
+      if (secret.room && !isInside(secret.room, nearest)) continue;
       this.find(secret);
     }
   }
@@ -75,12 +78,12 @@ function walked(from: Point, to: Point): boolean {
   return Math.hypot(to.x - from.x, to.y - from.y) <= LONGEST_STRIDE;
 }
 
-/** How near a point comes to the stretch from `a` to `b`. */
-function gapToStretch(point: Point, a: Point, b: Point): number {
+/** Where on the stretch from `a` to `b` comes nearest a point. */
+function nearestOnStretch(point: Point, a: Point, b: Point): Point {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length = dx * dx + dy * dy;
   const t = length === 0 ? 0 : ((point.x - a.x) * dx + (point.y - a.y) * dy) / length;
   const along = Math.max(0, Math.min(1, t));
-  return Math.hypot(point.x - (a.x + dx * along), point.y - (a.y + dy * along));
+  return { x: a.x + dx * along, y: a.y + dy * along };
 }

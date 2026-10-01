@@ -151,9 +151,11 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     setting: 'open',
     description: 'Goblins on the west road, three to a knot. Harder than anything in town.',
     ...OLD_MILL_ROAD_LAYOUT,
+    // The stream from Greyford comes in off the north edge's west end into the
+    // millpond, so that edge leaves only east of it, as Greyford's does.
     exits: [
       { edge: 'east', to: 'town' },
-      { edge: 'north', to: 'greyford' },
+      { edge: 'north', to: 'greyford', mouth: [6, 44] },
     ],
   },
   /**
@@ -236,8 +238,10 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     setting: 'open',
     description: 'A trading post out where the work is. Bring what you dug up.',
     ...GREYFORD_LAYOUT,
+    // The way south is the edge east of the stream, which runs on into the mill
+    // road's millpond: the same stretch as the mill road's north mouth.
     exits: [
-      { edge: 'south', to: 'old-mill-road' },
+      { edge: 'south', to: 'old-mill-road', mouth: [6, 44] },
       { edge: 'east', to: 'quarry' },
     ],
   },
