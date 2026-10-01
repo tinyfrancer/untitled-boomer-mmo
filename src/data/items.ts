@@ -241,7 +241,7 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
   // once and is gone, so a vendor price would only ever be a trap.
   'hideout-key': {
     id: 'hideout-key',
-    name: 'Hideout Key',
+    name: 'Cellar Key',
     weight: 1,
     kind: 'material',
     icon: { shape: 'key' },

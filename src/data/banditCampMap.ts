@@ -8,20 +8,22 @@ import { layoutZone } from './zoneText';
  *
  * The waystation is walls of dressed stone round a paved yard, broken: a gap in
  * the north wall, the south wall fallen for five tiles, and one in the east wall
- * that the yard's paving runs out of to the way down into the vault. Inside, the
- * hall where the wardens slept stands in the yard's north-east corner with its
- * own door, and a stable along the south wall; the lamp niche is in the hall's
- * back wall. Up an old track off the road is the well-house, two walls and its
- * floor, and south-west of the road the pond the carters watered at.
+ * that the yard's paving runs out of, down a walled lane to the way down into
+ * the vault, which is the lane's end and nowhere else on the edge (decision
+ * 119). Inside, the hall where the wardens slept stands in the yard's north-east
+ * corner with its own door, and a stable along the south wall; the lamp niche is
+ * in the hall's back wall. Up an old track off the road is the well-house, two
+ * walls and its floor, and south-west of the road the pond the carters watered
+ * at.
  *
  * The walls are what make it a camp worth thinking about rather than a field of
  * men: a creature notices only a player it can see (decision 116), so a player
  * outside a wall is unseen by the men inside it, and one who comes in through a
  * gap meets the men who can see that gap.
  *
- * Both edges are arrival strips, Lampton's on the west and the vault's on the
- * east, so nothing stands within an aggro radius across from either, and the
- * start, where a death puts somebody, is further off still.
+ * Both edges are arrival strips, Lampton's the whole west edge and the vault's
+ * the lane's end on the east, so nothing stands within an aggro radius of
+ * either, and the start, where a death puts somebody, is further off still.
  */
 export const BANDIT_CAMP_LAYOUT = layoutZone(
   'bandit-camp',
@@ -42,13 +44,13 @@ export const BANDIT_CAMP_LAYOUT = layoutZone(
     ..........==........__________________%......
     ====================__________________%......
     ===@================________b_________%......
-    ====================______b_______b___%......
+    ====================______b_______b___%%%%%%%
     ....................__________________%______
     .....................___%____________________
     .................a......%%%__%_______________
     .....~~~~...............%______c_____________
     ....~~~~~~..............%___________b_%______
-    ....~~~~~~............e.%_d___________%......
+    ....~~~~~~............e.%_d___________%%%%%%%
     ....~~~~~~..............%_____________%......
     ....~~~~~~..............%%%%%%%_____%%%......
     ....~~~~~~...................................

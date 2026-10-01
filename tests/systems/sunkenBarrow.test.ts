@@ -120,10 +120,11 @@ describe('what the barrow is', () => {
    * hideout's entrance hall and the fen's north-to-south climb in one map.
    *
    * A locked door is a door somebody has ground a 3% key for, so an ambush on the
-   * far side of it is not a hard zone but a wasted key. The whole north band is
-   * the mouth — a traveller materialises anywhere along it — and everything that
-   * starts a fight is at least a chamber further in, with the eights down with
-   * the king. `spawnSafety` holds the arithmetic; what this holds is the shape.
+   * far side of it is not a hard zone but a wasted key. A traveller materialises
+   * anywhere across the mouth at the head of the stair (decision 119), and
+   * everything that starts a fight is at least a room further in, with the eights
+   * down with the king. `spawnSafety` holds the arithmetic; what this holds is the
+   * shape.
    */
   it('climbs the further in it goes, and starts nothing at the mouth', () => {
     const byDepth = [...ZONE.mobSpawns].sort((a, b) => a.y - b.y);
@@ -140,7 +141,7 @@ describe('what the barrow is', () => {
     expect(Math.min(...levels)).toBe(7);
     expect(Math.max(...levels)).toBe(8);
 
-    // Nothing at all stands in the mouth, which is the north third of the map.
+    // Nothing at all stands in the stair down from the mouth, its top three rows.
     const mouth = TILE_SIZE * 3;
     ZONE.mobSpawns.forEach((spawn) => {
       expect(spawn.y, `${spawn.enemyId} is standing in the mouth`).toBeGreaterThan(mouth);
@@ -158,7 +159,7 @@ describe('what the barrow is', () => {
     const guards = ZONE.mobSpawns.filter((spawn) => spawn.enemyId !== 'barrow-king');
 
     expect(king).toHaveLength(1);
-    expect(guards).toHaveLength(8);
+    expect(guards).toHaveLength(10);
     guards.forEach((guard) => expect(guard.y).toBeLessThan(king[0]!.y));
     guards.forEach((guard) => expect(guard.enemyId).toBe('barrow-wight'));
   });

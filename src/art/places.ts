@@ -2,7 +2,15 @@ import type { StationId } from '../data/recipes';
 import type { NodeShapeId, ResourceNodeId, SecretId } from '../types/ids';
 import { variantId } from './compile';
 import { CHIPS, SPLASH } from './sprites/chips';
-import { BROKEN_CELL, CELLAR_HATCH, LAMP_NICHE, LAMP_STONE, WARDEN_NICHE } from './sprites/secrets';
+import {
+  BROKEN_CELL,
+  CELLAR_HATCH,
+  LAMP_NICHE,
+  LAMP_STONE,
+  SEA_LIGHT_FRIEZE,
+  STRONGBOX,
+  WARDEN_NICHE,
+} from './sprites/secrets';
 import { CAMPFIRE, FLETCHING_BENCH, FORGE, TANNERY } from './sprites/stations';
 import { HARDWOOD, TREE, WILLOW } from './sprites/trees';
 import { RICH_VEIN, SEAM, VEIN } from './sprites/veins';
@@ -74,6 +82,8 @@ const SECRET_SPRITES: Readonly<Record<SecretId, { sprite: string; flat: boolean 
   'warden-niche': { sprite: WARDEN_NICHE.id, flat: false },
   'broken-cell': { sprite: BROKEN_CELL.id, flat: false },
   'lamp-niche': { sprite: LAMP_NICHE.id, flat: false },
+  strongbox: { sprite: STRONGBOX.id, flat: false },
+  'sea-light-frieze': { sprite: SEA_LIGHT_FRIEZE.id, flat: false },
 };
 
 export function secretSprite(secretId: SecretId): { sprite: string; flat: boolean } {

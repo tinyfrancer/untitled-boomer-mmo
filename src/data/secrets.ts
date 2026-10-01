@@ -80,6 +80,29 @@ export const SECRETS: Record<SecretId, SecretDefinition> = {
     cache: { copper: 50, items: [] },
     blocks: null,
   },
+  // At the end of the low passage under the Cellar's guardroom: the strongbox off
+  // the pay-cart Hollis guarded and drove off the road, its Company seal broken,
+  // and his grave gold in it now. Merrath's face is on the gold, and Wick knows
+  // the face before it knows why (`docs/lore/spirit.md`).
+  strongbox: {
+    id: 'strongbox',
+    zoneId: 'bandit-hideout',
+    name: 'The Company Strongbox',
+    line: "That's the Company's box, and that isn't the Company's face on the gold. Put it away. Please.",
+    cache: { copper: 80, items: [] },
+    blocks: null,
+  },
+  // Along the barrow's gallery: Veymar's coast with its sea-lights burning, the
+  // first picture of the kingdom as it was. The coin at its foot is what the
+  // fenfolk left for the dead before the water came in.
+  'sea-light-frieze': {
+    id: 'sea-light-frieze',
+    zoneId: 'sunken-barrow',
+    name: 'The Sea-Light Frieze',
+    line: 'Lights all along the sea, and the water kept back behind them. It looked smaller, with the lights on.',
+    cache: { copper: 150, items: [] },
+    blocks: null,
+  },
 };
 
 /**

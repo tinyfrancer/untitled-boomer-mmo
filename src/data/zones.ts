@@ -129,9 +129,11 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     setting: 'open',
     description: 'Armour and coin, off men who swing first. Come geared.',
     ...BANDIT_CAMP_LAYOUT,
+    // The way down is the lane out of the gap in the waystation's east wall,
+    // and only the lane: the vault is entered at a mouth (decision 119).
     exits: [
       { edge: 'west', to: 'town' },
-      { edge: 'east', to: 'bandit-hideout' },
+      { edge: 'east', to: 'bandit-hideout', mouth: [17, 21] },
     ],
   },
   /**
@@ -205,7 +207,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     setting: 'underground',
     description: 'Locked, and what is buried in there was buried holding it. Come at eight.',
     ...SUNKEN_BARROW_LAYOUT,
-    exits: [{ edge: 'north', to: 'blackwater-fen' }],
+    exits: [{ edge: 'north', to: 'blackwater-fen', mouth: [20, 24] }],
     requiresKey: 'barrow-key',
   },
   /**
@@ -241,11 +243,11 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
   },
   'bandit-hideout': {
     id: 'bandit-hideout',
-    name: 'Bandit Hideout',
+    name: "The Cutthroat's Cellar",
     setting: 'underground',
     description: 'Locked. Whatever they are guarding in there, they guard it well.',
     ...BANDIT_HIDEOUT_LAYOUT,
-    exits: [{ edge: 'west', to: 'bandit-camp' }],
+    exits: [{ edge: 'west', to: 'bandit-camp', mouth: [13, 17] }],
     requiresKey: 'hideout-key',
   },
 };

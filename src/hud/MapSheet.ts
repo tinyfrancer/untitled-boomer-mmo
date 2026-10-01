@@ -87,7 +87,7 @@ function cellName(content: string, x: number, y: number): SVGElement {
  * The line a shut zone carries under its level band, and what colour it is in.
  *
  * Two words rather than a sentence: the cell is 80 units across and the full
- * reason ("You need a Hideout Key") belongs in the toast the world answers a tap
+ * reason ("You need a Cellar Key") belongs in the toast the world answers a tap
  * with, which is the version a phone with no pointer to hover actually gets.
  * Holding the key is worth saying differently from not holding it — that is the
  * difference between a wall and an invitation.

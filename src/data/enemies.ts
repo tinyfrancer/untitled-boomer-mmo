@@ -417,8 +417,8 @@ export const ENEMIES: Record<EnemyId, EnemyDefinition> = {
     body: { width: TILE_SIZE, height: TILE_SIZE },
     aggressive: true,
     // A shade under the raider's 210, and it buys the zone its whole layout:
-    // every chamber in the barrow is sized so the mouth, the spine and the
-    // respawn all sit outside one of these.
+    // every room in the barrow is sized so the stair and the respawn at its
+    // foot sit outside one of these.
     aggroRadius: 200,
     /**
      * Priced against the ceiling it raises, which is the rule the fen wrote down
