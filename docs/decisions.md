@@ -3303,3 +3303,43 @@ Claude's, alongside them:
 
 **Rejected:** a smoke section of its own for the walk; its script, which drops a character into each
 zone through the save, was scaffolding for the review, as A10's and B9's were.
+
+## 125. Each wave merges through its own branch, numbers are reserved at launch, a wave's questions are answered before it launches, and the orchestrator merges phases without the user
+
+**2026-10-01 · the user, asked by Claude, after wave 1 opened five PRs that each needed a rebase**
+
+Wave 1 showed what decision 123's rule 3 costs: five phases finished within an hour of each other,
+each took decision 124 and save version 103, and each needed its session woken to rebase and
+renumber before the user could merge the next, with the user asked to merge five times. The user
+wants a wave launched and merged without their input and one review at its end, and settled four
+forks, each on Claude's recommendation but the last:
+
+- **A branch per wave.** `claude/v2-wave-N` is cut from `main` when a wave starts; each phase
+  branches from it and its PR targets it (CI runs on a pull request whatever its base, and nothing
+  but `main` deploys); the orchestrator merges each phase into it as it goes green; and one PR, the
+  wave to `main`, goes up at the end for the user's review, so a wave deploys once. **Rejected:**
+  phases merging straight to `main` with the orchestrator merging at its check-ins, which deploys
+  every phase and leaves nothing for one review.
+- **Numbers are reserved at launch.** The orchestrator assigns each phase its decision number, and a
+  save version where its brief says it changes the save, in launch order, written into its launch
+  prompt, and merges phases into the wave branch in that order, so nothing ever renumbers. A phase
+  that stalls is dealt with then: a message to its session, or its number given to the next.
+  **Rejected:** numbers taken at the merge by the orchestrator in the merge commit, robust to any
+  order but running the full gates on every merge.
+- **One question round before a wave launches.** The orchestrator compiles the wave's briefs'
+  questions, the user answers once, the answers are written under each brief before the wave branch
+  is cut, and a session builds without asking; a fork a brief did not foresee is settled on the
+  recommended option and recorded in the decision for the user to overturn at the wave review.
+  **Rejected:** sessions asking in their own session and waiting, which means checking on each.
+- **Wave 1 moves onto a wave branch.** Its five green PRs are retargeted to `claude/v2-wave-1` and
+  merged there by the orchestrator with their numbers reserved (D1 126, E1 127, D4 128, E2 129,
+  F1 130, and save versions 103 to 107 in the same order), and one PR goes to `main`.
+  **Rejected:** finishing wave 1 to `main` by waking each session to rebase, which Claude
+  recommended, five deploys and the churn the branch exists to avoid; the user merging the five by
+  hand.
+- **Check-ins every 30 minutes**, from 60.
+
+G1, launched before this under the old rule, keeps its PR against `main` with decision 131 reserved
+and no save version, merged after wave 1's PR so the decisions stay in order. Wave 2's numbers are
+reserved in its launch order: D2 132 (save version 108), D3 133 (109), D1b 134, E3 135, F2 136 and
+F3 137 (110). The orchestrator is the session that proposed decision 123, woken every half hour.

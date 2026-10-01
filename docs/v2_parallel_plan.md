@@ -3,7 +3,9 @@
 **Status:** live. Proposed on 2026-10-01 against `6497833`, the merge of C10, and taken by the user
 the same day (decision 123). `docs/v2_plan.md` is still the live plan and still says what each phase
 is; this document says how its remaining phases are built by several agents at once rather than one
-session at a time, and holds a brief per phase. **Landed:** C11 (wave 0), 2026-10-01, with the
+session at a time, and holds a brief per phase. **From wave 1 each wave merges through its own branch, its numbers reserved at launch and its
+questions answered before it launches, by an orchestrator session woken every half hour (decision 125)**, so the user is asked nothing between a wave's question round and its review. **Landed:** C11
+(wave 0), 2026-10-01, with the
 measurement below written into the plan's C11 entry (decision 124). **In flight:** wave 1 (D1, D4,
 E1, E2, F1), started 2026-10-01 before C11 merged at the user's word, its questions answered under
 each brief. **Next:** G1, the moment C11 merges. Update this line as phases start and land, the way
@@ -114,24 +116,30 @@ section are for.
 
 The plan's "How this plan is worked" holds, with these on top, which it summarises (decision 123).
 
-1. **A branch per phase, named here**, cut from `origin/main` the day the phase starts:
-   `claude/v2-c11-review`, `claude/v2-d1-dialog`, and so on down the briefs. One PR per phase, as
-   before; a draft while it moves, ready when it is done.
-2. **Questions first, in one round.** A phase asks every open question in its brief before it writes
-   code, and the user answers a wave's questions in one sitting. A mechanics fork the brief did not
-   foresee is asked when met; a lore fact is added to `docs/lore/` and not asked.
-3. **Numbers are taken at the merge, not at the branch.** A phase in flight writes its decision
-   with no number and its migration step against a version it does not yet know. When it is ready,
-   it rebases on current `main`, takes the next decision number and the next `CHARACTER_STATE_VERSION`
-   (and keys its step to it), runs the gates and smoke again, and pushes. The user merges it next, or
-   it rebases once more. A phase that changes nothing about the save takes no version. The typecheck
-   holds `saveFile.ts`'s `FIELDS` to every field, so a step cannot land without its check.
-4. **The Record commit is written last, after that rebase**, so the status line, `CLAUDE.md`, the
-   decision and the architecture doc are written against what `main` says by then rather than
-   against what it said the morning the branch was cut. That is the order the phases already use;
-   here it is a rule.
-5. **The merge queue is one at a time**, in the order phases finish. A rebase onto a phase that
-   merged ahead costs minutes, since nearly every collision is an appended line.
+1. **A branch per wave, and a branch per phase on it** (decision 125). `claude/v2-wave-N` is cut
+   from `origin/main` when the wave starts, each phase's branch is cut from it, named here
+   (`claude/v2-d1-dialog`, and so on down the briefs), and its PR targets the wave branch, where CI
+   runs as it does against `main`. One PR per phase, as before; a draft while it moves, ready when
+   it is done. The wave goes to `main` as one PR at its end, for the user's review, and that merge
+   is the wave's one deploy.
+2. **A wave's questions are answered before it launches.** The orchestrator compiles every open
+   question in the wave's briefs, the user answers them in one sitting, and the answers are written
+   under each brief before the wave branch is cut, so a session builds without asking. A mechanics
+   fork the brief did not foresee is settled on the recommended option and recorded in the decision
+   for the user to overturn at the wave review; a lore fact is added to `docs/lore/` and not asked.
+3. **Numbers are reserved at launch.** The orchestrator assigns each phase its decision number, and
+   the next `CHARACTER_STATE_VERSION` where its brief says it changes the save, in launch order, and
+   writes them into the launch prompt; the phase writes its decision and keys its migration step to
+   them from the start and never renumbers. A phase that changes nothing about the save takes no
+   version. The typecheck holds `saveFile.ts`'s `FIELDS` to every field, so a step cannot land
+   without its check.
+4. **The Record commit is written last**, so the status line, `CLAUDE.md`, the decision and the
+   architecture doc are written against the wave branch as it stands by then rather than as it was
+   the morning the branch was cut. That is the order the phases already use; here it is a rule.
+5. **The orchestrator merges phases into the wave branch**, one at a time in the order their numbers
+   were reserved, at a check-in every 30 minutes, when the PR is green and ready; a phase ahead of it
+   in the order that is not done holds it. A phase that stalls gets a message to its session, or its
+   number goes to the next. The user merges nothing until the wave's PR.
 6. **A phase edits only its own entry in `docs/v2_plan.md`** and the status line. A review phase
    amends its own part; anything it would change in another part that has an agent on it is
    proposed in the PR and the user settles it, so a review cannot cut a phase from under a session.
@@ -142,8 +150,9 @@ The plan's "How this plan is worked" holds, with these on top, which it summaris
 8. **The pace is not moved sideways.** A phase that adds a buff, a bonus or a consumable keeps it
    out of `tests/world/pace.ts` or holds the bot to playing without it; a phase that means to move
    the curve says so in its decision and retunes.
-9. **Every merge still deploys**, so every phase still leaves the game playable half-built, and the
-   CI budget is unchanged: five PRs a day is nowhere near a hundred deploys.
+9. **A wave deploys once**, when its PR merges to `main`, so every phase still leaves the game
+   playable half-built for the wave's review, and the CI budget is unchanged: a PR against the wave
+   branch runs the gates and smoke as one against `main` does.
 
 ---
 
@@ -179,8 +188,11 @@ Started 2026-10-01, before C11 had merged, at the user's word: the risk decision
 Four if the user would rather judge four PRs than five; E2 is the one to hold back, since E3 is
 the only thing waiting on it.
 
-**The user is asked:** each phase's questions at the start, then to play five PRs as they come, and
-to merge them one at a time as each is rebased.
+**Moved onto `claude/v2-wave-1` on 2026-10-01 (decision 125)**, its five PRs green and retargeted
+there, merged in by the orchestrator in finish order with their numbers reserved: D1 decision 126
+and save version 103, E1 127 and 104, D4 128 and 105, E2 129 and 106, F1 130 and 107.
+
+**The user is asked:** each phase's questions at the start, then to review the wave's one PR.
 
 ### Wave 2: as wave 1 merges, five agents again
 
@@ -196,8 +208,14 @@ to merge them one at a time as each is rebased.
 - **F3 — Collection log** (`claude/v2-f3-collection`), once F1 has merged; its lore count fills when
   D2 lands, and the HUD already draws an empty count without complaint.
 
+**Numbers reserved** (decision 125): G1 131 and no save version, launched 2026-10-01 before the
+wave branch existed, so its PR stays against `main` and is merged after wave 1's; then, from
+`claude/v2-wave-2` cut from `main` once wave 1 has merged, D2 132 (save version 108), D3 133 (109),
+D1b 134, E3 135, F2 136 and F3 137 (110), in that launch order.
+
 **The user is asked:** G1's interview, which is the largest single ask in the whole of what is left
-(it writes the phases Part G is built as), and the five phases' questions.
+(it writes the phases Part G is built as), in G1's own session since it launched before decision
+125; and the other six phases' questions in one round before the wave branch is cut.
 
 ### Wave 3: the three reviews, and Part G's first content
 
