@@ -46,6 +46,8 @@ export class MomentEar {
         return ['level-up'];
       case 'loot-left':
         return ['sack'];
+      case 'spirit-calls':
+        return ['chime'];
       case 'gather-tick':
         if (!this.gatherBeat.beat(event.progress)) return [];
         return [gatherCue(event.nodeId)];

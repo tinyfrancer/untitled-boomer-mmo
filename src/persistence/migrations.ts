@@ -17,6 +17,8 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   100: (state) => ({ ...state, showMinimap: true }),
   // Secrets (decision 117): nobody made before them has found one.
   101: (state) => ({ ...state, secrets: [] }),
+  // Wick's beats (D4): nobody made before them has heard one.
+  102: (state) => ({ ...state, beats: [] }),
 };
 
 /**

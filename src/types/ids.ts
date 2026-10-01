@@ -489,3 +489,17 @@ export type SecretId =
   | 'kept-lantern'
   | 'sealed-door'
   | 'makers-mark';
+
+// A piece of Wick's story it remembers (D4, `docs/lore/spirit.md`): one at
+// each zone and at a boss, heard once per character. The first is its waking,
+// which comes before the rest wherever the character is.
+export type SpiritBeatId =
+  | 'wake'
+  | 'candle-strand'
+  | 'the-new-cut'
+  | 'the-cellar'
+  | 'old-mill-road'
+  | 'greyford'
+  | 'blackwater-fen'
+  | 'the-deep-cut'
+  | 'orlath';

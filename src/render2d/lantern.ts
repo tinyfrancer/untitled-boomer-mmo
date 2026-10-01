@@ -3,16 +3,17 @@ import { TILE_PIXELS } from '../art/budget';
 import type { CanvasPool } from './canvases';
 
 /**
- * The light the player carries underground, drawn the way the style guide
- * draws light, as a stamp over the scene rather than anything computed per
- * sprite (`docs/architecture/art.md`).
+ * The light underground, drawn the way the style guide draws light, as a stamp
+ * over the scene rather than anything computed per sprite
+ * (`docs/architecture/art.md`). Since D4 it is Wick's: the one light there is
+ * the spirit at the player's shoulder, not a lantern carried (the user's
+ * answer, D4), so it is centred on Wick and its glow is Wick's blue-white.
  *
- * Two stamps, centred on the player's chest. The first is darkness with a
- * clear disc in it, falling off in dithered steps as pixel art shades rather
- * than in a smooth gradient, and never quite black, so a creature at the edge
- * of the screen is still a shape. The second is a warm glow added in the disc,
- * since the underground palette is dark on purpose and the lantern is where
- * its colour is.
+ * Two stamps, centred on the light. The first is darkness with a clear disc in
+ * it, falling off in dithered steps as pixel art shades rather than in a
+ * smooth gradient, and never quite black, so a creature at the edge of the
+ * screen is still a shape. The second is a glow added in the disc, since the
+ * underground palette is dark on purpose and the light is where its colour is.
  */
 
 /** How far the light is clear, where it is gone, and how dark gone is, in art pixels. */
@@ -22,9 +23,7 @@ export const LANTERN = {
   dark: 0.66,
   // The ground is seen at a slant, so a pool of light on it is wider than it is deep.
   squash: 0.8,
-  /** How far over the feet the flame is carried. */
-  height: 20,
-  /** How strong the glow is at the flame. */
+  /** How strong the glow is at the light. */
   glow: 0.14,
 } as const;
 
@@ -34,7 +33,7 @@ const STEPS = 8;
 /** A 4×4 ordered dither: which of sixteen thresholds each pixel of a block is. */
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 
-/** How far from the flame a pixel of a stamp `size` across is, the slant counted in. */
+/** How far from the light a pixel of a stamp `size` across is, the slant counted in. */
 function distance(x: number, y: number, size: number): number {
   const middle = size / 2;
   return Math.hypot(x + 0.5 - middle, (y + 0.5 - middle) / LANTERN.squash);
@@ -63,7 +62,7 @@ export function darknessAlpha(): { size: number; alpha: Uint8ClampedArray } {
   return { size, alpha };
 }
 
-/** The glow, as the alpha of each pixel of a stamp `2 × clear` across, strongest at the flame. */
+/** The glow, as the alpha of each pixel of a stamp `2 × clear` across, strongest at the light. */
 export function glowAlpha(): { size: number; alpha: Uint8ClampedArray } {
   const size = LANTERN.clear * 2;
   const alpha = new Uint8ClampedArray(size * size);
@@ -96,10 +95,10 @@ export class Lantern {
   constructor(pool: CanvasPool) {
     this.pool = pool;
     this.darkness = stamp(pool, SHARED_RAMPS.ink[0], darknessAlpha());
-    this.glow = stamp(pool, SHARED_RAMPS.fire[4], glowAlpha());
+    this.glow = stamp(pool, SHARED_RAMPS.arcane[4], glowAlpha());
   }
 
-  /** Over everything standing and under the words, the flame at `(x, y)` on the canvas. */
+  /** Over everything standing and under the words, the light at `(x, y)` on the canvas. */
   draw(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
     const reach = LANTERN.reach;
     const left = x - reach;

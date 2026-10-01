@@ -41,7 +41,7 @@ export interface OptionsModalHandlers extends OptionSettings {
  * and says what unmuting will come back at.
  *
  * Tips are here too, although they are kept on the character rather than the
- * device (decision 98): this is where a player who tapped No more tips looks
+ * device (decision 98): this is where a player who told Wick to go quiet looks
  * to have them back. So is the minimap's switch, kept on the character the
  * same way (decision 115).
  *
@@ -176,7 +176,8 @@ export class OptionsModal extends Overlay {
   }
 
   private drawSwitches(): void {
-    this.tipsButton.textContent = this.tipsOn ? 'Tips: On' : 'Tips: Off';
+    // Quiet is Wick's tips alone: its story is still told (D4).
+    this.tipsButton.textContent = this.tipsOn ? "Wick's Tips: On" : "Wick's Tips: Quiet";
     this.tipsButton.setAttribute('aria-pressed', String(this.tipsOn));
     this.minimapButton.textContent = this.minimapOn ? 'Minimap: On' : 'Minimap: Off';
     this.minimapButton.setAttribute('aria-pressed', String(this.minimapOn));

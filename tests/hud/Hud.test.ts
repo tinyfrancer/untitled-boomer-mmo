@@ -86,6 +86,8 @@ import {
   SKILL_XP_GAINED_EVENT,
   TIP_HEARD_EVENT,
   TIP_OFFERED_EVENT,
+  SPIRIT_SAID_EVENT,
+  SPIRIT_BEAT_HEARD_EVENT,
   SECRET_FOUND_EVENT,
   SECRETS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
@@ -482,7 +484,7 @@ describe("the spirit's tips", () => {
     expect(showing()).toBe(false);
   });
 
-  it('asks for tips off on No more tips, and goes', () => {
+  it('asks for tips off on Go quiet, and goes', () => {
     mount();
     events.emit(TIP_OFFERED_EVENT, TIP);
     answer('tips-off');
@@ -556,13 +558,55 @@ describe("the spirit's tips", () => {
     expect(showing()).toBe(false);
   });
 
+  // D4: Wick's name over all it says, a beat heard back on Got it, and a line
+  // of its own taken down with nothing kept.
+  it("says a beat under Wick's name, with no Go quiet, and hears it back", () => {
+    mount({ tips: { heard: [], off: true } });
+    events.emit(SPIRIT_SAID_EVENT, { beatId: 'candle-strand', text: "It's pulling." });
+    expect(showing()).toBe(true);
+    expect(card().dataset.beat).toBe('candle-strand');
+    expect(card().querySelector('.hud-tip__heading')?.textContent).toBe('Wick');
+    expect(card().querySelector('[data-action="tips-off"]')?.classList.contains('hud-hidden')).toBe(
+      true,
+    );
+    answer('tip-heard');
+    expect(sent(SPIRIT_BEAT_HEARD_EVENT)).toEqual([['candle-strand']]);
+    expect(showing()).toBe(false);
+  });
+
+  it('takes a line of its own down on Got it, and keeps nothing', () => {
+    mount();
+    events.emit(SPIRIT_SAID_EVENT, { beatId: null, text: "I'm a very good light." });
+    expect(card().dataset.aside).toBe('');
+    expect(card().textContent).toContain("I'm a very good light.");
+    answer('tip-heard');
+    expect(sent(SPIRIT_BEAT_HEARD_EVENT)).toEqual([]);
+    expect(sent(TIP_HEARD_EVENT)).toEqual([]);
+    expect(showing()).toBe(false);
+  });
+
+  it("puts Wick's name over a tip, with Go quiet beside Got it", () => {
+    mount();
+    events.emit(TIP_OFFERED_EVENT, TIP);
+    expect(card().querySelector('.hud-tip__heading')?.textContent).toBe('Wick');
+    expect(card().querySelector('[data-action="tips-off"]')?.textContent).toBe('Go quiet');
+  });
+
+  it('waits out an open counter, as a tap on Wick at one does', async () => {
+    mount();
+    events.emit(COUNTER_OPENED_EVENT, 'merchant', 'shopkeeper');
+    await settle();
+    events.emit(SPIRIT_SAID_EVENT, { beatId: null, text: 'Later.' });
+    expect(showing()).toBe(false);
+  });
+
   it('puts the switch in Options, on what the save says', () => {
     mount({ tips: { heard: [], off: true } });
     menuItem('options');
     const button = parent.querySelector<HTMLButtonElement>('[data-action="toggle-tips"]');
-    expect(button?.textContent).toBe('Tips: Off');
+    expect(button?.textContent).toBe("Wick's Tips: Quiet");
     button?.click();
-    expect(button?.textContent).toBe('Tips: On');
+    expect(button?.textContent).toBe("Wick's Tips: On");
     expect(button?.getAttribute('aria-pressed')).toBe('true');
     expect(sent(TIPS_SET_REQUESTED_EVENT)).toEqual([[true]]);
   });

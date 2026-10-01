@@ -120,6 +120,8 @@ import {
   SECRETS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
+  SPIRIT_SAID_EVENT,
+  SPIRIT_BEAT_HEARD_EVENT,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
@@ -381,6 +383,7 @@ class Hud {
     this.tipCard = new TipCard({
       onHeard: (tipId) => this.events.emit(TIP_HEARD_EVENT, tipId),
       onSilence: () => this.events.emit(TIPS_SET_REQUESTED_EVENT, false),
+      onBeatHeard: (beatId) => this.events.emit(SPIRIT_BEAT_HEARD_EVENT, beatId),
     });
 
     this.characterSheet = new CharacterSheet(
@@ -1203,6 +1206,10 @@ class Hud {
     });
     listen(SECRET_FOUND_EVENT, (secretId) => {
       this.tipCard.found(secretId);
+      this.holdTip();
+    });
+    listen(SPIRIT_SAID_EVENT, (said) => {
+      this.tipCard.say(said);
       this.holdTip();
     });
     listen(SECRETS_CHANGED_EVENT, (found) => this.mapSheet.setSecretsFound(found));

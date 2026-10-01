@@ -80,6 +80,7 @@ import type {
   ReforgeId,
   SecretId,
   SkillId,
+  SpiritBeatId,
   TipId,
   TitleId,
   ZoneId,
@@ -749,6 +750,12 @@ export class CharacterController {
     if (this.state.secrets.includes(secretId)) return false;
     this.state.secrets = [...this.state.secrets, secretId];
     return true;
+  }
+
+  /** A beat of Wick's heard once is heard for good. */
+  markBeatHeard(beatId: SpiritBeatId): void {
+    if (this.state.beats.includes(beatId)) return;
+    this.state.beats = [...this.state.beats, beatId];
   }
 
   setTipsOff(off: boolean): void {
