@@ -108,7 +108,9 @@ interface Band {
 /**
  * The way up. A new character has nothing to eat and nothing to light; by the
  * strand the first quest has paid for logs, and from the camp on the shelf's
- * ration is carried in, the crab once the fen hits too hard for a fish.
+ * ration is carried in, the crab once the fen hits too hard for a fish, and
+ * more of it into the barrow, which feeds nobody and whose wights come one at a
+ * time (C11), so a level there is eaten through rather than died through.
  */
 const BANDS: Band[] = [
   { level: 1, zoneId: 'town', kit: STARTING, food: {}, logs: 0 },
@@ -118,7 +120,7 @@ const BANDS: Band[] = [
   { level: 5, zoneId: 'old-mill-road', kit: ROAD, food: { 'cooked-fish': 20 }, logs: 10 },
   { level: 6, zoneId: 'blackwater-fen', kit: FEN, food: { 'cooked-crab': 20 }, logs: 10 },
   { level: 7, zoneId: 'blackwater-fen', kit: BARROW, food: { 'cooked-crab': 20 }, logs: 10 },
-  { level: 8, zoneId: 'sunken-barrow', kit: BARROW, food: { 'cooked-crab': 20 }, logs: 10 },
+  { level: 8, zoneId: 'sunken-barrow', kit: BARROW, food: { 'cooked-crab': 30 }, logs: 10 },
 ];
 
 const CLASSES: ClassId[] = ['warrior', 'wizard', 'ranger'];
