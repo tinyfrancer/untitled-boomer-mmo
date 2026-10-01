@@ -143,18 +143,31 @@ the eastern lights, with a warden's tomb under it.
 - "The Company lost a pay-cart on this road eight years ago, and a guard called Hollis with it."
   Leads to who Hollis was.
 
-## The Cutthroat's Cellar (now "Bandit Hideout"), level 4
+## The Cutthroat's Cellar, level 4
+
+_Rebuilt in C7 (decision 119)._
 
 **What it is.** The vault under the waystation, where Hollis keeps a locked door between himself and
-the road, and his hoard behind it.
+the road, and his hoard behind it. A stair goes down to it from a walled lane out of the gap in the
+yard's east wall, into the guardroom where his men keep the door; from there a spine runs back to the
+tomb, with the bunk room off one side of it and the storeroom where the carts' takings go off the
+other. Every room is lined in dressed stone, and the hill is packed up behind it.
 
-**What it was.** A lamp-warden's tomb. Its lantern is long gone, and Hollis sold the grave goods to
-Greyford.
+**What it was.** A lamp-warden's tomb. Its lantern is long gone, the warden's bier is bare at the
+back of the tomb, and Hollis sold the grave goods to Greyford.
 
 **People.** Hollis the Cutthroat.
 
-**Wick.** Hollis's coins carry Merrath's face, and Wick knows it and is afraid of it: "Put that
-away. Please."
+**Secrets.**
+
+- The Company's strongbox, off the pay-cart Hollis drove off the road eight years ago, its seal
+  broken, at the end of a low passage from the storeroom's far corner back under the guardroom.
+  Hollis keeps his grave gold in it, Merrath's face on every coin. _In game_, and Wick's beat for the
+  Cellar is said on finding it.
+
+**Wick.** Hollis's coins carry Merrath's face, and Wick knows it and is afraid of it, at the
+strongbox: "That's the Company's box, and that isn't the Company's face on the gold. Put it away.
+Please."
 
 ## Old Mill Road, levels 4-5
 
@@ -281,9 +294,13 @@ bottom of them is the door.
 
 ## The Sunken Barrow, levels 7-8
 
+_Rebuilt in C7 (decision 119)._
+
 **What it is.** Orlhal, Orlath's barrow, under the southern edge of the fen, its door above the water
 for the first time since the Drowning because the Company's drains lowered it. Wights, and at the
-back, Orlath.
+back, Orlath. The stair goes down from the door into the antechamber, and on down to the gallery,
+which runs the width of the barrow; the crypts open off either end of it, the dead laid in them, and
+the king's chamber off its middle. The water that followed the fen in lies in the corners.
 
 **What it was.** The richest barrow in Veymar, three hundred years older than the Drowning.
 
@@ -292,8 +309,10 @@ hundred years, with a little of himself left in his crown.
 
 **Secrets.**
 
-- A frieze of the sea-lights along the passage: the first picture the player sees of Veymar as it
-  was.
+- A frieze of the sea-lights along the gallery: the first picture the player sees of Veymar as it
+  was. _In game_, on the gallery's north wall west of the stair, with the coin the fenfolk left the
+  dead before the water came still at its foot. Wick: "Lights all along the sea, and the water kept
+  back behind them. It looked smaller, with the lights on."
 - Orlath's lantern, empty. The fenfolk soul that kept it has gone to Marhal. It is the Grave Lantern
   the barrow drops.
 

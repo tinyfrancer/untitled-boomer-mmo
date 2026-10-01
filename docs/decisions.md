@@ -2964,3 +2964,54 @@ to end, since an arrival lands at the fraction of the edge it was crossed at (th
 west side, the Deep Cut's whole south). At 45×32 that is a strip thirty-two tiles long down one side
 of a vault. Whether an exit into a vault becomes a door somewhere in it, or an arrival at a mouth
 narrower than its edge, is that phase's question.
+
+## 119. A vault is entered at a mouth narrower than its edge; the Cutthroat's Cellar and the Sunken Barrow rebuilt at 45×32
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase C7**
+
+C7 is the third of the rebuilds, the two vaults. The user settled the one fork decision 118 left it,
+on Claude's recommendation:
+
+- **An exit is open along its mouth**, a stretch of its edge named on its row (`ZoneExit.mouth`, the
+  first and last tile open), and only that stretch leaves. Each vault's side is a mouth five tiles
+  across, and where the zone outside has been rebuilt its side narrows too: Redrag Camp's east edge
+  is now the walled lane out of the gap in the waystation's east wall, and the fen's south edge stays
+  whole until C9 rebuilds it. An arrival lands across the mouth of the exit back at the fraction of
+  the other it was crossed at. Walking off an edge is still how a zone is left, so the signposts, the
+  minimap's arrows and the edge-walk on a keyboard work as they did, and C9 can narrow the Deep Cut's
+  side the same way. **Rejected:** a door somewhere in the vault, a new kind of exit at a point, which
+  frees the layout entirely but touches the signposts, the edge-walk, both maps, the minimap and the
+  sweeps and needs a door drawn — the change Lampton's undercroft and Karn Tholl's door will want, left
+  for them; keeping the side open end to end, a hall thirty-two tiles long down one wall of each vault.
+
+Claude's, building it:
+
+- **A crossing is measured over where a body's centre can cross**, the mouth held half a body in from
+  either side, for a mouth and a whole edge alike, so a body crossing hard against one side of a wide
+  mouth arrives hard against the same side of a narrow one, and never in the wall beside it. A whole
+  edge's arrivals moved by at most half a body for it, and the sweeps now ask the ends of a mouth, 0
+  and 1, where they asked a little inside them. **Rejected:** a fraction across the mouth's full width,
+  which lands an arrival at 0 with half its body in the rock; clamping such an arrival afterwards,
+  which makes a crossing and the arrival it carries disagree.
+- **The sweeps ask the mouth**: an arrival anywhere across it lands on ground, every tile of it on the
+  edge is ground, it is three tiles across or more, every exit has its way back on the opposite edge,
+  and an arrival strip is measured to as the segment across its mouth rather than as a line down the
+  whole edge.
+- **A vault is rock with every room lined in masonry**: both are built tombs dug into the ground, so
+  the hill is packed up behind dressed stone, which needed two edges, masonry under rock and masonry
+  under water. **Rejected:** masonry throughout, which reads as a plain of capstones; rock alone, the
+  look version 1 had, which reads as a cave.
+- **The Cutthroat's Cellar** takes its name, and its key is the Cellar Key: the stair down from the
+  lane, the guardroom left clear, the spine east to the warden's tomb with Hollis in front of the
+  bier, and the bunk room and the storeroom off the spine, nine creatures where there were five.
+  **The Sunken Barrow** keeps its shape, read north to south: the stair, the antechamber, the gallery,
+  the crypts at its ends and the king's chamber off its middle, eleven where there were nine and every
+  seven shallower than every eight. Both keep the start, where a death in them puts somebody, at the
+  foot of the way in and out of every creature's reach.
+- **Two secrets**, one a vault: the Company strongbox at the end of a low passage back under the
+  Cellar's guardroom, which carries Wick's beat for the Cellar from `docs/lore/spirit.md`; and the
+  frieze of the sea-lights along the barrow's gallery, from `places.md`. Both are drawn, the frieze at
+  the prop budget's 64 by 32.
+- **Smoke walks into the Cellar and out again by each side's mouth**, and holds everything in it
+  drawn, the strongbox included. No section walks to the barrow, as none did before; its frieze is
+  compiled at boot in every run and held by the art tests.

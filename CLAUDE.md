@@ -203,8 +203,11 @@ character a tile, the grounds' characters shared by every zone, and a legend of 
 the start, creatures, nodes, stations, buildings and secrets (`data/secrets.ts`, decision 117: a
 row there and a drawing in `art/places.ts`, found by walking up to it and on no map). A marker stands in the middle of its tile, a
 building is a block of its letter exactly its footprint, whoever works in one is named on its row
-rather than placed, and a zone's size is its text's. Walking is the only way into a zone. **An exit needs its whole shared edge walkable on both sides, one arrival-inset
-in**, and every spawn, building and wander disc is held by sweeps (`ZoneSystem.test.ts`,
+rather than placed, and a zone's size is its text's. Walking is the only way into a zone. **An exit
+is open along its mouth**, the whole shared edge unless its row names a narrower `mouth` (decision
+119, a vault's way in), and an arrival lands across the mouth of the exit back at the fraction it
+crossed the other at. **A mouth needs to be walkable on both sides, one arrival-inset in**, and every
+spawn, building and wander disc is held by sweeps (`ZoneSystem.test.ts`,
 `BuildingSystem.test.ts`, `spawnSafety.test.ts`, `render2d/picking.test.ts`) — expect a new zone or
 exit to cost a spawn or a building moved somewhere else. **So is every creature's way home**
 (`spawnSafety.test.ts`): a home its body stands in, with room to turn round, walked back to from
