@@ -14,8 +14,8 @@ import { layoutZone } from './zoneText';
  * goes on down to the gallery, which runs the width of the barrow with the
  * frieze of the sea-lights along its north wall. The crypts open off either end
  * of the gallery, the dead laid in them, and the king's chamber off its middle,
- * straight on from the stair: he is the deepest thing here, with two of his own
- * in front of him and the room behind him to stand in.
+ * straight on from the stair: he is the deepest thing here, alone in it, with
+ * the room behind him to stand in.
  *
  * The water that followed the fen in lies in the corners of the rooms, never
  * across a way through, so nothing is pinned against it and no route goes round
@@ -42,16 +42,16 @@ export const SUNKEN_BARROW_LAYOUT = layoutZone(
     ####################%___%####################
     ###%%%%%%%%%%%%%%%%%%___%%%%%%%%%%%%%%%%%%###
     ###%__________f__________________________%###
-    ###%____a___________________________a____%###
+    ###%__b________b_____________b________b__%###
     ###%_____________________________________%###
     #%%%%____%%%%%%%%%%%_____%%%%%%%%%%%____%%%%#
     #%_________~~%##%___________%##%~~_________%#
     #%_________~~%##%___________%##%~~_________%#
-    #%__b________%##%_b_______b_%##%________b__%#
     #%___________%##%___________%##%___________%#
     #%___________%##%___________%##%___________%#
-    #%_______b___%##%___________%##%___b_______%#
+    #%_b_________%##%___________%##%_________b_%#
     #%___________%##%___________%##%___________%#
+    #%_________b_%##%___________%##%_b_________%#
     #%~~_________%##%_____c_____%##%_________~~%#
     #%~~_________%##%~~_______~~%##%_________~~%#
     #%%%%%%%%%%%%%##%~~_______~~%##%%%%%%%%%%%%%#
@@ -62,17 +62,22 @@ export const SUNKEN_BARROW_LAYOUT = layoutZone(
     // Along the gallery's north wall, west of where the passage comes down.
     f: { secret: 'sea-light-frieze', on: 'stone' },
     /**
-     * The sevens hold the antechamber and the gallery, standing off the middle
-     * where the stair and the passage come through, and the eights are in the
-     * crypts and the king's chamber, all of them deeper than every seven. The
-     * stair is empty, the rule the Cellar's guardroom keeps: a locked door with
-     * an ambush behind it is a trap rather than a zone.
+     * The sevens hold the antechamber, standing off the middle where the stair
+     * and the passage come through, and the eights the gallery and the crypts,
+     * all of them deeper than every seven. Each stands out of the reach of the
+     * next one's notice, two to a crypt in its opposite corners and four spaced
+     * down the gallery, so they come one at a time (C11): in pairs through the
+     * rooms they killed every class over and over, a level 8 dying once for
+     * every two or three it killed. The stair is empty, the rule the Cellar's
+     * guardroom keeps: a locked door with an ambush behind it is a trap rather
+     * than a zone.
      */
     a: { mob: 'barrow-wight', level: 7, on: 'stone' },
     b: { mob: 'barrow-wight', level: 8, on: 'stone' },
     /**
-     * The king, last and deepest, two of his in front of him: he is fought last
-     * or he is fought with company. He is a tile and a half tall, and stands
+     * The king, last and deepest, and alone: his chamber held two wights, and
+     * a fight with either that stepped back drew him into it, which is where
+     * most of the barrow's deaths were. He is a tile and a half tall, and stands
      * two rows off the chamber's back wall, the room behind him where he turns
      * round on the way home (decision 116).
      */

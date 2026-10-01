@@ -3,6 +3,7 @@ import { bootIntoGame, showCharacterCreate, type GameHost } from '../../src/boot
 import { unmountCharacterCreate } from '../../src/hud/CharacterCreate';
 import { DEFAULT_LOOK, HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../../src/data/looks';
 import { createNewCharacter, saveService } from '../../src/persistence';
+import { STARTING_FOOD } from '../../src/persistence/CharacterState';
 import { STORAGE_KEY } from '../../src/persistence/LocalStorageSaveService';
 import { writeSaveExport } from '../../src/persistence/saveFile';
 import { endGame, gameContext } from '../../src/world/GameContext';
@@ -185,6 +186,15 @@ describe('bootIntoGame', () => {
 
     // A tab closed on the spawn point still has a character to come back to.
     expect(saveService.load()).toMatchObject({ name: 'Newcomer', classId: 'warrior' });
+  });
+
+  it('starts the new character with something to eat in the bag', () => {
+    bootIntoGame(host);
+    typeName('Newcomer');
+    chooseClass('warrior');
+    begin().click();
+
+    expect(saveService.load()?.inventory).toEqual(STARTING_FOOD);
   });
 
   it('loads a save instead, which becomes the save, with no character made first', () => {

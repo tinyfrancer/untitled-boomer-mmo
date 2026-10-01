@@ -165,10 +165,13 @@ three-quarters of a session. The user kept it and made food the way past it: **a
 half of what a body at its band holds, over six seconds** — cooked rat 20, fish 30, crab 40, eel 70 —
 where the same foods healed 10 to 45 over ten and barely beat standing still. It is still out of a
 fight only, since `markInCombat` drops it, so a meal is eaten between pulls rather than in one.
+**A new character starts with sixteen cooked rats** (`STARTING_FOOD`, the Part C review, decision
+124), put in the bag by `createStartingCharacter` on the creation screen, where an empty bag spent
+most of the first level standing still; `createNewCharacter` still starts empty, for every fixture.
 **Every band feeds itself or says where its food comes from**: rats and crabs drop meat raw for a
 fire, every humanoid carries a ration (bandits and goblin scavengers cooked fish, goblin miners cooked
 rat, raiders raw eel), the fen's lurkers give up the eel they were eating, and the barrow and the
-crawlers feed nobody, so a player carries the shelf's ration in. One log lights a fire anywhere, so
+crawlers feed nobody, so a player carries the shelf's ration in, and more of it into the barrow. One log lights a fire anywhere, so
 what drops raw is cooked where it dropped. `tests/world/pace.test.ts` holds it: once there is food to
 carry, a level spends under a fifth of its time resting, and its rations cost under a third of the
 coin it picks up.

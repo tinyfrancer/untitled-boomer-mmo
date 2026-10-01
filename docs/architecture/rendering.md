@@ -200,7 +200,9 @@ read mid-fight; the signs over doors and the signposts, which stand still; the t
 creatures, front first. A plate
 that touches nothing stands where it would alone, so only a crowd looks any different: goblins
 standing side by side wrote "Goblin Scavenger (LvGoblin Scavenger (Lv 4)" before it, and now stand
-under a short column of names. The layout is a pure function of boxes, unit-tested apart from any
+under a short column of names. Two plates on one line keep a word's space between them
+(`PLATE_GAP`, decision 124), since one written a space after another reads as the same name:
+Lampton's "Cottage" sign and a rat beside it wrote "Cottage Rat (Lv 1)". The layout is a pure function of boxes, unit-tested apart from any
 canvas, and the widths are the font's own (`textWidth`), which is what the baked word will be.
 
 **`drawnCounts()` counts one label per name over a creature, a person, a signpost and the player**,
