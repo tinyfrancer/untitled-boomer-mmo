@@ -103,18 +103,21 @@ and the top-left is where the pixel art of the games named above puts it.
 **Nothing casts a shadow; everything standing sits on one.** The renderer lays a flat ellipse under
 anything that stands, in the setting's `shadow` colour at partial opacity, which is what stops a
 sprite hovering. A cast shadow would have to be drawn for every frame of every facing, and would
-tell the player nothing a contact shadow does not. **Underground is lit by the lantern**
-(`render2d/lantern.ts`, decision 106): the renderer darkens everything but a pool of light round the
-player, as the 3D view did with a point light, and the underground palette is dark so the pool is
-where the colour is. It is two stamps centred on the player's chest, drawn over everything standing
+tell the player nothing a contact shadow does not. **Underground is lit by Wick**
+(`render2d/lantern.ts`, decision 106, and D4, which made the lantern's light the spirit's): the
+renderer darkens everything but a pool of light round Wick at the player's shoulder, as the 3D view
+did with a point light, and the underground palette is dark so the pool is where the colour is. It
+is two stamps centred on the light, drawn over everything standing
 and under the words: darkness, clear for three tiles and falling off to six and a half **in dithered
 steps** rather than a smooth gradient, as pixel art shades, wider than it is deep since the ground is
 seen at a slant, and **never black** (two thirds dark), so a creature at the edge of the screen is
-still a shape; and a faint warm glow added in the clear, which is what brings the colour back.
+still a shape; and a faint glow added in the clear in Wick's blue-white (`arcane`'s top step),
+which is what brings the colour back.
 
 ## The outline
 
-**People, beasts, props, icons and scatter are outlined; tiles, effects and frames are not.** A figure
+**People, beasts, props, icons and scatter are outlined; tiles, effects, frames and the spirit are
+not.** A figure
 against busy ground on a phone needs an edge to be a figure at all; ground has no edge to draw, and
 light has none either. Scatter is ground, and outlined anyway (decision 106): drawn in the same ramp
 as ground already textured in it, a tuft with no edge was not there at all. **Nobody draws the outline: the compiler does.** Each empty pixel beside the silhouette, on
@@ -143,6 +146,7 @@ renderer play any creature's walk on one clock without asking the creature.
 | effect  | 16×16, 32×32, 64×64                      | play 4 (60)                                                                                                        |
 | icon    | 16×16, 32×32                             | still 1                                                                                                            |
 | frame   | 8×8, 16×16, 24×24                        | still 1                                                                                                            |
+| spirit  | 16×16                                    | loop 4 (200)                                                                                                       |
 
 Two idle frames are a breath, which separates a figure standing from a figure paused. Four walk
 frames are a stride: foot, pass, other foot, pass. Three to a blow are wind-up, strike and recover,
@@ -157,6 +161,13 @@ sides, since a flip moves the sword to the other hand. The figure kit draws the 
 with its arms traded before the flip, so what the right hand holds stays in it. A person with everything is 16 frames a
 facing: 51 drawn with the left mirrored, 67 on screen. **Raising a count is a decision about the
 game**, since it multiplies across every sprite of the kind and every layer B4 puts on a figure.
+
+**The spirit is a kind of its own** (D4, the user's): Wick is light, so not outlined, as an effect
+is not, but it never goes out, so it loops where an effect plays once, on one facing since a light
+has no face. That it has something to say is a second sprite rather than a second animation, so the
+kind keeps one clock: `wick` breathes up and down a pixel with a mote or two about it, and
+`wick-calling` is brighter and wider and throws a glint either side (`sprites/wick.ts`), in the
+`arcane` ramp the card it speaks on is edged in, with a heart of `metal`'s white.
 
 ## The sprite format
 

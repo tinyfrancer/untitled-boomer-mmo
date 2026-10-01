@@ -4,8 +4,8 @@ Every zone as it stands: what it is, what it was, who is there, what it hides, w
 about it, and what Wick remembers there. Then the lands past level 8.
 
 The rebuilds (C5-C9) take a zone's name, its secrets and its rumours from here and add its people;
-a secret is found by walking up to it, and pays a line of Wick's and a cache (decision 117). D2's rumours start from the lines here, and D4 writes
-Wick's beats from the lines here. A zone's name changes in the game in the phase that rebuilds it.
+a secret is found by walking up to it, and pays a line of Wick's and a cache (decision 117). D2's rumours start from the lines here, and D4 wrote
+Wick's beats from the lines here (`spirit.md` says where each is said). A zone's name changes in the game in the phase that rebuilds it.
 Someone marked _not yet in the game_ is for a rebuild or for Part D to add.
 
 ## Lampton, levels 1-3
