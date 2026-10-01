@@ -4,10 +4,10 @@
 the same day (decision 123). `docs/v2_plan.md` is still the live plan and still says what each phase
 is; this document says how its remaining phases are built by several agents at once rather than one
 session at a time, and holds a brief per phase. **Landed:** C11 (wave 0), 2026-10-01, with the
-measurement below written into the plan's C11 entry (decision 124). **In flight:** wave 1 (D1, D4,
-E1, E2, F1), started 2026-10-01 before C11 merged at the user's word, its questions answered under
-each brief. **Next:** G1, the moment C11 merges. Update this line as phases start and land, the way
-the plan's status line is.
+measurement below written into the plan's C11 entry (decision 124), and D4 (wave 1) the same day
+(decision 125). **In flight:** the rest of wave 1 (D1, E1, E2, F1), started 2026-10-01 before C11
+merged at the user's word, its questions answered under each brief. **Next:** G1. Update this line
+as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc
