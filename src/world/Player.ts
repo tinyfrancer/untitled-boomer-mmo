@@ -8,12 +8,20 @@ import { potionArmor, potionEffects, type PotionTimers } from '../systems/Potion
 import { createHealPulse, healPulseTick, type HealPulseState } from '../systems/HealPulseSystem';
 import { clamp } from '../systems/math';
 import { stepToward, type MovementStep, type Point } from '../systems/MovementSystem';
-import { moveWithCollision, type Aabb, type CollisionWorld } from '../systems/CollisionSystem';
+import {
+  isBlocked,
+  moveWithCollision,
+  type Aabb,
+  type CollisionWorld,
+} from '../systems/CollisionSystem';
 import { PLAYER_HALF_EXTENT } from '../config/constants';
 import type { InputState } from '../systems/InputState';
 import type { ClassId, ItemId } from '../types/ids';
 import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import { isBow } from '../data/items';
+
+/** How near a leg a coordinate is landed on it, in world pixels (`landOnLeg`). */
+const LAND_ON_LEG = 0.5;
 
 /**
  * The player, as simulation only: position, velocity, stats, pools and buffs.
@@ -446,6 +454,32 @@ export class Player {
       (vy * deltaMs) / 1000,
       world,
     );
-    this.setPosition(moved.x, moved.y);
+    const blocked =
+      Math.abs(moved.x - (this.x + (vx * deltaMs) / 1000)) > LAND_ON_LEG ||
+      Math.abs(moved.y - (this.y + (vy * deltaMs) / 1000)) > LAND_ON_LEG;
+    const landed = blocked ? this.landOnLeg(moved, world) : moved;
+    this.setPosition(landed.x, landed.y);
+  }
+
+  /**
+   * Lands a coordinate exactly on the leg being walked once it is within a
+   * hair of it, where a wall left the move short.
+   *
+   * A route through a two-tile doorway runs a body's half-width off the end of
+   * the wall either side, and a body coming at that from beside the doorway
+   * slides along the wall with its other axis blocked: each frame closes a
+   * share of what is left, so it never arrives, and a hair short is a hair
+   * inside the wall's end, where it stalled for good. Walking out of the house
+   * from the plans to the garden found it (F2).
+   */
+  private landOnLeg(moved: Point, world: CollisionWorld): Point {
+    const leg = this.route[0];
+    if (!leg) return moved;
+    const landed = {
+      x: Math.abs(leg.x - moved.x) < LAND_ON_LEG ? leg.x : moved.x,
+      y: Math.abs(leg.y - moved.y) < LAND_ON_LEG ? leg.y : moved.y,
+    };
+    if (landed.x === moved.x && landed.y === moved.y) return moved;
+    return isBlocked(world, { ...this.bounds(), ...landed }) ? moved : landed;
   }
 }
