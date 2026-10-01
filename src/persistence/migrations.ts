@@ -23,7 +23,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   101: (state) => ({ ...state, secrets: [] }),
   // Rested (phase E1): an empty bank, and a session parked before it banked
   // nothing with the game open, so the morning pays its whole night.
-  102: (state) => ({
+  103: (state) => ({
     ...state,
     rested: 0,
     afk: isRecord(state.afk) ? { ...state.afk, restedMs: 0 } : null,

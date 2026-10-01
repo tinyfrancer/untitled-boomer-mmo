@@ -96,7 +96,7 @@ Max HP is not on the wire — `player-hp-changed` carries the current value alon
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
 
-**The rested bank is a paler segment ahead of the XP fill** (decision 124, `afk.md`): the fill's violet
+**The rested bank is a paler segment ahead of the XP fill** (decision 127, `afk.md`): the fill's violet
 at its lightest step, a third strength, drawn under the fill from the bar's start to as far as the
 bank carries the bar (`restedReach`), which is twice the bank while it doubles, so its far end stays
 put as it is spent and only the fill moves up to meet it. It stops at the bar's end, and what is

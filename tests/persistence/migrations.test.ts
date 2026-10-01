@@ -57,7 +57,7 @@ describe('migrateCharacterState', () => {
   it('has banked no rested, made before there was any (phase E1)', () => {
     const before: Record<string, unknown> = {
       ...createNewCharacter('Aria', 'wizard'),
-      version: FIRST_VERSION_2_STATE + 2,
+      version: FIRST_VERSION_2_STATE + 3,
       afk: { startedAt: '2026-10-01T08:00:00.000Z', zoneId: 'town', station: null },
     };
     delete before.rested;
@@ -72,7 +72,7 @@ describe('migrateCharacterState', () => {
   it('leaves a save with no parked night without one', () => {
     const before: Record<string, unknown> = {
       ...createNewCharacter('Aria', 'wizard'),
-      version: FIRST_VERSION_2_STATE + 2,
+      version: FIRST_VERSION_2_STATE + 3,
     };
     delete before.rested;
     expect(migrateCharacterState(before)?.afk).toBeNull();

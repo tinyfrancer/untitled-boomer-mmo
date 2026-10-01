@@ -3245,7 +3245,7 @@ order, which fixes an order nobody knows yet and breaks the chain if a phase sli
 before C11 merges, which risks a review amending a part with a session on it; more than five agents
 a wave, which the user's time does not support.
 
-## 124. Idle banks rested by time, open or closed, to half a level; XP earned by hand pays double while it lasts, and idle's own never spends it
+## 127. Idle banks rested by time, open or closed, to half a level; XP earned by hand pays double while it lasts, and idle's own never spends it
 
 **2026-10-01 · the user, asked by Claude, building the plan's phase E1**
 

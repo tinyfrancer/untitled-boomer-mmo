@@ -77,7 +77,7 @@ on the shelf; the wizard and the ranger grow six health a level; no travel until
 **and E1** (rested: idle banks it by time, open or closed, to half a level and full in a night;
 XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment ahead
 of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
-banked; save version 103; decision 124). **Next: C11**, the Part C review, and from here the phases are built several at a time, by the
+banked; save version 104; decision 127). **Next: C11**, the Part C review, and from here the phases are built several at a time, by the
 rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.
 
@@ -689,7 +689,7 @@ C2 answered which factions there are and what the spirit wants (`docs/lore/facti
 Idle and active each get a reason (decision 85).
 
 - **E1 — Rested.** Time spent idle or away banks a rested bonus that speeds up active XP, capped,
-  and shown on the XP bar. **Landed** (decision 124): banked by idle, open or closed, by time, to
+  and shown on the XP bar. **Landed** (decision 127): banked by idle, open or closed, by time, to
   half a level and full in eight hours; doubles XP earned by hand (kills, quests, contracts) while
   it lasts; idle's own XP never spends it; the pace bot plays unrested.
 - **E2 — Potions.** A way to make them (a new making skill, and where its herbs come from, are this
