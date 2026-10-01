@@ -66,9 +66,12 @@ every room lined in masonry, each entered at a mouth five tiles across rather th
 an exit now open only along its mouth; the strongbox and the frieze; decision 119), **and C8** (Old Mill
 Road and Greyford rebuilt at 45×32, one stream from Greyford's ford into the millpond and the edge
 between them a mouth either side, the first outdoors; a secret may lie in a room, found from inside
-it; the shrine, the ledger, the keystone and the fettler's back room; decision 120). **Next: C9**,
-Blackwater Fen and the Deep Cut rebuilt. Update this line as each phase lands: which phase, and
-which is next.
+it; the shrine, the ledger, the keystone and the fettler's back room; decision 120), **and C9**
+(Blackwater Fen and the Deep Cut rebuilt at 45×32, the fen's south edge a mouth at the barrow's
+door and the New Cut's shaft a mouth on either side, its shelf given back to the rock; the drowned
+village, the lantern still burning, the sealed door and the maker's mark, the lantern the first
+standing secret that loops; no scenery yet; decision 121). **Next: C10**, less grind. Update this
+line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -585,6 +588,23 @@ saved position stops meaning anything.
   carries Wick's beat for Greyford. A new sweep holds every secret walked up to, and found the
   strand's causeway one body wide; it is two. Smoke gained a `back-room` section. About thirty files
   with its tests and docs. Both forks were the user's (decision 120).
+- **C9 — Blackwater Fen and the Deep Cut. (Landed.)** Both at 45×32, and each narrowed the edge it
+  shares with the zone below it. **The fen's south edge opens at the barrow's door**, the same five
+  tiles as the barrow's own, its kerb of masonry and its threshold the stone floor, which needed the
+  two edges the marsh had never met; the strand keeps the beach road's arrival end to end, the salt
+  pans are cut into its east end with a drain down out of the marsh to feed them, and the mere, four
+  guarded deep pools and the lantern's holm are below. **The Deep Cut is entered down the shaft**:
+  the New Cut's north edge opens only at the shaft's head and the Deep Cut's south edge only at its
+  foot, the same seven tiles, so the New Cut's shelf went back to the rock. Inside, the goblins'
+  gallery and two workings, and the dwarves' road lined in masonry up to the hall where the goblins
+  stopped digging. **Two of the lore's three secrets a zone**: the drowned village (a mark) and the
+  lantern still burning, the first standing secret that loops, in the fen; the sealed door, carrying
+  Wick's beat, and the maker's mark in the Deep Cut, both struck with Karn Tholl's peak. The holm's
+  way and the flooded passage wait for Part G, and **the fen's lanterns on posts wait for scenery**,
+  a new kind of marker no zone needs yet. The way-home sweep found a diagonal squeeze, a raider a
+  tile wide wedged between two cells of water a tile apart corner to corner. Smoke walks down the
+  shaft and into the fen. About twenty-five files with its tests and docs. All four forks were the
+  user's (decision 121).
 - **C5-C9 — Rebuild the ten zones at 3×**, two a phase: side paths, a secret or two, several
   activity spots each, **the activities being more of what the zone already has** (decision 118).
   Spawns, nodes and stations re-placed; the progression test re-held. **Every creature, node,
@@ -593,8 +613,8 @@ saved position stops meaning anything.
   nothing a placeholder and the tests hold every row to a drawing (decision 112). **The order**
   after C6 (decision 118): **C7** the two vaults, the Cutthroat's Cellar and the Sunken Barrow, the
   same shape on purpose (landed); **C8** Old Mill Road and Greyford (landed); **C9** Blackwater Fen and
-  the Deep Cut, whose shared edges with the Cut and the barrow may narrow to a mouth (decision 119),
-  as the mill road's and Greyford's did round their stream (decision 120).
+  the Deep Cut, whose shared edges with the Cut and the barrow narrowed to a mouth as the mill road's
+  and Greyford's did round their stream (decision 121, landed).
 - **C10 — Less grind.** Pillar 3's promise, "tune curves down before adding systems up", which no
   phase kept until the Part A review added this one (decision 99). The curves are tuned against the
   rebuilt zones, since their longer walks between kills are what moves the pace, and before Parts
@@ -611,7 +631,9 @@ may add (more of what the zone has) and when the lore's people arrive (Part D). 
 vault is entered: at a mouth narrower than its edge, a door inside a zone left for the undercroft and
 Karn Tholl (decision 119). C8 answered whether a mouth is only a vault's (no: an outdoor edge narrows
 round water that crosses it) and whether a secret may lie indoors (yes, found from inside the room,
-decision 120).
+decision 120). C9 answered whether the last two zones' edges narrow (both, at the barrow's door and
+at the shaft, the New Cut's side too) and whether the lore's scenery comes in with them (not yet,
+decision 121).
 
 ---
 

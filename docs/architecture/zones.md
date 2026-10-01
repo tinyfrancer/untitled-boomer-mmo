@@ -18,7 +18,7 @@ the Deep Cut under the quarry where the coal is, the Sunken Barrow under the bot
 where the dead are, the two vaults rebuilt in C7, and Greyford Outpost between the road west and
 the quarry, where a counter trades in materials rather than coin, a tannery works what the fen
 drops, a fletcher's bench turns timber and bars into arrows, and a fettler reworks gear into what you
-would rather it was, the road west and Greyford rebuilt in C8);
+would rather it was, the road west and Greyford rebuilt in C8, and the fen and the Deep Cut in C9);
 character creation, leveling, gear,
 two-way combat with death and respawn; three gathering skills and four making ones; currency, vendoring and a bank
 to keep a haul in; a weight-limited pack; a five-quest chain from the shopkeeper that collects,
@@ -84,9 +84,9 @@ on neither map and never named over, found by walking up to it (`world/SecretFin
 is a marker in its zone's text like anything else placed, and its row says which zone it is in,
 which a test holds against where the text put it. Finding one is kept on the character, pays a line
 of Wick's on the tips' card and a cache, and the zone map counts the zone's own under it. Lampton,
-the Old Mill Road and Greyford hide two each, and Candle Strand, the New Cut, Redrag Camp, the Cellar
-and the barrow one each; a rebuild adds its zone's from `docs/lore/places.md`, each drawn in the
-phase that adds it. **A secret may lie in a room** (decision 120): written into its building's block
+the Old Mill Road, Greyford, the fen and the Deep Cut hide two each, and Candle Strand, the New Cut,
+Redrag Camp, the Cellar and the barrow one each, so every zone hides at least one; a rebuild adds
+its zone's from `docs/lore/places.md`, each drawn in the phase that adds it. **A secret may lie in a room** (decision 120): written into its building's block
 where it lies, which still reads as the whole footprint, and found from inside that room and nowhere
 else, since a wall is a quarter of a tile and the reach would otherwise find it from the room in
 front or the lane behind. The mill's ledger and the fettler's back room are the two.
@@ -122,14 +122,14 @@ first and last tile of its edge that are open, and only that stretch leaves; an 
 the mouth of the exit back at the fraction of the other it was crossed at, both measured over where a
 body's centre can cross, half a body in from either side, so a crossing hard against one side of a
 wide mouth lands hard against the same side of a narrow one and never in its wall. A row with no
-mouth is open end to end, as every outdoor edge still is. Before this, an underground zone joined by
+mouth is open end to end, as most outdoor edges still are. Before this, an underground zone joined by
 an edge had to keep that whole side open, which at 45×32 is a hall thirty-two tiles long down one
 wall of a vault. **The Cutthroat's Cellar** is entered at five rows of its west edge, the stair
 down from a walled lane out of the gap in Redrag Camp's east wall, which is the camp's mouth: the
 guardroom left clear, the spine east to the warden's tomb with Hollis in front of the bier, the bunk
 room and the storeroom off it, and a low passage from the storeroom's far corner back under the
-guardroom to the strongbox. **The Sunken Barrow** is entered at five tiles of its north edge, the
-fen's south edge staying whole until C9 rebuilds it: the stair, the antechamber, the gallery with the
+guardroom to the strongbox. **The Sunken Barrow** is entered at five tiles of its north edge, and
+the fen's side of that edge at the same five since C9 rebuilt it: the stair, the antechamber, the gallery with the
 frieze along its north wall, the crypts at either end of it and the king's chamber off its middle,
 read north to south with every seven shallower than every eight. Both are rock with every room lined
 in masonry, so the hill is packed up behind dressed stone, and both keep the start, which is where a
@@ -151,6 +151,22 @@ in the north-west with the mill on its bank and the willows round it, five knots
 climb westward from either side of the road to the pond, and the hardwood stands in the south-east
 as the timber stand. Every knot is held out of reach of both arrival strips, and the willows of every
 knot's.
+
+**The fen and the Deep Cut** (decision 121) are the last of the rebuilds, and each narrowed the
+edge it shares with the zone below it. **Blackwater Fen** keeps its depth dial: the strand along the
+north is the beach road's arrival end to end, the Company's salt pans cut into its east end with a
+drain run straight down out of the marsh to feed them and a crossing of stone over it, the mere in
+the west with the drowned village under it, four deep pools each with a raider over it, and the
+lantern's holm in the south-west, reached by a neck of reed. Its south edge opens only at **the
+barrow's door**, the same five tiles as the barrow's own mouth, the door's kerb of masonry and its
+threshold the stone floor, the black water either side, so a raider is kept off the door rather than
+off the bottom of the marsh. **The Deep Cut** is entered down **the shaft**: the New Cut's north edge
+opens only at the shaft's head and the Deep Cut's south edge only at its foot, the same seven tiles,
+so the New Cut's shelf went back to the face and a body coming up arrives in the shaft. Inside, the
+goblins' rough gallery opens off the shaft, two workings go north off it, coal near and rich iron at
+their backs, and between them the dwarves' road, cut square and lined in masonry, runs up to the
+hall where the goblins stopped digging, the sealed door in its north wall and the mark at the end of
+a passage off it.
 
 The quarry is what that claim looks like when it is cashed: a map file, a row and one
 exit each way, and it appeared on the world map, in the zone map and in the offline camp with
@@ -217,5 +233,7 @@ The quarry paid the same bill in rock the moment the Deep Cut opened, which is w
 rather than a story about the beach: the face ran across the whole north edge and its comment said
 that was why the zone had no north exit — the same sentence the beach's map had, about a different
 material. It then sat at rows 2-4 with a shelf along the top of it and a break through the middle
-where the shaft was driven, and every existing spawn stayed put; the rebuilt Cut kept that shape. **Expect the sentence explaining why
-a zone has no exit somewhere to be the thing that has to go when it gets one.**
+where the shaft was driven, and every existing spawn stayed put; the rebuilt Cut kept that shape
+until C9 opened its north edge at the shaft alone and gave the shelf back to the rock (decision 121),
+which a mouth made possible and a whole edge never did. **Expect the sentence explaining why a zone
+has no exit somewhere to be the thing that has to go when it gets one.**

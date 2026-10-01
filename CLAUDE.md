@@ -206,7 +206,8 @@ building is a block of its letter exactly its footprint, whoever works in one is
 rather than placed, and a zone's size is its text's. **A secret may lie in a room**, written into its
 building's block, and is found only from inside that room (decision 120). Walking is the only way
 into a zone. **An exit is open along its mouth**, the whole shared edge unless its row names a
-narrower `mouth` (decision 119, a vault's way in, or an edge with a stream across it, decision 120),
+narrower `mouth` (decision 119, a vault's way in, an edge with a stream across it, decision 120, or
+a shaft or a barrow's door, decision 121),
 and an arrival lands across the mouth of the exit back at the fraction it crossed the other at. **A
 mouth needs to be walkable on both sides, one arrival-inset in**, and every spawn, building and
 wander disc is held by sweeps (`ZoneSystem.test.ts`, `BuildingSystem.test.ts`,
@@ -214,7 +215,8 @@ wander disc is held by sweeps (`ZoneSystem.test.ts`, `BuildingSystem.test.ts`,
 (`tests/world/secrets.test.ts`) — expect a new zone or exit to cost a spawn or a building moved
 somewhere else. **So is every creature's way home**
 (`spawnSafety.test.ts`): a home its body stands in, with room to turn round, walked back to from
-anywhere a chase inside its ring can lead it; nobody lives in a gap exactly a body's width.
+anywhere a chase inside its ring can lead it; nobody lives in a gap exactly a body's width, straight
+across or corner to corner (decision 121).
 
 **Data-driven definitions** (`src/data/`, keyed by the id unions in `src/types/ids.ts`): classes,
 items, enemies, loot, quests, bounties, recipes, zones and the text they are written in. Prefer a row over code — a new

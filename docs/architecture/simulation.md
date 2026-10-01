@@ -169,8 +169,11 @@ line. The first run found four homes no walk could end at, all from writing the 
 goblin in the trunk of the hardwood beside it, the barrow king (a tile and a half tall) with his feet
 in the rock at the foot of his chamber, and a fen raider and a lurker each living in a gap a tile wide
 between two pools, which a search will not stand a body in. The tree moved, the king got an alcove,
-the lurker moved down a row and the raider's pool gave up a tile. The one kind of cell it skips is a
-slot with no room to turn round in (decision 35), which a press can push a creature into and no route
+the lurker moved down a row and the raider's pool gave up a tile. **A diagonal is a gap too**
+(decision 121): the rebuilt fen wedged a raider, a whole tile wide, between a pool's corner and a
+scrap of water at the causeway's head, a tile apart on a diagonal, a passage with no slack in it
+though nothing across it in a straight line is a tile wide. The one kind of cell it skips is a slot
+with no room to turn round in (decision 35), which a press can push a creature into and no route
 takes it out of; the net below is for that.
 
 **There is no physics engine.** `world/Player` and `world/Mob` own `{x, y, vx, vy}` and integrate

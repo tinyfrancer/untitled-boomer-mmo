@@ -63,7 +63,7 @@ is one of the rarest things in the band.
 
 The dwarves of **Karn Tholl**, under the Greyhills and the mountains north of them. They made
 Veymar's lanterns, crowns and blades, and their mark is on every grave good that comes out of a
-barrow. They refused to make the Great Kindling's lantern, lost their deepest halls to the sea
+barrow: a peak, the mountain the stone hall is under. They refused to make the Great Kindling's lantern, lost their deepest halls to the sea
 anyway, and shut their doors six hundred years ago. The settlers think they are extinct.
 
 They are blunt, proud of their own work and contemptuous of anybody else's, and they keep accounts of
