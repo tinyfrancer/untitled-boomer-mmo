@@ -35,7 +35,7 @@ through), `LootPiles` (what a full pack left on the ground, its minute, and taki
 spirit's tips: which to offer, and hearing the answer), `SecretFinder` (a secret walked up to, once,
 measured along the stretch walked each frame so a slow phone finds one it walked past, decision
 117, and one in a room only from inside it, decision 120), `HouseSession` (whichever stand, the
-chest or the wall in the house is open, and what crosses between it and the bag; decision 124,
+chest or the wall in the house is open, and what crosses between it and the bag; decision 130,
 `buildings.md`), and `ApproachDriver`
 (all three click-to-move walks). Each owns its own state,
 is constructed by `ZoneWorld` and reaches the rest of the zone through two things and no others: the

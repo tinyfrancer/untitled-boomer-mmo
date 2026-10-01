@@ -19,7 +19,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // Secrets (decision 117): nobody made before them has found one.
   101: (state) => ({ ...state, secrets: [] }),
   // The house (F1): bare stands and an empty chest for everybody made before it.
-  102: (state) => ({ ...state, house: emptyHouse() }),
+  106: (state) => ({ ...state, house: emptyHouse() }),
 };
 
 /**

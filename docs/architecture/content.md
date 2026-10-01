@@ -70,7 +70,7 @@ else in the game hands out either rock. The **goblin maul** on it is the first w
 game that comes off something repeatable; everything above a brown axe until then was one boss behind
 a 3% key.
 
-**A chain's last quest may hand over a keepsake** (decision 124), the fifth kind of item: no price,
+**A chain's last quest may hand over a keepsake** (decision 130), the fifth kind of item: no price,
 the same for every class, weighed with any gear the quest pays so a full pack refuses both, and good
 for nothing but a stand in the house. **One quest lets the house** (`reward.house`), and nothing is
 stored when it pays: the house is the player's while that quest is done (`ownsHouse`). The trophies a

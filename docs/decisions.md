@@ -3245,7 +3245,7 @@ order, which fixes an order nobody knows yet and breaks the chain if a phase sli
 before C11 merges, which risks a review amending a part with a session on it; more than five agents
 a wave, which the user's time does not support.
 
-## 124. The house is the Surveyor's House, let by a quest for timber; trophies stand on stands and come back on a tap; the chest is eight kinds; the plaques hang themselves
+## 130. The house is the Surveyor's House, let by a quest for timber; trophies stand on stands and come back on a tap; the chest is eight kinds; the plaques hang themselves
 
 **2026-10-01 · the user, asked by Claude, building the plan's phase F1**
 

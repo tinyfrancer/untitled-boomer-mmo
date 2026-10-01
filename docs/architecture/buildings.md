@@ -112,7 +112,7 @@ either side. `tests/art/rooms.test.ts` puts a body on all three spots the game s
 somebody on — the middle of the room, the counter, and where the walk to that counter ends — and
 fails on anything deeper.
 
-**The house is the one room whose furniture is tapped** (decision 124, `data/house.ts`). The
+**The house is the one room whose furniture is tapped** (decision 130, `data/house.ts`). The
 Surveyor's House is let to the player by a quest, and stands four stands, a chest and a wall of
 plaques against its walls. Where each stands is data rather than the renderer's, since the
 simulation walks up to them: `HOUSE_FIXTURES` places each in the house's frame, `FITTING_DEPTH` deep

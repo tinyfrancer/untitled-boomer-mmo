@@ -75,7 +75,7 @@ its number plus four minutes of play, measured by a bot playing every class thro
 curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
 on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
 **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
-with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 124).
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130).
 **Next: C11**, the Part C review, and from here the phases are built several at a time, by the
 rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.

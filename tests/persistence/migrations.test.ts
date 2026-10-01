@@ -57,7 +57,7 @@ describe('migrateCharacterState', () => {
   it('has a house with bare stands and an empty chest, made before there was one (F1)', () => {
     const before: Record<string, unknown> = {
       ...createNewCharacter('Aria', 'wizard'),
-      version: FIRST_VERSION_2_STATE + 2,
+      version: FIRST_VERSION_2_STATE + 6,
     };
     delete before.house;
     const migrated = migrateCharacterState(before);

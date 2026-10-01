@@ -286,7 +286,7 @@ up. It **blinks through the last ten seconds of its minute**, read off the pile'
 than the view's, which is how it says it is going without a timer drawn over it (`docs/decisions.md`
 66).
 
-**A fixture is what stands in the house** (decision 124): a stand, the chest or the wall, picked
+**A fixture is what stands in the house** (decision 130): a stand, the chest or the wall, picked
 only while the player is in the house's room, since from outside the roof is over all of it and the
 building answers. It sits above the building for that reason and below the station, which it never
 meets. A stand's box stands as tall as a trophy on it, the chest's as it is drawn, and the wall's is

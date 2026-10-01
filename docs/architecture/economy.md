@@ -113,7 +113,7 @@ after the death fee, and the reason the pack stays small and awkward while the d
 shelves. It _caps_ at `MAX_BANK_SLOTS`, which is what left the endgame with a purse and nowhere to
 spend it until the reforging stone went on the shelf above it — see reforging, below.
 
-**The house's chest is the bank's rule at a fixed size** (decision 124): weightless, a slot an item
+**The house's chest is the bank's rule at a fixed size** (decision 130): weightless, a slot an item
 id however deep the stack, eight slots and nothing to rent, stored in `CharacterState.house` with
 what stands on the house's stands. It is a store beside the vault, not a second vault: the bank is
 where the depth goes, and F2 may grow the chest. Its panel is the bank's two sides with no shelf row,

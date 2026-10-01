@@ -249,7 +249,7 @@ what it says** (`systems/TipSystem.ts`): each tip is a rule over the character, 
 the fee, the price or the ceiling it names off the table or constant that holds it. What has been
 heard is stored (`CharacterState.tips`), since hearing leaves nothing else behind, and so is every
 secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and what stands
-on the house's stands and lies in its chest (`CharacterState.house`, decision 124); whose the house
+on the house's stands and lies in its chest (`CharacterState.house`, decision 130); whose the house
 is, what is a trophy and which plaques hang are derived.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
@@ -321,7 +321,7 @@ kit laid over its footprint** (`art/building.ts`), its door where `doorGap` puts
 and **what stands in its room is `art/rooms.ts`** (decision 109): nothing in it blocks, so
 `tests/art/rooms.test.ts` is all that keeps the furniture and the
 counter out of where the game stands a body. **The house's stands, chest and wall are the one
-furniture tapped** (decision 124): where they stand is `data/house.ts`, since the world walks up to
+furniture tapped** (decision 130): where they stand is `data/house.ts`, since the world walks up to
 them, aimed at where a body stands rather than at the fixture, and `tests/world/house.test.ts` holds
 them clear and in reach as `rooms.test.ts` does the rest. **Who is drawn with what** is
 `art/cast.ts`, anything not in it being its kind's placeholder, and **what each place is drawn as**
