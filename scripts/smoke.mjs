@@ -478,6 +478,7 @@ const QUARTERMASTER = "window.world.npcs.find((n) => n.npcId === 'quartermaster'
 const GENERAL_STORE = "window.world.buildings.find((b) => b.definition.id === 'general-store')";
 const FORGE = "window.world.stations.find((s) => s.station === 'forge')";
 const BENCH = "window.world.stations.find((s) => s.station === 'bench')";
+const STILL = "window.world.stations.find((s) => s.station === 'still')";
 const SOUTH_SIGNPOST = "window.world.signposts.find((s) => s.exit.edge === 'south')";
 
 /**
@@ -3494,7 +3495,7 @@ async function skillsBook() {
   const index = await book();
   check(
     'the Skills tab opens the book on an index of every skill',
-    index.visible && index.page === '' && index.skills === 13,
+    index.visible && index.page === '' && index.skills === 15,
     `${index.skills} skill(s), page "${index.page}"`,
   );
   await tapTab('skills');
@@ -3525,7 +3526,7 @@ async function skillsBook() {
   await page.click('.hud-sheet[data-sheet="skills"] [data-action="skills-back"]');
   await page.waitForTimeout(80);
   const back = await book();
-  check('and Back goes to the index', back.page === '' && back.skills === 13, `"${back.page}"`);
+  check('and Back goes to the index', back.page === '' && back.skills === 15, `"${back.page}"`);
 
   await page.click('.hud-sheet[data-sheet="skills"] .hud-skill[data-skill="smithing"]');
   await page.waitForTimeout(150);
@@ -5620,6 +5621,88 @@ async function fletchersBench() {
   );
 }
 
+async function still() {
+  // --- The still at Greyford, brewing's station (version 2 phase E2), and the
+  // potion it makes drunk out of the bag.
+  //
+  // The rules — two herbs a tonic, a clock on game time, what each potion does —
+  // are tests/systems/brewing.test.ts and tests/world/brewing.test.ts. What only
+  // a browser shows is the still drawn and picked by a real click, its panel
+  // headed for it, a real tap brewing, a real tap on Drink putting the potion's
+  // icon in the player column, and the still let go of with the zone. ---
+  await toGreyford();
+  await sweep();
+  const before = await canvases();
+
+  await page.evaluate(() => {
+    const w = window.world;
+    const still = w.stations.find((s) => s.station === 'still');
+    w.clearTarget();
+    w.character.state.inventory = { samphire: 2 };
+    window.events.emit('inventory-changed', w.character.state.inventory);
+    // Set rather than awarded, for the reason the forge section gives.
+    w.character.state.skills.brewing = { level: 9, xp: 0 };
+    w.teleport(still?.x ?? 0, (still?.y ?? 0) + 40);
+  });
+  await step(2);
+  await draw();
+  await clickAt(await screenAt(STILL));
+  await step(2);
+  const title = await page.evaluate(
+    () => document.querySelector('.hud-modal__box--station .hud-modal__title')?.textContent ?? '',
+  );
+  check('a real click on the still opens its list', title === 'Still', `"${title}"`);
+
+  await page.click('.hud-modal__box--station [data-recipe="samphire-tonic"]');
+  await step(16, 200);
+  const brewed = await page.evaluate(
+    () => window.world.character.state.inventory['samphire-tonic'] ?? 0,
+  );
+  check('a tap on a still row brews two samphire into a tonic', brewed === 1, `${brewed} tonic`);
+  await page.screenshot({ path: `${OUT}/23-still.png` });
+
+  await page.click('.hud-modal [data-action="close-station"]');
+  await step(2);
+  await tapTab('inventory');
+  await page.click('.hud-sheet[data-sheet="inventory"] .hud-item[data-item="samphire-tonic"]');
+  await page.click('.hud-sheet[data-sheet="inventory"] [data-item-action="drink"]');
+  await step(2);
+  const drunk = await page.evaluate(() => ({
+    left: window.world.character.state.inventory['samphire-tonic'] ?? 0,
+    icons: document.querySelectorAll('.hud-player .hud-effect').length,
+  }));
+  check(
+    'a real tap on Drink spends the tonic and puts its mark in the player column',
+    drunk.left === 0 && drunk.icons > 0,
+    `${drunk.left} left, ${drunk.icons} icon(s)`,
+  );
+  await tapTab('inventory');
+
+  // Out of the yard and back: the still is built with the zone, so it has to
+  // come down with it and go back up without a leak.
+  await page.evaluate(() => {
+    const w = window.world;
+    w.clearTarget();
+    w.character.state.inventory = {};
+    w.character.state.potions = {};
+    window.events.emit('inventory-changed', {});
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('old-mill-road', 'the road south out of Greyford');
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('greyford', 'the road north back into Greyford');
+  await sweep();
+  const after = await canvases();
+  check(
+    'a round trip out of Greyford lets go of everything the still was drawn with',
+    after <= before,
+    `${before} -> ${after} canvases`,
+  );
+}
+
 async function backRoom() {
   // --- The fettler's store at Greyford: the one door nobody sees from the
   // yard, since it is round the back, and the one secret that lies in a room
@@ -5933,6 +6016,7 @@ const SECTIONS = [
   ['fletchers-bench', fletchersBench],
   ['back-room', backRoom],
   ['spirit', spirit],
+  ['still', still],
 ];
 
 const known = SECTIONS.map(([name]) => name);

@@ -91,7 +91,7 @@ export const CHIPS: SpriteDef = {
   height: 16,
   legend: { T: 'thatch.2', U: 'thatch.3', V: 'thatch.4' },
   animations: { play: [CHIPS_PLAY_0, CHIPS_PLAY_1, CHIPS_PLAY_2, CHIPS_PLAY_3] },
-  variants: { stone: { thatch: 'bone' } },
+  variants: { stone: { thatch: 'bone' }, leaf: { thatch: 'nature' } },
 };
 
 const SPLASH_PLAY_0 = grid(`

@@ -256,6 +256,8 @@ there; a new person is a conversation there as well as a row in `NPCS`.
 secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every beat
 of Wick's story heard (`CharacterState.beats`, decision 128); which beat waits where is derived
 (`systems/SpiritSystem.ts`).
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and the time left
+on each potion drunk (`CharacterState.potions`, decision 129), which a night away reads.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can

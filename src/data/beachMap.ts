@@ -45,15 +45,15 @@ export const BEACH_LAYOUT = layoutZone(
     :::::::::::::::::::::::::::::::::::::::::::::
     :::::::::::::::::::::::::::a:::::::::::b:::::
     ::::::::::::a::::::::::::::::::::::::::::::::
-    :::::::::::::::::::::::::::::::::::::::::::::
+    :::::::s::::::::::::::s::::::::::::::::::::::
     ::::~~~~~f~~~~~~f~~~~~~~f~~~~~~f~~~~~~f~~~~~~
     ::::~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::::~~~~~~~#~~~~~#~~~~~#~~~~~#~~~~~#~~~~~#~~~
     ::::_______n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::::________~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::::~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    :::::::::::::::::::::::::::::::::::::::::::::
-    :::::::::::::::::::::::::::::::::::::::::::::
+    :::::::::s:::::::::::::::::::::::::::::::::::
+    :::::::::::::::::::::::::::s:::::::::::::::::
     :::::::::::::::::b:::::::::::::::b:::::::c:::
     :::::::::::::::::::::::::::::::::::::::::::::
     :::::::::::::::::::::::::::::::::::::::::::::
@@ -65,6 +65,9 @@ export const BEACH_LAYOUT = layoutZone(
     f: { node: 'ocean-fishing-spot', on: 'water' },
     // At the nearest Candle's foot, at the end of the sea-wall's top.
     n: { secret: 'warden-niche', on: 'stone' },
+    // Samphire, on the sand at the water's edge where the salt reaches it: the
+    // starter band's herb (version 2 phase E2).
+    s: { node: 'samphire', on: 'sand' },
     /**
      * Crabs on the sand, away from the grass where the road from Lampton comes
      * down, and a few across the water on the southern strand. Every zone in

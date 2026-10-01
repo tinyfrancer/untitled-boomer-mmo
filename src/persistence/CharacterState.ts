@@ -7,6 +7,7 @@ import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { PotionTimers } from '../systems/PotionSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { DialogMemory } from '../systems/DialogSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
@@ -32,7 +33,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 5;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 6;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -153,6 +154,12 @@ export interface CharacterState {
    * leaves nothing else behind.
    */
   beats: SpiritBeatId[];
+  /**
+   * The potions drunk and still working, as the time each has left (version 2
+   * phase E2). Stored because a potion lasts minutes and works on while the
+   * game is closed for the time it has left, which the away payout reads.
+   */
+  potions: PotionTimers;
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -280,6 +287,7 @@ export function createNewCharacter(
     secrets: [],
     asked: {},
     beats: [],
+    potions: {},
     quests: {},
     bounty: null,
     kills: {},

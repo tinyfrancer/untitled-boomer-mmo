@@ -27,6 +27,15 @@ idea: the trophy always drops because a fight that long has to be worth somethin
 it is cloth so it fits every class, while the weapons behind it are the chase — one per class, a
 bow among them since act three phase 12, so the run is worth making whoever you rolled.
 
+**Luck is a multiplier on a table's chances, never a row of its own** (`rollLootTable`'s `luck`,
+version 2 phase E2). Fortune, the bogbean potion, makes each entry a quarter likelier while it lasts,
+capped at certain, and leaves the coin alone, since a purse is what the creature had rather than what
+it dropped. It is the one thing that moves a table's odds, and it moves them on the roll rather than
+in `LOOT_TABLES`, so `uniqueLoot.test.ts` and the rarities this file argues for still read off the
+table as written. The same potion adds a tenth to the second-one roll mastery pays
+(`secondOneChanceFor`), which is the roll rather than the pool: the skills book still says what the
+pool pays.
+
 **Every humanoid that is not a boss carries a handful of arrows** (`arrows()` in
 `data/lootTables.ts`; `docs/decisions.md` 64, 75), at even odds and more of them the higher the band,
 since so is what a creature there takes to kill. A table entry may name a `quantity` range for this,

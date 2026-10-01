@@ -97,6 +97,9 @@ export class IdleSheet extends Sheet {
     if (plan.arrows.length > 0) {
       view.push(sectionHeader('Arrows'), ...lines(plan.arrows));
     }
+    if (plan.potions.length > 0) {
+      view.push(sectionHeader('Potions'), ...lines(plan.potions));
+    }
     view.push(sectionHeader('Away', 'with the game closed'), ...lines(plan.away));
     view.push(sectionHeader('Rested', 'for XP earned by hand'), ...lines(plan.rested));
     return view;

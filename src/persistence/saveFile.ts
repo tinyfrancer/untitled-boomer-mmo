@@ -5,6 +5,7 @@ import { BOUNTIES } from '../data/bounties';
 import { CLASSES } from '../data/classes';
 import { HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../data/looks';
 import { QUESTS } from '../data/quests';
+import { POTION_EFFECTS } from '../data/potions';
 import { REFORGES } from '../data/reforges';
 import { SKILLS } from '../data/skills';
 import { ZONES } from '../data/zones';
@@ -250,6 +251,14 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
   secrets: [listOf(isString), 'a list of secrets found'],
   asked: [recordOf(listOf(isString)), 'a list of what was heard for each person'],
   beats: [listOf(isString), "a list of Wick's beats heard"],
+  potions: [
+    (value) =>
+      isRecord(value) &&
+      Object.entries(value).every(
+        ([effectId, left]) => Object.hasOwn(POTION_EFFECTS, effectId) && isCount(left),
+      ),
+    `the time left on each potion drunk (${names(POTION_EFFECTS)})`,
+  ],
   quests: [
     (value) =>
       isRecord(value) &&

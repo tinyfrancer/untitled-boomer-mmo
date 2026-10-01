@@ -71,6 +71,10 @@ first syllable, and it has no k, g or z.
 - **Items** are a material or tier and the thing (Iron Helmet, Steel Arrows), or where or whom it
   came from and the thing (Fenweave Robe, Barrow Blade, Goblin Maul, Grave Lantern). A unique item may
   carry its maker's or its owner's name.
+- **Herbs** keep the plain country name a settler or a fenfolk gives the plant (Samphire,
+  Meadowsweet, Bog Myrtle, Bogbean), and **potions** are the herb and the drink (Samphire Tonic,
+  Meadowsweet Draught, Bogbean Cordial), or whose drink it is (Keeper's Draught). What a potion
+  leaves a body feeling is said plainly (Quick Hands, Dulled Pain, Keeper's Watch, Fortune).
 - **Titles** are a rank word after what the rank is in (Rat Culler, Goblin Slayer). A faction's
   titles are in its own words (D3).
 - **Zones** take "The" where a settler would say it (The Deep Cut, The Sunken Barrow) and not where
@@ -112,6 +116,8 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Karn Tholl                  | KARN THOLL  | The dwarves' hold                                   | `peoples.md`  |
 | Karra Deepvein              |             | The dwarf scout in the Deep Cut                     | `places.md`   |
 | the Keepers                 |             | The fenfolk as a faction                            | `factions.md` |
+| Keeper's Draught            |             | _In game_; the fenfolk's watch-brew of bog myrtle   | `peoples.md`  |
+| Keeper's Watch              |             | _In game_; what the Keeper's Draught leaves         | `naming.md`   |
 | the kindling                |             | Binding a soul into a flame                         | `history.md`  |
 | the Lamp Stone              |             | _In game_; the waymarker in Lampton's crossroads    | `places.md`   |
 | Lampton                     |             | _In game_; the Company's town                       | `places.md`   |

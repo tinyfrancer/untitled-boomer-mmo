@@ -6,7 +6,7 @@ import type { MobSpawnPoint } from '../data/zoneText';
 import { ZONES } from '../data/zones';
 import { xpToReachLevel } from '../data/xpTable';
 import type { AfkSession } from '../persistence/CharacterState';
-import { AFK_XP_MULTIPLIER, afkGatherSkill } from './AfkSystem';
+import { afkGatherSkill } from './AfkSystem';
 import { hasInputs, recipesAt, rollCraft } from './CraftingSystem';
 import { canCarry } from './EncumbranceSystem';
 import { scaleEnemyStats } from './EnemySystem';
@@ -22,7 +22,13 @@ import { skillLevel, skillXpToNextLevel, type Skills } from './SkillSystem';
 import { arrowsCarried, loadedArrow, type Quiver } from './QuiverSystem';
 import type { Reforges } from './ReforgeSystem';
 import { computeEffectiveStats } from './StatsSystem';
-import type { ClassId, EnemyId, MasteryTargetId, SkillId } from '../types/ids';
+import {
+  idleXpMultiplier,
+  potionGatherSpeed,
+  potionLeftMs,
+  type PotionTimers,
+} from './PotionSystem';
+import type { ClassId, EnemyId, MasteryTargetId, PotionEffectId, SkillId } from '../types/ids';
 
 // Nothing accrues past this. A tab closed over a long weekend hands back a
 // night's play, not a finished character.
@@ -68,6 +74,13 @@ export interface OfflineAfkContext {
   // What the fettler did to the gear, which moves how hard a shot lands and so
   // how many of them a kill takes.
   reforges?: Reforges;
+  /**
+   * What had been drunk when the game closed (version 2 phase E2). A potion
+   * works for the time it had left, so a night away pays Keeper's Watch's share
+   * and Samphire Tonic's speed for those first minutes and nothing after; the
+   * fight and luck potions are for a hand on the controls and do nothing here.
+   */
+  potions?: PotionTimers;
   rng?: () => number;
 }
 
@@ -166,6 +179,23 @@ const NOTHING: OfflineAfkReport = {
   capped: false,
   rested: 0,
 };
+
+/** The potions a closed game honours: the two brewed for idle. */
+export const OFFLINE_POTIONS: readonly PotionEffectId[] = ['keepers-watch', 'quick-hands'];
+
+/**
+ * What one thing done offline pays, at the share idle keeps when it was done:
+ * Keeper's Watch's for whatever finished inside the time the potion had left,
+ * idle's own half after it.
+ */
+function offlineRate(
+  context: Pick<OfflineAfkContext, 'potions'>,
+  baseXp: number,
+  finishedAtMs: number,
+): number {
+  const watching = finishedAtMs <= potionLeftMs(context.potions ?? {}, 'keepers-watch');
+  return baseXp * idleXpMultiplier(watching) * OFFLINE_RATE_MULTIPLIER;
+}
 
 /**
  * How long a parked session counts for. A clock that went backwards (a
@@ -325,12 +355,19 @@ function resolveOfflineFight(
 
   const rng = context.rng ?? Math.random;
   const { xpReward } = scaleEnemyStats(definition, quarry.level);
-  const perKillXp = xpReward * AFK_XP_MULTIPLIER * OFFLINE_RATE_MULTIPLIER;
+  const perKillXp = (kill: number): number =>
+    offlineRate(context, xpReward, (kill + 1) * OFFLINE_KILL_INTERVAL_MS);
   // The cap is applied to the kill count rather than to the xp, so the coin
   // and the loot in the report come from the same fights the xp did.
-  const affordableKills =
-    perKillXp > 0 ? Math.floor(offlineXpCeiling(context.characterLevel) / perKillXp) : 0;
-  const kills = Math.min(elapsedKills, affordableKills);
+  const ceiling = offlineXpCeiling(context.characterLevel);
+  const xpFor = (count: number): number =>
+    Array.from({ length: count }, (_, kill) => perKillXp(kill)).reduce((a, b) => a + b, 0);
+  let kills = 0;
+  let earned = 0;
+  while (kills < elapsedKills && perKillXp(kills) > 0 && earned + perKillXp(kills) <= ceiling) {
+    earned += perKillXp(kills);
+    kills += 1;
+  }
   if (kills <= 0) {
     return { ...NOTHING, elapsedMs };
   }
@@ -391,7 +428,7 @@ function resolveOfflineFight(
     enemyId: quarry.enemyId,
     // Floored rather than rounded, so a session can never come out ahead of
     // the same kills made awake and camping.
-    xp: Math.floor(perKillXp * fought),
+    xp: Math.floor(xpFor(fought)),
     copper: Math.floor(copper * OFFLINE_RATE_MULTIPLIER),
     drops,
     missed,
@@ -459,16 +496,33 @@ function resolveOfflineGather(
     return { ...NOTHING, elapsedMs };
   }
 
-  const elapsedGathers = Math.floor(elapsedMs / gatherDurationMs(node, level));
+  // When each gather finished: quicker while a Samphire Tonic had time left,
+  // at the skill's own pace after it.
+  const quickMs = Math.min(elapsedMs, potionLeftMs(context.potions ?? {}, 'quick-hands'));
+  const quick = gatherDurationMs(node, level, potionGatherSpeed(context.potions ?? {}));
+  const plain = gatherDurationMs(node, level);
+  const quickGathers = Math.floor(quickMs / quick);
+  const elapsedGathers = quickGathers + Math.floor((elapsedMs - quickGathers * quick) / plain);
   if (elapsedGathers <= 0) {
     return { ...NOTHING, elapsedMs };
   }
+  const finishedAt = (gather: number): number =>
+    gather < quickGathers
+      ? (gather + 1) * quick
+      : quickGathers * quick + (gather + 1 - quickGathers) * plain;
+  const perGatherXp = (gather: number): number =>
+    offlineRate(context, node.xpReward, finishedAt(gather));
 
-  const perGatherXp = node.xpReward * AFK_XP_MULTIPLIER * OFFLINE_RATE_MULTIPLIER;
   const xpToNext = skillXpToNextLevel(skill, level, context.characterLevel);
-  const affordable = xpToNext > 0 ? Math.floor(xpToNext / perGatherXp) : Number.POSITIVE_INFINITY;
-
-  const gathers = Math.min(elapsedGathers, affordable);
+  let gathers = 0;
+  let skillXp = 0;
+  while (
+    gathers < elapsedGathers &&
+    (xpToNext <= 0 || skillXp + perGatherXp(gathers) <= xpToNext)
+  ) {
+    skillXp += perGatherXp(gathers);
+    gathers += 1;
+  }
   let drops: Inventory = {};
   let missed: Inventory = {};
   // Tracked against the pack as it fills, so a bag that ran out of room partway
@@ -496,7 +550,7 @@ function resolveOfflineGather(
     skill,
     // Floored rather than rounded, so a session can never come out ahead of the
     // same gathers made awake.
-    skillXp: Math.floor(perGatherXp * gathers),
+    skillXp: Math.floor(skillXp),
     masteryTargetId: node.id,
     capped: gathers < elapsedGathers,
   };
@@ -529,7 +583,8 @@ function resolveOfflineCraft(
     return { ...NOTHING, elapsedMs };
   }
 
-  const perCraftXp = recipe.xpReward * AFK_XP_MULTIPLIER * OFFLINE_RATE_MULTIPLIER;
+  const perCraftXp = (attempt: number): number =>
+    offlineRate(context, recipe.xpReward, (attempt + 1) * recipe.durationMs);
   const xpToNext = skillXpToNextLevel(recipe.skill, level, context.characterLevel);
   const rng = context.rng ?? Math.random;
 
@@ -545,7 +600,7 @@ function resolveOfflineCraft(
     // session reaches rather than one it steps over — the gathering branch gets
     // the same guarantee out of flooring its count up front, which a run of
     // failed rolls makes impossible here.
-    if (xpToNext > 0 && skillXp + perCraftXp > xpToNext) {
+    if (xpToNext > 0 && skillXp + perCraftXp(attempt) > xpToNext) {
       capped = true;
       break;
     }
@@ -575,7 +630,7 @@ function resolveOfflineCraft(
     // Things, not jobs: a job at the bench is fifteen shafts, and "12 made"
     // over a report listing 180 of them would be two numbers disagreeing.
     crafts += result.quantity;
-    skillXp += perCraftXp;
+    skillXp += perCraftXp(attempt);
   }
 
   return {

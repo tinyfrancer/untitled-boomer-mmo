@@ -39,6 +39,7 @@ import {
   ROUND_SHIELD,
   RUSTY_SWORD,
   SHORT_BOW,
+  SICKLE,
 } from './sprites/weapons';
 
 /**
@@ -120,6 +121,7 @@ export const WIELDS: Readonly<Partial<Record<ItemId, Wield>>> = {
   'goblin-maul': { art: MAUL, blade: 'masonry' },
   'fishing-pole': { art: FISHING_POLE },
   'steel-pole': { art: FISHING_POLE, haft: 'tierSteel' },
+  sickle: { art: SICKLE },
   shortbow: { art: SHORT_BOW },
   'hunting-bow': { art: SHORT_BOW, haft: 'tierBrown' },
   'poachers-bow': { art: SHORT_BOW, haft: 'leather' },
@@ -153,6 +155,7 @@ const BY_SHAPE = {
   pick: PICKAXE,
   pole: FISHING_POLE,
   bow: SHORT_BOW,
+  sickle: SICKLE,
 } as const;
 
 const BY_OFFHAND = { shield: ROUND_SHIELD, orb: ORB, quiver: 'quiver' } as const;
