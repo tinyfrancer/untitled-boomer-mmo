@@ -387,15 +387,295 @@ name. Wick: "Lorn. Is that me?"
 
 ## Past level 8
 
-Part G sizes these (decision 84, C11). What each is for:
+Part G built these as ten zones in three bands (decision 131); `docs/v2_plan.md`'s Part G has their
+levels, exits and ids, and this is what each is. Each is _not yet in the game_ until its phase lands,
+and a phase adds what building the zone needed. Rumours are told at the band's hub, in Greyford or
+in Lampton, and lead into the band they are told in.
 
-- **The Keepers' holm**, deep in the fen: the fenfolk's stilt town and the lantern-hall where their
-  dead wait for a barrow, and what they did to Lorn.
-- **The Stillwood**, west past Greyford: the Quiet Court.
-- **Karn Tholl**, behind the Deep Cut's door: the dwarves' halls, and under them the drowned ones.
-- **The high Greyhills**, north: the goblins' tangles and their Big Ones, and past them something the
-  dwarves call a dragon and do not go near.
-- **The barrow field**, south of Orlhal: Veymar's older kings in a row, waking one at a time.
-- **The sea-wall**, out from Candle Strand along the drowned wall past the Candles, towards
-  Marhal.
-- **Marhal**, drowned, and Merrath the Last in the great light.
+### Band 9-12: the doors open
+
+The Veymarch's old peoples have kept their doors shut for six hundred years. The lanterns going out
+are why they open them now, and the player is who they open them to.
+
+## Lorhal, the Keepers' holm, levels 9-10
+
+**What it is.** The Keepers' town on the one high ground left in the deep fen, west of Blackwater
+Fen past the kept lantern, reached by a punt-channel through the reeds: stilt-houses, eel traps,
+sheep on the dry middle, and the **lantern-hall**, a long house with hooks down both walls where
+the Keepers' dead are lit and wait for a barrow to need them. Round it the deep fen, deeper and older
+than the Company's edge of it, its small barrows lowered by the drains and their lights out. A
+stone causeway runs south from the holm into the reeds, and only the Keepers walk it.
+
+**What it was.** Lorhal ("keeping-hill") was a lamp-wardens' village on a rise in the low
+country, the place their children were taught. It was the first high ground the survivors reached
+on the night of the Drowning, and they have kept it since.
+
+**People.** Maren, keeper of the third light, at home. Keepers who will trade with the player once
+they are known, and young raiders who will not have them there at all; Tirrow among them, when he is
+home. **Essa the Unlit**, a keeper whose own lantern went out in a drowned barrow this spring, and
+who walks the deep fen keeping nothing.
+
+**Secrets.**
+
+- The tally post by the lantern-hall's door, notched for every light the holm has lit since the
+  Drowning: nobody could count the notches in a day. Wick: "That's a lot of somebodies."
+- In the lantern-hall's back room, a hook with no lantern and a name cut over it in the old tongue,
+  scored through: the record of the one they did not let go. Wick: "Somebody went to a lot of
+  trouble to remember to forget that."
+
+**Rumours.**
+
+- "The Keepers' causeway goes south to where the old kings lie. They carry the key on them, and they
+  do not lend it." Leads to the Barrow Field.
+- "There's a hook in the lantern-hall nobody hangs anything on." Leads to the back room.
+
+**Wick.** The Keepers know what it is the moment it comes over the water, and Maren tells it what
+they did: kindled it, unwilling, and sealed it in the hill. She will not say why. Wick: "They put me
+in there. On purpose. I'd like to think I didn't deserve it."
+
+## The Stillwood, levels 10-11
+
+**What it is.** West over Greyford's ford, where the old road goes in under the trees and stops
+being a road. Deadfall, briar and moss, oaks older than the Charter by a thousand years, and no bird.
+The elves' growing things keep it: **briarlings**, thorn grown into the shape of something that walks,
+set to turn people back. Wolves come down off the hills into the eaves in winter and stay.
+
+**What it was.** Veymar's west road ran through it to the elves' courts, a waymarker a mile. The
+elves let the wood close over the road when they stopped coming.
+
+**People.** Nobody who stops to talk. **Old Thornhide**, the oldest boar in the wood, grown through
+with briar so long ago he is more hedge than pig, and the reason the wolves keep to the eaves.
+
+**Secrets.**
+
+- A waymarker in the trees, its cage rusted shut and its light long out, the twin of the Lamp
+  Stone. Wick: "I know this one. I don't know how."
+- A tree in the middle of a clearing that something sang to once, its bark grown in rings that are
+  not rings. Wick: "It's still listening."
+
+**Rumours.**
+
+- "A white stag goes west over the ford at dusk, and nobody who follows it gets far." Leads to the
+  Quiet Court.
+- "The old road's still there under the moss, if you know to look down." Leads to the waymarker.
+
+**Wick.** Quiet in the wood, which is new. "I think the people who live here were right about
+something. I wish I knew what."
+
+## The Quiet Court, levels 11-12
+
+**What it is.** The elves' seat at the Stillwood's heart: a ring of trees round a hall grown rather
+than built, and the **candle grove**, where they light the parting candle for whoever has died and let
+it go out by morning. The Court has come out of its hall to catch the strays going south over the
+wood and let them go on. Some will not be caught: they have run together into **wisps**, lights
+that bite, and in the oldest part of the grove into one great light the Court cannot part.
+
+**What it was.** Where the elves said their goodbyes to Veymar's dead before the kindling, and where
+they stopped coming from.
+
+**People.** The Willow Warden, home from the millpond. An elf of the Court who meets the player, and
+gives them something to call it. **The Many-Lit**, strays run together into one light, a small Great
+Kindling of nobody's making, which the Court grieves over and cannot touch.
+
+**Secrets.**
+
+- The candle grove's oldest stand, a candle-stub on every root, each one let go. Wick: "Every one of
+  these went out on purpose. That's the saddest thing I've ever seen, and I can't say why."
+- A stone where the elves said goodbye to the first of Veymar's dead they ever kindled, and wished
+  they had not. Wick: "They're sorry. For teaching it. Somebody should be."
+
+**Rumours.**
+
+- "The elves are taking the lights over the fen and doing something with them. Putting them out,
+  Tilda says. Letting them go, Maren says." Leads to the grove.
+- "There's a light in the old grove the size of a house." Leads to the Many-Lit.
+
+**Wick.** An elf looks at Wick for a long time and grieves, and does not say what for. Wick: "She
+looked at me like I was a grave."
+
+## Karn Tholl, levels 11-12
+
+**What it is.** Behind the Deep Cut's sealed door, opened with a token Karra Deepvein gives a player
+she has decided is not a goblin: the dwarves' **gate hall**, square-cut, lit and furnished, the
+first room in the Veymarch nobody has robbed. Past it the outer workings the goblins took a century
+ago, and the dwarves' war to take them back, which they are losing politely. A stair at the back goes
+down to the halls the sea took.
+
+**What it was.** The door of Karn Tholl, shut on the night of the Drowning and not opened since.
+
+**People.** Karra Deepvein, home, and the hold's smith, who would like a word about every piece of
+dwarven work the player is wearing. **Snikk the Delver**, a Big One's younger brother, who dug into
+the hold's armoury and has been wearing it.
+
+**Secrets.**
+
+- The hold's ledger of Veymar's debt, in a room off the gate hall, a book the size of a door, one
+  line a hall, every hall the sea took. Wick: "They've been keeping this for six hundred years. Of
+  course they have."
+- A lantern mould on a bench nobody has cleared, the size of a man, never poured. Wick: "Don't. I
+  don't want to know what that was for."
+
+**Rumours.**
+
+- "The dwarves don't go north. There's a hill up there that burnt from the inside, and they say
+  it's still warm." Leads to the Ashen Hollow.
+- "Karn Tholl had halls under the sea, before. The dwarves say had." Leads to the Drowned Halls.
+
+**Wick.** The dwarves refused it something, the Deep Cut's door said; here it remembers what: "They
+wouldn't make it. Whatever I asked for. They said no to my face."
+
+### Band 13-16: the old dead and the old fire
+
+## The High Greyhills, levels 13-14
+
+**What it is.** North of Greyford, above the trees: crag, scree, ironbark on the slopes and wild rams
+on the ledges, and the goblins' knots gathered into a **tangle** under Big Gorb in a dwarven
+lookout they have made a fort of. North of the tangle the hill is black, and the goblins do not go
+over it.
+
+**What it was.** Karn Tholl's high country, where the dwarves kept watch on the west before they
+shut their doors.
+
+**People.** Goblins in threes, braver than anywhere. **Big Gorb**, the tangle's Big One, wearing
+everything shiny he has ever taken, which is most of the shiny things in the Greyhills.
+
+**Secrets.**
+
+- The lookout's old signal-stone, carved with the dwarves' mark and a dragon struck through. Wick:
+  "That's a warning. In any language."
+- A slope of scree fused to glass. Wick: "Something breathed on this."
+
+**Rumours.**
+
+- "Big Gorb's got a seal off a door nobody's opened. He wears it round his neck." Leads to the
+  Ashen Seal.
+
+**Wick.** Up here it can see the sea, a line at the bottom of the sky, and goes quiet. "Don't make me
+look at that."
+
+## The Ashen Hollow, levels 15-16
+
+**What it is.** The dwarves' sealed cave under the burnt hill, its seal on the outside and its door
+broken from the inside long ago: hot, black, and littered with what a dragon does not eat. Crawlers
+come up into it from the drowned halls and blacken in the heat, and a tangle's outcasts feed it what
+they find, and are let live for it. At its bottom, asleep, the one dragon the dwarves know of.
+
+**What it was.** A dwarven forge older than Karn Tholl, sealed with what was in it when they could
+not put it out.
+
+**People.** Goblins who have stopped being afraid, which is worse. **Ashmaw**, the dragon, who is not
+a story.
+
+**Secrets.**
+
+- The dwarves' seal-stone on the inside of the door, cracked. Wick: "They locked it in. It let
+  itself out, and then it went back to sleep. That's the frightening part."
+- The hoard, what is left of six hundred years of goblins' offerings. Wick: "Mostly spoons."
+
+**Wick.** Fire with somebody in it, the first it has seen: "That's not a burning. That's someone."
+
+## The Drowned Halls, levels 14-15
+
+**What it is.** Down Karn Tholl's stair into the hold's deep halls under the low country, which the
+sea took on the night of the Drowning and still half holds: galleries flooded to the knee and to the
+neck, salt eels in the deep water, and the crawlers that came up through them into the Deep Cut, here
+the size of a cart. Their mother is at the bottom, where the sea came in.
+
+**What it was.** Karn Tholl's richest halls, cut under Veymar's coast to be near the kings who bought
+their work.
+
+**People.** Nobody living. **The Shellmother**, what the crawlers come from.
+
+**Secrets.**
+
+- The door where the sea came in, burst inward and never shut. Wick: "One night. They had one
+  night's warning, and it wasn't enough."
+- The last dwarf to leave, in stone, at the stair's foot, carved by the others. Wick: "They carve
+  their dead. That's kinder than what we did."
+
+**Wick.** It remembers making something the dwarves would not: "I made it myself. The lantern. They
+wouldn't, so I did."
+
+## The Barrow Field, levels 15-16
+
+**What it is.** South of Lorhal by the Keepers' causeway, opened with the Keepers' own key: the last
+dry ground of the old low country, and on it Veymar's older kings in a row, a barrow each, their
+lanterns kept by the Keepers for six hundred years and failing one at a time now that the drains have
+cut the field from the holm. Old wights and kings' hounds in the grass. The kings wake in the order
+their lights go out.
+
+**What it was.** Where Veymar laid its kings before Orlath's time, the first of them nearly fifteen
+hundred years ago.
+
+**People.** Keepers at the causeway's foot, keeping what they can. **Essath the Sleepless**, who was
+kindled restless and never slept in his lantern; **Halath**, who held the hills; and **Veyath the
+First**, "light-holder", the first king of Veymar, who wakes last.
+
+**Secrets.**
+
+- A barrow dug and lined and never filled, at the end of the row, with Merrath's mark over its door.
+  Wick: "He had a grave dug. He never meant to lie in it."
+- The kings' row, read from the causeway: every king of Veymar but two. Wick: "Two missing. I know
+  where one is."
+
+**Rumours.**
+
+- "The Keepers say the field's lights are going one a month now." Leads to the field.
+
+**Wick.** The king's face, Merrath's, comes back whole, and that Wick served him: "I knew him. I
+worked for him. I liked him."
+
+### Band 17-20: the sea
+
+## The Sea-Wall, levels 17-18
+
+**What it is.** East along the drowned sea-wall from the end of the southern strand, past the
+Candles: a road of dressed stone a mile into the sea, the sea-lights' towers standing along it dark,
+and the wardens who kept them walking it, drowned. At the far end one light still burns, and past it
+the wall goes down a stair into the sea.
+
+**What it was.** Veymar's sea-wall, the thing the kingdom was named for, its lights kept by wardens
+who gave themselves to them.
+
+**People.** **Vessa of the Last Light**, the warden of the last tower, who was on the wall living
+when her light went into the Great Kindling, and gave herself to the empty lamp before morning to
+light it again. It was too late for the low country, and it has held a mile of sea back alone for
+six hundred years. She lets nobody past her to Marhal.
+
+**Secrets.**
+
+- The wardens' roll on the last tower's door, every warden's name, and Lorn's family on it. Wick:
+  "That's my mother. I think. I'm sorry, I think."
+- The last tower's top, from which Marhal's light is a glow under the water. Wick says nothing.
+
+**Rumours.**
+
+- "One of the Candles still has a light in it, far out. The fishers won't row past it." Leads to the
+  Sea-Wall.
+
+**Wick.** The night it lit it, all of it at once: "I lit it. Midwinter. Every light went out, hers
+too. I did that."
+
+## Marhal, levels 18-19
+
+**What it is.** Drowned Marhal at the wall's end, where Merrath's great light holds the sea off the
+hill it stands on as the sea-lights once held it off the land: streets under a roof of standing
+water, green and dim, the palace at the top, and the great light in its tower. Its dead walk its
+streets, and the **lightbound**, souls the light drew in, come back out of it to guard it.
+
+**What it was.** Veymar's capital, "sea-hill", the one high place on the coast.
+
+**People.** **Merrath the Last** in the great light, waking.
+
+**Secrets.**
+
+- Lorn's workshop off the palace yard, the bench still laid. Wick: "I was good at this. That's the
+  worst of it."
+- The great stair to the light, every step worn by somebody who climbed it to be kindled.
+
+**Wick.** What it has to do, and the ending (`spirit.md`).
+
+### Elsewhere
+
+- **The Candles off the strand** are the sea-lights' stumps; the Sea-Wall is where they lead.
+- **The dragon** is the Ashen Hollow's; the dwarves know of one and there is one.

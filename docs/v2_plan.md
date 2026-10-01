@@ -89,8 +89,11 @@ once, a line of its own otherwise, quiet the tips alone, and its light the one u
 version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
 clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
-with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
-`claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 was folded onto
+`claude/v2-wave-1` and merged to `main` as one PR on 2026-10-01. **and G1** (the shape of 9-20: three bands of four levels, ten zones each with its levels, mouths,
+creatures, boss and ids, a made tier a band with gathering and making to 20, paid travel between
+hubs, two paths a class, an ending the player may argue with, built a band at a time; Part G written
+as phases G2-G16; decision 131). **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
 `claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
 phase lands:
 which phase, and which is next.
@@ -806,17 +809,286 @@ trophy be displayed and still used?
 
 Sized from how long a zone actually took (C11): about half an hour a zone rebuilt, and two to three
 times that for a zone of new content, so an hour and a half to two hours a zone, plus a phase for
-each gear and making tier.
+each gear and making tier. G1 wrote the rest of this part from the user's interview (decision 131,
+below): **three bands of four levels, ten new zones, a made tier a band, a boss a zone, paid
+travel between hubs, two paths a class at 10, an ending the player can argue with and cannot
+change, and the bands built one at a time**, each band's zones beside each other.
 
-- **G1 — The shape of 9-20.** How many bands, zones, gear tiers, making tiers and bosses, written
-  into this plan as phases, each level paced by `tests/world/pace.test.ts` as 1-9 is (decision 122),
-  and whether travel comes back once the world is past these ten zones.
-- **G2 — Specialisations at 10.** Two paths for each class (decision 84), each with its own
-  abilities and ranks; the bar stays four buttons. The duels hold each path to the curve.
-- **G3 onward — The bands**, one zone or one system a phase: magical creatures, new gear and making
-  tiers, bosses whose drops go on the house's stands, quests, rumours, faction content, contracts.
-  The progression simulation is carried to 20 and the cap test moves with it.
-- **Part G review.**
+- **G1 — The shape of 9-20. (Landed.)** The interview, this part, a brief per phase in
+  `docs/v2_parallel_plan.md`, and the lore extended where the shape needed a fact: `places.md`'s
+  lands past 8 written out zone by zone, `spirit.md`'s Part G beats and its ending, `history.md`'s
+  climb to 20, `factions.md`'s seats, `peoples.md`'s stranger things and the paths, and `naming.md`'s
+  list. Docs only. Every fork was the user's, each on Claude's recommendation.
+
+### The shape
+
+**Three bands of four levels**, each about an hour of the bot's play and longer than the one below
+(the pace holds level n to n + 1 at n + 4 minutes, decision 122): **9-12**, the doors opening,
+about 58 minutes; **13-16**, the old dead and the old fire waking, about 74; **17-20**, the sea,
+about 66. **The cap stays derived** (decision 10): the richest thing that spawns is Marhal's 19, so
+`MAX_CHARACTER_LEVEL` reaches 20 when Marhal lands and not before, and each zone moves it as it
+lands, which `progression.test.ts` says.
+
+**Ten zones**, every region the lore names past 8 at least one:
+
+| Band  | Zone (`ZoneId`)                           | Levels | Setting     | Reached from                                      | Boss (level)                    |
+| ----- | ----------------------------------------- | ------ | ----------- | ------------------------------------------------- | ------------------------------- |
+| 9-12  | **Lorhal** (`lorhal`), the Keepers' holm  | 9-10   | marsh       | Blackwater Fen's west edge                        | Essa the Unlit (10)             |
+| 9-12  | **The Stillwood** (`stillwood`)           | 10-11  | open        | Greyford's west edge, over the ford               | Old Thornhide (11)              |
+| 9-12  | **The Quiet Court** (`quiet-court`)       | 11-12  | open        | the Stillwood's west edge                         | the Many-Lit (12)               |
+| 9-12  | **Karn Tholl** (`karn-tholl`)             | 11-12  | underground | the Deep Cut's sealed door, locked                | Snikk the Delver (12)           |
+| 13-16 | **The High Greyhills** (`high-greyhills`) | 13-14  | open        | Greyford's north edge                             | Big Gorb (14)                   |
+| 13-16 | **The Drowned Halls** (`drowned-halls`)   | 14-15  | underground | Karn Tholl's north stair                          | the Shellmother (15)            |
+| 13-16 | **The Barrow Field** (`barrow-field`)     | 15-16  | marsh       | Lorhal's south causeway, locked                   | Veyath the First (16), two more |
+| 13-16 | **The Ashen Hollow** (`ashen-hollow`)     | 15-16  | underground | the High Greyhills' north edge, locked            | Ashmaw (16)                     |
+| 17-20 | **The Sea-Wall** (`sea-wall`)             | 17-18  | open        | Candle Strand's east edge, on the southern strand | Vessa of the Last Light (18)    |
+| 17-20 | **Marhal** (`marhal`)                     | 18-19  | underground | the Sea-Wall's east end, locked                   | Merrath the Last (19)           |
+
+**The world grid** (derived from the edges, `worldMap()`): Lorhal at (-1,2), west of the fen; the
+Barrow Field at (-1,3) under it; the Stillwood at (-2,-1) and the Quiet Court at (-3,-1), west of
+Greyford; the High Greyhills at (-1,-2) north of Greyford and the Ashen Hollow at (-1,-3) north of
+them; Karn Tholl at (0,-3) north of the Deep Cut and the Drowned Halls at (0,-4) north of it; the
+Sea-Wall at (1,1) east of the strand and Marhal at (2,1) east of it. No new cell is any existing
+zone's, and two cells side by side with no exit between them (the Greyhills beside the Deep Cut,
+the Ashen Hollow beside Karn Tholl, the Barrow Field beside the Sunken Barrow, the Sea-Wall under
+Redrag Camp) stay unjoined: a wall
+between them is rock, water or a cliff in their texts.
+
+**Every mouth is fixed here**, so two agents never argue an edge. A mouth is `[first, last]` on the
+edge, both sides the same (decision 119); the old zone's side is re-cut by the phase that opens it,
+in its own commit, and the sweeps say what it costs:
+
+| Edge                                              | Mouth      | What is there                                                                | Opened by      |
+| ------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- | -------------- |
+| Blackwater Fen west ↔ Lorhal east                 | rows 23-27 | the reed channel past the kept lantern's holm; marsh both sides              | G4             |
+| Greyford west ↔ the Stillwood east                | rows 12-16 | the old road over the ford, grown over                                       | G5             |
+| the Stillwood west ↔ the Quiet Court east         | rows 12-16 | the old road, gone to a path                                                 | G6             |
+| the Deep Cut north ↔ Karn Tholl south             | cols 20-24 | the sealed door in the hall's north wall, its kerb of masonry, locked        | G7             |
+| Greyford north ↔ the High Greyhills south         | cols 19-27 | the goats' track up from the yard, east of the stream                        | G9             |
+| the High Greyhills north ↔ the Ashen Hollow south | cols 20-24 | the burnt mouth of the dwarves' sealed cave, locked                          | G10            |
+| Karn Tholl north ↔ the Drowned Halls south        | cols 20-24 | the stair down; G7 lays it as stone to the edge, G11 writes both exit rows   | G7 ground, G11 |
+| Lorhal south ↔ the Barrow Field north             | cols 20-24 | the Keepers' causeway; G4 lays it as stone to the edge, G12 writes both rows | G4 ground, G12 |
+| Candle Strand east ↔ the Sea-Wall west            | rows 26-30 | the southern strand's east end, where the drowned wall comes ashore          | G15            |
+| the Sea-Wall east ↔ Marhal west                   | rows 13-17 | the wall's last tower and the stair down into the held-back sea, locked      | G16            |
+
+A zone that lands before its neighbour lays the ground of the mouth it will be entered from and
+writes no exit to an id that does not exist yet (`ZoneId` is a union, and an exit to nowhere is a
+signpost to nowhere); the later phase writes both exit rows. **Four doors are locked**, each by
+the rule that a key belongs to the zone its door is in (decision 11): Karn Tholl by a **Tholl
+Token** (`tholl-token`) Karra Deepvein hands over for a quest in the Deep Cut at 10; the Barrow
+Field by the **Keepers' Key** (`keepers-key`) from a quest in Lorhal; the Ashen Hollow by an **Ashen
+Seal** (`ashen-seal`) the High Greyhills' goblins carry, dropped as the barrow key is; Marhal by the
+**Sea-Gate Key** (`sea-gate-key`), Vessa of the Last Light's drop. A key handed out by a quest is
+new: it is a quest reward row and spent at the door as every key is.
+
+**Three of the zones are hubs as Greyford is**, people and counters in the middle of a zone with
+creatures round its edges: Lorhal (the Keepers), the Quiet Court (the elves) and Karn Tholl's gate
+hall (the dwarves). A hub's counters are its faction's (D3), its people talk in D1's schema, and
+its rumours lead into its band (D2).
+
+**One made tier a band** (decision 131): gathering and making go to **20**, as the character does
+(`MAX_GATHER_SKILL_LEVEL` from 10, moved once by G3), and each band adds a metal, a leather, a wood
+and a food, so plate, cloth-class leather, arrows, tools and food each get a rung a band, and each
+tier's materials come from that band's zones, so a piece pulls the player across its band the way
+steel pulls them across three zones now (`making.md`). The tier phase lands every row, recipe,
+wardrobe drawing and icon with nothing yet dropping or yielding them except what a recipe makes;
+`deadEnds.test.ts` holds that whole, and the zone phases add the nodes and the drops.
+
+| Band  | Metal (mined where)                                                                                     | Leather (off what)                                 | Wood (cut where)                    | Food (caught where)              | Recipe levels |
+| ----- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------- | -------------------------------- | ------------- |
+| 9-12  | **coldiron** (`coldiron-ore`, Karn Tholl)                                                               | **mirehide** (mire lurkers, Lorhal)                | **bog oak** (Lorhal)                | **pike** (Lorhal)                | 11-13         |
+| 13-16 | **thollsteel** (`deep-ore`, the Drowned Halls; `ashcoal`, the Ashen Hollow; at Karn Tholl's deep forge) | **craghide** (crag rams, the High Greyhills)       | **ironbark** (the High Greyhills)   | **salt eel** (the Drowned Halls) | 14-17         |
+| 17-20 | **seasilver** (`seasilver-ore`, the Sea-Wall)                                                           | **seahide** (reef crabs' undersides, the Sea-Wall) | **saltwood** (the Sea-Wall's drift) | **deep crab** (the Sea-Wall)     | 18-20         |
+
+The ids follow the ones there: `coldiron-bar`, `coldiron-helmet`, `coldiron-chestplate`,
+`coldiron-legs`, `coldiron-shield`, `mirehide-cowl`, `mirehide-vest`, `mirehide-leggings`,
+`bog-oak-shafts`, `coldiron-arrowheads`, `coldiron-arrows`, `coldiron-pickaxe`, `coldiron-axe`,
+`coldiron-pole`, `raw-pike`, `cooked-pike`, `burnt-pike`, and the same shape for `thollsteel-*`,
+`craghide-*`, `ironbark-*`, `salt-eel`, `seasilver-*`, `seahide-*`, `saltwood-*`, `deep-crab`. Each
+leather tier stops short of the plate a smith of the same standing makes and takes a deeper level
+(`making.md`'s fenhide rule). Arrows went crude 1, iron 2, steel 4, doubling, and capped so the bow
+stays the weapon (`making.md`); doubling three more times would break that, so each tier
+phase sets its rung against the band's bows and says so in its decision.
+
+**A boss a zone** (decision 131): a named creature at the zone's top level with `boss: true`, the
+camp never picking it, its table **one unique piece** (`uniqueLoot.test.ts`) a little better in one
+slot than the band's made tier or different from it, and **a trophy** for the house's stands, in
+F1's kind. The Barrow Field has three kings, each a boss with a piece and a trophy. The drops are
+named in each zone's entry.
+
+**Travel is paid, hub to hub** (decision 131, the question decision 122 left): a counter at each
+hub takes the player to any other hub they have walked to, for coin, as a G-phase of its own in band
+2 (G13), when the walk from the house to the Barrow Field passes two minutes. `zones.md`'s "walking
+is the only way into a zone" becomes "the only way into a zone the first time".
+
+**Two paths a class at 10** (decision 131), from `peoples.md`'s hooks: the **warrior** a
+**Bulwark**, who holds a line (shield, armour, a hold on what is hitting them), or a **Breaker**, who
+breaks one (both hands, the heavy blow); the **wizard** a **Firebrand**, fire with nobody in it, or
+a **Wardlight**, the warding light that edges towards the kindling; the **ranger** a **Fenstalker**,
+who hunts the fen's way (snares, a slow, patience), or a **Longbow**, who shoots Aldmark's (reach,
+the volley). G2 settles how one is chosen, whether it can be changed, and the abilities.
+
+**The ending** (decision 131): at the last beat in Marhal the player is asked once whether to let
+Wick go or to ask it to stay. Wick answers each differently and goes either way; the choice moves
+only its last lines and a title (`spirit.md`).
+
+**The order** (decision 131): **a band at a time**. A band's tier lands first; its zones then run
+beside each other, one agent a zone, two that share an edge given to one agent in sequence; G2
+starts once Lorhal's 10s are in `main`, and the band's last zone closes it. The user judges a band's
+zones as they come and the next band's tier starts once they have.
+
+### What each zone is
+
+Each entry is the spec for a phase; its brief is in `docs/v2_parallel_plan.md` ("A zone of Part
+G"). Every zone is **45×32** (decision 86), written as text in its own `src/data/<camel>Map.ts`
+(`lorhalMap.ts`, `stillwoodMap.ts`, and so on); its creatures are rows in `ENEMIES` with loot
+tables, `cast.ts` getups on the figure (decision 108) for anything built like a person and a new
+shape drawn in the phase for anything not; its secrets two, from `places.md`; its rumours told at
+its band's hub or in Greyford and Lampton, through D2; its Wick beat through D4; its faction moved
+through D3. The ids below are the ones the phases take, so two agents writing at once never name the
+same thing twice. Every level is held by the pace test.
+
+**Band 9-12, the doors opening.** Tier one (coldiron, mirehide, bog oak, pike) lands first as G3.
+
+- **G3 — Tier one.** `MAX_GATHER_SKILL_LEVEL` to 20; the coldiron,
+  mirehide, bog oak and pike rows above, their recipes at skill 11-13 at the stations that exist (the
+  forge for coldiron, Greyford's tannery for mirehide, the fletcher's bench for bog oak shafts, a
+  fire for pike), wardrobe drawings and icons, and `coldiron-ore`, the mire lurker's `mire-hide`,
+  `bog-oak` and `raw-pike` as items with nothing yielding them yet. 40-60 files, 2.5-3 hours.
+- **G4 — Lorhal, 9-10.** The Keepers' holm, a stilt town on the one high ground in the deep fen
+  west of Blackwater Fen, reached by punt-channel through the reeds from the kept lantern. In the
+  middle the lantern-hall, where the Keepers' dead wait for a barrow, and Maren's house; round it
+  deep water, reed beds and drowned barrows the drains have lowered. **Creatures:** `mire-lurker`
+  (beast, the lurker grown, its `mire-hide`), `fen-wight` (humanoid, the dead of the small fen
+  barrows the drains put out), and the young raiders who will not have the player there, `fen-raider`
+  at 9. **Boss:** **Essa the Unlit** (`unlit-keeper`, 10), a keeper whose own lantern went out and who
+  woke keeping nothing; drops the **Unlit Lantern** (`unlit-lantern`, an offhand for a caster) and her
+  trophy. **Nodes:** bog oak, the pike's deep water. **Counters:** the Keepers' (fenweave and fen
+  bows, opened by standing), a punt for travel when G13 lands. **Secrets:** `keepers-tally` (the
+  post notched with every light the holm has lit) and `lorns-cell` in the lantern-hall's room (the
+  record of the one they did not let go). **Rumours:** the causeway south to the old kings; the
+  lantern-hall's empty hook. **Wick:** what the fenfolk did to it, and that they will not say why.
+  **Quests:** the Keepers' Key's (G12's door), and Maren's. **Exits:** east to the fen (rows 23-27),
+  south to the Barrow Field's causeway laid to the edge (cols 20-24, G12's rows). Moves the cap to 11.
+  The first level-10 spawn: G2 may start. 25-40 files, 2 hours.
+- **G5 — The Stillwood, 10-11.** West over Greyford's ford, where the old road goes under the trees
+  and no bird sings. Deadfall and briar, a wood that has not been cut since Veymar, and the elves'
+  growing things set to keep people out. **Creatures:** `grey-wolf` (beast, down off the hills),
+  `briarling` (a thing of thorn the elves grew and set walking, a new shape). **Boss:** **Old
+  Thornhide** (`thornhide-boar`, 11), the oldest boar in the wood, grown through with briar; drops
+  **Thornhide Leggings** (`thornhide-leggings`, cloth-class) and a trophy. **Nodes:** none of the
+  tier's (the wood is not cut; that is the point); the hardwood's deadfall at the eaves. **Secrets:**
+  `old-milestone` (the Veymari road's mile-stone, its light long out) and `unsung-tree`. **Rumours:**
+  the white stag seen west of the ford; the Court. **Wick:** the elves were right about something.
+  **Exits:** east to Greyford (rows 12-16), west to the Quiet Court (rows 12-16). The same agent as
+  G6, in sequence. 25-35 files, 1.5-2 hours.
+- **G6 — The Quiet Court, 11-12.** The elves' seat at the heart of the Stillwood: a ring of trees
+  round a hall that was grown rather than built, and the grove where they light the parting candle
+  and let it go out. The Court is catching strays on their way to Marhal and letting them go on, and
+  the ones it cannot catch have gathered. **Creatures:** `wisp` (a stray gone wrong, a light that
+  bites, a new shape and Wick's kin), `briarling`. **Boss:** **the Many-Lit** (`many-lit`, 12), strays
+  run together into one light the Court cannot part, a small Great Kindling of its own; drops the
+  **Many-Lit Orb** (`many-lit-orb`, offhand) and a trophy. **People:** the Willow Warden comes home
+  here, and an elf of the Court gives the player something to call it. **Counter:** the Court's
+  (standing; what it trades is G6's question). **Secrets:** `candle-grove` and `first-goodbye`.
+  **Wick:** an elf looks at it and grieves. **Exits:** east to the Stillwood (rows 12-16). With G5.
+  25-40 files, 2 hours.
+- **G7 — Karn Tholl, 11-12.** Through the Deep Cut's sealed door, opened by the Tholl Token: the
+  dwarves' gate hall, square-cut and lit, their outer workings beyond it where the goblins dug for a
+  century, and the stair down to the halls the sea took. **Creatures:** `goblin-delver` (humanoid,
+  shrunk on the figure as the goblins are) and `goblin-sapper` (throws a firepot, an enemy ability
+  with its telegraph). **Boss:** **Snikk the Delver** (`delver-chief`, 12), a Big One's little brother
+  who found the dwarves' armoury; drops **Dunnrak** (`dunnrak`, a dwarven blade that has its maker's
+  name) and a trophy. **Nodes:** coldiron in the workings. **People and counters:** Karra Deepvein
+  home, and the hold's smith (the deep forge for G8). **Secrets:** `debt-ledger` (Veymar's account,
+  in a room) and `refused-mould`. **Rumours:** a dragon in the north the dwarves do not go near; the
+  drowned halls. **Wick:** the dwarves refused it something, and now it remembers what. **Quest:**
+  Karra's in the Deep Cut for the token (the Deep Cut's text is not touched beyond the door). **Exits:**
+  south to the Deep Cut (cols 20-24, re-cutting its hall's north wall at the door), north the stair
+  laid to the edge (cols 20-24). 30-40 files, 2 hours.
+
+**Band 13-16, the old dead and the old fire waking.** Tier two (thollsteel, craghide, ironbark,
+salt eel) lands first as G8.
+
+- **G8 — Tier two.** The rows above at skill 14-17; thollsteel made only at Karn Tholl's **deep
+  forge**, a new station drawn in this phase and placed in G7's gate hall (a station row and a
+  `STATION_PERSISTS` answer). 40-60 files, 2.5-3 hours.
+- **G9 — The High Greyhills, 13-14.** North of Greyford, the hills above the treeline where the
+  goblins' knots gather into a tangle. Crag and scree, ironbark on the slopes, the goblins' camp in an
+  old dwarven lookout. **Creatures:** `goblin-brute`, `goblin-slinger` (a thrown stone, at range),
+  in knots of three as the mill road's are (decision 9), and `crag-ram` (beast, its `crag-hide`).
+  **Boss:** **Big Gorb** (`big-one`, 14), the tangle's Big One; drops **Gorb's Crown** (`gorbs-crown`,
+  helmet, everything shiny he ever took) and a trophy. Goblins carry the **Ashen Seal**. **Secrets:**
+  `old-lookout` and `scorched-scree`. **Rumours:** what is under the burnt hill. **Exits:** south to
+  Greyford (cols 19-27, re-cutting the yard's north edge), north to the Ashen Hollow (cols 20-24).
+  The same agent as G10, in sequence. 25-35 files, 2 hours.
+- **G10 — The Ashen Hollow, 15-16.** The dwarves' sealed cave under the burnt hill, its door broken
+  from inside long ago, hot, and asleep at its bottom the one dragon the dwarves know of. Pillar 4:
+  the rarest thing in the game, met once. **Creatures:** `ash-crawler` (crawlers come up the drowned
+  halls and blackened by the heat), `cinder-goblin` (a tangle's outcasts who feed it). **Boss:**
+  **Ashmaw** (`dragon`, 16), drawn grown past the budget's 48×64 only if the budget says so (a
+  decision, `art/budget.ts`); drops **Ashmaw's Scale** (`ashmaw-scale`, chest) and a trophy.
+  **Nodes:** ashcoal. **Secrets:** `dwarf-seal` and `dragon-hoard`. **Wick:** fire with somebody in
+  it. **Exits:** south to the High Greyhills (cols 20-24, locked). With G9. 30-40 files, 2 hours.
+- **G11 — The Drowned Halls, 14-15.** Down Karn Tholl's stair into the deep halls the sea took on
+  the night of the Drowning, half under water still, where the cave crawlers come up from. **Creatures:**
+  `deep-crawler`, `salt-eel` as a creature in the flooded galleries (and as a fishing node). **Boss:**
+  **the Shellmother** (`shellmother`, 15), what the crawlers come from; drops the **Shellmother's
+  Carapace** (`shellmother-shield`, offhand) and a trophy. **Nodes:** deep ore, salt eel. **Secrets:**
+  `flooded-door` (where the sea came in) and `last-dwarf`. **Wick:** the dwarves made the lanterns;
+  it made the one they would not. **Exits:** south to Karn Tholl (cols 20-24, both rows). 25-35 files,
+  2 hours.
+- **G12 — The Barrow Field, 15-16.** South of Lorhal by the Keepers' causeway, opened by the
+  Keepers' Key: Veymar's older kings laid in a row on the last dry ground, their lanterns kept by the
+  Keepers for a thousand years and going out now one at a time. **Creatures:** `old-wight`,
+  `grave-hound` (a king's hound buried at his feet, beast). **Bosses:** **Essath the Sleepless**
+  (`sleepless-king`, 15, drops `essaths-blade`), **Halath** (`hill-king`, 15, drops `halaths-crown`)
+  and **Veyath the First** (`first-king`, 16, drops `veyaths-staff`), each with a trophy, each in a
+  barrow of his own entered from the field, the field's kings waking one at a time as the Keepers'
+  lights fail (a king is up when the player has laid the one before: derived from kills). **Secrets:**
+  `empty-barrow` (the one dug for a king who never came) and `kings-row`. **Wick:** the king's face,
+  and that it served him. **Exits:** north to Lorhal (cols 20-24, both rows, locked). 30-40 files,
+  2 hours.
+- **G13 — The carters.** Paid travel between hubs (Lampton, Greyford, Lorhal, Karn Tholl, the Quiet
+  Court; the Sea-Wall's tower when G15 lands): a `'travel'` counter at each hub's row, a price per hop
+  priced against what the pacer reports a level earns, the hubs reached derived from the zone visits
+  tally, arrival at the hub's start. `zones.md` and the zone map say it. 20-30 files, 1.5-2 hours.
+
+**Band 17-20, the sea.** Tier three (seasilver, seahide, saltwood, deep crab) lands first as G14.
+
+- **G14 — Tier three.** The rows above at skill 18-20. 40-55 files, 2.5 hours.
+- **G15 — The Sea-Wall, 17-18.** East along the drowned sea-wall from the southern strand, past the
+  Candles, a road of dressed stone a mile into the sea with the sea-lights' towers standing along it
+  dark, and the drowned wardens of them walking it. **Creatures:** `drowned-warden` (humanoid), `reef-crab`
+  (beast, the Old Shell's kin). **Boss:** **Vessa of the Last Light** (`last-warden`, 18), the one
+  warden whose light still burns, holding a mile of sea back alone and letting nobody past to Marhal;
+  drops **the Last Light** (`last-light`, offhand lantern), a trophy, and the **Sea-Gate Key**.
+  **Nodes:** seasilver in the towers' cages, saltwood, deep crab. **Secrets:** `warden-roll` and
+  `last-tower`. **Wick:** the night it lit it. **Exits:** west to Candle Strand (rows 26-30,
+  re-cutting the southern strand's east end), east to Marhal (rows 13-17, locked). The same agent as
+  G16, in sequence. 30-40 files, 2 hours.
+- **G16 — Marhal, 18-19, and the ending.** Drowned Marhal at the wall's end, where Merrath's light
+  holds the sea back off the hill it stands on as the sea-lights once held it off the land: streets
+  under a roof of standing water, the palace, and the great light. **Creatures:** `marhal-wight`,
+  `lightbound` (souls the light drew in, sent back out to guard it, a new shape). **Boss:** **Merrath
+  the Last** (`last-king`, 19); drops **Merrath's Crown** (`merraths-crown`) and a trophy. Then the
+  ending: Wick's last beat, the one question, and the walk back up out of the sea alone. **Secrets:**
+  `lampwrights-workshop` (in a room) and `great-stair`. **Exits:** west to the Sea-Wall (rows 13-17,
+  both rows). Moves the cap to 20. 35-50 files, 2.5-3 hours.
+- **Part G review.** Walk the bands against the pillars and the user's list, as C11 did; the
+  wizard's survival past 8 (decision 124's leftover) looked at again with G2's paths.
+
+**Sizing.** Ten zones at about two hours, three tiers at about three, G2 at three and G13 at two:
+about thirty-four agent hours, eleven of them on the critical path per band (a tier, then its
+longest zone pair) and so about twelve to fifteen end to end, the figure the parallel plan guessed.
+Each zone phase is 25-40 files, past the 30-file prompt to look (decision 99) because a new zone's
+creatures, drawings, loot, quests, secrets and lore all land with it; one that grows past 45 splits
+its quests and rumours into a follow-up and says so.
+
+**Open questions for Part G**, asked by the phase that meets them: G2's (how a path is chosen,
+whether it changes, what a path's abilities replace); each hub's counter (what the Keepers, the
+Court and the hold trade, and what standing opens there); G13's prices; whether the dragon is drawn
+past the budget; and whether Marhal's ending pays anything beyond its lines and a title.
 
 ---
 
