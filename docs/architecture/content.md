@@ -1,6 +1,6 @@
 # Content and progression
 
-What the data tables hold and the rules over them: loot, quests and objectives, bounties, the stored tallies, and mastery.
+What the data tables hold and the rules over them: loot, quests and objectives, bounties, the stored tallies, mastery, and the collection log.
 
 _Moved out of `CLAUDE.md` on 2026-09-25 (`docs/decisions.md` 57). The paragraphs are the ones that were there, in the order they were there; `CLAUDE.md` keeps the rules and points here for the reasoning. Where this and the code disagree, the code is right — and this file is what should be corrected._
 
@@ -262,3 +262,29 @@ a node or recipe added later gets its pool by construction. The skills book draw
 the node or recipe it belongs to, on that skill's page (`hud/SkillsSheet.ts`, decision 93), which is
 the only comparison a player makes — which tree to chop, never a tree against a bar. It had a page
 of its own until the book (decision 89).
+
+**Drops seen are the fourth stored counter, and the collection log is everything read off the four**
+(version 2 phase F3, `docs/decisions.md` 137, `systems/CollectionSystem.ts`). A drop seen leaves
+nothing behind to count it off — the item is eaten, sold or smelted, and the same item off another
+creature says nothing about this one — so `CharacterState.seen` holds, per creature, the items it has
+been seen to drop, each once, in the order first seen. It is credited in `CombatDirector.grantLoot`
+before the pack is asked, so a drop left in a pile or lost to a camp's full pack still counts, and by
+the parked payout for what a night's kills dropped, kept or lost (`AfkCamp.resolveParked`). It is
+told to the HUD (`drops-seen-changed`) and saved only when something is new, since the hundredth rat
+bone says nothing the first did not.
+
+Everything the log shows is derived, and from the tallies already kept rather than from a fifth:
+slain and the slayer ranks off the kills, an item **gathered** off its node's mastery pool and an item
+**made** off its recipe's (a pool is only fed by a success, so a non-empty one means the thing came
+off the node or the bench), a trophy collected off its boss's drops seen or its quest handed in, and
+what is at home off the house's stands. The **bestiary** is a page a creature (`ENEMIES` order, the
+Feats sheet's): where it is found and at what levels (read off the zones' spawns), slain, ranks, and
+every drop on its table, seen or greyed. The **items collected** are everything a drop, a node's
+yield or a recipe's result hands over, the failures and the shelf's own stock left out. **Lore
+found** is phase D2's count and reads as an empty one until its fragments land.
+
+**An item's card says where it comes from** (`comesFrom` in `systems/ItemUseSystem.ts`), which A2
+left to this phase: every creature whose table names it with the zones it lives in, whatever the
+chance, since a card that kept the rare drops quiet would hide the chase; every node that yields it
+with the zones it grows in; and the quest that hands it over. Off the same tables the log counts, so
+the card and the log cannot disagree about where a thing is found.

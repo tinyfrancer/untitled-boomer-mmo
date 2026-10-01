@@ -3562,3 +3562,44 @@ Claude's, building it:
 - **The trophies are every boss drop and every keepsake**, read off the tables, and a trophy's card
   says where it goes, before the house is the player's as well. The lore gained the Surveyor's House,
   and where the two keepsakes come from.
+
+## 137. The collection log is a seat of its own behind Menu, and drops seen are the fourth stored tally; everything else in it is read off the four
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase F3**
+
+F3 is the collection log and bestiary (decision 88). The brief's two forks were settled with wave 2's
+answers, both on Claude's recommendation: **Collection is a seat of its own behind Menu**, the one
+the parallel plan's collision table reserved; and **drops seen are the fourth stored tally**, since a
+drop seen leaves nothing behind to count, `CLAUDE.md`'s "only three tallies" gaining that line and
+its reason. **Rejected:** the Feats sheet growing pages (Feats, Bestiary, Collection), which puts two
+lists that both run a row a creature under one title; deriving drops seen from the bag, which forgets
+whatever was eaten, sold or smelted.
+
+Claude's, building it, each the recommended option and the wave review's to overturn:
+
+- **A drop is seen when it falls, kept or not**: a drop left in a pile by a full pack, lost to a
+  camp's, or named in the away report as missed all count, since the player was told of each.
+  **Rejected:** only what reached the bag, which would make a full pack hide the bestiary. Coin is
+  not a drop here; a purse is what the creature had.
+- **The items collected are read off the tallies already kept, not a fifth**: an item dropped off
+  the drops seen, an item gathered off its node's mastery pool and an item made off its recipe's,
+  since a pool is only fed by a success. **Rejected:** an "items ever held" tally, a fifth stored
+  record of facts three of the four already hold. A recipe's failure and the shelf's own stock are
+  not in the list: nobody sets out to collect a burnt fish, and a tool bought is not found.
+- **A drop not yet seen is named, greyed**, not hidden behind question marks: the item's card names
+  every creature that drops it, so hiding the name on the bestiary would be a puzzle the card already
+  answers. **Rejected:** "???" until seen.
+- **A trophy is collected once seen off its boss or once its quest is handed in**, whatever has
+  become of it since, and the row says when it is at home. **Rejected:** collected only while held or
+  on a stand, which would uncollect a trophy sold.
+- **The card's "where it comes from" names every dropper whatever the chance**, with the zones it
+  lives in, every node with the zones it grows in, and the quest that hands an item over, which the
+  brief did not ask for and a keepsake's trophy row needed anyway. **Rejected:** leaving out drops
+  under some chance, which would hide the chase.
+- **Lore found is D2's**, building beside this phase: the log reads an empty count until its
+  fragments land, and a boss's lore on its bestiary page waits for the same. **Rejected:** a count of
+  the secrets found standing in for lore, which D2 may count differently.
+- **The mark is a skull and the key is `b`**, for bestiary; no other key was free that said it.
+- **Save version 110** (decision 125's reservation), its step keyed at 109. Until D2 and D3 merge
+  their steps at 107 and 108, this branch carries two that pass a save through unchanged, so its
+  chain has no gap; theirs replace them at the merge.
