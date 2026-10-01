@@ -248,7 +248,8 @@ behind those, or the panel goes on promising the old night. **So is when a tip a
 what it says** (`systems/TipSystem.ts`): each tip is a rule over the character, and its line reads
 the fee, the price or the ceiling it names off the table or constant that holds it. What has been
 heard is stored (`CharacterState.tips`), since hearing leaves nothing else behind, and so is every
-secret found (`CharacterState.secrets`, decision 117), which leaves nothing either.
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and the time left
+on each potion drunk (`CharacterState.potions`, decision 129), which a night away reads.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can

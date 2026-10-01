@@ -3303,3 +3303,53 @@ Claude's, alongside them:
 
 **Rejected:** a smoke section of its own for the walk; its script, which drops a character into each
 zone through the save, was scaffolding for the review, as A10's and B9's were.
+
+## 129. Potions: foraging and brewing at a still, four potions one kind each, their clocks kept on the character and honoured away
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase E2**
+
+E2 is decision 85's other half, potions brewed in active play that boost idle gains. The user settled
+the brief's four questions with wave 1's answers, and four more at the start of the phase, each on
+Claude's recommendation:
+
+- **Herbs come from a fourth gathering skill with nodes and a tool of its own**, foraging and the
+  sickle, sold at the shop like the other three; **potions are brewed at a new station, a still**,
+  drawn in this phase and placed at Greyford; **one potion a kind**: gathering speed, a fight, idle
+  XP, and luck on a roll; **herbs grow in the fen and on the mill road's bank, a low one on the
+  strand, and none in Lampton**. **Rejected:** herbs off existing nodes and drops; brewing at a
+  campfire, which would make the fire two skills' station; herbs everywhere.
+- **A potion works through a closed game for the time it has left.** Its clock is saved on the
+  character, and a night away pays Keeper's Watch and Quick Hands for those minutes, under the same
+  ceilings. **Rejected:** an open-game potion whose clock pauses when the game closes; one whose
+  clock runs on in real time and is wasted.
+- **Keeper's Watch lifts idle from half of active XP to three-quarters**, the away ceiling unchanged,
+  so idle stays behind active (decision 15). **Rejected:** idle matching active while it lasts; three
+  quarters and a higher ceiling.
+- **The fight potion takes the edge off hits**: armour, about one piece of the band's gear.
+  **Rejected:** more attack power; a heal over time that works in a fight, the one thing food cannot.
+- **The luck potion betters both rolls**: the second one off a gather or a job, and each drop.
+  **Rejected:** drops only; the second-one roll only.
+
+Claude's, building it:
+
+- **The ladder is one herb a band**: samphire at foraging 1 on Candle Strand, meadowsweet at 4 on the
+  mill road's banks, bog myrtle at 6 and bogbean at 8 in the fen; brewing makes one potion a herb at
+  1, 3, 5 and 7, and **the upper two each take a herb from the rung below**, so the strand and the
+  mill road are not retired the day the fen opens. A failed brew keeps the herbs. A patch is walked
+  through and cut out in three. The still stands in Greyford's yard below the ford, reachable from
+  the starter band without a fight above it.
+- **A potion is a fifth kind of item**, drunk at full health or in a fight, since it heals nothing.
+  **Quick Hands** takes a fifth off a gather for ten minutes; **Dulled Pain** adds five armour for
+  three, which the duels hold to winning none of the contract's losses; **Keeper's Watch** lasts
+  thirty; **Fortune** adds a tenth to the second-one chance and makes each drop a quarter likelier,
+  capped at certain, for ten. A second of a kind starts the clock again rather than stacking. Each
+  sells for a little over its herbs.
+- **The clocks live on `CharacterState.potions`** and run on game time; a parked session spends them
+  by the time it was away. The fight and luck potions do nothing offline, where a night is a rate.
+  The idle panel says which potions are running and whether each counts away. Save version 106, as
+  decision 125 reserves it, keyed to 103 on this branch until the three steps reserved ahead of it
+  (D1, E1, D4) are in its chain.
+- **Named from the lore** (decision 114): the fenfolk's brewing, written into `peoples.md`, and the
+  herbs and the still into `places.md`.
+- **Found and left:** the steel tools' `gatherSpeedBonus` is never passed when a gather begins, so it
+  does nothing in play; queued as its own task rather than widening this phase.
