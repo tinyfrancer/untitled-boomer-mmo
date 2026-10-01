@@ -113,6 +113,14 @@ after the death fee, and the reason the pack stays small and awkward while the d
 shelves. It _caps_ at `MAX_BANK_SLOTS`, which is what left the endgame with a purse and nowhere to
 spend it until the reforging stone went on the shelf above it — see reforging, below.
 
+**The house's chest is the bank's rule at a fixed size** (decision 124): weightless, a slot an item
+id however deep the stack, eight slots and nothing to rent, stored in `CharacterState.house` with
+what stands on the house's stands. It is a store beside the vault, not a second vault: the bank is
+where the depth goes, and F2 may grow the chest. Its panel is the bank's two sides with no shelf row,
+run by `HouseSession`, which saves on every move for the bank's reason. A stand holds one trophy (a
+boss's drop or a keepsake) out of the bag and hands it back on a tap, refused whole on a full pack,
+so displaying a trophy never spends it.
+
 The counter is the shop's twin down to the shape: opened at `NPC_INTERACT_RADIUS`, shut by walking
 past `NPC_CLOSE_RADIUS`, a HUD overlay handed a _copy_ of the contents on `bank-changed`, and bare
 item ids and counts coming back — so a panel in an HTML overlay never holds the vault, and a count
