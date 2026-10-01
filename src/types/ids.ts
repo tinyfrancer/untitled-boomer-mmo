@@ -484,4 +484,8 @@ export type SecretId =
   | 'pond-shrine'
   | 'charter-ledger'
   | 'bridge-keystone'
-  | 'back-room';
+  | 'back-room'
+  | 'drowned-village'
+  | 'kept-lantern'
+  | 'sealed-door'
+  | 'makers-mark';

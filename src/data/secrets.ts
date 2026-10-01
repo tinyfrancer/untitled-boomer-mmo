@@ -146,6 +146,55 @@ export const SECRETS: Record<SecretId, SecretDefinition> = {
     cache: { copper: 40, items: [{ itemId: 'reforging-stone', quantity: 1 }] },
     blocks: null,
   },
+  // Under the mere in the fen's west, where a village of Veymar's low country
+  // went under the night the sea came in: its roofs are still down there, seen
+  // from the south shore, with a chimney or two standing out of the water. What
+  // the fenfolk threw in for it lies in the silt.
+  'drowned-village': {
+    id: 'drowned-village',
+    zoneId: 'blackwater-fen',
+    name: 'The Drowned Village',
+    line: 'Those are roofs, a whole street of them under the water. Did they know it was coming?',
+    cache: { copper: 70, items: [] },
+    blocks: null,
+  },
+  // On a holm in the reeds at the fen's south-west, cut off from the rest but for
+  // a neck of reed: a lantern still burning on its post over a barrow, kept by
+  // somebody, and what the keeper left beside it. A fenfolk's soul is in it,
+  // keeping whoever is under the mound asleep (`docs/lore/history.md`).
+  'kept-lantern': {
+    id: 'kept-lantern',
+    zoneId: 'blackwater-fen',
+    name: 'The Lantern Still Burning',
+    line: "There's somebody in that lantern. They're holding very still, as if something underneath might hear.",
+    cache: { copper: 100, items: [] },
+    blocks: { width: TILE_SIZE / 4, height: TILE_SIZE / 4 },
+  },
+  // In the north wall of the hall at the bottom of the Deep Cut, where the
+  // goblins stopped digging: Karn Tholl's door, sealed six hundred years and
+  // marked. Wick's beat for the Deep Cut (`docs/lore/spirit.md`), that the
+  // dwarves refused it something. The coin is the goblins', left where they
+  // stopped.
+  'sealed-door': {
+    id: 'sealed-door',
+    zoneId: 'deep-cut',
+    name: 'The Sealed Door',
+    line: 'They said no. I remember them saying no. What did I ask them for?',
+    cache: { copper: 85, items: [] },
+    blocks: null,
+  },
+  // At the end of a passage off the door's hall, a wall short of the east
+  // working: the dwarves' mark cut into the old workings where no goblin's pick
+  // has reached, a name and a reckoning, since a dwarf keeps accounts of
+  // everything and debts above all.
+  'makers-mark': {
+    id: 'makers-mark',
+    zoneId: 'deep-cut',
+    name: "The Maker's Mark",
+    line: "It's a name, with a sum cut under it. Whoever signed this wall expects to be paid.",
+    cache: { copper: 65, items: [] },
+    blocks: null,
+  },
 };
 
 /**

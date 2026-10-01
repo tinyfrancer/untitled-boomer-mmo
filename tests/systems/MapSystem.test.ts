@@ -317,7 +317,16 @@ describe('secretsFound', () => {
     expect(secretsFound('town', ['lamp-stone', 'warden-niche'])).toEqual({ found: 1, total: 2 });
   });
 
+  // Every zone hides one since the rebuilds (decision 121), so one is emptied
+  // for the length of the test, as a zone Part G adds may be.
   it('says nothing for a zone that hides none', () => {
-    expect(secretsFound('deep-cut', ['lamp-stone'])).toBeNull();
+    const zone = ZONES['deep-cut'];
+    const hidden = zone.secretSpawns;
+    zone.secretSpawns = [];
+    try {
+      expect(secretsFound('deep-cut', ['lamp-stone'])).toBeNull();
+    } finally {
+      zone.secretSpawns = hidden;
+    }
   });
 });

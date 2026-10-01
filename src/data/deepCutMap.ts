@@ -1,67 +1,87 @@
 import { layoutZone } from './zoneText';
 
 /**
- * The quarry's shaft, followed north until it stopped being a quarry: solid
- * rock with the workings cut out of it, which is the hideout's trick rather
- * than the outdoor maps'. What makes it a different place from the hideout is
- * the shape: not two rooms and a corridor to be fought along, but a gallery
- * you arrive in and two faces worked at the far end, with the hall between
- * them wide enough that nothing here is a bottleneck. Creatures do not path,
- * so a chaser steers straight at the player and slides along whatever it
- * hits, and a map of narrow passages is a map where geometry decides the
- * fight.
+ * The Deep Cut (decision 121, `docs/lore/places.md`): the New Cut's shaft
+ * followed down until it stopped being a shaft, into what were the outer
+ * workings of Karn Tholl. Solid rock, read south to north the way it is walked,
+ * and depth is the dial the whole way down.
  *
- * The gallery spans the full width of the south edge because its exit names no
- * mouth, so the whole edge is one: an arrival lands anywhere along it, at the
- * fraction of the New Cut's shelf it was crossed at. A vault is entered at a
- * mouth a few tiles across instead (decision 119), which this zone's rebuild may
- * take. The two workings each overlap the hall, so the whole map is one
- * connected space.
+ * The way in is a mouth seven tiles across the south edge, the shaft's own
+ * width, and the New Cut's north edge opens at the shaft's head across the same
+ * seven, so a body comes down the shaft and arrives at the foot of it. The shaft
+ * opens into the goblins' gallery, rough and wide, rock left standing in it and
+ * water in its east end where the crawlers come up. Off it the goblins followed
+ * two workings north, coal at their near ends and rich iron at their backs.
+ *
+ * Between the workings is the dwarves' road, cut square and lined in dressed
+ * stone, which the goblins broke into from the gallery; it goes north into the
+ * hall where they stopped digging, at the door in its north wall. A passage off
+ * the hall's east side ends a wall short of the east working, where the mark is
+ * cut: the goblins dug to within a wall of it and never through.
  */
 export const DEEP_CUT_LAYOUT = layoutZone(
   'deep-cut',
   `
-    #########################
-    #########################
-    ###############________##
-    ##_______######____w_c_##
-    ##_w_c___######_d______##
-    ##_______######________##
-    ##_____d_######________##
-    ##_______######__c_____##
-    ##_________________bv__##
-    ##_v_b______@_a________##
-    ##____________v_#########
-    #########__a____#########
-    #########_v_____#########
-    #########_______#########
-    #########_______#########
-    _________________________
-    _____a_____________a_____
-    _________________________
-    _________________________
+    #############################################
+    ##############%%%%%%%%%%%%%%%%%##############
+    ##############%_______n_______%%%%%##########
+    ##############%_________________k_%##########
+    ##############%_____c_______e_____%##########
+    ######w____###%___________________%____w#####
+    ######_____###%__e_______c____%%%%%_____#####
+    ####____c___##%_______________%##________####
+    ####_______w##%_______________%##w__c____####
+    ####________##%%%%%_______%%%%%##________####
+    ####________######%_______%######________####
+    ####___##___######%_______%######___##___####
+    ####___##___######%___e___%######___##___####
+    ####_b______######%_______%######______b_####
+    ####________######%_______%######_b______####
+    ####______b_######%_______%######________####
+    ####v_______######%_______%######_______v####
+    ####________######%_______%######________####
+    ##########__________________v______##########
+    #######v_________________________a____#######
+    #######____________a___________________v#####
+    #####________##_______________##____~~~_#####
+    #####v_______##___________a___##____~~~_#####
+    #####____a__________________________~~~_#####
+    #######__________v_________________a__#######
+    ###################_______###################
+    ###################_______###################
+    ###################_______###################
+    ###################___@___###################
+    ###################_______###################
+    ###################_______###################
+    ###################_______###################
   `,
   {
     '@': { start: true, on: 'stone' },
+    // In the hall's north wall, where the goblins stopped.
+    n: { secret: 'sealed-door', on: 'stone' },
+    // In the north wall at the end of the passage off the hall.
+    k: { secret: 'makers-mark', on: 'stone' },
     /**
-     * The seams, and the whole of what the zone is gated by: coal in the hall
-     * and at the near end of each working, rich iron at the back of both, so the
-     * deeper a seam the higher the level that opens it. Nothing here needs a
-     * key; what stops a character at the mouth of a working is the pick in their
-     * hands, and `tests/systems/deepCut.test.ts` holds that.
+     * The seams, and the whole of what the zone is gated by: coal round the
+     * gallery and at the near end of each working, rich iron at the back of
+     * both, so the deeper a seam the higher the level that opens it. Nothing
+     * here needs a key; what stops a character at the mouth of a working is the
+     * pick in their hands, and `tests/systems/deepCut.test.ts` holds that. Each
+     * stands against rock, never a body's width off it.
      */
     v: { node: 'coal-vein', on: 'stone' },
     w: { node: 'rich-iron-vein', on: 'stone' },
     /**
-     * Nothing aggressive stands between the way in and the hall: the gallery,
-     * where a traveller arrives anywhere along the south edge, holds only
+     * Nothing aggressive stands between the way in and the workings: the shaft,
+     * where a traveller arrives and a death puts them, and the gallery hold only
      * crawlers, passive and armoured and slow. The levels climb with depth, the
-     * quarry's dial one zone down, and the miners hold the far ends of both
-     * workings, standing over the rich seams they are cutting.
+     * quarry's dial one zone down: the fives in the gallery and halfway up the
+     * workings, the sixes at the workings' backs over the rich seams and in the
+     * hall in front of the door.
      */
     a: { mob: 'cave-crawler', level: 5, on: 'stone' },
     b: { mob: 'goblin-miner', level: 5, on: 'stone' },
     c: { mob: 'goblin-miner', level: 6, on: 'stone' },
-    d: { mob: 'cave-crawler', level: 6, on: 'stone' },
+    e: { mob: 'cave-crawler', level: 6, on: 'stone' },
   },
 );

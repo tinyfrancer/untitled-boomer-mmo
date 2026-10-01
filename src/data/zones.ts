@@ -92,11 +92,11 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     setting: 'open',
     description: 'Tin and iron in the rock, and rats in the spoil. Bring a pickaxe.',
     ...QUARRY_LAYOUT,
-    // The road north, and the second exit in the game to cost the zone it leaves
-    // a re-cut: the face ran across the whole of that edge. See `quarryMap.ts`.
+    // The way down is the shaft's head through the face, and only the shaft:
+    // the Deep Cut is entered at a mouth its width (decision 121).
     exits: [
       { edge: 'south', to: 'town' },
-      { edge: 'north', to: 'deep-cut' },
+      { edge: 'north', to: 'deep-cut', mouth: [19, 25] },
       { edge: 'west', to: 'greyford' },
     ],
   },
@@ -121,7 +121,7 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     setting: 'underground',
     description: 'Coal and rich iron under the quarry, and goblins already working them.',
     ...DEEP_CUT_LAYOUT,
-    exits: [{ edge: 'south', to: 'quarry' }],
+    exits: [{ edge: 'south', to: 'quarry', mouth: [19, 25] }],
   },
   'bandit-camp': {
     id: 'bandit-camp',
@@ -171,9 +171,11 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
    *
    * Reached by walking south off the beach, which cost the beach its wall of
    * ocean — see `beachMap.ts` for what an exit charges the zone it arrives in.
-   * It has since paid the same bill itself, one edge further on: the road to the
-   * barrow made its own south edge an arrival strip, and the deep pools and the
-   * men over them were standing on it.
+   * It paid the same bill itself one edge further on, when the road to the
+   * barrow made its whole south edge an arrival strip and the deep pools and the
+   * men over them had to move off it; the rebuild narrowed that edge to the
+   * barrow's door (decision 121), so the black water can come down to it either
+   * side and a raider is kept off the door's five tiles rather than off the edge.
    */
   'blackwater-fen': {
     id: 'blackwater-fen',
@@ -181,9 +183,11 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
     setting: 'marsh',
     description: 'Eels in the deep pools and raiders standing over them. Bring a pole.',
     ...BLACKWATER_FEN_LAYOUT,
+    // The way on is the barrow's door, and only the door: the same five tiles
+    // as the barrow's own mouth, the water either side of it (decision 121).
     exits: [
       { edge: 'north', to: 'beach' },
-      { edge: 'south', to: 'sunken-barrow' },
+      { edge: 'south', to: 'sunken-barrow', mouth: [20, 24] },
     ],
   },
   /**
@@ -200,8 +204,8 @@ export const ZONES: Record<ZoneId, ZoneDefinition> = {
    * fen carry it, and the mouth is at the bottom of their marsh, so the grind and
    * the door are in the same place.
    *
-   * Its cost to the fen is written up in `blackwaterFenMap.ts`: an exit needs its
-   * whole shared edge clear on both sides, and the deep pools were on that edge.
+   * Its door is at the bottom of the fen, a mouth either side of the edge
+   * between them, the same five tiles (decisions 119 and 121).
    */
   'sunken-barrow': {
     id: 'sunken-barrow',
