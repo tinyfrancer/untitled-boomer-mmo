@@ -78,8 +78,21 @@ on the shelf; the wizard and the ranger grow six health a level; no travel until
 character's bag with sixteen cooked rats in it, two names on one line a word's space apart, and a
 zone measured at about half an hour rebuilt and an hour and a half to two hours new; decision 124).
 From C11 the phases are built several at a time, by the rules and briefs in
-`docs/v2_parallel_plan.md` (decision 123). **Next: G1**, with wave 1 (D1, D4, E1, E2 and F1)
-already in flight. Update this line as each phase lands:
+`docs/v2_parallel_plan.md` (decision 123), and from wave 1 each wave merges through its own branch
+with its numbers reserved at launch (decision 125). **and D1** (dialog: the townsfolk under their lore names with their trade beside them, topics as
+data with answers that lead on, and a person who remembers what was asked for good; decision 126). **and E1** (rested: idle banks it by time, open or closed, to half a level and full in a night;
+XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment ahead
+of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
+banked; save version 104; decision 127). **and D4** (Wick in the world: a light at the shoulder that glows and chimes when it has something
+to say and says it on the card when tapped, the tips waiting in it, nine beats of its story heard
+once, a line of its own otherwise, quiet the tips alone, and its light the one underground; save
+version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
+still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
+clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
+`claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
+`claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
+phase lands:
 which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
