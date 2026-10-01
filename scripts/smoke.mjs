@@ -1242,7 +1242,7 @@ async function feedback() {
   });
   check(
     'a real click on the shopkeeper talks first: a greeting, the Shop button and their work, clear of the tab bar',
-    talk.title === 'Shopkeeper' &&
+    talk.title === 'Tilda Pell' &&
       /^\u201c.+\u201d$/.test(talk.greeting) &&
       talk.services.length === 1 &&
       talk.services[0] === 'merchant' &&
@@ -5605,6 +5605,81 @@ async function backRoom() {
   await draw();
 }
 
+async function dialog() {
+  // --- Dialog (D1): a person's topics are buttons in the conversation, a real
+  // click asks one and the answer replaces the greeting under the question,
+  // and the topic is grey when the player comes back, because the character
+  // remembers what was asked. The rules are tests/world/dialog.test.ts's; what
+  // needs a browser is the round trip through the panel and the walk away. ---
+  await standSouthOf(BANKER);
+  await clickAt(await screenAt(BANKER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'banker'),
+    'the tapped banker to talk',
+  );
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="vault"]');
+  await step(2);
+  const asked = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--talk');
+    const rect = box?.getBoundingClientRect();
+    const bar = document.querySelector('.hud-tabs')?.getBoundingClientRect();
+    return {
+      question: box?.querySelector('.hud-talk__asked')?.textContent ?? '',
+      answer: /** @type {HTMLElement | null} */ (box?.querySelector('.hud-talk__greeting'))?.dataset
+        .answer,
+      grey: /** @type {HTMLElement | null} */ (
+        box?.querySelector('.hud-talk__topic[data-topic="vault"]')
+      )?.dataset.asked,
+      remembered: window.world.character.state.asked.banker ?? [],
+      clear:
+        rect && bar ? rect.bottom <= bar.top && rect.left >= 0 && rect.right <= innerWidth : false,
+    };
+  });
+  check(
+    'a topic clicked is asked: the answer under the question, the button grey, the character remembering',
+    asked.question.length > 0 &&
+      asked.answer === 'vault' &&
+      asked.grey === 'true' &&
+      asked.remembered.includes('vault') &&
+      asked.clear,
+    JSON.stringify(asked),
+  );
+  await page.screenshot({ path: `${OUT}/9b-dialog.png` });
+
+  // Walked off and back: the conversation starts again at the greeting, and
+  // the topic is still grey.
+  await page.evaluate(`(() => {
+    const at = ${BANKER};
+    window.world.teleport(at.x, at.y + 400);
+  })()`);
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk') === null),
+    'the conversation to end on walking off',
+  );
+  await standSouthOf(BANKER);
+  await clickAt(await screenAt(BANKER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'banker'),
+    'the banker to talk again',
+  );
+  const back = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--talk');
+    return {
+      asked: box?.querySelector('.hud-talk__asked') !== null,
+      greeting: box?.querySelector('.hud-talk__greeting')?.textContent ?? '',
+      grey: /** @type {HTMLElement | null} */ (
+        box?.querySelector('.hud-talk__topic[data-topic="vault"]')
+      )?.dataset.asked,
+    };
+  });
+  check(
+    'back at the banker, a greeting again and the topic asked still grey',
+    !back.asked && /^\u201c.+\u201d$/.test(back.greeting) && back.grey === 'true',
+    JSON.stringify(back),
+  );
+  await page.evaluate(() => window.world.closeCounters());
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -5625,6 +5700,7 @@ const SECTIONS = [
   ['feedback', feedback],
   ['loot-piles', lootPiles],
   ['bank', bank],
+  ['dialog', dialog],
   ['trainer', trainer],
   ['bounty-board', bountyBoard],
   ['forge', forge],

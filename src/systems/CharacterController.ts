@@ -76,6 +76,7 @@ import type {
   GearSlotId,
   ItemId,
   MasteryTargetId,
+  NpcId,
   QuestId,
   ReforgeId,
   SecretId,
@@ -748,6 +749,17 @@ export class CharacterController {
   markSecretFound(secretId: SecretId): boolean {
     if (this.state.secrets.includes(secretId)) return false;
     this.state.secrets = [...this.state.secrets, secretId];
+    return true;
+  }
+
+  /**
+   * Notes an answer heard from somebody, answering false for one already heard.
+   * Remembered for good: a topic goes grey once asked.
+   */
+  markAnswerHeard(npcId: NpcId, answerId: string): boolean {
+    const heard = this.state.asked[npcId] ?? [];
+    if (heard.includes(answerId)) return false;
+    this.state.asked = { ...this.state.asked, [npcId]: [...heard, answerId] };
     return true;
   }
 

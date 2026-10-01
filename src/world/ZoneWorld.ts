@@ -9,6 +9,7 @@ import {
   AFK_SET_REQUESTED_EVENT,
   IDLE_FOOD_KEEP_REQUESTED_EVENT,
   IDLE_FOOD_MOVE_REQUESTED_EVENT,
+  ASK_TOPIC_REQUESTED_EVENT,
   COUNTER_CLOSED_EVENT,
   COUNTER_REQUESTED_EVENT,
   REFORGE_REQUESTED_EVENT,
@@ -583,6 +584,7 @@ export class ZoneWorld implements Targeting {
     listen(CONTEXT_ACTION_REQUESTED_EVENT, (actionId) => this.contextMenu.run(actionId));
     listen(TIP_HEARD_EVENT, (tipId) => this.tips.heard(tipId));
     listen(TIPS_SET_REQUESTED_EVENT, (on) => this.tips.set(on));
+    listen(ASK_TOPIC_REQUESTED_EVENT, (topicId) => counters.talk.ask(topicId));
   }
 
   /** Drops every subscription. The host calls this before building the next world. */
