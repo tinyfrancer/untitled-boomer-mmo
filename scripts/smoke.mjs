@@ -2880,6 +2880,70 @@ async function playerColumn() {
   check('the XP progress is printed inside the XP bar', await insideItsBar('.hud-player__xp'));
   check('and the health readout inside the health bar', await insideItsBar('.hud-player__hp'));
 
+  // --- Rested (phase E1): idle banks it as it runs, and the XP bar shows how
+  // far it reaches as a paler segment ahead of the fill. Banked for real, by
+  // idle on the hand crank: a level 1 banks a whole point every five minutes or
+  // so, and where nothing is in reach idle only stands and banks. ---
+  await startIdle();
+  for (let minute = 0; minute < 8; minute += 1) await step(60, 1000);
+  await draw();
+  const rested = await page.evaluate(() => {
+    const bar = document.querySelector('.hud-player__xp');
+    const segment = bar?.querySelector('.hud-bar__rested');
+    const fill = bar?.querySelector('.hud-bar__fill');
+    const rect = (/** @type {Element | null | undefined} */ node) => {
+      if (!node) return null;
+      const { x, right, width } = node.getBoundingClientRect();
+      return { x, right, width };
+    };
+    return {
+      banked: Math.floor(window.world.character.state.rested),
+      label: bar?.querySelector('.hud-bar__label')?.textContent ?? '',
+      bar: rect(bar),
+      segment: rect(segment),
+      fill: rect(fill),
+    };
+  });
+  check(
+    'idle banks rested, drawn as a segment past the fill inside the XP bar, and named on it',
+    rested.banked > 0 &&
+      rested.label.endsWith(`${rested.banked} rested`) &&
+      rested.bar !== null &&
+      rested.segment !== null &&
+      rested.fill !== null &&
+      rested.segment.width > 0 &&
+      rested.segment.right > rested.fill.right &&
+      rested.segment.right <= rested.bar.right + 1,
+    JSON.stringify(rested),
+  );
+  // The widest line the bar carries before the cap, measured in the label's
+  // own font rather than set on the character: a level 8 one point short of 9,
+  // with a full bank.
+  const fits = await page.evaluate(() => {
+    const label = document.querySelector('.hud-player__xp .hud-bar__label');
+    if (!(label instanceof HTMLElement)) return null;
+    const style = getComputedStyle(label);
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context) return null;
+    context.font = `${style.fontSize} ${style.fontFamily}`;
+    const room = label.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return { width: context.measureText('7,899 / 7,900 XP, 3,950 rested').width, room };
+  });
+  check(
+    'the widest rested line still fits inside the XP bar',
+    fits !== null && fits.width <= fits.room,
+    JSON.stringify(fits),
+  );
+  await page.keyboard.down('w');
+  await step(2);
+  await page.keyboard.up('w');
+  // Spent back to nothing so a later section's XP reads as it always has.
+  await page.evaluate(() => {
+    window.world.character.state.rested = 0;
+    window.events.emit('rested-changed', 0);
+  });
+  await park();
+
   const hp = await box('.hud-player__hp');
   const xp = await box('.hud-player__xp');
   const column = await box('.hud-player');

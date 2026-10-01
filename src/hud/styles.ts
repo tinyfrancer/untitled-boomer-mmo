@@ -191,6 +191,14 @@ export function hudCss(): string {
   width: 0;
   ${barFill(THEME.bars.xp)}
 }
+/* How far the rested bank carries the XP bar (phase E1): paler than the fill and
+   ahead of it, its far end where the bank runs out. */
+.hud-bar__rested {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: ${cssRgba(rampStep(THEME.bars.xp.ramp, 4), 0.35)};
+}
 .hud-bar__fill--mana {
   ${barFill(THEME.bars.mana)}
 }
