@@ -52,12 +52,18 @@ export class TalkSession extends CounterSession {
   }
 
   /**
-   * An answer's effects. There are none yet: D2's rumours and D3's standing
-   * are each a member of `DialogEffect` and a case here, and this stops
-   * compiling the day the first is added.
+   * An answer's effects, each a member of `DialogEffect` and a case here: a
+   * rumour told or a piece of lore learned goes in the journal (D2).
    */
-  private apply(effect: DialogEffect): never {
-    return effect;
+  private apply(effect: DialogEffect): void {
+    switch (effect.kind) {
+      case 'rumour':
+        this.ctx.noteWhisper({ kind: 'rumour', rumourId: effect.rumourId });
+        return;
+      case 'lore':
+        this.ctx.noteWhisper({ kind: 'lore', fragmentId: effect.fragmentId });
+        return;
+    }
   }
 
   private publish(): void {

@@ -1,4 +1,8 @@
 import { emptyHouse } from '../systems/HouseSystem';
+import type { KillCounts } from '../systems/AchievementSystem';
+import type { DialogMemory } from '../systems/DialogSystem';
+import { whispersFromPast } from '../systems/WhispersSystem';
+import type { SecretId } from '../types/ids';
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 
 // Each step upgrades a save from exactly `fromVersion` to `fromVersion + 1`.
@@ -46,6 +50,16 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   }),
   // The house (F1): bare stands and an empty chest for everybody made before it.
   106: (state) => ({ ...state, house: emptyHouse() }),
+  // Whispers (D2): what was already asked, found and killed before the journal
+  // is written into it, so it agrees with the character's past.
+  107: (state) => ({
+    ...state,
+    whispers: whispersFromPast({
+      asked: (state.asked ?? {}) as DialogMemory,
+      secrets: (state.secrets ?? []) as SecretId[],
+      kills: (state.kills ?? {}) as KillCounts,
+    }),
+  }),
 };
 
 /**

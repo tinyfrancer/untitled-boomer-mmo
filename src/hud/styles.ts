@@ -1117,6 +1117,27 @@ export function hudCss(): string {
   padding-left: ${THEME.padding}px;
 }
 
+/* The Whispers journal: a rumour in its teller's words, a fragment under its title. */
+.hud-whisper {
+  margin-bottom: ${THEME.padding}px;
+}
+.hud-whisper__title {
+  ${pixelType(1)}
+  color: ${THEME.color.levelUp};
+}
+.hud-whisper__text {
+  font-size: ${THEME.font.sm}px;
+  color: ${THEME.color.muted};
+}
+.hud-whisper__by {
+  font-size: ${THEME.font.xs}px;
+  color: ${THEME.color.dim};
+  padding-left: ${THEME.padding}px;
+}
+.hud-whisper.is-followed .hud-whisper__by {
+  color: ${THEME.color.levelUp};
+}
+
 .hud-titles {
   display: flex;
   align-items: center;

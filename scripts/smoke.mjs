@@ -341,8 +341,8 @@ const columnHeightBesideTraining = () =>
 
 /** What the bottom bar itself holds; everything else is behind the Menu tab. */
 const BAR_TABS = ['character', 'inventory', 'quests', 'idle', 'menu'];
-/** How many the Menu opens: Map, Feats, Skills, Combat Log, Options. */
-const MENU_TAB_COUNT = 5;
+/** How many the Menu opens: Map, Feats, Skills, Whispers, Combat Log, Options. */
+const MENU_TAB_COUNT = 6;
 
 /**
  * Opens a surface the way a thumb reaches it — off the bar when it is there,
@@ -5858,6 +5858,51 @@ async function dialog() {
   await page.evaluate(() => window.world.closeCounters());
 }
 
+async function whispers() {
+  // --- Whispers (D2): a rumour told in a real conversation is in the journal
+  // behind Menu, under its count, drawn on a phone above the bar. Which answer
+  // tells what, lore at a secret and off a boss, and following are
+  // tests/world/whispers.test.ts's and tests/systems/WhispersSystem.test.ts's;
+  // what needs a browser is the round trip from the talk panel to the sheet. ---
+  await standSouthOf(TRAINER);
+  await clickAt(await screenAt(TRAINER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'trainer'),
+    'the tapped trainer to talk',
+  );
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="past"]');
+  await step(2);
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="fen"]');
+  await step(2);
+  await page.evaluate(() => window.world.closeCounters());
+  await step(2);
+  await tapTab('whispers');
+  const journal = await page.evaluate(() => {
+    const sheet = document.querySelector('.hud-sheet[data-sheet="whispers"]');
+    const rect = sheet?.getBoundingClientRect();
+    const bar = document.querySelector('.hud-tabs')?.getBoundingClientRect();
+    return {
+      open: sheet !== null && !sheet.classList.contains('hud-hidden'),
+      rumour: sheet?.querySelector('[data-rumour="lights-on-posts"]')?.textContent ?? '',
+      heading: sheet?.querySelector('.hud-section')?.textContent ?? '',
+      kept: window.world.character.state.whispers.rumours,
+      clear:
+        rect && bar ? rect.bottom <= bar.top && rect.left >= 0 && rect.right <= innerWidth : false,
+    };
+  });
+  check(
+    'a rumour told in conversation is in the Whispers journal, counted, above the bar',
+    journal.open &&
+      journal.rumour.includes('Marta Hale') &&
+      /^Rumours\s*1 \/ \d+ heard/.test(journal.heading) &&
+      journal.kept.includes('lights-on-posts') &&
+      journal.clear,
+    JSON.stringify(journal),
+  );
+  await page.screenshot({ path: `${OUT}/9c-whispers.png` });
+  await tapTab('whispers');
+}
+
 async function spirit() {
   // --- Wick (D4): drawn beside the player in the art's light, brighter while it
   // has something to say, and a tap on it saying it on the card under its own
@@ -6218,6 +6263,7 @@ const SECTIONS = [
   ['loot-piles', lootPiles],
   ['bank', bank],
   ['dialog', dialog],
+  ['whispers', whispers],
   ['trainer', trainer],
   ['bounty-board', bountyBoard],
   ['forge', forge],

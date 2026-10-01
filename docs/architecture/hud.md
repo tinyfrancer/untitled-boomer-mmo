@@ -11,7 +11,7 @@ renderer-independent by construction: the same tree sat unchanged over both canv
 port, and nothing drawing the world knows it exists.
 
 `Hud.ts` owns the model and the subscriptions; everything else in `hud/` is a piece that draws part
-of it. Char / Bag / Quests / Idle / Feats / Skills / Map / Log are `Sheet` subclasses and one is open at a time — `Hud`
+of it. Char / Bag / Quests / Idle / Feats / Skills / Whispers / Map / Log are `Sheet` subclasses and one is open at a time — `Hud`
 holds a single `openSheet`, not a visible flag per panel — while Menu and Options are actions
 that open no sheet. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close. A tap on a person puts up the **talk panel** (`hud/TalkModal.ts`)
@@ -383,6 +383,16 @@ its count right (decision 99): the sheet has a width of its own (`THEME.panelWid
 longest rank, a boss's Slayer at 0 / 100 slain, fits, and a count never wraps, so a title too long
 for some narrower screen wraps on its own side. Only real text measures that, so smoke does, at a
 roomy screen and a 375px phone; a new creature with a longer name is what would move the width.
+
+**Whispers is the journal behind Menu** (`hud/WhispersSheet.ts`, decision 132, the candle mark, key
+J): the rumours heard, each in its teller's words with their name and trade and whether it has
+been followed, then the lore found, each under its title, both newest first under a count of how
+many there are. A rumour **never names where it leads**, even once followed; the line says as much
+as its teller did. The HUD holds the journal and the secrets found (seeded from the save, then the
+world's two unseeded publishers) beside the kills it already had, and reads the rest off
+`WhispersSystem`, so followed is drawn the moment a secret is found or a boss falls. Something just
+noted is said once on the toast, from its own event, since the journal's state alone cannot tell a
+new entry from a sheet rebuilt for another character.
 
 **An item says what it is for, and every row that shows one can be asked** (decision 90). The
 uses are derived, never written per item (`systems/ItemUseSystem.ts`): every recipe that takes it

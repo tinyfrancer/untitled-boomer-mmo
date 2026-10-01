@@ -10,6 +10,7 @@ export type TabId =
   | 'log'
   | 'map'
   | 'skills'
+  | 'whispers'
   | 'options';
 
 export interface TabDefinition {
@@ -55,6 +56,7 @@ export const MENU_TABS: TabDefinition[] = [
   { id: 'map', label: 'Map', icon: 'map', kind: 'sheet', key: 'm' },
   { id: 'feats', label: 'Feats', icon: 'trophy', kind: 'sheet', key: 'v' },
   { id: 'skills', label: 'Skills', icon: 'book', kind: 'sheet', key: 'k' },
+  { id: 'whispers', label: 'Whispers', icon: 'candle', kind: 'sheet', key: 'j' },
   { id: 'log', label: 'Combat Log', icon: 'swords', kind: 'sheet', key: 'l' },
   { id: 'options', label: 'Options', icon: 'cog', kind: 'action' },
 ];

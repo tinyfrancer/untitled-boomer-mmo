@@ -56,7 +56,8 @@ it woke: what did I do?
   thing it names.
 - **D1, dialog**, writes every person in `tone.md`'s voice from their entry in `places.md`.
 - **D2, Whispers of the Realm**: a rumour starts from a line in `places.md`, and a lore fragment is
-  a piece of `history.md` the player can find, never more than it says.
+  a piece of `history.md` the player can find, never more than it says: the rumours in the game are
+  marked in `places.md` with who tells them, and the fragments are `src/data/loreFragments.ts`.
 - **D3, factions**, starts from `factions.md`, which leaves it the mechanics.
 - **D4, the spirit**, places the beats in `spirit.md` at their zones and bosses.
 - **Part G, levels 9-20**, sized at C11, takes its regions from the end of `places.md` and its

@@ -10,6 +10,7 @@ import { emptyHouse, type HouseState } from '../systems/HouseSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { PotionTimers } from '../systems/PotionSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
+import { emptyWhispers, type WhispersState } from '../systems/WhispersSystem';
 import type { DialogMemory } from '../systems/DialogSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
@@ -34,7 +35,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 7;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 8;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -155,6 +156,13 @@ export interface CharacterState {
    * leaves nothing else behind.
    */
   beats: SpiritBeatId[];
+  /**
+   * The Whispers journal (D2, decision 132): the rumours heard and the lore
+   * found, each in the order it came. Stored because the journal's order is
+   * kept nowhere else, and so a line rewritten never un-tells a rumour; what
+   * has been followed is derived.
+   */
+  whispers: WhispersState;
   /**
    * The potions drunk and still working, as the time each has left (version 2
    * phase E2). Stored because a potion lasts minutes and works on while the
@@ -295,6 +303,7 @@ export function createNewCharacter(
     secrets: [],
     asked: {},
     beats: [],
+    whispers: emptyWhispers(),
     potions: {},
     quests: {},
     bounty: null,

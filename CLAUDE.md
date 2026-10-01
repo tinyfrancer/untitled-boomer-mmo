@@ -261,7 +261,12 @@ secret found (`CharacterState.secrets`, decision 117), which leaves nothing eith
 on each potion drunk (`CharacterState.potions`, decision 129), which a night away reads.
 secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and what stands
 on the house's stands and lies in its chest (`CharacterState.house`, decision 130); whose the house
-is, what is a trophy and which plaques hang are derived.
+is, what is a trophy and which plaques hang are derived. **The Whispers journal is stored too**
+(`CharacterState.whispers`, decision 132), the rumours heard and the lore found in the order they
+came, which nothing else keeps; whether a rumour is followed is derived. A rumour is told as an
+`effects` member on an answer (`data/rumours.ts`), lore is found at a secret, off a boss or in an
+answer (`data/loreFragments.ts`), all of it noted through `WorldContext.noteWhisper`, and every
+lead names a secret or a creature that exists (`WhispersSystem.test.ts`).
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can

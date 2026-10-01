@@ -44,6 +44,7 @@ import {
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
   SECRETS_CHANGED_EVENT,
+  WHISPERS_CHANGED_EVENT,
   VISITS_CHANGED_EVENT,
   XP_GAINED_EVENT,
   ZONE_ENTERED_EVENT,
@@ -294,6 +295,7 @@ export class ZoneWorld implements Targeting {
   private readonly publishVisits: () => void;
   private readonly publishUnlockedZones: () => void;
   private readonly publishSecrets: () => void;
+  private readonly publishWhispers: () => void;
   private readonly publishPlayerTile: () => void;
   private readonly publishCreatures: () => void;
   /**
@@ -434,6 +436,12 @@ export class ZoneWorld implements Targeting {
       () => [...this.character.state.secrets],
       (found) => found.join('|'),
       (found) => this.ctx.events.emit(SECRETS_CHANGED_EVENT, found),
+    );
+    // The Whispers journal (D2), for its sheet; unseeded for the same reason.
+    this.publishWhispers = publishOnChange(
+      () => this.character.state.whispers,
+      ({ rumours, fragments }) => `${rumours.join('|')}/${fragments.join('|')}`,
+      (whispers) => this.ctx.events.emit(WHISPERS_CHANGED_EVENT, whispers),
     );
     // Keyed to whole tiles so this speaks on a crossing rather than every
     // frame, but carrying the fractional position, so the dot sits where the
@@ -680,6 +688,7 @@ export class ZoneWorld implements Targeting {
     this.publishCreatures();
     this.secretFinder.update();
     this.publishSecrets();
+    this.publishWhispers();
     this.tips.update();
     this.spirit.update(deltaMs);
     this.updateNpcRange();

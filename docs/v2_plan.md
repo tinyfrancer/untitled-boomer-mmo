@@ -90,8 +90,11 @@ version 105; decision 128). **and E2** (potions: foraging with a sickle on herb 
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
 clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
 with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
-`claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
-`claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
+`claude/v2-wave-1` and up as one PR to `main`. **Wave 2** (D2, D3, D1b, E3, F2 and F3) is building
+on `claude/v2-wave-2`, with G1 in flight against `main`; **D2 is done there** (Whispers: a journal
+behind Menu of the rumours the townsfolk tell, one for each secret and boss, and the lore found at a
+secret, off a boss or in an answer, kept in the order it came; save version 108; decision 132), its
+PR against the wave branch for the orchestrator to fold in. Update this line as each
 phase lands:
 which phase, and which is next.
 
@@ -732,9 +735,16 @@ decision 121).
   every greeting rewritten and every topic written in the lore's voice. The five people the game
   lacks went to **D1b**. About thirty-five files with its tests and docs. All four forks were the
   user's (decision 126).
-- **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
-  creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
-  of what is found.
+- **D2 — Whispers of the Realm. (Landed.)** One journal, **Whispers**, behind
+  Menu: seventeen **rumours** (`data/rumours.ts`), one leading to each of the fifteen secrets and
+  the two bosses, told as effects on the six townsfolk's answers (eleven topics written for them),
+  with who told each and whether it has been followed; and nineteen **lore fragments**
+  (`data/loreFragments.ts`), pieces of the history found at the secrets, off the two bosses and in
+  two answers, with counts of both. Heard and found are kept in the order they came
+  (`CharacterState.whispers`, save version 108), filled for an older character from what they had
+  already asked, found and killed; followed is derived. The rumours the lore has for what is not
+  built yet are held in `places.md`. Finding lore pays nothing else. Smoke gained a `whispers`
+  section. Decision 132 has the forks.
 - **D3 — Factions and reputation.** Standing with each faction, moved by quests, kills, contracts and
   dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
 - **D4 — The spirit. (Landed.)** Wick drawn in the world, a sprite kind of its own (16×16, not

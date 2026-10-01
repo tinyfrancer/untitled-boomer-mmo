@@ -113,6 +113,23 @@ describe('migrateCharacterState', () => {
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
   });
 
+  it('has in its journal what it had already heard, found and killed, made before it (D2)', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 7,
+      asked: { shopkeeper: ['rats'] },
+      secrets: ['lamp-stone'],
+      kills: { 'bandit-chief': 1 },
+    };
+    delete before.whispers;
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.whispers).toEqual({
+      rumours: ['his-majesty'],
+      fragments: ['waymarker', 'hollis-crane'],
+    });
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
   it('drops saves from the future', () => {
     const future = {
       ...createNewCharacter('Aria', 'wizard'),

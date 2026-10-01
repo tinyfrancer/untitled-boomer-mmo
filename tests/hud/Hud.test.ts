@@ -94,6 +94,8 @@ import {
   SPIRIT_BEAT_HEARD_EVENT,
   SECRET_FOUND_EVENT,
   SECRETS_CHANGED_EVENT,
+  WHISPER_NOTED_EVENT,
+  WHISPERS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
   CREATURES_CHANGED_EVENT,
@@ -103,6 +105,8 @@ import {
   ASKED_CHANGED_EVENT,
   CONVERSATION_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
+import { RUMOURS } from '../../src/data/rumours';
+import { LORE_FRAGMENTS } from '../../src/data/loreFragments';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
@@ -1679,7 +1683,12 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     it('draws what they will talk about, between what they say and their counter', () => {
       mount();
       events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
-      expect(topics().map((button) => button.dataset.topic)).toEqual(['lampton', 'rats', 'news']);
+      expect(topics().map((button) => button.dataset.topic)).toEqual([
+        'lampton',
+        'rats',
+        'quarry',
+        'news',
+      ]);
       const body = parent.querySelector('.hud-modal__box--talk .hud-modal__body');
       expect([...(body?.children ?? [])].map((child) => child.className)).toEqual([
         'hud-talk__greeting',
@@ -2365,6 +2374,51 @@ describe('every overlay has the same lifecycle', () => {
  * rather than something it already holds: which zone is running and where the
  * player is standing are both the world's to know.
  */
+describe('the whispers journal', () => {
+  const sheet = (): HTMLElement | null =>
+    parent.querySelector<HTMLElement>('.hud-sheet[data-sheet="whispers"]');
+  const text = (): string => sheet()?.textContent ?? '';
+
+  it('lives behind Menu and counts what there is to find before anything is', () => {
+    mount();
+    menuItem('whispers');
+    expect(openSheets()).toEqual(['whispers']);
+    expect(text()).toContain('Rumours');
+    expect(text()).toContain(`0 / ${Object.keys(RUMOURS).length} heard, 0 followed`);
+    expect(text()).toContain(`0 / ${Object.keys(LORE_FRAGMENTS).length} found`);
+  });
+
+  it('draws a rumour with who told it, followed once its secret is found', () => {
+    mount({ whispers: { rumours: ['stone-older-than-town'], fragments: [] } });
+    menuItem('whispers');
+    const entry = (): HTMLElement | null | undefined =>
+      sheet()?.querySelector<HTMLElement>('[data-rumour="stone-older-than-town"]');
+    expect(entry()?.textContent).toContain('Tilda Pell, Shopkeeper · Not yet followed');
+    expect(entry()?.classList.contains('is-followed')).toBe(false);
+
+    events.emit(SECRETS_CHANGED_EVENT, ['lamp-stone']);
+    expect(entry()?.textContent).toContain('Followed');
+    expect(entry()?.classList.contains('is-followed')).toBe(true);
+    expect(text()).toContain('1 followed');
+  });
+
+  it('draws lore found under its title, newest first, from what the world says', () => {
+    mount();
+    events.emit(WHISPERS_CHANGED_EVENT, { rumours: [], fragments: ['waymarker', 'orlath'] });
+    menuItem('whispers');
+    const titles = [...(sheet()?.querySelectorAll('.hud-whisper__title') ?? [])].map(
+      (title) => title.textContent,
+    );
+    expect(titles).toEqual([LORE_FRAGMENTS.orlath.title, LORE_FRAGMENTS.waymarker.title]);
+  });
+
+  it('says what was just noted on the toast', () => {
+    mount();
+    events.emit(WHISPER_NOTED_EVENT, { kind: 'lore', fragmentId: 'orlath' });
+    expect(parent.textContent).toContain(`Lore: ${LORE_FRAGMENTS.orlath.title}`);
+  });
+});
+
 describe('the map', () => {
   const svg = (): SVGSVGElement | null => parent.querySelector('.hud-map__svg');
   const dot = (): SVGCircleElement | null => parent.querySelector('.hud-map__player');

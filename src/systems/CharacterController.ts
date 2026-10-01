@@ -79,10 +79,12 @@ import type {
   EnemyId,
   GearSlotId,
   ItemId,
+  LoreFragmentId,
   MasteryTargetId,
   NpcId,
   QuestId,
   ReforgeId,
+  RumourId,
   SecretId,
   SkillId,
   SpiritBeatId,
@@ -927,6 +929,22 @@ export class CharacterController {
     const heard = this.state.asked[npcId] ?? [];
     if (heard.includes(answerId)) return false;
     this.state.asked = { ...this.state.asked, [npcId]: [...heard, answerId] };
+    return true;
+  }
+
+  /** Notes a rumour in the journal, answering false for one already there. */
+  noteRumour(rumourId: RumourId): boolean {
+    const { whispers } = this.state;
+    if (whispers.rumours.includes(rumourId)) return false;
+    this.state.whispers = { ...whispers, rumours: [...whispers.rumours, rumourId] };
+    return true;
+  }
+
+  /** Notes a piece of lore in the journal, answering false for one already there. */
+  noteFragment(fragmentId: LoreFragmentId): boolean {
+    const { whispers } = this.state;
+    if (whispers.fragments.includes(fragmentId)) return false;
+    this.state.whispers = { ...whispers, fragments: [...whispers.fragments, fragmentId] };
     return true;
   }
 
