@@ -14,7 +14,7 @@ import type { SaveExport } from '../persistence/saveFile';
 import type { Inventory } from '../systems/InventorySystem';
 import { BountyModal, type BountyPanelState } from './BountyModal';
 import type { QuestPanelState } from './talkQuests';
-import { TalkModal } from './TalkModal';
+import { TalkModal, type TalkPanelState } from './TalkModal';
 import { StationModal, type StationPanelState } from './StationModal';
 import { SlotPicker } from './SlotPicker';
 import {
@@ -41,6 +41,7 @@ import {
   LEARN_ABILITY_REQUESTED_EVENT,
   CRAFT_REQUESTED_EVENT,
   TURN_IN_QUEST_REQUESTED_EVENT,
+  ASK_TOPIC_REQUESTED_EVENT,
 } from '../ui/uiEvents';
 import type { CounterId } from '../data/npcs';
 import type { StationId } from '../data/recipes';
@@ -72,6 +73,8 @@ export interface OverlayPanelState {
   reforger: () => ReforgePanelState;
   /** The log and its tallies, which anybody talked to may have work in. */
   quests: () => QuestPanelState;
+  /** What a conversation is drawn from: the work, what has been asked, and what was said. */
+  talk: () => TalkPanelState;
   station: () => StationPanelState;
 }
 
@@ -163,6 +166,7 @@ export class OverlayHost {
         const modal = new TalkModal(
           npcId,
           {
+            onAsk: (topicId) => emit(ASK_TOPIC_REQUESTED_EVENT, topicId),
             onServe: (role) => emit(COUNTER_REQUESTED_EVENT, role),
             onAccept: (questId) => emit(ACCEPT_QUEST_REQUESTED_EVENT, questId),
             onTurnIn: (questId) => emit(TURN_IN_QUEST_REQUESTED_EVENT, questId),
@@ -172,7 +176,7 @@ export class OverlayHost {
         );
         return {
           root: modal.root,
-          refresh: () => modal.update(panels.quests()),
+          refresh: () => modal.update(panels.talk()),
           layout: () => {},
           close: () => modal.close(),
         };

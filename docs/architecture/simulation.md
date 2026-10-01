@@ -30,7 +30,7 @@ knowing before you add to it:
 **The rules themselves are `ZoneWorld`'s collaborators, one per subsystem**: `CombatDirector`
 (both directions of a fight and what a corpse is worth), `GatherSession` (the channel, the fire,
 the pan, the food), `AbilityCaster` (whether a button may be pressed, and the spell part-way
-through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `TalkSession` and the counter sessions beside it (`ShopSession`, `BankSession`, `TrainerSession`, `BountySession` and the rest, `economy.md`), `QuestDesk`,
+through), `LootPiles` (what a full pack left on the ground, its minute, and taking from it), `AfkCamp`, `TalkSession` (the conversation: what was asked this visit, and asking, D1) and the counter sessions beside it (`ShopSession`, `BankSession`, `TrainerSession`, `BountySession` and the rest, `economy.md`), `QuestDesk`,
 `ContextMenuSession` (what a press held is about, and what was chosen from it), `TipDesk` (the
 spirit's tips: which to offer, and hearing the answer), `SecretFinder` (a secret walked up to, once,
 measured along the stretch walked each frame so a slow phone finds one it walked past, decision

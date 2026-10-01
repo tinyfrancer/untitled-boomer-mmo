@@ -1,19 +1,72 @@
+import type { DialogEffect } from '../data/dialog';
+import { topicOffer, type DialogReader } from '../systems/DialogSystem';
+import {
+  ASKED_CHANGED_EVENT,
+  CONVERSATION_CHANGED_EVENT,
+  type ConversationState,
+} from '../ui/uiEvents';
 import { CounterSession } from './CounterSession';
 import type { WorldContext } from './WorldContext';
 
 /**
  * Talking to somebody: what a tap on a person opens, before any counter.
  *
- * It is a counter with nothing to sell, and deliberately no more than that yet.
- * Everything that makes a conversation a thing to be *in* — walking up to open
- * it, walking off to end it, one at a time with the counters, the person the
- * quest desk asks about — is already the base's, so what a conversation says
- * and what it offers are the HUD's to draw from the tables: the greeting, the
- * person's quests, and a button for the counter they work. Dialog that
- * remembers what was asked is the state that will live here when there is some.
+ * A counter in every sense the world cares about — walking up to open it,
+ * walking off to end it, one at a time with the counters, the person the quest
+ * desk asks about — so all of that is the base's. What this adds is the
+ * conversation itself (D1): what was last asked this visit, which a fresh visit
+ * forgets and starts again at the greeting, and the asking, which the character
+ * remembers for good (`CharacterState.asked`). What a person will talk about is
+ * derived from `data/dialog.ts` by `DialogSystem`, here and in the panel alike.
  */
 export class TalkSession extends CounterSession {
+  private said: ConversationState['said'] = null;
+
   constructor(ctx: WorldContext) {
     super(ctx, 'talk');
+  }
+
+  /**
+   * Asks the person across a topic they will talk about now, and hears the
+   * answer. Checked here rather than trusted from the panel, which may be
+   * describing a conversation walked away from or a topic a quest just moved.
+   */
+  ask(topicId: string): void {
+    const npc = this.npc;
+    if (!npc) return;
+    const offer = topicOffer(npc.npcId, topicId, this.reader());
+    if (!offer) return;
+
+    this.said = { topicId, answerId: offer.answer.id };
+    offer.answer.effects?.forEach((effect) => this.apply(effect));
+    if (this.ctx.character.markAnswerHeard(npc.npcId, offer.answer.id)) {
+      this.ctx.events.emit(ASKED_CHANGED_EVENT, this.ctx.character.state.asked);
+      this.ctx.persistCharacter();
+    }
+    this.publish();
+  }
+
+  protected override opened(): void {
+    this.said = null;
+    this.publish();
+  }
+
+  /**
+   * An answer's effects. There are none yet: D2's rumours and D3's standing
+   * are each a member of `DialogEffect` and a case here, and this stops
+   * compiling the day the first is added.
+   */
+  private apply(effect: DialogEffect): never {
+    return effect;
+  }
+
+  private publish(): void {
+    if (!this.npc) return;
+    this.ctx.events.emit(CONVERSATION_CHANGED_EVENT, { npcId: this.npc.npcId, said: this.said });
+  }
+
+  private reader(): DialogReader {
+    const { level, classId, quests, asked } = this.ctx.character.state;
+    return { level, classId, quests, asked };
   }
 }

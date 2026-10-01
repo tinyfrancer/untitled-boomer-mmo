@@ -50,6 +50,7 @@ import { computeEffectiveStats } from '../systems/StatsSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
+import type { DialogMemory } from '../systems/DialogSystem';
 import { hudLayout, tipCardRect } from '../ui/layout';
 import { THEME } from '../ui/theme';
 import type { TabId } from '../ui/tabs';
@@ -120,6 +121,9 @@ import {
   SECRETS_CHANGED_EVENT,
   TIPS_SET_REQUESTED_EVENT,
   TIPS_STATE_CHANGED_EVENT,
+  ASKED_CHANGED_EVENT,
+  CONVERSATION_CHANGED_EVENT,
+  type ConversationState,
 } from '../ui/uiEvents';
 import type { CharacterState } from '../persistence';
 import type { PendingNotification } from '../world/GameContext';
@@ -220,6 +224,12 @@ interface HudModel {
   // Whether the minimap is up, for the layout and the options menu's switch.
   // Seeded from the save and kept current by the session.
   minimapOn: boolean;
+  // What everybody has been asked, which a topic's grey is drawn from: seeded
+  // from the save, since a conversation can be opened before anything is asked
+  // this session, and kept current by the world. And what is being said in the
+  // one conversation open, which the world resets each time one opens.
+  asked: DialogMemory;
+  conversation: ConversationState | null;
 }
 
 /**
@@ -319,6 +329,8 @@ class Hud {
       idleFood: character.idleFood ?? { order: [], keep: [] },
       tipsOn: !(character.tips?.off ?? false),
       minimapOn: character.showMinimap ?? true,
+      asked: character.asked ?? {},
+      conversation: null,
     };
 
     injectHudStyles();
@@ -350,6 +362,16 @@ class Hud {
         currency: this.model.currency,
       }),
       quests: () => ({ ...this.questCounters(), quests: this.model.quests }),
+      talk: () => ({
+        quests: { ...this.questCounters(), quests: this.model.quests },
+        dialog: {
+          level: this.model.level,
+          classId: this.classId,
+          quests: this.model.quests,
+          asked: this.model.asked,
+        },
+        conversation: this.model.conversation,
+      }),
       station: () => ({ inventory: this.model.inventory, skills: this.model.skills }),
       reforger: () => ({
         gear: this.model.gear,
@@ -1174,6 +1196,14 @@ class Hud {
     });
 
     listen(STATION_OPENED_EVENT, (stationId) => this.overlays.openStation(stationId));
+    listen(CONVERSATION_CHANGED_EVENT, (conversation) => {
+      this.model.conversation = conversation;
+      this.overlays.refreshOpen();
+    });
+    listen(ASKED_CHANGED_EVENT, (asked) => {
+      this.model.asked = asked;
+      this.overlays.refreshOpen();
+    });
     // A lesson lands on the bar and in the panel that sold it, in that order:
     // the bar is what the player pressed the row to get.
     listen(LEARNED_ABILITIES_CHANGED_EVENT, (abilityIds) => {

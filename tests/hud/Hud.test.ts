@@ -35,6 +35,7 @@ import { THEME } from '../../src/ui/theme';
 import { InputState, bindKeyboard } from '../../src/systems/InputState';
 import { nth } from '../nth';
 import { NPCS, ROLE_SERVICES, type CounterId, type NpcRoleId } from '../../src/data/npcs';
+import { DIALOG } from '../../src/data/dialog';
 import { QUESTS, QUEST_ORDER } from '../../src/data/quests';
 import {
   ACCEPT_QUEST_REQUESTED_EVENT,
@@ -93,6 +94,9 @@ import {
   CREATURES_CHANGED_EVENT,
   MINIMAP_SET_REQUESTED_EVENT,
   MINIMAP_STATE_CHANGED_EVENT,
+  ASK_TOPIC_REQUESTED_EVENT,
+  ASKED_CHANGED_EVENT,
+  CONVERSATION_CHANGED_EVENT,
 } from '../../src/ui/uiEvents';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
@@ -1531,8 +1535,9 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
 
     const box = parent.querySelector('.hud-modal__box--talk');
     expect(box?.querySelector('.hud-modal__title')?.textContent).toBe(npc.name);
+    expect(box?.querySelector('.hud-talk__trade')?.textContent).toBe(npc.trade);
     expect(box?.querySelector('.hud-talk__greeting')?.textContent).toBe(
-      `\u201c${npc.greeting}\u201d`,
+      `\u201c${nth(DIALOG[npc.id].greetings).says}\u201d`,
     );
 
     const services = [...(box?.querySelectorAll<HTMLButtonElement>('.hud-talk__service') ?? [])];
@@ -1575,6 +1580,83 @@ describe('every counter is one panel, keyed by who stands behind it', () => {
     expect(emitted.at(-1)).toEqual({
       event: TURN_IN_QUEST_REQUESTED_EVENT,
       args: ['rat-bones'],
+    });
+  });
+
+  /**
+   * What a person will talk about is a button each, grey once heard; asking is
+   * a request the world answers, and the answer replaces the greeting under the
+   * question that drew it (D1).
+   */
+  describe('topics', () => {
+    const topics = (): HTMLButtonElement[] => [
+      ...parent.querySelectorAll<HTMLButtonElement>('.hud-talk__topic'),
+    ];
+    const topic = (id: string): HTMLButtonElement | undefined =>
+      topics().find((button) => button.dataset.topic === id);
+    const saying = (): string =>
+      parent.querySelector('.hud-modal__box--talk .hud-talk__greeting')?.textContent ?? '';
+
+    it('draws what they will talk about, between what they say and their counter', () => {
+      mount();
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      expect(topics().map((button) => button.dataset.topic)).toEqual(['lampton', 'rats', 'news']);
+      const body = parent.querySelector('.hud-modal__box--talk .hud-modal__body');
+      expect([...(body?.children ?? [])].map((child) => child.className)).toEqual([
+        'hud-talk__greeting',
+        'hud-talk__topics',
+        'hud-button hud-talk__service',
+        'hud-talk__quests',
+      ]);
+    });
+
+    it('asks the world when one is pressed, and draws the answer under the question', () => {
+      mount();
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      topic('lampton')?.click();
+      expect(emitted.at(-1)).toEqual({ event: ASK_TOPIC_REQUESTED_EVENT, args: ['lampton'] });
+
+      events.emit(CONVERSATION_CHANGED_EVENT, {
+        npcId: 'shopkeeper',
+        said: { topicId: 'lampton', answerId: 'lampton' },
+      });
+      events.emit(ASKED_CHANGED_EVENT, { shopkeeper: ['lampton'] });
+      expect(parent.querySelector('.hud-talk__asked')?.textContent).toBe('What is this place?');
+      expect(saying()).toContain('Lampton.');
+      expect(topic('lampton')?.dataset.asked).toBe('true');
+      expect(topic('rats')?.dataset.asked).toBeUndefined();
+      // And what it led on to.
+      expect(topic('smith')).toBeDefined();
+    });
+
+    it('greys what was asked on an earlier visit, from the save', () => {
+      mount({ asked: { shopkeeper: ['rats'] } });
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      expect(topic('rats')?.dataset.asked).toBe('true');
+    });
+
+    it('greets rather than repeat what somebody else last said', () => {
+      mount();
+      events.emit(CONVERSATION_CHANGED_EVENT, {
+        npcId: 'shopkeeper',
+        said: { topicId: 'lampton', answerId: 'lampton' },
+      });
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'banker');
+      expect(saying()).toBe(`\u201c${nth(DIALOG.banker.greetings).says}\u201d`);
+      expect(parent.querySelector('.hud-talk__asked')).toBeNull();
+    });
+
+    it('opens a topic a quest handed in has given something new to say', () => {
+      mount({ quests: { 'rat-bones': { status: 'done', baseline: 0 } } });
+      events.emit(COUNTER_OPENED_EVENT, 'talk', 'shopkeeper');
+      events.emit(ASKED_CHANGED_EVENT, { shopkeeper: ['carts'] });
+      expect(topic('carts')?.dataset.asked).toBe('true');
+
+      events.emit(QUEST_LOG_CHANGED_EVENT, {
+        'rat-bones': { status: 'done', baseline: 0 },
+        'the-cutthroat': { status: 'done', baseline: 0 },
+      });
+      expect(topic('carts')?.dataset.asked).toBeUndefined();
     });
   });
 
@@ -1806,7 +1888,9 @@ describe('every row that stands for an item opens its card', () => {
     ask('.hud-list-row[data-item="reforging-stone"]');
 
     expect(title()).toBe('Reforging Stone');
-    expect(uses()).toContain('Used in: reforging gear, at the Fettler (Greyford Outpost)');
+    expect(uses()).toContain(
+      'Used in: reforging gear, at Silas Quill the fettler (Greyford Outpost)',
+    );
     expect(emitted.some((e) => e.event === BUY_ITEM_REQUESTED_EVENT)).toBe(false);
   });
 

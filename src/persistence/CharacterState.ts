@@ -8,6 +8,7 @@ import type { ActiveBounty } from '../systems/BountySystem';
 import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { Reforges } from '../systems/ReforgeSystem';
+import type { DialogMemory } from '../systems/DialogSystem';
 import type { QuestLog, ZoneVisits } from '../systems/QuestSystem';
 import type { Quiver } from '../systems/QuiverSystem';
 import type { AbilityId, ClassId, ItemId, SecretId, TipId, TitleId, ZoneId } from '../types/ids';
@@ -22,7 +23,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 2;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 3;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -124,6 +125,12 @@ export interface CharacterState {
    * behind, since the cache is spent and the thing itself is still there.
    */
   secrets: SecretId[];
+  /**
+   * What each person has told this character, as the answers heard (D1). Kept
+   * for good, since a person remembers what they were asked, and stored for
+   * the reason the tips heard are: hearing leaves nothing else behind.
+   */
+  asked: DialogMemory;
   // Which quests are accepted or finished, and where the tally each one counts
   // stood when it was taken. Progress itself is not stored — it is counted off
   // the bag, the kills or the visits on read (see QuestSystem).
@@ -242,6 +249,7 @@ export function createNewCharacter(
     tips: { heard: [], off: false },
     showMinimap: true,
     secrets: [],
+    asked: {},
     quests: {},
     bounty: null,
     kills: {},

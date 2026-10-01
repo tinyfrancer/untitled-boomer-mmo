@@ -248,7 +248,11 @@ behind those, or the panel goes on promising the old night. **So is when a tip a
 what it says** (`systems/TipSystem.ts`): each tip is a rule over the character, and its line reads
 the fee, the price or the ceiling it names off the table or constant that holds it. What has been
 heard is stored (`CharacterState.tips`), since hearing leaves nothing else behind, and so is every
-secret found (`CharacterState.secrets`, decision 117), which leaves nothing either.
+secret found (`CharacterState.secrets`, decision 117), which leaves nothing either, and every answer
+a person has given (`CharacterState.asked`, decision 126), by which a topic is grey until it gains a
+new one. **What a person says is a row** (`data/dialog.ts`), its conditions a `requires` union read
+by `DialogSystem` for the world and the HUD alike, so a new kind of condition is a member and a case
+there; a new person is a conversation there as well as a row in `NPCS`.
 
 **`CharacterState` changes go through `systems/CharacterController.ts`**, which refuses as a whole
 rather than half-applying. Anything the world hands the player goes through `tryAddItem`, which can

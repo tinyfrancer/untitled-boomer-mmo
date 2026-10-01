@@ -710,9 +710,15 @@ decision 121).
 
 ## Part D — People and the realm
 
-- **D1 — Dialog.** NPC conversations as data, in the talk panel A4 built: topics, answers that
-  lead to more, and an NPC who remembers what you have asked (state for `TalkSession`). A writing
-  pass over every existing NPC in the lore's voice, their greetings first.
+- **D1 — Dialog. (Landed.)** Conversations as data (`data/dialog.ts`), in the talk panel A4 built:
+  greetings and topics, each topic a button whose answer is the last whose conditions hold, leading
+  on to more by `follows`, and waiting on a level, a class, a quest or a topic asked elsewhere; the
+  answers heard kept on the character for good, a topic grey until it has something new (save
+  version 103). `requires` and `effects` are on every line, `effects` empty for D2 and D3. The six
+  townsfolk under their lore names, the trade beside the name on the card, the map and the panel,
+  every greeting rewritten and every topic written in the lore's voice. The five people the game
+  lacks went to **D1b**. About thirty-five files with its tests and docs. All four forks were the
+  user's (decision 126).
 - **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
   creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
   of what is found.

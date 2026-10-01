@@ -158,7 +158,7 @@ describe('describing the rest of the world', () => {
     const panel = describeNpc('shopkeeper');
     const stocked = SHOP_STOCK.filter((entry) => !entry.requires).length;
 
-    expect(panel.title).toBe('Shopkeeper');
+    expect(panel.title).toBe('Tilda Pell');
     expect(valueOf(panel, 'Sells')).toBe('Tools, food and supplies');
     expect(valueOf(panel, 'Stocks')).toBe(`${stocked} to start, up to ${SHOP_STOCK.length}`);
     expect(valueOf(panel, 'Quests')).toBe(
@@ -193,7 +193,7 @@ describe('describing the rest of the world', () => {
   it('describes the banker by what the counter does, not by what is on it', () => {
     const panel = describeNpc('banker');
 
-    expect(panel.title).toBe('Banker');
+    expect(panel.title).toBe('Ambrose Tally');
     expect(panel.subtitle).toBe('Banker');
     expect(valueOf(panel, 'Stores')).toContain('no weight');
     expect(valueOf(panel, 'Slots')).toContain(String(STARTING_BANK_SLOTS));
