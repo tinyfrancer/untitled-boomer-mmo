@@ -108,6 +108,23 @@ describe('what a menu offers', () => {
     ]);
   });
 
+  // Somebody who works no counter (D1b) has Talk and nothing to put after it,
+  // and a line from somebody else's counter does nothing at them.
+  it('offers Talk alone for somebody who works no counter', () => {
+    const { menu, perform } = session();
+    const fisher: WorldNpc = { x: 0, y: 0, npcId: 'fisher' };
+
+    expect(menu.open({ kind: 'npc', npc: fisher })?.actions).toEqual([
+      { id: 'talk', label: 'Talk' },
+    ]);
+    menu.run('shop');
+    expect(perform).not.toHaveBeenCalled();
+
+    menu.open({ kind: 'npc', npc: fisher });
+    menu.run('talk');
+    expect(perform).toHaveBeenCalledWith({ kind: 'npc', npc: fisher });
+  });
+
   // The board was renamed Contracts in A3 everywhere but this line.
   it('calls the board Contracts', () => {
     const { menu } = session();

@@ -91,7 +91,8 @@ describe('the quartermaster', () => {
   it('stands clear of the other three counters', () => {
     const { world } = harness();
 
-    expect(world.npcs).toHaveLength(4);
+    // The four counters, and the Wet Boot's keeper, who works none.
+    expect(world.npcs).toHaveLength(5);
     for (const a of world.npcs) {
       for (const b of world.npcs) {
         if (a === b) continue;

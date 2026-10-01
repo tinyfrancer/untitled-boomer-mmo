@@ -20,7 +20,9 @@ describe('who is drawn with what', () => {
   it('draws every person who stands in a town for real', () => {
     for (const npcId of Object.keys(NPCS) as NpcId[]) {
       expect(npcSprite(npcId), npcId).not.toBe(PLACEHOLDERS.person.id);
-      expect(KINDS.get(npcSprite(npcId)), npcId).toBe('person');
+      expect(npcSprite(npcId), npcId).not.toBe(PLACEHOLDERS.beast.id);
+      // Pocket is a crow, and is drawn as one.
+      expect(KINDS.get(npcSprite(npcId)), npcId).toBe(npcId === 'crow' ? 'beast' : 'person');
     }
   });
 

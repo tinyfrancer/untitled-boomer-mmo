@@ -99,10 +99,12 @@ describe('from the conversation', () => {
   it.each(ZONES_WITH_COUNTERS)('in %s opens the counter its person works', (zoneId) => {
     const kit = harness({ zoneId });
     for (const npc of kit.world.npcs) {
+      const role = npcRole(npc.npcId);
+      if (role === 'none') continue;
       standAt(kit, npc.npcId);
-      kit.bus.emit(COUNTER_REQUESTED_EVENT, npcRole(npc.npcId));
-      expect(kit.world.openCounter()?.id, npc.npcId).toBe(npcRole(npc.npcId));
-      expect(kit.world.counterNpc(npcRole(npc.npcId))).toBe(npc);
+      kit.bus.emit(COUNTER_REQUESTED_EVENT, role);
+      expect(kit.world.openCounter()?.id, npc.npcId).toBe(role);
+      expect(kit.world.counterNpc(role)).toBe(npc);
       expect(kit.world.counterNpc('talk')).toBeNull();
     }
   });

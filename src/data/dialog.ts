@@ -495,4 +495,294 @@ export const DIALOG: Record<NpcId, Conversation> = {
       },
     ],
   },
+
+  /*
+   * The lore's people (D1b): four who work no counter, so everything they are
+   * is here. Bess keeps the inn the player woke in; Amos fishes the strand this
+   * side of the Candles; Pocket is the crow at Greyford, rude and better
+   * informed than a crow should be; and Maren is the first of the fenfolk who
+   * will talk rather than fight. Tirrow, who leads the raiders, is a name in
+   * Maren's lines until Part G gives him a scene.
+   */
+  innkeeper: {
+    greetings: [
+      { says: "You're up. Sit anywhere that isn't wet, which is the bench by the fire." },
+      {
+        says: "The Company's put you in a house, I hear. You'll still drink here. They all say they won't, and they all do.",
+        requires: [done('a-roof-in-lampton')],
+      },
+    ],
+    topics: [
+      {
+        id: 'woke',
+        ask: 'How did I get here?',
+        answers: [
+          {
+            id: 'woke',
+            says: 'The carter brought you in off the west road with your purse cut and a lump on your head, and you slept a night and a day. The room is on the slate. The Company can pay it; it was their road.',
+          },
+        ],
+      },
+      {
+        id: 'night',
+        ask: 'Did anything odd happen that night?',
+        follows: 'woke',
+        answers: [
+          {
+            id: 'night',
+            says: "There was a light in your room, the night they carried you up. I took it for a candle. I hadn't left you a candle.",
+          },
+        ],
+      },
+      {
+        id: 'name',
+        ask: 'Why the Wet Boot?',
+        answers: [
+          {
+            id: 'name',
+            says: 'The first keeper came in off the strand in the rain, took off one boot and poured the sea out of it on the floor. They had named the place before he got the other one off.',
+          },
+        ],
+      },
+      {
+        id: 'cellar',
+        ask: "What's in your cellar?",
+        answers: [
+          {
+            id: 'cellar',
+            says: "Ale, rats, and something the regulars call His Majesty. I haven't been down since spring. I go as far as the hatch and shout.",
+          },
+        ],
+      },
+      {
+        id: 'cobb',
+        ask: 'Did the smith drink here?',
+        requires: [{ kind: 'asked', npcId: 'shopkeeper', topicId: 'smith' }],
+        answers: [
+          {
+            id: 'cobb',
+            says: "Every night for three years, on the stool by the door. He went east to a wedding and left the stool. I've not let anybody sit on it. I don't know why. Habit.",
+          },
+        ],
+      },
+      {
+        id: 'hollis',
+        ask: 'Who drinks here now?',
+        requires: [done('the-cutthroat')],
+        answers: [
+          {
+            id: 'hollis',
+            says: 'Carters again, now the east road is quiet. They talk about you. I tell them you paid your slate, which you did not, and that is the nicest thing I have said about anybody this year.',
+          },
+        ],
+      },
+    ],
+  },
+
+  fisher: {
+    greetings: [{ says: 'Mind the line. And mind the crabs. They mind nothing.' }],
+    topics: [
+      {
+        id: 'candles',
+        ask: 'What are those stones out in the water?',
+        answers: [
+          {
+            id: 'candles',
+            says: "The Candles. Somebody's old wall, gone under, with the stumps of something standing up along it. The young ones fish right out past them. I don't.",
+          },
+        ],
+      },
+      {
+        id: 'past',
+        ask: "Why won't you fish past them?",
+        follows: 'candles',
+        answers: [
+          {
+            id: 'past',
+            says: "There's a light down there after dark. Far out, and under the water. Not a boat, not the moon. I saw it my first winter here, and I've fished this side of the Candles since.",
+          },
+        ],
+      },
+      {
+        id: 'strand',
+        ask: 'Is the fishing good?',
+        answers: [
+          {
+            id: 'strand',
+            says: "Good enough for the Company, which pays by the basket and doesn't ask what's in it. Twenty-eight years I've fished this strand. The fish haven't noticed.",
+          },
+        ],
+      },
+      {
+        id: 'fenfolk',
+        ask: 'Do the fen raiders trouble you?',
+        requires: [level(3)],
+        answers: [
+          {
+            id: 'fenfolk',
+            says: 'They cut my nets twice last year, and left the fish in them. A thief takes the fish. I never did work out what that was, so I keep my nets out of the fen.',
+          },
+          {
+            id: 'fenfolk-close',
+            says: "You've been down there among them. Then you know more than I do. I only know they left the fish.",
+            requires: [done('blackwater-raiders')],
+          },
+        ],
+      },
+    ],
+  },
+
+  crow: {
+    greetings: [
+      { says: "Oh. It's you." },
+      {
+        says: 'Another sword. Lovely. Wave it somewhere else.',
+        requires: [{ kind: 'class', classId: 'warrior' }],
+      },
+      {
+        says: "Keep that fire to yourself. I'm nothing but feathers.",
+        requires: [{ kind: 'class', classId: 'wizard' }],
+      },
+      {
+        says: 'Point that somewhere else. I know what you lot think crows are for.',
+        requires: [{ kind: 'class', classId: 'ranger' }],
+      },
+    ],
+    topics: [
+      {
+        id: 'talk',
+        ask: 'How can you talk?',
+        answers: [{ id: 'talk', says: 'Not telling.' }],
+      },
+      {
+        id: 'name',
+        ask: 'How do you know who I am?',
+        follows: 'talk',
+        answers: [
+          {
+            id: 'name',
+            says: "Everybody knows who you are. I'm the only one rude enough to say so. Don't ask me how. I won't tell you that either.",
+          },
+        ],
+      },
+      {
+        id: 'fettler',
+        ask: 'What does the fettler keep in the back?',
+        answers: [
+          {
+            id: 'fettler',
+            says: "Shiny things. Dead people's shiny things. He thinks I don't look in at the window. I always look in at the window.",
+          },
+        ],
+      },
+      {
+        id: 'light',
+        ask: 'Can you see the light with me?',
+        answers: [
+          {
+            id: 'light',
+            says: 'I see it. It sees me. We have agreed not to discuss it.',
+          },
+        ],
+      },
+      {
+        id: 'ford',
+        ask: 'What else do you know?',
+        requires: [level(5)],
+        answers: [
+          {
+            id: 'ford',
+            says: 'More than you. Less than the stones in that ford, and they say nothing to anybody. Look at them, if you want to be told something.',
+          },
+          {
+            id: 'ford-barrow',
+            says: "That you went down into the old king's hole and came out again. Everybody knows that. What they don't know is what came out with you.",
+            requires: [done('the-barrow-king')],
+          },
+        ],
+      },
+    ],
+  },
+
+  keeper: {
+    greetings: [
+      {
+        says: 'Every light you see out there is somebody’s mother. Mind where you put your feet.',
+      },
+      {
+        says: 'You have killed some of our young. I know who you are. Sit anyway, if you will listen.',
+        requires: [done('blackwater-raiders')],
+      },
+    ],
+    topics: [
+      {
+        id: 'lights',
+        ask: 'What are the lights?',
+        answers: [
+          {
+            id: 'lights',
+            says: 'Lanterns, over the barrows. When one of us dies we go into one, and keep a king asleep who would be better asleep. I keep the third light. It is my mother.',
+          },
+        ],
+      },
+      {
+        id: 'pans',
+        ask: 'Why do your people break the pans?',
+        answers: [
+          {
+            id: 'pans',
+            says: 'The Company drains the fen to make salt, and the water goes down off our dead, and the lanterns go out. Our young break the pans for it. Tirrow leads them. He is young, and angry, and he is not wrong.',
+          },
+        ],
+      },
+      {
+        id: 'grandmother',
+        ask: 'What is under the pans?',
+        follows: 'pans',
+        answers: [
+          {
+            id: 'grandmother',
+            says: 'My grandmother, under the second pan from the east. She always said she would be worth something to the Company one day.',
+          },
+        ],
+      },
+      {
+        id: 'tirrow',
+        ask: 'Will Tirrow talk to me?',
+        follows: 'pans',
+        answers: [
+          {
+            id: 'tirrow',
+            says: 'He will not talk to me, and I carried him on my back across this fen. He talks to the pans, with a spade. When that changes I will know it first.',
+          },
+        ],
+      },
+      {
+        id: 'wick',
+        ask: 'Do you know what this light is?',
+        answers: [
+          {
+            id: 'wick',
+            says: 'We put you in the hill.',
+          },
+          {
+            id: 'wick-named',
+            says: 'It has a name again. Then it has begun to remember, and what it remembers is not mine to tell it.',
+            requires: [done('the-barrow-king')],
+          },
+        ],
+      },
+      {
+        id: 'why',
+        ask: 'Why would you do that?',
+        follows: 'wick',
+        answers: [
+          {
+            id: 'why',
+            says: 'Not today. Not to you, with it listening at your shoulder.',
+          },
+        ],
+      },
+    ],
+  },
 };

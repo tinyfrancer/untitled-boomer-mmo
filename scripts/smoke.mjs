@@ -547,7 +547,7 @@ const standSouthOf = async (what, back = 150) => {
  * Answers whom the conversation was with, since which person a ray reached is
  * the point of every section that calls this with three others standing close.
  *
- * @param {import('../src/data/npcs').NpcRoleId} role
+ * @param {import('../src/data/npcs').CounterId} role
  * @param {string} who
  * @returns {Promise<string | null>}
  */
@@ -5858,6 +5858,56 @@ async function dialog() {
   await page.evaluate(() => window.world.closeCounters());
 }
 
+async function lorePeople() {
+  // --- The lore's people (D1b): somebody who works no counter, in a zone with
+  // none, tapped on the strand. The conversation is the whole of them: topics
+  // and an answer, and no button for a counter. What they say is
+  // tests/world/dialog.test.ts's; what needs a browser is that a tap on a
+  // person standing in the open reaches them and the panel has nothing to
+  // offer but talk. ---
+  await toTown();
+  await park();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.closeCounters();
+    w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+  });
+  await stepUntilZone('beach', 'the strand road south out of town');
+
+  const FISHER = "window.world.npcs.find((n) => n.npcId === 'fisher')";
+  await standSouthOf(FISHER, 100);
+  await clickAt(await screenAt(FISHER));
+  await stepUntil(
+    () => page.evaluate(() => window.world.counterNpc('talk')?.npcId === 'fisher'),
+    'the tapped fisher to talk',
+  );
+  await page.click('.hud-modal__box--talk .hud-talk__topic[data-topic="candles"]');
+  await step(2);
+  const talk = await page.evaluate(() => {
+    const box = document.querySelector('.hud-modal__box--talk');
+    return {
+      name: box?.querySelector('.hud-modal__title')?.textContent ?? '',
+      services: box?.querySelectorAll('.hud-talk__service').length ?? -1,
+      answer: /** @type {HTMLElement | null} */ (box?.querySelector('.hud-talk__greeting'))?.dataset
+        .answer,
+      next: box?.querySelector('.hud-talk__topic[data-topic="past"]') !== null,
+    };
+  });
+  check(
+    'a person with no counter talks on the strand: an answer, the topic it leads to, and no counter offered',
+    talk.name.length > 0 && talk.services === 0 && talk.answer === 'candles' && talk.next,
+    JSON.stringify(talk),
+  );
+  await page.screenshot({ path: `${OUT}/9c-lore-people.png` });
+
+  await page.evaluate(() => {
+    const w = window.world;
+    w.closeCounters();
+    w.teleport(w.worldWidth / 2, 33);
+  });
+  await stepUntilZone('town', 'the strand road back north into town');
+}
+
 async function spirit() {
   // --- Wick (D4): drawn beside the player in the art's light, brighter while it
   // has something to say, and a tap on it saying it on the card under its own
@@ -6248,6 +6298,7 @@ const SECTIONS = [
   ['spirit', spirit],
   ['still', still],
   ['house', house],
+  ['lore-people', lorePeople],
 ];
 
 const known = SECTIONS.map(([name]) => name);

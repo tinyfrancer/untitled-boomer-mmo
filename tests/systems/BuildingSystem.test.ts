@@ -11,7 +11,7 @@ import {
   type BuildingDefinition,
 } from '../../src/data/buildings';
 import { ENEMIES } from '../../src/data/enemies';
-import { NPCS, NPC_INTERACT_RADIUS } from '../../src/data/npcs';
+import { NPCS, NPC_INTERACT_RADIUS, npcRole } from '../../src/data/npcs';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import { BLOCKING_TILES } from '../../src/data/tiles';
 import { ZONES, type ZoneDefinition } from '../../src/data/zones';
@@ -326,6 +326,18 @@ describe('the walk up to a counter', () => {
  * Every zone with counters and buildings both, rather than town alone, because
  * Greyford is the second and there was nothing holding it to any of this.
  */
+/**
+ * Whoever in a zone works somewhere: everybody with a counter, and anybody the
+ * zone's text names on a building's row, which is the Wet Boot's keeper (D1b).
+ * Somebody who works nowhere stands in the open and is placed as a marker.
+ */
+function workers(zone: ZoneDefinition): ZoneDefinition['npcSpawns'] {
+  return zone.npcSpawns.filter(
+    ({ x, y, npcId }) =>
+      npcRole(npcId) !== 'none' || placed(zone).some((building) => isInside(building, { x, y })),
+  );
+}
+
 describe('every counter', () => {
   const withCounters = zones.filter(
     (zone) => zone.npcSpawns.length > 0 && zone.buildingSpawns.length > 0,
@@ -334,7 +346,7 @@ describe('every counter', () => {
   it.each(withCounters.map((zone) => zone.id))('works out of a building in %s', (zoneId) => {
     const zone = ZONES[zoneId];
 
-    zone.npcSpawns.forEach(({ x, y, npcId }) => {
+    workers(zone).forEach(({ x, y, npcId }) => {
       const npc = { x, y };
       const home = placed(zone).find((building) => isInside(building, npc));
       expect(home, `the ${npcId} works out of nowhere`).toBeDefined();
@@ -349,7 +361,7 @@ describe('every counter', () => {
   it.each(withCounters.map((zone) => zone.id))('stands at the back of the room in %s', (zoneId) => {
     const zone = ZONES[zoneId];
 
-    zone.npcSpawns.forEach(({ x, y, npcId }) => {
+    workers(zone).forEach(({ x, y, npcId }) => {
       const npc = { x, y };
       const home = placed(zone).find((building) => isInside(building, npc));
       if (!home) throw new Error(`the ${npcId} works out of nowhere`);

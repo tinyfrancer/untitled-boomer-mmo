@@ -30,7 +30,7 @@ export const BLACKWATER_FEN_LAYOUT = layoutZone(
     ,,,,,,,,,,,,,,,,,,,,,,,,:::~~~:~~~:~~~:~~~:::
     ,,,m,,,,,,,,,,,,,,,,,,,,:::~~~:~~~:~~~:~~~:::
     ,,,,,,,,,,m,,,,,,,,,,,,,:::::::::::::::::::::
-    ,,,,,,,,,,,,,,,,,,,,,,,,:::~~~:~~~:~~~:~~~:::
+    ,,,,,,K,,,,,,,,,,,,,,,,,:::~~~:~~~:~~~:~~~:::
     ,,,,,,,,,,,,,,,,,,m,,,,,:::~~~:~~~:~~~:~~~:::
     ,,,,~~~~~,,,,,,,,,,,~~,,:::~~::::::::::::::::
     ,,,~~~~~~~,,,,b,,,,,~~,,:::~~::::::::::::::::
@@ -62,6 +62,10 @@ export const BLACKWATER_FEN_LAYOUT = layoutZone(
     v: { secret: 'drowned-village', on: 'water' },
     // On the holm, over the barrow it keeps.
     l: { secret: 'kept-lantern', on: 'marsh' },
+    // Maren, on the mere's north shore above the drowned village, where the
+    // strand road brings the Company's people in and she can see them come
+    // (D1b): out of every raider's reach, since she is the one who talks.
+    K: { npc: 'keeper', on: 'marsh' },
     /**
      * The deep pools' fishing, each inside a raider's aggro radius: the fen
      * supplies the food that makes the upper band survivable, and the food is

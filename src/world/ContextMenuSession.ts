@@ -1,4 +1,4 @@
-import { npcRole, ROLE_SERVICES, type NpcRoleId } from '../data/npcs';
+import { npcRole, roleCounter, ROLE_SERVICES, type NpcRoleId } from '../data/npcs';
 import { STATION_ACTION_LABELS, STATION_LABELS } from '../data/recipes';
 import { SKILLS } from '../data/skills';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
@@ -45,6 +45,8 @@ const ROLE_ACTIONS = {
   outfitter: 'outfit',
   quartermaster: 'bounty',
   reforger: 'reforge',
+  // Talking is the counter of somebody who works none, so it is their one line.
+  none: 'talk',
 } as const satisfies Record<NpcRoleId, ContextActionId>;
 
 /**
@@ -56,7 +58,7 @@ const ROLE_ACTIONS = {
  */
 function subjectActions(subject: Subject): ContextActionId[] {
   return subject.kind === 'npc'
-    ? ['talk', ROLE_ACTIONS[npcRole(subject.npc.npcId)]]
+    ? [...new Set(['talk', ROLE_ACTIONS[npcRole(subject.npc.npcId)]] as const)]
     : [SUBJECT_ACTIONS[subject.kind]];
 }
 
@@ -168,7 +170,7 @@ export class ContextMenuSession {
     // A person's counter, named, is the one line that is not a plain tap: the
     // same walk, ending at their counter rather than at a conversation.
     if (subject.kind === 'npc' && actionId !== 'talk') {
-      this.deps.perform({ ...subject, counter: npcRole(subject.npc.npcId) });
+      this.deps.perform({ ...subject, counter: roleCounter(npcRole(subject.npc.npcId)) });
       return;
     }
     this.deps.perform(subject);
@@ -240,9 +242,11 @@ export class ContextMenuSession {
 
   private npcMenu(npc: WorldNpc): ContextSubject {
     const role = npcRole(npc.npcId);
+    const talk = action('talk', 'Talk');
     return {
       title: describeNpc(npc.npcId).title,
-      actions: [action('talk', 'Talk'), action(ROLE_ACTIONS[role], ROLE_SERVICES[role].label)],
+      actions:
+        role === 'none' ? [talk] : [talk, action(ROLE_ACTIONS[role], ROLE_SERVICES[role].label)],
       details: describeNpc(npc.npcId),
     };
   }

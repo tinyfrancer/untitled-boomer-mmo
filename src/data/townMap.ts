@@ -76,7 +76,9 @@ export const TOWN_LAYOUT = layoutZone(
      */
     B: { building: 'bank-house', worker: 'banker', on: 'grass' },
     C: { building: 'cottage', on: 'grass' },
-    I: { building: 'inn', on: 'grass' },
+    // Bess keeps the Wet Boot from behind its bar, which is a counter like the
+    // others with nothing across it but talk (D1b).
+    I: { building: 'inn', worker: 'innkeeper', on: 'grass' },
     M: { building: 'smithy', on: 'grass' },
     Q: { building: 'quartermasters-post', worker: 'quartermaster', on: 'grass' },
     S: { building: 'general-store', worker: 'shopkeeper', on: 'grass' },
