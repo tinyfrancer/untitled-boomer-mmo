@@ -743,13 +743,64 @@ async function teardown() {
   await stepUntilZone('quarry', 'the north exit to load the New Cut');
   await checkZoneDrawn('New Cut');
   await page.screenshot({ path: `${OUT}/5-quarry.png` });
+  // Down the shaft, which is the New Cut's only way to the Deep Cut (decision
+  // 121): the middle of the mouth through the face, and an arrival across the
+  // Deep Cut's own at the shaft's foot, the door and the mark drawn down there.
+  /** @param {string} to */
+  const mouthMiddle = (to) =>
+    page.evaluate((to) => {
+      const w = window.world;
+      const post = w.signposts.find((sign) => sign.exit.to === to);
+      const [first, last] = post?.exit.mouth ?? [0, 0];
+      return ((first + last + 1) / 2) * (w.worldWidth / (w.zone.map[0]?.length ?? 1));
+    }, to);
+  const shaft = await mouthMiddle('deep-cut');
+  await page.evaluate((x) => window.world.teleport(x, 33), shaft);
+  await stepUntilZone('deep-cut', 'the walk down the shaft into the Deep Cut');
+  const foot = await page.evaluate(() => {
+    const w = window.world;
+    const exit = w.zone.exits.find((each) => each.to === 'quarry');
+    const [first, last] = exit?.mouth ?? [0, -1];
+    return { column: w.player.x / (w.worldWidth / (w.zone.map[0]?.length ?? 1)), first, last };
+  });
+  check(
+    "and comes down at the shaft's foot, across the Deep Cut's mouth",
+    foot.column > foot.first && foot.column < foot.last + 1,
+    `column ${foot.column.toFixed(2)} of ${foot.first}-${foot.last}`,
+  );
+  await checkZoneDrawn('Deep Cut');
+  await page.screenshot({ path: `${OUT}/5b-deep-cut.png` });
+  const up = await mouthMiddle('quarry');
+  await page.evaluate((x) => window.world.teleport(x, window.world.worldHeight - 33), up);
+  await stepUntilZone('quarry', 'the walk back up the shaft');
   await page.evaluate(() => {
     const w = window.world;
     w.teleport(w.worldWidth / 2, w.worldHeight - 33);
   });
   await stepUntilZone('town', 'the south exit to return to town');
+  // And the fen, two south, for the lantern still burning on its holm: the
+  // first secret standing up that loops, as a station's fire does, which
+  // nothing but a browser draws.
+  /**
+   * @param {'north' | 'south'} edge
+   * @param {string} zone
+   * @param {string} label
+   */
+  const walkOff = async (edge, zone, label) => {
+    await page.evaluate((edge) => {
+      const w = window.world;
+      w.teleport(w.worldWidth / 2, edge === 'north' ? 33 : w.worldHeight - 33);
+    }, edge);
+    await stepUntilZone(zone, label);
+  };
+  await walkOff('south', 'beach', 'the south exit to load the strand');
+  await walkOff('south', 'blackwater-fen', 'the strand road south to load the fen');
+  await checkZoneDrawn('fen');
+  await page.screenshot({ path: `${OUT}/5c-fen.png` });
+  await walkOff('north', 'beach', 'the north exit back to the strand');
+  await walkOff('north', 'town', 'the north exit back to town');
   check(
-    'zone travel round-trips Lampton -> the strand -> Lampton -> Redrag Camp -> Lampton -> the New Cut -> Lampton',
+    'zone travel round-trips Lampton -> the strand -> Lampton -> Redrag Camp -> Lampton -> the New Cut -> the Deep Cut -> the New Cut -> Lampton -> the strand -> the fen -> the strand -> Lampton',
     true,
   );
 }
