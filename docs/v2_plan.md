@@ -74,8 +74,9 @@ standing secret that loops; no scenery yet; decision 121), **and C10** (less gri
 its number plus four minutes of play, measured by a bot playing every class through the zones; the
 curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
 on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122).
-**Next: C11**, the Part C review. Update this line as each phase lands: which phase, and which is
-next.
+**Next: C11**, the Part C review, and from here the phases are built several at a time, by the
+rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
+which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -153,6 +154,12 @@ why Part A exists and comes first.
   split here, or say in its entry why it stayed whole. A4 (40 files) and A7 (45) went past it
   without a word, and each fitted its session; the count takes in the tests and the docs every
   phase corrects, so it is a prompt to look rather than a wall (decision 99).
+- **From C11 on, several phases are in flight at once** (decision 123). `docs/v2_parallel_plan.md`
+  says which may run beside which, the files they all touch, and the rules on top of these: a
+  phase's decision number and save version are taken at the merge rather than at the branch, its
+  Record commit is written after that rebase, a contested file is owned by one phase at a time, and
+  a review amends its own part and proposes the rest. It holds a brief per phase, which is where a
+  session building one starts.
 - **Every part ends in a review phase.** It re-reads what landed against the pillars and the
   user's original list, asks the user what feels wrong, and **amends the rest of this plan** before
   the next part starts: phases added, cut, reordered. This plan is expected to change.
@@ -172,7 +179,8 @@ why Part A exists and comes first.
 ### Starting cold
 
 1. `CLAUDE.md` loads by itself. Read this plan's status line, the phase to be built, its part's
-   introduction, and decisions 80-88.
+   introduction, decisions 80-88, and the phase's brief in `docs/v2_parallel_plan.md`, which says
+   what else to read and what to ask.
 2. `git log --oneline -15`, the one record that cannot be out of date.
 3. Read the `docs/architecture/` file for every subsystem the phase touches.
 4. Ask the phase's open questions before writing code.

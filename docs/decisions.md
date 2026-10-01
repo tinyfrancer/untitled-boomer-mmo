@@ -3220,3 +3220,27 @@ Claude's, building it:
   groups through rooms a kite cannot open up; the Deep Cut takes the ranged classes longer than the
   mill road at the same level; and a level 1 character with nothing to eat or light rests most of the
   five minutes the first level takes. The review (C11) and Part G are where these are looked at.
+
+## 123. The rest of version 2 is built several phases at a time, by the rules in `docs/v2_parallel_plan.md`
+
+**2026-10-01 · the user, asked by Claude**
+
+From C11 on, the remaining phases of `docs/v2_plan.md` are built by several agents at once, one
+cloud session a phase on a branch named for it, where every phase so far was built one at a time in
+one session. `docs/v2_parallel_plan.md` says which phases may run beside which (five at most in a
+wave, since the user's time to answer and to play is the bottleneck rather than the agents'), the
+files they all touch, and the rules on top of the plan's that make several branches safe to merge
+one after another: a save version and a decision number are taken at the merge rather than at the
+branch, since both count by one and the migration chain may have no gap; the Record commit is
+written after that rebase; a contested file is owned by one phase at a time (Lampton's text is F1's,
+the dialog schema D1's until it merges); a review amends its own part and proposes the rest; and the
+pace is never moved sideways by a bonus or a consumable. It holds a brief per phase a session starts
+cold from. C11 runs first and alone, as the plan's rule that a review precedes the next part asks,
+and wave 1's questions are put to the user the same day so its five phases start the moment C11
+merges.
+
+**Rejected:** one phase at a time, as the plan had been worked, which puts Parts D, E and F in a
+line though none waits on another; numbering decisions and save versions ahead of time in merge
+order, which fixes an order nobody knows yet and breaks the chain if a phase slips; starting wave 1
+before C11 merges, which risks a review amending a part with a session on it; more than five agents
+a wave, which the user's time does not support.
