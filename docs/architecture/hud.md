@@ -15,8 +15,13 @@ of it. Char / Bag / Quests / Idle / Feats / Skills / Map / Log are `Sheet` subcl
 holds a single `openSheet`, not a visible flag per panel — while Menu and Options are actions
 that open no sheet. The shop, the slot picker, the options menu and the away report are overlays
 built on open and removed on close. A tap on a person puts up the **talk panel** (`hud/TalkModal.ts`)
-in the slot every counter uses: their greeting, a button for the counter they work, and their
-quests (`hud/talkQuests.ts`), which no counter draws any more. Every role counter's panel is its own
+in the slot every counter uses: their name with their trade beside it, what they are saying (their
+greeting, or their answer under the question that drew it), the topics they will talk about as a
+button each, grey once heard until they have something new to say (`economy.md`), a button for the
+counter they work, and their quests (`hud/talkQuests.ts`), which no counter draws any more. The
+topics are derived from the HUD's model by `DialogSystem` (level, class, quest log, and what has
+been asked, which is seeded from the save and kept current on `ASKED_CHANGED_EVENT`), and what is
+being said comes from the world on `CONVERSATION_CHANGED_EVENT`, ids rather than words. Every role counter's panel is its own
 list with a **Back** to the conversation put at the front of its head by `OverlayHost` rather than
 by the panel, which is why each modal hands the host its `head` (`economy.md`). The options menu
 also holds the one setting

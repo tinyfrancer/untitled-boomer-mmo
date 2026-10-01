@@ -26,13 +26,20 @@ waystation's undercroft, which is where the rats come from.
 
 - **Tilda Pell**, the shopkeeper: warm and nosy, with three carts on the east road and a view on
   everybody. Her errands are the player's first work. Her mother bought eels off the fenfolk, and she
-  will not call them raiders.
+  will not call them raiders. She has kept the General Store for twenty-two of the town's
+  twenty-nine years, and has heard all about the player before they walk in. _In game_, talking
+  (D1).
 - **Ambrose Tally**, the banker: dry and exact, and trusted by everybody because he is interested in
-  nothing but the ledger.
+  nothing but the ledger. Hollis's old gold has crossed his counter twice this year, carried in by
+  people who would not say where they had it; he weighed it, wrote it down and sent it east. He
+  keeps Cobb Harrow's account, dormant, and knows why. _In game_, talking (D1).
 - **Marta Hale**, the trainer: has been a soldier, a hedge-wizard and a poacher, in that order, was
-  sacked from all three, and that is how she knows what to teach.
+  sacked from all three, and that is how she knows what to teach. She went into the fen once,
+  poaching eels, saw the lanterns on their posts with nobody tending them, and has not been back.
+  _In game_, talking (D1).
 - **Jory Stroud**, the quartermaster: the Company in Lampton, overworked, brusque and fair. He does
-  not care what is under the fen. He cares what is on the road.
+  not care what is under the fen. He cares what is on the road. He still orders iron for Cobb
+  Harrow, because the order is in the Company's book. _In game_, talking (D1).
 - **Bess Mallow**, who keeps the Wet Boot. _Not yet in the game._
 - **Cobb Harrow**, the smith, who went east to a wedding two years ago and has not come back. The
   contract board still orders for him.
@@ -223,9 +230,11 @@ little way west towards the Stillwood and is grown over.
 **People.**
 
 - **Oona Rook**, the outfitter: trades steel tools for ore, coal and hardwood, and is the most
-  practical person west of Lampton.
+  practical person west of Lampton. She takes the ford's stones for what was always there, though she
+  has noticed they are dressed. _In game_, talking (D1).
 - **Silas Quill**, the fettler: reworks gear, and grave goods, and asks nothing. Charming, shameless,
-  and not quite a villain.
+  and not quite a villain. He wants very much to see what Orlath was buried in. _In game_, talking
+  (D1).
 - **Pocket**, the crow on the longhouse roof. _Not yet in the game._
 
 **Secrets.**
