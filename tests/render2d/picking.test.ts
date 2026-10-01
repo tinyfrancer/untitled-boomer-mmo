@@ -154,7 +154,7 @@ describe('pickTap in 2D', () => {
    * does not stop you shopping. One box on one spot, offered by every kind, so
    * that only the order can decide.
    */
-  it('asks node, signpost, NPC, mob, spirit, station, fixture, building, pile, then ground', () => {
+  it('asks node, signpost, NPC, mob, station, fixture, spirit, building, pile, then ground', () => {
     const { world } = harness();
     const spot = { x: 700, y: 700 };
     const door = { x: 0, y: 0 };
@@ -181,9 +181,9 @@ describe('pickTap in 2D', () => {
       'signposts',
       'npcs',
       'mobs',
-      'spirit',
       'stations',
       'fixtures',
+      'spirit',
       'buildings',
       'piles',
     ] as const;
@@ -201,9 +201,9 @@ describe('pickTap in 2D', () => {
       'signpost',
       'npc',
       'mob',
-      'spirit',
       'station',
       'fixture',
+      'spirit',
       'building',
       'pile',
     ]);

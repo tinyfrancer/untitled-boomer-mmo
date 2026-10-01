@@ -269,10 +269,8 @@ since a crab is a thumb's width at best. **A node is picked by its body**: a tre
 the lower half of its crown, so a creature behind the crown is still the creature, and a fishing
 spot as the patch of water round it (`lyingRect`). A corpse and a lapsed pile answer no box at all.
 
-**The kinds are asked in a priority, not a depth sort**: node → signpost → NPC → mob → spirit →
-station → building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
 **The kinds are asked in a priority, not a depth sort**: node → signpost → NPC → mob → station →
-fixture → building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
+fixture → spirit → building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
 within one kind does what is drawn in front win, the one whose feet are further down the screen.
 Every point is ground at worst: a flat view has no sky to miss into.
 
@@ -295,8 +293,13 @@ up. It **blinks through the last ten seconds of its minute**, read off the pile'
 than the view's, which is how it says it is going without a timer drawn over it (`docs/decisions.md`
 66).
 
-**Wick is below the creatures and above the rest** (D4). It floats at the player's shoulder, which
-is where a creature fighting them stands, so above the mobs it would eat the tap on the rat; and it
+**Wick is below the creatures, the stations and the house's fixtures, and above the buildings**
+(D4, its seat moved at wave 1's fold). It floats at the player's shoulder, which is where a
+creature fighting them stands, so above the mobs it would eat the tap on the rat; it floats over
+the stand or the station the player walked up to as well, and what it has to say waits for a tap
+while they do not, which is what wave 1 found when D4 and F1 met (the house's held stand could not
+be tapped with Wick over it); above the buildings still, since a tap on a building's box only walks
+to its door and Wick at Lampton's start floats over the inn's; and it
 is picked by a box round the light where it is drawn (`lyingRect` at `SPIRIT_HEIGHT` over the ground
 under it) rather than one standing on the ground, which would be the player's shoulder, and never
 the player's own feet. There is one of it, so it is a pickable rather than a list.

@@ -23,8 +23,8 @@ import type {
  * What a tap is on (`docs/architecture/rendering.md` has why each rule is what
  * it is): a tap is picked against boxes the game chooses, not against the
  * pixels drawn, and the kinds are asked in a **priority** — node, signpost,
- * NPC, mob, spirit, station, building, loot pile, ground — rather than a depth sort,
- * NPC, mob, station, fixture, building, loot pile, ground — rather than a depth sort,
+ * NPC, mob, station, fixture, spirit, building, loot pile, ground — rather than a depth
+ * sort,
  * so a rat in front of the shopkeeper does not stop you shopping. A box is a
  * rectangle on the ground's plane, standing up the screen from where a thing's
  * feet are, and within one kind the one drawn in front wins.
@@ -132,13 +132,18 @@ export function pickTap(point: Point, scene: PickScene2D): WorldTap {
   if (npc) return { kind: 'npc', npc: npc.npc };
   const mob = frontmost(point, scene.mobs);
   if (mob) return { kind: 'mob', mob: mob.mob };
-  if (frontmost(point, [scene.spirit])) return { kind: 'spirit' };
   const station = frontmost(point, scene.stations);
   if (station) return { kind: 'station', station: station.station };
   // What stands in the house, from inside it only (F1): from outside the roof
   // is over all of it, and the building answers.
   const fixture = frontmost(point, scene.fixtures);
   if (fixture) return { kind: 'fixture', fixture: fixture.fixture };
+  // Wick after what the player walks up to and before what a tap only walks
+  // toward: it floats at the shoulder, over the stand or the station the
+  // player is standing at, and what it has to say waits for a tap while they
+  // do not; over a building's box it is still the light, since that tap would
+  // only walk to a door (settled at wave 1's fold, between D4 and F1).
+  if (frontmost(point, [scene.spirit])) return { kind: 'spirit' };
   // A building answers as whoever works in it, or the ground at its door: see
   // `docs/architecture/buildings.md`.
   const building = frontmost(point, scene.buildings);
