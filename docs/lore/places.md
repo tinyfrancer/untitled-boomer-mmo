@@ -61,9 +61,10 @@ waystation's undercroft, which is where the rats come from.
 _Rebuilt in C5 (decision 117)._
 
 **What it is.** The strand south of Lampton: sand, crabs and the Company's fishers, and a spit down
-the west side that is the only way to the fen road. Offshore stand **the Candles**, stumps of stone
-in a line out of the sea, which the settlers named for what they look like. There is no tide to
-speak of (decision 117): the sea is where it is.
+the west side that is the only way to the fen road. **Samphire** grows on the sand at the water's
+edge where the salt reaches it, and the fishers' children cut it to trade at Greyford for the still.
+Offshore stand **the Candles**, stumps of stone in a line out of the sea, which the settlers named
+for what they look like. There is no tide to speak of (decision 117): the sea is where it is.
 
 **What it was.** Veymar's sea-wall. The Candles are its sea-lights, drowned to the stump.
 
@@ -174,9 +175,10 @@ Please."
 _Rebuilt in C8 (decision 120)._
 
 **What it is.** The road west from Lampton, knots of goblins on it, the Old Mill standing empty
-over its millpond, the willows round the pond where the steel arrow's shafts are cut, and the timber
-stand in the south-east where the hardwood is. The stream that comes down past Greyford fills the
-pond. The road runs as far as the mill yard and gives out; the way on is north to Greyford.
+over its millpond, the willows round the pond where the steel arrow's shafts are cut,
+**meadowsweet** on the banks of the stream and the pond among them, and the timber stand in the
+south-east where the hardwood is. The stream that comes down past Greyford fills the pond. The road
+runs as far as the mill yard and gives out; the way on is north to Greyford.
 
 **What it was.** Veymar's road towards the Stillwood. The Old Mill is the first charter's, the
 millpond its dam over the elves' shrine, and the willows the elves planted round the shrine when
@@ -212,11 +214,12 @@ _Rebuilt in C8 (decision 120)._
 
 **What it is.** The Company's forward post at a ford of grey stones, where a stream comes down off
 the Greyhills' west end: a trading post, a longhouse with the fettler's store against its back, a
-tannery and a fletcher's bench by the water, cottages, and the only counters in the Veymarch that take
-no coin. The Old Mill Road reaches it from Lampton, and the New Cut is over the hill to the east. The
-stream runs on south into the Old Mill Road's millpond. The road crosses it at the ford, between the
-bridge's abutments, with two of its piers still standing in the water; over it the old road goes a
-little way west towards the Stillwood and is grown over.
+tannery and a fletcher's bench by the water, a fenfolk **still** of copper on the bank below the
+ford, traded off a holm when the post was built, cottages, and the only counters in the Veymarch
+that take no coin. The Old Mill Road reaches it from Lampton, and the New Cut is over the hill to the
+east. The stream runs on south into the Old Mill Road's millpond. The road crosses it at the ford,
+between the bridge's abutments, with two of its piers still standing in the water; over it the old
+road goes a little way west towards the Stillwood and is grown over.
 
 **What it was.** The ford's grey stones are dressed stone: the fallen piers of a Veymari bridge.
 
@@ -251,11 +254,13 @@ _Rebuilt in C9 (decision 121)._
 
 **What it is.** Black water, reed and marsh south of the strand: eels in the deep pools, bog
 lurkers, the raiders, and lanterns on posts over the water, burning, which the Company's people never
-go near. The Company's salt pans are cut into the sand at its northern edge, two rows of four, and a
-drain runs straight down out of the marsh to feed them, with a crossing of stone over it where it
-cut the fenfolk's old channel. A mere in the west has a village under it, two of its chimneys still
-standing out of the water. At the bottom of the fen the water closes in on a causeway to Orlhal's
-door, its kerb of dressed stone above the water since the drains lowered it.
+go near. **Bog myrtle** grows on the higher marsh and **bogbean** in the shallows round the pools,
+the fenfolk's brewing herbs (`peoples.md`). The Company's salt pans are cut into the sand at its
+northern edge, two rows of four, and a drain runs straight down out of the marsh to feed them, with
+a crossing of stone over it where it cut the fenfolk's old channel. A mere in the west has a village
+under it, two of its chimneys still standing out of the water. At the bottom of the fen the water
+closes in on a causeway to Orlhal's door, its kerb of dressed stone above the water since the drains
+lowered it.
 
 **What it was.** Veymar's low country: farms and villages under a man's depth of water, their roofs
 still showing in places. Orlhal is at its southern edge.
