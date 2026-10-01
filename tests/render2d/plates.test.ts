@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { boxesOverlap, stackPlates, stackableBox, type Stackable } from '../../src/render2d/plates';
+import {
+  PLATE_GAP,
+  boxesOverlap,
+  stackPlates,
+  stackableBox,
+  type Stackable,
+} from '../../src/render2d/plates';
 
 /** A goblin's plate: a bar and "Goblin Scavenger (Lv 4)", about 90 art pixels across. */
 const plate = (x: number, bottom: number, width = 90, height = 17): Stackable => ({
@@ -18,6 +24,16 @@ describe('stackPlates', () => {
     const [first, second] = stackPlates([plate(0, 100), plate(30, 104)]);
     expect(first).toBe(100);
     expect(second).toBe(100 - 17);
+  });
+
+  // Lampton wrote "Cottage Rat (Lv 1)": a sign and a rat's plate end to end,
+  // a space apart, read as one name.
+  it('lifts a plate that would stand beside another closer than a word space', () => {
+    expect(PLATE_GAP).toBeGreaterThan(0);
+    const touching = stackPlates([plate(0, 100), plate(90 + PLATE_GAP - 1, 100)]);
+    expect(touching[1]).toBeLessThan(100);
+    const apart = stackPlates([plate(0, 100), plate(90 + PLATE_GAP, 100)]);
+    expect(apart[1]).toBe(100);
   });
 
   it('never moves the first, whatever comes after it', () => {
