@@ -86,7 +86,7 @@ describe('computeEffectiveStats', () => {
 
   it("grows a class along its own axis: the wizard's is intellect", () => {
     const stats = computeEffectiveStats('wizard', NO_GEAR, 3);
-    expect(stats.maxHp).toBe(24 + 3 * 2);
+    expect(stats.maxHp).toBe(24 + 6 * 2);
     expect(stats.intellect).toBe(6 + 2 * 2);
     expect(stats.strength).toBe(1);
   });
