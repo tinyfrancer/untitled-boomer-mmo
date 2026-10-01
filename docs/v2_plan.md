@@ -73,8 +73,11 @@ village, the lantern still burning, the sealed door and the maker's mark, the la
 standing secret that loops; no scenery yet; decision 121), **and C10** (less grind: a level takes
 its number plus four minutes of play, measured by a bot playing every class through the zones; the
 curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
-on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122).
-**Next: C11**, the Part C review, and from here the phases are built several at a time, by the
+on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
+**and E1** (rested: idle banks it by time, open or closed, to half a level and full in a night;
+XP earned by hand pays double while it lasts and idle's own never spends it; a paler segment ahead
+of the XP bar's fill, a Rested section on the idle panel, the away report saying what a night
+banked; save version 103; decision 124). **Next: C11**, the Part C review, and from here the phases are built several at a time, by the
 rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.
 
@@ -686,7 +689,9 @@ C2 answered which factions there are and what the spirit wants (`docs/lore/facti
 Idle and active each get a reason (decision 85).
 
 - **E1 — Rested.** Time spent idle or away banks a rested bonus that speeds up active XP, capped,
-  and shown on the XP bar.
+  and shown on the XP bar. **Landed** (decision 124): banked by idle, open or closed, by time, to
+  half a level and full in eight hours; doubles XP earned by hand (kills, quests, contracts) while
+  it lasts; idle's own XP never spends it; the pace bot plays unrested.
 - **E2 — Potions.** A way to make them (a new making skill, and where its herbs come from, are this
   phase's questions), and potions brewed in active play that **boost idle gains** for a while: more
   XP, faster gathering. Some may help in a fight.
@@ -695,7 +700,7 @@ Idle and active each get a reason (decision 85).
 - **E4 — Part E review.**
 
 **Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing
-nodes and drops? Does rested XP come only from idle, or from being away too?
+nodes and drops? Does rested XP come only from idle, or from being away too? (Both, E1 answered.)
 
 ---
 

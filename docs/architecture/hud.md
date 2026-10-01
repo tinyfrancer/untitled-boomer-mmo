@@ -96,6 +96,15 @@ Max HP is not on the wire — `player-hp-changed` carries the current value alon
 recomputed from the gear and level the HUD's model already holds, which is why a gear swap and a
 level both have to refresh it.
 
+**The rested bank is a paler segment ahead of the XP fill** (decision 124, `afk.md`): the fill's violet
+at its lightest step, a third strength, drawn under the fill from the bar's start to as far as the
+bank carries the bar (`restedReach`), which is twice the bank while it doubles, so its far end stays
+put as it is spent and only the fill moves up to meet it. It stops at the bar's end, and what is
+left carries into the next level. While any is banked the line inside the bar names it ("96 / 200
+XP, 25 rested") in place of the percentage, which the bar already shows. The bank arrives on the XP
+gain (`CombatXpGain.rested`, since spending it is an XP gain) and, while idle fills it, on
+`rested-changed`, said when its whole number moves rather than every frame.
+
 **The column stands on a backing of the world's darkest ink** (decision 112), at three-quarters
 strength, because it is the one piece of top furniture with no panel: its words and bars are laid
 straight on the world, and a name the world wrote under them (a rat's, a shopfront's) read between

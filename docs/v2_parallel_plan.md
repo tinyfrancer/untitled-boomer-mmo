@@ -3,7 +3,7 @@
 **Status:** live. Proposed on 2026-10-01 against `6497833`, the merge of C10, and taken by the user
 the same day (decision 123). `docs/v2_plan.md` is still the live plan and still says what each phase
 is; this document says how its remaining phases are built by several agents at once rather than one
-session at a time, and holds a brief per phase. **In flight:** C11 (wave 0) and wave 1 (D1, D4, E1, E2, F1), all started 2026-10-01, wave 1 before C11 merged at the user's word, its questions answered under each brief. Update this line
+session at a time, and holds a brief per phase. **In flight:** C11 (wave 0) and wave 1 (D1, D4, E1, E2, F1), all started 2026-10-01, wave 1 before C11 merged at the user's word, its questions answered under each brief. **Landed:** E1 (decision 124, save version 103). Update this line
 as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
