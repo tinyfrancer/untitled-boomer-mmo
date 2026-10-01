@@ -26,28 +26,29 @@ Everything below is scoped in `docs/v2_plan.md`; nothing is added here. Size is 
 the phases that have landed (an A-phase was 20-45, a rebuild 25-35, B8 70), and hours are agent
 hours from the cadence so far (next section), not the user's.
 
-| Phase                     | What it is                                                                                  | Needs first           | Size, hours         |
-| ------------------------- | ------------------------------------------------------------------------------------------- | --------------------- | ------------------- |
-| **C11** Part C review     | Walk C1-C10 against the pillars; C10's three leftovers; **measure a zone's cost** for G1    | nothing               | 10-20 files, 1-2h   |
-| **D1** Dialog             | Conversations as data in the talk panel, a person who remembers, every NPC rewritten        | nothing               | 35-50 files, 2-3h   |
-| **D2** Whispers           | One journal of rumours (leads) and lore fragments (found), with counts                      | D1 for its source     | 25-35 files, 1.5-2h |
-| **D3** Factions           | Standing with each faction, moved by quests, kills, contracts and dialog; ranks open things | D1 for dialog choices | 30-45 files, 2-3h   |
-| **D4** The spirit         | Wick drawn in the world, following, tapped, told to go quiet; the beats; takes the tips     | nothing               | 35-50 files, 2-3h   |
-| **D5** Part D review      |                                                                                             | D1-D4                 | 10-20 files, 1h     |
-| **E1** Rested             | Idle or away banks a bonus that speeds active XP, capped, on the XP bar                     | nothing               | 15-25 files, 1-1.5h |
-| **E2** Potions            | A new making skill and where its herbs come from; potions that boost idle, some a fight     | nothing               | 40-60 files, 3-4h   |
-| **E3** What idle uses     | Idle drinks what it is given; potions join the idle panel's order and Keep                  | E2                    | 15-20 files, 1h     |
-| **E4** Part E review      |                                                                                             | E1-E3                 | 10-20 files, 1h     |
-| **F1** The house          | A building in Lampton that is yours: stands, a wall, a chest                                | nothing               | 40-55 files, 2.5-3h |
-| **F2** A house that grows | Upgrades for coin: rooms, stands, a garden, a workbench; priced by simulation               | F1                    | 25-35 files, 2h     |
-| **F3** Collection log     | Bestiary and log: slain, drops seen, lore found, trophies; an item says where it comes from | D2 for the lore count | 25-35 files, 1.5-2h |
-| **F4** Part F review      |                                                                                             | F1-F3                 | 10-20 files, 1h     |
-| **G1** The shape of 9-20  | Bands, zones, tiers, bosses, travel, written into the plan as phases; sized from C11        | C11                   | docs, 1-2h          |
-| **G2** Specialisations    | Two paths a class at 10, their abilities and ranks; the bar stays four                      | G1, a level-10 spawn  | 35-50 files, 2.5-3h |
-| **G3+** The bands         | One zone or one system a phase, to level 20                                                 | G1, the tiers         | per zone 25-40, 2h  |
-| Part G review             |                                                                                             | G3+                   | 1h                  |
-| **H1** The last pass      | The original list and every pillar once more                                                | everything            | 1-2h                |
-| **H2** Archive            | The plan to `docs/archive/`, `CLAUDE.md` to the game as it stands                           | H1                    | docs, 1h            |
+| Phase                     | What it is                                                                                    | Needs first              | Size, hours         |
+| ------------------------- | --------------------------------------------------------------------------------------------- | ------------------------ | ------------------- |
+| **C11** Part C review     | Walk C1-C10 against the pillars; C10's three leftovers; **measure a zone's cost** for G1      | nothing                  | 10-20 files, 1-2h   |
+| **D1** Dialog             | Conversations as data in the talk panel, a person who remembers, every NPC rewritten          | nothing                  | 35-50 files, 2-3h   |
+| **D1b** The lore's people | Five people the lore places and the game lacks, each drawn, a role whose only counter is talk | D1, F1 for the inn's row | 20-30 files, 1.5-2h |
+| **D2** Whispers           | One journal of rumours (leads) and lore fragments (found), with counts                        | D1 for its source        | 25-35 files, 1.5-2h |
+| **D3** Factions           | Standing with each faction, moved by quests, kills, contracts and dialog; ranks open things   | D1 for dialog choices    | 30-45 files, 2-3h   |
+| **D4** The spirit         | Wick drawn in the world, following, tapped, told to go quiet; the beats; takes the tips       | nothing                  | 35-50 files, 2-3h   |
+| **D5** Part D review      |                                                                                               | D1-D4                    | 10-20 files, 1h     |
+| **E1** Rested             | Idle or away banks a bonus that speeds active XP, capped, on the XP bar                       | nothing                  | 15-25 files, 1-1.5h |
+| **E2** Potions            | A new making skill and where its herbs come from; potions that boost idle, some a fight       | nothing                  | 40-60 files, 3-4h   |
+| **E3** What idle uses     | Idle drinks what it is given; potions join the idle panel's order and Keep                    | E2                       | 15-20 files, 1h     |
+| **E4** Part E review      |                                                                                               | E1-E3                    | 10-20 files, 1h     |
+| **F1** The house          | A building in Lampton that is yours: stands, a wall, a chest                                  | nothing                  | 40-55 files, 2.5-3h |
+| **F2** A house that grows | Upgrades for coin: rooms, stands, a garden, a workbench; priced by simulation                 | F1                       | 25-35 files, 2h     |
+| **F3** Collection log     | Bestiary and log: slain, drops seen, lore found, trophies; an item says where it comes from   | D2 for the lore count    | 25-35 files, 1.5-2h |
+| **F4** Part F review      |                                                                                               | F1-F3                    | 10-20 files, 1h     |
+| **G1** The shape of 9-20  | Bands, zones, tiers, bosses, travel, written into the plan as phases; sized from C11          | C11                      | docs, 1-2h          |
+| **G2** Specialisations    | Two paths a class at 10, their abilities and ranks; the bar stays four                        | G1, a level-10 spawn     | 35-50 files, 2.5-3h |
+| **G3+** The bands         | One zone or one system a phase, to level 20                                                   | G1, the tiers            | per zone 25-40, 2h  |
+| Part G review             |                                                                                               | G3+                      | 1h                  |
+| **H1** The last pass      | The original list and every pillar once more                                                  | everything               | 1-2h                |
+| **H2** Archive            | The plan to `docs/archive/`, `CLAUDE.md` to the game as it stands                             | H1                       | docs, 1h            |
 
 Two things outside the plan are left as well, neither a phase: `docs/upgrade_plan.md` (TypeScript 7,
 blocked on typescript-eslint; re-check its issue now and then), and a stale remote branch,
@@ -89,21 +90,21 @@ Every phase touches a handful of the same files. Most collisions are a line appe
 place and resolve mechanically on a rebase; three are not, and they are what the rules in the next
 section are for.
 
-| File                                                                             | Who touches it             | Kind                                                                                  |
-| -------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------- |
-| `src/persistence/CharacterState.ts`, `migrations.ts`, `saveFile.ts`              | D1 D2 D3 D4 E1 E2 F1 F3 G2 | **Sequential**: the save version counts by one and the chain may have no gap          |
-| `docs/decisions.md`                                                              | every phase                | **Sequential**: decision numbers                                                      |
-| `docs/v2_plan.md` status line, `CLAUDE.md`                                       | every phase                | **Same lines**: prose, resolved by hand on every rebase                               |
-| `src/types/ids.ts`                                                               | every phase                | Append to a union                                                                     |
-| `src/ui/uiEvents.ts`, `src/hud/Hud.ts`, `hud/styles.ts`, `tests/hud/Hud.test.ts` | every HUD phase            | Append                                                                                |
-| `src/ui/tabs.ts`, `art/icons.ts` marks                                           | D2, F3, maybe D3           | A seat behind Menu each: **decided below**, so two phases do not argue it             |
-| `src/world/ZoneWorld.ts`                                                         | D1 D3 D4 E1 F1             | A collaborator built and ticked; a hook in `resolveKill` or the XP path               |
-| `scripts/smoke.mjs` (one file, 5,700 lines)                                      | every phase                | A section appended and a row in `SECTIONS`                                            |
-| `src/data/townMap.ts` (Lampton's text)                                           | F1, D1, E2                 | **One owner**: F1 edits it; D1 names people on building rows; E2 places nothing there |
-| `src/systems/ItemUseSystem.ts`                                                   | E2 E3 F1 F3                | A new kind of use each; append                                                        |
-| `src/data/items.ts`, `recipes.ts`, `lootTables.ts`                               | E2, F1, G tiers            | Rows                                                                                  |
-| `src/world/TalkSession.ts`, `hud/TalkModal.ts`, `data/dialog.ts`                 | D1, then D2 and D3         | D1 shapes it; D2 and D3 add rows, not shape                                           |
-| `tests/world/pace.ts`, `pace.test.ts`                                            | E1, E2, G2, G3+            | The bot must play unrested and unpotioned, or the bands move                          |
+| File                                                                             | Who touches it             | Kind                                                                                                    |
+| -------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `src/persistence/CharacterState.ts`, `migrations.ts`, `saveFile.ts`              | D1 D2 D3 D4 E1 E2 F1 F3 G2 | **Sequential**: the save version counts by one and the chain may have no gap                            |
+| `docs/decisions.md`                                                              | every phase                | **Sequential**: decision numbers                                                                        |
+| `docs/v2_plan.md` status line, `CLAUDE.md`                                       | every phase                | **Same lines**: prose, resolved by hand on every rebase                                                 |
+| `src/types/ids.ts`                                                               | every phase                | Append to a union                                                                                       |
+| `src/ui/uiEvents.ts`, `src/hud/Hud.ts`, `hud/styles.ts`, `tests/hud/Hud.test.ts` | every HUD phase            | Append                                                                                                  |
+| `src/ui/tabs.ts`, `art/icons.ts` marks                                           | D2, F3, maybe D3           | A seat behind Menu each: **decided below**, so two phases do not argue it                               |
+| `src/world/ZoneWorld.ts`                                                         | D1 D3 D4 E1 F1             | A collaborator built and ticked; a hook in `resolveKill` or the XP path                                 |
+| `scripts/smoke.mjs` (one file, 5,700 lines)                                      | every phase                | A section appended and a row in `SECTIONS`                                                              |
+| `src/data/townMap.ts` (Lampton's text)                                           | F1, D1b, E2                | **One owner**: F1 edits it; D1b names Bess on the inn's row once F1 has merged; E2 places nothing there |
+| `src/systems/ItemUseSystem.ts`                                                   | E2 E3 F1 F3                | A new kind of use each; append                                                                          |
+| `src/data/items.ts`, `recipes.ts`, `lootTables.ts`                               | E2, F1, G tiers            | Rows                                                                                                    |
+| `src/world/TalkSession.ts`, `hud/TalkModal.ts`, `data/dialog.ts`                 | D1, then D2 and D3         | D1 shapes it; D2 and D3 add rows, not shape                                                             |
+| `tests/world/pace.ts`, `pace.test.ts`                                            | E1, E2, G2, G3+            | The bot must play unrested and unpotioned, or the bands move                                            |
 
 ---
 
@@ -181,6 +182,8 @@ to merge them one at a time as each is rebased.
 
 - **G1 — The shape of 9-20** (`claude/v2-g1-shape`), as soon as C11 has merged. An interview and a
   doc, on the critical path to everything in Part G, so it goes first in this wave rather than last.
+- **D1b — The lore's people** (`claude/v2-d1b-people`), once D1 has merged, and F1 for the one line
+  it writes in Lampton's text. Split from D1 by the user's answer below.
 - **D2 — Whispers** (`claude/v2-d2-whispers`), once D1 has merged.
 - **D3 — Factions** (`claude/v2-d3-factions`), once D1 has merged. Quests, kills and contracts
   moving standing need nothing of D1's; dialog choices do, and D1's schema will have the slot.
@@ -292,15 +295,19 @@ entry), `naming.md`; `docs/architecture/economy.md` (the NPC roles and the talk 
    over an item? Decision 87 says choices move standing (D3) and lead to rumours (D2), so the
    schema wants `requires` and `effects` on a line from the start even if D1 fills none.
 
+**Answered (2026-10-01):** the name alone over the head, the trade beside it on the card, the map and
+the talk panel; a person remembers for ever, an asked topic grey until it gains a new answer; the
+five people are split off as D1b (below); an answer does nothing yet, and the schema has `requires`
+and `effects` from the start.
+
 **Do:** a `data/dialog.ts` of topics per person, each a line with answers that lead to more, with
 `requires` (level, quest state, standing, a rumour heard) and `effects` (standing, a rumour, a flag)
 as slots D2 and D3 fill; `TalkSession` holds the conversation's state and what this person has been
 asked goes on the character (a new field, a save version taken at the merge, rule 3); `TalkModal`
 draws topics as buttons, the counter button and the quests as before. Rewrite every greeting and
 write every topic in `tone.md`'s voice from `places.md`, names and places now allowed (one unmet
-name a line, rule 8 of the tone). Add the people the user chose, each a row in `NPCS`, a placement
-on their building's row or in their zone's text, a `cast.ts` getup drawn in this phase (decision
-112), and their topics; add every new name to `naming.md`'s list.
+name a line, rule 8 of the tone). The six take their lore names here, and any name not yet in
+`naming.md`'s list goes on it; the five people the game lacks are D1b's.
 
 **Keep true:** talking is still a counter (`CounterId` `'talk'`), so everything that shuts a counter
 shuts it; no position on the HUD channel; the lore is extended, not asked. **Tests:** topics and
@@ -309,6 +316,33 @@ greeting and at least one topic, and that every `requires` names something that 
 dead-end rule's shape). **Docs:** `economy.md`'s NPC section, `hud.md`'s talk panel, `content.md` if
 quests are offered through a topic. **Smoke:** a `dialog` section that opens a person, asks, and
 sees the topic grey on return.
+
+### D1b — The lore's people (`claude/v2-d1b-people`)
+
+Split from D1 by the user's answer above, and run beside D2 and D3 once D1 has merged (and F1,
+for the one line it writes in Lampton's text).
+
+**Read:** D1's brief and what it landed; `docs/lore/places.md` for each person's entry and
+`peoples.md` for Pocket; decisions 107, 108 and 112; `src/art/cast.ts`, `art/budget.ts`,
+`data/zoneText.ts` (how a worker is named on a building's row), `tests/art/sprites.test.ts`,
+`tests/systems/spawnSafety.test.ts`.
+
+**Ask the user first:** whether a person with no counter is a role whose only counter is talk (a
+`'none'` role, the talk button alone and no service line) or a nullable role; whether Tirrow, who
+leads the raiders, talks at all before Part G or is met only in Maren's lines; and where Pocket
+perches, since a person stands on the ground and a crow on a roof is drawn over a building it does
+not block.
+
+**Do:** five rows in `NPCS` with their topics in D1's schema: Bess Mallow named on the Wet Boot's
+row in Lampton's text; the old fisher on the strand; Pocket on Greyford's longhouse, a new shape
+drawn within the budget; Maren, and Tirrow if chosen, in the fen, where no building stands, so each
+is placed in the text and drawn on the figure in the fenfolk's getup. Every placement held by the
+spawn and pathing sweeps; every new name in `naming.md`.
+
+**Keep true:** a person not in `cast.ts` is its shape's placeholder and a test holds every one to a
+drawing; a getup is on the figure (decision 108); the budget is exact. **Tests:** `dialog.test.ts`
+grows; the sweeps and the sprite test by construction. **Docs:** `economy.md`'s NPC roles, `art.md`'s
+cast, `places.md` marking who is in. **Smoke:** a person talked to in a zone with no counter.
 
 ### D4 — The spirit (`claude/v2-d4-spirit`)
 
@@ -326,6 +360,10 @@ picking, plates), `hud.md` (the tip card), `audio.md`; `src/world/TipDesk.ts`, `
 3. Underground the one light is the player's lantern (decision 59). Is Wick that light, so the
    lantern's glow is the spirit's, or does the spirit float beside a lantern?
 4. Is the spirit tappable while a counter is open?
+
+**Answered (2026-10-01):** the card as it is, in Wick's name and light, the spirit glowing and
+chiming in the world when it has something to say; quiet silences the tips alone; Wick is the light
+underground, the lantern's glow its own; a tap on it waits while a counter is open.
 
 **Do:** a sprite for Wick in `src/art/sprites/` on the budget's clock, a fist-sized blue-white light
 (the tip card's edge, `spirit.md`) with a loop and a "has something to say" state; the spirit as a
@@ -362,6 +400,10 @@ round trip with it along.
 4. On the XP bar: a paler segment ahead of the fill showing how far rested reaches, or a tint on the
    bar while it is spending?
 
+**Answered (2026-10-01):** banked by idle with the game open and by a parked night; capped at a
+share of a level, half a level's worth as the offline ceiling is; character XP alone; shown as a
+paler segment ahead of the fill.
+
 **Do:** a `rested` field on the character (a save version at the merge) banked by the camp and, if
 chosen, the parked payout, spent as a multiplier on attended XP only, so a camp's halved XP is never
 rested as well; a `RestedSystem` with the rate and the cap behind exported functions the idle panel
@@ -390,6 +432,12 @@ dead ends), `content.md`'s loot rules, `afk.md`, `art.md`'s places, icons and wa
    brew at a fire; or a new station (a still) at Greyford or in the fen, drawn in this phase?
 3. What the potions do: idle XP, gathering speed, and which help in a fight, if any?
 4. Where the herbs grow: the fen and the mill road's bank, the strand, or everywhere?
+
+**Answered (2026-10-01):** a fourth gathering skill with nodes and a tool of its own, sold at the
+shop like the others; brewed at a new station, a still, drawn in this phase and placed at Greyford
+or in the fen; the potions boost idle XP, speed gathering, help in a fight (held by the duels, and
+kept out of the pace bot) and better a drop or mastery roll, one kind each; herbs grow in the fen
+and on the mill road's bank, a low one on the strand, none in Lampton.
 
 **Do:** the skill (a `GatherSkillId` if making; a second if gathering), its nodes (`RESOURCE_NODES`
 rows, `art/places.ts` drawings, placements in the zone texts the user chose, held by the spawn and
@@ -420,6 +468,11 @@ Company (the plot it grants); `src/data/townMap.ts`, `buildings.ts`, `src/art/bu
    spending it?
 3. The chest: a second bank whose slots are bought, or a fixed small store?
 4. Working stations in the house (the plan's question), now or left to F2's workbench?
+
+**Answered (2026-10-01):** granted by a quest from the quartermaster after the starter arc, the
+Company's plot; a stand hands a trophy back on a tap, displaying is not spending; the chest is a
+fixed small store, the bank still the vault, and F2 may grow it; no station in F1, F2's workbench
+is the first.
 
 **Do:** a `house` building in Lampton's text and `BUILDINGS`, drawn by the kit; its room furnished
 from `art/rooms.ts` with stands and a wall that block nothing (decision 48), the stands tappable (a
