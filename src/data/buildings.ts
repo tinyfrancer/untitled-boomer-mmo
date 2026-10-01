@@ -205,6 +205,20 @@ export const BUILDINGS: Record<BuildingId, BuildingDefinition> = {
     shape: 'cottage',
     door: 'south',
   },
+  /**
+   * The room behind the house (F2), where the surveyor drew the four roads:
+   * shut until the player builds it out at the plans, and a room of stands
+   * after. Its door is in its west wall, onto the yard, since the house is
+   * against its south wall and a door can only face open ground; a tap on it
+   * walks round to the doorstep, as the smithy's does.
+   */
+  'drawing-room': {
+    id: 'drawing-room',
+    name: 'The Drawing Room',
+    body: { width: TILE_SIZE * 4, height: BAY },
+    shape: 'cottage',
+    door: 'west',
+  },
 };
 
 /** A building where a zone put it. What everything below asks about. */
@@ -279,6 +293,26 @@ export function doorGap(building: Standing): { from: number; to: number } {
   const centre = horizontal ? building.x : building.y;
   const span = Math.min(MIN_DOOR_SPAN, along);
   return { from: centre - span / 2, to: centre + span / 2 };
+}
+
+/**
+ * The doorway filled in, as a wall the thickness of the rest: what stands in
+ * the door of a room that is shut (F2's drawing room, until it is built).
+ */
+export function doorPlug(building: Standing): Rect {
+  const rect = buildingRect(building);
+  const gap = doorGap(building);
+  const t = WALL_THICKNESS;
+  switch (building.definition.door) {
+    case 'north':
+      return { left: gap.from, right: gap.to, top: rect.top, bottom: rect.top + t };
+    case 'south':
+      return { left: gap.from, right: gap.to, top: rect.bottom - t, bottom: rect.bottom };
+    case 'west':
+      return { left: rect.left, right: rect.left + t, top: gap.from, bottom: gap.to };
+    case 'east':
+      return { left: rect.right - t, right: rect.right, top: gap.from, bottom: gap.to };
+  }
 }
 
 /**

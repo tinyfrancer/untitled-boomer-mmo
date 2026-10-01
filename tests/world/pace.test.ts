@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
+import { HOUSE_UPGRADE_ORDER, HOUSE_UPGRADES } from '../../src/data/house';
 import { SHOP_STOCK } from '../../src/data/shop';
 import { STARTING_FOOD } from '../../src/persistence/CharacterState';
 import type { Gear } from '../../src/systems/InventorySystem';
@@ -290,6 +291,42 @@ describe('the time between fights', () => {
           expect(run.deaths, `${classId} at ${band.level}`).toBeLessThan(run.kills);
         }
       }
+    }
+  });
+});
+
+/**
+ * The house's stages are priced off what the climb picks up (F2): the lot
+ * built out is a goal saved for over the climb, most of the coin a class picks
+ * up from level 1 to the cap, and its first stage is paid for by the first
+ * level that drops any.
+ */
+describe('the house, priced off the climb', () => {
+  const climb = (classId: ClassId): number =>
+    BANDS.reduce(
+      (sum, band) => sum + mean(resultsFor(classId, band.level).map((run) => run.copper)),
+      0,
+    );
+  const total = HOUSE_UPGRADE_ORDER.reduce((sum, id) => sum + HOUSE_UPGRADES[id].price, 0);
+
+  it('costs most of what the climb picks up, for every class', () => {
+    for (const classId of CLASSES) {
+      const share = total / climb(classId);
+      expect(share, classId).toBeGreaterThan(0.5);
+      expect(share, classId).toBeLessThan(0.85);
+    }
+  });
+
+  it('has a first stage the first level that drops coin pays for', () => {
+    const first = HOUSE_UPGRADES.garden.price;
+    expect(HOUSE_UPGRADE_ORDER[0]).toBe('garden');
+    const paying = BANDS.find((band) =>
+      CLASSES.every((classId) => resultsFor(classId, band.level).some((run) => run.copper > 0)),
+    );
+    if (!paying) throw new Error('no level drops coin');
+    for (const classId of CLASSES) {
+      const earned = mean(resultsFor(classId, paying.level).map((run) => run.copper));
+      expect(first, `${classId} at ${paying.level}`).toBeLessThan(earned);
     }
   });
 });

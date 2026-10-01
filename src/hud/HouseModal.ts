@@ -1,28 +1,40 @@
 import { Overlay } from './Overlay';
 import { CounterSides } from './counterSides';
 import { el, emptyLine, row, sectionHeader, stackRow } from './dom';
+import { Purse } from './purse';
 import { itemIconEl } from './hudArt';
 import { bindItemCard } from './itemCard';
 import { ENEMIES } from '../data/enemies';
-import { CHEST_SLOTS, fixtureKey, type HouseFixture } from '../data/house';
+import {
+  CHEST_SLOTS,
+  HOUSE_UPGRADE_ORDER,
+  HOUSE_UPGRADES,
+  fixtureKey,
+  type HouseFixture,
+} from '../data/house';
 import { describeItemName } from '../data/items';
 import type { KillCounts } from '../systems/AchievementSystem';
 import {
   chestSlotsUsed,
+  isBuilt,
   isTrophy,
+  nextUpgrade,
   onStand,
   plaques,
   type HouseState,
 } from '../systems/HouseSystem';
 import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
 import { THEME } from '../ui/theme';
-import type { ItemId } from '../types/ids';
+import { formatCurrency } from '../systems/CurrencySystem';
+import type { HouseUpgradeId, ItemId } from '../types/ids';
 
 /** Everything the panel draws, all of it a copy the world still owns. */
 export interface HousePanelState {
   house: HouseState;
   inventory: Inventory;
   kills: KillCounts;
+  /** The coin in hand, which the plans are bought with (F2). */
+  currency: number;
 }
 
 export interface HouseHandlers {
@@ -30,6 +42,8 @@ export interface HouseHandlers {
   /** How many to move: the row takes one, the button beside it the lot. */
   onDeposit: (itemId: ItemId, quantity: number) => void;
   onWithdraw: (itemId: ItemId, quantity: number) => void;
+  /** Builds the next stage off the plans (F2). */
+  onBuild: (upgrade: HouseUpgradeId) => void;
   /** The X: the world owns whether anything in the house is open, so this asks. */
   onDismiss: () => void;
 }
@@ -38,6 +52,7 @@ const TITLES: Record<HouseFixture['kind'], string> = {
   stand: 'Stand',
   chest: 'Chest',
   wall: 'Wall of Plaques',
+  plans: 'The Plans',
 };
 
 /**
@@ -60,6 +75,7 @@ export class HouseModal extends Overlay {
   private readonly count: HTMLElement;
   private readonly body: HTMLElement;
   private readonly sides: CounterSides | null;
+  private readonly purse: Purse | null;
 
   constructor(fixture: HouseFixture, handlers: HouseHandlers, onClosed: () => void) {
     super('hud-modal hud-modal--pass-through hud-modal--top', onClosed);
@@ -72,11 +88,13 @@ export class HouseModal extends Overlay {
     const head = el('div', 'hud-modal__head');
     head.append(el('div', 'hud-modal__title', TITLES[fixture.kind]));
     this.count = el('div', 'hud-house__count');
+    // The plans are bought from, so they show the coin in hand as a counter does.
+    this.purse = fixture.kind === 'plans' ? new Purse() : null;
     const close = el('button', 'hud-button hud-modal__close', 'X');
     close.type = 'button';
     close.dataset.action = 'close-house';
     close.addEventListener('click', () => handlers.onDismiss());
-    head.append(this.count, close);
+    head.append(this.count, ...(this.purse ? [this.purse.root] : []), close);
 
     if (chest) {
       this.sides = new CounterSides(box);
@@ -104,7 +122,50 @@ export class HouseModal extends Overlay {
         return;
       case 'wall':
         this.drawWall(state);
+        return;
+      case 'plans':
+        this.drawPlans(state);
     }
+  }
+
+  /**
+   * The lot as the surveyor drew it (F2): every stage in the order it is
+   * built, what it builds and what it costs, the built ones marked and the
+   * next one a tap to buy. The ones after it are greyed, since each needs the
+   * one before.
+   */
+  private drawPlans(state: HousePanelState): void {
+    const built = HOUSE_UPGRADE_ORDER.filter((id) => isBuilt(state.house, id)).length;
+    this.count.textContent = `${built} / ${HOUSE_UPGRADE_ORDER.length} built`;
+    this.count.style.color = THEME.color.muted;
+    this.purse?.set(state.currency);
+    const next = nextUpgrade(state.house);
+    this.body.replaceChildren(
+      sectionHeader('The lot, as it was drawn', 'tap the next to build it'),
+    );
+    for (const id of HOUSE_UPGRADE_ORDER) {
+      const upgrade = HOUSE_UPGRADES[id];
+      const done = isBuilt(state.house, id);
+      const isNext = next?.id === id;
+      const entry = row({
+        className: 'hud-list-row',
+        label: upgrade.name,
+        value: done ? 'Built' : formatCurrency(upgrade.price),
+        valueClass: 'hud-list-row__value',
+        onClick: isNext ? () => this.handlers.onBuild(id) : undefined,
+      });
+      entry.root.dataset.upgrade = id;
+      if (isNext) entry.root.dataset.action = 'build-upgrade';
+      const affordable = isNext && state.currency >= upgrade.price;
+      entry.label.style.color = done
+        ? THEME.color.levelUp
+        : affordable
+          ? THEME.color.equippable
+          : THEME.color.dim;
+      entry.value.style.color = done ? THEME.color.muted : THEME.color.levelUp;
+      this.body.append(entry.root, emptyLine(upgrade.builds));
+    }
+    if (!next) this.body.append(emptyLine('(everything on the plans is built)'));
   }
 
   /** A bare stand: every trophy in the bag, a tap setting one out. */

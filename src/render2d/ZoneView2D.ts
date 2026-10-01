@@ -708,10 +708,11 @@ export class ZoneView2D implements ZoneView {
   }
 
   /**
-   * What stands in the house while the player is in it (F1): its stands and
-   * chest where `data/house.ts` puts them, a trophy's own icon on each stand
-   * that holds one, and a plaque on the back wall for every slayer rank
-   * earned, once the house is the player's.
+   * What stands in the house while the player is in it (F1): its stands,
+   * chest and plans where `data/house.ts` puts them, a trophy's own icon on
+   * each stand that holds one, and a plaque on the back wall for every slayer
+   * rank earned, once the house is the player's. The drawing room (F2) is the
+   * same but for the plaques, which hang in the house.
    */
   private houseStanding(
     world: ZoneWorld,
@@ -720,7 +721,7 @@ export class ZoneView2D implements ZoneView {
   ): Standing[] {
     const sheet = this.sheet;
     const icons = this.icons;
-    if (!sheet || house.definition.id !== HOUSE_BUILDING) return [];
+    if (!sheet) return [];
     const { state } = world.character;
     const owned = ownsHouse(state.quests);
     const context = this.context;
@@ -745,7 +746,7 @@ export class ZoneView2D implements ZoneView {
         },
       });
     }
-    if (!owned) return out;
+    if (!owned || house.definition.id !== HOUSE_BUILDING) return out;
     const wall = interiorRect(house).top;
     plaques(state.kills).forEach((plaque, index) => {
       const spot = plaqueAt(index, wall);

@@ -404,6 +404,7 @@ class Hud {
         house: this.model.house,
         inventory: this.model.inventory,
         kills: this.model.kills,
+        currency: this.model.currency,
       }),
     });
     this.mapSheet = new MapSheet({

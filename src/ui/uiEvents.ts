@@ -5,6 +5,7 @@ import type {
   AchievementId,
   MasteryTargetId,
   GearSlotId,
+  HouseUpgradeId,
   NpcId,
   QuestId,
   RecipeId,
@@ -310,6 +311,7 @@ export const HOUSE_CHANGED_EVENT = 'house-changed';
 export const DISPLAY_TROPHY_REQUESTED_EVENT = 'display-trophy-requested';
 export const CHEST_DEPOSIT_REQUESTED_EVENT = 'chest-deposit-requested';
 export const CHEST_WITHDRAW_REQUESTED_EVENT = 'chest-withdraw-requested';
+export const BUILD_UPGRADE_REQUESTED_EVENT = 'build-upgrade-requested';
 
 // Payload for TARGET_SELECTED_EVENT. An object rather than positional args
 // because the frame needs the level and its con color alongside the HP.
@@ -583,6 +585,7 @@ export interface UiEventMap {
   [DISPLAY_TROPHY_REQUESTED_EVENT]: [itemId: ItemId];
   [CHEST_DEPOSIT_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
   [CHEST_WITHDRAW_REQUESTED_EVENT]: [itemId: ItemId, quantity: number];
+  [BUILD_UPGRADE_REQUESTED_EVENT]: [upgrade: HouseUpgradeId];
 }
 
 /** Every event name on the channel, which is what `EventBus` keys on. */

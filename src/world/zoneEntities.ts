@@ -1,6 +1,7 @@
 import {
   BUILDINGS,
   buildingWalls,
+  doorPlug,
   isInside,
   type BuildingDefinition,
   type Rect,
@@ -9,10 +10,13 @@ import { ENEMIES } from '../data/enemies';
 import {
   HOUSE_BUILDING,
   HOUSE_FIXTURES,
+  HOUSE_YARD,
+  SHUT_UNTIL,
   fixtureAccess,
   fixturePoint,
   type HouseFixture,
 } from '../data/house';
+import type { HouseUpgradeId } from '../types/ids';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { SECRETS } from '../data/secrets';
 import { BLOCKING_TILES } from '../data/tiles';
@@ -111,6 +115,58 @@ export interface ZoneEntities {
   fixtures: WorldFixture[];
   signposts: WorldSignpost[];
   collisionWorld: CollisionWorld;
+  /**
+   * What stands in the doorway of each room shut until a stage of the house
+   * is built (F2), keyed by the stage: a blocker in `collisionWorld` until then,
+   * taken out of it when the stage is bought.
+   */
+  doorPlugs: Map<HouseUpgradeId, Rect[]>;
+}
+
+/**
+ * What one stage of the house puts on the lot (F2), or what the house is let
+ * with when `upgrade` is null: its fixtures, and the yard's beds and bench,
+ * wherever the house stands. Placed off the buildings rather than written into
+ * the zone's text, so moving the house moves all of it.
+ */
+export function houseEntities(
+  buildings: readonly WorldBuilding[],
+  upgrade: HouseUpgradeId | null,
+): { fixtures: WorldFixture[]; nodes: ResourceNode[]; stations: WorldStation[] } {
+  const fixtures = HOUSE_FIXTURES.filter(
+    (placement) => (placement.upgrade ?? null) === upgrade,
+  ).flatMap((placement) =>
+    buildings
+      .filter((building) => building.definition.id === placement.building)
+      .map((room) => ({
+        ...fixturePoint(room, placement),
+        fixture: placement.fixture,
+        area: {
+          left: room.x + placement.rect.left,
+          right: room.x + placement.rect.right,
+          top: room.y + placement.rect.top,
+          bottom: room.y + placement.rect.bottom,
+        },
+        access: fixtureAccess(room, placement),
+        house: room,
+      })),
+  );
+  const houses = buildings.filter((building) => building.definition.id === HOUSE_BUILDING);
+  const yard = HOUSE_YARD.filter((placement) => placement.upgrade === upgrade).flatMap(
+    (placement) =>
+      houses.map((house) => ({
+        placement,
+        x: house.x + placement.at.x,
+        y: house.y + placement.at.y,
+      })),
+  );
+  const nodes = yard.flatMap(({ placement, x, y }) =>
+    'node' in placement ? [new ResourceNode(x, y, RESOURCE_NODES[placement.node])] : [],
+  );
+  const stations = yard.flatMap(({ placement, x, y }) =>
+    'station' in placement ? [{ x, y, station: placement.station }] : [],
+  );
+  return { fixtures, nodes, stations };
 }
 
 /**
@@ -124,6 +180,7 @@ export function populateZone(
   zone: ZoneDefinition,
   size: { width: number; height: number },
   rng: () => number,
+  built: readonly HouseUpgradeId[] = [],
 ): ZoneEntities {
   const spawnPoint: Point = { ...zone.start };
 
@@ -152,25 +209,22 @@ export function populateZone(
     room: buildings.find((building) => isInside(building, { x, y })) ?? null,
   }));
 
-  // What stands in the house, wherever the house stands: placed off the
-  // building rather than written into the zone's text, so moving the house
-  // moves its stands.
-  const fixtures = buildings
-    .filter((building) => building.definition.id === HOUSE_BUILDING)
-    .flatMap((house) =>
-      HOUSE_FIXTURES.map((placement) => ({
-        ...fixturePoint(house, placement),
-        fixture: placement.fixture,
-        area: {
-          left: house.x + placement.rect.left,
-          right: house.x + placement.rect.right,
-          top: house.y + placement.rect.top,
-          bottom: house.y + placement.rect.bottom,
-        },
-        access: fixtureAccess(house, placement),
-        house,
-      })),
-    );
+  // What stands in the house and its yard, as far as it is built (F2).
+  const fixtures: WorldFixture[] = [];
+  for (const stage of [null, ...built]) {
+    const raised = houseEntities(buildings, stage);
+    fixtures.push(...raised.fixtures);
+    nodes.push(...raised.nodes);
+    stations.push(...raised.stations);
+  }
+
+  // A room shut until a stage is built has its doorway walled up till then.
+  const doorPlugs = new Map<HouseUpgradeId, Rect[]>();
+  for (const building of buildings) {
+    const stage = SHUT_UNTIL[building.definition.id];
+    if (!stage || built.includes(stage)) continue;
+    doorPlugs.set(stage, [...(doorPlugs.get(stage) ?? []), doorPlug(building)]);
+  }
 
   // One tappable signpost per exit — the mobile way out of a zone.
   const signposts = zone.exits.map((exit) => {
@@ -188,6 +242,7 @@ export function populateZone(
     buildings,
     fixtures,
     signposts,
+    doorPlugs,
     // Nothing walks into the pond, a tree trunk or a wall. One description of
     // the world, which the player and every mob integrate themselves against.
     //
@@ -209,6 +264,7 @@ export function populateZone(
         // them. `buildingRect` is still the footprint — the map, the pick box
         // and the fade all want that — and these are the other question.
         ...buildings.flatMap(buildingWalls),
+        ...[...doorPlugs.values()].flat(),
         // The one that stands up out of the ground, as a trunk does.
         ...secrets.flatMap(({ x, y, secretId }) => {
           const body = SECRETS[secretId].blocks;

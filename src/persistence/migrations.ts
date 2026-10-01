@@ -1,3 +1,4 @@
+import { HOUSE_STANDS } from '../data/house';
 import { emptyHouse } from '../systems/HouseSystem';
 import { CHARACTER_STATE_VERSION, type CharacterState } from './CharacterState';
 
@@ -46,6 +47,20 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   }),
   // The house (F1): bare stands and an empty chest for everybody made before it.
   106: (state) => ({ ...state, house: emptyHouse() }),
+  // The house that grows (F2): F1's four stands kept where they stood and
+  // bare ones for the drawing room's four, and nothing built yet.
+  107: (state) => {
+    const house = isRecord(state.house) ? state.house : {};
+    const stands: unknown[] = Array.isArray(house.stands) ? house.stands : [];
+    return {
+      ...state,
+      house: {
+        ...house,
+        stands: Array.from({ length: HOUSE_STANDS }, (_, stand) => stands[stand] ?? null),
+        built: [],
+      },
+    };
+  },
 };
 
 /**

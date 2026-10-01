@@ -1,7 +1,7 @@
 import { ART_PIXEL } from '../art/budget';
 import { creatureSprite, npcSprite } from '../art/cast';
 import { stationSprite } from '../art/places';
-import { CHEST, STAND } from '../art/sprites/fittings';
+import { CHEST, PLANS, STAND } from '../art/sprites/fittings';
 import { TILE_SIZE } from '../config/constants';
 import { isInside } from '../data/buildings';
 import type { Point } from '../systems/MovementSystem';
@@ -239,8 +239,9 @@ export function pickScene(
 /**
  * A fixture in the house, as a thumb aims at it (F1): a stand as tall as a
  * trophy standing on it, the chest as it is drawn, and the wall as the face of
- * it the plaques hang on. The chest stands in front of the wall's foot, so
- * where the two boxes meet the chest is the one picked.
+ * it the plaques hang on, and the plans' table as it is drawn (F2). The chest
+ * stands in front of the wall's foot, so where the two boxes meet the chest is
+ * the one picked.
  */
 function fixtureRect(fixture: WorldFixture, tall: (sprite: string) => number): PickRect {
   const { area } = fixture;
@@ -257,5 +258,7 @@ function fixtureRect(fixture: WorldFixture, tall: (sprite: string) => number): P
         top: area.top - TILE_SIZE * 1.5,
         bottom: area.top,
       };
+    case 'plans':
+      return standingRect(x, area.bottom, TILE_SIZE * 0.75, tall(PLANS.id));
   }
 }

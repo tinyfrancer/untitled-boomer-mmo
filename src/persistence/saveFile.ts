@@ -3,7 +3,7 @@ import { ABILITIES } from '../data/abilities';
 import { TITLES } from '../data/achievements';
 import { BOUNTIES } from '../data/bounties';
 import { CLASSES } from '../data/classes';
-import { HOUSE_STANDS } from '../data/house';
+import { HOUSE_STANDS, HOUSE_UPGRADES } from '../data/house';
 import { HAIRSTYLES, HAIR_COLOURS, SKIN_TONES } from '../data/looks';
 import { QUESTS } from '../data/quests';
 import { POTION_EFFECTS } from '../data/potions';
@@ -289,8 +289,9 @@ const FIELDS: Record<Exclude<keyof CharacterState, 'version' | 'afk'>, [Check, s
       Array.isArray(value.stands) &&
       value.stands.length === HOUSE_STANDS &&
       listOf(orNull(isString))(value.stands) &&
-      recordOf(isCount)(value.chest),
-    `an item or null for each of ${HOUSE_STANDS} stands, and a count for each item in the chest`,
+      recordOf(isCount)(value.chest) &&
+      listOf(keyOf(HOUSE_UPGRADES))(value.built),
+    `an item or null for each of ${HOUSE_STANDS} stands, a count for each item in the chest, and a list of what is built (${names(HOUSE_UPGRADES)})`,
   ],
   createdAt: [isString, 'a date'],
   updatedAt: [isString, 'a date'],

@@ -1,11 +1,12 @@
 import { BUILDINGS, isInside } from '../data/buildings';
-import { HOUSE_BUILDING } from '../data/house';
+import { HOUSE_BUILDING, HOUSE_UPGRADES, SHUT_UNTIL } from '../data/house';
 import { describeItemName } from '../data/items';
-import { onStand, ownsHouse } from '../systems/HouseSystem';
-import type { ItemId } from '../types/ids';
+import { formatCurrency } from '../systems/CurrencySystem';
+import { isBuilt, onStand, ownsHouse } from '../systems/HouseSystem';
+import type { HouseUpgradeId, ItemId } from '../types/ids';
 import { HOUSE_CHANGED_EVENT, HOUSE_CLOSED_EVENT, HOUSE_OPENED_EVENT } from '../ui/uiEvents';
 import type { WorldContext } from './WorldContext';
-import type { WorldFixture } from './zoneEntities';
+import type { WorldBuilding, WorldFixture } from './zoneEntities';
 
 /** What standing in the house needs from the rest of the zone, and the whole of it. */
 export interface HouseSessionDeps {
@@ -15,6 +16,10 @@ export interface HouseSessionDeps {
    * one being used.
    */
   closeCounters: () => void;
+  /** Puts what a stage builds into the zone being stood in (F2). */
+  raise: (upgrade: HouseUpgradeId) => void;
+  /** The zone's buildings, which a room shut until it is built is one of. */
+  buildings: readonly WorldBuilding[];
 }
 
 /**
@@ -30,7 +35,9 @@ export interface HouseSessionDeps {
  *
  * A stand that holds a trophy hands it back on a tap rather than opening
  * anything (F1's answer: displaying is not spending), so only a bare stand,
- * the chest and the wall ever open a panel.
+ * the chest, the wall and the plans ever open a panel. The plans are where
+ * the house is built out (F2), a stage at a time, and what a stage builds is
+ * put into the zone the moment it is paid for.
  */
 export class HouseSession {
   /** What is open while it is; null when nothing is. */
@@ -80,6 +87,40 @@ export class HouseSession {
     }
     this.close();
     this.settle();
+  }
+
+  /** Builds the next stage off the plans that are open, and puts it on the lot. */
+  build(upgrade: HouseUpgradeId): void {
+    if (this.open?.fixture.kind !== 'plans') return;
+    const result = this.ctx.character.buildUpgrade(upgrade);
+    if (!result.ok) {
+      this.ctx.notice(result.reason);
+      return;
+    }
+    this.deps.raise(upgrade);
+    this.ctx.notice(
+      `${HOUSE_UPGRADES[upgrade].name} is built, for ${formatCurrency(result.price)}.`,
+    );
+    this.ctx.publishCurrency();
+    this.settle();
+  }
+
+  /**
+   * Whether a walk to here is refused because it ends in a room still shut
+   * (F2): said once, rather than a walk into a walled-up doorway.
+   */
+  refusesWalkTo(point: { x: number; y: number }): boolean {
+    const { house } = this.ctx.character.state;
+    const shut = this.deps.buildings.find((building) => {
+      const stage = SHUT_UNTIL[building.definition.id];
+      return stage !== undefined && !isBuilt(house, stage) && isInside(building, point);
+    });
+    if (!shut) return false;
+    const stage = SHUT_UNTIL[shut.definition.id] as HouseUpgradeId;
+    this.ctx.notice(
+      `${shut.definition.name} is shut until it is built: ${HOUSE_UPGRADES[stage].name} is on the plans in ${BUILDINGS[HOUSE_BUILDING].name}.`,
+    );
+    return true;
   }
 
   deposit(itemId: ItemId, quantity = 1): void {
@@ -142,6 +183,7 @@ export class HouseSession {
     this.ctx.events.emit(HOUSE_CHANGED_EVENT, {
       stands: [...house.stands],
       chest: { ...house.chest },
+      built: [...house.built],
     });
   }
 }

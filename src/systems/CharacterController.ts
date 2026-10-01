@@ -28,7 +28,15 @@ import {
 import type { CharacterState } from '../persistence/CharacterState';
 import { weaponSkillFor } from './CombatSystem';
 import { bankSlotPrice, bankSlotsUsed, hasBankRoom } from './BankSystem';
-import { hasChestRoom, isTrophy, onStand, ownsHouse, withStand } from './HouseSystem';
+import {
+  hasChestRoom,
+  isTrophy,
+  nextUpgrade,
+  onStand,
+  ownsHouse,
+  standBuilt,
+  withStand,
+} from './HouseSystem';
 import { HOUSE_STANDS } from '../data/house';
 import {
   canCarry,
@@ -78,6 +86,7 @@ import type {
   CombatSkillId,
   EnemyId,
   GearSlotId,
+  HouseUpgradeId,
   ItemId,
   MasteryTargetId,
   NpcId,
@@ -119,6 +128,10 @@ export type BankMove = { ok: false; reason: string } | { ok: true; moved: number
 
 /** A trophy set on a stand or handed back off one. */
 export type HouseMove = { ok: false; reason: string } | { ok: true; itemId: ItemId };
+
+/** A stage of the house built (F2), and what it cost. */
+export type HouseBuild =
+  { ok: false; reason: string } | { ok: true; upgrade: HouseUpgradeId; price: number };
 
 export type BankSlotPurchase =
   { ok: false; reason: string } | { ok: true; price: number; slots: number };
@@ -423,7 +436,7 @@ export class CharacterController {
     if (!ownsHouse(this.state.quests)) {
       return { ok: false, reason: 'The house is not yours yet.' };
     }
-    if (stand < 0 || stand >= HOUSE_STANDS) {
+    if (stand < 0 || stand >= HOUSE_STANDS || !standBuilt(this.state.house, stand)) {
       return { ok: false, reason: 'There is no such stand.' };
     }
     if (!isTrophy(itemId)) {
@@ -457,6 +470,30 @@ export class CharacterController {
     this.state.house = withStand(this.state.house, stand, null);
     this.state.updatedAt = new Date().toISOString();
     return { ok: true, itemId };
+  }
+
+  /**
+   * Builds the next stage of the house off the plans (F2), for its price.
+   * Refuses as a whole: a house not theirs yet, a stage that is not the next
+   * one, a lot already built out, or short of the coin.
+   */
+  buildUpgrade(upgrade: HouseUpgradeId): HouseBuild {
+    if (!ownsHouse(this.state.quests)) {
+      return { ok: false, reason: 'The house is not yours yet.' };
+    }
+    const next = nextUpgrade(this.state.house);
+    if (!next) {
+      return { ok: false, reason: 'Everything on the plans is built.' };
+    }
+    if (next.id !== upgrade) {
+      return { ok: false, reason: `${next.name} comes first.` };
+    }
+    if (!this.spendCurrency(next.price)) {
+      return { ok: false, reason: "You can't afford that." };
+    }
+    this.state.house = { ...this.state.house, built: [...this.state.house.built, upgrade] };
+    this.state.updatedAt = new Date().toISOString();
+    return { ok: true, upgrade, price: next.price };
   }
 
   /** Puts something from the bag in the house's chest: the bank's rule, at the chest's size. */

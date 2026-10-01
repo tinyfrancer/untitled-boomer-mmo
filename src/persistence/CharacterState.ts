@@ -34,7 +34,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 7;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 8;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -201,10 +201,12 @@ export interface CharacterState {
    */
   unlockedZones: ZoneId[];
   /**
-   * What stands on each of the house's stands and what is in its chest (F1).
-   * Stored because both are choices: a trophy set on a stand has left the bag
-   * and is nowhere else, and so is what was put away. Whether the house is
-   * theirs at all is not stored, since it is whether its quest is done.
+   * What stands on each of the house's stands and what is in its chest (F1),
+   * and which stages of it are built (F2). Stored because each is a choice: a
+   * trophy set on a stand has left the bag and is nowhere else, so is what was
+   * put away, and a room paid for leaves nothing but the coin gone. Whether
+   * the house is theirs at all is not stored, since it is whether its quest is
+   * done.
    */
   house: HouseState;
   createdAt: string;
