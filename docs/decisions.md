@@ -3303,3 +3303,74 @@ Claude's, alongside them:
 
 **Rejected:** a smoke section of its own for the walk; its script, which drops a character into each
 zone through the save, was scaffolding for the review, as A10's and B9's were.
+
+## G1. Levels 9-20 are three bands of four, ten zones, a made tier a band, a boss a zone, paid travel between hubs, two paths a class, an ending the player may argue with, built a band at a time
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase G1**
+
+G1 is the interview decision 84 put off until a zone's cost was known, and C11 measured it (decision
+124): about half an hour a zone rebuilt, two to three times that for a zone of new content. Claude
+read the lore's regions past 8 and the pace's arithmetic (level n to n + 1 in n + 4 minutes, so 9 to
+20 is about 198 minutes of the bot's play, half again the whole of 1-9) and put eight questions to
+the user in one round, each with a recommendation. The user took every one:
+
+- **Three bands of four levels**: 9-12 (about 58 minutes), 13-16 (74) and 17-20 (66), each one
+  movement of the lore's climb. **Rejected:** two bands of six, which goes two hours of play without
+  a new tier; four bands of three, a fourth tier phase for a smaller step.
+- **Ten zones**, every region the lore names past 8 at least one: Lorhal, the Stillwood and the Quiet
+  Court, Karn Tholl; the High Greyhills and the Ashen Hollow, the Drowned Halls, the Barrow Field;
+  the Sea-Wall and Marhal. About twenty agent hours. **Rejected:** seven, one a region, each zone
+  then carrying about half an hour of play where the rebuilt ones carry ten or fifteen minutes;
+  fourteen, two a region, more zones than the user's time to judge them.
+- **A made tier a band, and gathering and making to 20** with the character: a metal, a leather, a
+  wood and a food each band, from that band's zones, so a piece pulls the player across the band as
+  steel does now. **Rejected:** two tiers in twelve levels; gear from drops alone, which leaves the
+  four making skills nothing to do past 9.
+- **A boss a zone**, at its top level, with one unique piece and a trophy for the house's stands;
+  the Barrow Field has three kings. **Rejected:** one bigger boss a band with a set of drops, which
+  leaves most zones without a name at the back; trophies and materials only, which gives a boss
+  nothing a player wears.
+- **Travel comes back, paid and hub to hub**, as a phase of its own in band 2 (G13): a counter at
+  each hub takes the player to any hub they have walked to, for coin. Walking stays the only way into
+  a zone the first time. This is the question decision 122 left to G1: the walk from Lampton to the
+  far end of band 2 or 3 is several zones, the house is in Lampton, and a price is what `zones.md`
+  asked of travel if it came back. **Rejected:** a free recall to Lampton on a long cooldown, which
+  makes every walk out one way; still no travel, asked again at the Part G review.
+- **Two paths a class from the lore's hooks** (`peoples.md`): the warrior's Bulwark and Breaker, the
+  wizard's Firebrand and Wardlight, the ranger's Fenstalker and Longbow. G2 settles how a path is
+  chosen and what it does. **Rejected:** damage or survival for every class, which makes the three
+  alike; paths that borrow another class's kit, which blurs the classes and the duels.
+- **The player may argue with Wick and the ending holds**: one question at the last beat, let it go
+  or ask it to stay; Wick goes either way, and the choice moves its last lines and a title.
+  **Rejected:** no choice; a real branch in which Wick stays and Merrath sleeps on, two endings for a
+  story about letting go.
+- **A band at a time**: the band's tier first, then its zones beside each other, one agent a zone,
+  two zones sharing an edge given to one agent in sequence. **Rejected:** strictly one zone at a
+  time in story order, the slowest; all ten at once after the tiers, ten PRs to judge together and
+  no band judged before the next is built on it.
+
+Claude's, writing it:
+
+- **Every mouth is fixed in the plan**, both sides the same tiles, so no two agents argue an edge:
+  the fen's west at rows 23-27, Greyford's west at rows 12-16 and north at columns 19-27, the Deep
+  Cut's sealed door at columns 20-24, the strand's east at rows 26-30, and the new zones' edges
+  between them. A zone that lands before the neighbour it leads to lays the ground of the mouth and
+  writes no exit to an id that does not exist yet; the later phase writes both rows. **Rejected:**
+  leaving each pair to agree, which is the argument rule 7 of the parallel plan exists to avoid.
+- **The new zones go where the lore puts them on the derived grid**, and no new cell is an old zone's.
+  The Barrow Field is reached from Lorhal by the Keepers' causeway rather than out of the back of
+  Orlhal, since the Keepers carry the barrows' keys (`factions.md`) and Orlath's chamber is his
+  alone (decision 124). **Rejected:** a door through the king's chamber.
+- **Three new locks, each by decision 11's rule**, and two of their keys handed out by a quest rather
+  than dropped (the Tholl Token from Karra Deepvein in the Deep Cut, the Keepers' Key in Lorhal): a
+  quest in the zone the door is in is that rule kept, and a dwarf or a Keeper handing over a key is
+  the point of meeting them.
+- **The cap stays derived** (decision 10): Marhal's 19 is the richest spawn and Merrath the last,
+  so the cap reaches 20 when Marhal lands.
+- **Each zone phase is sized at 25-40 files and about two hours**, the tiers at three and G2 at
+  three, about thirty-four agent hours in all and twelve to fifteen on the critical path; a zone past
+  45 files splits its quests and rumours into a follow-up.
+- **The lore moved where the shape needed a fact it lacked**: `places.md`'s lands past 8 are written
+  out zone by zone, `spirit.md` has a beat a zone and its ending, `history.md`'s climb is by band,
+  `factions.md` names the three seats, `peoples.md` has the paths and four stranger things, and
+  `naming.md` every new name. The user was asked no story question (decision 114).
