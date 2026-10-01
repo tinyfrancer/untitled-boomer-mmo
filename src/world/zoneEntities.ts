@@ -1,5 +1,18 @@
-import { BUILDINGS, buildingWalls, isInside, type BuildingDefinition } from '../data/buildings';
+import {
+  BUILDINGS,
+  buildingWalls,
+  isInside,
+  type BuildingDefinition,
+  type Rect,
+} from '../data/buildings';
 import { ENEMIES } from '../data/enemies';
+import {
+  HOUSE_BUILDING,
+  HOUSE_FIXTURES,
+  fixtureAccess,
+  fixturePoint,
+  type HouseFixture,
+} from '../data/house';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { SECRETS } from '../data/secrets';
 import { BLOCKING_TILES } from '../data/tiles';
@@ -61,6 +74,22 @@ export interface WorldBuilding {
   definition: BuildingDefinition;
 }
 
+/**
+ * Something in the house a tap lands on (F1): a stand, the chest or the wall,
+ * where `data/house.ts` stands it in the house's room. Not a blocker, as
+ * nothing in a room is.
+ */
+export interface WorldFixture {
+  x: number;
+  y: number;
+  fixture: HouseFixture;
+  /** The ground it covers against its wall, in world pixels: its foot is the bottom edge. */
+  area: Rect;
+  /** Where a body stands to use it, which is what the walk up to it is aimed at. */
+  access: Point;
+  house: WorldBuilding;
+}
+
 /** A tappable exit marker — the mobile counterpart to walking into the edge. */
 export interface WorldSignpost {
   x: number;
@@ -79,6 +108,7 @@ export interface ZoneEntities {
   stations: WorldStation[];
   secrets: WorldSecret[];
   buildings: WorldBuilding[];
+  fixtures: WorldFixture[];
   signposts: WorldSignpost[];
   collisionWorld: CollisionWorld;
 }
@@ -122,6 +152,26 @@ export function populateZone(
     room: buildings.find((building) => isInside(building, { x, y })) ?? null,
   }));
 
+  // What stands in the house, wherever the house stands: placed off the
+  // building rather than written into the zone's text, so moving the house
+  // moves its stands.
+  const fixtures = buildings
+    .filter((building) => building.definition.id === HOUSE_BUILDING)
+    .flatMap((house) =>
+      HOUSE_FIXTURES.map((placement) => ({
+        ...fixturePoint(house, placement),
+        fixture: placement.fixture,
+        area: {
+          left: house.x + placement.rect.left,
+          right: house.x + placement.rect.right,
+          top: house.y + placement.rect.top,
+          bottom: house.y + placement.rect.bottom,
+        },
+        access: fixtureAccess(house, placement),
+        house,
+      })),
+    );
+
   // One tappable signpost per exit — the mobile way out of a zone.
   const signposts = zone.exits.map((exit) => {
     const point = signpostPoint(exit, size.width, size.height);
@@ -136,6 +186,7 @@ export function populateZone(
     stations,
     secrets,
     buildings,
+    fixtures,
     signposts,
     // Nothing walks into the pond, a tree trunk or a wall. One description of
     // the world, which the player and every mob integrate themselves against.

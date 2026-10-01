@@ -271,6 +271,8 @@ spot as the patch of water round it (`lyingRect`). A corpse and a lapsed pile an
 
 **The kinds are asked in a priority, not a depth sort**: node → signpost → NPC → mob → spirit →
 station → building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
+**The kinds are asked in a priority, not a depth sort**: node → signpost → NPC → mob → station →
+fixture → building → loot pile → ground. A rat in front of the shopkeeper does not stop you shopping. Only
 within one kind does what is drawn in front win, the one whose feet are further down the screen.
 Every point is ground at worst: a flat view has no sky to miss into.
 
@@ -298,6 +300,14 @@ is where a creature fighting them stands, so above the mobs it would eat the tap
 is picked by a box round the light where it is drawn (`lyingRect` at `SPIRIT_HEIGHT` over the ground
 under it) rather than one standing on the ground, which would be the player's shoulder, and never
 the player's own feet. There is one of it, so it is a pickable rather than a list.
+**A fixture is what stands in the house** (decision 130): a stand, the chest or the wall, picked
+only while the player is in the house's room, since from outside the roof is over all of it and the
+building answers. It sits above the building for that reason and below the station, which it never
+meets. A stand's box stands as tall as a trophy on it, the chest's as it is drawn, and the wall's is
+the face the plaques hang on, with the chest in front of its foot winning where the two meet. The
+view draws the stands and the chest with the room's furniture, a trophy's own icon on its stand off
+a sheet of the items' icons compiled the first time a zone with the house is built and kept for the
+session, and the plaques on the back wall sorted with it.
 
 `tests/render2d/picking.test.ts` holds the priority, the boxes, the building's answers and the pile,
 Wick tapped where it floats from every zone's start,

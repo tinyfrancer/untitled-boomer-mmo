@@ -1,7 +1,9 @@
 import { ART_PIXEL } from '../art/budget';
 import { creatureSprite, npcSprite } from '../art/cast';
 import { stationSprite } from '../art/places';
+import { CHEST, STAND } from '../art/sprites/fittings';
 import { TILE_SIZE } from '../config/constants';
+import { isInside } from '../data/buildings';
 import type { Point } from '../systems/MovementSystem';
 import type { LootPile } from '../world/LootPile';
 import type { Mob } from '../world/Mob';
@@ -9,6 +11,7 @@ import type { ResourceNode } from '../world/ResourceNode';
 import { SPIRIT_HEIGHT } from '../world/Spirit';
 import type {
   WorldBuilding,
+  WorldFixture,
   WorldNpc,
   WorldSignpost,
   WorldStation,
@@ -21,6 +24,7 @@ import type {
  * it is): a tap is picked against boxes the game chooses, not against the
  * pixels drawn, and the kinds are asked in a **priority** — node, signpost,
  * NPC, mob, spirit, station, building, loot pile, ground — rather than a depth sort,
+ * NPC, mob, station, fixture, building, loot pile, ground — rather than a depth sort,
  * so a rat in front of the shopkeeper does not stop you shopping. A box is a
  * rectangle on the ground's plane, standing up the screen from where a thing's
  * feet are, and within one kind the one drawn in front wins.
@@ -90,6 +94,7 @@ export interface PickScene2D {
   /** Wick, the one of its kind, under anything a fight or a counter is asked of. */
   readonly spirit: Pickable2D;
   readonly stations: readonly (Pickable2D & { readonly station: WorldStation })[];
+  readonly fixtures: readonly (Pickable2D & { readonly fixture: WorldFixture })[];
   readonly buildings: readonly (Pickable2D & {
     readonly building: WorldBuilding;
     tapAnswer(): WorldTap;
@@ -130,6 +135,10 @@ export function pickTap(point: Point, scene: PickScene2D): WorldTap {
   if (frontmost(point, [scene.spirit])) return { kind: 'spirit' };
   const station = frontmost(point, scene.stations);
   if (station) return { kind: 'station', station: station.station };
+  // What stands in the house, from inside it only (F1): from outside the roof
+  // is over all of it, and the building answers.
+  const fixture = frontmost(point, scene.fixtures);
+  if (fixture) return { kind: 'fixture', fixture: fixture.fixture };
   // A building answers as whoever works in it, or the ground at its door: see
   // `docs/architecture/buildings.md`.
   const building = frontmost(point, scene.buildings);
@@ -207,6 +216,11 @@ export function pickScene(
       pickRect: () =>
         standingRect(station.x, station.y, TILE_SIZE, tall(stationSprite(station.station))),
     })),
+    fixtures: world.fixtures.map((fixture) => ({
+      fixture,
+      baseY: fixture.area.bottom,
+      pickRect: () => (isInside(fixture.house, world.player) ? fixtureRect(fixture, tall) : null),
+    })),
     buildings,
     piles: world.lootPiles.map((pile) => ({
       pile,
@@ -215,4 +229,28 @@ export function pickScene(
         pile.isGone() ? null : standingRect(pile.x, pile.y, TILE_SIZE / 2, TILE_SIZE / 2),
     })),
   };
+}
+
+/**
+ * A fixture in the house, as a thumb aims at it (F1): a stand as tall as a
+ * trophy standing on it, the chest as it is drawn, and the wall as the face of
+ * it the plaques hang on. The chest stands in front of the wall's foot, so
+ * where the two boxes meet the chest is the one picked.
+ */
+function fixtureRect(fixture: WorldFixture, tall: (sprite: string) => number): PickRect {
+  const { area } = fixture;
+  const x = (area.left + area.right) / 2;
+  switch (fixture.fixture.kind) {
+    case 'stand':
+      return standingRect(x, area.bottom, TILE_SIZE * 0.75, tall(STAND.id) + TILE_SIZE / 2);
+    case 'chest':
+      return standingRect(x, area.bottom, TILE_SIZE * 0.75, tall(CHEST.id));
+    case 'wall':
+      return {
+        left: area.left,
+        right: area.right,
+        top: area.top - TILE_SIZE * 1.5,
+        bottom: area.top,
+      };
+  }
 }

@@ -4,18 +4,24 @@ import {
   type BuildingDefinition,
   type Rect,
 } from '../data/buildings';
-import type { BuildingId, BuildingShapeId, ZoneEdge } from '../types/ids';
+import type { HouseFixture } from '../data/house';
+import type { BuildingId, BuildingShapeId, SlayerRank, ZoneEdge } from '../types/ids';
+import { variantId } from './compile';
 import {
   BED,
   BENCH,
   BENCH_SIDE,
+  CHEST,
   COUNTER,
   CRATES,
   HEARTH,
   HEARTH_EAST,
   HEARTH_LOW,
   HEARTH_WEST,
+  PLAQUE,
   SHELVES,
+  STAND,
+  STAND_TOP,
 } from './sprites/fittings';
 
 /**
@@ -105,6 +111,9 @@ const ROOM_FITTINGS: Record<BuildingShapeId, readonly Fitting[]> = {
  * is waiting in it.
  */
 const ROOM_OVERRIDES: Partial<Record<BuildingId, readonly Fitting[]>> = {
+  // The house's bed, against the one wall its stands and chest leave
+  // (`data/house.ts`): somebody lives here, and the rest is theirs to fill.
+  house: [{ kind: 'bed', against: 'left' }],
   store: [
     { kind: 'crates', against: 'left' },
     { kind: 'crates', against: 'right' },
@@ -246,4 +255,52 @@ export function counterAt(
 ): { x: number; y: number } {
   const step = TOWARD_DOOR[door];
   return { x: worker.x + step.x * COUNTER_AHEAD, y: worker.y + step.y * COUNTER_AHEAD };
+}
+
+/*
+ * The house's fixtures (F1): where they stand is `data/house.ts`, since the
+ * simulation walks up to them, and what they are drawn as is here, with the
+ * rest of the room.
+ */
+
+/** What a fixture is drawn as, or null for the wall, which is its plaques. */
+export function fixtureSprite(fixture: HouseFixture): string | null {
+  switch (fixture.kind) {
+    case 'stand':
+      return STAND.id;
+    case 'chest':
+      return CHEST.id;
+    case 'wall':
+      return null;
+  }
+}
+
+/** How far over a stand's foot a trophy on it stands, in art pixels. */
+export const TROPHY_LIFT = STAND_TOP;
+
+/** How many plaques hang in a row, and how far apart, in simulation units. */
+const PLAQUES_A_ROW = 4;
+const PLAQUE_SPACING = 24;
+/** How far up the back wall the lowest row hangs, and how far apart the rows are. */
+const PLAQUE_LOW = 24;
+const PLAQUE_ROW = 24;
+
+/**
+ * Where the nth plaque hangs, in the house's frame: across the back wall over
+ * the chest, between the two stands against it, four a row from the bottom
+ * up. `y` is where the plaque's foot is drawn; `wall` is the foot of the wall
+ * it hangs on, which is what it is sorted by.
+ */
+export function plaqueAt(index: number, wall: number): { x: number; y: number } {
+  const row = Math.floor(index / PLAQUES_A_ROW);
+  const across = index % PLAQUES_A_ROW;
+  return {
+    x: (across - (PLAQUES_A_ROW - 1) / 2) * PLAQUE_SPACING,
+    y: wall - PLAQUE_LOW - row * PLAQUE_ROW,
+  };
+}
+
+/** A plaque's sprite: gold for a Slayer, dyed for the ranks below. */
+export function plaqueSprite(rank: SlayerRank): string {
+  return rank === 'slayer' ? PLAQUE.id : variantId(PLAQUE.id, rank);
 }

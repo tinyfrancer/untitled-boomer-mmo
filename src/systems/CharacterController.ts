@@ -28,6 +28,8 @@ import {
 import type { CharacterState } from '../persistence/CharacterState';
 import { weaponSkillFor } from './CombatSystem';
 import { bankSlotPrice, bankSlotsUsed, hasBankRoom } from './BankSystem';
+import { hasChestRoom, isTrophy, onStand, ownsHouse, withStand } from './HouseSystem';
+import { HOUSE_STANDS } from '../data/house';
 import {
   canCarry,
   carryCapacity as capacityForStrength,
@@ -115,6 +117,9 @@ export interface SkillXpGain {
  */
 export type BankMove = { ok: false; reason: string } | { ok: true; moved: number; left?: number };
 
+/** A trophy set on a stand or handed back off one. */
+export type HouseMove = { ok: false; reason: string } | { ok: true; itemId: ItemId };
+
 export type BankSlotPurchase =
   { ok: false; reason: string } | { ok: true; price: number; slots: number };
 
@@ -148,6 +153,8 @@ export type QuestTurnIn =
       questId: QuestId;
       // Null when the quest pays coin and XP alone, which most of them do.
       rewardItemId: ItemId | null;
+      // What the giver handed over to keep, which only a chain's last quest does.
+      keepsake: ItemId | null;
       copper: number;
       xp: CombatXpGain;
     };
@@ -401,6 +408,92 @@ export class CharacterController {
     }
     this.state.bankSlots += 1;
     return { ok: true, price, slots: this.state.bankSlots };
+  }
+
+  // ---------------------------------------------------------------------------
+  // The house
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Sets a trophy from the bag on a bare stand. Refuses as a whole: a house
+   * that is not theirs yet, something that is no trophy, a stand already
+   * holding one, or nothing of it in the bag.
+   */
+  displayTrophy(stand: number, itemId: ItemId): HouseMove {
+    if (!ownsHouse(this.state.quests)) {
+      return { ok: false, reason: 'The house is not yours yet.' };
+    }
+    if (stand < 0 || stand >= HOUSE_STANDS) {
+      return { ok: false, reason: 'There is no such stand.' };
+    }
+    if (!isTrophy(itemId)) {
+      return { ok: false, reason: 'Only a trophy goes on a stand.' };
+    }
+    if (onStand(this.state.house, stand)) {
+      return { ok: false, reason: 'Something already stands there.' };
+    }
+    if (this.itemCount(itemId) <= 0) {
+      return { ok: false, reason: 'You have none of that to set out.' };
+    }
+    this.removeItem(itemId, 1);
+    this.state.house = withStand(this.state.house, stand, itemId);
+    this.state.updatedAt = new Date().toISOString();
+    return { ok: true, itemId };
+  }
+
+  /**
+   * Hands back what stands on a stand, which is what displaying it never
+   * stopped it being (F1): refused whole, and left standing, when the pack
+   * has no room for it.
+   */
+  takeFromStand(stand: number): HouseMove {
+    const itemId = onStand(this.state.house, stand);
+    if (!itemId) {
+      return { ok: false, reason: 'Nothing stands there.' };
+    }
+    if (!this.tryAddItem(itemId, 1)) {
+      return { ok: false, reason: 'Your pack is too full to carry that.' };
+    }
+    this.state.house = withStand(this.state.house, stand, null);
+    this.state.updatedAt = new Date().toISOString();
+    return { ok: true, itemId };
+  }
+
+  /** Puts something from the bag in the house's chest: the bank's rule, at the chest's size. */
+  chestDeposit(itemId: ItemId, quantity = 1): BankMove {
+    if (!ownsHouse(this.state.quests)) {
+      return { ok: false, reason: 'The house is not yours yet.' };
+    }
+    const count = Math.min(Math.floor(quantity), this.itemCount(itemId));
+    if (count <= 0) {
+      return { ok: false, reason: 'You have none of that to put away.' };
+    }
+    if (!hasChestRoom(this.state.house.chest, itemId)) {
+      return { ok: false, reason: 'The chest has no room for another kind of thing.' };
+    }
+    this.removeItem(itemId, count);
+    this.state.house = {
+      ...this.state.house,
+      chest: addItemToInventory(this.state.house.chest, itemId, count),
+    };
+    return { ok: true, moved: count };
+  }
+
+  /** Takes back as much from the chest as the pack will hold, as a withdrawal from the bank does. */
+  chestWithdraw(itemId: ItemId, quantity = 1): BankMove {
+    const held = Math.min(Math.floor(quantity), this.state.house.chest[itemId] ?? 0);
+    if (held <= 0) {
+      return { ok: false, reason: 'The chest is not holding that.' };
+    }
+    const count = this.addWhatFits(itemId, held);
+    if (count <= 0) {
+      return { ok: false, reason: 'Your pack is too full to carry that.' };
+    }
+    this.state.house = {
+      ...this.state.house,
+      chest: removeItemFromInventory(this.state.house.chest, itemId, count),
+    };
+    return { ok: true, moved: count, left: held - count };
   }
 
   /**
@@ -680,14 +773,22 @@ export class CharacterController {
     if (rewardItemId && !canCarry(after, rewardItemId, 1, this.carryCapacity())) {
       return { ok: false, reason: 'Your pack is too full for the reward.' };
     }
+    const geared = rewardItemId ? addItemToInventory(after, rewardItemId, 1) : after;
+    // A keepsake is weighed on top of the gear, since a quest that pays both
+    // has to have room for both or it pays neither.
+    const keepsake = definition.reward.keepsake ?? null;
+    if (keepsake && !canCarry(geared, keepsake, 1, this.carryCapacity())) {
+      return { ok: false, reason: 'Your pack is too full for the reward.' };
+    }
 
-    this.state.inventory = rewardItemId ? addItemToInventory(after, rewardItemId, 1) : after;
+    this.state.inventory = keepsake ? addItemToInventory(geared, keepsake, 1) : geared;
     this.state.quests = completeQuest(this.state.quests, questId);
     this.addCurrency(definition.reward.copper);
     return {
       ok: true,
       questId,
       rewardItemId,
+      keepsake,
       copper: definition.reward.copper,
       xp: this.awardPlayedXp(definition.reward.xp),
     };

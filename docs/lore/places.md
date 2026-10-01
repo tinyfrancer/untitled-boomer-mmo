@@ -22,6 +22,13 @@ lamp-post and named the town for. People pin notices to it.
 **What it was.** A Veymari crossroads. The Lamp Stone is a waymarker, and under the town is a
 waystation's undercroft, which is where the rats come from.
 
+**The Surveyor's House.** Built in the Charter's second year for the Company's surveyor, who laid
+the four roads out from the Lamp Stone and then followed the west one; it has stood empty since the
+survey went on to Greyford. It is at the east end of the counters' row, past the Quartermaster's
+Post. The Company lets its houses to its own people and to whoever has been useful, and Jory Stroud
+does the letting. _In game_ (F1): let to the player once the Red Rags are broken, for the timber its
+roof wants, with stands for what they bring home, a chest, and a wall for their plaques.
+
 **People.**
 
 - **Tilda Pell**, the shopkeeper: warm and nosy, with three carts on the east road and a view on
@@ -29,6 +36,8 @@ waystation's undercroft, which is where the rats come from.
   will not call them raiders. She has kept the General Store for twenty-two of the town's
   twenty-nine years, and has heard all about the player before they walk in. _In game_, talking
   (D1).
+  will not call them raiders. The bell off the first of her carts the Red Rags took turned up among
+  Hollis's things, and she gives it to whoever put him down. _In game_ as Pell's Cart Bell.
 - **Ambrose Tally**, the banker: dry and exact, and trusted by everybody because he is interested in
   nothing but the ledger. Hollis's old gold has crossed his counter twice this year, carried in by
   people who would not say where they had it; he weighed it, wrote it down and sent it east. He
@@ -238,6 +247,9 @@ road goes a little way west towards the Stillwood and is grown over.
 - **Silas Quill**, the fettler: reworks gear, and grave goods, and asks nothing. Charming, shameless,
   and not quite a villain. He wants very much to see what Orlath was buried in. _In game_, talking
   (D1).
+  and not quite a villain. Years before anybody opened Orlhal he pressed its door's seal in wax, and
+  it is the one thing he has never sold; he parts with it to whoever puts Orlath down. _In game_ as
+  the Cast of Orlath's Seal.
 - **Pocket**, the crow on the longhouse roof. _Not yet in the game._
 
 **Secrets.**

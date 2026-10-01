@@ -3518,3 +3518,47 @@ Claude's, building it:
   herbs and the still into `places.md`.
 - **Found and left:** the steel tools' `gatherSpeedBonus` is never passed when a gather begins, so it
   does nothing in play; queued as its own task rather than widening this phase.
+
+## 130. The house is the Surveyor's House, let by a quest for timber; trophies stand on stands and come back on a tap; the chest is eight kinds; the plaques hang themselves
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase F1**
+
+F1 puts the house in Lampton (decision 88). The brief's four forks were settled with wave 1's
+answers: **the house is granted by a quest from the quartermaster after the starter arc**, the
+Company's plot; **a stand hands its trophy back on a tap**, so displaying is not spending; **the
+chest is a fixed small store** and the bank is still the vault, F2 free to grow it; **no station**
+until F2's workbench. **Rejected:** a house standing empty with the player's name on it from the
+start, or bought for coin; displaying as spending; a second bank with slots to buy; stations now.
+
+Four more the user settled when they were met, each on Claude's recommendation:
+
+- **The quest asks for twenty logs** (A Roof in Lampton, after The Cutthroat), the roof wanting
+  mending before anybody lives under it, and pays the house and 50 XP. **Rejected:** a deed fee, the
+  first quest to cost coin and a new kind of objective; twelve goblins for the Company; the house for
+  the asking.
+- **The two capstone quests each hand over a keepsake**, a new item kind with no price, good for
+  nothing but a stand. **Rejected:** no keepsakes until Part G; a keepsake from the plot quest too.
+- **Four stands and a chest of eight kinds.** **Rejected:** six and twelve; three and six.
+- **The plaques hang themselves**: one a creature at the highest slayer rank earned, derived from the
+  kills. **Rejected:** hooks the player chooses plaques for, which would be one more stored choice.
+
+Claude's, building it:
+
+- **Whose the house is is derived**: it is the player's while the quest whose reward names the house
+  is done. Only what stands on the stands and what is in the chest is stored (`CharacterState.house`,
+  save version 103). **Rejected:** a flag set on turn-in, a second record of the same fact.
+- **The fixtures are data** (`data/house.ts`), not the renderer's furniture, because they are the
+  first things in a room anybody taps: the world walks up to them and the view draws them where the
+  world says. They are a new tappable kind, picked from inside the room only and ranked above the
+  building, and a `HouseSession` collaborator owns what is open. **Rejected:** the chest as a counter
+  with nobody behind it, which would give the counter table a row with no person; fixtures written
+  into Lampton's text, which would place the house twice.
+- **The walk to a fixture is aimed at where a body stands to use it**, half a tile off its wall
+  inside the room, after the first walk aimed at a corner stand went round the outside of the house:
+  A\* walks tile centres, and the nearest centre to that stand was outside the side wall.
+- **The house stands at the east end of the counters' row**, its door on the high street, and the
+  cottage behind it moved up a row. **Rejected:** south of the street, first in the general store's
+  lane and then by the pond, where it pushed the wizard's first level past the pace test's bound.
+- **The trophies are every boss drop and every keepsake**, read off the tables, and a trophy's card
+  says where it goes, before the house is the player's as well. The lore gained the Surveyor's House,
+  and where the two keepsakes come from.

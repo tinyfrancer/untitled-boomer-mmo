@@ -9,7 +9,7 @@ import { SKILL_ORDER } from '../../src/data/skills';
 import { ZONES } from '../../src/data/zones';
 import { migrateCharacterState } from '../../src/persistence/migrations';
 import {
-  CHARACTER_STATE_VERSION,
+  FIRST_VERSION_2_STATE,
   createNewCharacter,
   type AfkSession,
 } from '../../src/persistence/CharacterState';
@@ -264,7 +264,8 @@ describe('a save from before brewing', () => {
     const skills = { ...(now.skills as Record<string, unknown>) };
     delete skills.foraging;
     delete skills.brewing;
-    const before = { ...now, version: CHARACTER_STATE_VERSION - 1, skills };
+    // The version E2's step migrates from: the one before it, not the latest.
+    const before = { ...now, version: FIRST_VERSION_2_STATE + 5, skills };
     delete (before as Record<string, unknown>).potions;
 
     const migrated = migrateCharacterState(before);

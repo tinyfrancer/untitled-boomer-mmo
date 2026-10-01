@@ -4,6 +4,8 @@ import { SETTING_PALETTES, SHARED_RAMPS } from '../art/palette';
 import { ART_PIXEL } from '../art/budget';
 import { variantId } from '../art/compile';
 import { nodeSprite, secretSprite, stationSprite, strokeSprite } from '../art/places';
+import { ICON_SPRITES, itemSprite } from '../art/icons';
+import { TROPHY_LIFT, fittingAnchor, fixtureSprite, plaqueAt, plaqueSprite } from '../art/rooms';
 import { CRIT, HIT, LEVEL_UP, LOOT_SACK } from '../art/sprites/effects';
 import { SIGNPOST } from '../art/sprites/props';
 import { WICK, WICK_CALLING } from '../art/sprites/wick';
@@ -11,7 +13,8 @@ import { TEXT_HEIGHT, textWidth } from '../art/font';
 import { TILE_SIZE } from '../config/constants';
 import { ABILITIES } from '../data/abilities';
 import { ENEMY_ABILITIES } from '../data/enemyAbilities';
-import { buildingRect, occupant } from '../data/buildings';
+import { buildingRect, interiorRect, occupant } from '../data/buildings';
+import { HOUSE_BUILDING } from '../data/house';
 import { npcName } from '../data/npcs';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { titleName } from '../systems/AchievementSystem';
@@ -19,6 +22,7 @@ import { bountyMarker } from '../systems/BountySystem';
 import { conColor, enemyDisplayName } from '../systems/EnemySystem';
 import { barFill } from '../systems/math';
 import { npcMarker, strongerMarker } from '../systems/QuestSystem';
+import { onStand, ownsHouse, plaques } from '../systems/HouseSystem';
 import { GatherBeat } from '../ui/gatherBeat';
 import { FLOAT_TONE_COLORS, QUEST_MARKER_STYLE, THEME } from '../ui/theme';
 import type { ZoneView } from '../host/zoneView';
@@ -28,7 +32,7 @@ import type { NodeShapeId, ResourceNodeId, ZoneSetting } from '../types/ids';
 import type { Mob } from '../world/Mob';
 import { SPIRIT_HEIGHT } from '../world/Spirit';
 import type { FloatTone, WorldEvent } from '../world/worldEvents';
-import type { WorldTap, ZoneWorld } from '../world/ZoneWorld';
+import type { WorldBuilding, WorldTap, ZoneWorld } from '../world/ZoneWorld';
 import { Motion, deathPose, frameIndex, playMs, type Pose } from './animation';
 import { BuildingSprite } from './buildings';
 import { Camera2D } from './camera';
@@ -198,6 +202,10 @@ export class ZoneView2D implements ZoneView {
   // made: compiled again when that changes, and kept across zones, since a
   // person looks the same in every light (only the ground's ramps differ).
   private figure: { wearing: string; sheet: SpriteSheet } | null = null;
+  // The items' icons, for a trophy standing on a stand in the house (F1):
+  // compiled the first time a zone with the house in it is built and kept for
+  // the session, since an icon is drawn the same in every light.
+  private icons: SpriteSheet | null = null;
   private world: ZoneWorld | null = null;
   private setting: ZoneSetting = 'open';
   private ground: BakedGround | null = null;
@@ -266,6 +274,9 @@ export class ZoneView2D implements ZoneView {
       ),
     );
     this.text = new TextCache(this.pool);
+    if (!this.icons && world.fixtures.length > 0) {
+      this.icons = new SpriteSheet(this.pool, 'open', ICON_SPRITES);
+    }
     this.buildings = world.buildings.map(
       (building) =>
         new BuildingSprite(building, occupant(building, world.npcs), (picture) =>
@@ -311,6 +322,8 @@ export class ZoneView2D implements ZoneView {
     this.vignette = null;
     this.pool.release(this.figure?.sheet.canvas ?? null);
     this.figure = null;
+    this.pool.release(this.icons?.canvas ?? null);
+    this.icons = null;
     for (const sheet of this.sheets.values()) this.pool.release(sheet.canvas);
     this.sheets.clear();
     this.sheet = null;
@@ -676,6 +689,7 @@ export class ZoneView2D implements ZoneView {
       for (const thing of building.furniture) {
         standing.push(prop(thing.x, thing.y, thing.sprite, moving(thing.sprite)));
       }
+      standing.push(...this.houseStanding(world, building.building, prop));
     }
 
     standing.sort((a, b) => a.baseY - b.baseY);
@@ -691,6 +705,60 @@ export class ZoneView2D implements ZoneView {
     if (this.vignette) context.drawImage(this.vignette, 0, 0);
     this.drawWords(world, sheet, figure, room);
     this.text.endFrame();
+  }
+
+  /**
+   * What stands in the house while the player is in it (F1): its stands and
+   * chest where `data/house.ts` puts them, a trophy's own icon on each stand
+   * that holds one, and a plaque on the back wall for every slayer rank
+   * earned, once the house is the player's.
+   */
+  private houseStanding(
+    world: ZoneWorld,
+    house: WorldBuilding,
+    prop: (x: number, y: number, sprite: string, animation: 'still') => Standing,
+  ): Standing[] {
+    const sheet = this.sheet;
+    const icons = this.icons;
+    if (!sheet || house.definition.id !== HOUSE_BUILDING) return [];
+    const { state } = world.character;
+    const owned = ownsHouse(state.quests);
+    const context = this.context;
+    const at = (x: number, y: number): Point => this.camera.toCanvas(x, y);
+    const still: Pose = { animation: 'still', facing: null, index: 0 };
+    const out: Standing[] = [];
+    for (const fixture of world.fixtures) {
+      if (fixture.house !== house) continue;
+      const sprite = fixtureSprite(fixture.fixture);
+      if (!sprite) continue;
+      const foot = fittingAnchor(fixture.area);
+      out.push(prop(foot.x, foot.y, sprite, 'still'));
+      if (fixture.fixture.kind !== 'stand' || !icons) continue;
+      const trophy = onStand(state.house, fixture.fixture.stand);
+      if (!trophy) continue;
+      // A hair in front of the stand's own foot, so it is drawn over the board.
+      out.push({
+        baseY: foot.y + 0.01,
+        draw: () => {
+          const p = at(foot.x, foot.y);
+          icons.draw(context, itemSprite(trophy), still, p.x, p.y - TROPHY_LIFT);
+        },
+      });
+    }
+    if (!owned) return out;
+    const wall = interiorRect(house).top;
+    plaques(state.kills).forEach((plaque, index) => {
+      const spot = plaqueAt(index, wall);
+      const sprite = plaqueSprite(plaque.rank);
+      out.push({
+        baseY: wall,
+        draw: () => {
+          const p = at(house.x + spot.x, spot.y);
+          sheet.draw(context, sprite, still, p.x, p.y);
+        },
+      });
+    });
+    return out;
   }
 
   /**

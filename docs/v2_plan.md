@@ -767,7 +767,14 @@ nodes and drops? Does rested XP come only from idle, or from being away too? (Bo
 ## Part F — Home and collections
 
 - **F1 — The house.** A building in town that is yours: walk in, set trophies on stands and a wall
-  (boss drops, quest keepsakes, achievement plaques), keep things in a chest.
+  (boss drops, quest keepsakes, achievement plaques), keep things in a chest. _Landed (decision
+  124):_ the Surveyor's House at the east end of Lampton's counters' row, let by the quartermaster's
+  A Roof in Lampton (twenty logs, after The Cutthroat); four stands that take a boss's drop or a
+  keepsake and hand it back on a tap; a chest of eight kinds, the bank's rule; a wall of plaques, one
+  a creature at its highest rank, derived; a keepsake from each capstone quest; no station. The
+  fixtures are a new tappable kind, picked from inside the room, and the walk to one is aimed at
+  where a body stands to use it. 51 files, past the guide, kept whole since the save, the room and
+  the panel are one feature to play.
 - **F2 — A house that grows.** Upgrades bought with coin: more rooms, more stands, a garden, a
   workbench. A long goal and a coin sink, priced by simulation like everything else.
 - **F3 — Collection log and bestiary.** Creatures slain and the drops seen from each, lore found,

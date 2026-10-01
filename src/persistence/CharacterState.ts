@@ -6,6 +6,7 @@ import { createInitialSkills, type Skills } from '../systems/SkillSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { ActiveBounty } from '../systems/BountySystem';
 import type { IdleFoodChoice } from '../systems/IdleFoodSystem';
+import { emptyHouse, type HouseState } from '../systems/HouseSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { PotionTimers } from '../systems/PotionSystem';
 import type { Reforges } from '../systems/ReforgeSystem';
@@ -33,7 +34,7 @@ import { NO_GEAR, type Gear, type Inventory } from '../systems/InventorySystem';
  */
 export const FIRST_VERSION_2_STATE = 100;
 
-export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 6;
+export const CHARACTER_STATE_VERSION = FIRST_VERSION_2_STATE + 7;
 
 // One tool costs less than this, both cost more: the shop is usable on day
 // one, but stocking a full kit takes selling some loot first.
@@ -199,6 +200,13 @@ export interface CharacterState {
    * read the answer off. Every other zone is open and is never named here.
    */
   unlockedZones: ZoneId[];
+  /**
+   * What stands on each of the house's stands and what is in its chest (F1).
+   * Stored because both are choices: a trophy set on a stand has left the bag
+   * and is nowhere else, and so is what was put away. Whether the house is
+   * theirs at all is not stored, since it is whether its quest is done.
+   */
+  house: HouseState;
   createdAt: string;
   updatedAt: string;
 }
@@ -295,6 +303,7 @@ export function createNewCharacter(
     mastery: {},
     activeTitleId: null,
     unlockedZones: [],
+    house: emptyHouse(),
     createdAt: now,
     updatedAt: now,
   };

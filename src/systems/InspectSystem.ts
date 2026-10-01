@@ -27,7 +27,10 @@ import { formatCurrency } from './CurrencySystem';
 import { itemUses, type ItemUseContext } from './ItemUseSystem';
 import { LOOT_PILE_LIFETIME_MS } from './LootSystem';
 import { scaleEnemyStats } from './EnemySystem';
-import type { EnemyDefinition } from '../data/enemies';
+import { ENEMIES, type EnemyDefinition } from '../data/enemies';
+import { CHEST_SLOTS, type HouseFixture } from '../data/house';
+import { chestSlotsUsed, onStand, plaques, type HouseState } from './HouseSystem';
+import type { KillCounts } from './AchievementSystem';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 import type { EnemyFamilyId, ItemId, NpcId, ZoneEdge } from '../types/ids';
 
@@ -491,6 +494,7 @@ function itemSubtitle(itemId: ItemId): string {
   if (item.kind === 'material') return 'Material';
   if (item.kind === 'ammunition') return 'Arrows';
   if (item.kind === 'potion') return 'Potion';
+  if (item.kind === 'keepsake') return 'Keepsake';
   if (item.slot === 'weapon') {
     if (isBow(itemId)) return 'Bow';
     return toolSkill(itemId) ? 'Tool' : 'Weapon';
@@ -498,4 +502,51 @@ function itemSubtitle(itemId: ItemId): string {
   if (quiverCapacity(itemId)) return 'Quiver';
   const armor = armorTypeOf(itemId);
   return armor ? `${ARMOR_TYPE_LABELS[armor]} armour` : 'Armour';
+}
+
+/**
+ * A stand, the chest or the wall in the house (F1), described as it stands:
+ * what is on the stand, how full the chest is, how many plaques hang. Settled
+ * the moment the card opens, as every card is.
+ */
+export function describeFixture(
+  fixture: HouseFixture,
+  context: { house: HouseState; kills: KillCounts; owned: boolean },
+): InspectPanel {
+  const subtitle = context.owned ? 'In your house' : 'Not yours yet';
+  switch (fixture.kind) {
+    case 'stand': {
+      const held = onStand(context.house, fixture.stand);
+      return {
+        title: 'Stand',
+        subtitle,
+        lines: [{ label: 'Holds', value: held ? describeItemName(held) : 'Nothing' }],
+        note: "A boss's drop or a keepsake stands here, and a tap hands it back.",
+      };
+    }
+    case 'chest':
+      return {
+        title: 'Chest',
+        subtitle,
+        lines: [
+          {
+            label: 'Holds',
+            value: `${chestSlotsUsed(context.house.chest)} / ${CHEST_SLOTS} kinds of thing`,
+          },
+        ],
+        note: 'It weighs nothing to keep things here: a slot an item, however many.',
+      };
+    case 'wall':
+      return {
+        title: 'Wall of Plaques',
+        subtitle,
+        lines: [
+          {
+            label: 'Plaques',
+            value: `${plaques(context.kills).length} / ${Object.keys(ENEMIES).length}`,
+          },
+        ],
+        note: 'A plaque hangs for every creature you have a slayer rank against, at the highest.',
+      };
+  }
 }

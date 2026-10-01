@@ -138,12 +138,25 @@ interface PotionItemDefinition extends BaseItemDefinition {
   icon: ItemIcon;
 }
 
+/**
+ * A keepsake, and the fifth kind: handed over by whoever gave a chain's last
+ * quest, and good for one thing, a stand in the house (F1). Its own kind rather
+ * than a material with no price, because a material is something to make into
+ * something and the dead-end sweep asks that of every one; a keepsake is
+ * nothing but itself, and the shelf never sells one.
+ */
+interface KeepsakeItemDefinition extends BaseItemDefinition {
+  kind: 'keepsake';
+  icon: ItemIcon;
+}
+
 export type ItemDefinition =
   | EquipmentItemDefinition
   | MaterialItemDefinition
   | ConsumableItemDefinition
   | AmmunitionItemDefinition
-  | PotionItemDefinition;
+  | PotionItemDefinition
+  | KeepsakeItemDefinition;
 
 export const ITEMS: Record<ItemId, ItemDefinition> = {
   'rusty-sword': {
@@ -1460,6 +1473,27 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     weight: 2,
     kind: 'material',
     icon: { shape: 'ore' },
+  },
+  /*
+   * The keepsakes. Light, since a quest that asks for kills takes nothing in
+   * and a pack too full for one refuses the turn-in; and with no price, since
+   * the only thing either is for is a stand (`data/house.ts`).
+   */
+  // Off the first cart the Red Rags took, found among Hollis's things.
+  'pells-cart-bell': {
+    id: 'pells-cart-bell',
+    name: "Pell's Cart Bell",
+    weight: 1,
+    kind: 'keepsake',
+    icon: { shape: 'bell' },
+  },
+  // Pressed in wax off the seal on the barrow's door, years before it was opened.
+  'orlaths-seal-cast': {
+    id: 'orlaths-seal-cast',
+    name: "Cast of Orlath's Seal",
+    weight: 1,
+    kind: 'keepsake',
+    icon: { shape: 'seal' },
   },
 };
 

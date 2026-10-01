@@ -5967,6 +5967,236 @@ async function spirit() {
   );
 }
 
+/** Back to town from wherever an earlier section left the player, by the roads. */
+async function toTown() {
+  if ((await zoneId()) === 'town') return;
+  if ((await zoneId()) === 'greyford') {
+    await page.evaluate(() => {
+      const w = window.world;
+      w.clearTarget();
+      w.closeCounters();
+      w.teleport(w.worldWidth / 2, w.worldHeight - 33);
+    });
+    await stepUntilZone('old-mill-road', 'the road south out of Greyford');
+  }
+  if ((await zoneId()) === 'old-mill-road') {
+    await page.evaluate(() => {
+      const w = window.world;
+      w.teleport(w.worldWidth - 33, w.worldHeight / 2);
+    });
+    await stepUntilZone('town', 'the road east into town');
+  }
+}
+
+async function house() {
+  // --- The house (F1): a building that is the player's once the quartermaster
+  // lets it, with stands, a chest and a wall of plaques in its room. The rules
+  // are `tests/world/house.test.ts`'s; what only a browser has is the walk in
+  // by two real taps, a tap on a stand picked from inside the room through the
+  // camera, the panel's rows doing what they say, the trophy drawn on its
+  // stand in the cutaway, and the view letting go of it all across a round
+  // trip out of town. ---
+  await toTown();
+  const home = await page.evaluate(() => {
+    const w = window.world;
+    const found = w.buildings.find((each) => each.definition.id === 'house');
+    const state = w.character.state;
+    state.quests = { ...state.quests, 'a-roof-in-lampton': { status: 'done', baseline: 0 } };
+    state.house = { stands: [null, null, null, null], chest: {} };
+    state.kills = { ...state.kills, rat: Math.max(state.kills.rat ?? 0, 50) };
+    state.inventory = { ...state.inventory, 'barrow-crown': 1, 'pells-cart-bell': 1, logs: 3 };
+    window.events.emit('inventory-changed', state.inventory);
+    window.events.emit('kills-changed', state.kills);
+    w.clearTarget();
+    w.closeCounters();
+    w.player.stopMoving();
+    return found
+      ? {
+          x: found.x,
+          y: found.y,
+          width: found.definition.body.width,
+          depth: found.definition.body.height,
+        }
+      : null;
+  });
+  if (!home) {
+    check('town has the house', false);
+    return;
+  }
+  await sweep();
+  const before = await canvases();
+
+  // In by its door, a tap on the house and a second from its doorstep.
+  await page.evaluate((at) => window.world.teleport(at.x, at.y + at.depth / 2 + 160), home);
+  await step(2);
+  await draw();
+  /** @param {{ x: number; y: number }} at */
+  const middle = (at) => window.view.worldToScreen(at.x, at.y);
+  await clickAt(await page.evaluate(middle, home));
+  await stepUntil(
+    () => page.evaluate(() => !window.world.player.hasMoveTarget()),
+    'the walk to the house door',
+    20000,
+  );
+  await draw();
+  await clickAt(await page.evaluate(middle, home));
+  const inside = await stepFor(
+    () =>
+      page.evaluate(() => ({
+        x: window.world.player.x,
+        y: window.world.player.y,
+        walking: window.world.player.hasMoveTarget(),
+      })),
+    (spot) => !spot.walking,
+    'the walk into the house',
+    30000,
+  );
+  check(
+    'two taps walk into the house',
+    Math.abs(inside.x - home.x) < home.width / 2 && Math.abs(inside.y - home.y) < home.depth / 2,
+    `player at ${Math.round(inside.x)},${Math.round(inside.y)}`,
+  );
+
+  // A bare stand, tapped from inside: its panel offers what is in the bag.
+  /** @param {string} key */
+  const fixtureOnScreen = (key) =>
+    page.evaluate((wanted) => {
+      const f = window.world.fixtures.find(
+        (each) =>
+          (each.fixture.kind === 'stand' ? `stand-${each.fixture.stand}` : each.fixture.kind) ===
+          wanted,
+      );
+      if (!f) return null;
+      return wanted === 'wall'
+        ? window.view.worldToScreen(f.x, f.area.top - 40)
+        : window.view.worldToScreen(f.x, f.area.bottom - 16);
+    }, key);
+  await draw();
+  const stand = await fixtureOnScreen('stand-0');
+  if (!stand) {
+    check('the house has a first stand', false);
+    return;
+  }
+  await clickAt(stand);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="stand-0"]') !== null),
+    "the first stand's panel",
+    20000,
+  );
+  const offered = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-modal [data-display]')].map((row) =>
+      row.getAttribute('data-display'),
+    ),
+  );
+  check(
+    'a tap on a bare stand opens it, offering the trophies in the bag and nothing else',
+    offered.includes('barrow-crown') &&
+      offered.includes('pells-cart-bell') &&
+      !offered.includes('logs'),
+    offered.join(', '),
+  );
+  await page.click('.hud-modal [data-display="barrow-crown"]');
+  await step(2);
+  const set = await page.evaluate(() => ({
+    stand: window.world.character.state.house.stands[0],
+    bag: window.world.character.state.inventory['barrow-crown'] ?? 0,
+    panel: document.querySelector('.hud-modal[data-house]') !== null,
+  }));
+  check(
+    'a row sets the trophy on the stand, out of the bag, and the panel shuts',
+    set.stand === 'barrow-crown' && set.bag === 0 && !set.panel,
+    JSON.stringify(set),
+  );
+  await draw();
+  await page.screenshot({ path: `${OUT}/23-house.png` });
+
+  // A held stand hands its trophy back on a tap: displaying is not spending.
+  // Asked again where it is now, since the camera followed the walk to it.
+  const held = await fixtureOnScreen('stand-0');
+  if (held) await clickAt(held);
+  await stepUntil(
+    () => page.evaluate(() => window.world.character.state.house.stands[0] === null),
+    'the stand to hand the trophy back',
+    20000,
+  );
+  check(
+    'a tap on a held stand hands the trophy back to the bag',
+    (await page.evaluate(() => window.world.character.state.inventory['barrow-crown'] ?? 0)) === 1,
+  );
+
+  // The chest: the bank's two sides, at the chest's size.
+  const chest = await fixtureOnScreen('chest');
+  if (chest) await clickAt(chest);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="chest"]') !== null),
+    "the chest's panel",
+    20000,
+  );
+  await page.click('.hud-modal [data-chest-all="logs"]');
+  await step(2);
+  const kept = await page.evaluate(() => ({
+    chest: window.world.character.state.house.chest.logs ?? 0,
+    bag: window.world.character.state.inventory.logs ?? 0,
+    slots: document.querySelector('.hud-modal .hud-house__count')?.textContent,
+  }));
+  check(
+    'the chest stores a stack from the bag and says how many of its slots are used',
+    kept.chest === 3 && kept.bag === 0 && kept.slots === '1 / 8 slots',
+    JSON.stringify(kept),
+  );
+  await page.click('.hud-modal [data-action="close-house"]');
+  await step(2);
+
+  // The wall: one plaque a creature, read off the kills.
+  const wall = await fixtureOnScreen('wall');
+  if (wall) await clickAt(wall);
+  await stepUntil(
+    () => page.evaluate(() => document.querySelector('.hud-modal[data-house="wall"]') !== null),
+    "the wall's panel",
+    20000,
+  );
+  const hung = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-modal [data-plaque]')].map((row) => row.textContent),
+  );
+  check(
+    'the wall names a plaque for the rat',
+    hung.some((line) => line?.includes('Rat Hunter')),
+    hung.join(' | '),
+  );
+  // The plaques themselves, with the player stood back from the wall they hang on.
+  await page.click('.hud-modal [data-action="close-house"]');
+  await page.evaluate((at) => window.world.teleport(at.x + 48, at.y + 40), home);
+  await step(2);
+  await draw();
+  await page.screenshot({ path: `${OUT}/23b-house-wall.png` });
+
+  // Out of the house shuts what is open in it; and out of town and back lets
+  // go of everything the room was drawn with.
+  await park();
+  check(
+    'walking out of the house shuts its panel',
+    (await page.evaluate(() => document.querySelector('.hud-modal[data-house]') === null)) === true,
+  );
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(w.worldWidth - 33, w.worldHeight / 2 + 64);
+  });
+  await stepUntil(async () => (await zoneId()) !== 'town', 'the road east out of town');
+  const away = await zoneId();
+  await page.evaluate(() => {
+    const w = window.world;
+    w.teleport(33, w.worldHeight / 2);
+  });
+  await stepUntilZone('town', `the road back into town from ${away}`);
+  await sweep();
+  const after = await canvases();
+  check(
+    'a round trip out of town lets go of everything the house was drawn with',
+    after <= before,
+    `${before} -> ${after} canvases`,
+  );
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -6017,6 +6247,7 @@ const SECTIONS = [
   ['back-room', backRoom],
   ['spirit', spirit],
   ['still', still],
+  ['house', house],
 ];
 
 const known = SECTIONS.map(([name]) => name);

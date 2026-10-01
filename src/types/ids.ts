@@ -175,7 +175,11 @@ export type ItemId =
   | 'samphire-tonic'
   | 'meadowsweet-draught'
   | 'keepers-draught'
-  | 'bogbean-cordial';
+  | 'bogbean-cordial'
+  // Keepsakes (F1): handed over by whoever gave a chain's last quest, sold by
+  // nobody and good for nothing but a stand in the house.
+  | 'pells-cart-bell'
+  | 'orlaths-seal-cast';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -285,7 +289,9 @@ export type ItemIconShape =
   | 'shaft'
   | 'arrowhead'
   | 'herb'
-  | 'potion';
+  | 'potion'
+  | 'bell'
+  | 'seal';
 
 export type GatherSkillId =
   | 'fishing'
@@ -376,7 +382,9 @@ export type BuildingId =
   // fettler works in, and the fettler's store behind it.
   | 'trading-post'
   | 'longhouse'
-  | 'store';
+  | 'store'
+  // The player's, once the Company lets it to them (F1).
+  | 'house';
 
 // Which body a renderer draws a building with, and the same bargain
 // `CreatureShapeId` and `NodeShapeId` make: a new BUILDINGS row names a shape it
@@ -413,7 +421,9 @@ export type QuestId =
   | 'cut-coal'
   | 'lurker-hides'
   | 'blackwater-raiders'
-  | 'the-barrow-king';
+  | 'the-barrow-king'
+  // The quartermaster's, after the starter arc: the plot the house stands on.
+  | 'a-roof-in-lampton';
 
 // Standing work, as opposed to a quest, which is a story told once. Its own
 // union rather than a slice of QuestId for the reason `LootTableId` is its own:
