@@ -89,7 +89,7 @@ once, a line of its own otherwise, quiet the tips alone, and its light the one u
 version 105; decision 128). **and E2** (potions: foraging with a sickle on herb patches from the strand to the fen, brewing at a
 still in Greyford, four potions one kind each for gathering speed, a fight, idle XP and luck, their
 clocks kept on the character and honoured by a night away; save version 106; decision 129). **and F1** (the house: the Surveyor's House in Lampton, let by a quest from the quartermaster,
-with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). Wave 1 is folded onto
+with four stands, a chest and a wall of plaques; keepsakes from the capstone quests; decision 130). **and D3** (factions: standing with the Company, the Keepers and Greyford moved by kills, quests, contracts and answers, the Company and the Keepers opposed on deeds, ranks in each faction's words paying titles and opening a quest, a shelf row and lines, a block on the character sheet and the ranks on Feats; save version 109; decision 133, on `claude/v2-wave-2`). Wave 1 is folded onto
 `claude/v2-wave-1` and up as one PR to `main`. **Next: wave 2** (D2, D3, D1b, E3, F2 and F3) from
 `claude/v2-wave-2` once wave 1 merges, with G1 in flight against `main`. Update this line as each
 phase lands:
