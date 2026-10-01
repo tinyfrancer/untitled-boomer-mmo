@@ -1,6 +1,7 @@
 import { describeItemName, isShield } from '../data/items';
 import { SKILLS } from '../data/skills';
 import { titleName } from '../systems/AchievementSystem';
+import { killStanding } from '../systems/FactionSystem';
 import {
   logAbsorbed,
   logAchievement,
@@ -143,6 +144,9 @@ export class CombatDirector {
     for (const fragmentId of fragmentsOf(enemyId)) {
       this.ctx.noteWhisper({ kind: 'lore', fragmentId });
     }
+    // A kill a faction minds moves its standing (D3), a camp's included, since
+    // a raider down while idle is as dead as one cut down by hand.
+    this.ctx.moveStanding(killStanding(enemyId), { count });
     if (crossed.length > 0) {
       this.ctx.persistCharacter();
     }

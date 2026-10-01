@@ -60,6 +60,8 @@ const MIGRATIONS: Record<number, MigrationStep> = {
       kills: (state.kills ?? {}) as KillCounts,
     }),
   }),
+  // Factions (D3): nobody made before them stands anywhere with anybody.
+  108: (state) => ({ ...state, standing: {} }),
 };
 
 /**

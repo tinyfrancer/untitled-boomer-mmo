@@ -67,6 +67,8 @@ import {
 import { bonusYieldChance, crossedMasteryTiers, masteryXp, recordMastery } from './MasterySystem';
 import { keepIdleFood, moveIdleFood, type IdleFoodMove } from './IdleFoodSystem';
 import { drinkPotion, fortuneYieldChance, spendPotionTime } from './PotionSystem';
+import { crossedRanks, moveStanding, type RankCrossing } from './FactionSystem';
+import type { StandingMove } from '../data/factions';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { QUESTS } from '../data/quests';
 import type { AchievementDefinition } from '../data/achievements';
@@ -723,10 +725,10 @@ export class CharacterController {
     this.state.potions = spendPotionTime(this.state.potions, elapsedMs);
   }
 
-  /** The three tallies a quest objective is read off. */
+  /** The three tallies a quest objective is read off, and the standing a quest may wait on. */
   questCounters(): QuestCounters {
-    const { inventory, kills, visits } = this.state;
-    return { inventory, kills, visits };
+    const { inventory, kills, visits, standing } = this.state;
+    return { inventory, kills, visits, standing };
   }
 
   questProgress(questId: QuestId): QuestProgress {
@@ -735,7 +737,7 @@ export class CharacterController {
 
   acceptQuest(questId: QuestId): boolean {
     const definition = QUESTS[questId];
-    if (!canAccept(definition, this.state.quests)) {
+    if (!canAccept(definition, this.state.quests, this.state.standing)) {
       return false;
     }
     // The baseline is taken here and nowhere else: it is what the objective's
@@ -880,7 +882,30 @@ export class CharacterController {
   }
 
   earnedTitles(): TitleId[] {
-    return earnedTitles(this.state.kills);
+    return earnedTitles(this.state.kills, this.state.standing);
+  }
+
+  /**
+   * Moves standing with each faction a move names, `count` times over, and
+   * reports the ranks crossed either way (D3).
+   *
+   * A faction title fallen below comes off, since the right to wear it is
+   * gone; and a character wearing nothing puts on the best rank just reached,
+   * for the reason `recordKill` does.
+   */
+  moveStanding(move: StandingMove, count = 1): RankCrossing[] {
+    const before = this.state.standing;
+    this.state.standing = moveStanding(before, move, count);
+    const crossed = crossedRanks(before, this.state.standing);
+    const worn = this.state.activeTitleId;
+    if (worn !== null && !hasEarnedTitle(this.state.kills, this.state.standing, worn)) {
+      this.state.activeTitleId = null;
+    }
+    if (this.state.activeTitleId === null) {
+      const best = crossed.filter((crossing) => crossing.rose && crossing.rank.title).at(-1);
+      if (best) this.state.activeTitleId = best.rank.id as TitleId;
+    }
+    return crossed;
   }
 
   /**
@@ -963,7 +988,7 @@ export class CharacterController {
   }
 
   setActiveTitle(titleId: TitleId | null): boolean {
-    if (titleId !== null && !hasEarnedTitle(this.state.kills, titleId)) {
+    if (titleId !== null && !hasEarnedTitle(this.state.kills, this.state.standing, titleId)) {
       return false;
     }
     this.state.activeTitleId = titleId;

@@ -6,6 +6,7 @@ import {
   type DialogTopic,
 } from '../data/dialog';
 import type { ClassId, NpcId } from '../types/ids';
+import { hasRank, type Standing } from './FactionSystem';
 import { questStatus, type QuestLog } from './QuestSystem';
 
 /**
@@ -24,6 +25,7 @@ export interface DialogReader {
   classId: ClassId;
   quests: QuestLog;
   asked: DialogMemory;
+  standing: Standing;
 }
 
 /** A topic as the conversation offers it: what it says now, and whether that is heard. */
@@ -44,6 +46,10 @@ export function holds(requirement: DialogRequirement, reader: DialogReader): boo
       return questStatus(reader.quests, requirement.questId) === requirement.status;
     case 'asked':
       return topicAsked(reader.asked, requirement.npcId, requirement.topicId);
+    case 'standing':
+      return hasRank(reader.standing, requirement.rankId);
+    case 'unasked':
+      return !topicAsked(reader.asked, requirement.npcId, requirement.topicId);
   }
 }
 

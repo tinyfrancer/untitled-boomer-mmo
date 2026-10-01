@@ -6242,6 +6242,59 @@ async function house() {
   );
 }
 
+async function factions() {
+  // --- Standing (D3): moved by a deed in the world, drawn as a block on the
+  // character sheet and as ranks on Feats, the rank reached worn when nothing
+  // was and taken off from its row. The rules are tested headlessly; what
+  // needs a browser is both sheets redrawing from the one event. ---
+  const standing = await page.evaluate(() => {
+    const w = window.world;
+    w.character.state.standing = {};
+    w.character.state.activeTitleId = null;
+    // Past the slayer chain's last rank, so the only title these kills earn
+    // is the Company's.
+    w.character.state.kills = { ...w.character.state.kills, bandit: 100 };
+    w.creditKill('bandit', 60);
+    return w.character.state.standing;
+  });
+  await tapTab('character');
+  const block = await page.evaluate(() =>
+    [...document.querySelectorAll('.hud-sheet[data-sheet="character"] .hud-standing')].map(
+      (n) => n.textContent,
+    ),
+  );
+  check(
+    'a kill the Company minds moves its standing, and the sheet says the rank and the next',
+    standing.company === 60 &&
+      block.length === 3 &&
+      block[0] === 'The Veymarch CompanyCompany Hand, 60 / 250 standing',
+    block.join(' | '),
+  );
+  await page.screenshot({ path: `${OUT}/standing.png` });
+
+  const column = () =>
+    page.evaluate(() => ({
+      worn: window.world.character.state.activeTitleId,
+      line: document.querySelector('.hud-player__title')?.textContent ?? '',
+    }));
+  const reached = await column();
+  check(
+    'the rank reached is worn when nothing was, and the player column says so',
+    reached.worn === 'company-hand' && reached.line === 'Company Hand',
+    `${reached.worn}: "${reached.line}"`,
+  );
+  await tapTab('feats');
+  await page.click('.hud-sheet[data-sheet="feats"] [data-title="company-hand"]');
+  await page.waitForTimeout(200);
+  const off = await column();
+  check(
+    "Feats draws the faction's ranks, and its row takes the title off",
+    off.worn === null,
+    `${off.worn}`,
+  );
+  await page.screenshot({ path: `${OUT}/standing-feats.png` });
+}
+
 /**
  * The run, in the order it happens. Each entry is one of the `// ---` banners
  * above and is what `--section=` names.
@@ -6294,6 +6347,7 @@ const SECTIONS = [
   ['spirit', spirit],
   ['still', still],
   ['house', house],
+  ['factions', factions],
 ];
 
 const known = SECTIONS.map(([name]) => name);

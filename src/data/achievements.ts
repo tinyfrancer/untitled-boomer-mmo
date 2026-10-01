@@ -1,4 +1,5 @@
 import { ENEMIES } from './enemies';
+import { FACTION_RANKS, FACTION_TITLE_ORDER } from './factions';
 import type { AchievementId, EnemyId, SlayerRank, SlayerTier, TitleId } from '../types/ids';
 
 export interface AchievementDefinition {
@@ -80,8 +81,12 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDefinition> = Object
   ),
 ) as Record<AchievementId, AchievementDefinition>;
 
-export const TITLES: Record<TitleId, TitleDefinition> = Object.fromEntries(
-  ENEMY_IDS.flatMap((enemyId) =>
+/**
+ * Every title: a slayer rank's, and a faction rank's (D3), whose name is the
+ * rank's own in that faction's words.
+ */
+export const TITLES: Record<TitleId, TitleDefinition> = Object.fromEntries([
+  ...ENEMY_IDS.flatMap((enemyId) =>
     SLAYER_TIERS.map((threshold) => [
       titleIdFor(enemyId, threshold),
       {
@@ -90,4 +95,8 @@ export const TITLES: Record<TitleId, TitleDefinition> = Object.fromEntries(
       },
     ]),
   ),
-) as Record<TitleId, TitleDefinition>;
+  ...FACTION_TITLE_ORDER.map((titleId) => [
+    titleId,
+    { id: titleId, name: FACTION_RANKS[titleId].name },
+  ]),
+]) as Record<TitleId, TitleDefinition>;

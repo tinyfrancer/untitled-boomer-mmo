@@ -27,6 +27,7 @@ import { bindHudKeys } from './keys';
 import { injectHudStyles } from './styles';
 import { describeItemName, quiverCapacity } from '../data/items';
 import { SKILLS } from '../data/skills';
+import { FACTION_RANKS } from '../data/factions';
 import { appendLogEntry, type CombatLogEntry } from '../systems/CombatLogSystem';
 import { carryCapacity, inventoryWeight } from '../systems/EncumbranceSystem';
 import { equippableFrom } from '../systems/EquipSystem';
@@ -55,6 +56,7 @@ import type { Reforges } from '../systems/ReforgeSystem';
 import type { KillCounts } from '../systems/AchievementSystem';
 import type { MasteryXp } from '../systems/MasterySystem';
 import type { DialogMemory } from '../systems/DialogSystem';
+import type { Standing } from '../systems/FactionSystem';
 import { hudLayout, tipCardRect } from '../ui/layout';
 import { THEME } from '../ui/theme';
 import type { TabId } from '../ui/tabs';
@@ -110,6 +112,8 @@ import {
   TARGET_CLEARED_EVENT,
   TARGET_SELECTED_EVENT,
   TITLE_CHANGED_EVENT,
+  STANDING_CHANGED_EVENT,
+  STANDING_RANK_EVENT,
   RESTED_CHANGED_EVENT,
   UNEQUIP_SLOT_REQUESTED_EVENT,
   UNLOCKED_ZONES_CHANGED_EVENT,
@@ -255,6 +259,10 @@ interface HudModel {
   // one conversation open, which the world resets each time one opens.
   asked: DialogMemory;
   conversation: ConversationState | null;
+  // Standing with each faction (D3): seeded from the save, since the sheets
+  // and a gated row are drawn before anything moves it, and kept current by
+  // the world.
+  standing: Standing;
   // Which potions are running, for the idle panel's word on what they do to
   // idle. Read off the buff row, which already carries them; the clocks
   // themselves are the world's.
@@ -374,6 +382,7 @@ class Hud {
       house: character.house ?? emptyHouse(),
       whispers: character.whispers ?? emptyWhispers(),
       secrets: character.secrets ?? [],
+      standing: character.standing ?? {},
     };
 
     injectHudStyles();
@@ -384,6 +393,7 @@ class Hud {
         inventory: this.model.inventory,
         quests: this.model.quests,
         level: this.model.level,
+        standing: this.model.standing,
       }),
       banker: () => ({
         contents: this.model.bank,
@@ -412,6 +422,7 @@ class Hud {
           classId: this.classId,
           quests: this.model.quests,
           asked: this.model.asked,
+          standing: this.model.standing,
         },
         conversation: this.model.conversation,
       }),
@@ -550,8 +561,8 @@ class Hud {
     this.inventorySheet.update(this.model.inventory);
     this.inventorySheet.setCurrency(this.model.currency);
     this.refreshEncumbrance();
-    this.featsSheet.update(this.model.kills, this.model.activeTitleId);
     this.refreshWhispers();
+    this.featsSheet.update(this.model.kills, this.model.standing, this.model.activeTitleId);
     this.combatLogSheet.update(this.model.combatLog);
     this.refreshSkillsBook();
     this.refreshIdle();
@@ -854,10 +865,10 @@ class Hud {
     };
   }
 
-  /** The three tallies a quest objective may be counted off, as the model holds them. */
+  /** The three tallies a quest objective may be counted off, and the standing one may wait on. */
   private questCounters(): QuestCounters {
-    const { inventory, kills, visits } = this.model;
-    return { inventory, kills, visits };
+    const { inventory, kills, visits, standing } = this.model;
+    return { inventory, kills, visits, standing };
   }
 
   /**
@@ -906,6 +917,7 @@ class Hud {
       },
       skills: this.model.skills,
       level: this.model.level,
+      standing: this.model.standing,
     });
   }
 
@@ -1127,8 +1139,8 @@ class Hud {
     );
     listen(KILLS_CHANGED_EVENT, (kills) => {
       this.model.kills = kills;
-      this.featsSheet.update(kills, this.model.activeTitleId);
       this.refreshWhispers();
+      this.featsSheet.update(kills, this.model.standing, this.model.activeTitleId);
       // A corpse is progress on a kill objective, and the counter behind the
       // shopkeeper's row is the same one the feats sheet just redrew from.
       this.refreshQuests();
@@ -1371,9 +1383,24 @@ class Hud {
     listen(TITLE_CHANGED_EVENT, (titleId) => {
       this.model.activeTitleId = titleId;
       this.playerColumn.setTitle(titleId);
-      this.featsSheet.update(this.model.kills, titleId);
+      this.featsSheet.update(this.model.kills, this.model.standing, titleId);
       // A worn title costs the player column an extra line.
       this.applyLayout();
+    });
+    listen(STANDING_CHANGED_EVENT, (standing) => {
+      this.model.standing = standing;
+      this.featsSheet.update(this.model.kills, standing, this.model.activeTitleId);
+      this.refreshCharacterSheet();
+      // A rank opens a quest, a shelf row and a topic, each drawn from the
+      // model by whichever panel is up.
+      this.refreshQuests();
+    });
+    listen(STANDING_RANK_EVENT, (crossing) => {
+      const rank = FACTION_RANKS[crossing.rankId];
+      this.toast.show(
+        `${crossing.rose ? 'Rank' : 'Fallen to'}: ${rank.name}`,
+        crossing.rose ? THEME.color.skillUp : THEME.color.dim,
+      );
     });
     listen(RESTED_CHANGED_EVENT, (rested) => {
       this.model.rested = rested;

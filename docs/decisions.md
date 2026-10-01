@@ -3682,3 +3682,76 @@ Claude's, met building it and settled on its recommendation:
   `CombatDirector.creditKill` is where a kill is counted.
 - **The journal is Whispers behind Menu**, a candle its mark and J its key, and something noted is
   said once on the toast and once in the log. The pace bot reads none of it, and nothing moved.
+
+## 133. Standing is a fourth stored tally, moved by kills, quests, contracts and answers; the Company and the Keepers are opposed on deeds; ranks in each faction's words pay titles and open a quest, a shelf row and lines
+
+**2026-10-01 · the user, asked by Claude, and Claude, building the plan's phase D3**
+
+D3 gives the factions of `docs/lore/factions.md` standing the player earns (decision 87). Wave 2's
+question round settled the brief's four forks before it launched. **Two were the user's**, each on
+Claude's recommendation: **three factions have standing before level 9**, the Veymarch Company, the
+Keepers and Greyford, the Quiet Court and Karn Tholl met once each and given standing in Part G; and
+**standing shows as a block on the character sheet with the ranks earned on Feats**, no seat of its
+own. **Rejected:** all five factions now, two of them with nothing to move them; a Standing tab behind
+Menu. **Two were settled by Claude on its recommendation, the user having declined the card, for the
+wave review to overturn**: **the Company and the Keepers are opposed on deeds rather than a seesaw**,
+a raider killed costing the Keepers while it pays the Company and other deeds moving one alone; and
+**the upper chain's ten raiders cost standing with the Keepers, which putting Orlath back to rest
+earns back**. **Rejected:** zero-sum standing, where any Company work costs the Keepers the same,
+which would make the starter arc a quarrel with people the player has not met; deeds that move only
+one faction ever, which leaves the lore's one real opposition with nothing in the game; the chain
+free with the Keepers.
+
+Claude's, building it, each a fork the brief did not foresee and so settled on the recommended
+option for the wave review to overturn:
+
+- **Standing is a number a faction, stored, held between −1000 and 1000**
+  (`CharacterState.standing`, save version 109), the fourth tally beside kills, visits and mastery,
+  since a contract paid is cleared off the board and an answer given leaves nothing to count.
+  `CLAUDE.md`'s rule now says four. Ranks, titles and everything a rank opens are derived.
+  **Rejected:** deriving standing from the other tallies, which a contract (nothing about a finished
+  one is stored) and an answer (heard, but which effect it paid is a rule that would have to be
+  replayed) cannot be; no floor or ceiling, which lets a night of raiders bury the Keepers past any
+  amends.
+- **Ranks at 50, 250 and 750, each above a stranger's a title, in the faction's own words**: Company
+  Hand, Contractor and Factor; the Keepers' Guest of the Fen, Lightfriend and Fenkin, with Drainer
+  below −50; Greyford Regular, Greyford Trader and Friend of the Yard. A title is a `TitleId` as a
+  slayer rank's is and worn the same way, put on when reached with nothing worn and **taken off when
+  fallen below**, the one way a title is ever lost. **Rejected:** only the top rank a title; a rank
+  without a title kept once earned, which makes a title a fact about the past rather than about where
+  the player stands.
+- **What moves it**: a kill a faction minds (bandits and their chief for the Company, a fen raider
+  +1 Company and −2 Keepers, a goblin on the road for Greyford, a barrow wight laid for the Keepers),
+  every quest once (the starter arc and the house for the Company, the upper chain for Greyford,
+  Orlath for Greyford and +50 Keepers), every contract every time (the board is the Company's; the
+  goblin cull Greyford's too), and an answer the first time it is heard. A camp's kills move it as
+  a hand's do, since the dead are as dead. Rats, crabs, lurkers, crawlers and miners move nothing.
+  **Rejected:** rats for the Company, which would make the first hour a rank; kills not moving
+  standing at all, which leaves "a raider down moves two factions" with nowhere to live.
+- **A kill is said only by the sheet; a quest, a contract and an answer are a line in the log; a rank
+  crossed is a toast and a line.** **Rejected:** a line a kill, which buries the log.
+- **A dialog choice is two topics each waiting on the other unasked** (a new `DialogRequirement`,
+  `unasked`, beside D3's `standing`), so the side taken first is the one kept: the quartermaster's
+  pans, "Then I'll help dig them out" (+15 Company, −15 Keepers) or "Maybe the fen was theirs first"
+  (−10 Company, +15 Keepers). An answer's effects are paid **the first time it is heard and never
+  again**, which moved `TalkSession`'s effects inside the first-heard check. **Rejected:** choices
+  both of which can be taken, which is not a choice; a flag on the character for the side taken,
+  which the answers heard already say.
+- **What a rank opens before 9**, through the `requires` slots already there: the outfitter's coal
+  waits on Greyford Regular (`QuestDefinition.requiresRank`), which the road west earns by itself (40
+  for the quest and 12 for its goblins); cooked eel goes on the shelf for a Company Contractor
+  (`StockRequirement` `standing`), the lazy half of the best heal as cooked fish is of the first; and
+  the quartermaster greets a Contractor and a Factor differently, the outfitter says where the player
+  stands with the yard, the fettler owns up to his back room's lantern to a Greyford Trader and the
+  shopkeeper speaks of the fen people to a Guest of the Fen. **Rejected:** iron arrows as the
+  Company's stock, which broke the rule that made arrows come off the bench and nowhere else
+  (`fletching.test.ts`); a new quest behind a rank, which is content for Part G's faction work;
+  gating contracts on a rank, which the board's rule (a level and never a story) refuses.
+- **D2's save step is a pass-through on this branch.** Decision 125 reserved save version 108 for D2
+  and 109 here, so the chain carries a `107` step that does nothing until D2's own replaces it on
+  the wave branch; without it every save between would be dropped on this branch alone.
+
+The pace is not moved: the bot does no quests or contracts and buys nothing, and the shelf row is a
+heal it never reaches for. The lore gained the ranks and what each faction calls them, the Keepers'
+word for the Company's people, the eel the Post salts for its carters, and the answers to the
+factions' open questions (`factions.md`, `naming.md`).

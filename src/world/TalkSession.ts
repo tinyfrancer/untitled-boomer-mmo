@@ -38,8 +38,10 @@ export class TalkSession extends CounterSession {
     if (!offer) return;
 
     this.said = { topicId, answerId: offer.answer.id };
-    offer.answer.effects?.forEach((effect) => this.apply(effect));
+    // Its effects are paid the first time it is heard and never again, or a
+    // grey topic would be a lever pulled for standing.
     if (this.ctx.character.markAnswerHeard(npc.npcId, offer.answer.id)) {
+      offer.answer.effects?.forEach((effect) => this.apply(effect));
       this.ctx.events.emit(ASKED_CHANGED_EVENT, this.ctx.character.state.asked);
       this.ctx.persistCharacter();
     }
@@ -53,7 +55,8 @@ export class TalkSession extends CounterSession {
 
   /**
    * An answer's effects, each a member of `DialogEffect` and a case here: a
-   * rumour told or a piece of lore learned goes in the journal (D2).
+   * rumour told or a piece of lore learned goes in the journal (D2), and a
+   * standing moved with the factions, said, since an answer is news (D3).
    */
   private apply(effect: DialogEffect): void {
     switch (effect.kind) {
@@ -62,6 +65,9 @@ export class TalkSession extends CounterSession {
         return;
       case 'lore':
         this.ctx.noteWhisper({ kind: 'lore', fragmentId: effect.fragmentId });
+        return;
+      case 'standing':
+        this.ctx.moveStanding(effect.move, { said: true });
         return;
     }
   }
@@ -72,7 +78,7 @@ export class TalkSession extends CounterSession {
   }
 
   private reader(): DialogReader {
-    const { level, classId, quests, asked } = this.ctx.character.state;
-    return { level, classId, quests, asked };
+    const { level, classId, quests, asked, standing } = this.ctx.character.state;
+    return { level, classId, quests, asked, standing };
   }
 }

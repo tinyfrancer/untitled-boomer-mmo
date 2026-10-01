@@ -1,5 +1,13 @@
 import type { QuestStatus } from '../systems/QuestSystem';
-import type { ClassId, LoreFragmentId, NpcId, QuestId, RumourId } from '../types/ids';
+import type {
+  ClassId,
+  FactionRankId,
+  LoreFragmentId,
+  NpcId,
+  QuestId,
+  RumourId,
+} from '../types/ids';
+import type { StandingMove } from './factions';
 
 /**
  * What has to be true for a line to be said: the character's level, their
@@ -13,15 +21,24 @@ export type DialogRequirement =
   | { kind: 'level'; atLeast: number }
   | { kind: 'class'; classId: ClassId }
   | { kind: 'quest'; questId: QuestId; status: QuestStatus }
-  | { kind: 'asked'; npcId: NpcId; topicId: string };
+  | { kind: 'asked'; npcId: NpcId; topicId: string }
+  // D3's: a rank with a faction stood at or above, and a topic not yet asked,
+  // which is how two answers become a choice: each waits on the other unasked,
+  // so taking one side takes the other off the table for good.
+  | { kind: 'standing'; rankId: FactionRankId }
+  | { kind: 'unasked'; npcId: NpcId; topicId: string };
 
 /**
- * What hearing an answer does beyond being heard, each a member here and a
- * case in `TalkSession`: a rumour told, noted in the Whispers journal, or a
- * piece of the history learned (D2, decision 132). D3 adds a standing moved.
+ * What hearing an answer does beyond being heard, the first time it is heard
+ * and never again, so a grey topic asked twice pays nothing twice: a rumour
+ * told or a piece of the history learned, noted in the Whispers journal (D2,
+ * decision 132), or a standing moved with the factions (D3, decision 133).
+ * Each is a member here and a case in `TalkSession`.
  */
 export type DialogEffect =
-  { kind: 'rumour'; rumourId: RumourId } | { kind: 'lore'; fragmentId: LoreFragmentId };
+  | { kind: 'rumour'; rumourId: RumourId }
+  | { kind: 'lore'; fragmentId: LoreFragmentId }
+  | { kind: 'standing'; move: StandingMove };
 
 /** Something a person says, and when they say it. */
 export interface DialogLine {
@@ -67,6 +84,13 @@ export interface Conversation {
 }
 
 const level = (atLeast: number): DialogRequirement => ({ kind: 'level', atLeast });
+const ranked = (rankId: FactionRankId): DialogRequirement => ({ kind: 'standing', rankId });
+const unasked = (npcId: NpcId, topicId: string): DialogRequirement => ({
+  kind: 'unasked',
+  npcId,
+  topicId,
+});
+const standing = (move: StandingMove): DialogEffect => ({ kind: 'standing', move });
 const done = (questId: QuestId): DialogRequirement => ({ kind: 'quest', questId, status: 'done' });
 const taken = (questId: QuestId): DialogRequirement => ({
   kind: 'quest',
@@ -163,6 +187,11 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'raiders',
             says: 'Raiders, the Company calls them. My mother called them the fen people and bought her eels off them. Draw your own lines.',
+          },
+          {
+            id: 'raiders-guest',
+            says: "I hear the fen people let you past these days. My mother would've liked you. She said they never once short-weighted her, which is more than I can say for the Company's scales.",
+            requires: [ranked('keepers-guest')],
           },
         ],
       },
@@ -360,6 +389,14 @@ export const DIALOG: Record<NpcId, Conversation> = {
         says: "There you are. The Post doesn't say it often, so I will: the Company's glad of you. Now. The board.",
         requires: [level(7)],
       },
+      {
+        says: "Contractor. Your name's in the book in ink now, not pencil. The board's yours first.",
+        requires: [ranked('company-contractor')],
+      },
+      {
+        says: "Factor. The Company doesn't hand that word out, and I've never once seen it handed to anybody who didn't sign for it. Sit, if you want. Nobody else does.",
+        requires: [ranked('company-factor')],
+      },
     ],
     topics: [
       {
@@ -438,6 +475,34 @@ export const DIALOG: Record<NpcId, Conversation> = {
             id: 'cut',
             says: "Coal, iron, goblins and paperwork. One of my men came up saying there's a sum cut into the rock down there, past where the goblins have been, with somebody's name on it. The Company would like to know whom it owes, and would prefer not to.",
             effects: [rumour('sum-in-the-rock')],
+          },
+        ],
+      },
+      // A choice (D3): each side waits on the other unasked, so the first said
+      // is the one that stands, and it moves the Company and the Keepers apart.
+      {
+        id: 'dig',
+        ask: "Then I'll help dig them out.",
+        follows: 'pans',
+        requires: [unasked('quartermaster', 'first')],
+        answers: [
+          {
+            id: 'dig',
+            says: "That's the spirit. The Post remembers who picks up a shovel, and so, I'm told, do the fenfolk. Watch your back out there.",
+            effects: [standing({ company: 15, keepers: -15 })],
+          },
+        ],
+      },
+      {
+        id: 'first',
+        ask: 'Maybe the fen was theirs first.',
+        follows: 'pans',
+        requires: [unasked('quartermaster', 'dig')],
+        answers: [
+          {
+            id: 'first',
+            says: "Maybe it was. It's ours on paper now, and paper's what the Crown reads. I won't hold it against you. I'll remember it, mind.",
+            effects: [standing({ company: -10, keepers: 15 })],
           },
         ],
       },
@@ -534,6 +599,32 @@ export const DIALOG: Record<NpcId, Conversation> = {
         ],
       },
       {
+        id: 'yard',
+        ask: 'How do I stand with Greyford?',
+        follows: 'greyford',
+        answers: [
+          {
+            id: 'yard',
+            says: "You're a stranger who's handy with a blade. Out here that's a start, not a friendship. Clear the road west and we'll talk.",
+          },
+          {
+            id: 'yard-regular',
+            says: "You're a regular. The yard knows your face. And I've a job wants a pick in it, if you've got one.",
+            requires: [ranked('greyford-regular')],
+          },
+          {
+            id: 'yard-trader',
+            says: "You're one of us, near enough. Near enough is as close as Greyford lets anybody, so don't take it hard.",
+            requires: [ranked('greyford-trader')],
+          },
+          {
+            id: 'yard-friend',
+            says: "Friend of the yard. Don't let it go to your head. The yard doesn't say it to many, and it's never once said it to the Company.",
+            requires: [ranked('greyford-friend')],
+          },
+        ],
+      },
+      {
         id: 'fettler',
         ask: 'What about the fettler?',
         answers: [
@@ -570,6 +661,11 @@ export const DIALOG: Record<NpcId, Conversation> = {
           {
             id: 'back',
             says: 'Stock, waiting on the bench. None of it for sale, and none of it for you to be looking at, round the back or anywhere else.',
+          },
+          {
+            id: 'back-trader',
+            says: "Trader, are you? Then you'll have been round the back already, and I'll have been told. Don't touch the lantern. It's cracked, it isn't for sale, and it isn't for asking about.",
+            requires: [ranked('greyford-trader')],
           },
         ],
       },

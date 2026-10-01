@@ -1,6 +1,7 @@
 import { QUESTS } from '../data/quests';
 import { SHOP_STOCK, type ShopStockEntry } from '../data/shop';
 import { isQuestDone, type QuestLog } from './QuestSystem';
+import { hasRank, rankReason, rankRequirement, type Standing } from './FactionSystem';
 
 /**
  * Whether something is on the shelf yet, and what to say when it is not.
@@ -24,6 +25,7 @@ export type StockAccess =
 export interface StockContext {
   level: number;
   quests: QuestLog;
+  standing: Standing;
 }
 
 export interface StockOffer {
@@ -45,6 +47,17 @@ export function stockAccess(entry: ShopStockEntry, context: StockContext): Stock
       kind: 'gated',
       requirement: `Needs Level ${requires.level}`,
       reason: `The shopkeeper keeps that for level ${requires.level} and up.`,
+    };
+  }
+
+  if (requires.kind === 'standing') {
+    if (hasRank(context.standing, requires.rankId)) {
+      return { kind: 'stocked' };
+    }
+    return {
+      kind: 'gated',
+      requirement: rankRequirement(requires.rankId),
+      reason: rankReason(requires.rankId),
     };
   }
 

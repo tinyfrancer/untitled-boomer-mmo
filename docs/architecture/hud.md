@@ -393,6 +393,15 @@ world's two unseeded publishers) beside the kills it already had, and reads the 
 `WhispersSystem`, so followed is drawn the moment a secret is found or a boss falls. Something just
 noted is said once on the toast, from its own event, since the journal's state alone cannot tell a
 new entry from a sheet rebuilt for another character.
+**Standing shows on the character sheet and its ranks on Feats, with no seat of its own** (D3,
+decision 133). Under the skills the character sheet has a **Standing** block, a row a faction: its
+name, the rank stood at, and the standing under it towards the next ("Company Hand, 60 / 250
+standing"), since a number alone does not say what it counts towards. Feats opens on a group a
+faction before the creatures, its standing beside its name and each rank that pays a title a row
+counted in standing until it is reached, then worn from its row like a slayer rank. A rank reached is
+a toast ("Rank: Company Hand"), and one fallen to a dim one. Both sheets redraw off
+`STANDING_CHANGED_EVENT`, which also redraws the open counter, since a rank opens a quest, a shelf
+row and a topic.
 
 **An item says what it is for, and every row that shows one can be asked** (decision 90). The
 uses are derived, never written per item (`systems/ItemUseSystem.ts`): every recipe that takes it

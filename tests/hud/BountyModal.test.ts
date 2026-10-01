@@ -28,6 +28,7 @@ const FREE: BountyPanelState = {
   inventory: {},
   kills: {},
   visits: {},
+  standing: {},
 };
 const HELD: BountyPanelState = { ...FREE, bounty: { bountyId: 'rat-cull', baseline: 0 } };
 

@@ -130,6 +130,17 @@ describe('migrateCharacterState', () => {
     expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
   });
 
+  it('stands nowhere with anybody, made before factions (D3)', () => {
+    const before: Record<string, unknown> = {
+      ...createNewCharacter('Aria', 'wizard'),
+      version: FIRST_VERSION_2_STATE + 8,
+    };
+    delete before.standing;
+    const migrated = migrateCharacterState(before);
+    expect(migrated?.standing).toEqual({});
+    expect(migrated?.version).toBe(CHARACTER_STATE_VERSION);
+  });
+
   it('drops saves from the future', () => {
     const future = {
       ...createNewCharacter('Aria', 'wizard'),

@@ -164,7 +164,7 @@ const TIP_LINES: Record<TipId, (facts: TipFacts) => string | null> = {
     );
   },
   'first-title': ({ character }) => {
-    const titleId = character.activeTitleId ?? earnedTitles(character.kills)[0];
+    const titleId = character.activeTitleId ?? earnedTitles(character.kills, character.standing)[0];
     if (!titleId) return null;
     return (
       `They're calling you ${titleName(titleId)} now. Every rank you earn is a title: ` +

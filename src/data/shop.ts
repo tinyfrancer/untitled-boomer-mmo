@@ -1,4 +1,4 @@
-import type { ItemId, QuestId } from '../types/ids';
+import type { FactionRankId, ItemId, QuestId } from '../types/ids';
 
 /**
  * What has to be true before something goes on the shelf.
@@ -10,7 +10,10 @@ import type { ItemId, QuestId } from '../types/ids';
  * door held shut by an item in the pack.
  */
 export type StockRequirement =
-  { kind: 'level'; level: number } | { kind: 'quest'; questId: QuestId };
+  | { kind: 'level'; level: number }
+  | { kind: 'quest'; questId: QuestId }
+  // A rank with a faction (D3): stock the Company keeps for its own.
+  | { kind: 'standing'; rankId: FactionRankId };
 
 // What the town shop sells. Buy prices sit above the items' sell values on
 // purpose — the vendor spread is what makes earning coin matter, and it is also
@@ -62,6 +65,17 @@ export const SHOP_STOCK: ShopStockEntry[] = [
   // counter pays back, which `progression.test.ts` holds to a third or so of
   // what the starter arc pays in coin.
   { itemId: 'crude-arrows', price: 30, quantity: 25 },
+  /*
+   * Company stock (D3): the eel the Post salts down for its own carters, sold
+   * to whoever the Company counts a contractor. The best heal in the game, and
+   * the lazy half of it, as cooked fish is: a pole in the fen's deep pools and
+   * a fire is still the cheaper road.
+   */
+  {
+    itemId: 'cooked-eel',
+    price: 40,
+    requires: { kind: 'standing', rankId: 'company-contractor' },
+  },
   // Rations, once there is something to need them for.
   { itemId: 'cooked-fish', price: 12, requires: { kind: 'level', level: 2 } },
   // The twenty the player carried in for the feast, sold back one at a time.

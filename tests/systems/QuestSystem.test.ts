@@ -37,7 +37,7 @@ function counters(
     visits?: ZoneVisits;
   } = {},
 ): QuestCounters {
-  return { inventory: {}, kills: {}, visits: {}, ...partial };
+  return { inventory: {}, kills: {}, visits: {}, standing: {}, ...partial };
 }
 
 const NONE = counters();
@@ -194,26 +194,26 @@ describe('a chain', () => {
   });
 
   it('refuses to accept one that is still locked', () => {
-    expect(canAccept(feast, {})).toBe(false);
-    expect(canAccept(feast, finished('rat-bones'))).toBe(true);
+    expect(canAccept(feast, {}, {})).toBe(false);
+    expect(canAccept(feast, finished('rat-bones'), {})).toBe(true);
   });
 
   // Drawn rather than hidden, so the row needs the name of what it waits on —
   // the same thing a gated shelf row carries where its price would be, and
   // saying it is a need, since a quest's name alone reads as a place or a note.
   it('names what a locked quest is waiting on', () => {
-    expect(blockingRequirement(feast, {})).toBe(`Needs ${bones.name}`);
-    expect(blockingRequirement(feast, finished('rat-bones'))).toBe(null);
-    expect(blockingRequirement(bones, {})).toBe(null);
+    expect(blockingRequirement(feast, {}, {})).toBe(`Needs ${bones.name}`);
+    expect(blockingRequirement(feast, finished('rat-bones'), {})).toBe(null);
+    expect(blockingRequirement(bones, {}, {})).toBe(null);
   });
 });
 
 describe('accepting and turning in', () => {
   it('accepts a quest only once', () => {
-    expect(canAccept(bones, {})).toBe(true);
+    expect(canAccept(bones, {}, {})).toBe(true);
     const log = taken('rat-bones');
-    expect(canAccept(bones, log)).toBe(false);
-    expect(canAccept(bones, completeQuest(log, 'rat-bones'))).toBe(false);
+    expect(canAccept(bones, log, {})).toBe(false);
+    expect(canAccept(bones, completeQuest(log, 'rat-bones'), {})).toBe(false);
   });
 
   it('refuses a turn-in for a quest that was never accepted', () => {

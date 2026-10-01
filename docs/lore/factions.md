@@ -84,13 +84,27 @@ and their work respected, which means returned.
 - **Greyford trades with everyone**, which is why nobody trusts it and everybody uses it.
 - **The Company does not believe in the Court or Karn Tholl**, until it has to.
 
-## What D3 has left to decide
+## Standing and ranks
 
-- Whether standing with the Company and the Keepers is zero-sum, or whether each deed moves them on
-  its own.
-- What the upper band's chain costs with the Keepers, since it asks for ten raiders dead, and whether
-  putting Orlath down earns it back (the Keepers would call it a mercy: his lantern was out, and
-  nothing else could lay him).
-- Each faction's ranks and titles, in its own words (`naming.md`).
-- Which factions have standing before level 9: the Company, the Keepers and Greyford, with the Court
-  and Karn Tholl met once each and their standing opening in Part G.
+_In game since D3 (decision 133)._ The Company, the Keepers and Greyford hold standing before level
+9; the Court and Karn Tholl are met once each, and their standing opens in Part G.
+
+- **The Company and the Keepers are opposed on deeds, not a seesaw.** A raider killed pays the
+  Company and costs the Keepers; taking a side over the salt pans with Jory Stroud moves them apart;
+  every other deed moves one alone.
+- **The upper chain's ten raiders cost the Keepers**, and putting Orlath down earns it back: the
+  Keepers call it a mercy, his lantern being out and nothing else able to lay him. A barrow wight laid
+  is a smaller mercy of the same kind.
+- **Ranks, in each faction's own words**, each above a stranger's a title:
+  - The Company counts in its ledger: Stranger, **Company Hand**, **Company Contractor**, **Company
+    Factor**. A factor is what the Company calls the agent who keeps its books in a place, and it
+    does not hand the word out.
+  - The Keepers: **Drainer**, their word for anybody who digs the fen's drains and pans and so for
+    the Company's people; Outsider, which is everybody else; **Guest of the Fen**; **Lightfriend**;
+    and **Fenkin**, the most they say of anybody not born on a holm.
+  - Greyford: Stranger, **Greyford Regular**, **Greyford Trader**, **Friend of the Yard**, which the
+    yard has never once said to the Company.
+- **What a rank opens before 9**: the Post salts down eel for its own carters and sells it to a
+  Company Contractor; Oona Rook keeps the coal trade for a Greyford Regular; Silas Quill admits to the
+  lantern in his back room to a Greyford Trader; and Jory Stroud and Oona speak differently to
+  somebody they count.

@@ -285,3 +285,37 @@ says it once to the HUD and saves; the three places that call it are `TalkSessio
 a hand's does. The step from save version 107 fills the journal from what an older character had
 already asked, found and killed, in the tables' order, since theirs was never kept. Finding lore
 pays nothing else; the collection log (F3) reads the counts, and `fragmentsOf` for a creature's page.
+
+## Standing with the factions
+
+**Standing is the fourth stored tally, and it is stored for the reason the other three are**
+(`data/factions.ts`, `systems/FactionSystem.ts`, version 2 phase D3, decision 133): a deed leaves
+nothing behind to count it off. A contract paid is cleared off the board, and an answer given is one
+line among many, so `CharacterState.standing` holds a number per faction, held between −1000 and
+1000, and everything that comes off it derives on read: the rank stood at, how far the next is, which
+quests, shelf rows and lines it opens and which titles it pays. Absent is 0, a stranger.
+
+**Three factions have standing before level 9**: the Veymarch Company, the Keepers and Greyford
+(`FactionId`). The Quiet Court and Karn Tholl are met once each and join in Part G. Each climbs at 50,
+250 and 750, every rank above a stranger's paying the title it is named for in the faction's own
+words, as a slayer rank does; only the Keepers have a rank below it (Drainer, under −50), since only
+the Keepers are set against anything the game asks of a player.
+
+**Four deeds move it**, each a row rather than a rule: a kill (`KILL_STANDING`, credited in
+`CombatDirector.creditKill` beside the kill tally, so a camp's kills count and a night away's are paid
+as many times over), a quest handed in (`QuestReward.standing`, once), a contract paid
+(`BountyReward.standing`, every time, the board being the Company's) and an answer heard
+(`DialogEffect` `standing`, the first time only, so a grey topic asked again pays nothing). All four go
+through `WorldContext.moveStanding`, which emits the totals, says a quest's, a contract's or an
+answer's move in the log (a kill's is not news), and says a rank crossed either way with a toast and
+a line. **The Company and the Keepers are opposed on deeds rather than a seesaw**: a raider killed
+pays the Company and costs the Keepers, the pans' choice moves them apart, and every other deed moves
+one alone; `tests/systems/FactionSystem.test.ts` holds that no row moves the two the same way. The
+upper chain's ten raiders cost the Keepers twenty, and putting Orlath down earns more than that back.
+
+**A rank opens things through the same `requires` slots that already existed**: a quest's
+`requiresRank` (the outfitter's coal waits on Greyford Regular, which the road west earns by itself),
+a shelf row's `StockRequirement` `standing` (cooked eel for a Company Contractor) and a line's
+`DialogRequirement` `standing`. A locked row says what it Needs, the rank by name. With nothing worn, a
+rank reached puts its title on, as a slayer rank does; a faction title fallen below comes off, which
+is the one way a title is lost.

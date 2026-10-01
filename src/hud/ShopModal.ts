@@ -7,6 +7,7 @@ import { bindItemCard } from './itemCard';
 import { describeItemName, itemValue } from '../data/items';
 import { formatCurrency } from '../systems/CurrencySystem';
 import type { QuestLog } from '../systems/QuestSystem';
+import type { Standing } from '../systems/FactionSystem';
 import { shopOffers, type StockOffer } from '../systems/ShopSystem';
 import { THEME } from '../ui/theme';
 import { inventoryEntries, type Inventory } from '../systems/InventorySystem';
@@ -15,10 +16,11 @@ import type { ItemId } from '../types/ids';
 export interface ShopState {
   currency: number;
   inventory: Inventory;
-  // What the shelf is gated on: a level, or a piece of the shopkeeper's own
-  // work finished.
+  // What the shelf is gated on: a level, a piece of the shopkeeper's own
+  // work finished, or a rank with a faction (D3).
   quests: QuestLog;
   level: number;
+  standing: Standing;
 }
 
 export interface ShopHandlers {
@@ -78,7 +80,11 @@ export class ShopModal extends Overlay {
     this.purse.set(state.currency);
 
     this.body.replaceChildren(sectionHeader('Their stock', 'tap to buy'));
-    for (const offer of shopOffers({ level: state.level, quests: state.quests })) {
+    for (const offer of shopOffers({
+      level: state.level,
+      quests: state.quests,
+      standing: state.standing,
+    })) {
       this.body.append(this.stockRow(offer, state.currency));
     }
 

@@ -761,9 +761,9 @@ decision 121).
   has the forks.
 - **D5 — Part D review.**
 
-**Open questions for Part D**: can two factions be opposed, so that raising one lowers another?
-C2 answered which factions there are and what the spirit wants (`docs/lore/factions.md` and
-`spirit.md`, decision 114), and left D3 the mechanics.
+**Open questions for Part D**: none of D3's left. D3 answered whether two factions can be opposed
+(the Company and the Keepers, on deeds rather than as a seesaw, decision 133). C2 answered which
+factions there are and what the spirit wants (`docs/lore/factions.md` and `spirit.md`, decision 114).
 
 ---
 
