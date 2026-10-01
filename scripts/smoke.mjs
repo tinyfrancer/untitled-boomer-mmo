@@ -3419,7 +3419,7 @@ async function skillsBook() {
   const index = await book();
   check(
     'the Skills tab opens the book on an index of every skill',
-    index.visible && index.page === '' && index.skills === 13,
+    index.visible && index.page === '' && index.skills === 15,
     `${index.skills} skill(s), page "${index.page}"`,
   );
   await tapTab('skills');
@@ -3450,7 +3450,7 @@ async function skillsBook() {
   await page.click('.hud-sheet[data-sheet="skills"] [data-action="skills-back"]');
   await page.waitForTimeout(80);
   const back = await book();
-  check('and Back goes to the index', back.page === '' && back.skills === 13, `"${back.page}"`);
+  check('and Back goes to the index', back.page === '' && back.skills === 15, `"${back.page}"`);
 
   await page.click('.hud-sheet[data-sheet="skills"] .hud-skill[data-skill="smithing"]');
   await page.waitForTimeout(150);
