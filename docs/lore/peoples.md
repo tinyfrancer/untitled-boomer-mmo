@@ -120,8 +120,15 @@ to them.
 - **Cave crawlers** are sea crabs gone pale in the dark, and there are no crabs in the Greyhills: they
   came up through the dwarves' drowned halls, which means those halls still reach the sea. (The Deep
   Cut)
-- **Dragons** are real, and there are very few. The dwarves know of one, asleep in the north, and do
-  not go near it. (Part G)
+- **Dragons** are real, and there are very few. The dwarves know of one, **Ashmaw**, asleep in the
+  forge they sealed it in under the burnt hill north of the Greyhills, and do not go near it. (The
+  Ashen Hollow)
+- **Briarlings** are thorn the elves grew into the shape of something that walks and set to turn
+  people back from the Stillwood. They do not hurry and do not stop. (The Stillwood)
+- **Wisps** are strays that would not be let go and ran together, lights that bite; enough of them
+  in one place make something the elves cannot part. (The Quiet Court)
+- **The lightbound** are souls the great light drew in and sends back out to guard it, kindled and
+  obedient, and once people. (Marhal)
 
 The rest of what lives in the Veymarch is only animals, however it looks: rats, crabs, eels, and the
 fen's **bog lurkers**, newts the size of dogs whose hides the wet cannot get through.
@@ -129,16 +136,18 @@ fen's **bog lurkers**, newts the size of dogs whose hides the wet cannot get thr
 ## Where each class comes from
 
 The three classes are three ways a nobody earns a living on a frontier. Part G's specialisations
-(decision 84) can grow out of these; they are hooks, not choices.
+(decision 84) grow out of these, two a class, named in each class below (decision G1); G2 decides
+what each does.
 
 - **Warriors** are Aldmark's soldiers left over from its wars, the Company's militia and the
-  sellswords it hires. Marta Hale trains them in Lampton. A path that holds a line and a path that
-  breaks one are both at home here.
+  sellswords it hires. Marta Hale trains them in Lampton. A path that holds a line, the **Bulwark**, and a
+  path that breaks one, the **Breaker**, are both at home here.
 - **Wizards** are trained in Aldmark's hedge-colleges in fire, the one magic humans kept after
   Veymar, and are taught that fire is not the kindling: a burning with nobody in it. Settlers are a
   little wary of wizards, and the fenfolk more, since fire and lanterns do not mix. A wizard's Mana
-  Shield and Mend already lean towards light that wards, and a path that goes further that way edges
-  towards the kindling: a temptation the story can use.
+  Shield and Mend already lean towards light that wards, and a path that goes further that way, the
+  **Wardlight**, edges towards the kindling: a temptation the story can use. The other path is the
+  **Firebrand**, fire with nobody in it and proud of it.
 - **Rangers** are frontier hunters, poachers and scouts, and the best bows in the Veymarch are
-  fen-made. A path that hunts the fen's way (the marsh, traps, patience) and a path that shoots
-  Aldmark's (range, the volley) are both at home here.
+  fen-made. A path that hunts the fen's way (the marsh, traps, patience), the **Fenstalker**, and a
+  path that shoots Aldmark's (range, the volley), the **Longbow**, are both at home here.

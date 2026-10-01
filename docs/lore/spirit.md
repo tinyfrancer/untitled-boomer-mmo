@@ -56,18 +56,27 @@ pull is until late.
 A piece at each new zone and each boss, as D4 promises. The table is the order; D4 writes the lines,
 and the ones in `places.md` show the voice.
 
-| Where                                 | What comes back                                                   |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| Lampton, the Lamp Stone               | The shape of a waymarker: it has seen one before                  |
-| Candle Strand                         | Fear of the sea, and the pull, unexplained                        |
-| The New Cut, the broken cell          | That it was in there, in the dark, for a long time                |
-| The Cutthroat's Cellar, Hollis's coin | A king's face, Merrath's, and fear of it                          |
-| Old Mill Road, the Willow Warden      | That it is kindled, and that an elf thinks that a terrible thing  |
-| Greyford, the lamp-warden's ring      | That it wore one: it was a lamp-warden, or a lamp-warden's child  |
-| Blackwater Fen, Maren                 | That the fenfolk put it in the hill                               |
-| The Deep Cut, the dwarves' door       | That the dwarves refused it something                             |
-| The Sunken Barrow, Orlath             | Its name, Lorn, and that it tended the kings' lanterns            |
-| Part G, a band at a time              | The king, the lantern, the night it lit it, and what it has to do |
+| Where                                 | What comes back                                                  |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| Lampton, the Lamp Stone               | The shape of a waymarker: it has seen one before                 |
+| Candle Strand                         | Fear of the sea, and the pull, unexplained                       |
+| The New Cut, the broken cell          | That it was in there, in the dark, for a long time               |
+| The Cutthroat's Cellar, Hollis's coin | A king's face, Merrath's, and fear of it                         |
+| Old Mill Road, the Willow Warden      | That it is kindled, and that an elf thinks that a terrible thing |
+| Greyford, the lamp-warden's ring      | That it wore one: it was a lamp-warden, or a lamp-warden's child |
+| Blackwater Fen, Maren                 | That the fenfolk put it in the hill                              |
+| The Deep Cut, the dwarves' door       | That the dwarves refused it something                            |
+| The Sunken Barrow, Orlath             | Its name, Lorn, and that it tended the kings' lanterns           |
+| Lorhal, Maren                         | What the fenfolk did to it, and that they will not say why       |
+| The Stillwood, the waymarker          | That the elves were right about something                        |
+| The Quiet Court, an elf               | That an elf grieves to look at it                                |
+| Karn Tholl, the dwarves               | What it asked the dwarves for, and that they said no             |
+| The High Greyhills, the sea in sight  | The pull, nearer                                                 |
+| The Ashen Hollow, Ashmaw              | That a fire can have somebody in it                              |
+| The Drowned Halls, the burst door     | The lantern: that it made it when the dwarves would not          |
+| The Barrow Field, the empty barrow    | The king: Merrath's face whole, and that it served him           |
+| The Sea-Wall, Vessa                   | The night it lit it                                              |
+| Marhal, the great light               | What it has to do                                                |
 
 ## How it speaks
 
@@ -91,5 +100,11 @@ goes on with it, Lorn's too. The bible wants it because the whole story is about
 go. Veymar kept its dead and drowned for it; the fenfolk keep theirs and pay for it with their own;
 the Company keeps going and breaks what it does not see; and the one soul that caused all of it is
 the one that can let go of all of it. The player climbs from nobody to the one who carried Wick down
-to Marhal, and walks back up alone, having earned it. Whether the player can argue with Wick, and
-what the last of its lines are, is Part G's.
+to Marhal, and walks back up alone, having earned it.
+
+**The player may argue, and the ending holds** (Part G, decision G1). At the foot of the great light
+the player is asked once: let Wick go, or ask it to stay. Wick goes either way, since staying would
+leave every soul of Veymar in the light and Wick knows it; what the choice changes is what it says
+last and the title the player walks out with. Let go, it thanks them: "You carried me all the way
+down. That's further than anyone ever carried me." Asked to stay, it is kind about it: "I know. I'd
+ask too. Go on up; it's warmer." Neither line is final: G16 writes them, and these show the voice.
