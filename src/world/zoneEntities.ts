@@ -1,4 +1,4 @@
-import { BUILDINGS, buildingWalls, type BuildingDefinition } from '../data/buildings';
+import { BUILDINGS, buildingWalls, isInside, type BuildingDefinition } from '../data/buildings';
 import { ENEMIES } from '../data/enemies';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { SECRETS } from '../data/secrets';
@@ -38,6 +38,12 @@ export interface WorldSecret {
   x: number;
   y: number;
   secretId: SecretId;
+  /**
+   * The building whose room it lies in, if it lies in one (decision 120): it
+   * is found from inside that room and nowhere else, since a wall is a quarter
+   * of a tile and the reach would otherwise find it from the lane behind.
+   */
+  room: WorldBuilding | null;
 }
 
 /**
@@ -103,12 +109,17 @@ export function populateZone(
 
   const stations = zone.stationSpawns.map(({ x, y, station }) => ({ x, y, station }));
 
-  const secrets = zone.secretSpawns.map(({ x, y, secretId }) => ({ x, y, secretId }));
-
   const buildings = zone.buildingSpawns.map(({ x, y, buildingId }) => ({
     x,
     y,
     definition: BUILDINGS[buildingId],
+  }));
+
+  const secrets = zone.secretSpawns.map(({ x, y, secretId }) => ({
+    x,
+    y,
+    secretId,
+    room: buildings.find((building) => isInside(building, { x, y })) ?? null,
   }));
 
   // One tappable signpost per exit — the mobile way out of a zone.

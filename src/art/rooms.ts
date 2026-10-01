@@ -94,15 +94,21 @@ const ROOM_FITTINGS: Record<BuildingShapeId, readonly Fitting[]> = {
 };
 
 /**
- * The two rooms that are their own thing: the shape stays the rule, and a row
- * may name itself.
+ * The rooms that are their own thing: the shape stays the rule, and a row may
+ * name itself.
  *
- * Both are fires. The smithy and the inn are the two buildings in the game
+ * Two are fires. The smithy and the inn are the two buildings in the game
  * whose whole character is the thing burning in them; left to their shapes the
  * smithy would be the mill with a chimney and the inn would be a fourth
- * shopfront.
+ * shopfront. The third is the fettler's store, which is a cottage's roof over
+ * nobody's bed: crates either side, and the middle of the floor left to what
+ * is waiting in it.
  */
 const ROOM_OVERRIDES: Partial<Record<BuildingId, readonly Fitting[]>> = {
+  store: [
+    { kind: 'crates', against: 'left' },
+    { kind: 'crates', against: 'right' },
+  ],
   smithy: [
     { kind: 'hearth', against: 'back' },
     { kind: 'bench', against: 'right' },

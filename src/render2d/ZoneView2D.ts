@@ -453,13 +453,18 @@ export class ZoneView2D implements ZoneView {
       const pose: Pose = { animation: 'loop', facing: null, index: frameIndex(def, 'loop', now) };
       sheet.draw(context, sprite, pose, p.x, p.y + Math.floor(def.height / 2));
     }
-    // A secret that lies in the ground, a hatch, likewise under anyone on it.
+    // A secret that lies in the ground, a hatch, likewise under anyone on it;
+    // one under water plays on the water's clock, as the rings do.
     for (const secret of world.secrets) {
       const { sprite, flat } = secretSprite(secret.secretId);
       if (!flat) continue;
+      const def = sheet.def(sprite);
       const p = at(secret.x, secret.y);
-      const pose: Pose = { animation: 'still', facing: null, index: 0 };
-      sheet.draw(context, sprite, pose, p.x, p.y + Math.floor(sheet.def(sprite).height / 2));
+      const pose: Pose =
+        def.kind === 'mark'
+          ? { animation: 'loop', facing: null, index: frameIndex(def, 'loop', now) }
+          : { animation: 'still', facing: null, index: 0 };
+      sheet.draw(context, sprite, pose, p.x, p.y + Math.floor(def.height / 2));
     }
 
     // What everything stands on: a shadow under it, and a ring under the target.

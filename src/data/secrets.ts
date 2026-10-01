@@ -103,6 +103,49 @@ export const SECRETS: Record<SecretId, SecretDefinition> = {
     cache: { copper: 150, items: [] },
     blocks: null,
   },
+  // Under the millpond, where the stream pooled below the hills and the elves
+  // said goodbye to Veymar, until the first charter dammed it. The coin in the
+  // shallows is the village's, thrown in the year the winter would not end.
+  'pond-shrine': {
+    id: 'pond-shrine',
+    zoneId: 'old-mill-road',
+    name: 'The Shrine Under the Pond',
+    line: "There's carving down there, under the water. All leaves. Somebody made that to be sad at.",
+    cache: { copper: 45, items: [] },
+    blocks: null,
+  },
+  // In the Old Mill, against the west wall: the first charter's accounts, the
+  // last eleven years of them the Grey Winter, and the mill's last takings in
+  // the box it was kept in.
+  'charter-ledger': {
+    id: 'charter-ledger',
+    zoneId: 'old-mill-road',
+    name: "The First Charter's Ledger",
+    line: 'Eleven years of entries, and every one of them says it was cold. Then they stop.',
+    cache: { copper: 60, items: [] },
+    blocks: null,
+  },
+  // In the ford at Greyford, by the pier it fell from: the middle stone of the
+  // Veymari bridge, a lamp cut into it. Carters throw a coin in for luck.
+  'bridge-keystone': {
+    id: 'bridge-keystone',
+    zoneId: 'greyford',
+    name: 'The Bridge Keystone',
+    line: "That held a bridge up, once. There's a lamp cut into it. Whoever built this liked lamps as much as I do.",
+    cache: { copper: 35, items: [] },
+    blocks: null,
+  },
+  // The fettler's store behind the longhouse, where grave goods wait to be
+  // reworked and nobody asks: a lamp-warden's ring among them, and Wick's beat
+  // for Greyford (`docs/lore/spirit.md`), that it wore one.
+  'back-room': {
+    id: 'back-room',
+    zoneId: 'greyford',
+    name: "The Fettler's Back Room",
+    line: "That ring's mine. No, one like it. I had one like it.",
+    cache: { copper: 40, items: [{ itemId: 'reforging-stone', quantity: 1 }] },
+    blocks: null,
+  },
 };
 
 /**

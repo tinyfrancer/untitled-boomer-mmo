@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { TILE_SIZE } from '../../src/config/constants';
+import { PLAYER_HALF_EXTENT, TILE_SIZE } from '../../src/config/constants';
+import { isInside } from '../../src/data/buildings';
 import { SECRET_REACH, SECRETS } from '../../src/data/secrets';
+import { ZONES } from '../../src/data/zones';
+import { isBlocked } from '../../src/systems/CollisionSystem';
+import { findPath } from '../../src/systems/PathSystem';
+import { zoneWorldSize } from '../../src/systems/ZoneSystem';
+import { populateZone } from '../../src/world/zoneEntities';
 import { SECRET_FOUND_EVENT, SECRETS_CHANGED_EVENT } from '../../src/ui/uiEvents';
 import type { SecretId } from '../../src/types/ids';
 import type { ZoneWorld } from '../../src/world/ZoneWorld';
@@ -137,4 +143,74 @@ describe('finding a secret', () => {
     );
     expect(blocked).toBe(true);
   });
+});
+
+/**
+ * A secret may lie in a room (decision 120), and is found from inside it and
+ * nowhere else: a wall is a quarter of a tile, so the reach would otherwise
+ * find the fettler's back room from the longhouse in front of it.
+ */
+describe('a secret in a room', () => {
+  it('is found from inside the room', () => {
+    const kit = harness({ zoneId: 'greyford' });
+    const store = secretIn(kit.world, 'back-room');
+
+    kit.world.teleport(store.x, store.y - TILE_SIZE / 3);
+    kit.tick(1);
+
+    expect(kit.character.state.secrets).toEqual(['back-room']);
+    expect(kit.character.itemCount('reforging-stone')).toBe(1);
+  });
+
+  it('is not found through its wall, from the room in front of it', () => {
+    const kit = harness({ zoneId: 'greyford' });
+    const secret = kit.world.secrets.find((each) => each.secretId === 'back-room');
+    if (!secret?.room) throw new Error('the back room lies in no room');
+    const longhouse = kit.world.buildings.find((each) => each.definition.id === 'longhouse');
+    if (!longhouse) throw new Error('greyford has no longhouse');
+
+    // In the longhouse, as near the back room as a body there can stand, which
+    // is within the reach of it.
+    const near = { x: secret.x, y: secret.y + SECRET_REACH };
+    expect(isInside(longhouse, near)).toBe(true);
+    expect(isInside(secret.room, near)).toBe(false);
+    kit.world.teleport(near.x, near.y);
+    kit.tick(1);
+
+    expect(kit.character.state.secrets).toEqual([]);
+  });
+});
+
+/**
+ * The sweep a placement cannot otherwise fail: every secret can be walked up
+ * to, from where the zone puts a player, and into its room for one that lies in
+ * a room. One a body can never come within reach of is a secret nobody finds.
+ */
+describe('every secret', () => {
+  for (const zone of Object.values(ZONES)) {
+    if (zone.secretSpawns.length === 0) continue;
+
+    it(`can be walked up to in ${zone.id}`, () => {
+      const entities = populateZone(zone, zoneWorldSize(zone), () => 0.5);
+      const step = TILE_SIZE / 4;
+
+      for (const secret of entities.secrets) {
+        const stands: { x: number; y: number }[] = [];
+        for (let dy = -SECRET_REACH; dy <= SECRET_REACH; dy += step) {
+          for (let dx = -SECRET_REACH; dx <= SECRET_REACH; dx += step) {
+            if (Math.hypot(dx, dy) > SECRET_REACH) continue;
+            const at = { x: secret.x + dx, y: secret.y + dy };
+            if (secret.room && !isInside(secret.room, at)) continue;
+            const body = { ...at, halfWidth: PLAYER_HALF_EXTENT, halfHeight: PLAYER_HALF_EXTENT };
+            if (!isBlocked(entities.collisionWorld, body)) stands.push(at);
+          }
+        }
+        const reached = stands.some(
+          (at) =>
+            findPath(entities.collisionWorld, entities.spawnPoint, at, PLAYER_HALF_EXTENT) !== null,
+        );
+        expect(reached, `${zone.id}: nobody can walk up to the ${secret.secretId}`).toBe(true);
+      }
+    });
+  }
 });

@@ -3,10 +3,14 @@ import { PLACEHOLDERS } from './sprites/placeholders';
 import { TERRAIN_SPRITES } from './sprites/terrain';
 import { SIGNPOST } from './sprites/props';
 import {
+  BACK_ROOM,
+  BRIDGE_KEYSTONE,
   BROKEN_CELL,
   CELLAR_HATCH,
+  CHARTER_LEDGER,
   LAMP_NICHE,
   LAMP_STONE,
+  POND_SHRINE,
   SEA_LIGHT_FRIEZE,
   STRONGBOX,
   WARDEN_NICHE,
@@ -63,6 +67,10 @@ export const SPRITES: readonly SpriteDef[] = [
   LAMP_NICHE,
   STRONGBOX,
   SEA_LIGHT_FRIEZE,
+  POND_SHRINE,
+  CHARTER_LEDGER,
+  BRIDGE_KEYSTONE,
+  BACK_ROOM,
   TREE,
   HARDWOOD,
   WILLOW,
