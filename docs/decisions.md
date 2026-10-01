@@ -3244,3 +3244,40 @@ line though none waits on another; numbering decisions and save versions ahead o
 order, which fixes an order nobody knows yet and breaks the chain if a phase slips; starting wave 1
 before C11 merges, which risks a review amending a part with a session on it; more than five agents
 a wave, which the user's time does not support.
+
+## 124. A person is their name with their trade beside it, talks in topics written as data, and remembers what they were asked for good
+
+**2026-10-01 · the user, asked by Claude, building the plan's phase D1**
+
+D1 fills the talk panel A4 built (decision 92) with conversations. The user settled four forks at
+the start of wave 1, each on Claude's recommendation:
+
+- **The name alone over the head, the trade beside it on the card, the map and the talk panel.**
+  The six townsfolk take their lore names (`docs/lore/places.md`), and `NpcDefinition.trade` keeps
+  what they do somewhere a player looks, as pillar 1 asks; a line that names a person for an item
+  or a tip names them with it ("Silas Quill the fettler"). **Rejected:** "Tilda Pell, Shopkeeper" in
+  one line everywhere, the plate included.
+- **A person remembers for ever**: the answers heard are stored on the character
+  (`CharacterState.asked`, save version 103), and a topic is grey while the answer it would give
+  has been heard, until a quest or a level gives it a new one. **Rejected:** remembering per visit.
+- **The five people the lore places and the game lacks are D1b's**, run in wave 2, since a person
+  with no counter is a new kind of row and the crow a new shape. **Rejected:** all five in D1.
+- **An answer does nothing yet**, and the schema carries `requires` and `effects` from the start
+  for D2 and D3 to fill. **Rejected:** a flag or an item handed over by an answer in D1.
+
+Claude's, alongside them:
+
+- **A topic has answers, and the last whose conditions hold is said**, so newer news is written
+  later and a topic grows rather than being replaced; a greeting is chosen the same way, which is
+  how the quartermaster's tone at level 7 is not his tone at level 1 (`tone.md`'s rule 6). What is
+  remembered is the answer, not the topic, which is what lets a topic come back. **Rejected:** a
+  tree of nested replies, which a save cannot name a place in without a path.
+- **A topic leads on by `follows`**, another of the same person's asked first, and may wait on a
+  level, a class, a quest's state or a topic asked of somebody else. `requires` is a union so a
+  standing (D3) or a rumour heard (D2) is a member and a case in `DialogSystem.holds`; `effects` is
+  `never` until D2 or D3 adds a member, and `TalkSession.apply` stops compiling when one does.
+- **What is on offer is derived** by `DialogSystem` for the world and the panel alike, and the world
+  checks every request against it, so a topic drawn from a stale model is refused. What is being
+  said this visit is the session's and forgotten at the end of it: the next visit opens at the
+  greeting. The events carry ids, not words.
+- **Topics are drawn between what is said and the counter button**, the quests under both.

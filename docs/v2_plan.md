@@ -73,7 +73,9 @@ village, the lantern still burning, the sealed door and the maker's mark, the la
 standing secret that loops; no scenery yet; decision 121), **and C10** (less grind: a level takes
 its number plus four minutes of play, measured by a bot playing every class through the zones; the
 curve 100n² − 200; food the answer to the wait, healing more, faster, dropping more and costing less
-on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122).
+on the shelf; the wizard and the ranger grow six health a level; no travel until G1; decision 122),
+**and D1** (dialog: the townsfolk under their lore names with their trade beside them, topics as
+data with answers that lead on, and a person who remembers what was asked for good; decision 124).
 **Next: C11**, the Part C review, and from here the phases are built several at a time, by the
 rules and briefs in `docs/v2_parallel_plan.md` (decision 123). Update this line as each phase lands:
 which phase, and which is next.
@@ -662,9 +664,15 @@ decision 121).
 
 ## Part D — People and the realm
 
-- **D1 — Dialog.** NPC conversations as data, in the talk panel A4 built: topics, answers that
-  lead to more, and an NPC who remembers what you have asked (state for `TalkSession`). A writing
-  pass over every existing NPC in the lore's voice, their greetings first.
+- **D1 — Dialog. (Landed.)** Conversations as data (`data/dialog.ts`), in the talk panel A4 built:
+  greetings and topics, each topic a button whose answer is the last whose conditions hold, leading
+  on to more by `follows`, and waiting on a level, a class, a quest or a topic asked elsewhere; the
+  answers heard kept on the character for good, a topic grey until it has something new (save
+  version 103). `requires` and `effects` are on every line, `effects` empty for D2 and D3. The six
+  townsfolk under their lore names, the trade beside the name on the card, the map and the panel,
+  every greeting rewritten and every topic written in the lore's voice. The five people the game
+  lacks went to **D1b**. About thirty-five files with its tests and docs. All four forks were the
+  user's (decision 124).
 - **D2 — Whispers of the Realm.** One journal of **rumours** (leads to a secret, a cache, a rare
   creature, a side quest) and **lore fragments** (from NPCs, books, ruins and bosses), with counts
   of what is found.
