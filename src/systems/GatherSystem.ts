@@ -4,14 +4,20 @@ import type { ResourceNodeDefinition } from '../data/resourceNodes';
 import type { Gear } from './InventorySystem';
 import { skillLevel, type Skills } from './SkillSystem';
 
-// How much of the base gather time each skill level shaves off. At the level 10
-// cap a gather takes 55% of what it did at level 1.
-const SPEED_PER_LEVEL = 0.05;
+// How much of the base gather time each skill level shaves off. At the level 20
+// cap a gather takes 52.5% of what it did at level 1, which is about what the
+// old cap of 10 bought at 5% a level (decision 139): the cap moved and what a
+// capped skill buys did not, since at the old rate the skill alone would have
+// met MIN_GATHER_FRACTION at 14 and every tool above steel would have bought
+// nothing.
+const SPEED_PER_LEVEL = 0.025;
 // Chance per skill level above 1 of pulling a second resource from one gather.
 // Exported because it is one of the two terms `rollGatherQuantity` adds, and the
 // test that holds them to being *added* rather than rolled separately has to
-// know where one ends and the other begins.
-export const BONUS_YIELD_PER_LEVEL = 0.03;
+// know where one ends and the other begins. Halved with the speed when the cap
+// doubled, for the same reason: 3% a level to 20 is a second one more often
+// than not.
+export const BONUS_YIELD_PER_LEVEL = 0.015;
 // The fastest a swing can ever get, however much skill and tool are stacked.
 const MIN_GATHER_FRACTION = 0.35;
 

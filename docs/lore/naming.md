@@ -112,7 +112,7 @@ Every proper name in the game and in this bible. A name the game uses today is m
 | Candle Strand                  |             | _In game_; the strand south of Lampton              | `places.md`   |
 | the Candles                    |             | _In game_; the sea-lights' stumps off Candle Strand | `places.md`   |
 | Cobb Harrow                    |             | Lampton's absent smith                              | `places.md`   |
-| coldiron, mirehide, bog oak    |             | Band 9-12's made tier                               | `v2_plan.md`  |
+| coldiron, mirehide, bog oak    |             | _In game_; band 9-12's made tier (G3)               | `v2_plan.md`  |
 | Company Contractor             |             | _In game_; the Company's second rank                | `factions.md` |
 | Company Factor                 |             | _In game_; the Company's highest rank               | `factions.md` |
 | Company Hand                   |             | _In game_; the Company's first rank                 | `factions.md` |

@@ -15,8 +15,11 @@ export type GearSlotId = 'helmet' | 'chest' | 'pants' | 'weapon' | 'offhand';
 // pieces, the offhand included. `fenhide` is what `steel` is for the other half
 // of the roster: the same marsh as `fenweave` answered again, made rather than
 // dropped, and the first armour in the game a wizard can build instead of
-// hoping for.
-export type TierId = 'brown' | 'studded' | 'iron' | 'fenweave' | 'fenhide' | 'steel';
+// hoping for. `coldiron` and `mirehide` are band 9-12's made tier (decision
+// 139): the dwarves' metal out of Karn Tholl and the deep fen's hide out of
+// Lorhal, the steel and fenhide argument one band up.
+export type TierId =
+  'brown' | 'studded' | 'iron' | 'fenweave' | 'fenhide' | 'steel' | 'coldiron' | 'mirehide';
 
 export type ArmorTypeId = 'cloth' | 'leather' | 'plate';
 
@@ -179,7 +182,32 @@ export type ItemId =
   // Keepsakes (F1): handed over by whoever gave a chain's last quest, sold by
   // nobody and good for nothing but a stand in the house.
   | 'pells-cart-bell'
-  | 'orlaths-seal-cast';
+  | 'orlaths-seal-cast'
+  // Band 9-12's made tier (G3, decision 139): the raw four the band's zones
+  // will yield, what the stations make of them, and the band's rung of plate,
+  // leather, tools, arrows and food. Nothing yields the raw four until the
+  // zones land; the recipes are what keep them from leading nowhere.
+  | 'coldiron-ore'
+  | 'coldiron-bar'
+  | 'coldiron-helmet'
+  | 'coldiron-chestplate'
+  | 'coldiron-legs'
+  | 'coldiron-shield'
+  | 'coldiron-pickaxe'
+  | 'coldiron-axe'
+  | 'coldiron-pole'
+  | 'coldiron-arrowheads'
+  | 'coldiron-arrows'
+  | 'mire-hide'
+  | 'mirehide-leather'
+  | 'mirehide-cowl'
+  | 'mirehide-vest'
+  | 'mirehide-leggings'
+  | 'bog-oak'
+  | 'bog-oak-shafts'
+  | 'raw-pike'
+  | 'cooked-pike'
+  | 'burnt-pike';
 
 // A recipe is named for what it makes, which is how one is asked for at a
 // station: "what am I making?" rather than "what raw thing do I have?". It was
@@ -215,7 +243,20 @@ export type RecipeId =
   | 'samphire-tonic'
   | 'meadowsweet-draught'
   | 'keepers-draught'
-  | 'bogbean-cordial';
+  | 'bogbean-cordial'
+  | 'coldiron-bar'
+  | 'coldiron-helmet'
+  | 'coldiron-chestplate'
+  | 'coldiron-legs'
+  | 'coldiron-shield'
+  | 'coldiron-arrowheads'
+  | 'coldiron-arrows'
+  | 'mirehide-leather'
+  | 'mirehide-cowl'
+  | 'mirehide-vest'
+  | 'mirehide-leggings'
+  | 'bog-oak-shafts'
+  | 'cooked-pike';
 
 export type EnemyId =
   | 'rat'

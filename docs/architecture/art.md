@@ -259,7 +259,9 @@ plain are what it grows into: a leather cap, a nasal helm, a pointed hat, a hood
 cowl with its mantle; a cutthroat's bandana over the nose and mouth, and a crown of gold; a leather
 jerkin, studded or plain, over the tunic; **plate over a quilted gambeson, the steel under the
 crimson cloak**; a robe, and the fen's trimmed in brass; a vest of hide; breeches, and greaves to
-the toes.
+the toes. Band 9-12's tier (decision 139) is the same pieces again in two more ramps: coldiron
+the plain plate, the nasal helm, the greaves and the heater shield in a colder, bluer metal than
+steel's, and mirehide the cowl, the vest and the breeches cured darker and olive.
 
 **Every weapon is drawn as the item it is** (`sprites/weapons.ts`): a rusty sword, the chief's
 cutlass with its knuckle bow, the king's leaf blade; a felling axe, a bearded fighting axe, a
@@ -446,7 +448,9 @@ of tin is the same grey in the rock as in the pack (held by a test, as the 3D vi
 off the item). **Coal is a seam** (`seam@coal`), a black band laid across the stone glinting where it
 catches the light, since ore nearly as dark as the rock it is in did not show as a thin vein; **the
 rich vein** is a bigger stone with the ore running through all of it. A worked-out vein is the same
-rock with pits where the ore came out.
+rock with pits where the ore came out. `oreColdiron` is in `ORE_RAMPS` ahead of any vein (G3,
+decision 139), so the lump in the bag is drawn in it now and the seam G7 lays in Karn Tholl finds
+its variant waiting.
 
 **A herb patch is a clump of leaves with flowering stems out of it** (`sprites/herbs.ts`, version 2
 phase E2), at the prop budget's 32 square: leaves heaped low, each a small ball lit from the
@@ -661,6 +665,10 @@ wardrobe (above): a piece in `tier`, a weapon's blade in `metal`, its haft in `w
 the bag is the helm on the figure. What is not gear is drawn in its plainest self, raw and uncooked,
 and cooking, burning, curing and smelting are recolours, into `roast` and `char` where nothing
 else would do; a vein's ore and a lump of it in the bag are one ramp (held by `places.test.ts`).
+The pike is the one drawing the first tier past the barrow added (decision 139), since a long fish
+in the eel's ramps would be the eel: in oilskin's olive, so its cooked and burnt halves are recolours
+of it as the fish's and the eel's are; a mire hide is the lurker's hide drawn wet and dark, and
+cured into the tier's own ramp.
 The icons were **painted by a generator and pasted in**, as the trees were: shapes filled as
 materials, shaded by the light above (a sphere for what is round), and written into the source as
 the grids they made, so the source reads as the pictures and a hand can touch up a pixel.

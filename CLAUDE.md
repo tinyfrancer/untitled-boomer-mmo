@@ -382,7 +382,12 @@ nothing handed out leads nowhere, `uniqueLoot.test.ts` holds boss drops unique, 
 stays behind active play (half XP, no abilities, an offline cap). **Rested rides the player's XP,
 never idle's** (`systems/RestedSystem.ts`, decision 127): a kill made by hand, a quest or a contract
 spends it through `awardPlayedXp`, and idle's halved XP goes through `awardXp`, which leaves it
-alone, or idle pays itself back; the pace bot plays unrested.
+alone, or idle pays itself back; the pace bot plays unrested. **A made tier past the barrow is set
+by the duels too** (decision 139, `tests/systems/coldiron.test.ts`): a warrior geared in it beats
+the band's bottom level standing in its telegraph, beats its top by moving and loses to it standing,
+the tier below does neither, and a character at the band's top in it loses to the level above, which
+is the next tier's. A tier lands whole with nothing yielding its raw materials, so it moves neither
+the pace nor the cap; its zones do.
 Change a stat, a table or a curve and retune until those pass rather than eyeballing it.
 
 ## Where the reasoning lives

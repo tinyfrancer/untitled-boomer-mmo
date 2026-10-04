@@ -181,13 +181,21 @@ describe('what it pays', () => {
   });
 
   /**
-   * The eel is the best heal there is, which is the reason to make the walk at
-   * all. A food added later that beats it belongs to a zone past this one.
+   * The eel is the best heal there is this side of the band past the barrow,
+   * which is the reason to make the walk at all. A food that beats it belongs
+   * to a zone past this one, and is cooked at a level this one's water does
+   * not reach: the pike is (decision 139).
    */
-  it('cooks into the best heal in the game', () => {
-    const best = Math.max(...Object.keys(ITEMS).map((id) => healOf(id as ItemId)));
-    expect(healOf('cooked-eel')).toBe(best);
+  it('cooks into the best heal in the game short of a deeper cooking level', () => {
     expect(RECIPES['cooked-eel'].outputItemId).toBe('cooked-eel');
+    const eel = healOf('cooked-eel');
+    const better = (Object.keys(ITEMS) as ItemId[]).filter((id) => healOf(id) > eel);
+    expect(better.length).toBeGreaterThan(0);
+    for (const id of better) {
+      const recipe = Object.values(RECIPES).find((row) => row.outputItemId === id);
+      expect(recipe?.skill, id).toBe('cooking');
+      expect(recipe?.requiredLevel, id).toBeGreaterThan(RECIPES['cooked-eel'].requiredLevel);
+    }
   });
 
   /**

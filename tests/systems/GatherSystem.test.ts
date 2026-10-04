@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_GATHER_SKILL_LEVEL } from '../../src/config/constants';
 import type { ItemId } from '../../src/types/ids';
 import { RESOURCE_NODES } from '../../src/data/resourceNodes';
 import {
@@ -73,12 +74,24 @@ describe('gatherDurationMs', () => {
     expect(gatherDurationMs(TREE, 1)).toBe(TREE.baseGatherMs);
   });
 
-  it('falls to 55% of the base at the level 10 cap', () => {
-    expect(gatherDurationMs(TREE, 10)).toBe(Math.round(TREE.baseGatherMs * 0.55));
+  // What the old cap of 10 bought at 5% a level, stretched over 20 (decision
+  // 139): the cap moved and what a capped skill buys did not.
+  it('falls to 52.5% of the base at the level 20 cap', () => {
+    expect(gatherDurationMs(TREE, MAX_GATHER_SKILL_LEVEL)).toBe(
+      Math.round(TREE.baseGatherMs * 0.525),
+    );
+  });
+
+  // The skill alone never meets the floor, so every tool above steel still
+  // buys something at the cap: the floor is for the two terms together.
+  it('leaves the floor to the tool, even at the cap', () => {
+    expect(gatherDurationMs(TREE, MAX_GATHER_SKILL_LEVEL)).toBeGreaterThan(
+      gatherDurationMs(TREE, MAX_GATHER_SKILL_LEVEL, 0.2),
+    );
   });
 
   it('never speeds up so far that a gather becomes instant', () => {
-    expect(gatherDurationMs(TREE, 10)).toBeGreaterThan(0);
+    expect(gatherDurationMs(TREE, MAX_GATHER_SKILL_LEVEL, 1)).toBeGreaterThan(0);
   });
 });
 
