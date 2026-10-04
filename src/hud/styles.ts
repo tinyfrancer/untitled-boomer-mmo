@@ -747,6 +747,11 @@ export function hudCss(): string {
   font-size: ${THEME.font.xs}px;
   color: ${THEME.color.muted};
 }
+/* A faction's name over its rank and count (decision 138): the row's label,
+   on a line of its own since the three never fit one at a desktop's 240. */
+.hud-standing__name {
+  font-size: ${THEME.font.sm}px;
+}
 .hud-skill__bar {
   height: 3px;
   margin-top: 2px;
@@ -811,10 +816,10 @@ export function hudCss(): string {
 .hud-idle-food__item > .hud-icon {
   flex: none;
 }
+/* A name wraps rather than being cut: at the desktop's 300 the row's three
+   buttons left "Samphire T…", and a second line fits the row's height. */
 .hud-idle-food__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .hud-idle-food.is-kept .hud-idle-food__name {
   color: ${THEME.color.dim};

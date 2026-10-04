@@ -115,7 +115,7 @@ import { LORE_FRAGMENTS } from '../../src/data/loreFragments';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
-import type { NpcId, SkillId, ZoneId } from '../../src/types/ids';
+import type { NpcId, SkillId, ZoneId, EnemyId } from '../../src/types/ids';
 
 // A page's downloads and clipboard, which jsdom has neither of. What the HUD
 // hands them is what is asserted.
@@ -1075,11 +1075,19 @@ describe('the character sheet’s standing', () => {
     parent.querySelector(`[data-sheet="character"] .hud-standing[data-faction="${factionId}"]`)
       ?.textContent ?? '';
 
+  // A faction is a skill row's shape (decision 138): the name on one line, the
+  // rank and the count under it, and a bar towards the next rank.
   it('says where the character stands with each faction and how far the next rank is', () => {
     mount({ standing: { company: 60, keepers: -80 } });
     expect(line('company')).toBe('The Veymarch CompanyCompany Hand, 60 / 250 standing');
     expect(line('keepers')).toBe('The KeepersDrainer, -80 / -50 standing');
     expect(line('greyford')).toBe('GreyfordStranger, 0 / 50 standing');
+    const fill = (factionId: string): string =>
+      parent.querySelector<HTMLElement>(
+        `[data-sheet="character"] .hud-standing[data-faction="${factionId}"] .hud-bar__fill`,
+      )?.style.width ?? '';
+    expect(fill('company')).toBe('5%');
+    expect(fill('keepers')).toBe('0%');
   });
 
   it('redraws when the world moves it, and toasts a rank reached', () => {
