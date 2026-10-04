@@ -6643,6 +6643,15 @@ async function houseGrows() {
     rows.join(',') === 'garden,workbench,room,stands',
     rows.join(', '),
   );
+  // A row that cannot be tapped says what it Needs (decision 138).
+  const needs = await page.evaluate(
+    () => document.querySelector('.hud-modal .hud-modal__body')?.textContent ?? '',
+  );
+  check(
+    'a stage after the next says it needs the one before it built first',
+    needs.includes('Needs The Herb Garden built first'),
+    needs.slice(0, 200),
+  );
 
   // Each row bought in turn, the next row the one that answers.
   for (const stage of ['garden', 'workbench', 'room', 'stands']) {

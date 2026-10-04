@@ -164,6 +164,14 @@ export class HouseModal extends Overlay {
           : THEME.color.dim;
       entry.value.style.color = done ? THEME.color.muted : THEME.color.levelUp;
       this.body.append(entry.root, emptyLine(upgrade.builds));
+      // A row that cannot be tapped says what it Needs: the stage before it,
+      // or the coin the purse is short by (decision 138).
+      const before = HOUSE_UPGRADE_ORDER[HOUSE_UPGRADE_ORDER.indexOf(id) - 1];
+      if (!done && !isNext && before) {
+        this.body.append(emptyLine(`Needs ${HOUSE_UPGRADES[before].name} built first`));
+      } else if (isNext && !affordable) {
+        this.body.append(emptyLine(`Needs ${formatCurrency(upgrade.price - state.currency)} more`));
+      }
     }
     if (!next) this.body.append(emptyLine('(everything on the plans is built)'));
   }

@@ -106,6 +106,31 @@ describe('the bestiary', () => {
     const entry = bestiaryEntry('rat', { kills: { rat: 100 }, seen: { rat: dropsOf('rat') } });
     expect(entry.complete).toBe(true);
   });
+
+  // A boss's page carries the history it drops (D2), the title said once found
+  // and the page not complete until it is (decision 138's mend of 137's promise).
+  it('carries a boss’s lore, found off the journal', () => {
+    const fragments = Object.values(LORE_FRAGMENTS).filter(
+      (fragment) => fragment.found.kind === 'kill' && fragment.found.enemyId === BOSS,
+    );
+    expect(fragments.length).toBeGreaterThan(0);
+    const unfound = bestiaryEntry(BOSS, {
+      kills: { [BOSS]: 100 },
+      seen: { [BOSS]: dropsOf(BOSS) },
+    });
+    expect(unfound.lore.map((fragment) => [fragment.fragmentId, fragment.found])).toEqual(
+      fragments.map((fragment) => [fragment.id, false]),
+    );
+    expect(unfound.complete).toBe(false);
+    const found = bestiaryEntry(BOSS, {
+      kills: { [BOSS]: 100 },
+      seen: { [BOSS]: dropsOf(BOSS) },
+      whispers: { rumours: [], fragments: fragments.map((fragment) => fragment.id) },
+    });
+    expect(found.lore.every((fragment) => fragment.found)).toBe(true);
+    expect(found.complete).toBe(true);
+    expect(bestiaryEntry('rat', { kills: {}, seen: {} }).lore).toEqual([]);
+  });
 });
 
 describe('the trophies', () => {
@@ -136,6 +161,25 @@ describe('the trophies', () => {
     const [trophy] = allTrophies();
     const state = fresh({ house: withStand(emptyHouse(), 0, trophy as ItemId) });
     expect(trophies(state).find((entry) => entry.itemId === trophy)?.displayed).toBe(true);
+  });
+
+  // A trophy at home is collected whatever the drops seen say: a save from
+  // before they were counted can have one on a stand its boss was never seen
+  // to drop, and the chest is home too (decision 138).
+  it('counts a trophy at home collected, on a stand or in the chest', () => {
+    const [drop] = dropsOf(BOSS);
+    const standing = fresh({ house: withStand(emptyHouse(), 0, drop as ItemId) });
+    expect(trophies(standing).find((entry) => entry.itemId === drop)).toMatchObject({
+      collected: true,
+      displayed: true,
+      stored: false,
+    });
+    const stored = fresh({ house: { ...emptyHouse(), chest: { [drop as ItemId]: 1 } } });
+    expect(trophies(stored).find((entry) => entry.itemId === drop)).toMatchObject({
+      collected: true,
+      displayed: false,
+      stored: true,
+    });
   });
 });
 

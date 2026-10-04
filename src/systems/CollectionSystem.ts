@@ -7,12 +7,12 @@ import { QUESTS, QUEST_ORDER } from '../data/quests';
 import { RECIPES } from '../data/recipes';
 import { RESOURCE_NODES } from '../data/resourceNodes';
 import { ZONES } from '../data/zones';
-import type { EnemyId, ItemId, QuestId, ZoneId } from '../types/ids';
+import type { EnemyId, ItemId, LoreFragmentId, QuestId, ZoneId } from '../types/ids';
 import { isUnlocked, killCount, type KillCounts } from './AchievementSystem';
 import { allTrophies, type HouseState } from './HouseSystem';
 import { masteryXp, type MasteryXp } from './MasterySystem';
 import { isQuestDone, type QuestLog } from './QuestSystem';
-import type { WhispersState } from './WhispersSystem';
+import { fragmentsOf, type WhispersState } from './WhispersSystem';
 
 /**
  * The collection log and the bestiary (version 2 phase F3): what has been
@@ -109,8 +109,17 @@ export interface BestiaryEntry {
   dropsSeen: Count;
   /** The slayer ranks earned against it, out of the three every creature has. */
   ranks: Count;
+  /** What of the history it carries (D2), found the first time it falls; most carry none. */
+  lore: BestiaryLore[];
   /** Every drop seen and every rank earned: nothing about it left to find. */
   complete: boolean;
+}
+
+export interface BestiaryLore {
+  fragmentId: LoreFragmentId;
+  /** The journal's heading for it, said only once found: a title is half the find. */
+  title: string;
+  found: boolean;
 }
 
 function count(flags: readonly boolean[]): Count {
@@ -119,7 +128,7 @@ function count(flags: readonly boolean[]): Count {
 
 export function bestiaryEntry(
   enemyId: EnemyId,
-  state: Pick<CollectionState, 'kills' | 'seen'>,
+  state: Pick<CollectionState, 'kills' | 'seen'> & Partial<Pick<CollectionState, 'whispers'>>,
 ): BestiaryEntry {
   const enemy = ENEMIES[enemyId];
   const drops = dropsOf(enemyId).map((itemId) => ({
@@ -132,6 +141,11 @@ export function bestiaryEntry(
       .filter((definition) => definition.enemyId === enemyId)
       .map((definition) => isUnlocked(definition, state.kills)),
   );
+  const lore = fragmentsOf(enemyId).map((fragmentId) => ({
+    fragmentId,
+    title: LORE_FRAGMENTS[fragmentId].title,
+    found: state.whispers?.fragments.includes(fragmentId) ?? false,
+  }));
   return {
     enemyId,
     name: enemy.name,
@@ -141,12 +155,18 @@ export function bestiaryEntry(
     drops,
     dropsSeen,
     ranks,
-    complete: dropsSeen.have === dropsSeen.total && ranks.have === ranks.total,
+    lore,
+    complete:
+      dropsSeen.have === dropsSeen.total &&
+      ranks.have === ranks.total &&
+      lore.every((fragment) => fragment.found),
   };
 }
 
 /** Every creature, in the enemy table's order, which is the Feats sheet's. */
-export function bestiary(state: Pick<CollectionState, 'kills' | 'seen'>): BestiaryEntry[] {
+export function bestiary(
+  state: Pick<CollectionState, 'kills' | 'seen'> & Partial<Pick<CollectionState, 'whispers'>>,
+): BestiaryEntry[] {
   return (Object.keys(ENEMIES) as EnemyId[]).map((enemyId) => bestiaryEntry(enemyId, state));
 }
 
@@ -156,10 +176,12 @@ export type TrophySource = { kind: 'boss'; enemyId: EnemyId } | { kind: 'quest';
 export interface TrophyEntry {
   itemId: ItemId;
   source: TrophySource | null;
-  /** Earned: seen off its boss, or its quest handed in. */
+  /** Earned: seen off its boss, its quest handed in, or already at home. */
   collected: boolean;
   /** Standing on one of the house's stands now. */
   displayed: boolean;
+  /** Lying in the house's chest now. */
+  stored: boolean;
 }
 
 export function trophySource(itemId: ItemId): TrophySource | null {
@@ -172,17 +194,25 @@ export function trophySource(itemId: ItemId): TrophySource | null {
   return questId ? { kind: 'quest', questId } : null;
 }
 
-/** Every trophy the house can stand (F1's), whether earned and whether at home. */
+/**
+ * Every trophy the house can stand (F1's), whether earned and whether at home.
+ * One at home is collected whatever the tallies say: a save from before drops
+ * were counted (F3) can have a trophy on a stand its boss was never seen to
+ * drop, and a row saying "At home" over a count that leaves it out is a count
+ * nobody believes (decision 138).
+ */
 export function trophies(state: Pick<CollectionState, 'seen' | 'quests' | 'house'>): TrophyEntry[] {
   return allTrophies().map((itemId) => {
     const source = trophySource(itemId);
-    const collected =
+    const displayed = state.house.stands.includes(itemId);
+    const stored = (state.house.chest[itemId] ?? 0) > 0;
+    const earned =
       source?.kind === 'boss'
         ? hasSeenDrop(state.seen, source.enemyId, itemId)
         : source?.kind === 'quest'
           ? isQuestDone(state.quests, source.questId)
           : false;
-    return { itemId, source, collected, displayed: state.house.stands.includes(itemId) };
+    return { itemId, source, collected: earned || displayed || stored, displayed, stored };
   });
 }
 
