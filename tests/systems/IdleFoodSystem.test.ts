@@ -28,6 +28,7 @@ describe('idleFoodOrder', () => {
       'cooked-fish',
       'cooked-crab',
       'cooked-eel',
+      'cooked-pike',
     ]);
   });
 
@@ -40,6 +41,7 @@ describe('idleFoodOrder', () => {
       'cooked-rat',
       'cooked-fish',
       'cooked-eel',
+      'cooked-pike',
     ]);
   });
 
@@ -50,6 +52,7 @@ describe('idleFoodOrder', () => {
       'cooked-rat',
       'cooked-fish',
       'cooked-crab',
+      'cooked-pike',
     ]);
   });
 });
@@ -114,6 +117,7 @@ describe('moveIdleFood', () => {
       'cooked-fish',
       'cooked-rat',
       'cooked-eel',
+      'cooked-pike',
       'samphire-tonic',
       'keepers-draught',
       'meadowsweet-draught',

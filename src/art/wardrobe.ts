@@ -104,6 +104,15 @@ export const WORN: Readonly<Partial<Record<ItemId, Worn>>> = {
   'fenhide-leggings': { piece: BREECHES },
   'iron-legs': { piece: GREAVES },
   'steel-legs': { piece: GREAVES },
+  // Band 9-12's tier (decision 139): coldiron the plain plate in its own
+  // colder metal, since the crimson cloak is steel's; mirehide the fenhide
+  // pieces again, cured darker.
+  'coldiron-helmet': { piece: HELM },
+  'coldiron-chestplate': { piece: PLATE },
+  'coldiron-legs': { piece: GREAVES },
+  'mirehide-cowl': { piece: COWL },
+  'mirehide-vest': { piece: VEST },
+  'mirehide-leggings': { piece: BREECHES },
 };
 
 export const WIELDS: Readonly<Partial<Record<ItemId, Wield>>> = {
@@ -126,12 +135,16 @@ export const WIELDS: Readonly<Partial<Record<ItemId, Wield>>> = {
   'hunting-bow': { art: SHORT_BOW, haft: 'tierBrown' },
   'poachers-bow': { art: SHORT_BOW, haft: 'leather' },
   'barrow-longbow': { art: LONGBOW, haft: 'bone' },
+  'coldiron-pickaxe': { art: PICKAXE, blade: 'tierColdiron' },
+  'coldiron-axe': { art: FELLING_AXE, blade: 'tierColdiron' },
+  'coldiron-pole': { art: FISHING_POLE, haft: 'tierColdiron' },
 };
 
 export const OFFHANDS: Readonly<Partial<Record<ItemId, Offhand>>> = {
   'brown-shield': { art: ROUND_SHIELD },
   'grave-shield': { art: ROUND_SHIELD, ramp: 'grave' },
   'steel-shield': { art: HEATER_SHIELD },
+  'coldiron-shield': { art: HEATER_SHIELD },
   'apprentice-orb': { art: ORB, ramp: 'arcane', glow: 'arcane' },
   'grave-lantern': { art: LANTERN, ramp: 'grave', glow: 'nature' },
   'worn-quiver': { art: 'quiver', ramp: 'leather' },

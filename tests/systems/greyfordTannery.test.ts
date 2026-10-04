@@ -53,9 +53,10 @@ describe('the second vertical', () => {
    * Two making skills existed and both of them made a warrior's things or
    * nobody's: the forge turns out plate, which a wizard may not wear at all, and
    * the fire turns out dinner. This is the whole reason the tannery is here, so
-   * it is the first thing to break if the fenhide rows ever stop being cloth.
+   * it is the first thing to break if the fenhide rows ever stop being cloth;
+   * the tiers above it (mirehide, decision 139) are the vat's too.
    */
-  it('is the only armour a wizard can make', () => {
+  it('is the only place a wizard can make armour', () => {
     const wearable = (itemId: ItemId): string[] => {
       const item = ITEMS[itemId];
       if (item.kind !== 'equipment' || !item.armorType) return [];
@@ -68,7 +69,7 @@ describe('the second vertical', () => {
     const wizardsOwn = madeArmour.filter((itemId) => wearable(itemId).includes('wizard'));
 
     expect(wizardsOwn.length).toBeGreaterThan(0);
-    expect([...wizardsOwn].sort()).toEqual([...FENHIDE].sort());
+    expect(wizardsOwn).toEqual(expect.arrayContaining([...FENHIDE]));
     for (const itemId of wizardsOwn) {
       expect(RECIPES[itemId as (typeof FENHIDE)[number]].station).toBe('tannery');
     }

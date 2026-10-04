@@ -1495,6 +1495,300 @@ export const ITEMS: Record<ItemId, ItemDefinition> = {
     kind: 'keepsake',
     icon: { shape: 'seal' },
   },
+
+  /**
+   * Band 9-12's made tier (G3, decision 139): coldiron, mirehide, bog oak and
+   * pike, the steel-and-fenhide argument one band up. Every row here is landed
+   * before the band's zones, so a zone agent finds its ids and drawings under
+   * it; nothing yields the raw four yet (Karn Tholl's seams for the ore,
+   * Lorhal's lurkers, its drowned banks and its deep water for the rest), and
+   * the recipes are what keep them from leading nowhere until it does.
+   *
+   * What a piece is worth is set by the duels rather than by a step per tier
+   * (the user's answer for G3): a warrior in the four coldiron pieces and the
+   * king's blade beats a level 11 standing in its chill, beats a 12 by
+   * stepping out of it, and loses to a 12 standing in every one, where the
+   * same warrior in steel sweats the 11 and loses to the 12 however they
+   * move; and a 13 in it still loses to a 14, which is the next tier's job.
+   * `tests/systems/coldiron.test.ts` holds it.
+   */
+  // What Karn Tholl's seams hold, the dwarves' own metal: heavier than coal
+  // and dearer, since it sits behind a locked door and three more levels of
+  // pick. The hold's smith would like a word about every piece of it.
+  'coldiron-ore': {
+    id: 'coldiron-ore',
+    name: 'Coldiron Ore',
+    value: 22,
+    weight: 4,
+    kind: 'material',
+    icon: { shape: 'ore' },
+  },
+  // Coldiron ore in a coal fire. One ore to a bar where steel took two irons,
+  // since the ore is the rarer thing and the walk to it the longer one; the
+  // Deep Cut's coal is what keeps the outer workings worth a stop on the way
+  // down to the hold.
+  'coldiron-bar': {
+    id: 'coldiron-bar',
+    name: 'Coldiron Bar',
+    value: 70,
+    weight: 4,
+    kind: 'material',
+    icon: { shape: 'bar' },
+  },
+  /**
+   * The coldiron set: four pieces like steel, plate, and the first armour in
+   * the game that outgrows the king's barrow.
+   *
+   * Each stops more than its steel piece and weighs more for it, the bargain
+   * every armour row makes. Riveted and strapped in steel, which is the tin
+   * argument one band up: the quarry's iron and the Deep Cut's coal are still
+   * in every piece, so neither is retired the day the hold opens.
+   */
+  'coldiron-helmet': {
+    id: 'coldiron-helmet',
+    name: 'Coldiron Helmet',
+    value: 260,
+    weight: 8,
+    kind: 'equipment',
+    slot: 'helmet',
+    tier: 'coldiron',
+    armorType: 'plate',
+    armorValue: 11,
+    healthBonus: 4,
+    strengthBonus: 1,
+  },
+  'coldiron-chestplate': {
+    id: 'coldiron-chestplate',
+    name: 'Coldiron Chestplate',
+    value: 420,
+    weight: 12,
+    kind: 'equipment',
+    slot: 'chest',
+    tier: 'coldiron',
+    armorType: 'plate',
+    armorValue: 20,
+    healthBonus: 7,
+    strengthBonus: 2,
+  },
+  'coldiron-legs': {
+    id: 'coldiron-legs',
+    name: 'Coldiron Legs',
+    value: 340,
+    weight: 11,
+    kind: 'equipment',
+    slot: 'pants',
+    tier: 'coldiron',
+    armorType: 'plate',
+    armorValue: 16,
+    healthBonus: 5,
+    strengthBonus: 2,
+  },
+  'coldiron-shield': {
+    id: 'coldiron-shield',
+    name: 'Coldiron Shield',
+    value: 300,
+    weight: 10,
+    kind: 'equipment',
+    slot: 'offhand',
+    tier: 'coldiron',
+    armorType: 'plate',
+    offhandShape: 'shield',
+    armorValue: 13,
+    healthBonus: 4,
+    strengthBonus: 1,
+  },
+  /**
+   * The coldiron tools, the rung above steel: a fifth more off a swing again,
+   * on the same floor, and still below the starting weapons on attack power so
+   * a tool is never a stealth combat upgrade. Bartered for the band's materials
+   * at Karn Tholl's gate hall once G7 stands it (the user's answer for G3:
+   * Greyford's outfitter keeps to the steel loop), so until then they are rows
+   * with nothing handing them over.
+   */
+  'coldiron-pickaxe': {
+    id: 'coldiron-pickaxe',
+    name: 'Coldiron Pickaxe',
+    value: 320,
+    weight: 6,
+    kind: 'equipment',
+    slot: 'weapon',
+    tier: 'coldiron',
+    weaponShape: 'pick',
+    attackPowerBonus: 1,
+    toolFor: 'mining',
+    gatherSpeedBonus: 0.2,
+  },
+  'coldiron-axe': {
+    id: 'coldiron-axe',
+    name: 'Coldiron Axe',
+    value: 290,
+    weight: 5,
+    kind: 'equipment',
+    slot: 'weapon',
+    tier: 'coldiron',
+    weaponShape: 'axe',
+    attackPowerBonus: 1,
+    toolFor: 'woodcutting',
+    gatherSpeedBonus: 0.2,
+  },
+  'coldiron-pole': {
+    id: 'coldiron-pole',
+    name: 'Coldiron Pole',
+    value: 260,
+    weight: 4,
+    kind: 'equipment',
+    slot: 'weapon',
+    tier: 'coldiron',
+    weaponShape: 'pole',
+    attackPowerBonus: 0,
+    toolFor: 'fishing',
+    gatherSpeedBonus: 0.2,
+  },
+  // The halves of the band's arrow, fifteen to a bar or a log, and priced at
+  // nothing for the reason the others are.
+  'coldiron-arrowheads': {
+    id: 'coldiron-arrowheads',
+    name: 'Coldiron Arrowheads',
+    weight: 0.1,
+    kind: 'material',
+    icon: { shape: 'arrowhead' },
+  },
+  'bog-oak-shafts': {
+    id: 'bog-oak-shafts',
+    name: 'Bog Oak Shafts',
+    weight: 0.1,
+    kind: 'material',
+    icon: { shape: 'shaft' },
+  },
+  /**
+   * The band's arrow. Not double the steel one: the line went crude 1, iron 2,
+   * steel 4, capped at the chief's bow so the bow stays the weapon, and three
+   * more doublings would put an arrow past every bow in the game. Two over
+   * steel, and under the king's longbow, which is the best bow there is until
+   * the band's own (decision 139).
+   */
+  'coldiron-arrows': {
+    id: 'coldiron-arrows',
+    name: 'Coldiron Arrows',
+    value: 7,
+    weight: 0.1,
+    kind: 'ammunition',
+    damage: 6,
+    icon: { shape: 'arrow' },
+  },
+  /**
+   * What a mire lurker is made of: the bog lurker's hide, grown in deeper
+   * water. Dearer than the fen's, since it comes off a longer fight in a
+   * deeper marsh.
+   */
+  'mire-hide': {
+    id: 'mire-hide',
+    name: 'Mire Hide',
+    value: 40,
+    weight: 3,
+    kind: 'material',
+    icon: { shape: 'meat' },
+  },
+  // The hide with the mire taken out of it: the tannery's second intermediate,
+  // and the cheap row leatherwork climbs its band on, as cured leather was.
+  'mirehide-leather': {
+    id: 'mirehide-leather',
+    name: 'Mirehide Leather',
+    value: 58,
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'meat' },
+  },
+  /**
+   * The mirehide set: cloth-class, so a caster's, and the fenhide rule one
+   * band up. It stops short of the coldiron plate a smith of the same standing
+   * makes and carries intellect instead, and its capstone shares the plate's
+   * top level rather than passing it, since the band's three recipe levels
+   * leave no fourth to be deeper on (decision 139).
+   */
+  'mirehide-cowl': {
+    id: 'mirehide-cowl',
+    name: 'Mirehide Cowl',
+    value: 230,
+    weight: 3,
+    kind: 'equipment',
+    slot: 'helmet',
+    tier: 'mirehide',
+    armorType: 'cloth',
+    armorValue: 9,
+    healthBonus: 2,
+    intellectBonus: 3,
+  },
+  'mirehide-vest': {
+    id: 'mirehide-vest',
+    name: 'Mirehide Vest',
+    value: 450,
+    weight: 5,
+    kind: 'equipment',
+    slot: 'chest',
+    tier: 'mirehide',
+    armorType: 'cloth',
+    armorValue: 15,
+    healthBonus: 4,
+    intellectBonus: 5,
+  },
+  'mirehide-leggings': {
+    id: 'mirehide-leggings',
+    name: 'Mirehide Leggings',
+    value: 290,
+    weight: 4,
+    kind: 'equipment',
+    slot: 'pants',
+    tier: 'mirehide',
+    armorType: 'cloth',
+    armorValue: 12,
+    healthBonus: 3,
+    intellectBonus: 4,
+  },
+  /**
+   * What Lorhal's drowned banks give up: oak that lay in the bog since before
+   * the Drowning, black through, hard and straight. The band's shaft, and the
+   * rung above willow for the axe; dearer than willow for being behind the
+   * deep fen.
+   */
+  'bog-oak': {
+    id: 'bog-oak',
+    name: 'Bog Oak',
+    value: 14,
+    weight: 3,
+    kind: 'material',
+    icon: { shape: 'log' },
+  },
+  /**
+   * What Lorhal's deep water holds, and the band's meal. Cooked it heals what
+   * a body at the band's levels mostly holds, as the eel did for the fen's,
+   * over the same six seconds; raw it is worth more than an eel for being
+   * behind a deeper water and a longer pole.
+   */
+  'raw-pike': {
+    id: 'raw-pike',
+    name: 'Raw Pike',
+    value: 24,
+    weight: 2,
+    kind: 'material',
+    icon: { shape: 'fish' },
+  },
+  'cooked-pike': {
+    id: 'cooked-pike',
+    name: 'Cooked Pike',
+    value: 44,
+    kind: 'consumable',
+    healAmount: 90,
+    healDurationMs: 6000,
+    icon: { shape: 'fish' },
+  },
+  'burnt-pike': {
+    id: 'burnt-pike',
+    name: 'Burnt Pike',
+    value: 1,
+    kind: 'material',
+    icon: { shape: 'fish' },
+  },
 };
 
 // What an item weighs when no row says otherwise. Nothing is free to carry, so

@@ -7,7 +7,7 @@ import { SHOP_STOCK } from '../../src/data/shop';
 import { QUESTS } from '../../src/data/quests';
 import { ZONES } from '../../src/data/zones';
 import { rollLootTable } from '../../src/systems/LootSystem';
-import type { ItemId, LootTableId } from '../../src/types/ids';
+import type { ItemId, LootTableId, TierId } from '../../src/types/ids';
 
 /**
  * What makes a boss's drops unique, held over the data rather than trusted.
@@ -160,12 +160,41 @@ describe('the tables behind a locked door', () => {
  * than quietly retiring a hoard.
  */
 describe('the ladder', () => {
-  it('puts every unique above everything in its slot that is not one', () => {
+  /**
+   * Since Part G the ladder has bands (decision 131): levels 1-8 are the first
+   * game's, and 9-12, 13-16 and 17-20 each have a made tier of their own, a
+   * little under the piece the band's boss drops. So a boss beats everything in
+   * its slot up to its own band's tier and nothing of a band past it: the
+   * chief's bandana is not asked to beat a helmet forged for a level 13
+   * (decision 139). A tier is a compile error here until it has a band.
+   */
+  const TIER_BAND: Record<TierId, number> = {
+    brown: 0,
+    studded: 0,
+    iron: 0,
+    fenweave: 0,
+    fenhide: 0,
+    steel: 0,
+    coldiron: 1,
+    mirehide: 1,
+  };
+  const bandOf = (level: number): number => (level <= 8 ? 0 : Math.ceil((level - 8) / 4));
+  const tierBandOf = (itemId: ItemId): number => {
+    const item = ITEMS[itemId];
+    return item.kind === 'equipment' && item.tier ? TIER_BAND[item.tier] : 0;
+  };
+  const bossBandOf = (itemId: ItemId): number => {
+    const table = BOSS_TABLES.find((tableId) => dropsOf(tableId).includes(itemId));
+    return bandOf(table ? bossLevel(table) : 0);
+  };
+
+  it('puts every unique above everything in its slot that is not one, up to its band', () => {
     UNIQUES.forEach((itemId) => {
       const slot = slotOf(itemId);
       Object.values(ITEMS)
         .filter((item) => item.kind === 'equipment' && item.slot === slot)
         .filter((item) => !UNIQUES.has(item.id))
+        .filter((item) => tierBandOf(item.id) <= bossBandOf(itemId))
         .forEach((rival) => {
           expect(power(itemId), `${itemId} against ${rival.id}`).toBeGreaterThan(power(rival.id));
         });

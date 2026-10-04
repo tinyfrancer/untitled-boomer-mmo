@@ -683,6 +683,219 @@ export const RECIPES: Record<RecipeId, CraftingRecipe> = {
     xpReward: 66,
     durationMs: 3200,
   },
+
+  /**
+   * Band 9-12's made tier (G3, decision 139), at the stations that exist: the
+   * forge for coldiron, Greyford's tannery for mirehide, the fletcher's bench
+   * for bog oak and a fire for pike, at skill 11-13, which is where the ladder
+   * goes on from steel's 10. Each recipe pays what its level costs on the
+   * quadratic curve: a level past 10 is thousands of XP, and a row paying what
+   * a steel row paid would have made the band a longer grind than the nine
+   * levels under it.
+   *
+   * The smelt is one ore and the Deep Cut's coal, and every coldiron piece is
+   * riveted in a steel bar and drawn over charcoal, so a finished piece
+   * reaches Karn Tholl, the Deep Cut, the quarry and the road west: the steel
+   * tier's web with the hold on the end of it, and neither of the mines under
+   * it retired. `tests/systems/coldiron.test.ts` traces it.
+   */
+  'coldiron-bar': {
+    id: 'coldiron-bar',
+    name: 'Coldiron Bar',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'coldiron-ore', quantity: 1 },
+      { itemId: 'coal', quantity: 1 },
+    ],
+    outputItemId: 'coldiron-bar',
+    requiredLevel: 11,
+    xpReward: 90,
+    durationMs: 3400,
+  },
+  'coldiron-arrowheads': {
+    id: 'coldiron-arrowheads',
+    name: 'Coldiron Arrowheads',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [{ itemId: 'coldiron-bar', quantity: 1 }],
+    outputItemId: 'coldiron-arrowheads',
+    outputQuantity: 15,
+    requiredLevel: 11,
+    xpReward: 70,
+    durationMs: 3200,
+  },
+  'coldiron-helmet': {
+    id: 'coldiron-helmet',
+    name: 'Coldiron Helmet',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'coldiron-bar', quantity: 2 },
+      { itemId: 'steel-bar', quantity: 1 },
+      { itemId: 'charcoal', quantity: 1 },
+    ],
+    outputItemId: 'coldiron-helmet',
+    requiredLevel: 11,
+    xpReward: 240,
+    durationMs: 4400,
+  },
+  // The offhand at the legs' level, as steel's is: a shield held behind the
+  // longest craft in the band would be the same joke at a warrior's expense.
+  'coldiron-shield': {
+    id: 'coldiron-shield',
+    name: 'Coldiron Shield',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'coldiron-bar', quantity: 2 },
+      { itemId: 'steel-bar', quantity: 1 },
+      { itemId: 'charcoal', quantity: 1 },
+    ],
+    outputItemId: 'coldiron-shield',
+    requiredLevel: 12,
+    xpReward: 270,
+    durationMs: 4600,
+  },
+  'coldiron-legs': {
+    id: 'coldiron-legs',
+    name: 'Coldiron Legs',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'coldiron-bar', quantity: 3 },
+      { itemId: 'steel-bar', quantity: 1 },
+      { itemId: 'charcoal', quantity: 1 },
+    ],
+    outputItemId: 'coldiron-legs',
+    requiredLevel: 12,
+    xpReward: 330,
+    durationMs: 4800,
+  },
+  'coldiron-chestplate': {
+    id: 'coldiron-chestplate',
+    name: 'Coldiron Chestplate',
+    skill: 'smithing',
+    station: 'forge',
+    inputs: [
+      { itemId: 'coldiron-bar', quantity: 4 },
+      { itemId: 'steel-bar', quantity: 2 },
+      { itemId: 'charcoal', quantity: 2 },
+    ],
+    outputItemId: 'coldiron-chestplate',
+    requiredLevel: 13,
+    xpReward: 440,
+    durationMs: 5200,
+  },
+
+  /**
+   * The tannery's second line: a mire hide cured, and the mirehide set
+   * stitched from it. The secondaries both come off the forge again, which is
+   * what keeps the vat hanging off it rather than standing beside it: the
+   * coldiron bar is the buckles and the charcoal the blacking, so a piece
+   * reaches Lorhal, Karn Tholl, the Deep Cut and the road west. A cure takes
+   * the hide and nothing else, as it did, and a failure keeps it.
+   */
+  'mirehide-leather': {
+    id: 'mirehide-leather',
+    name: 'Mirehide Leather',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [{ itemId: 'mire-hide', quantity: 1 }],
+    outputItemId: 'mirehide-leather',
+    requiredLevel: 11,
+    xpReward: 260,
+    durationMs: 3200,
+  },
+  'mirehide-cowl': {
+    id: 'mirehide-cowl',
+    name: 'Mirehide Cowl',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [
+      { itemId: 'mirehide-leather', quantity: 2 },
+      { itemId: 'coldiron-bar', quantity: 1 },
+      { itemId: 'charcoal', quantity: 1 },
+    ],
+    outputItemId: 'mirehide-cowl',
+    requiredLevel: 11,
+    xpReward: 420,
+    durationMs: 4200,
+  },
+  'mirehide-leggings': {
+    id: 'mirehide-leggings',
+    name: 'Mirehide Leggings',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [
+      { itemId: 'mirehide-leather', quantity: 3 },
+      { itemId: 'coldiron-bar', quantity: 1 },
+      { itemId: 'charcoal', quantity: 1 },
+    ],
+    outputItemId: 'mirehide-leggings',
+    requiredLevel: 12,
+    xpReward: 560,
+    durationMs: 4600,
+  },
+  'mirehide-vest': {
+    id: 'mirehide-vest',
+    name: 'Mirehide Vest',
+    skill: 'leatherworking',
+    station: 'tannery',
+    inputs: [
+      { itemId: 'mirehide-leather', quantity: 4 },
+      { itemId: 'coldiron-bar', quantity: 2 },
+      { itemId: 'charcoal', quantity: 2 },
+    ],
+    outputItemId: 'mirehide-vest',
+    requiredLevel: 13,
+    xpReward: 760,
+    durationMs: 5000,
+  },
+
+  // The bench's band: bog oak cut into shafts at 11, and the coldiron arrow
+  // put together at 12, fifteen a job as the whole line is.
+  'bog-oak-shafts': {
+    id: 'bog-oak-shafts',
+    name: 'Bog Oak Shafts',
+    skill: 'fletching',
+    station: 'bench',
+    inputs: [{ itemId: 'bog-oak', quantity: 1 }],
+    outputItemId: 'bog-oak-shafts',
+    outputQuantity: 15,
+    requiredLevel: 11,
+    xpReward: 80,
+    durationMs: 2800,
+  },
+  'coldiron-arrows': {
+    id: 'coldiron-arrows',
+    name: 'Coldiron Arrows',
+    skill: 'fletching',
+    station: 'bench',
+    inputs: [
+      { itemId: 'bog-oak-shafts', quantity: 15 },
+      { itemId: 'coldiron-arrowheads', quantity: 15 },
+    ],
+    outputItemId: 'coldiron-arrows',
+    outputQuantity: 15,
+    requiredLevel: 12,
+    xpReward: 170,
+    durationMs: 3400,
+  },
+
+  // The band's meal, at cooking 11, and it burns like everything else does.
+  'cooked-pike': {
+    id: 'cooked-pike',
+    name: 'Raw Pike',
+    skill: 'cooking',
+    station: 'fire',
+    inputs: [{ itemId: 'raw-pike', quantity: 1 }],
+    outputItemId: 'cooked-pike',
+    failureItemId: 'burnt-pike',
+    requiredLevel: 11,
+    xpReward: 80,
+    durationMs: 3600,
+  },
 };
 
 export const FIRE_INPUT_ITEM_ID: ItemId = 'logs';

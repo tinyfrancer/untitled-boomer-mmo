@@ -9,7 +9,7 @@ import { ZONES } from '../../src/data/zones';
 import { worldMap } from '../../src/systems/MapSystem';
 import { scaleEnemyStats } from '../../src/systems/EnemySystem';
 import { arrivalPoint, zoneWorldSize } from '../../src/systems/ZoneSystem';
-import type { ItemId, ResourceNodeId, ZoneId } from '../../src/types/ids';
+import type { ItemId, RecipeId, ResourceNodeId, ZoneId } from '../../src/types/ids';
 
 /**
  * The shaft under the quarry, and what has to stay true about it.
@@ -286,15 +286,21 @@ describe('what keeps the gate a gate', () => {
   });
 
   /**
-   * And the deepest thing anyone can make sits exactly at the ceiling of the
-   * skill that makes it. Capping smithing has to buy something, or the last
-   * level of the deepest crafting skill in the game unlocks nothing at all.
+   * And the deepest steel piece sat exactly at the ceiling of the skill while
+   * the ceiling was 10. Since the skills went to 20 (decision 139) that claim
+   * is the ladder's: the tier above steel picks it up the level after steel's
+   * capstone, so no level of smithing between the two opens nothing.
    */
-  it('puts the capstone recipe at the top of the skill', () => {
+  it('hands the ladder on to the next tier the level after its capstone', () => {
     const smithing = Object.values(RECIPES).filter((recipe) => recipe.skill === 'smithing');
-    expect(Math.max(...smithing.map((recipe) => recipe.requiredLevel))).toBe(
-      MAX_GATHER_SKILL_LEVEL,
-    );
+    const levelOf = (itemId: ItemId): number => RECIPES[itemId as RecipeId].requiredLevel;
+    const capstone = Math.max(...STEEL.map(levelOf));
+    const above = smithing
+      .filter((recipe) => recipe.requiredLevel > capstone)
+      .map((recipe) => recipe.requiredLevel);
+    expect(above.length).toBeGreaterThan(0);
+    expect(Math.min(...above)).toBe(capstone + 1);
+    expect(capstone).toBeLessThan(MAX_GATHER_SKILL_LEVEL);
   });
 });
 
@@ -342,15 +348,21 @@ describe('what it pays', () => {
   /**
    * The shield is why the tier has four pieces where every other one has three.
    * A warrior's armour comes mostly out of the off hand, and until this the slot
-   * filled once in the starter band and then never again.
+   * filled once in the starter band and then never again. Anything that stops
+   * more than it is a band up, behind a deeper smithing level (decision 139).
    */
   it('gives the off hand the first thing above the starter band to put in it', () => {
+    expect(RECIPES['steel-shield'].outputItemId).toBe('steel-shield');
     const offhands = Object.values(ITEMS).filter(
       (item) => item.kind === 'equipment' && item.slot === 'offhand',
     );
-    const best = Math.max(...offhands.map((item) => armorValueOf(item.id)));
-    expect(armorValueOf('steel-shield')).toBe(best);
-    expect(RECIPES['steel-shield'].outputItemId).toBe('steel-shield');
+    const better = offhands.filter((item) => armorValueOf(item.id) > armorValueOf('steel-shield'));
+    expect(better.length).toBeGreaterThan(0);
+    for (const item of better) {
+      const recipe = Object.values(RECIPES).find((row) => row.outputItemId === item.id);
+      expect(recipe?.skill, item.id).toBe('smithing');
+      expect(recipe?.requiredLevel, item.id).toBeGreaterThan(RECIPES['steel-shield'].requiredLevel);
+    }
   });
 
   /**

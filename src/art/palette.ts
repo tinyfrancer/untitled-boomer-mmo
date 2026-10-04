@@ -90,6 +90,8 @@ export const SHARED_RAMPS = {
   oreTin: [0x262c33, 0x56626b, 0x9aa7ad, 0xc9d3d6, 0xf2f7f7],
   oreIron: [0x2b120c, 0x5e2816, 0xa0562f, 0xcc7f45, 0xf0b673],
   oreCoal: [0x0b0a0d, 0x1c1b1e, 0x3b3a38, 0x625f59, 0xb8b2a3],
+  // Coldiron in the seam: blue-black, the dwarves' metal before it is worked.
+  oreColdiron: [0x14192a, 0x283350, 0x465a80, 0x7088ad, 0xa6bad4],
   // Water thrown up, the same wherever it is thrown: a splash is light, and the
   // water it comes off is coloured by the setting.
   spray: [0x1c2a36, 0x355468, 0x5f8aa0, 0x9fc4d2, 0xe6f4f6],
@@ -112,6 +114,10 @@ export const SHARED_RAMPS = {
   tierFenweave: [0x0f2328, 0x1b3f42, 0x2f5d5a, 0x4c857a, 0x80b39e],
   tierFenhide: [0x4a2c20, 0x7c5338, 0xb08457, 0xd3ab78, 0xefd3a3],
   tierSteel: [0x1b2130, 0x364054, 0x5d6b7a, 0x8797a8, 0xbac9d5],
+  // Band 9-12's made tier (decision 139): coldiron a colder, bluer metal than
+  // steel, and mirehide the deep fen's hide cured dark and olive.
+  tierColdiron: [0x161a2e, 0x2b3558, 0x4a5c84, 0x7a8fb3, 0xb3c3dc],
+  tierMirehide: [0x1c1a10, 0x37341e, 0x575330, 0x7f7a4c, 0xaaa474],
 } as const satisfies Record<string, Ramp>;
 
 export type SharedRampId = keyof typeof SHARED_RAMPS;
@@ -207,6 +213,8 @@ export const TIER_RAMPS: Readonly<Record<TierId, SharedRampId>> = {
   fenweave: 'tierFenweave',
   fenhide: 'tierFenhide',
   steel: 'tierSteel',
+  coldiron: 'tierColdiron',
+  mirehide: 'tierMirehide',
 };
 
 /**
@@ -214,12 +222,14 @@ export const TIER_RAMPS: Readonly<Record<TierId, SharedRampId>> = {
  * `ore` ramp to be swapped for. Named for what the rock yields, which the
  * nodes' own data says (`art/places.ts` reads it).
  */
-export type OreId = 'tin' | 'iron' | 'coal';
+export type OreId = 'tin' | 'iron' | 'coal' | 'coldiron';
 
 export const ORE_RAMPS: Readonly<Record<OreId, SharedRampId>> = {
   tin: 'oreTin',
   iron: 'oreIron',
   coal: 'oreCoal',
+  // Karn Tholl's seams, which G7 lays; the lump in the bag is drawn in it now.
+  coldiron: 'oreColdiron',
 };
 
 export function isTerrainRamp(id: RampId): id is TerrainRampId {

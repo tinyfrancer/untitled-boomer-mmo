@@ -177,6 +177,21 @@ const MATERIAL_ICONS: Readonly<Partial<Record<ItemId, IconRow>>> = {
   'bogbean-cordial': { art: ITEM.POTION, recolour: { nature: 'purple' } },
   'pells-cart-bell': { art: ITEM.BELL },
   'orlaths-seal-cast': { art: ITEM.SEAL },
+  // Band 9-12's tier (decision 139): the ore in the seam's own ramp, the bar
+  // and the arrow's halves in the tier's, the hide wet and dark and cured
+  // into the tier's olive, bog oak black through, and the pike a drawing of
+  // its own, since a long fish in the eel's ramps would be the eel.
+  'coldiron-ore': { art: ITEM.ORE, recolour: { ore: 'oreColdiron' } },
+  'coldiron-bar': { art: ITEM.BAR, recolour: { tier: 'tierColdiron' } },
+  'coldiron-arrowheads': { art: ITEM.ARROWHEADS, recolour: { tier: 'tierColdiron' } },
+  'coldiron-arrows': { art: ITEM.ARROW, recolour: { wood: 'tierColdiron', bone: 'teal' } },
+  'mire-hide': { art: ITEM.HIDE, recolour: { furBog: 'oilskin' } },
+  'mirehide-leather': { art: ITEM.HIDE, recolour: { furBog: 'tierMirehide' } },
+  'bog-oak': { art: ITEM.LOG, recolour: { wood: 'slate' } },
+  'bog-oak-shafts': { art: ITEM.SHAFTS, recolour: { thatch: 'slate' } },
+  'raw-pike': { art: ITEM.PIKE },
+  'cooked-pike': { art: ITEM.PIKE, recolour: { oilskin: 'roast' } },
+  'burnt-pike': { art: ITEM.PIKE, recolour: { oilskin: 'char' } },
 };
 
 // What an item nobody drew is drawn as, by the shape its data names.
