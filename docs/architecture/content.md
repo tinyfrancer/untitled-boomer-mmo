@@ -311,7 +311,10 @@ answer's move in the log (a kill's is not news), and says a rank crossed either 
 a line. **The Company and the Keepers are opposed on deeds rather than a seesaw**: a raider killed
 pays the Company and costs the Keepers, the pans' choice moves them apart, and every other deed moves
 one alone; `tests/systems/FactionSystem.test.ts` holds that no row moves the two the same way. The
-upper chain's ten raiders cost the Keepers twenty, and putting Orlath down earns more than that back.
+upper chain's raiders cost the Keepers two apiece, for as many as the barrow key takes to drop, which
+at 3% is thirty-odd rather than the ten the quest names; putting Orlath down pays 75, a little over
+that run, so the chain comes out about even and the pans' choice decides the sign
+(`FactionSystem.test.ts` holds the reward to the key's run; the Part D review, decision 138).
 
 **A rank opens things through the same `requires` slots that already existed**: a quest's
 `requiresRank` (the outfitter's coal waits on Greyford Regular, which the road west earns by itself),
@@ -339,7 +342,11 @@ Feats sheet's): where it is found and at what levels (read off the zones' spawns
 every drop on its table, seen or greyed. The **items collected** are everything a drop, a node's
 yield or a recipe's result hands over, the failures and the shelf's own stock left out. **Lore
 found** is the Whispers journal's: the fragments heard (`CharacterState.whispers`, phase D2) out of
-every one in `LORE_FRAGMENTS`, joined at wave 2's fold.
+every one in `LORE_FRAGMENTS`, joined at wave 2's fold; a boss's page lists what it carries
+(`fragmentsOf`), the title once found, and is complete only when it is (the Part F review, decision
+138). **A trophy at home is collected whatever the tallies say**, on a stand or in the chest (same
+review): a save from before drops were counted can have one on a stand its boss was never seen to
+drop, and a row saying "At home" over a count that left it out was a count nobody believed.
 
 **An item's card says where it comes from** (`comesFrom` in `systems/ItemUseSystem.ts`), which A2
 left to this phase: every creature whose table names it with the zones it lives in, whatever the

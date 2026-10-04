@@ -249,7 +249,9 @@ book): it reads the functions the rolls call, so a new rate goes behind an expor
 book can read rather than inline in a roll, or the book goes on saying the old number. **So is what
 idle will do** (`systems/IdlePlanSystem.ts`, the idle panel): it reads `afkCampJob` and
 `offlineJob`, the function the payout branches on, so a new rule in the camp or the payout goes
-behind those, or the panel goes on promising the old night; what a night drinks is
+behind those, or the panel goes on promising the old night; what a tool has to work in a zone is
+`nodesStandingIn`, the zone's spawns and the house's garden where it is built, which the panel and
+the payout both read (decision 138); what a night drinks is
 `nightPotionSupply`, which the payout drinks out of and the panel names (decision 135). **So is
 when a tip applies, and what it says** (`systems/TipSystem.ts`): each tip is a rule over the
 character, and its line reads the fee, the price or the ceiling it names off the table or constant

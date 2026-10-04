@@ -12,8 +12,10 @@ and 109, D1b 134, E3 135, F3 137 and 110, F2 136 and 111, F2's version numbered 
 was reserved none and found it needed one), folded onto `claude/v2-wave-2` by the orchestrator on
 2026-10-01 and up as one PR to `main` for the user's review. **Building:** wave 3 on
 `claude/v2-wave-3`, cut from `main` at wave 2's merge (`fe1382f`), its numbers reserved from 138: the
-Part D, E and F review as one agent and G3 launched 2026-10-01; G4, G5/G6 and G7 once G3 is folded;
-G2 once G4 is. Update this line as phases start and land, the way the plan's status line is.
+Part D, E and F review as one agent and G3 launched 2026-10-01; the review (D5, E4 and F4, decision
+138, no save version) up as a draft PR against the wave branch on 2026-10-02 for the user's play
+notes, mended and marked ready as they come; G4, G5/G6 and G7 once G3 is folded; G2 once G4 is.
+Update this line as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc

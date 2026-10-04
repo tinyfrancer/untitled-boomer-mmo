@@ -3956,3 +3956,115 @@ Claude's, building it, each the recommended option and the wave review's to over
 - **Save version 110** (decision 125's reservation), its step keyed at 109. Until D2 and D3 merge
   their steps at 107 and 108, this branch carries two that pass a save through unchanged, so its
   chain has no gap; theirs replace them at the merge.
+
+## 138. The Part D, E and F review: Orlath's mercy covers the key's run, the garden counts for idle, the steel tools are quicker, and a boss's lore is on its page
+
+**2026-10-02 · Claude, building the plan's phases D5, E4 and F4 as one, for the user to overturn at the wave review**
+
+The three parts merged within a day of each other (wave 2, decisions 132-137 on wave 1's 126-130),
+so one session walked them as one review on `claude/v2-d5-e4-f4-review`, as wave 3's question round
+settled (decision 125's rule 2): D1-D4 and D1b, E1-E3 and F1-F3 against the pillars and the user's
+first list, at a 390×844 phone and a 1280×800 desktop through smoke's screenshots and a walk of its
+own that drops a level 6 character with the house half built, standing with every faction, a journal
+half full and a potion running onto every surface the parts added; and the code of each part against
+what its decision said it did. **The user had not played the parts when this was written**: the
+review's PR went up as a draft against the wave branch saying what it found and what it would have
+them play for, and their notes come from its comments. Every fork below is settled on the recommended
+option for them to overturn.
+
+The parts' promise held: the townsfolk talk and remember, the four people the lore placed stand where
+it put them, the journal fills, standing moves and ranks pay titles, Wick glows and says its piece,
+rested banks and doubles, four potions brew and idle drinks them, the house lets, fills and grows, and
+the log counts it all. What the walk and the reading found was at the seams between the parts, where
+one landed beside another without reading it:
+
+**Part D (D5)**
+
+- **The barrow king's quest pays the Keepers 75, not 50.** Decision 133 meant putting Orlath to rest
+  to earn back what the chain's raiders cost with the Keepers and sized it on the ten the quest
+  names; but the barrow key is a 3% drop off those raiders (`lootTables.ts`), so about
+  thirty-three are expected before it falls, at −2 each, and the chain left every character a
+  Drainer (−66 against +50, −51 with the pans answered the Keepers' way, −81 the Company's), with
+  only wights at +1 to climb back. The quest pays the key's run with a little over, so the chain
+  comes out about even and the pans' choice decides the sign; `FactionSystem.test.ts` now holds the
+  reward to the raiders the key's chance takes rather than the quest's count. **Rejected:** a raider
+  costing −1, which decision 133 chose −2 for so the one real opposition is felt; a wight paying more,
+  which makes the barrow the amends rather than the mercy; leaving Drainer the chain's normal end,
+  which is a word nobody earned on a sheet nobody can read it off.
+- **A kill moves standing before it is counted.** A raider that drops the player below Guest of the
+  Fen takes the title off, and a slayer rank the same kill crossed was then found with "nothing
+  worn" already decided; moved first, the fallen title is off before the rank looks.
+- **The Standing block is three skill rows.** On a desktop's 240-wide sheet "The Veymarch Company"
+  beside "Company Hand, 180 / 250 standing" wrapped three deep on both sides; each faction is now a
+  skill row's shape, the name on a line of its own, the rank and the count under it, and a bar
+  towards the next rank, which the skills above it already have. **Rejected:** a wider character
+  sheet, which the skills fit at 240; the name beside the rank with the count under, which still
+  wrapped the two longest.
+- **Found and left:** the top rank of every faction (750) is reached only by grinding: about
+  twenty-five to sixty contracts for Factor and Friend of the Yard, and Fenkin and Lightfriend by
+  wights alone, since no contract pays the Keepers. Pillar 3 asks for a long goal rather than a long
+  grind, and Part G's hubs are where the deeds that pay the Keepers belong (Lorhal is theirs); it is
+  proposed to G4 in the PR rather than built here (rule 6). The crow's first greeting is never said,
+  since its three class greetings cover every class; left, since a fallback that holds is the rule.
+  The toast prints over Wick's card on a short screen by `Hud.ts`'s own choice (the toast the more
+  urgent), and the talk panel stands over the XP bar as every counter has since A4; neither is
+  this review's to move.
+
+**Part E (E4)**
+
+- **The steel tools are quicker, as their row always said.** Decision 129 found `gatherSpeedBonus`
+  passed nowhere and queued it; `toolGatherSpeed` reads it off the tool in hand for the skill it is
+  for, at each swing by hand or by an awake camp, in the parked night's pace and on the idle panel's
+  "A Tree every" line, and the card says "Each swing 15% quicker" off the same field. The skills book
+  says nothing of it, since the book is the skill's and the tool is a thing you go and get.
+  **Rejected:** taking the field off the three rows, which `greyford.test.ts` holds to being faster
+  and the outfitter's barter is priced on.
+- **The garden counts, awake and away.** Decision 136 placed the beds off the house so no zone's
+  table lists them, and left a parked night in Lampton paid for the zone's spawns alone; the walk
+  found the awake panel wrong too, promising a fight the camp did not make, since it read the same
+  table. `nodesStandingIn` is the zone's spawns and the garden where it is built
+  (`gardenNodesIn`), read by the panel and the payout alike with `house.built` passed to both, so a
+  sickle in Lampton works the beds once the garden is bought and nothing before. The skills book and
+  the card still read the zone alone: a garden one character paid for is nobody's wild patch.
+  **Rejected:** writing the beds into Lampton's text once bought, which is the fork decision 136
+  already closed.
+- **The panel promises the draughts a night can drink.** It summed every potion in the bag, so
+  fifty Keeper's Draughts read as a night of 1500 minutes; it counts them against the eight hours
+  the way `nightPotionWindows` drinks them and says the rest stay in the bag. A running potion's line
+  says which night it would count for, since a Samphire Tonic drunk before a night of fighting reads
+  as a plan otherwise.
+- **A potion's half hour reads in minutes on the buff row** ("30m"), a spell's seconds as before,
+  and **an idle row's name wraps rather than being cut**: at the desktop panel's 300 the three
+  buttons left "Samphire T…", and the row is two lines tall already.
+  **Found and left:** the row says what a buff is called and not what it does; the idle panel and
+  the card both do, and a tap on a buff is a surface of its own, proposed rather than built.
+
+**Part F (F4)**
+
+- **A boss's lore is on its bestiary page.** Decision 137 promised it once D2 landed, and D2 landed
+  in the same wave without it: a Lore section under the drops, a row a fragment, the title once it
+  is in the journal and "A piece of the history · Not yet found" before, since the title is half
+  the find; the page is complete only when it is found.
+- **A trophy at home is collected, on a stand or in the chest.** A save from before drops were
+  counted has a Bandana on a stand its chief was never seen to drop, and the row said "At home" over
+  a count that left it out; "collected" is earned or at home, and the row says "In the chest" when
+  that is where it lies. **Rejected:** seeding `seen` in a migration, which cannot reach a save
+  already past F3's version.
+- **The plans say what a stage needs**: "Needs The Herb Garden built first" under a stage after the
+  next, and "Needs 7s 0c more" under the next when the purse is short, where both had been one grey.
+- **Found and left:** the plaque wall hangs four a row with no ceiling, and a fifth row (the
+  seventeenth creature) would stand above the wall's top; Part G adds the creatures, so the wall's
+  room is proposed to the band that passes sixteen, with the Drawing Room's back wall the obvious
+  place. The bestiary names a locked zone before the player has been there, by decision 137's own
+  stance of naming rather than hiding; kept.
+
+**The plan's own errata**, mended in the same PR: D3's entry had no landed line; D4's and F1's
+pointed at decision 124 for their forks (128 and 130); E2's entry said nothing of what landed
+(decision 129); and `afk.md` credited rested to decision 124 (127). Three review entries went in
+from one PR, each under its part, saying why they ran as one.
+
+**Rejected for the review as a whole:** a smoke section for the walk, as A10, B9 and C11 rejected it;
+touching Part G's files (items, recipes, the wardrobe, the icons, the skill cap, `making.md`'s
+tiers), which G3 is on beside this; a save version, since nothing about the save moved; and asking
+the user a story question. The lore was touched in one line: `factions.md`'s on what the chain
+costs the Keepers, which said ten raiders and now says the run the key takes.

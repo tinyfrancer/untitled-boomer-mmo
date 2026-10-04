@@ -112,10 +112,13 @@ greyed until seen, the trophies and the items collected, drops seen the fifth st
 count the Whispers journal's, an item's card saying where it comes from; save version 110; decision 137) **and F2** (the house grows off the surveyor's plans in four stages for 80s, two thirds of the
 climb's coin: a garden of samphire and meadowsweet and a fletcher's bench in the yard, and the
 Drawing Room behind the house, walled up until it is built, with two stands and then two more; save
-version 111, numbered at the fold; decision 136). **Building: wave 3** on `claude/v2-wave-3`, the
-review of Parts D, E and F as one agent and G3 first, then G4, G5/G6 and G7, then G2, by
-`docs/v2_parallel_plan.md`, its numbers reserved from 138. Update
-this line as each phase lands: which phase, and which is next.
+version 111, numbered at the fold; decision 136). **Wave 3** on `claude/v2-wave-3`, its numbers reserved from 138: **D5, E4 and F4** (the review of
+Parts D, E and F as one: Orlath's mercy covering the key's run with the Keepers, a kill moving
+standing before it is counted, the steel tools quicker as their rows said, the garden counted by idle
+awake and away, a night's draughts promised to its hours, a boss's lore on its bestiary page, a trophy
+at home collected and the plans saying what a stage needs; decision 138, no save version) are up as
+one draft PR for the user's play notes; **G3** builds beside it, then G4, G5/G6 and G7, then G2, by
+`docs/v2_parallel_plan.md`. Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -764,8 +767,15 @@ decision 121).
   already asked, found and killed; followed is derived. The rumours the lore has for what is not
   built yet are held in `places.md`. Finding lore pays nothing else. Smoke gained a `whispers`
   section. Decision 132 has the forks.
-- **D3 — Factions and reputation.** Standing with each faction, moved by quests, kills, contracts and
-  dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
+- **D3 — Factions and reputation. (Landed.)** Standing with each faction, moved by quests, kills,
+  contracts and dialog choices; ranks that open stock, quests, dialog and titles (decision 87).
+  _Landed (decision 133):_ three factions before level 9 (the Veymarch Company, the Keepers and
+  Greyford), standing a stored tally held between −1000 and 1000, moved by kills a faction minds,
+  every quest once, every contract every time and an answer the first time it is heard; the Company
+  and the Keepers opposed on deeds rather than a seesaw; ranks at 50, 250 and 750 in each faction's
+  words, each a title put on when reached and taken off when fallen below; a rank opening the
+  outfitter's coal, cooked eel on the shelf and lines; a Standing block on the character sheet and
+  the ranks on Feats; save version 109.
 - **D4 — The spirit. (Landed.)** Wick drawn in the world, a sprite kind of its own (16×16, not
   outlined, one loop, a brighter sprite when it calls), following the player off the left shoulder
   on a lag that never routes and never blocks (`world/Spirit.ts`). It **glows and chimes when it has
@@ -776,9 +786,25 @@ decision 121).
   version 105); where a memory is a thing, its secret says it and the zone's beat leads up to it.
   **Go quiet** silences the tips alone. **Underground its light is the only one**, the lantern's pool
   centred on it in its blue-white. Picked after the creatures and before the stations; a tap on it
-  takes nothing back, and waits out an open counter. Smoke gained a `spirit` section. Decision 124
+  takes nothing back, and waits out an open counter. Smoke gained a `spirit` section. Decision 128
   has the forks.
-- **D5 — Part D review.**
+- **D5 — Part D review. (Landed.)** Walked with E4 and F4 as one review (decision 138), since the three parts merged within a day of each other (wave 2) and the user plays once: D1-D4 and D1b against the pillars and the user's first list at a 390×844 phone and a 1280×800 desktop, through smoke's screenshots and a walk of its own, and the code against its decisions. The user's play notes come from the review PR's comments and are mended before it is marked ready. Part D's promise held: six townsfolk and
+  four more of the lore's people talking in topics and remembering, seventeen rumours and nineteen
+  fragments in one journal, three factions with ranks that pay titles, and Wick in the world with
+  nine beats. Found at the seams:
+  - **Orlath's mercy covers the key's run.** Decision 133 sized what the chain earns back with the
+    Keepers on the ten raiders the quest names, and the barrow key is a 3% drop off them, so about
+    thirty-three are expected at −2 each and the chain left a Drainer (−66 against +50). The barrow
+    king's quest pays the Keepers 75, held by `FactionSystem.test.ts` to the key's run.
+  - **A kill moves standing before it is counted**, so a faction title the kill costs comes off before
+    a slayer rank the same kill crossed looks for something worn.
+  - **The Standing block is three skill rows**: the name on a line of its own, the rank and the count
+    under it and a bar towards the next rank, where a desktop's sheet wrapped the old line three
+    deep.
+  - **Found and left, proposed to Part G:** every faction's top rank is a grind (twenty-five to sixty
+    contracts, or wights alone for the Keepers, who have no contract), which Part G's hubs are where
+    to mend; the crow's first greeting is never said, a fallback that holds; the toast over Wick's
+    card and the talk panel over the XP bar are standing choices, not this part's.
 
 **Open questions for Part D**: none of D3's left. D3 answered whether two factions can be opposed
 (the Company and the Keepers, on deeds rather than as a seesaw, decision 133). C2 answered which
@@ -796,7 +822,10 @@ Idle and active each get a reason (decision 85).
   it lasts; idle's own XP never spends it; the pace bot plays unrested.
 - **E2 — Potions.** A way to make them (a new making skill, and where its herbs come from, are this
   phase's questions), and potions brewed in active play that **boost idle gains** for a while: more
-  XP, faster gathering. Some may help in a fight.
+  XP, faster gathering. Some may help in a fight. **Landed** (decision 129): foraging with a sickle
+  on herb patches from the strand to the fen, brewing at a still in Greyford, four potions one kind
+  each (gathering speed, a fight, idle XP and luck), their clocks kept on the character and honoured
+  by a night away; save version 106.
 - **E3 — What idle uses.** Idle drinks the potions it is given. Potions join the rows A7's idle
   panel orders and keeps, so the player sets when idle drinks them the way they set its food.
   **Landed** (decision 135): potions are rows beside the food in the one stored order and Keep,
@@ -804,10 +833,25 @@ Idle and active each get a reason (decision 85).
   two at once; a parked night drinks the same way, counted from when the tab closed and only until
   it stops, and the morning wakes to the last one's clock; the panel names what a night will drink
   and the away report what it drank. No save version.
-- **E4 — Part E review.**
+- **E4 — Part E review. (Landed.)** Walked with D5 and F4 as one review (decision 138; D5 says
+  how). Part E's promise held: rested banks by time and doubles XP earned by hand, four potions brew
+  and work through a closed game, and idle drinks them in the order set. Found at the seams:
+  - **The steel tools are quicker, as their rows always said.** Decision 129 found `gatherSpeedBonus`
+    read nowhere; it is read now at each swing by hand or by a camp, for a parked night and on the
+    idle panel, and the card says "Each swing 15% quicker".
+  - **The garden counts, awake and away.** Decision 136 left a parked night in Lampton paid for the
+    zone's spawns alone, and the awake panel read the same table and promised a fight the camp did
+    not make. The panel and the payout read one list, the zone's spawns and the garden where it is
+    built, so a sickle in Lampton works the beds once the garden is bought.
+  - **The panel promises the draughts a night can drink**, counted against its eight hours rather
+    than the whole bag, and a running potion's line says which night it would count for. A potion's
+    half hour reads in minutes on the buff row, and an idle row's name wraps where a desktop cut it.
+  - **Found and left:** the buff row says what a buff is called and not what it does; a tap on a
+    buff is a surface of its own, proposed rather than built.
 
-**Open questions for Part E**: alchemy fed by a new gathering skill, or by herbs from existing
-nodes and drops? Does rested XP come only from idle, or from being away too? (Both, E1 answered.)
+**Open questions for Part E**: none left; the part has landed. E2 answered where herbs come from (a
+fourth gathering skill with nodes and a tool of its own, decision 129) and E1 whether rested comes
+from being away too (both, decision 127).
 
 ---
 
@@ -815,7 +859,7 @@ nodes and drops? Does rested XP come only from idle, or from being away too? (Bo
 
 - **F1 — The house.** A building in town that is yours: walk in, set trophies on stands and a wall
   (boss drops, quest keepsakes, achievement plaques), keep things in a chest. _Landed (decision
-  124):_ the Surveyor's House at the east end of Lampton's counters' row, let by the quartermaster's
+  130):_ the Surveyor's House at the east end of Lampton's counters' row, let by the quartermaster's
   A Roof in Lampton (twenty logs, after The Cutthroat); four stands that take a boss's drop or a
   keepsake and hand it back on a tap; a chest of eight kinds, the bank's rule; a wall of plaques, one
   a creature at its highest rank, derived; a keepsake from each capstone quest; no station. The
@@ -845,10 +889,23 @@ nodes and drops? Does rested XP come only from idle, or from being away too? (Bo
   came; drops seen the fourth stored tally (save version 110), counted as they fall, kept or not,
   and everything else read off the tallies already kept; the card's "Dropped by", "Gathered from"
   and "Quest reward" lines. Lore found reads empty until D2's fragments land.
-- **F4 — Part F review.**
+- **F4 — Part F review. (Landed.)** Walked with D5 and E4 as one review (decision 138; D5 says
+  how). Part F's promise held: a house let by a quest, filled from stands, a chest and a wall, grown
+  in four stages, and a log that counts the creatures, the drops, the trophies, the items and the
+  lore. Found at the seams:
+  - **A boss's lore is on its bestiary page**, which decision 137 promised once D2 landed and D2
+    landed beside it without: a Lore section under the drops, the title once found and "Not yet
+    found" before, and the page complete only when it is.
+  - **A trophy at home is collected**, on a stand or in the chest, whatever the drops seen say,
+    since a save from before F3 counted them can have one on a stand its boss was never seen to
+    drop; the row says "In the chest" when that is where it lies.
+  - **The plans say what a stage needs**: the stage before it built first, or how much more coin.
+  - **Found and left, proposed to Part G:** the plaque wall hangs four a row with no ceiling, and the
+    seventeenth creature would hang above it; the band that passes sixteen gives the wall room.
 
-**Open questions for Part F**: does the house hold only trophies, or also working stations? Can a
-trophy be displayed and still used?
+**Open questions for Part F**: none left; the part has landed. F1 answered whether the house holds
+working stations (not until F2's bench, decision 130) and whether a trophy is displayed or spent (a
+stand hands it back on a tap, so displaying is not spending).
 
 ---
 
