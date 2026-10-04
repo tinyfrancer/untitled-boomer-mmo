@@ -120,9 +120,9 @@ describe('the skills book', () => {
 describe('what a level buys, as a page says it', () => {
   it('reads a gathering level off the curve the swing uses', () => {
     const about = skillPage('woodcutting', state({ woodcutting: 3 })).about.join(' ');
-    expect(about).toContain('Each level makes a gather 5% quicker and adds a 3% chance');
-    expect(about).toContain('At level 3: 10% quicker, and a 6% chance of a second.');
-    expect(about).toContain(`At ${MAX_GATHER_SKILL_LEVEL}, the most: 45% quicker`);
+    expect(about).toContain('Each level makes a gather 2.5% quicker and adds a 1.5% chance');
+    expect(about).toContain('At level 3: 5% quicker, and a 3% chance of a second.');
+    expect(about).toContain(`At ${MAX_GATHER_SKILL_LEVEL}, the most: 48% quicker`);
     expect(about).toContain('Needs a Felling Axe in hand.');
   });
 

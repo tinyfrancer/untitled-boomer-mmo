@@ -28,7 +28,12 @@ export const EXIT_MARGIN = TILE_SIZE * 0.6;
  * says what it has to be.
  */
 export const MAX_CHARACTER_LEVEL = 9;
-export const MAX_GATHER_SKILL_LEVEL = 10;
+// Gathering and making go to 20 with the character (decision 131), moved once
+// here by G3 rather than a band at a time: a skill's ceiling is a promise about
+// how far the ladder goes, where the character's is a fact about what spawns.
+// Each band's tier opens three levels of it (11-13, 14-17, 18-20), so until
+// its zones land the top of the ladder is a number and not a recipe.
+export const MAX_GATHER_SKILL_LEVEL = 20;
 
 // Combat skills cap at ten times the character's level, so levelling is what
 // raises the ceiling — a level 1 character tops out at 1 Handed 10, a capped
