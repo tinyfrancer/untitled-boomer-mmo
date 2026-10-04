@@ -114,7 +114,7 @@ climb's coin: a garden of samphire and meadowsweet and a fletcher's bench in the
 Drawing Room behind the house, walled up until it is built, with two stands and then two more; save
 version 111, numbered at the fold; decision 136). **Building: wave 3** on `claude/v2-wave-3`, the
 review of Parts D, E and F as one agent and G3 first, then G4, G5/G6 and G7, then G2, by
-`docs/v2_parallel_plan.md`, its numbers reserved from 138; **G3** is up for the wave (tier one:
+`docs/v2_parallel_plan.md`, its numbers reserved from 138; **G3** is folded into wave 3 (tier one:
 coldiron, mirehide, bog oak and pike as rows, recipes at 11-13, drawings and icons, nothing yielding
 the raw four yet; the skills to 20 with the gather curve stretched over them; the step set by the
 duels at 11-13; decision 139). Update this line as each phase lands: which phase, and which is next.
