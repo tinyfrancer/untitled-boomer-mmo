@@ -96,7 +96,8 @@ export const SPIRIT_BEATS: Record<SpiritBeatId, SpiritBeat> = {
     line: "Somebody in this yard buys what comes up out of the old graves. I'd like a look. I don't know why.",
     unbidden: false,
   },
-  // Maren is not in the game yet. When she is, she says it to Wick's face.
+  // Maren says the rest of this to Wick's face when asked about the light
+  // (D1b, decision 134); the beat only leads up to her.
   'blackwater-fen': {
     id: 'blackwater-fen',
     zoneId: 'blackwater-fen',

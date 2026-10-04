@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BOUNTIES } from '../../src/data/bounties';
 import { ENEMIES } from '../../src/data/enemies';
+import { LOOT_TABLES } from '../../src/data/lootTables';
 import {
   FACTIONS,
   FACTION_ORDER,
@@ -142,10 +143,18 @@ describe('what moves it', () => {
     }
   });
 
-  it('costs the Keepers the chain’s raiders, and Orlath laid earns it back', () => {
+  // The chain's cost with the Keepers is the raiders the key takes, not the ten
+  // the quest names: at the key's chance that is thirty-odd, and decision 138
+  // found the chain leaving a Drainer where decision 133 meant it earned back.
+  it('costs the Keepers the raiders the key takes, and Orlath laid earns it back', () => {
     const raiders = QUESTS['blackwater-raiders'].objective;
     if (raiders.kind !== 'kill') throw new Error('the raiders are no longer a kill');
-    const cost = (KILL_STANDING[raiders.enemyId]?.keepers ?? 0) * raiders.quantity;
+    const key = Object.values(LOOT_TABLES)
+      .flatMap((table) => table.entries)
+      .find((entry) => entry.itemId === 'barrow-key');
+    if (!key) throw new Error('the barrow key is on no table');
+    const run = Math.max(raiders.quantity, Math.ceil(1 / key.chance));
+    const cost = (KILL_STANDING[raiders.enemyId]?.keepers ?? 0) * run;
     expect(cost).toBeLessThan(0);
     expect(QUESTS['the-barrow-king'].reward.standing?.keepers ?? 0).toBeGreaterThanOrEqual(-cost);
   });
