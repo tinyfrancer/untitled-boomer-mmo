@@ -1,6 +1,7 @@
 import { Sheet } from './Sheet';
-import { el, row, sectionHeader } from './dom';
+import { el, fillPercent, row, sectionHeader } from './dom';
 import { setSkillProgress, skillRow, type SkillRow } from './skillRows';
+import { barFill } from '../systems/math';
 import { drawPortrait } from './hudArt';
 import { playerGetup, portrait } from '../art/outfit';
 import { bindItemCard } from './itemCard';
@@ -17,7 +18,7 @@ import { NO_GEAR, type Gear } from '../systems/InventorySystem';
 import { exhaustive, mapKeys } from '../types/exhaustive';
 import type { ClassId, GearSlotId, SkillId } from '../types/ids';
 import type { Look } from '../data/looks';
-import { FACTIONS, FACTION_ORDER } from '../data/factions';
+import { FACTIONS, FACTION_ORDER, MIN_STANDING } from '../data/factions';
 import { currentRank, nextRank, standingWith, type Standing } from '../systems/FactionSystem';
 import type { FactionId } from '../types/ids';
 
@@ -86,7 +87,7 @@ export class CharacterSheet extends Sheet {
   private readonly statLines: HTMLElement[];
   private readonly slots: Record<GearSlotId, SlotRow>;
   private readonly skills: Record<SkillId, SkillRow>;
-  private readonly factions: Record<FactionId, HTMLElement>;
+  private readonly factions: Record<FactionId, StandingRow>;
   private gear: Gear = NO_GEAR;
 
   constructor(
@@ -136,16 +137,21 @@ export class CharacterSheet extends Sheet {
       ...this.buildSkillBlock('Combat Skills', COMBAT_SKILL_ORDER, onSkillClicked),
     };
 
+    // A faction is a skill row's shape (decision 138): its name on one line,
+    // the rank and the count under it, and a bar towards the next rank, since
+    // the name beside the rank and the count wrapped three deep on both sides
+    // of a desktop's sheet.
     this.body.append(sectionHeader('Standing'));
     this.factions = mapKeys(FACTION_ORDER, (factionId) => {
-      const line = row({
-        className: 'hud-row hud-standing',
-        label: FACTIONS[factionId].name,
-        valueClass: 'hud-muted',
-      });
-      line.root.dataset.faction = factionId;
-      this.body.append(line.root);
-      return line.value;
+      const root = el('div', 'hud-skill hud-standing');
+      root.dataset.faction = factionId;
+      const value = el('div', 'hud-skill__line');
+      const bar = el('div', 'hud-bar hud-skill__bar');
+      const fill = el('div', 'hud-bar__fill');
+      bar.append(fill);
+      root.append(el('div', 'hud-standing__name', FACTIONS[factionId].name), value, bar);
+      this.body.append(root);
+      return { value, fill };
     });
   }
 
@@ -202,7 +208,10 @@ export class CharacterSheet extends Sheet {
     }
 
     for (const factionId of FACTION_ORDER) {
-      this.factions[factionId].textContent = standingLine(state.standing, factionId);
+      const drawn = this.factions[factionId];
+      const line = standingLine(state.standing, factionId);
+      drawn.value.textContent = line.text;
+      drawn.fill.style.width = fillPercent(line.fill);
     }
   }
 
@@ -229,14 +238,22 @@ export class CharacterSheet extends Sheet {
 }
 
 /**
- * A faction's rank and the standing under it, with how far the next rank is,
+ * A faction's rank and the standing under it, with how far the next rank is
+ * and how far along the bar between the two the character stands,
  * since a number alone does not say what it is counting towards.
  */
-function standingLine(standing: Standing, factionId: FactionId): string {
+function standingLine(standing: Standing, factionId: FactionId): { text: string; fill: number } {
   const value = standingWith(standing, factionId);
+  const current = currentRank(standing, factionId);
   const next = nextRank(standing, factionId);
-  const counted = next ? `${value} / ${next.from} standing` : `${value} standing`;
-  return `${currentRank(standing, factionId).name}, ${counted}`;
+  if (!next) return { text: `${current.name}, ${value} standing`, fill: 1 };
+  // The first rank starts at the floor, so the bar towards the next is counted
+  // from nothing rather than from a thousand below.
+  const from = current.from > MIN_STANDING ? current.from : 0;
+  return {
+    text: `${current.name}, ${value} / ${next.from} standing`,
+    fill: next.from > from ? barFill(Math.max(0, value - from), next.from - from) : 0,
+  };
 }
 
 /**
@@ -249,4 +266,10 @@ function armourLine(armor: number): string {
   return share > 0
     ? `${BONUS_NAMES.armor} ${armor} (stops ${share}% of a hit)`
     : `${BONUS_NAMES.armor} ${armor}`;
+}
+
+/** A faction's row: the rank and count under its name, and the bar's fill. */
+interface StandingRow {
+  value: HTMLElement;
+  fill: HTMLElement;
 }

@@ -134,7 +134,7 @@ ceiling the panel named — half a level, or one level of the skill — when tha
 `OfflineAfkReport.capped` is how it knows: set when the ceiling rather than the time, the bag or the
 arrows ended the night.
 
-**Idle banks rested, and active play spends it** (decisions 85 and 124, `systems/RestedSystem.ts`).
+**Idle banks rested, and active play spends it** (decisions 85 and 127, `systems/RestedSystem.ts`).
 It is the half of decision 85 that gives idle a reason active play does not have: idle earns half
 the XP and never an ability, and what it hands back is a bonus on the XP the player then earns by
 hand. **It banks by time, not by what idle earned**, so a night at a bench or a bow out of arrows
@@ -190,3 +190,18 @@ carries what was drunk (`drunk`, listed under Drank) and the clocks the morning 
 (`potions`), which `resolveParked` hands to `CharacterController.settleNightPotions` whatever else
 the night earned. **The panel names what a night will drink off the list the payout drinks out of**
 (`nightPotionSupply`), and `IdlePlanSystem.test.ts` sweeps every zone and job for it.
+
+**What grows where a camp stands is the zone's spawns and the house's garden** (`nodesStandingIn`
+in `OfflineAfkSystem.ts`, reading `gardenNodesIn` from `HouseSystem.ts`; the Part E review, decision
+138). F2 placed the garden's beds off the house rather than in Lampton's text, so no zone's table
+lists them, and `campNode` and the panel's `workableNodes` both read the table: a sickle in Lampton
+was promised a fight while the awake camp cut the beds, and a parked night was paid nothing. Both
+read the one list now, with `house.built` passed into `OfflineAfkContext` and `IdlePlanInput`, so
+they cannot disagree about whether a tool has work here. What asks where a herb grows _wild_ (the
+skills book, the card's "Gathered from") still reads the zone alone. **A swing's length reads the
+tool as well as the skill and the potion** (`toolGatherSpeed`, same review): the steel tier's
+`gatherSpeedBonus` had been read nowhere since it landed, and is now read at each swing by hand or
+by a camp, in the parked gather's pace and on the panel's "A Tree every" line. **The panel's line on
+a night's draughts counts them against the night's hours** the way `nightPotionWindows` drinks
+them, so a bag of fifty is not promised as a night of fifty, and a running potion's line says which
+night it would count for.

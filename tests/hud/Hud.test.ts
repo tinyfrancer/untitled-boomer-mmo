@@ -115,7 +115,7 @@ import { LORE_FRAGMENTS } from '../../src/data/loreFragments';
 import { OFFLINE_CAP_MS, type OfflineAfkReport } from '../../src/systems/OfflineAfkSystem';
 import type { EventBus } from '../../src/world/worldEvents';
 import type { PendingNotification } from '../../src/world/GameContext';
-import type { NpcId, SkillId, ZoneId } from '../../src/types/ids';
+import type { NpcId, SkillId, ZoneId, EnemyId } from '../../src/types/ids';
 
 // A page's downloads and clipboard, which jsdom has neither of. What the HUD
 // hands them is what is asserted.
@@ -1075,11 +1075,19 @@ describe('the character sheet’s standing', () => {
     parent.querySelector(`[data-sheet="character"] .hud-standing[data-faction="${factionId}"]`)
       ?.textContent ?? '';
 
+  // A faction is a skill row's shape (decision 138): the name on one line, the
+  // rank and the count under it, and a bar towards the next rank.
   it('says where the character stands with each faction and how far the next rank is', () => {
     mount({ standing: { company: 60, keepers: -80 } });
     expect(line('company')).toBe('The Veymarch CompanyCompany Hand, 60 / 250 standing');
     expect(line('keepers')).toBe('The KeepersDrainer, -80 / -50 standing');
     expect(line('greyford')).toBe('GreyfordStranger, 0 / 50 standing');
+    const fill = (factionId: string): string =>
+      parent.querySelector<HTMLElement>(
+        `[data-sheet="character"] .hud-standing[data-faction="${factionId}"] .hud-bar__fill`,
+      )?.style.width ?? '';
+    expect(fill('company')).toBe('5%');
+    expect(fill('keepers')).toBe('0%');
   });
 
   it('redraws when the world moves it, and toasts a rank reached', () => {
@@ -1120,6 +1128,14 @@ describe('the buff row', () => {
     events.emit(PLAYER_EFFECTS_CHANGED_EVENT, []);
     expect(icons()).toEqual([]);
     expect(row()?.classList.contains('hud-hidden')).toBe(true);
+  });
+
+  // A potion's half hour reads in minutes, a spell's seconds as seconds.
+  it('reads a long buff in minutes', () => {
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'keepers-watch', remainingMs: 1_800_000, durationMs: 1_800_000 },
+    ]);
+    expect(parent.querySelector<HTMLElement>('.hud-effect__time')?.textContent).toBe('30m');
   });
 
   it('counts each one down and sweeps its square as it is spent', () => {
@@ -1928,6 +1944,24 @@ describe('the collection log', () => {
     expect(bones?.classList.contains('is-unseen')).toBe(true);
     sheet()?.querySelector<HTMLButtonElement>('[data-action="collection-back"]')?.click();
     expect(sheet()?.dataset.page).toBe('index');
+  });
+
+  // A boss's page says what of the history it carries, the title once found.
+  it('lists a boss’s lore on its page, named once it is in the journal', () => {
+    const boss = (Object.keys(ENEMIES) as EnemyId[]).find((enemyId) => ENEMIES[enemyId].boss)!;
+    const fragment = Object.values(LORE_FRAGMENTS).find(
+      (candidate) => candidate.found.kind === 'kill' && candidate.found.enemyId === boss,
+    )!;
+    mount({ kills: { [boss]: 1 } });
+    menuItem('collection');
+    sheet()?.querySelector<HTMLButtonElement>(`[data-creature="${boss}"]`)?.click();
+    const lore = () => sheet()?.querySelector<HTMLElement>(`[data-lore="${fragment.id}"]`);
+    expect(lore()?.textContent).toContain('Not yet found');
+    expect(lore()?.textContent).not.toContain(fragment.title);
+    expect(text()).toContain('Lore');
+    events.emit(WHISPERS_CHANGED_EVENT, { rumours: [], fragments: [fragment.id] });
+    expect(lore()?.textContent).toContain(fragment.title);
+    expect(lore()?.classList.contains('is-unseen')).toBe(false);
   });
 
   it('redraws off a drop seen, a kill and a pool', () => {

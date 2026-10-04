@@ -10,7 +10,8 @@ import { afkGatherSkill } from './AfkSystem';
 import { hasInputs, recipesAt, rollCraft } from './CraftingSystem';
 import { canCarry } from './EncumbranceSystem';
 import { scaleEnemyStats } from './EnemySystem';
-import { gatherDurationMs } from './GatherSystem';
+import { gatherDurationMs, toolGatherSpeed } from './GatherSystem';
+import { gardenNodesIn } from './HouseSystem';
 import {
   addItemToInventory,
   removeItemFromInventory,
@@ -33,7 +34,14 @@ import {
 } from './IdleFoodSystem';
 import { POTION_EFFECT_IDS, QUICK_HANDS_SPEED } from '../data/potions';
 import { idleXpMultiplier, spendPotionTime, type PotionTimers } from './PotionSystem';
-import type { ClassId, EnemyId, MasteryTargetId, PotionEffectId, SkillId } from '../types/ids';
+import type {
+  ClassId,
+  EnemyId,
+  HouseUpgradeId,
+  MasteryTargetId,
+  PotionEffectId,
+  SkillId,
+} from '../types/ids';
 
 // Nothing accrues past this. A tab closed over a long weekend hands back a
 // night's play, not a finished character.
@@ -92,6 +100,12 @@ export interface OfflineAfkContext {
    * one at a time. Absent is the order nobody chose, everything fair game.
    */
   idleFood?: IdleFoodChoice;
+  /**
+   * The stages of the house built (F2), since the garden's beds are nodes of
+   * the player's that no zone's table lists: a sickle parked in Lampton is paid
+   * for them once the garden is. Absent is nothing built.
+   */
+  built?: readonly HouseUpgradeId[];
   rng?: () => number;
 }
 
@@ -270,14 +284,31 @@ function campQuarry(zoneId: keyof typeof ZONES, characterLevel: number) {
   });
 }
 
+/**
+ * What grows where a camp stands, for *this* character: the zone's own spawns
+ * and the house's garden where it is built. The idle panel reads the same
+ * list, so the two cannot disagree about whether a sickle has work here.
+ */
+export function nodesStandingIn(
+  zoneId: keyof typeof ZONES,
+  built: readonly HouseUpgradeId[] = [],
+): ResourceNodeDefinition[] {
+  const spawns = (ZONES[zoneId]?.nodeSpawns ?? []).map((spawn) => RESOURCE_NODES[spawn.nodeId]);
+  return [...spawns, ...gardenNodesIn(zoneId, built)];
+}
+
 // The node an unattended gatherer would have been working: the richest one in
 // that zone their skill actually opens. A fisher who has earned the ocean is
 // paid for the ocean; one who has not is paid for the pond.
-function campNode(zoneId: keyof typeof ZONES, skill: SkillId, level: number) {
-  const spawns = ZONES[zoneId]?.nodeSpawns ?? [];
-  const workable = spawns
-    .map((spawn) => RESOURCE_NODES[spawn.nodeId])
-    .filter((node) => node.skill === skill && node.requiredLevel <= level);
+function campNode(
+  zoneId: keyof typeof ZONES,
+  skill: SkillId,
+  level: number,
+  built: readonly HouseUpgradeId[],
+) {
+  const workable = nodesStandingIn(zoneId, built).filter(
+    (node) => node.skill === skill && node.requiredLevel <= level,
+  );
   if (workable.length === 0) {
     return null;
   }
@@ -377,7 +408,7 @@ export type OfflineJob =
 
 export function offlineJob(
   session: Pick<AfkSession, 'zoneId' | 'station'>,
-  context: Pick<OfflineAfkContext, 'characterLevel' | 'inventory' | 'gear' | 'skills'>,
+  context: Pick<OfflineAfkContext, 'characterLevel' | 'inventory' | 'gear' | 'skills' | 'built'>,
 ): OfflineJob {
   const { station } = session;
   const recipe =
@@ -389,7 +420,12 @@ export function offlineJob(
   }
   const skill = afkGatherSkill(context.gear);
   if (skill !== null) {
-    const node = campNode(session.zoneId, skill, skillLevel(context.skills, skill));
+    const node = campNode(
+      session.zoneId,
+      skill,
+      skillLevel(context.skills, skill),
+      context.built ?? [],
+    );
     return { kind: 'gather', skill, node };
   }
   return { kind: 'fight', quarry: campQuarry(session.zoneId, context.characterLevel) };
@@ -562,9 +598,10 @@ function resolveOfflineGather(
   }
 
   // When each gather finished: quicker while a Samphire Tonic was working and
-  // could see it through, at the skill's own pace otherwise.
-  const quick = gatherDurationMs(node, level, QUICK_HANDS_SPEED);
-  const plain = gatherDurationMs(node, level);
+  // could see it through, at the skill's and the tool's own pace otherwise.
+  const tool = toolGatherSpeed(context.gear, skill);
+  const quick = gatherDurationMs(node, level, QUICK_HANDS_SPEED + tool);
+  const plain = gatherDurationMs(node, level, tool);
   const quickUntil = (atMs: number): number =>
     windows.find(
       (window) => window.effectId === 'quick-hands' && window.fromMs <= atMs && atMs < window.toMs,

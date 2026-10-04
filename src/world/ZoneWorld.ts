@@ -1327,7 +1327,7 @@ export class ZoneWorld implements Targeting {
     // The one choke point both the swing and the ability paths run through, so
     // it is the one place the AFK penalty has to be applied. A quest reward is
     // not one of them — handing a quest in is something the player did — so it
-    // comes in through publishXpGain instead. A kill made by hand spends the
+    // goes straight to awardPlayedXp instead. A kill made by hand spends the
     // rested bank; one idle made is halved, raised by a Keeper's Watch if one is
     // drunk, and never rested as well.
     if (this.afk.active) {

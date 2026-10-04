@@ -152,7 +152,13 @@ function trophyRow(entry: TrophyEntry): HTMLElement {
   const line = row({
     className: 'hud-list-row hud-collection-row',
     label: describeItemName(entry.itemId),
-    value: entry.displayed ? 'At home' : entry.collected ? 'Collected' : trophyFrom(entry),
+    value: entry.displayed
+      ? 'At home'
+      : entry.stored
+        ? 'In the chest'
+        : entry.collected
+          ? 'Collected'
+          : trophyFrom(entry),
     valueClass: 'hud-list-row__value',
     icon: itemIconEl(entry.itemId),
   });
@@ -198,7 +204,33 @@ function creatureView(entry: BestiaryEntry): HTMLElement[] {
           return line.root;
         })
       : [el('div', 'hud-empty', 'It drops nothing.')];
-  return [...facts, sectionHeader('Drops', `${of(entry.dropsSeen)} seen`), ...drops];
+  // What of the history it carries (D2), under the drops: the title once found,
+  // since the title is half the find, and the Whispers journal has the words.
+  const lore = entry.lore.map((fragment) => {
+    const line = row({
+      className: 'hud-list-row hud-collection-row',
+      label: fragment.found ? fragment.title : 'A piece of the history',
+      value: fragment.found ? 'In Whispers' : 'Not yet found',
+      valueClass: 'hud-list-row__value',
+    });
+    line.root.dataset.lore = fragment.fragmentId;
+    line.root.classList.toggle('is-unseen', !fragment.found);
+    return line.root;
+  });
+  return [
+    ...facts,
+    sectionHeader('Drops', `${of(entry.dropsSeen)} seen`),
+    ...drops,
+    ...(lore.length > 0
+      ? [
+          sectionHeader(
+            'Lore',
+            `${lore.filter((line) => !line.classList.contains('is-unseen')).length} / ${lore.length} found`,
+          ),
+          ...lore,
+        ]
+      : []),
+  ];
 }
 
 function fact(label: string, value: string): HTMLElement {

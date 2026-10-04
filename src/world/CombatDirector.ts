@@ -137,6 +137,11 @@ export class CombatDirector {
    */
   creditKill(enemyId: EnemyId, count = 1): AchievementUnlock[] {
     const { character } = this.ctx;
+    // A kill a faction minds moves its standing (D3), a camp's included, since
+    // a raider down while idle is as dead as one cut down by hand. Moved before
+    // the kill is counted, so a faction title the kill costs comes off first
+    // and a slayer rank the same kill crosses finds nothing worn (decision 138).
+    this.ctx.moveStanding(killStanding(enemyId), { count });
     const worn = character.state.activeTitleId;
     const crossed = character.recordKill(enemyId, count);
     this.ctx.events.emit(KILLS_CHANGED_EVENT, character.state.kills);
@@ -145,9 +150,6 @@ export class CombatDirector {
     for (const fragmentId of fragmentsOf(enemyId)) {
       this.ctx.noteWhisper({ kind: 'lore', fragmentId });
     }
-    // A kill a faction minds moves its standing (D3), a camp's included, since
-    // a raider down while idle is as dead as one cut down by hand.
-    this.ctx.moveStanding(killStanding(enemyId), { count });
     if (crossed.length > 0) {
       this.ctx.persistCharacter();
     }

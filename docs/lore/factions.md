@@ -92,9 +92,9 @@ _In game since D3 (decision 133)._ The Company, the Keepers and Greyford hold st
 - **The Company and the Keepers are opposed on deeds, not a seesaw.** A raider killed pays the
   Company and costs the Keepers; taking a side over the salt pans with Jory Stroud moves them apart;
   every other deed moves one alone.
-- **The upper chain's ten raiders cost the Keepers**, and putting Orlath down earns it back: the
-  Keepers call it a mercy, his lantern being out and nothing else able to lay him. A barrow wight laid
-  is a smaller mercy of the same kind.
+- **The upper chain's raiders cost the Keepers**, every one of the run it takes to find the barrow's
+  key on them, and putting Orlath down earns it back: the Keepers call it a mercy, his lantern being
+  out and nothing else able to lay him. A barrow wight laid is a smaller mercy of the same kind.
 - **Ranks, in each faction's own words**, each above a stranger's a title:
   - The Company counts in its ledger: Stranger, **Company Hand**, **Company Contractor**, **Company
     Factor**. A factor is what the Company calls the agent who keeps its books in a place, and it

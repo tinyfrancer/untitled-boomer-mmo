@@ -248,7 +248,9 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
   // drop off the raiders the quest before it sends you to, so this is what says
   // out loud that the door at the bottom of the fen exists. The Keepers count
   // the king laid as the mercy it is, his light being out, which earns back what
-  // the ten raiders before it cost with them (decision 133).
+  // the raiders before it cost with them (decision 133): not the quest's ten but
+  // the thirty-odd a 3% key takes on average, which decision 138 found left the
+  // chain a Drainer, so `FactionSystem.test.ts` holds this to the key's run.
   'the-barrow-king': {
     id: 'the-barrow-king',
     name: 'The Barrow King',
@@ -261,7 +263,7 @@ export const QUESTS: Record<QuestId, QuestDefinition> = {
       copper: 700,
       xp: 1200,
       keepsake: 'orlaths-seal-cast',
-      standing: { greyford: 50, keepers: 50 },
+      standing: { greyford: 50, keepers: 75 },
     },
   },
 };

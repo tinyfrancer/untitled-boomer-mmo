@@ -104,6 +104,11 @@ function wearing(itemId: ItemId): string[] {
   const tool = toolSkill(itemId);
   if (tool) lines.push(`Equip it to ${SKILLS[tool].verb}`);
   const item = ITEMS[itemId];
+  // What a better tool plainly does (the steel tier's `gatherSpeedBonus`), said
+  // on the card since nothing else says it: the skills book is the skill's.
+  if (item.kind === 'equipment' && (item.gatherSpeedBonus ?? 0) > 0) {
+    lines.push(`Each swing ${Math.round((item.gatherSpeedBonus ?? 0) * 100)}% quicker`);
+  }
   if (item.kind === 'equipment') lines.push(reforging(itemId, item.slot));
   return lines;
 }

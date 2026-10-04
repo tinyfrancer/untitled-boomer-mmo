@@ -50,7 +50,7 @@ export class EffectBar {
       // Drawn as the *spent* share, growing from the bottom, so a full square
       // is a buff about to drop off — the opposite of a bar being drained.
       icon.sweep.style.height = fillPercent(effectElapsed(effect));
-      icon.time.textContent = `${effectSeconds(effect)}s`;
+      icon.time.textContent = effectClock(effect);
     }
   }
 
@@ -77,4 +77,14 @@ export class EffectBar {
     }
     this.root.classList.toggle('hud-hidden', effects.length === 0);
   }
+}
+
+/**
+ * What is left on a buff, in the unit a player counts it in: a spell's seconds,
+ * and a potion's half hour in minutes rather than as "1800s", rounded up so the
+ * last minute reads as one until it is seconds.
+ */
+export function effectClock(effect: ActiveEffect): string {
+  const seconds = effectSeconds(effect);
+  return seconds >= 60 ? `${Math.ceil(seconds / 60)}m` : `${seconds}s`;
 }

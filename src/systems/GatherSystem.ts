@@ -1,5 +1,6 @@
 import { SKILLS } from '../data/skills';
-import { toolItemFor, toolSkill } from '../data/items';
+import { ITEMS, toolItemFor, toolSkill } from '../data/items';
+import type { SkillId } from '../types/ids';
 import type { ResourceNodeDefinition } from '../data/resourceNodes';
 import type { Gear } from './InventorySystem';
 import { skillLevel, type Skills } from './SkillSystem';
@@ -71,6 +72,19 @@ export function gatherDurationMs(
 /** How much of a swing's base time the skill alone has shaved off, as a fraction. */
 export function gatherSpeedBonus(level: number): number {
   return SPEED_PER_LEVEL * (level - 1);
+}
+
+/**
+ * How much of a swing the tool in hand shaves off on its own: a steel tool's
+ * `gatherSpeedBonus`, and nothing for a plain one or a tool for another skill.
+ * Read wherever a gather's length is, by hand, by an awake camp, by a parked
+ * night and by the idle panel, so the four agree on what a better pick does.
+ */
+export function toolGatherSpeed(gear: Gear, skill: SkillId): number {
+  const weapon = gear.weapon;
+  if (!weapon || toolSkill(weapon) !== skill) return 0;
+  const item = ITEMS[weapon];
+  return item.kind === 'equipment' ? (item.gatherSpeedBonus ?? 0) : 0;
 }
 
 /** The skill's own chance of a second one off a gather, before any mastery. */

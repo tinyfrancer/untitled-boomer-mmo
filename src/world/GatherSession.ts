@@ -22,6 +22,7 @@ import {
   beginGather,
   canGather,
   rollGatherQuantity,
+  toolGatherSpeed,
   type GatherState,
 } from '../systems/GatherSystem';
 import { distance, withinRadius } from '../systems/MovementSystem';
@@ -354,14 +355,16 @@ export class GatherSession {
     this.ctx.events.emit(CHANNEL_PROGRESS_EVENT, 0);
   }
 
-  // One swing at a node, at the skill's speed and a Samphire Tonic's if one is
-  // running: read at each swing, so a potion drunk mid-run speeds the next one.
+  // One swing at a node, at the skill's speed, the tool's and a Samphire
+  // Tonic's if one is running: read at each swing, so a potion drunk mid-run
+  // speeds the next one.
   private swing(definition: ResourceNode['definition']): GatherState {
     const { character } = this.ctx;
     return beginGather(
       definition,
       character.skillLevelOf(definition.skill),
-      potionGatherSpeed(character.state.potions),
+      potionGatherSpeed(character.state.potions) +
+        toolGatherSpeed(character.state.gear, definition.skill),
     );
   }
 
