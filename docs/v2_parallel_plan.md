@@ -13,7 +13,8 @@ was reserved none and found it needed one), folded onto `claude/v2-wave-2` by th
 2026-10-01 and up as one PR to `main` for the user's review. **Building:** wave 3 on
 `claude/v2-wave-3`, cut from `main` at wave 2's merge (`fe1382f`), its numbers reserved from 138: the
 Part D, E and F review as one agent and G3 launched 2026-10-01; G4, G5/G6 and G7 once G3 is folded;
-G2 once G4 is. Update this line as phases start and land, the way the plan's status line is.
+G2 once G4 is. **G3** (decision 139, no save version) is built and up as its PR against the wave
+branch. Update this line as phases start and land, the way the plan's status line is.
 
 Each phase is still built the plan's way: one PR, the gates and smoke green locally before the push,
 the open questions asked first, the status line, a decision for each fork, and the architecture doc

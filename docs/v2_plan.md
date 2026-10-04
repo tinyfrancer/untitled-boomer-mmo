@@ -114,8 +114,10 @@ climb's coin: a garden of samphire and meadowsweet and a fletcher's bench in the
 Drawing Room behind the house, walled up until it is built, with two stands and then two more; save
 version 111, numbered at the fold; decision 136). **Building: wave 3** on `claude/v2-wave-3`, the
 review of Parts D, E and F as one agent and G3 first, then G4, G5/G6 and G7, then G2, by
-`docs/v2_parallel_plan.md`, its numbers reserved from 138. Update
-this line as each phase lands: which phase, and which is next.
+`docs/v2_parallel_plan.md`, its numbers reserved from 138; **G3** is up for the wave (tier one:
+coldiron, mirehide, bog oak and pike as rows, recipes at 11-13, drawings and icons, nothing yielding
+the raw four yet; the skills to 20 with the gather curve stretched over them; the step set by the
+duels at 11-13; decision 139). Update this line as each phase lands: which phase, and which is next.
 
 This plan came out of an interview on 2026-09-27. The user brought a list of what was unclear or
 missing after playing act three, and five rounds of questions settled the forks under it. Every
@@ -997,11 +999,19 @@ same thing twice. Every level is held by the pace test.
 
 **Band 9-12, the doors opening.** Tier one (coldiron, mirehide, bog oak, pike) lands first as G3.
 
-- **G3 — Tier one.** `MAX_GATHER_SKILL_LEVEL` to 20; the coldiron,
-  mirehide, bog oak and pike rows above, their recipes at skill 11-13 at the stations that exist (the
-  forge for coldiron, Greyford's tannery for mirehide, the fletcher's bench for bog oak shafts, a
-  fire for pike), wardrobe drawings and icons, and `coldiron-ore`, the mire lurker's `mire-hide`,
-  `bog-oak` and `raw-pike` as items with nothing yielding them yet. 40-60 files, 2.5-3 hours.
+- **G3 — Tier one. (Built, in wave 3.)** `MAX_GATHER_SKILL_LEVEL` to 20, once for every band, with
+  the gather curve stretched over the new cap so a capped skill buys what a capped skill bought and
+  no tool above steel is dead; the coldiron, mirehide, bog oak and pike rows above, their recipes at
+  skill 11-13 at the stations that exist (the forge for coldiron, Greyford's tannery for mirehide,
+  the fletcher's bench for bog oak shafts, a fire for pike), two tier ramps and an ore ramp ahead
+  of G7's vein, wardrobe rows, icons and a pike drawn, and `coldiron-ore`, the mire lurker's
+  `mire-hide`, `bog-oak` and `raw-pike` as items with nothing yielding them yet. The step is the
+  duels' (the user's answer): a level 11 in the four coldiron pieces beats an 11 standing in its
+  chill, beats a 12 moving and loses to it standing, where steel sweats the 11 and loses the 12; the
+  mirehide capstone shares the plate's 13; the arrow is two over steel, under the king's bow; the
+  tools wait on Karn Tholl's barter (the user's answer). The ladders the lower tiers pinned to the
+  top of the game are restated against the tier above. Twenty-six files. Decision 139, no save
+  version.
 - **G4 — Lorhal, 9-10.** The Keepers' holm, a stilt town on the one high ground in the deep fen
   west of Blackwater Fen, reached by punt-channel through the reeds from the kept lantern. In the
   middle the lantern-hall, where the Keepers' dead wait for a barrow, and Maren's house; round it
