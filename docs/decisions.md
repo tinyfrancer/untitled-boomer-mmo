@@ -3956,3 +3956,63 @@ Claude's, building it, each the recommended option and the wave review's to over
 - **Save version 110** (decision 125's reservation), its step keyed at 109. Until D2 and D3 merge
   their steps at 107 and 108, this branch carries two that pass a save through unchanged, so its
   chain has no gap; theirs replace them at the merge.
+
+## 139. Band 9-12's tier is set by the duels, the skills go to 20 with the gather curve stretched over them, and the leather shares the plate's top level
+
+**2026-10-04 · the user, asked by Claude in wave 3's question round, building the plan's phase G3**
+
+G3 is tier one of Part G (decision 131): coldiron, mirehide, bog oak and pike as rows, recipes,
+drawings and icons, landed whole before the band's zones so each zone agent finds its ids under it.
+The brief's two forks were settled in the wave's question round, both on Claude's recommendation:
+
+- **A piece of the tier gives the step the duels need, not a fixed step a tier.** Its numbers are set
+  so a character geared in it beats the band's creatures at the band's levels the way
+  `EnemySystem.test.ts` holds the curve now: a warrior at 11 in the four coldiron pieces and the
+  king's blade beats an 11 standing in its chill, beats a 12 by stepping out of each one, and loses to
+  a 12 standing in every one, where the same warrior in steel sweats the 11 and loses the 12 however
+  they move; and a 13 in coldiron loses to a 14, which is the next tier's. The set totals 60 armour,
+  20 health and 6 strength to steel's 37, 13 and 4. **Rejected:** a fixed step per tier, which would
+  be right for one band and wrong for the rest as the creatures' growth outruns the character's.
+- **Greyford's outfitter does not take the tier's materials.** Its barter stays the steel tier's
+  loop, and each band's materials are spent at that band's hubs, so a tier pulls the player across its
+  own band: the coldiron tools are rows nothing hands over until Karn Tholl's gate hall (G7) barters
+  them. **Rejected:** a row at the outfitter, which would make Greyford the hub of every band.
+
+Claude's, building it, each the recommended option and the wave review's to overturn:
+
+- **The gather curve is stretched over the new cap.** `MAX_GATHER_SKILL_LEVEL` goes to 20 once, for
+  every band, and at 5% a level the skill alone would have met `MIN_GATHER_FRACTION` at 14, so every
+  tool above steel would have bought nothing, and 3% a level would have paid a second one more often
+  than not; so a level buys 2.5% and 1.5%, and a capped skill buys what a capped skill bought. The
+  cost is that a level 10 gatherer today gathers like one halfway up the ladder, which is what they
+  are. **Rejected:** keeping the rates, for the dead tools; lowering the floor, which is the channel
+  disappearing. **The making curve stays**: the pace bot cooks on it (rule 8), so stretching it would
+  have moved the pace sideways; a making level past 9 buys the recipes it opens, which from 11 are
+  the tiers'.
+- **The leather's capstone shares the plate's top level.** Fenhide took a deeper level than iron
+  because there was a level to take; a band's three recipe levels (11-13) leave no fourth, so
+  mirehide stops short of coldiron in armour, carries intellect, and tops out at 13 beside it.
+  **Rejected:** the plate stopping at 12, which leaves a smith's 13 opening nothing; the leather at
+  14, which is the next band's.
+- **The arrow is two over steel, not double it** (6 to steel's 4), under the king's longbow, the best
+  bow in the game until the band's own. **Rejected:** doubling, which three more times puts an arrow
+  past every bow.
+- **A coldiron bar is one ore and one coal, and a piece takes a steel bar and charcoal.** The ore is
+  the rarer thing and the walk to it the longer one, and the steel in the rivets is the tin argument
+  one band up: the quarry and the Deep Cut are in every piece, so neither is retired the day the hold
+  opens. **Rejected:** two ores to a bar; a beast part of the band in the plate, which is the
+  leather's.
+- **Boss uniques beat everything in their slot up to their own band.** The ladder in
+  `uniqueLoot.test.ts` held every boss drop above every non-unique in its slot, which the chief's
+  bandana cannot keep against a helmet forged for a 13; it now holds it up to the band the boss is in
+  (1-8 the first game's, then four levels a band), and a tier is a compile error there until it has a
+  band. **Rejected:** dropping the ladder; holding it forever, which would make every tier past the
+  barrow worse than a level 4's bandana.
+- **The claims pinned to the top of the game are restated as ladders**: the steel capstone hands the
+  smithing ladder on the level after it, the steel shield is beaten only by a shield behind a deeper
+  smithing level, and the eel only by a meal behind a deeper cooking level. **Rejected:** moving the
+  claims to the new top, which the next tier would move again.
+- **The duels stand in the wight and the raider at the band's levels** until the band's creatures
+  exist, since the wight is the hardest common creature in the game and the fen's dead (G4) are its
+  kin; a zone phase restates them against its own rows.
+- **No save version**: `CharacterState` has no new field, a skill at 10 simply has room above it.

@@ -11,7 +11,13 @@ It is speed rather than yield, which is the opposite call `MASTERY_TIERS` makes 
 log because the _level_ already sells speed, where a tool is a discrete thing you go and get rather
 than a curve laid over the same action. `gatherDurationMs` floors the two terms together at
 `MIN_GATHER_FRACTION`, because a capped skill holding a steel tool would otherwise gather instantly,
-which is the channel disappearing rather than a reward.
+which is the channel disappearing rather than a reward. **The skills went to 20 with Part G** (decision
+131, moved once by G3, decision 139), and the curve was stretched over the new cap rather than left
+where it was: at 5% a level the skill alone would have met the floor at 14 and every tool above steel
+would have bought nothing, and 3% a level would have paid a second one more often than not, so a level
+buys 2.5% and a 1.5% chance of a second, and a capped skill buys what a capped skill bought. The
+making curve stayed as it was, because the pace bot cooks on it: a making level past 9 buys the
+recipes it opens and nothing else, which from 11 are the tiers'.
 
 **A recipe is one shape for all four making skills** (`CraftingRecipe` in `data/recipes.ts`, run by
 `systems/CraftingSystem.ts`). A cooking recipe was already input → output + failure output + level +
@@ -132,6 +138,39 @@ against alternatives:
 - **What comes off the bench goes through the quiver** (`CharacterController.addMadeItem`): into a
   dry one first, the rest into the bag, and never refused, since the inputs were spent before it was
   handed over (decision 79).
+
+**Band 9-12's tier is the steel and fenhide argument one band up** (G3, decision 139; the plan's
+"The shape" names a tier a band). Coldiron is smelted at the forge from one of Karn Tholl's ores and
+one of the Deep Cut's coals, and every coldiron piece is riveted in a steel bar and drawn over
+charcoal, so a finished piece reaches the hold, the Deep Cut, the quarry and the road west and
+neither of the mines under the hold is retired the day it opens, which is the tin vein's argument
+again. Mirehide is the mire lurker's hide cured at Greyford's tannery and stitched with a coldiron
+bar for the buckles and charcoal for the blacking, both off the forge, so the vat still hangs off it.
+Bog oak is cut into shafts at the bench and a coldiron bar into heads at the forge, and the pike is
+cooked at a fire. All of it sits at skill 11-13, where steel's capstone at 10 hands the ladder on. Four
+things about it were decided against alternatives:
+
+- **What a piece is worth is the step the duels need, not a step a tier** (the user's). A warrior at
+  11 in the four coldiron pieces and the king's blade beats an 11 standing in its chill, beats a 12 by
+  stepping out of each one, and loses to a 12 standing in every one; the same warrior in steel sweats
+  the 11 and loses the 12 however they move; and a 13 in coldiron still loses to a 14, which is the
+  next tier's job. `tests/systems/coldiron.test.ts` holds it against the wight and the raider scaled
+  to the band until the band's own creatures land.
+- **The leather's capstone shares the plate's top level rather than passing it.** Fenhide took a
+  deeper level than iron because there was a level to take; a band's three recipe levels leave no
+  fourth, so mirehide stops short of coldiron in armour, carries intellect, and tops out at 13 beside
+  it. **Rejected:** the plate stopping at 12, which leaves a smith's 13 opening nothing.
+- **The arrow is two over steel, not double it.** The line went 1, 2, 4 and was capped at the chief's
+  bow so the bow stays the weapon; three more doublings would put an arrow past every bow in the
+  game, so each tier's arrow is set under the best bow there is when it lands, the king's longbow
+  until the band's own.
+- **The tools are the band's hub's to barter, not the outfitter's** (the user's): Greyford keeps the
+  steel loop, and Karn Tholl's gate hall (G7) takes the band's materials for them, so a tier pulls
+  the player across its own band. Until then they are rows nothing hands over.
+
+Nothing yields the raw four until the band's zones land; the recipes are what keep them from leading
+nowhere, and the sweeps above hold the whole tier that way, so a zone phase adds a node or a drop
+and changes no row here.
 
 **Foraging and brewing are the potion line, and the first production vertical that makes no gear**
 (version 2 phase E2, decision 129). Foraging is a fourth gathering skill, with a tool of its

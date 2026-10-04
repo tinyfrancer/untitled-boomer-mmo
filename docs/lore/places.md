@@ -450,7 +450,10 @@ Fen past the kept lantern, reached by a punt-channel through the reeds: stilt-ho
 sheep on the dry middle, and the **lantern-hall**, a long house with hooks down both walls where
 the Keepers' dead are lit and wait for a barrow to need them. Round it the deep fen, deeper and older
 than the Company's edge of it, its small barrows lowered by the drains and their lights out. A
-stone causeway runs south from the holm into the reeds, and only the Keepers walk it.
+stone causeway runs south from the holm into the reeds, and only the Keepers walk it. Pike hang in
+the deep water off the holm's north side, longer than any eel in the Company's fen, and bog oak lies
+in the drowned banks where the drains have lowered them: oak that went under before the Drowning and
+came out black through, which the Keepers cut for stilts and their bowyers for shafts.
 
 **What it was.** Lorhal ("keeping-hill") was a lamp-wardens' village on a rise in the low
 country, the place their children were taught. It was the first high ground the survivors reached
@@ -545,7 +548,9 @@ looked at me like I was a grave."
 she has decided is not a goblin: the dwarves' **gate hall**, square-cut, lit and furnished, the
 first room in the Veymarch nobody has robbed. Past it the outer workings the goblins took a century
 ago, and the dwarves' war to take them back, which they are losing politely. A stair at the back goes
-down to the halls the sea took.
+down to the halls the sea took. The hold's own metal is coldiron, a blue-black ore out of its seams
+that the dwarves smelt over the outer workings' coal and rivet in steel, colder in the hand than iron
+and harder; the smith makes nothing else, and will say so.
 
 **What it was.** The door of Karn Tholl, shut on the night of the Drowning and not opened since.
 
