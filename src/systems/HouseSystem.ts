@@ -3,15 +3,19 @@ import { ENEMIES } from '../data/enemies';
 import {
   CHEST_SLOTS,
   HOUSE_STANDS,
+  HOUSE_BUILDING,
   HOUSE_UPGRADE_ORDER,
   HOUSE_UPGRADES,
+  HOUSE_YARD,
   standUpgrade,
   type HouseUpgrade,
 } from '../data/house';
 import { ITEMS } from '../data/items';
 import { LOOT_TABLES } from '../data/lootTables';
 import { QUESTS, QUEST_ORDER } from '../data/quests';
-import type { EnemyId, HouseUpgradeId, ItemId, QuestId, SlayerRank } from '../types/ids';
+import { RESOURCE_NODES, type ResourceNodeDefinition } from '../data/resourceNodes';
+import { ZONES } from '../data/zones';
+import type { EnemyId, HouseUpgradeId, ItemId, QuestId, SlayerRank, ZoneId } from '../types/ids';
 import { hasBankRoom, bankSlotsUsed } from './BankSystem';
 import { isUnlocked, type KillCounts } from './AchievementSystem';
 import type { Inventory } from './InventorySystem';
@@ -151,4 +155,28 @@ export function plaques(kills: KillCounts): Plaque[] {
     });
   }
   return [...highest.values()];
+}
+
+/**
+ * The garden's beds as nodes, in the zone the house stands in and once its
+ * stage is built (F2): what a camp there can cut besides the zone's own spawns.
+ * The beds are placed off the house rather than written into the zone's text,
+ * so a zone's table never lists them, and anything that asks what grows here
+ * for *this* character (the idle panel, the parked payout) reads this beside it;
+ * what asks where a herb grows wild (the skills book, the card) still reads the
+ * zone alone, since a garden one character paid for is nobody's wild patch.
+ */
+export function gardenNodesIn(
+  zoneId: ZoneId,
+  built: readonly HouseUpgradeId[],
+): ResourceNodeDefinition[] {
+  const hasHouse = ZONES[zoneId]?.buildingSpawns.some(
+    (spawn) => spawn.buildingId === HOUSE_BUILDING,
+  );
+  if (!hasHouse) return [];
+  return HOUSE_YARD.flatMap((placement) =>
+    'node' in placement && built.includes(placement.upgrade)
+      ? [RESOURCE_NODES[placement.node]]
+      : [],
+  );
 }

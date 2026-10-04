@@ -400,6 +400,29 @@ describe('a parked gathering camp', () => {
     );
   });
 
+  // F2's garden (decision 138): the beds are the player's rather than Lampton's,
+  // so a sickle parked there is paid for them once the garden is built and for
+  // nothing before, as the idle panel says.
+  it('cuts the garden once it is built, and nothing in Lampton before', () => {
+    const SICKLE: Gear = { ...AXE, weapon: 'sickle' };
+    const parked = sessionStartedAgo(HOUR_MS, 'town');
+    const bare = resolveOfflineAfk(parked, gathering(SICKLE));
+    expect(bare).toMatchObject({ gathers: 0, skillXp: 0, skill: null });
+    const grown = resolveOfflineAfk(parked, gathering(SICKLE, { built: ['garden'] }));
+    expect(grown.skill).toBe('foraging');
+    expect((grown.drops.samphire ?? 0) + (grown.missed.samphire ?? 0)).toBe(grown.gathers);
+    expect(grown.gathers).toBeGreaterThan(0);
+  });
+
+  // A steel tool swings quicker for a parked night as it does for a hand: a
+  // minute's worth, short of the ceiling an hour of either would meet.
+  it('swings quicker with a steel tool', () => {
+    const parked = sessionStartedAgo(HOUR_MS / 60, 'town');
+    const plain = resolveOfflineAfk(parked, gathering(AXE));
+    const steel = resolveOfflineAfk(parked, gathering({ ...AXE, weapon: 'steel-axe' }));
+    expect(steel.gathers).toBeGreaterThan(plain.gathers);
+  });
+
   it('pays a town fisher for the pond, which needs no level at all', () => {
     const report = resolveOfflineAfk(sessionStartedAgo(HOUR_MS), gathering(POLE));
     expect(report.skill).toBe('fishing');

@@ -1,11 +1,10 @@
 import { ENEMIES } from '../data/enemies';
 import { describeItemName, isBow } from '../data/items';
-import { RESOURCE_NODES, type ResourceNodeDefinition } from '../data/resourceNodes';
+import type { ResourceNodeDefinition } from '../data/resourceNodes';
 import { STATION_LABELS, type CraftingRecipe, type StationId } from '../data/recipes';
 import { SKILLS } from '../data/skills';
-import { ZONES } from '../data/zones';
 import { EFFECTS } from '../data/effects';
-import type { ClassId, PotionEffectId, SkillId, ZoneId } from '../types/ids';
+import type { ClassId, HouseUpgradeId, PotionEffectId, SkillId, ZoneId } from '../types/ids';
 import {
   AFK_EAT_FRACTION,
   AFK_RESUME_FRACTION,
@@ -17,18 +16,20 @@ import {
 } from './AfkSystem';
 import { hasInputs } from './CraftingSystem';
 import { canCarry, carryCapacity, inventoryWeight } from './EncumbranceSystem';
-import { canGather, gatherDurationMs } from './GatherSystem';
+import { canGather, gatherDurationMs, toolGatherSpeed } from './GatherSystem';
 import {
+  IDLE_POTION_USE,
   idleFoods,
   idlePotions,
   nightPotionSupply,
+  nightPotionWindows,
+  potionWorksFor,
   type IdleActivity,
   type IdleFoodChoice,
   type IdleFoodRow,
   type IdlePotionRow,
 } from './IdleFoodSystem';
 import { describePotionEffect } from './PotionSystem';
-import { POTION_EFFECTS } from '../data/potions';
 import type { Gear, Inventory } from './InventorySystem';
 import { ingredients, recipeOutput } from './ItemUseSystem';
 import {
@@ -37,6 +38,7 @@ import {
   OFFLINE_MAX_LEVEL_FRACTION,
   OFFLINE_POTIONS,
   OFFLINE_RATE_MULTIPLIER,
+  nodesStandingIn,
   offlineAmmo,
   offlineActivity,
   offlineJob,
@@ -75,6 +77,8 @@ export interface IdlePlanInput {
   rested: number;
   /** The potions running (version 2 phase E2); absent is none. */
   potionsRunning?: readonly PotionEffectId[];
+  /** The house's stages built (F2), since the garden is work for a sickle in Lampton; absent is none. */
+  built?: readonly HouseUpgradeId[];
 }
 
 export interface IdlePlan {
@@ -117,6 +121,7 @@ export function idlePlan(input: IdlePlanInput): IdlePlan {
   const activity: IdleActivity = fights ? 'fight' : job.kind;
   const potionRows = idlePotions(input.inventory, input.idleFood, activity);
   const skill = afkJobSkill(job);
+  const away = awayJob(input, job);
   return {
     job: jobLines(input, job, nodes),
     xp:
@@ -128,8 +133,10 @@ export function idlePlan(input: IdlePlanInput): IdlePlan {
     arrows: fights ? arrowLines(input) : [],
     potionRule: potionRule(potionRows),
     potionRows,
-    potions: (input.potionsRunning ?? []).map(potionLine),
-    away: awayLines(input, job),
+    potions: (input.potionsRunning ?? []).map((effectId) =>
+      potionLine(effectId, offlineActivity(away)),
+    ),
+    away: awayLines(input, job, away),
     rested: restedLines(input),
     warning: packFull(input, job, nodes)
       ? 'Your pack is full: nothing idle finds will be kept'
@@ -146,11 +153,12 @@ export function awayCeilingReached(skill: SkillId | null): string {
   return `Stopped at the most a night pays: ${ceilingWords(skill)}`;
 }
 
-// The zone's nodes this tool can work at this level, named once each.
+// The nodes here this tool can work at this level, named once each: the zone's
+// and the garden's, off the one list the parked payout reads.
 function workableNodes(input: IdlePlanInput, skill: SkillId): ResourceNodeDefinition[] {
-  const nodes = (ZONES[input.zoneId]?.nodeSpawns ?? [])
-    .map((spawn) => RESOURCE_NODES[spawn.nodeId])
-    .filter((node) => node.skill === skill && canGather(node, input.skills, input.gear).ok);
+  const nodes = nodesStandingIn(input.zoneId, input.built ?? []).filter(
+    (node) => node.skill === skill && canGather(node, input.skills, input.gear).ok,
+  );
   return [...new Set(nodes)];
 }
 
@@ -207,14 +215,22 @@ function potionRule(rows: IdlePotionRow[]): string {
 
 /**
  * What one running potion does for idle. Only the two brewed for it count with
- * the game closed (`OfflineAfkSystem`), and the panel says which, since
- * drinking Fortune before a night away would otherwise look like a plan.
+ * the game closed (`OfflineAfkSystem`), and only for a night of the job each
+ * moves, and the panel says which, since drinking Fortune before a night away,
+ * or a Samphire Tonic before a night of fighting, would otherwise look like a
+ * plan.
  */
-function potionLine(effectId: PotionEffectId): string {
-  const away = OFFLINE_POTIONS.includes(effectId)
+function potionLine(effectId: PotionEffectId, night: IdleActivity | null): string {
+  const away = potionWorksFor(effectId, night, true)
     ? 'away too, for the time it has left'
-    : 'with the game open only';
+    : OFFLINE_POTIONS.includes(effectId)
+      ? `away only for a night of ${IDLE_POTION_USE[effectId].away.map(activityNoun).join(' or ')}`
+      : 'with the game open only';
   return `${EFFECTS[effectId].name}: ${describePotionEffect(effectId)}, ${away}`;
+}
+
+function activityNoun(activity: IdleActivity): string {
+  return activity === 'fight' ? 'fighting' : activity === 'gather' ? 'gathering' : 'making';
 }
 
 function arrowLines(input: IdlePlanInput): string[] {
@@ -225,17 +241,23 @@ function arrowLines(input: IdlePlanInput): string[] {
   return [`${describeItemName(arrow)} first, ${carried} carried`, 'Fists when they run out'];
 }
 
-function awayLines(input: IdlePlanInput, job: AfkCampJob): string[] {
+// What a closed game would be paid for, asked of the payout's own rule.
+function awayJob(input: IdlePlanInput, job: AfkCampJob): OfflineJob {
   const station = job.kind === 'craft' ? job.recipe.station : null;
-  const away = offlineJob(
+  return offlineJob(
     { zoneId: input.zoneId, station },
     {
       characterLevel: input.level,
       inventory: input.inventory,
       gear: input.gear,
       skills: input.skills,
+      built: input.built,
     },
   );
+}
+
+function awayLines(input: IdlePlanInput, job: AfkCampJob, away: OfflineJob): string[] {
+  const station = job.kind === 'craft' ? job.recipe.station : null;
   const lines = [`Counts up to ${OFFLINE_CAP_MS / 3_600_000} hours`];
   // A campfire does not outlast the tab, so a night parked at one is paid for
   // what the gear says instead, and the panel says so rather than letting the
@@ -263,7 +285,11 @@ function awayJobLines(input: IdlePlanInput, away: OfflineJob): string[] {
   if (away.kind === 'gather') {
     const { node } = away;
     if (!node) return [`Nothing here to ${SKILLS[away.skill].verb}: it earns nothing`];
-    const every = gatherDurationMs(node, skillLevel(input.skills, away.skill));
+    const every = gatherDurationMs(
+      node,
+      skillLevel(input.skills, away.skill),
+      toolGatherSpeed(input.gear, away.skill),
+    );
     return [`A ${node.name} every ${seconds(every)}`, rate, skillCeiling(input, away.skill)];
   }
   const { quarry } = away;
@@ -289,17 +315,31 @@ function awayJobLines(input: IdlePlanInput, away: OfflineJob): string[] {
 }
 
 // What a closed game drinks: the list the payout drinks out of, one at a time,
-// for as long as the night and the potions last. Nothing to say with none.
+// for as long as the night and the potions last, counted the way the payout
+// counts them against the hours a night is paid for, so a bag of fifty is not
+// promised as a night of fifty. Nothing to say with none.
 function awayPotionLine(input: IdlePlanInput, activity: IdleActivity | null): string | null {
   if (idlePotions(input.inventory, input.idleFood, null).length === 0) return null;
   const supply = nightPotionSupply(input.inventory, input.idleFood, activity);
   if (supply.length === 0) return 'Drinks none of the potions in the bag';
-  const lasts = supply.reduce(
-    (total, { effectId, count }) => total + POTION_EFFECTS[effectId].durationMs * count,
-    0,
-  );
-  const named = supply.map(({ itemId, count }) => `${describeItemName(itemId)} ×${count}`);
-  return `Drinks in turn, as each wears off: ${named.join(', ')}, ${minutes(lasts)} in all`;
+  const windows = nightPotionWindows({
+    running: {},
+    closedAtMs: 0,
+    untilMs: OFFLINE_CAP_MS,
+    inventory: input.inventory,
+    choice: input.idleFood,
+    activity,
+  });
+  const drunk = new Map<string, number>();
+  for (const window of windows) {
+    if (window.itemId) drunk.set(window.itemId, (drunk.get(window.itemId) ?? 0) + 1);
+  }
+  const lasts = Math.min(OFFLINE_CAP_MS, ...windows.map((window) => window.toMs).slice(-1));
+  const named = supply
+    .filter(({ itemId }) => (drunk.get(itemId) ?? 0) > 0)
+    .map(({ itemId }) => `${describeItemName(itemId)} ×${drunk.get(itemId)}`);
+  const left = supply.some(({ itemId, count }) => (drunk.get(itemId) ?? 0) < count);
+  return `Drinks in turn, as each wears off: ${named.join(', ')}, ${minutes(lasts)} in all${left ? '; the rest stay in the bag' : ''}`;
 }
 
 // What idle banks, read off the constants the bank fills and spends by, so a

@@ -223,6 +223,7 @@ export class AfkCamp {
       reforges: character.state.reforges,
       potions: character.state.potions,
       idleFood: character.state.idleFood,
+      built: character.state.house.built,
       rng: this.ctx.rolls,
     });
     const report = { ...paid, rested };

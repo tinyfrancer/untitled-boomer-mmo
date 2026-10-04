@@ -8,6 +8,7 @@ import {
   canGather,
   gatherDurationMs,
   rollGatherQuantity,
+  toolGatherSpeed,
 } from '../../src/systems/GatherSystem';
 import { addSkillXp, createInitialSkills, type Skills } from '../../src/systems/SkillSystem';
 import type { Gear } from '../../src/systems/InventorySystem';
@@ -158,5 +159,20 @@ describe('rollGatherQuantity', () => {
 
   it('never yields three, however deep both terms are', () => {
     expect(rollGatherQuantity(50, 1, () => 0)).toBe(2);
+  });
+});
+
+// The steel tier's `gatherSpeedBonus`, which decision 129 found read nowhere:
+// it is the tool's own share off a swing, for the skill the tool is for.
+describe('toolGatherSpeed', () => {
+  it('is the steel tool’s share, and nothing for a plain tool or another skill’s', () => {
+    const steel = gearWith('steel-axe');
+    expect(toolGatherSpeed(steel, 'woodcutting')).toBeGreaterThan(0);
+    expect(toolGatherSpeed(AXE, 'woodcutting')).toBe(0);
+    expect(toolGatherSpeed(steel, 'fishing')).toBe(0);
+    expect(toolGatherSpeed(SWORD, 'woodcutting')).toBe(0);
+    expect(gatherDurationMs(TREE, 1, toolGatherSpeed(steel, 'woodcutting'))).toBeLessThan(
+      gatherDurationMs(TREE, 1),
+    );
   });
 });

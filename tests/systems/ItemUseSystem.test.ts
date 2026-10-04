@@ -128,6 +128,8 @@ describe('what an item is for', () => {
 
   it('tells a tool what it is held for, and armour who may wear it', () => {
     expect(itemUses('fishing-pole')).toContain('Equip it to fish');
+    expect(itemUses('steel-pole')).toContain('Each swing 15% quicker');
+    expect(itemUses('fishing-pole').some((line) => line.endsWith('quicker'))).toBe(false);
     expect(itemUses('brown-helmet')).toContain('Worn by: Warrior, Ranger');
     expect(itemUses('brown-robe')).toContain('Worn by: any class');
   });

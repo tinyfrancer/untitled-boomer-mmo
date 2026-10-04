@@ -1122,6 +1122,14 @@ describe('the buff row', () => {
     expect(row()?.classList.contains('hud-hidden')).toBe(true);
   });
 
+  // A potion's half hour reads in minutes, a spell's seconds as seconds.
+  it('reads a long buff in minutes', () => {
+    events.emit(PLAYER_EFFECTS_CHANGED_EVENT, [
+      { effectId: 'keepers-watch', remainingMs: 1_800_000, durationMs: 1_800_000 },
+    ]);
+    expect(parent.querySelector<HTMLElement>('.hud-effect__time')?.textContent).toBe('30m');
+  });
+
   it('counts each one down and sweeps its square as it is spent', () => {
     const sweep = (): string =>
       parent.querySelector<HTMLElement>('.hud-effect__sweep')?.style.height ?? '';
@@ -1928,6 +1936,24 @@ describe('the collection log', () => {
     expect(bones?.classList.contains('is-unseen')).toBe(true);
     sheet()?.querySelector<HTMLButtonElement>('[data-action="collection-back"]')?.click();
     expect(sheet()?.dataset.page).toBe('index');
+  });
+
+  // A boss's page says what of the history it carries, the title once found.
+  it('lists a boss’s lore on its page, named once it is in the journal', () => {
+    const boss = (Object.keys(ENEMIES) as EnemyId[]).find((enemyId) => ENEMIES[enemyId].boss)!;
+    const fragment = Object.values(LORE_FRAGMENTS).find(
+      (candidate) => candidate.found.kind === 'kill' && candidate.found.enemyId === boss,
+    )!;
+    mount({ kills: { [boss]: 1 } });
+    menuItem('collection');
+    sheet()?.querySelector<HTMLButtonElement>(`[data-creature="${boss}"]`)?.click();
+    const lore = () => sheet()?.querySelector<HTMLElement>(`[data-lore="${fragment.id}"]`);
+    expect(lore()?.textContent).toContain('Not yet found');
+    expect(lore()?.textContent).not.toContain(fragment.title);
+    expect(text()).toContain('Lore');
+    events.emit(WHISPERS_CHANGED_EVENT, { rumours: [], fragments: [fragment.id] });
+    expect(lore()?.textContent).toContain(fragment.title);
+    expect(lore()?.classList.contains('is-unseen')).toBe(false);
   });
 
   it('redraws off a drop seen, a kill and a pool', () => {

@@ -994,6 +994,7 @@ class Hud {
         zoneId: this.model.zoneId,
         rested: this.model.rested,
         potionsRunning: this.model.potionsRunning,
+        built: this.model.house.built,
       }),
       this.model.afkActive,
     );

@@ -9,7 +9,7 @@ import { skillXpToNextLevel } from '../../src/systems/SkillSystem';
 import { RESTED_FILL_MS, restedCap } from '../../src/systems/RestedSystem';
 import { MAX_CHARACTER_LEVEL } from '../../src/config/constants';
 import type { StationId } from '../../src/data/recipes';
-import type { ClassId, ItemId, ZoneId } from '../../src/types/ids';
+import type { ClassId, HouseUpgradeId, ItemId, ZoneId } from '../../src/types/ids';
 import { ITEMS } from '../../src/data/items';
 
 /**
@@ -21,7 +21,7 @@ import { ITEMS } from '../../src/data/items';
 function standing(
   zoneId: ZoneId,
   change: (state: CharacterState) => void = () => {},
-  options: { classId?: ClassId; stations?: StationId[] } = {},
+  options: { classId?: ClassId; stations?: StationId[]; built?: HouseUpgradeId[] } = {},
 ): IdlePlanInput {
   const state = createNewCharacter('Tester', options.classId ?? 'warrior');
   change(state);
@@ -37,6 +37,7 @@ function standing(
     stations: options.stations ?? [],
     zoneId,
     rested: state.rested,
+    built: options.built,
   };
 }
 
@@ -95,6 +96,30 @@ describe('a gathering idle', () => {
     expect(plan.job[1]).toBe('Fight what comes near where you start, never starting on a boss');
     expect(plan.xp).toBe('Half the XP for kills, and no abilities');
     expect(plan.away).toContain('Nothing here to chop wood: it earns nothing');
+  });
+
+  // F2's garden is the one node of the player's rather than the zone's, so a
+  // sickle in Lampton has work there once it is built and none before, awake
+  // and away alike, off the one list the payout reads (decision 138).
+  it('works the garden once it is built, awake and away, and says so', () => {
+    const bare = idlePlan(standing('town', holding('sickle')));
+    expect(bare.job[0]).toBe('No work here for your Sickle, so:');
+    expect(bare.away).toContain('Nothing here to forage: it earns nothing');
+    const grown = idlePlan(standing('town', holding('sickle'), { built: ['garden'] }));
+    expect(grown.job).toEqual(['Forage near where you start: Samphire']);
+    expect(grown.away.some((line) => /^A Samphire every [\d.]+s$/.test(line))).toBe(true);
+  });
+
+  // A steel tool's own speed is read wherever a swing's length is, the panel's
+  // promise included, since decision 129 found it read nowhere at all.
+  it('counts the tool in hand in a gather’s pace', () => {
+    const every = (weapon: ItemId): number =>
+      Number(
+        idlePlan(standing('town', holding(weapon)))
+          .away.find((line) => line.startsWith('A Tree every'))
+          ?.match(/([\d.]+)s$/)?.[1],
+      );
+    expect(every('steel-axe')).toBeLessThan(every('felling-axe'));
   });
 
   it('warns when the pack has no room for what it gathers', () => {
@@ -308,6 +333,34 @@ describe("idle's potions", () => {
     expect(plan.away).toContain(
       "Drinks in turn, as each wears off: Keeper's Draught ×2, 60 minutes in all",
     );
+  });
+
+  // A night is paid for eight hours at most, so the panel promises the draughts
+  // that fit in them and says the rest keep.
+  it('promises no more draughts than a night can drink', () => {
+    const plan = idlePlan(
+      standing('town', (state) => (state.inventory = { 'keepers-draught': 50 })),
+    );
+    expect(plan.away).toContain(
+      "Drinks in turn, as each wears off: Keeper's Draught ×16, 480 minutes in all; the rest stay in the bag",
+    );
+  });
+
+  // A tonic counts away for a night of gathering alone, and the line on a
+  // running one says which night it would count for.
+  it('says what a running potion does for the night this job would be', () => {
+    const fighting = idlePlan({
+      ...standing('town'),
+      potionsRunning: ['quick-hands', 'keepers-watch', 'fortune'],
+    });
+    expect(fighting.potions[0]).toMatch(/away only for a night of gathering$/);
+    expect(fighting.potions[1]).toMatch(/away too, for the time it has left$/);
+    expect(fighting.potions[2]).toMatch(/with the game open only$/);
+    const gathering = idlePlan({
+      ...standing('town', holding('felling-axe')),
+      potionsRunning: ['quick-hands'],
+    });
+    expect(gathering.potions[0]).toMatch(/away too, for the time it has left$/);
   });
 
   it('says when there is nothing it may drink', () => {
